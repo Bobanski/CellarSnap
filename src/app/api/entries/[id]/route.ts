@@ -4,9 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const nullableString = z.preprocess(
   (value) => {
-    if (typeof value === "string" && value.trim() === "") {
-      return null;
-    }
+    if (typeof value === "string" && value.trim() === "") return null;
     return value;
   },
   z.string().nullable().optional()
@@ -28,28 +26,26 @@ const updateEntrySchema = z.object({
   place_image_path: nullableString,
 });
 
-async function createSignedUrl(path: string | null, supabase: ReturnType<typeof createSupabaseServerClient>) {
-  if (!path || path === "pending") {
-    return null;
-  }
+type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
+  if (!path || path === "pending") return null;
 
   const { data, error } = await supabase.storage
     .from("wine-photos")
     .createSignedUrl(path, 60 * 60);
 
-  if (error) {
-    return null;
-  }
-
+  if (error) return null;
   return data.signedUrl;
 }
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
-  const supabase = createSupabaseServerClient();
+  const { id } = await params;
+
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -65,7 +61,7 @@ export async function GET(
     .eq("user_id", user.id)
     .single();
 
-  if (error) {
+  if (error || !data) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
@@ -80,10 +76,11 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
-  const supabase = createSupabaseServerClient();
+  const { id } = await params;
+
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -94,7 +91,10 @@ export async function PUT(
 
   const payload = updateEntrySchema.safeParse(await request.json());
   if (!payload.success) {
-    return NextResponse.json({ error: payload.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: payload.error.flatten() },
+      { status: 400 }
+    );
   }
 
   const updates = Object.fromEntries(
@@ -113,8 +113,11 @@ export async function PUT(
     .select("*")
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !data) {
+    return NextResponse.json(
+      { error: error?.message ?? "Update failed" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ entry: data });
@@ -122,10 +125,11 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
-  const supabase = createSupabaseServerClient();
+  const { id } = await params;
+
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -141,7 +145,7 @@ export async function DELETE(
     .eq("user_id", user.id)
     .single();
 
-  if (fetchError) {
+  if (fetchError || !existing) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
@@ -156,7 +160,7 @@ export async function DELETE(
   }
 
   const paths = [existing.label_image_path, existing.place_image_path].filter(
-    (path): path is string => Boolean(path && path !== "pending")
+    (p): p is string => Boolean(p && p !== "pending")
   );
 
   if (paths.length > 0) {
