@@ -26,7 +26,9 @@ const createEntrySchema = z.object({
     .optional(),
 });
 
-async function createSignedUrl(path: string | null, supabase: ReturnType<typeof createSupabaseServerClient>) {
+type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
   if (!path || path === "pending") {
     return null;
   }
@@ -43,7 +45,8 @@ async function createSignedUrl(path: string | null, supabase: ReturnType<typeof 
 }
 
 export async function GET() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -74,7 +77,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -85,7 +89,10 @@ export async function POST(request: Request) {
 
   const payload = createEntrySchema.safeParse(await request.json());
   if (!payload.success) {
-    return NextResponse.json({ error: payload.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: payload.error.flatten() },
+      { status: 400 }
+    );
   }
 
   const consumedAt =
