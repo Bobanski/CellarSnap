@@ -1,5 +1,23 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## CellarSnap MVP setup
+
+Required environment variables (in `.env.local`):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Supabase SQL steps:
+
+- Run `supabase/sql/001_init.sql` to create `public.wine_entries` and RLS policies.
+- Run `supabase/sql/002_storage.sql` to create the `wine-photos` bucket and storage policies.
+
+Local development:
+
+```bash
+npm run dev
+```
+
 ## Getting Started
 
 First, run the development server:
