@@ -8,13 +8,42 @@ type FeedEntry = WineEntryWithUrls & {
   author_name: string;
 };
 
+type UserOption = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+};
+
 export default function FeedPage() {
   const [entries, setEntries] = useState<FeedEntry[]>([]);
-  const [users, setUsers] = useState<
-    { id: string; display_name: string | null; email: string | null }[]
-  >([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserOption[]>([]);
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const response = await fetch(
+        `/api/users?search=${encodeURIComponent(searchQuery.trim())}`,
+        { cache: "no-store" }
+      );
+      setSearching(false);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.users ?? []);
+      } else {
+        setSearchResults([]);
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const userMap = useMemo(
     () =>
@@ -88,6 +117,45 @@ export default function FeedPage() {
           </div>
         </header>
 
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
+          <label className="mb-2 block text-sm font-medium text-zinc-700">
+            Find a friend
+          </label>
+          <input
+            type="search"
+            placeholder="Search by username or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+            aria-describedby="search-results-desc"
+          />
+          <p id="search-results-desc" className="sr-only">
+            Search results appear below; click to open their profile.
+          </p>
+          {searchQuery.trim() && (
+            <div className="mt-3 space-y-1">
+              {searching ? (
+                <p className="text-sm text-zinc-500">Searching...</p>
+              ) : searchResults.length === 0 ? (
+                <p className="text-sm text-zinc-500">No friends match your search.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {searchResults.map((u) => (
+                    <li key={u.id}>
+                      <Link
+                        href={`/profile/${u.id}`}
+                        className="block rounded-lg px-2 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+                      >
+                        {u.display_name ?? u.email ?? u.id}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+
         {loading ? (
           <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700">
             Loading feed...
@@ -109,7 +177,15 @@ export default function FeedPage() {
                 className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300"
               >
                 <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>{entry.author_name}</span>
+                  <span>
+                    <Link
+                      href={`/profile/${entry.user_id}`}
+                      className="font-medium text-zinc-700 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {entry.author_name}
+                    </Link>
+                  </span>
                   <span>{entry.consumed_at}</span>
                 </div>
                 <div className="mt-3 flex gap-4">
