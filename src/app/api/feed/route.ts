@@ -33,6 +33,7 @@ export async function GET() {
   const { data: entries, error } = await supabase
     .from("wine_entries")
     .select("*")
+    .neq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) {
