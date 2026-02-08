@@ -66,6 +66,42 @@ export async function POST(request: Request) {
     const response = await openai.responses.create(
       {
         model: "gpt-5-mini",
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "label_autofill",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                wine_name: { type: ["string", "null"] },
+                producer: { type: ["string", "null"] },
+                vintage: { type: ["string", "null"] },
+                country: { type: ["string", "null"] },
+                region: { type: ["string", "null"] },
+                appellation: { type: ["string", "null"] },
+                notes: { type: ["string", "null"] },
+                confidence: { type: ["number", "null"] },
+                warnings: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+              required: [
+                "wine_name",
+                "producer",
+                "vintage",
+                "country",
+                "region",
+                "appellation",
+                "notes",
+                "confidence",
+                "warnings",
+              ],
+            },
+          },
+        },
         input: [
           {
             role: "user",
