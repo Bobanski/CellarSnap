@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
+import Photo from "@/components/Photo";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { WineEntryWithUrls } from "@/types/wine";
 
@@ -192,10 +193,12 @@ export default function EntriesPage() {
               >
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                   {entry.label_image_url ? (
-                    <img
+                    <Photo
                       src={entry.label_image_url}
                       alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                      containerClassName="h-full w-full"
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      loading="lazy"
                     />
                   ) : (
                     "No photo"

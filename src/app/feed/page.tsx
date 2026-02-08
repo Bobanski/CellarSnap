@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatConsumedDate } from "@/lib/formatDate";
+import Photo from "@/components/Photo";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type FeedEntry = WineEntryWithUrls & {
@@ -217,10 +218,12 @@ export default function FeedPage() {
                 <div className="mt-4 flex gap-4">
                   <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                     {entry.label_image_url ? (
-                      <img
+                      <Photo
                         src={entry.label_image_url}
                         alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                        containerClassName="h-full w-full"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        loading="lazy"
                       />
                     ) : (
                       "No photo"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import Photo from "@/components/Photo";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
@@ -246,10 +247,12 @@ export default function EntryDetailPage() {
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
               {entry.label_image_url ? (
                 <div>
-                  <img
+                  <Photo
                     src={entry.label_image_url}
                     alt="Wine label"
+                    containerClassName="h-80 w-full"
                     className="h-80 w-full object-cover"
+                    loading="eager"
                   />
                   {isOwner ? (
                     <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
@@ -277,10 +280,12 @@ export default function EntryDetailPage() {
             {entry.place_image_url ? (
               <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
                 <div>
-                  <img
+                  <Photo
                     src={entry.place_image_url}
                     alt="Place"
+                    containerClassName="h-80 w-full"
                     className="h-80 w-full object-cover"
+                    loading="lazy"
                   />
                   {isOwner ? (
                     <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
