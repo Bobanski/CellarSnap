@@ -43,13 +43,13 @@ export async function GET() {
   const userIds = Array.from(new Set((entries ?? []).map((entry) => entry.user_id)));
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name")
     .in("id", userIds);
 
   const profileMap = new Map(
     (profiles ?? []).map((profile) => [
       profile.id,
-      profile.display_name ?? profile.email ?? "Unknown",
+      profile.display_name ?? "Unknown",
     ])
   );
 

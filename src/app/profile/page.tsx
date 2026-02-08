@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Profile = {
@@ -18,12 +18,14 @@ type ProfileFormValues = {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const requiresUsernameSetup = searchParams.get("setup") === "username";
 
   const { register, handleSubmit, reset } = useForm<ProfileFormValues>({
     defaultValues: { display_name: "" },
@@ -63,6 +65,12 @@ export default function ProfilePage() {
   }, [reset, router]);
 
   const onSubmit = handleSubmit(async (values) => {
+    const trimmedDisplayName = values.display_name.trim();
+    if (trimmedDisplayName.length < 3) {
+      setErrorMessage("Username must be at least 3 characters.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -71,7 +79,7 @@ export default function ProfilePage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        display_name: values.display_name.trim() || null,
+        display_name: trimmedDisplayName,
       }),
     });
 
@@ -86,7 +94,9 @@ export default function ProfilePage() {
     const data = await response.json();
     if (data.profile) {
       setProfile(data.profile);
-      setSuccessMessage("Profile updated. This name will be shown across the app.");
+      setSuccessMessage(
+        "Username saved. This is the name shown to other people in the app."
+      );
     }
   });
 
@@ -154,6 +164,11 @@ export default function ProfilePage() {
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
           <form onSubmit={onSubmit} className="space-y-6">
+            {requiresUsernameSetup ? (
+              <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                Set a username to continue using CellarSnap.
+              </p>
+            ) : null}
             {errorMessage ? (
               <p className="text-sm text-rose-200">{errorMessage}</p>
             ) : null}
@@ -169,9 +184,7 @@ export default function ProfilePage() {
                 Username
               </label>
               <p className="mb-2 text-xs text-zinc-500">
-                This is the name shown when you appear in the app (e.g. on the
-                feed or when others see your entries). Leave blank to use your
-                email.
+                This name is shown across the app. Minimum 3 characters.
               </p>
               <input
                 id="display_name"
@@ -179,7 +192,7 @@ export default function ProfilePage() {
                 placeholder="e.g. wine_lover"
                 maxLength={100}
                 className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("display_name")}
+                {...register("display_name", { required: true })}
               />
             </div>
 

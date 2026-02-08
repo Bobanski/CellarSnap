@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -21,6 +21,7 @@ export async function middleware(request: NextRequest) {
   const isProfileRoute = pathname.startsWith("/profile");
   const isFeedRoute = pathname.startsWith("/feed");
   const isLoginRoute = pathname.startsWith("/login");
+  const isUsernameSetupBypass = pathname.startsWith("/profile");
 
   const isProtected = isEntriesRoute || isProfileRoute || isFeedRoute;
   if (isProtected && !user) {
@@ -29,10 +30,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (isLoginRoute && user) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/entries";
-    return NextResponse.redirect(redirectUrl);
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const hasUsername = Boolean(profile?.display_name?.trim());
+    if (!hasUsername && !isUsernameSetupBypass) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/profile";
+      redirectUrl.searchParams.set("setup", "username");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isLoginRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = hasUsername ? "/entries" : "/profile";
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   return response;

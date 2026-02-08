@@ -88,7 +88,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const payload = createEntrySchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const payload = createEntrySchema.safeParse(body);
   if (!payload.success) {
     return NextResponse.json(
       { error: payload.error.flatten() },

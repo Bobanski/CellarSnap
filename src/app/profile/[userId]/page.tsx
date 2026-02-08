@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
@@ -13,12 +12,10 @@ export default function FriendProfilePage() {
   const router = useRouter();
   const params = useParams<{ userId: string }>();
   const userId = params.userId;
-  const supabase = createSupabaseBrowserClient();
 
   const [profile, setProfile] = useState<{
     id: string;
     display_name: string | null;
-    email: string | null;
   } | null>(null);
   const [theirEntries, setTheirEntries] = useState<EntryWithAuthor[]>([]);
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
@@ -38,15 +35,14 @@ export default function FriendProfilePage() {
       setLoading(true);
       setErrorMessage(null);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const currentProfileRes = await fetch("/api/profile", { cache: "no-store" });
+      if (!currentProfileRes.ok) {
         router.push("/login");
         return;
       }
 
-      if (user.id === userId) {
+      const currentProfileData = await currentProfileRes.json();
+      if (currentProfileData.profile?.id === userId) {
         router.replace("/profile");
         return;
       }
@@ -127,7 +123,7 @@ export default function FriendProfilePage() {
               Friend profile
             </span>
             <h1 className="text-3xl font-semibold text-zinc-50">
-              {profile.display_name ?? profile.email ?? "Unknown"}
+              {profile.display_name ?? "Unknown"}
             </h1>
             <p className="text-sm text-zinc-300">
               Wines they’ve logged and wines they’ve been tagged in.

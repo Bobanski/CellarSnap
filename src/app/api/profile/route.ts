@@ -3,7 +3,11 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const updateProfileSchema = z.object({
-  display_name: z.string().min(0).max(100).nullable(),
+  display_name: z
+    .string()
+    .trim()
+    .min(3, "Username must be at least 3 characters.")
+    .max(100, "Username must be 100 characters or fewer."),
 });
 
 export async function GET() {
@@ -61,7 +65,7 @@ export async function PATCH(request: Request) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .update({ display_name: display_name || null })
+    .update({ display_name })
     .eq("id", user.id)
     .select("id, display_name, email")
     .single();

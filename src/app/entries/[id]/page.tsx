@@ -14,7 +14,7 @@ export default function EntryDetailPage() {
   const supabase = createSupabaseBrowserClient();
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [users, setUsers] = useState<
-    { id: string; display_name: string | null; email: string | null }[]
+    { id: string; display_name: string | null }[]
   >([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserProfile, setCurrentUserProfile] = useState<{
@@ -29,13 +29,13 @@ export default function EntryDetailPage() {
     const map = new Map(
       users.map((user) => [
         user.id,
-        user.display_name ?? user.email ?? "Unknown",
+        user.display_name ?? "Unknown",
       ])
     );
     if (currentUserProfile) {
       map.set(
         currentUserProfile.id,
-        currentUserProfile.display_name ?? currentUserProfile.email ?? "Unknown"
+        currentUserProfile.display_name ?? "You"
       );
     }
     return map;

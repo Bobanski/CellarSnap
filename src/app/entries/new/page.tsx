@@ -29,7 +29,7 @@ export default function NewEntryPage() {
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
   const [users, setUsers] = useState<
-    { id: string; display_name: string | null; email: string | null }[]
+    { id: string; display_name: string | null }[]
   >([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -285,7 +285,7 @@ export default function NewEntryPage() {
             ) : (
               <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
                 {users.map((user) => {
-                  const label = user.display_name ?? user.email ?? "Unknown";
+                  const label = user.display_name ?? "Unknown";
                   const isChecked = selectedUserIds.includes(user.id);
                   return (
                     <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">

@@ -12,25 +12,23 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search")?.trim().toLowerCase();
+  const search = searchParams.get("search")?.trim();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name")
     .neq("id", user.id)
     .order("display_name", { ascending: true });
+
+  if (search) {
+    query = query.ilike("display_name", `%${search}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  let users = data ?? [];
-  if (search) {
-    users = users.filter((p) => {
-      const name = (p.display_name ?? "").toLowerCase();
-      const email = (p.email ?? "").toLowerCase();
-      return name.includes(search) || email.includes(search);
-    });
-  }
-  return NextResponse.json({ users });
+  return NextResponse.json({ users: data ?? [] });
 }

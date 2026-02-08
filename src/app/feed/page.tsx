@@ -12,7 +12,6 @@ type FeedEntry = WineEntryWithUrls & {
 type UserOption = {
   id: string;
   display_name: string | null;
-  email: string | null;
 };
 
 export default function FeedPage() {
@@ -30,14 +29,13 @@ export default function FeedPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
+
     const timer = setTimeout(async () => {
       setSearching(true);
       const response = await fetch(
-        `/api/users?search=${encodeURIComponent(searchQuery.trim())}`,
+        `/api/users?search=${encodeURIComponent(trimmedQuery)}`,
         { cache: "no-store" }
       );
       setSearching(false);
@@ -52,13 +50,11 @@ export default function FeedPage() {
   }, [searchQuery]);
 
   const userMap = useMemo(() => {
-    const map = new Map(
-      users.map((u) => [u.id, u.display_name ?? u.email ?? "Unknown"])
-    );
+    const map = new Map(users.map((u) => [u.id, u.display_name ?? "Unknown"]));
     if (currentUserProfile) {
       map.set(
         currentUserProfile.id,
-        currentUserProfile.display_name ?? currentUserProfile.email ?? "Unknown"
+        currentUserProfile.display_name ?? "You"
       );
     }
     return map;
@@ -151,9 +147,15 @@ export default function FeedPage() {
           </label>
           <input
             type="search"
-            placeholder="Search by username or email..."
+            placeholder="Search by username..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchQuery(value);
+              if (!value.trim()) {
+                setSearchResults([]);
+              }
+            }}
             className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
             aria-describedby="search-results-desc"
           />
@@ -174,7 +176,7 @@ export default function FeedPage() {
                         href={`/profile/${u.id}`}
                         className="block rounded-lg px-2 py-1.5 text-sm text-zinc-200 hover:bg-white/10"
                       >
-                        {u.display_name ?? u.email ?? "Unknown"}
+                        {u.display_name ?? "Unknown"}
                       </Link>
                     </li>
                   ))}
@@ -199,21 +201,17 @@ export default function FeedPage() {
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
             {entries.map((entry) => (
-              <Link
+              <article
                 key={entry.id}
-                href={`/entries/${entry.id}`}
                 className="group rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
               >
                 <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <span>
-                    <Link
-                      href={`/profile/${entry.user_id}`}
-                      className="font-medium text-zinc-200 hover:text-amber-200"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {entry.author_name}
-                    </Link>
-                  </span>
+                  <Link
+                    href={`/profile/${entry.user_id}`}
+                    className="font-medium text-zinc-200 hover:text-amber-200"
+                  >
+                    {entry.author_name}
+                  </Link>
                   <span>{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
                 <div className="mt-4 flex gap-4">
@@ -252,7 +250,15 @@ export default function FeedPage() {
                         .join(", ")
                     : "No one listed"}
                 </div>
-              </Link>
+                <div className="mt-4">
+                  <Link
+                    href={`/entries/${entry.id}`}
+                    className="inline-flex rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                  >
+                    View entry
+                  </Link>
+                </div>
+              </article>
             ))}
           </div>
         )}
