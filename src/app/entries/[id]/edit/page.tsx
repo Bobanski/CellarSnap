@@ -35,6 +35,8 @@ export default function EditEntryPage() {
   const [users, setUsers] = useState<
     { id: string; display_name: string | null; email: string | null }[]
   >([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,6 +111,26 @@ export default function EditEntryPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (isMounted) {
+        setCurrentUserId(user?.id ?? null);
+        setAuthLoading(false);
+      }
+    };
+
+    loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase]);
+
   const onSubmit = handleSubmit(async (values) => {
     if (!entry) {
       return;
@@ -174,7 +196,7 @@ export default function EditEntryPage() {
     router.push(`/entries/${entry.id}`);
   });
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
         <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
@@ -189,6 +211,24 @@ export default function EditEntryPage() {
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
         <div className="mx-auto w-full max-w-3xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
           {errorMessage ?? "Entry unavailable."}
+        </div>
+      </div>
+    );
+  }
+
+  if (currentUserId && entry.user_id !== currentUserId) {
+    return (
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-3xl space-y-4">
+          <Link
+            className="text-sm font-medium text-zinc-300 hover:text-zinc-50"
+            href={`/entries/${entry.id}`}
+          >
+            ← Back to entry
+          </Link>
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            You can only edit your own entries.
+          </div>
         </div>
       </div>
     );
@@ -277,7 +317,7 @@ export default function EditEntryPage() {
             ) : (
               <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
                 {users.map((user) => {
-                  const label = user.display_name ?? user.email ?? user.id;
+                  const label = user.display_name ?? user.email ?? "Unknown";
                   const isChecked = selectedUserIds.includes(user.id);
                   return (
                     <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">

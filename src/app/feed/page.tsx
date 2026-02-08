@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type FeedEntry = WineEntryWithUrls & {
@@ -52,12 +53,12 @@ export default function FeedPage() {
 
   const userMap = useMemo(() => {
     const map = new Map(
-      users.map((u) => [u.id, u.display_name ?? u.email ?? u.id])
+      users.map((u) => [u.id, u.display_name ?? u.email ?? "Unknown"])
     );
     if (currentUserProfile) {
       map.set(
         currentUserProfile.id,
-        currentUserProfile.display_name ?? currentUserProfile.email ?? currentUserProfile.id
+        currentUserProfile.display_name ?? currentUserProfile.email ?? "Unknown"
       );
     }
     return map;
@@ -167,7 +168,7 @@ export default function FeedPage() {
                         href={`/profile/${u.id}`}
                         className="block rounded-lg px-2 py-1.5 text-sm text-zinc-200 hover:bg-white/10"
                       >
-                        {u.display_name ?? u.email ?? u.id}
+                        {u.display_name ?? u.email ?? "Unknown"}
                       </Link>
                     </li>
                   ))}
@@ -207,7 +208,7 @@ export default function FeedPage() {
                       {entry.author_name}
                     </Link>
                   </span>
-                  <span>{entry.consumed_at}</span>
+                  <span>{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
                 <div className="mt-4 flex gap-4">
                   <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
@@ -241,7 +242,7 @@ export default function FeedPage() {
                   Tasted with:{" "}
                   {entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
                     ? entry.tasted_with_user_ids
-                        .map((id) => userMap.get(id) ?? id)
+                        .map((id) => userMap.get(id) ?? "Unknown")
                         .join(", ")
                     : "No one listed"}
                 </div>

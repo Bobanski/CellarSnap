@@ -21,7 +21,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name")
+    .select("id, display_name, email")
     .eq("id", id)
     .single();
 
@@ -32,7 +32,8 @@ export async function GET(
   return NextResponse.json({
     profile: {
       id: data.id,
-      display_name: data.display_name ?? "Unknown",
+      display_name: data.display_name ?? null,
+      email: data.email ?? null,
     },
   });
 }

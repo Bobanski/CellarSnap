@@ -265,7 +265,7 @@ export default function NewEntryPage() {
             ) : (
               <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
                 {users.map((user) => {
-                  const label = user.display_name ?? user.email ?? user.id;
+                  const label = user.display_name ?? user.email ?? "Unknown";
                   const isChecked = selectedUserIds.includes(user.id);
                   return (
                     <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">

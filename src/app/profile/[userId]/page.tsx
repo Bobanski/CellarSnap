@@ -17,7 +17,8 @@ export default function FriendProfilePage() {
 
   const [profile, setProfile] = useState<{
     id: string;
-    display_name: string;
+    display_name: string | null;
+    email: string | null;
   } | null>(null);
   const [theirEntries, setTheirEntries] = useState<EntryWithAuthor[]>([]);
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
@@ -126,7 +127,7 @@ export default function FriendProfilePage() {
               Friend profile
             </span>
             <h1 className="text-3xl font-semibold text-zinc-50">
-              {profile.display_name}
+              {profile.display_name ?? profile.email ?? "Unknown"}
             </h1>
             <p className="text-sm text-zinc-300">
               Wines they’ve logged and wines they’ve been tagged in.
