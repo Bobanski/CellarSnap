@@ -193,6 +193,50 @@ export default function NewEntryPage() {
     }
   };
 
+  const createAutofillImage = async (file: File) => {
+    try {
+      if (!file.type.startsWith("image/")) {
+        return file;
+      }
+
+      const imageUrl = URL.createObjectURL(file);
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+      URL.revokeObjectURL(imageUrl);
+
+      const maxSize = 1600;
+      const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+      if (scale >= 1) {
+        return file;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return file;
+      }
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.8)
+      );
+
+      if (!blob) {
+        return file;
+      }
+
+      return new File([blob], "label-autofill.jpg", { type: "image/jpeg" });
+    } catch {
+      return file;
+    }
+  };
+
   const runAutofill = async (file: File) => {
     setAutofillStatus("loading");
     setAutofillMessage("Analyzing label...");
@@ -201,8 +245,9 @@ export default function NewEntryPage() {
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
+      const resized = await createAutofillImage(file);
       const formData = new FormData();
-      formData.append("label", file);
+      formData.append("label", resized);
 
       const response = await fetch("/api/label-autofill", {
         method: "POST",
@@ -213,6 +258,11 @@ export default function NewEntryPage() {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        if (response.status === 413) {
+          setAutofillStatus("error");
+          setAutofillMessage("Image too large. Try a smaller photo.");
+          return;
+        }
         if (response.status === 504) {
           setAutofillStatus("timeout");
           setAutofillMessage("Autofill timed out. Try again.");
