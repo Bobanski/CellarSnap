@@ -65,11 +65,13 @@ export async function GET() {
 
   const feedEntries = await Promise.all(
     (entries ?? []).map(async (entry) => {
-      const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id) => ({
-        id,
-        display_name: profileMap.get(id)?.display_name ?? null,
-        email: profileMap.get(id)?.email ?? null,
-      }));
+      const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map(
+        (id: string) => ({
+          id,
+          display_name: profileMap.get(id)?.display_name ?? null,
+          email: profileMap.get(id)?.email ?? null,
+        })
+      );
 
       return {
         ...entry,
