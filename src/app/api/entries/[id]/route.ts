@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+
 const nullableString = z.preprocess(
   (value) => {
     if (typeof value === "string" && value.trim() === "") return null;
@@ -25,6 +27,9 @@ const updateEntrySchema = z.object({
   tasted_with_user_ids: z.array(z.string().uuid()).optional(),
   label_image_path: nullableString,
   place_image_path: nullableString,
+  entry_privacy: privacyLevelSchema.optional(),
+  label_photo_privacy: privacyLevelSchema.nullable().optional(),
+  place_photo_privacy: privacyLevelSchema.nullable().optional(),
 });
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+
 const nullableString = z.preprocess(
   (value) => {
     if (typeof value === "string" && value.trim() === "") {
@@ -25,6 +27,9 @@ const createEntrySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
   tasted_with_user_ids: z.array(z.string().uuid()).optional(),
+  entry_privacy: privacyLevelSchema.optional(),
+  label_photo_privacy: privacyLevelSchema.nullable().optional(),
+  place_photo_privacy: privacyLevelSchema.nullable().optional(),
 });
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -106,6 +111,20 @@ export async function POST(request: Request) {
   const consumedAt =
     payload.data.consumed_at ?? new Date().toISOString().slice(0, 10);
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("default_entry_privacy")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const entryPrivacy = payload.data.entry_privacy ??
+    profile?.default_entry_privacy ??
+    "private";
+  const labelPhotoPrivacy =
+    payload.data.label_photo_privacy ?? null;
+  const placePhotoPrivacy =
+    payload.data.place_photo_privacy ?? null;
+
   const { data, error } = await supabase
     .from("wine_entries")
     .insert({
@@ -121,6 +140,9 @@ export async function POST(request: Request) {
       tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
       label_image_path: null,
       place_image_path: null,
+      entry_privacy: entryPrivacy,
+      label_photo_privacy: labelPhotoPrivacy,
+      place_photo_privacy: placePhotoPrivacy,
     })
     .select("*")
     .single();

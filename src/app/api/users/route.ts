@@ -30,5 +30,39 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ users: data ?? [] });
+  const users = data ?? [];
+  const userIds = users.map((candidate) => candidate.id);
+
+  if (userIds.length === 0) {
+    return NextResponse.json({ users: [] });
+  }
+
+  const [{ data: followingRows }, { data: followerRows }] = await Promise.all([
+    supabase
+      .from("user_follows")
+      .select("followee_id")
+      .eq("follower_id", user.id)
+      .in("followee_id", userIds),
+    supabase
+      .from("user_follows")
+      .select("follower_id")
+      .eq("followee_id", user.id)
+      .in("follower_id", userIds),
+  ]);
+
+  const followingSet = new Set((followingRows ?? []).map((row) => row.followee_id));
+  const followersSet = new Set((followerRows ?? []).map((row) => row.follower_id));
+
+  return NextResponse.json({
+    users: users.map((candidate) => {
+      const following = followingSet.has(candidate.id);
+      const follows_you = followersSet.has(candidate.id);
+      return {
+        ...candidate,
+        following,
+        follows_you,
+        friends: following && follows_you,
+      };
+    }),
+  });
 }

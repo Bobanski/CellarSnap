@@ -29,10 +29,31 @@ export async function GET(
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
+  const [{ data: outgoingFollow }, { data: incomingFollow }] = await Promise.all([
+    supabase
+      .from("user_follows")
+      .select("followee_id")
+      .eq("follower_id", user.id)
+      .eq("followee_id", id)
+      .maybeSingle(),
+    supabase
+      .from("user_follows")
+      .select("follower_id")
+      .eq("follower_id", id)
+      .eq("followee_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const following = Boolean(outgoingFollow);
+  const follows_you = Boolean(incomingFollow);
+
   return NextResponse.json({
     profile: {
       id: data.id,
       display_name: data.display_name ?? null,
+      following,
+      follows_you,
+      friends: following && follows_you,
     },
   });
 }

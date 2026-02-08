@@ -2,13 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+
 const updateProfileSchema = z.object({
   display_name: z
     .string()
     .trim()
     .min(3, "Username must be at least 3 characters.")
-    .max(100, "Username must be 100 characters or fewer."),
-});
+    .max(100, "Username must be 100 characters or fewer.")
+    .optional(),
+  default_entry_privacy: privacyLevelSchema.optional(),
+}).refine(
+  (value) =>
+    value.display_name !== undefined ||
+    value.default_entry_privacy !== undefined,
+  { message: "No profile updates provided." }
+);
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -22,7 +31,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name, email, default_entry_privacy")
     .eq("id", user.id)
     .single();
 
@@ -55,19 +64,31 @@ export async function PATCH(request: Request) {
 
   const parsed = updateProfileSchema.safeParse(body);
   if (!parsed.success) {
+    const flattened = parsed.error.flatten();
+    const message =
+      flattened.formErrors[0] ??
+      flattened.fieldErrors.display_name?.[0] ??
+      flattened.fieldErrors.default_entry_privacy?.[0] ??
+      "Invalid profile update.";
     return NextResponse.json(
-      { error: parsed.error.flatten().fieldErrors },
+      { error: message },
       { status: 400 }
     );
   }
 
-  const { display_name } = parsed.data;
+  const updates: Record<string, string> = {};
+  if (parsed.data.display_name !== undefined) {
+    updates.display_name = parsed.data.display_name;
+  }
+  if (parsed.data.default_entry_privacy !== undefined) {
+    updates.default_entry_privacy = parsed.data.default_entry_privacy;
+  }
 
   const { data, error } = await supabase
     .from("profiles")
-    .update({ display_name })
+    .update(updates)
     .eq("id", user.id)
-    .select("id, display_name, email")
+    .select("id, display_name, email, default_entry_privacy")
     .single();
 
   if (error) {

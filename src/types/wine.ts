@@ -1,3 +1,5 @@
+export type PrivacyLevel = "public" | "friends" | "private";
+
 export type WineEntry = {
   id: string;
   user_id: string;
@@ -12,6 +14,9 @@ export type WineEntry = {
   tasted_with_user_ids: string[] | null;
   label_image_path: string | null;
   place_image_path: string | null;
+  entry_privacy: PrivacyLevel;
+  label_photo_privacy: PrivacyLevel | null;
+  place_photo_privacy: PrivacyLevel | null;
   created_at: string;
 };
 
@@ -30,6 +35,9 @@ export type WineEntryCreatePayload = {
   location_text?: string | null;
   consumed_at?: string;
   tasted_with_user_ids?: string[];
+  entry_privacy?: PrivacyLevel;
+  label_photo_privacy?: PrivacyLevel | null;
+  place_photo_privacy?: PrivacyLevel | null;
 };
 
 export type WineEntryUpdatePayload = Partial<{
@@ -44,4 +52,7 @@ export type WineEntryUpdatePayload = Partial<{
   tasted_with_user_ids: string[];
   label_image_path: string | null;
   place_image_path: string | null;
+  entry_privacy: PrivacyLevel;
+  label_photo_privacy: PrivacyLevel | null;
+  place_photo_privacy: PrivacyLevel | null;
 }>;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Profile = {
@@ -18,14 +18,15 @@ type ProfileFormValues = {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const requiresUsernameSetup = searchParams.get("setup") === "username";
+  const requiresUsernameSetup =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("setup") === "username";
 
   const { register, handleSubmit, reset } = useForm<ProfileFormValues>({
     defaultValues: { display_name: "" },
