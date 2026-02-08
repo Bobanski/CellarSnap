@@ -222,10 +222,15 @@ export default function EntriesPage() {
                         </span>
                       ) : null}
                     </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {[entry.country, entry.region, entry.appellation]
+                        .filter(Boolean)
+                        .join(" · ") || "Location not set"}
+                    </p>
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-400">
                     <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-wide">
-                      {entry.rating}/100
+                      {entry.rating ? `${entry.rating}/100` : "Unrated"}
                     </span>
                     <span>{formatConsumedDate(entry.consumed_at)}</span>
                   </div>

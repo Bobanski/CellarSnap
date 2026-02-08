@@ -6,7 +6,9 @@ const responseSchema = z.object({
   wine_name: z.string().nullable().optional(),
   producer: z.string().nullable().optional(),
   vintage: z.string().nullable().optional(),
+  country: z.string().nullable().optional(),
   region: z.string().nullable().optional(),
+  appellation: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1).optional(),
   warnings: z.array(z.string()).optional(),
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
                 type: "input_text",
                 text:
                   "You are extracting wine label info. Return ONLY JSON with keys: " +
-                  "wine_name, producer, vintage, region, notes, confidence, warnings. " +
+                  "wine_name, producer, vintage, country, region, appellation, notes, confidence, warnings. " +
                   "Use null for unknown values. confidence is 0-1.",
               },
               { type: "input_image", image_url: dataUrl, detail: "high" },
@@ -97,7 +99,9 @@ export async function POST(request: Request) {
       wine_name: normalize(data.wine_name),
       producer: normalize(data.producer),
       vintage: normalize(data.vintage),
+      country: normalize(data.country),
       region: normalize(data.region),
+      appellation: normalize(data.appellation),
       notes: normalize(data.notes),
       confidence: data.confidence ?? null,
       warnings: data.warnings ?? [],

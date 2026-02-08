@@ -11,7 +11,9 @@ type EditEntryForm = {
   wine_name: string;
   producer: string;
   vintage: string;
+  country: string;
   region: string;
+  appellation: string;
   rating?: number;
   notes: string;
   location_text: string;
@@ -72,7 +74,9 @@ export default function EditEntryPage() {
           wine_name: data.entry.wine_name ?? "",
           producer: data.entry.producer ?? "",
           vintage: data.entry.vintage ?? "",
+          country: data.entry.country ?? "",
           region: data.entry.region ?? "",
+          appellation: data.entry.appellation ?? "",
           rating: data.entry.rating ?? undefined,
           notes: data.entry.notes ?? "",
           location_text: data.entry.location_text ?? "",
@@ -143,7 +147,9 @@ export default function EditEntryPage() {
       wine_name: values.wine_name || null,
       producer: values.producer || null,
       vintage: values.vintage || null,
+      country: values.country || null,
       region: values.region || null,
+      appellation: values.appellation || null,
       rating: values.rating ? Number(values.rating) : null,
       notes: values.notes || null,
       location_text: values.location_text || null,
@@ -317,10 +323,24 @@ export default function EditEntryPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium text-zinc-200">Country</label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("country")}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium text-zinc-200">Region</label>
               <input
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("region")}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-200">Appellation</label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("appellation")}
               />
             </div>
             <div>

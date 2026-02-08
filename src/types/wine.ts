@@ -12,7 +12,9 @@ export type WineEntry = {
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
+  country: string | null;
   region: string | null;
+  appellation: string | null;
   rating: number | null;
   notes: string | null;
   location_text: string | null;
@@ -37,7 +39,9 @@ export type WineEntryCreatePayload = {
   wine_name?: string | null;
   producer?: string | null;
   vintage?: string | null;
+  country?: string | null;
   region?: string | null;
+  appellation?: string | null;
   rating?: number | null;
   notes?: string | null;
   location_text?: string | null;
@@ -52,8 +56,10 @@ export type WineEntryUpdatePayload = Partial<{
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
+  country: string | null;
   region: string | null;
-  rating: number;
+  appellation: string | null;
+  rating: number | null;
   notes: string | null;
   location_text: string | null;
   consumed_at: string;

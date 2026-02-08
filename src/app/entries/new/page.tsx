@@ -10,7 +10,9 @@ type NewEntryForm = {
   wine_name: string;
   producer: string;
   vintage: string;
+  country: string;
   region: string;
+  appellation: string;
   rating?: number;
   notes: string;
   location_text: string;
@@ -72,7 +74,9 @@ export default function NewEntryPage() {
         wine_name: values.wine_name || null,
         producer: values.producer || null,
         vintage: values.vintage || null,
+        country: values.country || null,
         region: values.region || null,
+        appellation: values.appellation || null,
         rating: values.rating ? Number(values.rating) : null,
         notes: values.notes || null,
         location_text: values.location_text || null,
@@ -160,7 +164,9 @@ export default function NewEntryPage() {
     wine_name?: string | null;
     producer?: string | null;
     vintage?: string | null;
+    country?: string | null;
     region?: string | null;
+    appellation?: string | null;
     notes?: string | null;
   }) => {
     const current = getValues();
@@ -173,8 +179,14 @@ export default function NewEntryPage() {
     if (!current.vintage && data.vintage) {
       setValue("vintage", data.vintage);
     }
+    if (!current.country && data.country) {
+      setValue("country", data.country);
+    }
     if (!current.region && data.region) {
       setValue("region", data.region);
+    }
+    if (!current.appellation && data.appellation) {
+      setValue("appellation", data.appellation);
     }
     if (!current.notes && data.notes) {
       setValue("notes", data.notes);
@@ -352,11 +364,27 @@ export default function NewEntryPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium text-zinc-200">Country</label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="Optional"
+                {...register("country")}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium text-zinc-200">Region</label>
               <input
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 placeholder="Optional"
                 {...register("region")}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-200">Appellation</label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="Optional"
+                {...register("appellation")}
               />
             </div>
             <div>

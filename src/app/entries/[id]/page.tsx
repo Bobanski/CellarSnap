@@ -315,7 +315,7 @@ export default function EntryDetailPage() {
                   Rating
                 </p>
                 <p className="text-2xl font-semibold text-zinc-50">
-                  {entry.rating}/100
+                  {entry.rating ? `${entry.rating}/100` : "Unrated"}
                 </p>
               </div>
               <div>
@@ -340,6 +340,22 @@ export default function EntryDetailPage() {
                 </p>
                 <p className="text-sm text-zinc-200">
                   {entry.vintage || "Not set"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Country
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.country || "Not set"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Appellation
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.appellation || "Not set"}
                 </p>
               </div>
             </div>
