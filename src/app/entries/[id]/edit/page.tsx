@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { WineEntryWithUrls } from "@/types/wine";
@@ -18,12 +18,10 @@ type EditEntryForm = {
   consumed_at: string;
 };
 
-export default function EditEntryPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EditEntryPage() {
   const router = useRouter();
+  const params = useParams<{ id: string | string[] }>();
+  const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit, reset } = useForm<EditEntryForm>({
     defaultValues: {
@@ -42,10 +40,16 @@ export default function EditEntryPage({
     let isMounted = true;
 
     const loadEntry = async () => {
+      if (!entryId) {
+        setErrorMessage("Entry not found.");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setErrorMessage(null);
 
-      const response = await fetch(`/api/entries/${params.id}`, {
+      const response = await fetch(`/api/entries/${entryId}`, {
         cache: "no-store",
       });
       if (!response.ok) {
@@ -76,7 +80,7 @@ export default function EditEntryPage({
     return () => {
       isMounted = false;
     };
-  }, [params.id, reset]);
+  }, [entryId, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!entry) {

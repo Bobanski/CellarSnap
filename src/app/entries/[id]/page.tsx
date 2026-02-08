@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import type { WineEntryWithUrls } from "@/types/wine";
 
-export default function EntryDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function EntryDetailPage() {
   const router = useRouter();
+  const params = useParams<{ id: string | string[] }>();
+  const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,10 +17,16 @@ export default function EntryDetailPage({
     let isMounted = true;
 
     const loadEntry = async () => {
+      if (!entryId) {
+        setLoading(false);
+        setErrorMessage("Entry not found.");
+        return;
+      }
+
       setLoading(true);
       setErrorMessage(null);
 
-      const response = await fetch(`/api/entries/${params.id}`, {
+      const response = await fetch(`/api/entries/${entryId}`, {
         cache: "no-store",
       });
 
@@ -44,14 +48,19 @@ export default function EntryDetailPage({
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [entryId]);
 
   const onDelete = async () => {
+    if (!entryId) {
+      setErrorMessage("Entry not found.");
+      return;
+    }
+
     if (!confirm("Delete this entry?")) {
       return;
     }
 
-    const response = await fetch(`/api/entries/${params.id}`, {
+    const response = await fetch(`/api/entries/${entryId}`, {
       method: "DELETE",
     });
 
