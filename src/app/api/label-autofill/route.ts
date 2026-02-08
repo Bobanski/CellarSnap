@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const responseSchema = z.object({
   wine_name: z.string().nullable().optional(),
@@ -10,11 +11,12 @@ const responseSchema = z.object({
   region: z.string().nullable().optional(),
   appellation: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  confidence: z.number().min(0).max(1).optional(),
+  confidence: z.number().min(0).max(1).nullable().optional(),
   warnings: z.array(z.string()).optional(),
 });
 
 const TIMEOUT_MS = 15000;
+const MAX_LABEL_BYTES = 8 * 1024 * 1024;
 
 function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
@@ -32,6 +34,15 @@ function extractJson(text: string) {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -51,6 +62,12 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Label image is required" }, { status: 400 });
   }
+  if (!file.type.startsWith("image/")) {
+    return NextResponse.json({ error: "Label must be an image" }, { status: 400 });
+  }
+  if (file.size > MAX_LABEL_BYTES) {
+    return NextResponse.json({ error: "Label image is too large" }, { status: 413 });
+  }
 
   const arrayBuffer = await file.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
@@ -66,9 +83,11 @@ export async function POST(request: Request) {
     const response = await openai.responses.create(
       {
         model: "gpt-5-mini",
-        response_format: {
-          type: "json_schema",
-          json_schema: {
+        reasoning: { effort: "minimal" },
+        max_output_tokens: 300,
+        text: {
+          format: {
+            type: "json_schema",
             name: "label_autofill",
             strict: true,
             schema: {
@@ -117,7 +136,8 @@ export async function POST(request: Request) {
             ],
           },
         ],
-      } as unknown as Parameters<typeof openai.responses.create>[0],
+        safety_identifier: user.id,
+      },
       { signal: controller.signal }
     );
 
@@ -125,6 +145,13 @@ export async function POST(request: Request) {
       "output_text" in response && typeof response.output_text === "string"
         ? response.output_text
         : "";
+    if (!outputText.trim()) {
+      return NextResponse.json(
+        { error: "No data returned from label analysis" },
+        { status: 422 }
+      );
+    }
+
     const parsed = responseSchema.safeParse(extractJson(outputText));
     if (!parsed.success) {
       return NextResponse.json(

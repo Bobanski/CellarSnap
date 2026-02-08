@@ -259,6 +259,11 @@ export default function NewEntryPage() {
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          setAutofillStatus("error");
+          setAutofillMessage("Your session expired. Sign in again and retry.");
+          return;
+        }
         if (response.status === 413) {
           setAutofillStatus("error");
           setAutofillMessage("Image too large. Try a smaller photo.");
@@ -279,7 +284,18 @@ export default function NewEntryPage() {
       const data = await response.json();
       applyAutofill(data);
       setAutofillStatus("success");
-      setAutofillMessage("Autofill complete. Review the details.");
+      const confidenceLabel =
+        typeof data.confidence === "number"
+          ? `Confidence ${Math.round(data.confidence * 100)}%`
+          : null;
+      const warningCount = Array.isArray(data.warnings) ? data.warnings.length : 0;
+      const warningLabel =
+        warningCount > 0 ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain` : null;
+      setAutofillMessage(
+        [confidenceLabel, warningLabel]
+          .filter(Boolean)
+          .join(" • ") || "Autofill complete. Review the details."
+      );
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === "AbortError") {
