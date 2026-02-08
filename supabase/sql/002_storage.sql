@@ -4,12 +4,14 @@ on conflict (id) do nothing;
 
 alter table storage.objects enable row level security;
 
-create policy "Users can read own wine photos"
+drop policy if exists "Users can read own wine photos" on storage.objects;
+
+create policy "Authenticated users can read wine photos"
   on storage.objects
   for select
   using (
     bucket_id = 'wine-photos'
-    and auth.uid()::text = split_part(name, '/', 1)
+    and auth.role() = 'authenticated'
   );
 
 create policy "Users can upload own wine photos"
