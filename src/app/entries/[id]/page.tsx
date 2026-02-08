@@ -111,8 +111,8 @@ export default function EntryDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-100 px-6 py-8">
-        <div className="mx-auto w-full max-w-3xl rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700">
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
           Loading entry...
         </div>
       </div>
@@ -121,8 +121,8 @@ export default function EntryDetailPage() {
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-zinc-100 px-6 py-8">
-        <div className="mx-auto w-full max-w-3xl rounded-xl border border-red-200 bg-white p-6 text-sm text-red-600">
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
           {errorMessage ?? "Entry unavailable."}
         </div>
       </div>
@@ -130,110 +130,126 @@ export default function EntryDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 px-6 py-8">
-      <div className="mx-auto w-full max-w-4xl space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-900">
+    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="mx-auto w-full max-w-5xl space-y-8">
+        <header className="flex flex-wrap items-end justify-between gap-6">
+          <div className="space-y-2">
+            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+              Cellar entry
+            </span>
+            <h1 className="text-3xl font-semibold text-zinc-50">
               {entry.wine_name || "Untitled wine"}
             </h1>
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-zinc-300">
               {entry.producer || "Unknown producer"}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href={`/entries/${entry.id}/edit`}
             >
               Edit
             </Link>
             <button
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600"
+              className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-400"
               type="button"
               onClick={onDelete}
             >
               Delete
             </button>
-            <Link className="text-sm font-medium text-zinc-600" href="/entries">
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/entries"
+            >
               Back
             </Link>
           </div>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
               {entry.label_image_url ? (
                 <img
                   src={entry.label_image_url}
                   alt="Wine label"
-                  className="h-72 w-full object-cover"
+                  className="h-80 w-full object-cover"
                 />
               ) : (
-                <div className="flex h-72 items-center justify-center text-sm text-zinc-600">
+                <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
                   No label photo uploaded.
                 </div>
               )}
             </div>
             {entry.place_image_url ? (
-              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+              <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
                 <img
                   src={entry.place_image_url}
                   alt="Place"
-                  className="h-72 w-full object-cover"
+                  className="h-80 w-full object-cover"
                 />
               </div>
             ) : null}
           </div>
 
-            <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6">
+          <div className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Rating</p>
-                <p className="text-lg font-semibold text-zinc-900">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Rating
+                </p>
+                <p className="text-2xl font-semibold text-zinc-50">
                   {entry.rating}/100
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                   Consumed
                 </p>
-                <p className="text-lg font-semibold text-zinc-900">
+                <p className="text-lg font-semibold text-zinc-50">
                   {formatConsumedDate(entry.consumed_at)}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Region</p>
-                <p className="text-sm text-zinc-700">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Region
+                </p>
+                <p className="text-sm text-zinc-200">
                   {entry.region || "Not set"}
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-400">Vintage</p>
-                <p className="text-sm text-zinc-700">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Vintage
+                </p>
+                <p className="text-sm text-zinc-200">
                   {entry.vintage || "Not set"}
                 </p>
               </div>
             </div>
 
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-400">Location</p>
-              <p className="text-sm text-zinc-700">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                Location
+              </p>
+              <p className="text-sm text-zinc-200">
                 {entry.location_text || "Not set"}
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-400">Notes</p>
-              <p className="text-sm text-zinc-700">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                Notes
+              </p>
+              <p className="text-sm text-zinc-200">
                 {entry.notes || "Not set"}
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-400">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                 Tasted with
               </p>
-              <p className="text-sm text-zinc-700">
+              <p className="text-sm text-zinc-200">
                 {entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
                   ? entry.tasted_with_user_ids
                       .map((id) => userMap.get(id) ?? id)
@@ -245,7 +261,7 @@ export default function EntryDetailPage() {
         </div>
 
         {errorMessage ? (
-          <p className="text-sm text-red-600">{errorMessage}</p>
+          <p className="text-sm text-rose-300">{errorMessage}</p>
         ) : null}
       </div>
     </div>

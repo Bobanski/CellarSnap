@@ -176,8 +176,8 @@ export default function EditEntryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 px-6 py-8">
-        <div className="mx-auto w-full max-w-3xl rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
           Loading entry...
         </div>
       </div>
@@ -186,8 +186,8 @@ export default function EditEntryPage() {
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-zinc-50 px-6 py-8">
-        <div className="mx-auto w-full max-w-3xl rounded-xl border border-red-200 bg-white p-6 text-sm text-red-600">
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
           {errorMessage ?? "Entry unavailable."}
         </div>
       </div>
@@ -195,55 +195,63 @@ export default function EditEntryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 px-6 py-8">
-      <div className="mx-auto w-full max-w-3xl space-y-6">
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-900">Edit entry</h1>
-            <p className="text-sm text-zinc-600">Update tasting details or photos.</p>
+    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="mx-auto w-full max-w-3xl space-y-8">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-2">
+            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+              Edit entry
+            </span>
+            <h1 className="text-3xl font-semibold text-zinc-50">
+              Refine your tasting notes.
+            </h1>
+            <p className="text-sm text-zinc-300">Update tasting details or photos.</p>
           </div>
-          <Link className="text-sm font-medium text-zinc-700" href={`/entries/${entry.id}`}>
+          <Link
+            className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+            href={`/entries/${entry.id}`}
+          >
             Back
           </Link>
         </header>
 
-        <form className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm" onSubmit={onSubmit}>
+        <form className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur" onSubmit={onSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-zinc-700">Wine name</label>
+              <label className="text-sm font-medium text-zinc-200">Wine name</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("wine_name")}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Producer</label>
+              <label className="text-sm font-medium text-zinc-200">Producer</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("producer")}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Vintage</label>
+              <label className="text-sm font-medium text-zinc-200">Vintage</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("vintage")}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Region</label>
+              <label className="text-sm font-medium text-zinc-200">Region</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("region")}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Rating (1-100)</label>
+              <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
               <input
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("rating", {
                   required: true,
                   setValueAs: (value) => (value === "" ? undefined : Number(value)),
@@ -251,31 +259,31 @@ export default function EditEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Consumed date</label>
+              <label className="text-sm font-medium text-zinc-200">Consumed date</label>
               <input
                 type="date"
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("consumed_at", { required: true })}
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-700">
+            <label className="text-sm font-medium text-zinc-200">
               Tasted with
             </label>
             {users.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-500">No other users yet.</p>
+              <p className="mt-2 text-sm text-zinc-400">No other users yet.</p>
             ) : (
-              <div className="mt-2 grid gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+              <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
                 {users.map((user) => {
                   const label = user.display_name ?? user.email ?? user.id;
                   const isChecked = selectedUserIds.includes(user.id);
                   return (
-                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-700">
+                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-zinc-300"
+                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
                         checked={isChecked}
                         onChange={(event) => {
                           setSelectedUserIds((prev) =>
@@ -294,59 +302,59 @@ export default function EditEntryPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-700">Notes</label>
+            <label className="text-sm font-medium text-zinc-200">Notes</label>
             <textarea
-              className="mt-1 min-h-[120px] w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("notes")}
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-700">Location</label>
+            <label className="text-sm font-medium text-zinc-200">Location</label>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("location_text")}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-zinc-700">
+              <label className="text-sm font-medium text-zinc-200">
                 Replace label photo
               </label>
               <input
                 type="file"
                 accept="image/*"
-                className="mt-1 w-full text-sm"
+                className="mt-1 w-full text-sm text-zinc-300"
                 onChange={(event) => setLabelFile(event.target.files?.[0] ?? null)}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">
+              <label className="text-sm font-medium text-zinc-200">
                 Replace place photo
               </label>
               <input
                 type="file"
                 accept="image/*"
-                className="mt-1 w-full text-sm"
+                className="mt-1 w-full text-sm text-zinc-300"
                 onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
               />
             </div>
           </div>
 
           {errorMessage ? (
-            <p className="text-sm text-red-600">{errorMessage}</p>
+            <p className="text-sm text-rose-300">{errorMessage}</p>
           ) : null}
 
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting}
             >
               Save changes
             </button>
-            <Link className="text-sm font-medium text-zinc-700" href={`/entries/${entry.id}`}>
+            <Link className="text-sm font-medium text-zinc-300" href={`/entries/${entry.id}`}>
               Cancel
             </Link>
           </div>

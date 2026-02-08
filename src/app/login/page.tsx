@@ -56,52 +56,63 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">CellarSnap</h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Sign in or create an account to start logging wines.
-        </p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f0a09] px-6">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 left-0 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl" />
+      </div>
+      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-zinc-50">CellarSnap</h1>
+            <p className="mt-2 text-sm text-zinc-300">
+              A private cellar journal with a social pour.
+            </p>
+          </div>
+          <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200">
+            Beta
+          </span>
+        </div>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-700" htmlFor="email">
+            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
               Email
             </label>
             <input
               id="email"
               type="email"
               autoComplete="email"
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="you@example.com"
               {...register("email", { required: true })}
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-700" htmlFor="password">
+            <label className="text-sm font-medium text-zinc-200" htmlFor="password">
               Password
             </label>
             <input
               id="password"
               type="password"
               autoComplete="current-password"
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="********"
               {...register("password", { required: true })}
             />
           </div>
 
           {errorMessage ? (
-            <p className="text-sm text-red-600">{errorMessage}</p>
+            <p className="text-sm text-rose-300">{errorMessage}</p>
           ) : null}
           {infoMessage ? (
-            <p className="text-sm text-emerald-600">{infoMessage}</p>
+            <p className="text-sm text-emerald-300">{infoMessage}</p>
           ) : null}
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
             Sign In
@@ -109,7 +120,7 @@ export default function LoginPage() {
 
           <button
             type="button"
-            className="w-full rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
             onClick={onSignUp}
           >
