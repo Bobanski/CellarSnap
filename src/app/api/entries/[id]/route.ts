@@ -105,6 +105,7 @@ export async function GET(
     ...data,
     label_image_url: await createSignedUrl(data.label_image_path, supabase),
     place_image_url: await createSignedUrl(data.place_image_path, supabase),
+    pairing_image_url: await createSignedUrl(data.pairing_image_path, supabase),
     tasted_with_users: tastedWithUsers,
   };
 
@@ -184,7 +185,7 @@ export async function DELETE(
 
   const { data: existing, error: fetchError } = await supabase
     .from("wine_entries")
-    .select("label_image_path, place_image_path")
+    .select("label_image_path, place_image_path, pairing_image_path")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -203,9 +204,11 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const paths = [existing.label_image_path, existing.place_image_path].filter(
-    (p): p is string => Boolean(p && p !== "pending")
-  );
+  const paths = [
+    existing.label_image_path,
+    existing.place_image_path,
+    existing.pairing_image_path,
+  ].filter((p): p is string => Boolean(p && p !== "pending"));
 
   if (paths.length > 0) {
     await supabase.storage.from("wine-photos").remove(paths);

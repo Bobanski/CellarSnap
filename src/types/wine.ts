@@ -32,6 +32,7 @@ export type WineEntry = {
 export type WineEntryWithUrls = WineEntry & {
   label_image_url: string | null;
   place_image_url: string | null;
+  pairing_image_url: string | null;
   tasted_with_users?: UserSummary[];
 };
 

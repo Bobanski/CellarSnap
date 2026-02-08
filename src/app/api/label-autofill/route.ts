@@ -10,7 +10,6 @@ const responseSchema = z.object({
   country: z.string().nullable().optional(),
   region: z.string().nullable().optional(),
   appellation: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
   warnings: z.array(z.string()).optional(),
 });
@@ -100,7 +99,6 @@ export async function POST(request: Request) {
                 country: { type: ["string", "null"] },
                 region: { type: ["string", "null"] },
                 appellation: { type: ["string", "null"] },
-                notes: { type: ["string", "null"] },
                 confidence: { type: ["number", "null"] },
                 warnings: {
                   type: "array",
@@ -114,7 +112,6 @@ export async function POST(request: Request) {
                 "country",
                 "region",
                 "appellation",
-                "notes",
                 "confidence",
                 "warnings",
               ],
@@ -129,7 +126,7 @@ export async function POST(request: Request) {
                 type: "input_text",
                 text:
                   "You are extracting wine label info. Return ONLY JSON with keys: " +
-                  "wine_name, producer, vintage, country, region, appellation, notes, confidence, warnings. " +
+                  "wine_name, producer, vintage, country, region, appellation, confidence, warnings. " +
                   "Use null for unknown values. confidence is 0-1.",
               },
               { type: "input_image", image_url: dataUrl, detail: "high" },
@@ -168,7 +165,6 @@ export async function POST(request: Request) {
       country: normalize(data.country),
       region: normalize(data.region),
       appellation: normalize(data.appellation),
-      notes: normalize(data.notes),
       confidence: data.confidence ?? null,
       warnings: data.warnings ?? [],
     });

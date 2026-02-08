@@ -167,7 +167,6 @@ export default function NewEntryPage() {
     country?: string | null;
     region?: string | null;
     appellation?: string | null;
-    notes?: string | null;
   }) => {
     const current = getValues();
     if (!current.wine_name && data.wine_name) {
@@ -187,9 +186,6 @@ export default function NewEntryPage() {
     }
     if (!current.appellation && data.appellation) {
       setValue("appellation", data.appellation);
-    }
-    if (!current.notes && data.notes) {
-      setValue("notes", data.notes);
     }
   };
 
@@ -407,6 +403,15 @@ export default function NewEntryPage() {
             ) : null}
           </div>
 
+          <div>
+            <label className="text-sm font-medium text-zinc-200">Notes</label>
+            <textarea
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              placeholder="Optional tasting notes"
+              {...register("notes")}
+            />
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Wine name</label>
@@ -476,15 +481,6 @@ export default function NewEntryPage() {
                 {...register("consumed_at", { required: true })}
               />
             </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
-            <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="Optional tasting notes"
-              {...register("notes")}
-            />
           </div>
 
           <div>
