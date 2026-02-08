@@ -117,7 +117,7 @@ export async function POST(request: Request) {
             ],
           },
         ],
-      },
+      } as unknown as Parameters<typeof openai.responses.create>[0],
       { signal: controller.signal }
     );
 
