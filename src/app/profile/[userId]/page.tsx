@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
 export default function FriendProfilePage() {
-  const router = useRouter();
   const params = useParams<{ userId: string }>();
   const userId = params.userId;
 
@@ -34,18 +33,6 @@ export default function FriendProfilePage() {
 
       setLoading(true);
       setErrorMessage(null);
-
-      const currentProfileRes = await fetch("/api/profile", { cache: "no-store" });
-      if (!currentProfileRes.ok) {
-        router.push("/login");
-        return;
-      }
-
-      const currentProfileData = await currentProfileRes.json();
-      if (currentProfileData.profile?.id === userId) {
-        router.replace("/profile");
-        return;
-      }
 
       const [profileRes, entriesRes, taggedRes] = await Promise.all([
         fetch(`/api/users/${userId}`, { cache: "no-store" }),
@@ -78,7 +65,7 @@ export default function FriendProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [userId, router]);
+  }, [userId]);
 
   if (loading) {
     return (
