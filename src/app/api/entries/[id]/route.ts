@@ -27,6 +27,7 @@ const updateEntrySchema = z.object({
   tasted_with_user_ids: z.array(z.string().uuid()).optional(),
   label_image_path: nullableString,
   place_image_path: nullableString,
+  pairing_image_path: nullableString,
   entry_privacy: privacyLevelSchema.optional(),
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),

@@ -11,7 +11,7 @@ type NewEntryForm = {
   producer: string;
   vintage: string;
   region: string;
-  rating: number;
+  rating?: number;
   notes: string;
   location_text: string;
   consumed_at: string;
@@ -22,12 +22,12 @@ export default function NewEntryPage() {
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit, getValues, setValue } = useForm<NewEntryForm>({
     defaultValues: {
-      rating: 90,
       consumed_at: new Date().toISOString().slice(0, 10),
     },
   });
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
+  const [pairingFile, setPairingFile] = useState<File | null>(null);
   const [autofillStatus, setAutofillStatus] = useState<
     "idle" | "loading" | "success" | "error" | "timeout"
   >("idle");
@@ -73,7 +73,7 @@ export default function NewEntryPage() {
         producer: values.producer || null,
         vintage: values.vintage || null,
         region: values.region || null,
-        rating: Number(values.rating),
+        rating: values.rating ? Number(values.rating) : null,
         notes: values.notes || null,
         location_text: values.location_text || null,
         consumed_at: values.consumed_at,
@@ -92,6 +92,9 @@ export default function NewEntryPage() {
       ? `${entry.user_id}/${entry.id}/label.jpg`
       : null;
     const placePath = placeFile ? `${entry.user_id}/${entry.id}/place.jpg` : null;
+    const pairingPath = pairingFile
+      ? `${entry.user_id}/${entry.id}/pairing.jpg`
+      : null;
 
     if (labelFile && labelPath) {
       const { error: labelError } = await supabase.storage
@@ -117,13 +120,29 @@ export default function NewEntryPage() {
       }
     }
 
-    if (labelPath || placePath) {
+    if (pairingFile && pairingPath) {
+      const { error: pairingError } = await supabase.storage
+        .from("wine-photos")
+        .upload(pairingPath, pairingFile, {
+          upsert: true,
+          contentType: pairingFile.type,
+        });
+
+      if (pairingError) {
+        setIsSubmitting(false);
+        setErrorMessage("Pairing photo upload failed. Please try again.");
+        return;
+      }
+    }
+
+    if (labelPath || placePath || pairingPath) {
       const updateResponse = await fetch(`/api/entries/${entry.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           label_image_path: labelPath,
           place_image_path: placePath,
+          pairing_image_path: pairingPath,
         }),
       });
 
@@ -167,7 +186,7 @@ export default function NewEntryPage() {
     setAutofillMessage("Analyzing label...");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 18000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
       const formData = new FormData();
@@ -273,9 +292,10 @@ export default function NewEntryPage() {
               ) : null}
             </div>
             <input
+              id="label-upload"
               type="file"
               accept="image/*"
-              className="mt-3 w-full text-sm text-zinc-300"
+              className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0] ?? null;
                 setLabelFile(file);
@@ -284,17 +304,24 @@ export default function NewEntryPage() {
                 }
               }}
             />
+            <label
+              htmlFor="label-upload"
+              className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+            >
+              Upload image
+            </label>
             {autofillMessage ? (
               <p
-                className={`mt-2 text-xs ${
+                className={`mt-2 text-sm ${
                   autofillStatus === "success"
                     ? "text-emerald-300"
                     : autofillStatus === "loading"
-                      ? "text-zinc-300"
+                      ? "text-zinc-200"
                       : "text-rose-300"
                 }`}
               >
                 {autofillMessage}
+                {autofillStatus === "loading" ? " (Please wait up to 15 seconds.)" : ""}
               </p>
             ) : null}
           </div>
@@ -340,7 +367,6 @@ export default function NewEntryPage() {
                 pattern="[0-9]*"
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("rating", {
-                  required: true,
                   setValueAs: (value) => (value === "" ? undefined : Number(value)),
                 })}
               />
@@ -374,16 +400,47 @@ export default function NewEntryPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Place photo (optional)
               </label>
+              <p className="text-xs text-zinc-400">
+                Add a photo of the place you enjoyed this wine.
+              </p>
               <input
+                id="place-upload"
                 type="file"
                 accept="image/*"
-                className="mt-1 w-full text-sm text-zinc-300"
+                className="hidden"
                 onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
               />
+              <label
+                htmlFor="place-upload"
+                className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              >
+                Upload image
+              </label>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+              <label className="text-sm font-medium text-zinc-200">
+                Pairing photo (optional)
+              </label>
+              <p className="text-xs text-zinc-400">
+                Capture the dish or pairing you enjoyed.
+              </p>
+              <input
+                id="pairing-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => setPairingFile(event.target.files?.[0] ?? null)}
+              />
+              <label
+                htmlFor="pairing-upload"
+                className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              >
+                Upload image
+              </label>
             </div>
           </div>
 

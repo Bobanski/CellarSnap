@@ -13,13 +13,14 @@ export type WineEntry = {
   producer: string | null;
   vintage: string | null;
   region: string | null;
-  rating: number;
+  rating: number | null;
   notes: string | null;
   location_text: string | null;
   consumed_at: string;
   tasted_with_user_ids: string[] | null;
   label_image_path: string | null;
   place_image_path: string | null;
+  pairing_image_path: string | null;
   entry_privacy: PrivacyLevel;
   label_photo_privacy: PrivacyLevel | null;
   place_photo_privacy: PrivacyLevel | null;
@@ -37,7 +38,7 @@ export type WineEntryCreatePayload = {
   producer?: string | null;
   vintage?: string | null;
   region?: string | null;
-  rating: number;
+  rating?: number | null;
   notes?: string | null;
   location_text?: string | null;
   consumed_at?: string;
@@ -59,6 +60,7 @@ export type WineEntryUpdatePayload = Partial<{
   tasted_with_user_ids: string[];
   label_image_path: string | null;
   place_image_path: string | null;
+  pairing_image_path: string | null;
   entry_privacy: PrivacyLevel;
   label_photo_privacy: PrivacyLevel | null;
   place_photo_privacy: PrivacyLevel | null;

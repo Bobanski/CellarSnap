@@ -12,7 +12,7 @@ type EditEntryForm = {
   producer: string;
   vintage: string;
   region: string;
-  rating: number;
+  rating?: number;
   notes: string;
   location_text: string;
   consumed_at: string;
@@ -25,13 +25,13 @@ export default function EditEntryPage() {
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit, reset } = useForm<EditEntryForm>({
     defaultValues: {
-      rating: 90,
       consumed_at: new Date().toISOString().slice(0, 10),
     },
   });
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
+  const [pairingFile, setPairingFile] = useState<File | null>(null);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null }[]
   >([]);
@@ -73,7 +73,7 @@ export default function EditEntryPage() {
           producer: data.entry.producer ?? "",
           vintage: data.entry.vintage ?? "",
           region: data.entry.region ?? "",
-          rating: data.entry.rating,
+          rating: data.entry.rating ?? undefined,
           notes: data.entry.notes ?? "",
           location_text: data.entry.location_text ?? "",
           consumed_at: data.entry.consumed_at,
@@ -144,7 +144,7 @@ export default function EditEntryPage() {
       producer: values.producer || null,
       vintage: values.vintage || null,
       region: values.region || null,
-      rating: Number(values.rating),
+      rating: values.rating ? Number(values.rating) : null,
       notes: values.notes || null,
       location_text: values.location_text || null,
       consumed_at: values.consumed_at,
@@ -179,6 +179,24 @@ export default function EditEntryPage() {
       }
 
       updatePayload.place_image_path = placePath;
+    }
+
+    if (pairingFile) {
+      const pairingPath = `${entry.user_id}/${entry.id}/pairing.jpg`;
+      const { error: pairingError } = await supabase.storage
+        .from("wine-photos")
+        .upload(pairingPath, pairingFile, {
+          upsert: true,
+          contentType: pairingFile.type,
+        });
+
+      if (pairingError) {
+        setIsSubmitting(false);
+        setErrorMessage("Pairing upload failed.");
+        return;
+      }
+
+      updatePayload.pairing_image_path = pairingPath;
     }
 
     const response = await fetch(`/api/entries/${entry.id}`, {
@@ -313,7 +331,6 @@ export default function EditEntryPage() {
                 pattern="[0-9]*"
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("rating", {
-                  required: true,
                   setValueAs: (value) => (value === "" ? undefined : Number(value)),
                 })}
               />
@@ -377,27 +394,38 @@ export default function EditEntryPage() {
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace label photo
               </label>
               <input
                 type="file"
                 accept="image/*"
-                className="mt-1 w-full text-sm text-zinc-300"
+                className="mt-3 w-full text-sm text-zinc-300"
                 onChange={(event) => setLabelFile(event.target.files?.[0] ?? null)}
               />
             </div>
-            <div>
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace place photo
               </label>
               <input
                 type="file"
                 accept="image/*"
-                className="mt-1 w-full text-sm text-zinc-300"
+                className="mt-3 w-full text-sm text-zinc-300"
                 onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
+              />
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+              <label className="text-sm font-medium text-zinc-200">
+                Replace pairing photo
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-3 w-full text-sm text-zinc-300"
+                onChange={(event) => setPairingFile(event.target.files?.[0] ?? null)}
               />
             </div>
           </div>

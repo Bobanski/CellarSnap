@@ -13,6 +13,7 @@ Supabase SQL steps:
 - Run `supabase/sql/001_init.sql` to create `public.wine_entries` and RLS policies.
 - Run `supabase/sql/002_storage.sql` to create the `wine-photos` bucket and storage policies.
 - Run `supabase/sql/003_social.sql` to add profiles and social fields.
+- Run `supabase/sql/004_pairing_and_rating.sql` to add pairing photo + optional rating.
 - Run `supabase/sql/004_follow_privacy.sql` to add follows + privacy levels (`public` / `friends` / `private`) for entries and photos.
 
 Local development:
