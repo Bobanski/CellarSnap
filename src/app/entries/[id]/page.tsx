@@ -17,19 +17,29 @@ export default function EntryDetailPage() {
     { id: string; display_name: string | null; email: string | null }[]
   >([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{
+    id: string;
+    display_name: string | null;
+    email: string | null;
+  } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const userMap = useMemo(
-    () =>
-      new Map(
-        users.map((user) => [
-          user.id,
-          user.display_name ?? user.email ?? "Unknown",
-        ])
-      ),
-    [users]
-  );
+  const userMap = useMemo(() => {
+    const map = new Map(
+      users.map((user) => [
+        user.id,
+        user.display_name ?? user.email ?? "Unknown",
+      ])
+    );
+    if (currentUserProfile) {
+      map.set(
+        currentUserProfile.id,
+        currentUserProfile.display_name ?? currentUserProfile.email ?? "Unknown"
+      );
+    }
+    return map;
+  }, [users, currentUserProfile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -72,14 +82,20 @@ export default function EntryDetailPage() {
     let isMounted = true;
 
     const loadUsers = async () => {
-      const response = await fetch("/api/users", { cache: "no-store" });
-      if (!response.ok) {
-        return;
-      }
-
-      const data = await response.json();
+      const [usersResponse, profileResponse] = await Promise.all([
+        fetch("/api/users", { cache: "no-store" }),
+        fetch("/api/profile", { cache: "no-store" }),
+      ]);
       if (isMounted) {
-        setUsers(data.users ?? []);
+        if (usersResponse.ok) {
+          const data = await usersResponse.json();
+          setUsers(data.users ?? []);
+        }
+        if (profileResponse.ok) {
+          const data = await profileResponse.json();
+          setCurrentUserProfile(data.profile ?? null);
+          setCurrentUserId(data.profile?.id ?? null);
+        }
       }
     };
 
@@ -98,7 +114,7 @@ export default function EntryDetailPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (isMounted) {
-        setCurrentUserId(user?.id ?? null);
+        setCurrentUserId((prev) => prev ?? user?.id ?? null);
       }
     };
 
