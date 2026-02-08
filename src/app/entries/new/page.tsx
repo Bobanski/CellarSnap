@@ -20,7 +20,7 @@ type NewEntryForm = {
 export default function NewEntryPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { register, handleSubmit } = useForm<NewEntryForm>({
+  const { register, handleSubmit, getValues, setValue } = useForm<NewEntryForm>({
     defaultValues: {
       rating: 90,
       consumed_at: new Date().toISOString().slice(0, 10),
@@ -28,8 +28,12 @@ export default function NewEntryPage() {
   });
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
+  const [autofillStatus, setAutofillStatus] = useState<
+    "idle" | "loading" | "success" | "error" | "timeout"
+  >("idle");
+  const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
   const [users, setUsers] = useState<
-    { id: string; display_name: string | null }[]
+    { id: string; display_name: string | null; email: string | null }[]
   >([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -133,6 +137,77 @@ export default function NewEntryPage() {
     router.push(`/entries/${entry.id}`);
   });
 
+  const applyAutofill = (data: {
+    wine_name?: string | null;
+    producer?: string | null;
+    vintage?: string | null;
+    region?: string | null;
+    notes?: string | null;
+  }) => {
+    const current = getValues();
+    if (!current.wine_name && data.wine_name) {
+      setValue("wine_name", data.wine_name);
+    }
+    if (!current.producer && data.producer) {
+      setValue("producer", data.producer);
+    }
+    if (!current.vintage && data.vintage) {
+      setValue("vintage", data.vintage);
+    }
+    if (!current.region && data.region) {
+      setValue("region", data.region);
+    }
+    if (!current.notes && data.notes) {
+      setValue("notes", data.notes);
+    }
+  };
+
+  const runAutofill = async (file: File) => {
+    setAutofillStatus("loading");
+    setAutofillMessage("Analyzing label...");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+    try {
+      const formData = new FormData();
+      formData.append("label", file);
+
+      const response = await fetch("/api/label-autofill", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 504) {
+          setAutofillStatus("timeout");
+          setAutofillMessage("Autofill timed out. Try again.");
+          return;
+        }
+        setAutofillStatus("error");
+        setAutofillMessage("Could not read the label. Try again.");
+        return;
+      }
+
+      const data = await response.json();
+      applyAutofill(data);
+      setAutofillStatus("success");
+      setAutofillMessage("Autofill complete. Review the details.");
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === "AbortError") {
+        setAutofillStatus("timeout");
+        setAutofillMessage("Autofill timed out. Try again.");
+        return;
+      }
+      setAutofillStatus("error");
+      setAutofillMessage("Could not read the label. Try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-3xl space-y-8">
@@ -177,6 +252,53 @@ export default function NewEntryPage() {
         </header>
 
         <form className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur" onSubmit={onSubmit}>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <label className="text-sm font-medium text-zinc-200">
+                  Label photo (recommended)
+                </label>
+                <p className="text-xs text-zinc-400">
+                  We’ll try to autofill details from the label. You can edit anything after.
+                </p>
+              </div>
+              {labelFile ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                  onClick={() => runAutofill(labelFile)}
+                >
+                  Try again
+                </button>
+              ) : null}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="mt-3 w-full text-sm text-zinc-300"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setLabelFile(file);
+                if (file) {
+                  runAutofill(file);
+                }
+              }}
+            />
+            {autofillMessage ? (
+              <p
+                className={`mt-2 text-xs ${
+                  autofillStatus === "success"
+                    ? "text-emerald-300"
+                    : autofillStatus === "loading"
+                      ? "text-zinc-300"
+                      : "text-rose-300"
+                }`}
+              >
+                {autofillMessage}
+              </p>
+            ) : null}
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Wine name</label>
@@ -252,17 +374,6 @@ export default function NewEntryPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200">
-                Label photo (optional)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="mt-1 w-full text-sm text-zinc-300"
-                onChange={(event) => setLabelFile(event.target.files?.[0] ?? null)}
-              />
-            </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">
                 Place photo (optional)

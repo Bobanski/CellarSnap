@@ -6,6 +6,7 @@ Required environment variables (in `.env.local`):
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `OPENAI_API_KEY` (for label autofill)
 
 Supabase SQL steps:
 
