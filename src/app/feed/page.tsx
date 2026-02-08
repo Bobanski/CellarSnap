@@ -17,6 +17,11 @@ type UserOption = {
 export default function FeedPage() {
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{
+    id: string;
+    display_name: string | null;
+    email: string | null;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserOption[]>([]);
   const [searching, setSearching] = useState(false);
@@ -45,16 +50,18 @@ export default function FeedPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const userMap = useMemo(
-    () =>
-      new Map(
-        users.map((user) => [
-          user.id,
-          user.display_name ?? user.email ?? user.id,
-        ])
-      ),
-    [users]
-  );
+  const userMap = useMemo(() => {
+    const map = new Map(
+      users.map((u) => [u.id, u.display_name ?? u.email ?? u.id])
+    );
+    if (currentUserProfile) {
+      map.set(
+        currentUserProfile.id,
+        currentUserProfile.display_name ?? currentUserProfile.email ?? currentUserProfile.id
+      );
+    }
+    return map;
+  }, [users, currentUserProfile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,9 +70,10 @@ export default function FeedPage() {
       setLoading(true);
       setErrorMessage(null);
 
-      const [feedResponse, usersResponse] = await Promise.all([
+      const [feedResponse, usersResponse, profileResponse] = await Promise.all([
         fetch("/api/feed", { cache: "no-store" }),
         fetch("/api/users", { cache: "no-store" }),
+        fetch("/api/profile", { cache: "no-store" }),
       ]);
 
       if (!feedResponse.ok) {
@@ -76,10 +84,12 @@ export default function FeedPage() {
 
       const feedData = await feedResponse.json();
       const usersData = usersResponse.ok ? await usersResponse.json() : { users: [] };
+      const profileData = profileResponse.ok ? await profileResponse.json() : { profile: null };
 
       if (isMounted) {
         setEntries(feedData.entries ?? []);
         setUsers(usersData.users ?? []);
+        setCurrentUserProfile(profileData.profile ?? null);
         setLoading(false);
       }
     };
