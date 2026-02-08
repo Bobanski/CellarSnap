@@ -20,5 +20,6 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ users: data ?? [] });
+  const users = (data ?? []).filter((p) => p.id !== user.id);
+  return NextResponse.json({ users });
 }
