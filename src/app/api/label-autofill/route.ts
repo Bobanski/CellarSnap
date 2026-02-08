@@ -121,7 +121,10 @@ export async function POST(request: Request) {
       { signal: controller.signal }
     );
 
-    const outputText = response.output_text ?? "";
+    const outputText =
+      "output_text" in response && typeof response.output_text === "string"
+        ? response.output_text
+        : "";
     const parsed = responseSchema.safeParse(extractJson(outputText));
     if (!parsed.success) {
       return NextResponse.json(
