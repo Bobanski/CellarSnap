@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function createSignedUrl(
   path: string | null,
-  supabase: ReturnType<typeof createSupabaseServerClient>
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 ) {
   if (!path) {
     return null;
