@@ -167,7 +167,7 @@ export default function NewEntryPage() {
     setAutofillMessage("Analyzing label...");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000);
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
 
     try {
       const formData = new FormData();
@@ -262,7 +262,7 @@ export default function NewEntryPage() {
                   We’ll try to autofill details from the label. You can edit anything after.
                 </p>
               </div>
-              {labelFile ? (
+              {labelFile && autofillStatus !== "loading" ? (
                 <button
                   type="button"
                   className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"

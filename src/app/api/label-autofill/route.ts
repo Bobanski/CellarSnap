@@ -12,7 +12,7 @@ const responseSchema = z.object({
   warnings: z.array(z.string()).optional(),
 });
 
-const TIMEOUT_MS = 9000;
+const TIMEOUT_MS = 15000;
 
 function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
