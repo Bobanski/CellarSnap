@@ -18,9 +18,12 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isEntriesRoute = pathname.startsWith("/entries");
+  const isProfileRoute = pathname.startsWith("/profile");
+  const isFeedRoute = pathname.startsWith("/feed");
   const isLoginRoute = pathname.startsWith("/login");
 
-  if (isEntriesRoute && !user) {
+  const isProtected = isEntriesRoute || isProfileRoute || isFeedRoute;
+  if (isProtected && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);
@@ -36,5 +39,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/entries/:path*", "/login", "/feed"],
+  matcher: ["/entries/:path*", "/profile/:path*", "/login", "/feed"],
 };

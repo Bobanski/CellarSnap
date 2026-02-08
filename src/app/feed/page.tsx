@@ -76,6 +76,9 @@ export default function FeedPage() {
             <Link className="text-sm font-medium text-zinc-700" href="/entries">
               My entries
             </Link>
+            <Link className="text-sm font-medium text-zinc-700" href="/profile">
+              My profile
+            </Link>
             <Link
               className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
               href="/entries/new"
