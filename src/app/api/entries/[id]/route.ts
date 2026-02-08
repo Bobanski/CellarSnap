@@ -59,7 +59,6 @@ export async function GET(
     .from("wine_entries")
     .select("*")
     .eq("id", id)
-    .eq("user_id", user.id)
     .single();
 
   if (error || !data) {
