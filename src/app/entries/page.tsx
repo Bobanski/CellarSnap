@@ -16,24 +16,28 @@ export default function EntriesPage() {
   const [sortBy, setSortBy] = useState<"consumed_at" | "rating" | "vintage">(
     "consumed_at"
   );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const sortedEntries = useMemo(() => {
     const copy = [...entries];
+    const mult = sortOrder === "asc" ? 1 : -1;
 
     if (sortBy === "rating") {
-      return copy.sort((a, b) => b.rating - a.rating);
+      return copy.sort((a, b) => mult * (a.rating - b.rating));
     }
 
     if (sortBy === "vintage") {
       return copy.sort((a, b) => {
         const aValue = a.vintage ? Number(a.vintage) : -Infinity;
         const bValue = b.vintage ? Number(b.vintage) : -Infinity;
-        return bValue - aValue;
+        return mult * (aValue - bValue);
       });
     }
 
-    return copy.sort((a, b) => b.consumed_at.localeCompare(a.consumed_at));
-  }, [entries, sortBy]);
+    return copy.sort(
+      (a, b) => mult * a.consumed_at.localeCompare(b.consumed_at)
+    );
+  }, [entries, sortBy, sortOrder]);
 
   useEffect(() => {
     let isMounted = true;
@@ -80,7 +84,7 @@ export default function EntriesPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm font-medium text-zinc-700">
-              <span className="sr-only">Sort entries</span>
+              <span className="sr-only">Sort by</span>
               <select
                 className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
                 value={sortBy}
@@ -93,6 +97,33 @@ export default function EntriesPage() {
                 <option value="consumed_at">Sort: Date consumed</option>
                 <option value="rating">Sort: Rating</option>
                 <option value="vintage">Sort: Vintage</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium text-zinc-700">
+              <span className="sr-only">Sort order</span>
+              <select
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+                value={sortOrder}
+                onChange={(event) =>
+                  setSortOrder(event.target.value as "asc" | "desc")
+                }
+              >
+                {sortBy === "consumed_at" ? (
+                  <>
+                    <option value="desc">Newest first</option>
+                    <option value="asc">Oldest first</option>
+                  </>
+                ) : sortBy === "rating" ? (
+                  <>
+                    <option value="desc">High to low</option>
+                    <option value="asc">Low to high</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="desc">Newest first</option>
+                    <option value="asc">Oldest first</option>
+                  </>
+                )}
               </select>
             </label>
             <Link
@@ -149,6 +180,12 @@ export default function EntriesPage() {
                     </h2>
                     <p className="text-sm text-zinc-500">
                       {entry.producer || "Unknown producer"}
+                      {entry.vintage ? (
+                        <span className="text-zinc-400">
+                          {" · "}
+                          {entry.vintage}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-500">
