@@ -75,7 +75,7 @@ export async function POST(request: Request) {
                   "wine_name, producer, vintage, region, notes, confidence, warnings. " +
                   "Use null for unknown values. confidence is 0-1.",
               },
-              { type: "input_image", image_url: dataUrl },
+              { type: "input_image", image_url: dataUrl, detail: "high" },
             ],
           },
         ],
