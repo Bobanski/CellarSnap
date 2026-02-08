@@ -17,7 +17,7 @@ const createEntrySchema = z.object({
   producer: nullableString,
   vintage: nullableString,
   region: nullableString,
-  rating: z.number().int().min(1).max(10),
+  rating: z.number().int().min(1).max(100),
   notes: nullableString,
   location_text: nullableString,
   consumed_at: z
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       notes: payload.data.notes ?? null,
       location_text: payload.data.location_text ?? null,
       consumed_at: consumedAt,
-      label_image_path: "pending",
+      label_image_path: null,
       place_image_path: null,
     })
     .select("*")

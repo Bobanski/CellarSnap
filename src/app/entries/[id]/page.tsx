@@ -65,8 +65,8 @@ export default function EntryDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 px-6 py-8">
-        <div className="mx-auto w-full max-w-3xl rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">
+      <div className="min-h-screen bg-zinc-100 px-6 py-8">
+        <div className="mx-auto w-full max-w-3xl rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700">
           Loading entry...
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function EntryDetailPage({
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-zinc-50 px-6 py-8">
+      <div className="min-h-screen bg-zinc-100 px-6 py-8">
         <div className="mx-auto w-full max-w-3xl rounded-xl border border-red-200 bg-white p-6 text-sm text-red-600">
           {errorMessage ?? "Entry unavailable."}
         </div>
@@ -84,14 +84,14 @@ export default function EntryDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-8">
+    <div className="min-h-screen bg-zinc-100 px-6 py-8">
       <div className="mx-auto w-full max-w-4xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-900">
               {entry.wine_name || "Untitled wine"}
             </h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-600">
               {entry.producer || "Unknown producer"}
             </p>
           </div>
@@ -124,7 +124,11 @@ export default function EntryDetailPage({
                   alt="Wine label"
                   className="h-72 w-full object-cover"
                 />
-              ) : null}
+              ) : (
+                <div className="flex h-72 items-center justify-center text-sm text-zinc-600">
+                  No label photo uploaded.
+                </div>
+              )}
             </div>
             {entry.place_image_url ? (
               <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
@@ -137,12 +141,12 @@ export default function EntryDetailPage({
             ) : null}
           </div>
 
-          <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6">
+            <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-xs uppercase tracking-wide text-zinc-400">Rating</p>
                 <p className="text-lg font-semibold text-zinc-900">
-                  {entry.rating}/10
+                  {entry.rating}/100
                 </p>
               </div>
               <div>

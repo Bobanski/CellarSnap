@@ -27,7 +27,7 @@ export default function EditEntryPage({
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit, reset } = useForm<EditEntryForm>({
     defaultValues: {
-      rating: 7,
+      rating: 90,
       consumed_at: new Date().toISOString().slice(0, 10),
     },
   });
@@ -163,63 +163,66 @@ export default function EditEntryPage({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-8">
+    <div className="min-h-screen bg-zinc-100 px-6 py-8">
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-900">Edit entry</h1>
-            <p className="text-sm text-zinc-500">Update tasting details or photos.</p>
+            <p className="text-sm text-zinc-600">Update tasting details or photos.</p>
           </div>
-          <Link className="text-sm font-medium text-zinc-600" href={`/entries/${entry.id}`}>
+          <Link className="text-sm font-medium text-zinc-700" href={`/entries/${entry.id}`}>
             Back
           </Link>
         </header>
 
-        <form className="space-y-5" onSubmit={onSubmit}>
+        <form className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm" onSubmit={onSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-700">Wine name</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
                 {...register("wine_name")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-700">Producer</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
                 {...register("producer")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-700">Vintage</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
                 {...register("vintage")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-700">Region</label>
               <input
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
                 {...register("region")}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-700">Rating (1-10)</label>
+              <label className="text-sm font-medium text-zinc-700">Rating (1-100)</label>
               <input
-                type="number"
-                min={1}
-                max={10}
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
-                {...register("rating", { valueAsNumber: true, required: true })}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                {...register("rating", {
+                  required: true,
+                  setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                })}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-700">Consumed date</label>
               <input
                 type="date"
-                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 {...register("consumed_at", { required: true })}
               />
             </div>
@@ -228,7 +231,7 @@ export default function EditEntryPage({
           <div>
             <label className="text-sm font-medium text-zinc-700">Notes</label>
             <textarea
-              className="mt-1 min-h-[120px] w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+              className="mt-1 min-h-[120px] w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
               {...register("notes")}
             />
           </div>
@@ -236,7 +239,7 @@ export default function EditEntryPage({
           <div>
             <label className="text-sm font-medium text-zinc-700">Location</label>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
               {...register("location_text")}
             />
           </div>
@@ -278,7 +281,7 @@ export default function EditEntryPage({
             >
               Save changes
             </button>
-            <Link className="text-sm font-medium text-zinc-600" href={`/entries/${entry.id}`}>
+            <Link className="text-sm font-medium text-zinc-700" href={`/entries/${entry.id}`}>
               Cancel
             </Link>
           </div>

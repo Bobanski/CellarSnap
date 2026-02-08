@@ -15,7 +15,7 @@ const updateEntrySchema = z.object({
   producer: nullableString,
   vintage: nullableString,
   region: nullableString,
-  rating: z.number().int().min(1).max(10).optional(),
+  rating: z.number().int().min(1).max(100).optional(),
   notes: nullableString,
   location_text: nullableString,
   consumed_at: z

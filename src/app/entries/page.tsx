@@ -47,12 +47,12 @@ export default function EntriesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-8">
+    <div className="min-h-screen bg-zinc-100 px-6 py-8">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-900">Your cellar</h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-600">
               Track wines, ratings, and memorable sips.
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function EntriesPage() {
         </header>
 
         {loading ? (
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700">
             Loading entries...
           </div>
         ) : errorMessage ? (
@@ -82,7 +82,7 @@ export default function EntriesPage() {
             {errorMessage}
           </div>
         ) : entries.length === 0 ? (
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500">
+          <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700">
             No entries yet. Add your first bottle!
           </div>
         ) : (
@@ -93,14 +93,16 @@ export default function EntriesPage() {
                 href={`/entries/${entry.id}`}
                 className="flex gap-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300"
               >
-                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 text-xs text-zinc-600">
                   {entry.label_image_url ? (
                     <img
                       src={entry.label_image_url}
                       alt={entry.wine_name ?? entry.producer ?? "Wine label"}
                       className="h-full w-full object-cover"
                     />
-                  ) : null}
+                  ) : (
+                    "No photo"
+                  )}
                 </div>
                 <div className="flex flex-1 flex-col justify-between">
                   <div>
@@ -112,7 +114,7 @@ export default function EntriesPage() {
                     </p>
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-500">
-                    <span>Rating: {entry.rating}/10</span>
+                    <span>Rating: {entry.rating}/100</span>
                     <span>{entry.consumed_at}</span>
                   </div>
                 </div>

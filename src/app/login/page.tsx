@@ -56,10 +56,10 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6">
       <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-zinc-900">CellarSnap</h1>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-zinc-600">
           Sign in or create an account to start logging wines.
         </p>
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               autoComplete="email"
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
               placeholder="you@example.com"
               {...register("email", { required: true })}
             />
@@ -86,7 +86,7 @@ export default function LoginPage() {
               id="password"
               type="password"
               autoComplete="current-password"
-              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none"
               placeholder="********"
               {...register("password", { required: true })}
             />
