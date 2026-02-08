@@ -23,11 +23,23 @@ export default function ResetPasswordPage() {
     let isMounted = true;
 
     const initSession = async () => {
-      const { error } = await supabase.auth.getSessionFromUrl({
-        storeSession: true,
-      });
+      const url = window.location.href;
+      const hasCode = url.includes("code=");
+
+      if (hasCode) {
+        const { error } = await supabase.auth.exchangeCodeForSession(url);
+        if (isMounted) {
+          if (error) {
+            setErrorMessage("This reset link is invalid or expired.");
+          }
+          setReady(true);
+        }
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
       if (isMounted) {
-        if (error) {
+        if (!data.session) {
           setErrorMessage("This reset link is invalid or expired.");
         }
         setReady(true);
