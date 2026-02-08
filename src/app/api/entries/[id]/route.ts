@@ -70,10 +70,32 @@ export async function GET(
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
+  const tastedWithIds = Array.isArray(data.tasted_with_user_ids)
+    ? data.tasted_with_user_ids
+    : [];
+  let tastedWithUsers: { id: string; display_name: string | null }[] = [];
+
+  if (tastedWithIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", tastedWithIds);
+
+    const nameMap = new Map(
+      (profiles ?? []).map((profile) => [profile.id, profile.display_name ?? null])
+    );
+
+    tastedWithUsers = tastedWithIds.map((userId: string) => ({
+      id: userId,
+      display_name: nameMap.get(userId) ?? null,
+    }));
+  }
+
   const entry = {
     ...data,
     label_image_url: await createSignedUrl(data.label_image_path, supabase),
     place_image_url: await createSignedUrl(data.place_image_path, supabase),
+    tasted_with_users: tastedWithUsers,
   };
 
   return NextResponse.json({ entry });

@@ -7,12 +7,16 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { WineEntryWithUrls } from "@/types/wine";
 
+type EntryDetail = WineEntryWithUrls & {
+  tasted_with_users?: { id: string; display_name: string | null }[];
+};
+
 export default function EntryDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
-  const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
+  const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null }[]
   >([]);
@@ -237,16 +241,22 @@ export default function EntryDetailPage() {
                     alt="Wine label"
                     className="h-80 w-full object-cover"
                   />
-                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                    <span>Label photo</span>
-                    <a
-                      href={entry.label_image_url}
-                      download
-                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                    >
-                      Download
-                    </a>
-                  </div>
+                  {currentUserId === entry.user_id ? (
+                    <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                      <span>Label photo</span>
+                      <a
+                        href={entry.label_image_url}
+                        download
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                      Label photo
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
@@ -262,16 +272,22 @@ export default function EntryDetailPage() {
                     alt="Place"
                     className="h-80 w-full object-cover"
                   />
-                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                    <span>Place photo</span>
-                    <a
-                      href={entry.place_image_url}
-                      download
-                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                    >
-                      Download
-                    </a>
-                  </div>
+                  {currentUserId === entry.user_id ? (
+                    <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                      <span>Place photo</span>
+                      <a
+                        href={entry.place_image_url}
+                        download
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                      Place photo
+                    </div>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -336,7 +352,12 @@ export default function EntryDetailPage() {
               <p className="text-sm text-zinc-200">
                 {entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
                   ? entry.tasted_with_user_ids
-                      .map((id) => userMap.get(id) ?? "Unknown")
+                      .map((id) => {
+                        const fromEntry = entry.tasted_with_users?.find(
+                          (user) => user.id === id
+                        )?.display_name;
+                        return fromEntry ?? userMap.get(id) ?? "Unknown";
+                      })
                       .join(", ")
                   : "No one listed"}
               </p>
