@@ -231,11 +231,23 @@ export default function EntryDetailPage() {
           <div className="space-y-5">
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
               {entry.label_image_url ? (
-                <img
-                  src={entry.label_image_url}
-                  alt="Wine label"
-                  className="h-80 w-full object-cover"
-                />
+                <div>
+                  <img
+                    src={entry.label_image_url}
+                    alt="Wine label"
+                    className="h-80 w-full object-cover"
+                  />
+                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                    <span>Label photo</span>
+                    <a
+                      href={entry.label_image_url}
+                      download
+                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
               ) : (
                 <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
                   No label photo uploaded.
@@ -244,11 +256,23 @@ export default function EntryDetailPage() {
             </div>
             {entry.place_image_url ? (
               <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
-                <img
-                  src={entry.place_image_url}
-                  alt="Place"
-                  className="h-80 w-full object-cover"
-                />
+                <div>
+                  <img
+                    src={entry.place_image_url}
+                    alt="Place"
+                    className="h-80 w-full object-cover"
+                  />
+                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                    <span>Place photo</span>
+                    <a
+                      href={entry.place_image_url}
+                      download
+                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
