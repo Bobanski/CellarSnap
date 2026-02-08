@@ -73,21 +73,28 @@ export async function GET(
   const tastedWithIds = Array.isArray(data.tasted_with_user_ids)
     ? data.tasted_with_user_ids
     : [];
-  let tastedWithUsers: { id: string; display_name: string | null }[] = [];
+  let tastedWithUsers: { id: string; display_name: string | null; email: string | null }[] = [];
 
   if (tastedWithIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, display_name")
+      .select("id, display_name, email")
       .in("id", tastedWithIds);
 
     const nameMap = new Map(
-      (profiles ?? []).map((profile) => [profile.id, profile.display_name ?? null])
+      (profiles ?? []).map((profile) => [
+        profile.id,
+        {
+          display_name: profile.display_name ?? null,
+          email: profile.email ?? null,
+        },
+      ])
     );
 
     tastedWithUsers = tastedWithIds.map((userId: string) => ({
       id: userId,
-      display_name: nameMap.get(userId) ?? null,
+      display_name: nameMap.get(userId)?.display_name ?? null,
+      email: nameMap.get(userId)?.email ?? null,
     }));
   }
 

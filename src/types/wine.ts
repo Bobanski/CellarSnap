@@ -1,5 +1,11 @@
 export type PrivacyLevel = "public" | "friends" | "private";
 
+export type UserSummary = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+};
+
 export type WineEntry = {
   id: string;
   user_id: string;
@@ -23,6 +29,7 @@ export type WineEntry = {
 export type WineEntryWithUrls = WineEntry & {
   label_image_url: string | null;
   place_image_url: string | null;
+  tasted_with_users?: UserSummary[];
 };
 
 export type WineEntryCreatePayload = {

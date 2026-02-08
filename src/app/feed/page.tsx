@@ -244,11 +244,18 @@ export default function FeedPage() {
                 </div>
                 <div className="mt-3 text-xs text-zinc-400">
                   Tasted with:{" "}
-                  {entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
-                    ? entry.tasted_with_user_ids
-                        .map((id) => userMap.get(id) ?? "Unknown")
+                  {entry.tasted_with_users && entry.tasted_with_users.length > 0
+                    ? entry.tasted_with_users
+                        .map(
+                          (user) =>
+                            user.display_name ?? user.email ?? "Unknown"
+                        )
                         .join(", ")
-                    : "No one listed"}
+                    : entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
+                      ? entry.tasted_with_user_ids
+                          .map((id) => userMap.get(id) ?? "Unknown")
+                          .join(", ")
+                      : "No one listed"}
                 </div>
                 <div className="mt-4">
                   <Link

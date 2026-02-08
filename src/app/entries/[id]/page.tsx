@@ -171,6 +171,8 @@ export default function EntryDetailPage() {
     );
   }
 
+  const isOwner = currentUserId === entry.user_id;
+
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -187,7 +189,7 @@ export default function EntryDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {currentUserId === entry.user_id ? (
+            {isOwner ? (
               <>
                 <Link
                   className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
@@ -205,13 +207,21 @@ export default function EntryDetailPage() {
               </>
             ) : null}
             <Link
-              className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+              className={
+                isOwner
+                  ? "rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+                  : "rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              }
               href="/entries"
             >
               My entries
             </Link>
             <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              className={
+                !isOwner
+                  ? "rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+                  : "rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              }
               href="/feed"
             >
               Friends tab
@@ -241,7 +251,7 @@ export default function EntryDetailPage() {
                     alt="Wine label"
                     className="h-80 w-full object-cover"
                   />
-                  {currentUserId === entry.user_id ? (
+                  {isOwner ? (
                     <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
                       <span>Label photo</span>
                       <a
@@ -272,7 +282,7 @@ export default function EntryDetailPage() {
                     alt="Place"
                     className="h-80 w-full object-cover"
                   />
-                  {currentUserId === entry.user_id ? (
+                  {isOwner ? (
                     <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
                       <span>Place photo</span>
                       <a
@@ -355,8 +365,13 @@ export default function EntryDetailPage() {
                       .map((id) => {
                         const fromEntry = entry.tasted_with_users?.find(
                           (user) => user.id === id
-                        )?.display_name;
-                        return fromEntry ?? userMap.get(id) ?? "Unknown";
+                        );
+                        return (
+                          fromEntry?.display_name ??
+                          fromEntry?.email ??
+                          userMap.get(id) ??
+                          "Unknown"
+                        );
                       })
                       .join(", ")
                   : "No one listed"}
