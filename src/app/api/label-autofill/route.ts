@@ -149,6 +149,12 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.name === "AbortError") {
       return NextResponse.json({ error: "Request timed out" }, { status: 504 });
     }
+    if (error instanceof OpenAI.APIError) {
+      return NextResponse.json(
+        { error: error.message || "OpenAI request failed" },
+        { status: error.status ?? 500 }
+      );
+    }
     return NextResponse.json({ error: "Autofill failed" }, { status: 500 });
   } finally {
     clearTimeout(timeout);

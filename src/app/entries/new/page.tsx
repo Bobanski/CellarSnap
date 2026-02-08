@@ -258,6 +258,7 @@ export default function NewEntryPage() {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
         if (response.status === 413) {
           setAutofillStatus("error");
           setAutofillMessage("Image too large. Try a smaller photo.");
@@ -269,7 +270,9 @@ export default function NewEntryPage() {
           return;
         }
         setAutofillStatus("error");
-        setAutofillMessage("Could not read the label. Try again.");
+        setAutofillMessage(
+          errorPayload.error ?? "Could not read the label. Try again."
+        );
         return;
       }
 
