@@ -24,7 +24,11 @@ export default function EntriesPage() {
     const mult = sortOrder === "asc" ? 1 : -1;
 
     if (sortBy === "rating") {
-      return copy.sort((a, b) => mult * (a.rating - b.rating));
+      return copy.sort((a, b) => {
+        const aValue = a.rating ?? -Infinity;
+        const bValue = b.rating ?? -Infinity;
+        return mult * (aValue - bValue);
+      });
     }
 
     if (sortBy === "vintage") {
