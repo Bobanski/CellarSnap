@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 export default function EntryDetailPage() {
@@ -163,7 +164,7 @@ export default function EntryDetailPage() {
                   Consumed
                 </p>
                 <p className="text-lg font-semibold text-zinc-900">
-                  {entry.consumed_at}
+                  {formatConsumedDate(entry.consumed_at)}
                 </p>
               </div>
               <div>

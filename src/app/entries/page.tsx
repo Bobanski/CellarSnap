@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { WineEntryWithUrls } from "@/types/wine";
 
@@ -115,7 +116,7 @@ export default function EntriesPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs text-zinc-500">
                     <span>Rating: {entry.rating}/100</span>
-                    <span>{entry.consumed_at}</span>
+                    <span>{formatConsumedDate(entry.consumed_at)}</span>
                   </div>
                 </div>
               </Link>
