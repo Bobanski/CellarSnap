@@ -32,6 +32,10 @@ export default function EditEntryPage() {
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
+  const [users, setUsers] = useState<
+    { id: string; display_name: string | null; email: string | null }[]
+  >([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -61,6 +65,7 @@ export default function EditEntryPage() {
       const data = await response.json();
       if (isMounted) {
         setEntry(data.entry);
+        setSelectedUserIds(data.entry.tasted_with_user_ids ?? []);
         reset({
           wine_name: data.entry.wine_name ?? "",
           producer: data.entry.producer ?? "",
@@ -82,6 +87,28 @@ export default function EditEntryPage() {
     };
   }, [entryId, reset]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      const response = await fetch("/api/users", { cache: "no-store" });
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (isMounted) {
+        setUsers(data.users ?? []);
+      }
+    };
+
+    loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const onSubmit = handleSubmit(async (values) => {
     if (!entry) {
       return;
@@ -99,6 +126,7 @@ export default function EditEntryPage() {
       notes: values.notes || null,
       location_text: values.location_text || null,
       consumed_at: values.consumed_at,
+      tasted_with_user_ids: selectedUserIds,
     };
 
     if (labelFile) {
@@ -230,6 +258,39 @@ export default function EditEntryPage() {
                 {...register("consumed_at", { required: true })}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-700">
+              Tasted with
+            </label>
+            {users.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-500">No other users yet.</p>
+            ) : (
+              <div className="mt-2 grid gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                {users.map((user) => {
+                  const label = user.display_name ?? user.email ?? user.id;
+                  const isChecked = selectedUserIds.includes(user.id);
+                  return (
+                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-zinc-300"
+                        checked={isChecked}
+                        onChange={(event) => {
+                          setSelectedUserIds((prev) =>
+                            event.target.checked
+                              ? [...prev, user.id]
+                              : prev.filter((id) => id !== user.id)
+                          );
+                        }}
+                      />
+                      {label}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div>

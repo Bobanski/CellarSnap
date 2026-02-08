@@ -9,6 +9,7 @@ export type WineEntry = {
   notes: string | null;
   location_text: string | null;
   consumed_at: string;
+  tasted_with_user_ids: string[] | null;
   label_image_path: string | null;
   place_image_path: string | null;
   created_at: string;
@@ -28,6 +29,7 @@ export type WineEntryCreatePayload = {
   notes?: string | null;
   location_text?: string | null;
   consumed_at?: string;
+  tasted_with_user_ids?: string[];
 };
 
 export type WineEntryUpdatePayload = Partial<{
@@ -39,6 +41,7 @@ export type WineEntryUpdatePayload = Partial<{
   notes: string | null;
   location_text: string | null;
   consumed_at: string;
+  tasted_with_user_ids: string[];
   label_image_path: string | null;
   place_image_path: string | null;
 }>;

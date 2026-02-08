@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -11,8 +11,22 @@ export default function EntryDetailPage() {
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
+  const [users, setUsers] = useState<
+    { id: string; display_name: string | null; email: string | null }[]
+  >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const userMap = useMemo(
+    () =>
+      new Map(
+        users.map((user) => [
+          user.id,
+          user.display_name ?? user.email ?? user.id,
+        ])
+      ),
+    [users]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -50,6 +64,28 @@ export default function EntryDetailPage() {
       isMounted = false;
     };
   }, [entryId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      const response = await fetch("/api/users", { cache: "no-store" });
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (isMounted) {
+        setUsers(data.users ?? []);
+      }
+    };
+
+    loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const onDelete = async () => {
     if (!entryId) {
@@ -191,6 +227,18 @@ export default function EntryDetailPage() {
               <p className="text-xs uppercase tracking-wide text-zinc-400">Notes</p>
               <p className="text-sm text-zinc-700">
                 {entry.notes || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-400">
+                Tasted with
+              </p>
+              <p className="text-sm text-zinc-700">
+                {entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
+                  ? entry.tasted_with_user_ids
+                      .map((id) => userMap.get(id) ?? id)
+                      .join(", ")
+                  : "No one listed"}
               </p>
             </div>
           </div>

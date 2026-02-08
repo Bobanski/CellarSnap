@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -28,8 +28,34 @@ export default function NewEntryPage() {
   });
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
+  const [users, setUsers] = useState<
+    { id: string; display_name: string | null; email: string | null }[]
+  >([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      const response = await fetch("/api/users", { cache: "no-store" });
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (isMounted) {
+        setUsers(data.users ?? []);
+      }
+    };
+
+    loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
@@ -47,6 +73,7 @@ export default function NewEntryPage() {
         notes: values.notes || null,
         location_text: values.location_text || null,
         consumed_at: values.consumed_at,
+        tasted_with_user_ids: selectedUserIds,
       }),
     });
 
@@ -219,6 +246,39 @@ export default function NewEntryPage() {
                 onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-700">
+              Tasted with
+            </label>
+            {users.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-500">No other users yet.</p>
+            ) : (
+              <div className="mt-2 grid gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                {users.map((user) => {
+                  const label = user.display_name ?? user.email ?? user.id;
+                  const isChecked = selectedUserIds.includes(user.id);
+                  return (
+                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-zinc-300"
+                        checked={isChecked}
+                        onChange={(event) => {
+                          setSelectedUserIds((prev) =>
+                            event.target.checked
+                              ? [...prev, user.id]
+                              : prev.filter((id) => id !== user.id)
+                          );
+                        }}
+                      />
+                      {label}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {errorMessage ? (

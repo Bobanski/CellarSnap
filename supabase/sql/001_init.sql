@@ -9,6 +9,7 @@ create table if not exists public.wine_entries (
   notes text,
   location_text text,
   consumed_at date not null default current_date,
+  tasted_with_user_ids uuid[] not null default '{}'::uuid[],
   label_image_path text,
   place_image_path text,
   created_at timestamptz not null default now()
@@ -20,6 +21,11 @@ create policy "Users can view own wine entries"
   on public.wine_entries
   for select
   using (auth.uid() = user_id);
+
+create policy "Authenticated users can view wine entries"
+  on public.wine_entries
+  for select
+  using (auth.role() = 'authenticated');
 
 create policy "Users can insert own wine entries"
   on public.wine_entries

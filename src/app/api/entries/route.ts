@@ -24,6 +24,7 @@ const createEntrySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  tasted_with_user_ids: z.array(z.string().uuid()).optional(),
 });
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
       notes: payload.data.notes ?? null,
       location_text: payload.data.location_text ?? null,
       consumed_at: consumedAt,
+      tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
       label_image_path: null,
       place_image_path: null,
     })

@@ -22,6 +22,7 @@ const updateEntrySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  tasted_with_user_ids: z.array(z.string().uuid()).optional(),
   label_image_path: nullableString,
   place_image_path: nullableString,
 });
