@@ -125,16 +125,22 @@ export default function FeedPage() {
               My entries
             </Link>
             <Link
+              className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+              href="/feed"
+            >
+              Friends tab
+            </Link>
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/entries/new"
+            >
+              New entry
+            </Link>
+            <Link
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/profile"
             >
               My profile
-            </Link>
-            <Link
-              className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
-              href="/entries/new"
-            >
-              New entry
             </Link>
           </div>
         </header>

@@ -89,6 +89,12 @@ export default function EntriesPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
+              className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+              href="/entries"
+            >
+              My entries
+            </Link>
+            <Link
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/feed"
             >
@@ -96,15 +102,15 @@ export default function EntriesPage() {
             </Link>
             <Link
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/profile"
-            >
-              My profile
-            </Link>
-            <Link
-              className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
               href="/entries/new"
             >
               New entry
+            </Link>
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/profile"
+            >
+              My profile
             </Link>
             <button
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"

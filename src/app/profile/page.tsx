@@ -125,8 +125,23 @@ export default function ProfilePage() {
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/entries"
             >
-              Back to cellar
+              My entries
             </Link>
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/feed"
+            >
+              Friends tab
+            </Link>
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/entries/new"
+            >
+              New entry
+            </Link>
+            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+              My profile
+            </span>
             <button
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               type="button"

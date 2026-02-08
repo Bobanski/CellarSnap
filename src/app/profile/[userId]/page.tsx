@@ -133,12 +133,29 @@ export default function FriendProfilePage() {
               Wines they’ve logged and wines they’ve been tagged in.
             </p>
           </div>
-          <Link
-            className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-            href="/feed"
-          >
-            Friends tab
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/entries"
+            >
+              My entries
+            </Link>
+            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+              Friends tab
+            </span>
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/entries/new"
+            >
+              New entry
+            </Link>
+            <Link
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              href="/profile"
+            >
+              My profile
+            </Link>
+          </div>
         </header>
 
         <section className="space-y-4">
