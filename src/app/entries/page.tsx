@@ -160,7 +160,7 @@ export default function EntriesPage() {
             </select>
           </div>
           <span className="text-xs text-zinc-400">
-            {sortedEntries.length} entry{sortedEntries.length === 1 ? "" : "ies"}
+            {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
           </span>
         </section>
 

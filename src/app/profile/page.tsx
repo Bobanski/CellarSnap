@@ -97,8 +97,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-100 px-6 py-8">
-        <div className="mx-auto max-w-2xl rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700">
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
           Loading profile...
         </div>
       </div>
@@ -106,24 +106,29 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 px-6 py-8">
-      <div className="mx-auto max-w-2xl space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-900">My profile</h1>
-            <p className="text-sm text-zinc-600">
-              Edit how you appear in the app.
+    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="mx-auto max-w-2xl space-y-8">
+        <header className="flex flex-wrap items-end justify-between gap-6">
+          <div className="space-y-2">
+            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+              My profile
+            </span>
+            <h1 className="text-3xl font-semibold text-zinc-50">
+              Edit how you appear
+            </h1>
+            <p className="text-sm text-zinc-300">
+              Set your username so friends see your name across the app.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Link
-              className="text-sm font-medium text-zinc-600"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/entries"
             >
               Back to cellar
             </Link>
             <button
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               type="button"
               onClick={onSignOut}
             >
@@ -132,18 +137,18 @@ export default function ProfilePage() {
           </div>
         </header>
 
-        <div className="rounded-xl border border-zinc-200 bg-white p-6">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
           <form onSubmit={onSubmit} className="space-y-6">
             {errorMessage ? (
-              <p className="text-sm text-red-600">{errorMessage}</p>
+              <p className="text-sm text-rose-200">{errorMessage}</p>
             ) : null}
             {successMessage ? (
-              <p className="text-sm text-green-600">{successMessage}</p>
+              <p className="text-sm text-emerald-200">{successMessage}</p>
             ) : null}
 
             <div>
               <label
-                className="mb-1 block text-sm font-medium text-zinc-700"
+                className="mb-1 block text-sm font-medium text-zinc-300"
                 htmlFor="display_name"
               >
                 Username
@@ -158,7 +163,7 @@ export default function ProfilePage() {
                 type="text"
                 placeholder="e.g. wine_lover"
                 maxLength={100}
-                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("display_name")}
               />
             </div>
@@ -167,10 +172,10 @@ export default function ProfilePage() {
               <label className="mb-1 block text-sm font-medium text-zinc-500">
                 Email
               </label>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-zinc-300">
                 {profile?.email ?? "—"}
               </p>
-              <p className="mt-1 text-xs text-zinc-400">
+              <p className="mt-1 text-xs text-zinc-500">
                 Your email is used to sign in and is not editable here.
               </p>
             </div>
@@ -178,7 +183,7 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
+              className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
             >
               {isSubmitting ? "Saving…" : "Save changes"}
             </button>
