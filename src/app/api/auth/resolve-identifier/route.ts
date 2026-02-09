@@ -3,8 +3,11 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({
-  identifier: z.string().min(1),
+  identifier: z.string().trim().min(1),
+  mode: z.enum(["auto", "username"]).optional(),
 });
+
+const emailSchema = z.string().email();
 
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -21,9 +24,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Identifier required." }, { status: 400 });
   }
 
-  const identifier = parsed.data.identifier.trim();
-  if (identifier.includes("@")) {
-    return NextResponse.json({ email: identifier });
+  const identifier = parsed.data.identifier;
+  const mode = parsed.data.mode ?? "auto";
+
+  if (mode === "auto") {
+    const parsedEmail = emailSchema.safeParse(identifier);
+    if (parsedEmail.success) {
+      return NextResponse.json({ email: parsedEmail.data });
+    }
   }
 
   const { data, error } = await supabase.rpc("get_email_for_username", {
@@ -35,7 +43,10 @@ export async function POST(request: Request) {
   }
 
   if (!data) {
-    return NextResponse.json({ error: "Username not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "No account matches that email or username." },
+      { status: 404 }
+    );
   }
 
   return NextResponse.json({ email: data });

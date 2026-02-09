@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  USERNAME_FORMAT_MESSAGE,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MAX_LENGTH_MESSAGE,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MIN_LENGTH_MESSAGE,
+  USERNAME_DISALLOWED_PATTERN,
+} from "@/lib/validation/username";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 
@@ -8,8 +16,12 @@ const updateProfileSchema = z.object({
   display_name: z
     .string()
     .trim()
-    .min(3, "Username must be at least 3 characters.")
-    .max(100, "Username must be 100 characters or fewer.")
+    .min(USERNAME_MIN_LENGTH, USERNAME_MIN_LENGTH_MESSAGE)
+    .max(USERNAME_MAX_LENGTH, USERNAME_MAX_LENGTH_MESSAGE)
+    .refine(
+      (value) => !USERNAME_DISALLOWED_PATTERN.test(value),
+      USERNAME_FORMAT_MESSAGE
+    )
     .optional(),
   default_entry_privacy: privacyLevelSchema.optional(),
 }).refine(

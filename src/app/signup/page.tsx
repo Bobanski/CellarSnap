@@ -5,6 +5,12 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  USERNAME_FORMAT_MESSAGE,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MIN_LENGTH_MESSAGE,
+  isUsernameFormatValid,
+} from "@/lib/validation/username";
 
 type SignupFormValues = {
   email: string;
@@ -23,8 +29,13 @@ export default function SignupPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     const username = values.username.trim();
-    if (username.length < 3) {
-      setErrorMessage("Username must be at least 3 characters.");
+    if (username.length < USERNAME_MIN_LENGTH) {
+      setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
+      return;
+    }
+
+    if (!isUsernameFormatValid(username)) {
+      setErrorMessage(USERNAME_FORMAT_MESSAGE);
       return;
     }
 

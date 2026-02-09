@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  USERNAME_FORMAT_MESSAGE,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MAX_LENGTH_MESSAGE,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MIN_LENGTH_MESSAGE,
+  USERNAME_DISALLOWED_PATTERN,
+} from "@/lib/validation/username";
 
 const schema = z.object({
-  username: z.string().min(3),
+  username: z
+    .string()
+    .trim()
+    .min(USERNAME_MIN_LENGTH, USERNAME_MIN_LENGTH_MESSAGE)
+    .max(USERNAME_MAX_LENGTH, USERNAME_MAX_LENGTH_MESSAGE)
+    .refine(
+      (value) => !USERNAME_DISALLOWED_PATTERN.test(value),
+      USERNAME_FORMAT_MESSAGE
+    ),
 });
 
 export async function POST(request: Request) {

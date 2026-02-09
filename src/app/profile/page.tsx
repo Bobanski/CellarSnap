@@ -6,6 +6,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AlertsMenu from "@/components/AlertsMenu";
+import {
+  USERNAME_FORMAT_MESSAGE,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MIN_LENGTH_MESSAGE,
+  isUsernameFormatValid,
+} from "@/lib/validation/username";
 
 type Profile = {
   id: string;
@@ -69,8 +75,13 @@ export default function ProfilePage() {
 
   const onSubmit = handleSubmit(async (values) => {
     const trimmedDisplayName = values.display_name.trim();
-    if (trimmedDisplayName.length < 3) {
-      setErrorMessage("Username must be at least 3 characters.");
+    if (trimmedDisplayName.length < USERNAME_MIN_LENGTH) {
+      setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
+      return;
+    }
+
+    if (!isUsernameFormatValid(trimmedDisplayName)) {
+      setErrorMessage(USERNAME_FORMAT_MESSAGE);
       return;
     }
 
@@ -195,7 +206,8 @@ export default function ProfilePage() {
                 Username
               </label>
               <p className="mb-2 text-xs text-zinc-500">
-                This name is shown across the app. Minimum 3 characters.
+                This name is shown across the app. Minimum 3 characters, no spaces or
+                the at sign (@).
               </p>
               <input
                 id="display_name"
