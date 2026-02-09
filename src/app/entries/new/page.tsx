@@ -30,16 +30,20 @@ export default function NewEntryPage() {
       entry_privacy: "public",
     },
   });
-  const [labelFile, setLabelFile] = useState<File | null>(null);
-  const [placeFile, setPlaceFile] = useState<File | null>(null);
-  const [pairingFile, setPairingFile] = useState<File | null>(null);
-  const [labelPreview, setLabelPreview] = useState<string | null>(null);
-  const [placePreview, setPlacePreview] = useState<string | null>(null);
-  const [pairingPreview, setPairingPreview] = useState<string | null>(null);
+  const [labelPhotos, setLabelPhotos] = useState<
+    { file: File; preview: string }[]
+  >([]);
+  const [placePhotos, setPlacePhotos] = useState<
+    { file: File; preview: string }[]
+  >([]);
+  const [pairingPhotos, setPairingPhotos] = useState<
+    { file: File; preview: string }[]
+  >([]);
   const [autofillStatus, setAutofillStatus] = useState<
     "idle" | "loading" | "success" | "error" | "timeout"
   >("idle");
   const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
+  const [hasAutofillRun, setHasAutofillRun] = useState(false);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null; email: string | null }[]
   >([]);
@@ -74,11 +78,116 @@ export default function NewEntryPage() {
 
   useEffect(() => {
     return () => {
-      if (labelPreview) URL.revokeObjectURL(labelPreview);
-      if (placePreview) URL.revokeObjectURL(placePreview);
-      if (pairingPreview) URL.revokeObjectURL(pairingPreview);
+      labelPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
+      placePhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
+      pairingPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
     };
-  }, [labelPreview, placePreview, pairingPreview]);
+  }, [labelPhotos, placePhotos, pairingPhotos]);
+
+  const MAX_PHOTOS = 3;
+
+  const addPhotos = (type: "label" | "place" | "pairing", files: FileList) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    if (type === "label") {
+      setLabelPhotos((prev) => {
+        const remaining = MAX_PHOTOS - prev.length;
+        if (remaining <= 0) return prev;
+        const next = list.slice(0, remaining).map((file) => ({
+          file,
+          preview: URL.createObjectURL(file),
+        }));
+        if (!hasAutofillRun && prev.length === 0 && next[0]) {
+          runAutofill(next[0].file);
+          setHasAutofillRun(true);
+        }
+        return [...prev, ...next];
+      });
+      return;
+    }
+
+    if (type === "place") {
+      setPlacePhotos((prev) => {
+        const remaining = MAX_PHOTOS - prev.length;
+        if (remaining <= 0) return prev;
+        const next = list.slice(0, remaining).map((file) => ({
+          file,
+          preview: URL.createObjectURL(file),
+        }));
+        return [...prev, ...next];
+      });
+      return;
+    }
+
+    setPairingPhotos((prev) => {
+      const remaining = MAX_PHOTOS - prev.length;
+      if (remaining <= 0) return prev;
+      const next = list.slice(0, remaining).map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      return [...prev, ...next];
+    });
+  };
+
+  const removePhoto = (
+    type: "label" | "place" | "pairing",
+    index: number
+  ) => {
+    if (type === "label") {
+      setLabelPhotos((prev) => {
+        const target = prev[index];
+        if (target) URL.revokeObjectURL(target.preview);
+        return prev.filter((_, i) => i !== index);
+      });
+      return;
+    }
+    if (type === "place") {
+      setPlacePhotos((prev) => {
+        const target = prev[index];
+        if (target) URL.revokeObjectURL(target.preview);
+        return prev.filter((_, i) => i !== index);
+      });
+      return;
+    }
+    setPairingPhotos((prev) => {
+      const target = prev[index];
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const uploadPhotos = async (
+    entryId: string,
+    type: "label" | "place" | "pairing",
+    photos: { file: File }[]
+  ) => {
+    for (const photo of photos) {
+      const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!createResponse.ok) {
+        const payload = await createResponse.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Unable to create photo record.");
+      }
+
+      const { photo: created } = await createResponse.json();
+      const { error } = await supabase.storage
+        .from("wine-photos")
+        .upload(created.path, photo.file, {
+          upsert: true,
+          contentType: photo.file.type,
+        });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
@@ -122,69 +231,23 @@ export default function NewEntryPage() {
     }
 
     const { entry } = await response.json();
-    const labelPath = labelFile
-      ? `${entry.user_id}/${entry.id}/label.jpg`
-      : null;
-    const placePath = placeFile ? `${entry.user_id}/${entry.id}/place.jpg` : null;
-    const pairingPath = pairingFile
-      ? `${entry.user_id}/${entry.id}/pairing.jpg`
-      : null;
 
-    if (labelFile && labelPath) {
-      const { error: labelError } = await supabase.storage
-        .from("wine-photos")
-        .upload(labelPath, labelFile, { upsert: true, contentType: labelFile.type });
-
-      if (labelError) {
-        setIsSubmitting(false);
-        setErrorMessage("Label upload failed. Please try again.");
-        return;
+    try {
+      if (labelPhotos.length > 0) {
+        await uploadPhotos(entry.id, "label", labelPhotos);
       }
-    }
-
-    if (placeFile && placePath) {
-      const { error: placeError } = await supabase.storage
-        .from("wine-photos")
-        .upload(placePath, placeFile, { upsert: true, contentType: placeFile.type });
-
-      if (placeError) {
-        setIsSubmitting(false);
-        setErrorMessage("Place photo upload failed. Please try again.");
-        return;
+      if (placePhotos.length > 0) {
+        await uploadPhotos(entry.id, "place", placePhotos);
       }
-    }
-
-    if (pairingFile && pairingPath) {
-      const { error: pairingError } = await supabase.storage
-        .from("wine-photos")
-        .upload(pairingPath, pairingFile, {
-          upsert: true,
-          contentType: pairingFile.type,
-        });
-
-      if (pairingError) {
-        setIsSubmitting(false);
-        setErrorMessage("Pairing photo upload failed. Please try again.");
-        return;
+      if (pairingPhotos.length > 0) {
+        await uploadPhotos(entry.id, "pairing", pairingPhotos);
       }
-    }
-
-    if (labelPath || placePath || pairingPath) {
-      const updateResponse = await fetch(`/api/entries/${entry.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          label_image_path: labelPath,
-          place_image_path: placePath,
-          pairing_image_path: pairingPath,
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        setIsSubmitting(false);
-        setErrorMessage("Unable to finalize entry.");
-        return;
-      }
+    } catch (error) {
+      setIsSubmitting(false);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Photo upload failed."
+      );
+      return;
     }
 
     router.push(`/entries/${entry.id}`);
@@ -389,11 +452,14 @@ export default function NewEntryPage() {
                   We’ll try to autofill details from the label. You can edit anything after.
                 </p>
               </div>
-              {labelFile && autofillStatus !== "loading" ? (
+              {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
                 <button
                   type="button"
                   className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                  onClick={() => runAutofill(labelFile)}
+                  onClick={() => {
+                    const first = labelPhotos[0];
+                    if (first) runAutofill(first.file);
+                  }}
                 >
                   Try again
                 </button>
@@ -404,49 +470,53 @@ export default function NewEntryPage() {
               id="label-upload"
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                if (labelPreview) URL.revokeObjectURL(labelPreview);
-                setLabelFile(file);
-                setLabelPreview(file ? URL.createObjectURL(file) : null);
-                if (file) {
-                  runAutofill(file);
-                }
+                if (!event.target.files) return;
+                addPhotos("label", event.target.files);
+                event.target.value = "";
               }}
             />
-            {labelPreview ? (
-              <div className="group relative mt-3 overflow-hidden rounded-2xl border border-white/10">
-                <img
-                  src={labelPreview}
-                  alt="Label preview"
-                  className="h-40 w-full object-cover"
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
-                  aria-label="Remove label photo"
-                  onClick={() => {
-                    if (labelPreview) URL.revokeObjectURL(labelPreview);
-                    setLabelPreview(null);
-                    setLabelFile(null);
-                    setAutofillStatus("idle");
-                    setAutofillMessage(null);
-                    if (labelInputRef.current) {
-                      labelInputRef.current.value = "";
-                    }
-                  }}
-                >
-                  ×
-                </button>
+            {labelPhotos.length > 0 ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {labelPhotos.map((photo, index) => (
+                  <div
+                    key={photo.preview}
+                    className="group relative overflow-hidden rounded-2xl border border-white/10"
+                  >
+                    <img
+                      src={photo.preview}
+                      alt={`Label preview ${index + 1}`}
+                      className="h-32 w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                      aria-label="Remove label photo"
+                      onClick={() => {
+                        removePhoto("label", index);
+                        if (index === 0) {
+                          setAutofillStatus("idle");
+                          setAutofillMessage(null);
+                        }
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : null}
             <button
               type="button"
               className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
               onClick={() => labelInputRef.current?.click()}
+              disabled={labelPhotos.length >= MAX_PHOTOS}
             >
-              Upload image
+              {labelPhotos.length >= MAX_PHOTOS
+                ? "Max photos reached"
+                : "Upload image"}
             </button>
             {autofillMessage ? (
               <p
@@ -566,44 +636,47 @@ export default function NewEntryPage() {
                 id="place-upload"
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  if (placePreview) URL.revokeObjectURL(placePreview);
-                  setPlaceFile(file);
-                  setPlacePreview(file ? URL.createObjectURL(file) : null);
+                  if (!event.target.files) return;
+                  addPhotos("place", event.target.files);
+                  event.target.value = "";
                 }}
               />
-              {placePreview ? (
-                <div className="group relative mt-3 overflow-hidden rounded-2xl border border-white/10">
-                  <img
-                    src={placePreview}
-                    alt="Place preview"
-                    className="h-40 w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
-                    aria-label="Remove place photo"
-                    onClick={() => {
-                      if (placePreview) URL.revokeObjectURL(placePreview);
-                      setPlacePreview(null);
-                      setPlaceFile(null);
-                      if (placeInputRef.current) {
-                        placeInputRef.current.value = "";
-                      }
-                    }}
-                  >
-                    ×
-                  </button>
+              {placePhotos.length > 0 ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {placePhotos.map((photo, index) => (
+                    <div
+                      key={photo.preview}
+                      className="group relative overflow-hidden rounded-2xl border border-white/10"
+                    >
+                      <img
+                        src={photo.preview}
+                        alt={`Place preview ${index + 1}`}
+                        className="h-32 w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                        aria-label="Remove place photo"
+                        onClick={() => removePhoto("place", index)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               <button
                 type="button"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                 onClick={() => placeInputRef.current?.click()}
+                disabled={placePhotos.length >= MAX_PHOTOS}
               >
-                Upload image
+                {placePhotos.length >= MAX_PHOTOS
+                  ? "Max photos reached"
+                  : "Upload image"}
               </button>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
@@ -618,44 +691,47 @@ export default function NewEntryPage() {
                 id="pairing-upload"
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  if (pairingPreview) URL.revokeObjectURL(pairingPreview);
-                  setPairingFile(file);
-                  setPairingPreview(file ? URL.createObjectURL(file) : null);
+                  if (!event.target.files) return;
+                  addPhotos("pairing", event.target.files);
+                  event.target.value = "";
                 }}
               />
-              {pairingPreview ? (
-                <div className="group relative mt-3 overflow-hidden rounded-2xl border border-white/10">
-                  <img
-                    src={pairingPreview}
-                    alt="Pairing preview"
-                    className="h-40 w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
-                    aria-label="Remove pairing photo"
-                    onClick={() => {
-                      if (pairingPreview) URL.revokeObjectURL(pairingPreview);
-                      setPairingPreview(null);
-                      setPairingFile(null);
-                      if (pairingInputRef.current) {
-                        pairingInputRef.current.value = "";
-                      }
-                    }}
-                  >
-                    ×
-                  </button>
+              {pairingPhotos.length > 0 ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {pairingPhotos.map((photo, index) => (
+                    <div
+                      key={photo.preview}
+                      className="group relative overflow-hidden rounded-2xl border border-white/10"
+                    >
+                      <img
+                        src={photo.preview}
+                        alt={`Pairing preview ${index + 1}`}
+                        className="h-32 w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                        aria-label="Remove pairing photo"
+                        onClick={() => removePhoto("pairing", index)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               <button
                 type="button"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                 onClick={() => pairingInputRef.current?.click()}
+                disabled={pairingPhotos.length >= MAX_PHOTOS}
               >
-                Upload image
+                {pairingPhotos.length >= MAX_PHOTOS
+                  ? "Max photos reached"
+                  : "Upload image"}
               </button>
             </div>
           </div>

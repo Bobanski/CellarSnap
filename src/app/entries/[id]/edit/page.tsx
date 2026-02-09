@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AlertsMenu from "@/components/AlertsMenu";
-import type { WineEntryWithUrls } from "@/types/wine";
+import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EditEntryForm = {
   wine_name: string;
@@ -34,9 +34,11 @@ export default function EditEntryPage() {
     },
   });
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
-  const [labelFile, setLabelFile] = useState<File | null>(null);
-  const [placeFile, setPlaceFile] = useState<File | null>(null);
-  const [pairingFile, setPairingFile] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<EntryPhoto[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [uploadingType, setUploadingType] = useState<
+    "label" | "place" | "pairing" | null
+  >(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
@@ -125,6 +127,153 @@ export default function EditEntryPage() {
     };
   }, []);
 
+  const MAX_PHOTOS = 3;
+
+  const loadPhotos = async () => {
+    if (!entryId) return;
+    setPhotoError(null);
+    const response = await fetch(`/api/entries/${entryId}/photos`, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      setPhotoError("Unable to load photos.");
+      return;
+    }
+    const data = await response.json();
+    setPhotos(data.photos ?? []);
+  };
+
+  useEffect(() => {
+    loadPhotos().catch(() => null);
+  }, [entryId]);
+
+  const photosByType = (type: "label" | "place" | "pairing") =>
+    photos
+      .filter((photo) => photo.type === type)
+      .sort((a, b) => a.position - b.position);
+
+  const legacyPhotos = (type: "label" | "place" | "pairing") => {
+    if (!entry) return [];
+    const legacyUrl =
+      type === "label"
+        ? entry.label_image_url
+        : type === "place"
+        ? entry.place_image_url
+        : entry.pairing_image_url;
+    if (!legacyUrl) return [];
+    return [
+      {
+        id: `legacy-${type}`,
+        entry_id: entry.id,
+        type,
+        path: "",
+        position: 0,
+        created_at: entry.created_at,
+        signed_url: legacyUrl,
+      },
+    ];
+  };
+
+  const galleryForType = (type: "label" | "place" | "pairing") => {
+    const list = photosByType(type);
+    return list.length > 0 ? list : legacyPhotos(type);
+  };
+
+  const uploadPhotos = async (
+    type: "label" | "place" | "pairing",
+    files: FileList
+  ) => {
+    if (!entryId) return;
+    setUploadingType(type);
+    setPhotoError(null);
+    const current = photosByType(type);
+    const remaining = MAX_PHOTOS - current.length;
+    const list = Array.from(files).slice(0, remaining);
+    try {
+      for (const file of list) {
+        const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type }),
+        });
+        if (!createResponse.ok) {
+          const payload = await createResponse.json().catch(() => ({}));
+          throw new Error(payload.error ?? "Unable to create photo.");
+        }
+        const { photo } = await createResponse.json();
+        const { error } = await supabase.storage
+          .from("wine-photos")
+          .upload(photo.path, file, { upsert: true, contentType: file.type });
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
+      await loadPhotos();
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error ? error.message : "Photo upload failed."
+      );
+    } finally {
+      setUploadingType(null);
+    }
+  };
+
+  const deletePhoto = async (photoId: string) => {
+    if (!entryId) return;
+    setPhotoError(null);
+    const response = await fetch(
+      `/api/entries/${entryId}/photos/${photoId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setPhotoError(payload.error ?? "Unable to delete photo.");
+      return;
+    }
+    await loadPhotos();
+  };
+
+  const movePhoto = async (
+    type: "label" | "place" | "pairing",
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    if (!entryId) return;
+    const list = photosByType(type);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const current = list[index];
+    const swap = list[targetIndex];
+    if (!current || !swap) return;
+
+    setPhotos((prev) =>
+      prev.map((photo) => {
+        if (photo.id === current.id) {
+          return { ...photo, position: swap.position };
+        }
+        if (photo.id === swap.id) {
+          return { ...photo, position: current.position };
+        }
+        return photo;
+      })
+    );
+
+    await Promise.all([
+      fetch(`/api/entries/${entryId}/photos/${current.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ position: swap.position }),
+      }),
+      fetch(`/api/entries/${entryId}/photos/${swap.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ position: current.position }),
+      }),
+    ]);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -172,54 +321,6 @@ export default function EditEntryPage() {
       tasted_with_user_ids: selectedUserIds,
       entry_privacy: values.entry_privacy,
     };
-
-    if (labelFile) {
-      const labelPath = `${entry.user_id}/${entry.id}/label.jpg`;
-      const { error: labelError } = await supabase.storage
-        .from("wine-photos")
-        .upload(labelPath, labelFile, { upsert: true, contentType: labelFile.type });
-
-      if (labelError) {
-        setIsSubmitting(false);
-        setErrorMessage("Label upload failed.");
-        return;
-      }
-
-      updatePayload.label_image_path = labelPath;
-    }
-
-    if (placeFile) {
-      const placePath = `${entry.user_id}/${entry.id}/place.jpg`;
-      const { error: placeError } = await supabase.storage
-        .from("wine-photos")
-        .upload(placePath, placeFile, { upsert: true, contentType: placeFile.type });
-
-      if (placeError) {
-        setIsSubmitting(false);
-        setErrorMessage("Place upload failed.");
-        return;
-      }
-
-      updatePayload.place_image_path = placePath;
-    }
-
-    if (pairingFile) {
-      const pairingPath = `${entry.user_id}/${entry.id}/pairing.jpg`;
-      const { error: pairingError } = await supabase.storage
-        .from("wine-photos")
-        .upload(pairingPath, pairingFile, {
-          upsert: true,
-          contentType: pairingFile.type,
-        });
-
-      if (pairingError) {
-        setIsSubmitting(false);
-        setErrorMessage("Pairing upload failed.");
-        return;
-      }
-
-      updatePayload.pairing_image_path = pairingPath;
-    }
 
     const response = await fetch(`/api/entries/${entry.id}`, {
       method: "PUT",
@@ -525,67 +626,123 @@ export default function EditEntryPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <label className="text-sm font-medium text-zinc-200">
-                Replace label photo
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                ref={labelInputRef}
-                onChange={(event) => setLabelFile(event.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                onClick={() => labelInputRef.current?.click()}
-              >
-                Upload image
-              </button>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <label className="text-sm font-medium text-zinc-200">
-                Replace place photo
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                ref={placeInputRef}
-                onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                onClick={() => placeInputRef.current?.click()}
-              >
-                Upload image
-              </button>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <label className="text-sm font-medium text-zinc-200">
-                Replace pairing photo
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                ref={pairingInputRef}
-                onChange={(event) => setPairingFile(event.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                onClick={() => pairingInputRef.current?.click()}
-              >
-                Upload image
-              </button>
-            </div>
+            {(["label", "place", "pairing"] as const).map((type) => {
+              const list = photosByType(type);
+              const isUploading = uploadingType === type;
+              return (
+                <div
+                  key={type}
+                  className="rounded-2xl border border-white/10 bg-black/30 p-4"
+                >
+                  <label className="text-sm font-medium text-zinc-200">
+                    {type === "label"
+                      ? "Label photos"
+                      : type === "place"
+                      ? "Place photos"
+                      : "Pairing photos"}
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    {list.length === 0
+                      ? "Add a photo."
+                      : "Add more or reorder them."}
+                  </p>
+                  {list.length === 0 ? (
+                    <p className="mt-2 text-xs text-zinc-500">
+                      No photos yet.
+                    </p>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {list.map((photo, index) => (
+                        <div
+                          key={photo.id}
+                          className="rounded-xl border border-white/10 bg-black/40 p-2"
+                        >
+                          {photo.signed_url ? (
+                            <img
+                              src={photo.signed_url}
+                              alt={`${type} photo ${index + 1}`}
+                              className="h-28 w-full rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-28 items-center justify-center text-xs text-zinc-400">
+                              Photo unavailable
+                            </div>
+                          )}
+                          <div className="mt-2 flex items-center justify-between text-xs text-zinc-300">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-2 py-1 transition hover:border-white/30"
+                                disabled={index === 0}
+                                onClick={() => movePhoto(type, index, "up")}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-2 py-1 transition hover:border-white/30"
+                                disabled={index === list.length - 1}
+                                onClick={() => movePhoto(type, index, "down")}
+                              >
+                                ↓
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              className="rounded-full border border-rose-500/40 px-2 py-1 text-rose-200 transition hover:border-rose-300"
+                              onClick={() => deletePhoto(photo.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    ref={
+                      type === "label"
+                        ? labelInputRef
+                        : type === "place"
+                        ? placeInputRef
+                        : pairingInputRef
+                    }
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    onChange={(event) => {
+                      if (!event.target.files) return;
+                      uploadPhotos(type, event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      if (type === "label") labelInputRef.current?.click();
+                      if (type === "place") placeInputRef.current?.click();
+                      if (type === "pairing") pairingInputRef.current?.click();
+                    }}
+                    disabled={list.length >= MAX_PHOTOS || isUploading}
+                  >
+                    {list.length >= MAX_PHOTOS
+                      ? "Max photos reached"
+                      : isUploading
+                      ? "Uploading..."
+                      : "Add photo"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           {errorMessage ? (
             <p className="text-sm text-rose-300">{errorMessage}</p>
+          ) : null}
+          {photoError ? (
+            <p className="text-sm text-rose-300">{photoError}</p>
           ) : null}
 
           <div className="flex items-center gap-3">

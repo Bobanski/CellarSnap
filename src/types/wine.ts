@@ -6,6 +6,18 @@ export type UserSummary = {
   email: string | null;
 };
 
+export type EntryPhotoType = "label" | "place" | "pairing";
+
+export type EntryPhoto = {
+  id: string;
+  entry_id: string;
+  type: EntryPhotoType;
+  path: string;
+  position: number;
+  created_at: string;
+  signed_url?: string | null;
+};
+
 export type WineEntry = {
   id: string;
   user_id: string;

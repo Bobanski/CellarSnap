@@ -58,11 +58,33 @@ export async function GET(
     ])
   );
 
+  const entryIds = (entries ?? []).map((entry) => entry.id);
+  const { data: labelPhotos } =
+    entryIds.length > 0
+      ? await supabase
+          .from("entry_photos")
+          .select("entry_id, path, position, created_at")
+          .eq("type", "label")
+          .in("entry_id", entryIds)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true })
+      : { data: [] };
+
+  const labelMap = new Map<string, string>();
+  (labelPhotos ?? []).forEach((photo) => {
+    if (!labelMap.has(photo.entry_id)) {
+      labelMap.set(photo.entry_id, photo.path);
+    }
+  });
+
   const result = await Promise.all(
     (entries ?? []).map(async (entry) => ({
       ...entry,
       author_name: authorMap.get(entry.user_id) ?? "Unknown",
-      label_image_url: await createSignedUrl(entry.label_image_path, supabase),
+      label_image_url: await createSignedUrl(
+        labelMap.get(entry.id) ?? entry.label_image_path,
+        supabase
+      ),
       place_image_url: await createSignedUrl(entry.place_image_path, supabase),
     }))
   );

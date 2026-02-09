@@ -16,6 +16,7 @@ Supabase SQL steps:
 - Run `supabase/sql/004_pairing_and_rating.sql` to add pairing photo + optional rating.
 - Run `supabase/sql/005_notifications.sql` to add notifications for tags.
 - Run `supabase/sql/006_friends.sql` to add friend requests and relationships.
+- Run `supabase/sql/007_entry_photos.sql` to add multi-photo support (max 3 per type).
 - Run `supabase/sql/004_follow_privacy.sql` to add follows + privacy levels (`public` / `friends` / `private`) for entries and photos.
 
 Local development:

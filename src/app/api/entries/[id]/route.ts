@@ -204,10 +204,16 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const { data: photoRows } = await supabase
+    .from("entry_photos")
+    .select("path")
+    .eq("entry_id", id);
+
   const paths = [
     existing.label_image_path,
     existing.place_image_path,
     existing.pairing_image_path,
+    ...(photoRows ?? []).map((photo) => photo.path),
   ].filter((p): p is string => Boolean(p && p !== "pending"));
 
   if (paths.length > 0) {

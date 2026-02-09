@@ -7,7 +7,7 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import AlertsMenu from "@/components/AlertsMenu";
-import type { WineEntryWithUrls } from "@/types/wine";
+import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
@@ -19,6 +19,8 @@ export default function EntryDetailPage() {
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
   const [entry, setEntry] = useState<EntryDetail | null>(null);
+  const [photos, setPhotos] = useState<EntryPhoto[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(true);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null }[]
   >([]);
@@ -79,6 +81,36 @@ export default function EntryDetailPage() {
     };
 
     loadEntry();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [entryId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPhotos = async () => {
+      if (!entryId) return;
+      setPhotosLoading(true);
+      const response = await fetch(`/api/entries/${entryId}/photos`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        if (isMounted) {
+          setPhotos([]);
+          setPhotosLoading(false);
+        }
+        return;
+      }
+      const data = await response.json();
+      if (isMounted) {
+        setPhotos(data.photos ?? []);
+        setPhotosLoading(false);
+      }
+    };
+
+    loadPhotos();
 
     return () => {
       isMounted = false;
@@ -173,6 +205,65 @@ export default function EntryDetailPage() {
   const isOwner = currentUserId === entry.user_id;
   const backHref = isOwner ? "/entries" : "/feed";
   const backLabel = isOwner ? "← Back to My entries" : "← Back to Friends tab";
+  const sortByPosition = (list: EntryPhoto[]) =>
+    [...list].sort((a, b) => a.position - b.position);
+  const labelPhotos = sortByPosition(
+    photos.filter((photo) => photo.type === "label")
+  );
+  const placePhotos = sortByPosition(
+    photos.filter((photo) => photo.type === "place")
+  );
+  const pairingPhotos = sortByPosition(
+    photos.filter((photo) => photo.type === "pairing")
+  );
+  const labelGallery =
+    labelPhotos.length > 0
+      ? labelPhotos
+      : entry.label_image_url
+      ? [
+          {
+            id: "legacy-label",
+            entry_id: entry.id,
+            type: "label" as const,
+            path: "",
+            position: 0,
+            created_at: entry.created_at,
+            signed_url: entry.label_image_url,
+          },
+        ]
+      : [];
+  const placeGallery =
+    placePhotos.length > 0
+      ? placePhotos
+      : entry.place_image_url
+      ? [
+          {
+            id: "legacy-place",
+            entry_id: entry.id,
+            type: "place" as const,
+            path: "",
+            position: 0,
+            created_at: entry.created_at,
+            signed_url: entry.place_image_url,
+          },
+        ]
+      : [];
+  const pairingGallery =
+    pairingPhotos.length > 0
+      ? pairingPhotos
+      : entry.pairing_image_url
+      ? [
+          {
+            id: "legacy-pairing",
+            entry_id: entry.id,
+            type: "pairing" as const,
+            path: "",
+            position: 0,
+            created_at: entry.created_at,
+            signed_url: entry.pairing_image_url,
+          },
+        ]
+      : [];
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -240,31 +331,53 @@ export default function EntryDetailPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-5">
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
-              {entry.label_image_url ? (
+              {labelGallery.length > 0 ? (
                 <div>
                   <Photo
-                    src={entry.label_image_url}
+                    src={labelGallery[0].signed_url ?? ""}
                     alt="Wine label"
                     containerClassName="h-80 w-full"
                     className="h-80 w-full object-cover"
                     loading="eager"
                   />
-                  {isOwner ? (
-                    <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                      <span>Label photo</span>
+                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                    <span>Label photos</span>
+                    {labelGallery[0].signed_url ? (
                       <a
-                        href={entry.label_image_url}
+                        href={labelGallery[0].signed_url}
                         download
                         className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                       >
                         Download
                       </a>
+                    ) : null}
+                  </div>
+                  {labelGallery.length > 1 ? (
+                    <div className="grid gap-2 border-t border-white/10 bg-black/30 p-3 sm:grid-cols-3">
+                      {labelGallery.slice(1).map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="overflow-hidden rounded-xl border border-white/10"
+                        >
+                          {photo.signed_url ? (
+                            <img
+                              src={photo.signed_url}
+                              alt="Label alternate"
+                              className="h-24 w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-24 items-center justify-center text-xs text-zinc-400">
+                              Photo unavailable
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                      Label photo
-                    </div>
-                  )}
+                  ) : null}
+                </div>
+              ) : photosLoading ? (
+                <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
+                  Loading photos...
                 </div>
               ) : (
                 <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
@@ -272,32 +385,97 @@ export default function EntryDetailPage() {
                 </div>
               )}
             </div>
-            {entry.place_image_url ? (
+            {placeGallery.length > 0 ? (
               <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
                 <div>
                   <Photo
-                    src={entry.place_image_url}
+                    src={placeGallery[0].signed_url ?? ""}
                     alt="Place"
                     containerClassName="h-80 w-full"
                     className="h-80 w-full object-cover"
                     loading="lazy"
                   />
-                  {isOwner ? (
-                    <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                      <span>Place photo</span>
+                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                    <span>Place photos</span>
+                    {placeGallery[0].signed_url ? (
                       <a
-                        href={entry.place_image_url}
+                        href={placeGallery[0].signed_url}
                         download
                         className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                       >
                         Download
                       </a>
+                    ) : null}
+                  </div>
+                  {placeGallery.length > 1 ? (
+                    <div className="grid gap-2 border-t border-white/10 bg-black/30 p-3 sm:grid-cols-3">
+                      {placeGallery.slice(1).map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="overflow-hidden rounded-xl border border-white/10"
+                        >
+                          {photo.signed_url ? (
+                            <img
+                              src={photo.signed_url}
+                              alt="Place alternate"
+                              className="h-24 w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-24 items-center justify-center text-xs text-zinc-400">
+                              Photo unavailable
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ) : (
-                    <div className="border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                      Place photo
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {pairingGallery.length > 0 ? (
+              <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
+                <div>
+                  <Photo
+                    src={pairingGallery[0].signed_url ?? ""}
+                    alt="Pairing"
+                    containerClassName="h-80 w-full"
+                    className="h-80 w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+                    <span>Pairing photos</span>
+                    {pairingGallery[0].signed_url ? (
+                      <a
+                        href={pairingGallery[0].signed_url}
+                        download
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Download
+                      </a>
+                    ) : null}
+                  </div>
+                  {pairingGallery.length > 1 ? (
+                    <div className="grid gap-2 border-t border-white/10 bg-black/30 p-3 sm:grid-cols-3">
+                      {pairingGallery.slice(1).map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="overflow-hidden rounded-xl border border-white/10"
+                        >
+                          {photo.signed_url ? (
+                            <img
+                              src={photo.signed_url}
+                              alt="Pairing alternate"
+                              className="h-24 w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-24 items-center justify-center text-xs text-zinc-400">
+                              Photo unavailable
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ) : null}
