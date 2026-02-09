@@ -86,7 +86,7 @@ export default function AlertsMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-3 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#14100f] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#14100f] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
           <div className="border-b border-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-zinc-400">
             Alerts
           </div>
