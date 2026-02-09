@@ -15,7 +15,7 @@ type Profile = {
   id: string;
   display_name: string | null;
   email: string | null;
-  default_entry_privacy: "public" | "friends" | "private";
+  default_entry_privacy: "public" | "friends" | "private" | null;
   created_at: string | null;
 };
 
@@ -47,11 +47,14 @@ export default function ProfilePage() {
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
   // Password state
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -176,8 +179,12 @@ export default function ProfilePage() {
     setPasswordError(null);
     setPasswordSuccess(null);
 
+    if (!currentPassword) {
+      setPasswordError("Please enter your current password.");
+      return;
+    }
     if (newPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
+      setPasswordError("New password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -186,6 +193,25 @@ export default function ProfilePage() {
     }
 
     setIsSavingPassword(true);
+
+    // Verify current password by attempting to sign in
+    const email = profile?.email;
+    if (!email) {
+      setPasswordError("Unable to verify current password — no email found.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setPasswordError("Current password is incorrect.");
+      setIsSavingPassword(false);
+      return;
+    }
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -198,9 +224,23 @@ export default function ProfilePage() {
       return;
     }
 
+    setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
     setPasswordSuccess("Password updated successfully.");
+    setIsPasswordOpen(false);
+  };
+
+  const cancelPasswordChange = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setIsPasswordOpen(false);
   };
 
   if (loading) {
@@ -350,158 +390,220 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ── Section 2: Settings ── */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Settings
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Choose the default visibility for new entries you create.
-            </p>
+          {/* ── Section 2: Settings (only if privacy column exists) ── */}
+          {profile?.default_entry_privacy !== null && profile?.default_entry_privacy !== undefined ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Settings
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                Choose the default visibility for new entries you create.
+              </p>
 
-            <fieldset className="mt-5 space-y-3">
-              <legend className="sr-only">Default entry privacy</legend>
-              {(
-                [
-                  {
-                    value: "public" as const,
-                    label: "Public",
-                    description: "Visible to everyone on the feed",
-                  },
-                  {
-                    value: "friends" as const,
-                    label: "Friends only",
-                    description: "Only your friends can see these entries",
-                  },
-                  {
-                    value: "private" as const,
-                    label: "Private",
-                    description: "Only you can see these entries",
-                  },
-                ] as const
-              ).map((option) => (
-                <label
-                  key={option.value}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
-                    privacyValue === option.value
-                      ? "border-amber-300/60 bg-amber-400/10"
-                      : "border-white/10 bg-black/20 hover:border-white/20"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="default_entry_privacy"
-                    value={option.value}
-                    checked={privacyValue === option.value}
-                    onChange={() => savePrivacy(option.value)}
-                    disabled={isSavingPrivacy}
-                    className="mt-0.5 h-4 w-4 accent-amber-400"
-                  />
-                  <div>
-                    <p
-                      className={`text-sm font-medium ${
-                        privacyValue === option.value
-                          ? "text-amber-200"
-                          : "text-zinc-200"
-                      }`}
-                    >
-                      {option.label}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {option.description}
-                    </p>
-                  </div>
-                </label>
-              ))}
-            </fieldset>
+              <fieldset className="mt-5 space-y-3">
+                <legend className="sr-only">Default entry privacy</legend>
+                {(
+                  [
+                    {
+                      value: "public" as const,
+                      label: "Public",
+                      description: "Visible to everyone on the feed",
+                    },
+                    {
+                      value: "friends" as const,
+                      label: "Friends only",
+                      description: "Only your friends can see these entries",
+                    },
+                    {
+                      value: "private" as const,
+                      label: "Private",
+                      description: "Only you can see these entries",
+                    },
+                  ] as const
+                ).map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                      privacyValue === option.value
+                        ? "border-amber-300/60 bg-amber-400/10"
+                        : "border-white/10 bg-black/20 hover:border-white/20"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="default_entry_privacy"
+                      value={option.value}
+                      checked={privacyValue === option.value}
+                      onChange={() => savePrivacy(option.value)}
+                      disabled={isSavingPrivacy}
+                      className="mt-0.5 h-4 w-4 accent-amber-400"
+                    />
+                    <div>
+                      <p
+                        className={`text-sm font-medium ${
+                          privacyValue === option.value
+                            ? "text-amber-200"
+                            : "text-zinc-200"
+                        }`}
+                      >
+                        {option.label}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {option.description}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </fieldset>
 
-            {privacyMessage ? (
-              <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>
-            ) : null}
-          </div>
+              {privacyMessage ? (
+                <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* ── Section 3: Change Password ── */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Change password
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Update your account password. Must be at least 8 characters.
-            </p>
-
-            <div className="mt-5 space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <label
-                  className="mb-1 block text-sm font-medium text-zinc-300"
-                  htmlFor="new-password"
-                >
-                  New password
-                </label>
-                <div className="relative">
-                  <input
-                    id="new-password"
-                    type={showNewPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minimum 8 characters"
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword((p) => !p)}
-                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
-                    aria-label={showNewPassword ? "Hide password" : "Show password"}
-                  >
-                    {showNewPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Password
+                </h2>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Update your account password.
+                </p>
               </div>
 
-              <div>
-                <label
-                  className="mb-1 block text-sm font-medium text-zinc-300"
-                  htmlFor="confirm-password"
+              {!isPasswordOpen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordSuccess(null);
+                    setIsPasswordOpen(true);
+                  }}
+                  className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
                 >
-                  Confirm password
-                </label>
-                <div className="relative">
-                  <input
-                    id="confirm-password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter new password"
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((p) => !p)}
-                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                  >
-                    {showConfirmPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-
-              {passwordError ? (
-                <p className="text-sm text-rose-200">{passwordError}</p>
+                  Change password
+                </button>
               ) : null}
-              {passwordSuccess ? (
-                <p className="text-sm text-emerald-200">{passwordSuccess}</p>
-              ) : null}
-
-              <button
-                type="button"
-                disabled={isSavingPassword || !newPassword || !confirmPassword}
-                onClick={savePassword}
-                className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSavingPassword ? "Updating..." : "Update password"}
-              </button>
             </div>
+
+            {passwordSuccess && !isPasswordOpen ? (
+              <p className="mt-3 text-sm text-emerald-200">{passwordSuccess}</p>
+            ) : null}
+
+            {isPasswordOpen ? (
+              <div className="mt-5 space-y-4">
+                {/* Current password */}
+                <div>
+                  <label
+                    className="mb-1 block text-sm font-medium text-zinc-300"
+                    htmlFor="current-password"
+                  >
+                    Current password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="current-password"
+                      type={showCurrentPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((p) => !p)}
+                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                      aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                    >
+                      {showCurrentPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* New password */}
+                <div>
+                  <label
+                    className="mb-1 block text-sm font-medium text-zinc-300"
+                    htmlFor="new-password"
+                  >
+                    New password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((p) => !p)}
+                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm new password */}
+                <div>
+                  <label
+                    className="mb-1 block text-sm font-medium text-zinc-300"
+                    htmlFor="confirm-password"
+                  >
+                    Confirm new password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((p) => !p)}
+                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                {passwordError ? (
+                  <p className="text-sm text-rose-200">{passwordError}</p>
+                ) : null}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
+                    onClick={savePassword}
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSavingPassword ? "Updating..." : "Update password"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelPasswordChange}
+                    className="text-sm font-medium text-zinc-400 transition hover:text-zinc-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

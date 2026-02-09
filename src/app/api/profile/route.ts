@@ -41,17 +41,34 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Try fetching with default_entry_privacy; fall back without it if the column
+  // hasn't been added yet (004_follow_privacy.sql not run).
+  let profile: Record<string, unknown> | null = null;
+
   const { data, error } = await supabase
     .from("profiles")
     .select("id, display_name, email, default_entry_privacy, created_at")
     .eq("id", user.id)
     .single();
 
-  if (error) {
+  if (error && error.message.includes("default_entry_privacy")) {
+    const fallback = await supabase
+      .from("profiles")
+      .select("id, display_name, email, created_at")
+      .eq("id", user.id)
+      .single();
+
+    if (fallback.error) {
+      return NextResponse.json({ error: fallback.error.message }, { status: 500 });
+    }
+    profile = { ...fallback.data, default_entry_privacy: null };
+  } else if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  } else {
+    profile = data;
   }
 
-  return NextResponse.json({ profile: data });
+  return NextResponse.json({ profile });
 }
 
 export async function PATCH(request: Request) {
@@ -114,12 +131,24 @@ export async function PATCH(request: Request) {
     .from("profiles")
     .update(updates)
     .eq("id", user.id)
-    .select("id, display_name, email, default_entry_privacy")
+    .select("id, display_name, email, created_at")
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ profile: data });
+  // Re-read with privacy column if it exists
+  const full = await supabase
+    .from("profiles")
+    .select("default_entry_privacy")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const profile = {
+    ...data,
+    default_entry_privacy: full.data?.default_entry_privacy ?? null,
+  };
+
+  return NextResponse.json({ profile });
 }
