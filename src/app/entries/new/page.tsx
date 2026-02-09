@@ -411,12 +411,29 @@ export default function NewEntryPage() {
               }}
             />
             {labelPreview ? (
-              <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
+              <div className="group relative mt-3 overflow-hidden rounded-2xl border border-white/10">
                 <img
                   src={labelPreview}
                   alt="Label preview"
                   className="h-40 w-full object-cover"
                 />
+                <button
+                  type="button"
+                  className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                  aria-label="Remove label photo"
+                  onClick={() => {
+                    if (labelPreview) URL.revokeObjectURL(labelPreview);
+                    setLabelPreview(null);
+                    setLabelFile(null);
+                    setAutofillStatus("idle");
+                    setAutofillMessage(null);
+                    if (labelInputRef.current) {
+                      labelInputRef.current.value = "";
+                    }
+                  }}
+                >
+                  ×
+                </button>
               </div>
             ) : null}
             <button
@@ -553,12 +570,27 @@ export default function NewEntryPage() {
                 }}
               />
               {placePreview ? (
-                <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
+                <div className="group relative mt-3 overflow-hidden rounded-2xl border border-white/10">
                   <img
                     src={placePreview}
                     alt="Place preview"
                     className="h-40 w-full object-cover"
                   />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                    aria-label="Remove place photo"
+                    onClick={() => {
+                      if (placePreview) URL.revokeObjectURL(placePreview);
+                      setPlacePreview(null);
+                      setPlaceFile(null);
+                      if (placeInputRef.current) {
+                        placeInputRef.current.value = "";
+                      }
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               ) : null}
               <button
@@ -590,12 +622,27 @@ export default function NewEntryPage() {
                 }}
               />
               {pairingPreview ? (
-                <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
+                <div className="group relative mt-3 overflow-hidden rounded-2xl border border-white/10">
                   <img
                     src={pairingPreview}
                     alt="Pairing preview"
                     className="h-40 w-full object-cover"
                   />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                    aria-label="Remove pairing photo"
+                    onClick={() => {
+                      if (pairingPreview) URL.revokeObjectURL(pairingPreview);
+                      setPairingPreview(null);
+                      setPairingFile(null);
+                      if (pairingInputRef.current) {
+                        pairingInputRef.current.value = "";
+                      }
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               ) : null}
               <button
