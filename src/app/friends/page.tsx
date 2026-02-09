@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import AlertsMenu from "@/components/AlertsMenu";
+import NavBar from "@/components/NavBar";
 
 type Profile = {
   id: string;
@@ -15,8 +13,6 @@ type Profile = {
 type Suggestion = Profile & { mutual_count: number };
 
 export default function FriendsPage() {
-  const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
   const [friends, setFriends] = useState<Profile[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<
     { id: string; requester: Profile }[]
@@ -119,16 +115,14 @@ export default function FriendsPage() {
     await loadFriends();
   };
 
-  const onSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
-          Loading friends...
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+            Loading friends...
+          </div>
         </div>
       </div>
     );
@@ -136,56 +130,18 @@ export default function FriendsPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex flex-wrap items-end justify-between gap-6">
-          <div className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-              Friends
-            </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
-              Keep your cellar circle close.
-            </h1>
-            <p className="text-sm text-zinc-300">
-              Review requests, add friends, and see who you’re connected with.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries"
-            >
-              My entries
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/feed"
-            >
-              Social Feed
-            </Link>
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
-              Friends
-            </span>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries/new"
-            >
-              New entry
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/profile"
-            >
-              My profile
-            </Link>
-            <AlertsMenu />
-            <button
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              type="button"
-              onClick={onSignOut}
-            >
-              Sign out
-            </button>
-          </div>
+      <div className="mx-auto w-full max-w-6xl space-y-8">
+        <NavBar />
+        <header className="space-y-2">
+          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            Friends
+          </span>
+          <h1 className="text-3xl font-semibold text-zinc-50">
+            Keep your cellar circle close.
+          </h1>
+          <p className="text-sm text-zinc-300">
+            Review requests, add friends, and see who you're connected with.
+          </p>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -344,7 +300,7 @@ export default function FriendsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-zinc-200">Your friends</h2>
             <p className="mt-1 text-xs text-zinc-400">
-              People you’re connected with.
+              People you're connected with.
             </p>
             {friends.length === 0 ? (
               <p className="mt-4 text-sm text-zinc-500">

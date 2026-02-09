@@ -5,7 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import AlertsMenu from "@/components/AlertsMenu";
+import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
@@ -392,8 +392,13 @@ export default function EditEntryPage() {
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
-          Loading entry...
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+        </div>
+        <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+            Loading entry...
+          </div>
         </div>
       </div>
     );
@@ -402,8 +407,13 @@ export default function EditEntryPage() {
   if (!entry) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-          {errorMessage ?? "Entry unavailable."}
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+        </div>
+        <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            {errorMessage ?? "Entry unavailable."}
+          </div>
         </div>
       </div>
     );
@@ -412,7 +422,10 @@ export default function EditEntryPage() {
   if (currentUserId && entry.user_id !== currentUserId) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto w-full max-w-3xl space-y-4">
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+        </div>
+        <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
           <Link
             className="text-sm font-medium text-zinc-300 hover:text-zinc-50"
             href={`/entries/${entry.id}`}
@@ -429,50 +442,18 @@ export default function EditEntryPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto w-full max-w-3xl space-y-8">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="space-y-2">
-            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
-              Edit entry
-            </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
-              Refine your tasting notes.
-            </h1>
-            <p className="text-sm text-zinc-300">Update tasting details or photos.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
-              href="/entries"
-            >
-              My entries
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/feed"
-            >
-              Social Feed
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/friends"
-            >
-              Friends
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries/new"
-            >
-              New entry
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/profile"
-            >
-              My profile
-            </Link>
-            <AlertsMenu />
-          </div>
+      <div className="mx-auto w-full max-w-6xl space-y-8">
+        <NavBar />
+      </div>
+      <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
+        <header className="space-y-2">
+          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            Edit entry
+          </span>
+          <h1 className="text-3xl font-semibold text-zinc-50">
+            Refine your tasting notes.
+          </h1>
+          <p className="text-sm text-zinc-300">Update tasting details or photos.</p>
         </header>
 
         <form className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur" onSubmit={onSubmit}>

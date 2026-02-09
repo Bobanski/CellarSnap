@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
-import AlertsMenu from "@/components/AlertsMenu";
+import NavBar from "@/components/NavBar";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
@@ -185,8 +185,11 @@ export default function EntryDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
-          Loading entry...
+        <div className="mx-auto w-full max-w-5xl space-y-8">
+          <NavBar />
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+            Loading entry...
+          </div>
         </div>
       </div>
     );
@@ -195,8 +198,11 @@ export default function EntryDetailPage() {
   if (!entry) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-          {errorMessage ?? "Entry unavailable."}
+        <div className="mx-auto w-full max-w-5xl space-y-8">
+          <NavBar />
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            {errorMessage ?? "Entry unavailable."}
+          </div>
         </div>
       </div>
     );
@@ -268,15 +274,16 @@ export default function EntryDetailPage() {
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        <Link
-          className="text-sm font-medium text-zinc-400 hover:text-amber-200"
-          href={backHref}
-        >
-          {backLabel}
-        </Link>
-        <header className="flex flex-wrap items-end justify-between gap-6">
+        <NavBar />
+        <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
-            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <Link
+              className="text-sm font-medium text-zinc-400 hover:text-amber-200"
+              href={backHref}
+            >
+              {backLabel}
+            </Link>
+            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
               Cellar entry
             </span>
             <h1 className="text-3xl font-semibold text-zinc-50">
@@ -286,53 +293,15 @@ export default function EntryDetailPage() {
               {entry.producer || "Unknown producer"}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {isOwner ? (
-              <>
-                <Link
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                  href={`/entries/${entry.id}/edit`}
-                >
-                  Edit
-                </Link>
-              </>
-            ) : null}
+          {isOwner ? (
             <Link
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries"
+              href={`/entries/${entry.id}/edit`}
             >
-              My entries
+              Edit entry
             </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/feed"
-            >
-              Social Feed
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/friends"
-            >
-              Friends
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries/new"
-            >
-              New entry
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/profile"
-            >
-              My profile
-            </Link>
-            <AlertsMenu />
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
-              Entry
-            </span>
-          </div>
-        </header>
+          ) : null}
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-5">

@@ -2,20 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
-import AlertsMenu from "@/components/AlertsMenu";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import NavBar from "@/components/NavBar";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
 export default function FriendProfilePage() {
-  const router = useRouter();
   const params = useParams<{ userId: string }>();
   const userId = params.userId;
-  const supabase = createSupabaseBrowserClient();
 
   const [profile, setProfile] = useState<{
     id: string;
@@ -72,16 +69,14 @@ export default function FriendProfilePage() {
     };
   }, [userId]);
 
-  const onSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto max-w-4xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
-          Loading profile...
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+            Loading profile...
+          </div>
         </div>
       </div>
     );
@@ -90,7 +85,8 @@ export default function FriendProfilePage() {
   if (errorMessage || !profile) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-        <div className="mx-auto max-w-4xl space-y-4">
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
           <Link
             className="text-sm font-medium text-zinc-300 hover:text-zinc-50"
             href="/feed"
@@ -107,67 +103,29 @@ export default function FriendProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex flex-wrap items-end justify-between gap-6">
-          <div className="space-y-2">
-            <Link
-              className="inline-block text-sm font-medium text-zinc-400 hover:text-amber-200"
-              href="/feed"
-            >
-              ← Back to Friends
-            </Link>
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-              Friend profile
-            </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
-              {profile.display_name ?? "Unknown"}
-            </h1>
-            <p className="text-sm text-zinc-300">
-              Wines they’ve logged and wines they’ve been tagged in.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries"
-            >
-              My entries
-            </Link>
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
-              Social Feed
-            </span>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/friends"
-            >
-              Friends
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries/new"
-            >
-              New entry
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/profile"
-            >
-              My profile
-            </Link>
-            <AlertsMenu />
-            <button
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              type="button"
-              onClick={onSignOut}
-            >
-              Sign out
-            </button>
-          </div>
+      <div className="mx-auto w-full max-w-6xl space-y-8">
+        <NavBar />
+        <header className="space-y-2">
+          <Link
+            className="inline-block text-sm font-medium text-zinc-400 hover:text-amber-200"
+            href="/feed"
+          >
+            ← Back to Friends
+          </Link>
+          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            Friend profile
+          </span>
+          <h1 className="text-3xl font-semibold text-zinc-50">
+            {profile.display_name ?? "Unknown"}
+          </h1>
+          <p className="text-sm text-zinc-300">
+            Wines they've logged and wines they've been tagged in.
+          </p>
         </header>
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-zinc-50">
-            Wines they’ve uploaded
+            Wines they've uploaded
           </h2>
           {theirEntries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">

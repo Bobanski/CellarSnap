@@ -2,16 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
-import AlertsMenu from "@/components/AlertsMenu";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import NavBar from "@/components/NavBar";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 export default function EntriesPage() {
-  const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
   const [entries, setEntries] = useState<WineEntryWithUrls[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -140,66 +136,20 @@ export default function EntriesPage() {
     };
   }, []);
 
-  const onSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <header className="flex flex-wrap items-end justify-between gap-6">
-          <div className="space-y-2">
-            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
-              Your cellar
-            </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
-              Curate every pour.
-            </h1>
-            <p className="text-sm text-zinc-300">
-              Track vintage moments, ratings, and places worth revisiting.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
-              href="/entries"
-            >
-              My entries
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/feed"
-            >
-              Social Feed
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/friends"
-            >
-              Friends
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/entries/new"
-            >
-              New entry
-            </Link>
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href="/profile"
-            >
-              My profile
-            </Link>
-            <AlertsMenu />
-            <button
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              type="button"
-              onClick={onSignOut}
-            >
-              Sign out
-            </button>
-          </div>
+        <NavBar />
+        <header className="space-y-2">
+          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            Your cellar
+          </span>
+          <h1 className="text-3xl font-semibold text-zinc-50">
+            Curate every pour.
+          </h1>
+          <p className="text-sm text-zinc-300">
+            Track vintage moments, ratings, and places worth revisiting.
+          </p>
         </header>
 
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
