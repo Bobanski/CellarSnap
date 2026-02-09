@@ -21,6 +21,7 @@ export async function proxy(request: NextRequest) {
   const isProfileRoute = pathname.startsWith("/profile");
   const isFeedRoute = pathname.startsWith("/feed");
   const isLoginRoute = pathname.startsWith("/login");
+  const isSignupRoute = pathname.startsWith("/signup");
   const isUsernameSetupBypass = pathname.startsWith("/profile");
 
   const isProtected = isEntriesRoute || isProfileRoute || isFeedRoute;
@@ -45,7 +46,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    if (isLoginRoute) {
+    if (isLoginRoute || isSignupRoute) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = hasUsername ? "/entries" : "/profile";
       return NextResponse.redirect(redirectUrl);
@@ -56,5 +57,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/entries/:path*", "/profile/:path*", "/login", "/feed"],
+  matcher: ["/entries/:path*", "/profile/:path*", "/login", "/signup", "/feed"],
 };
