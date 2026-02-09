@@ -52,15 +52,3 @@ body {
 .rdp-consumed .rdp-weekday {
   color: #a8a29e;
 }
-
-/* Sort select dropdown styling */
-.sort-select option {
-  background-color: rgb(251 191 36);
-  color: rgb(24 24 27);
-  padding: 0.5rem;
-  border-bottom: 1px solid rgb(24 24 27);
-}
-
-.sort-select option:last-child {
-  border-bottom: none;
-}
