@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MIN_LENGTH,
@@ -15,33 +15,56 @@ type Profile = {
   id: string;
   display_name: string | null;
   email: string | null;
+  default_entry_privacy: "public" | "friends" | "private";
+  created_at: string | null;
 };
 
-type ProfileFormValues = {
-  display_name: string;
-};
+function formatMemberSince(dateString: string | null): string {
+  if (!dateString) return "Unknown";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export default function ProfilePage() {
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Identity card state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+
+  // Privacy state
+  const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("private");
+  const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+
+  // Password state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Username setup flow
   const requiresUsernameSetup =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("setup") === "username";
-
-  const { register, handleSubmit, reset } = useForm<ProfileFormValues>({
-    defaultValues: { display_name: "" },
-  });
 
   useEffect(() => {
     let isMounted = true;
 
     const loadProfile = async () => {
       setLoading(true);
-      setErrorMessage(null);
 
       const response = await fetch("/api/profile", { cache: "no-store" });
       if (!response.ok) {
@@ -49,7 +72,6 @@ export default function ProfilePage() {
           router.push("/login");
           return;
         }
-        setErrorMessage("Unable to load profile.");
         setLoading(false);
         return;
       }
@@ -57,8 +79,17 @@ export default function ProfilePage() {
       const data = await response.json();
       if (isMounted && data.profile) {
         setProfile(data.profile);
-        reset({ display_name: data.profile.display_name ?? "" });
+        setEditUsername(data.profile.display_name ?? "");
+        setPrivacyValue(data.profile.default_entry_privacy ?? "private");
         setLoading(false);
+
+        // Auto-open edit mode if username setup is required
+        if (
+          !data.profile.display_name?.trim() ||
+          new URLSearchParams(window.location.search).get("setup") === "username"
+        ) {
+          setIsEditing(true);
+        }
       }
     };
 
@@ -67,49 +98,110 @@ export default function ProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [reset, router]);
+  }, [router]);
 
-
-  const onSubmit = handleSubmit(async (values) => {
-    const trimmedDisplayName = values.display_name.trim();
-    if (trimmedDisplayName.length < USERNAME_MIN_LENGTH) {
-      setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
+  const saveUsername = async () => {
+    const trimmed = editUsername.trim();
+    if (trimmed.length < USERNAME_MIN_LENGTH) {
+      setUsernameError(USERNAME_MIN_LENGTH_MESSAGE);
+      return;
+    }
+    if (!isUsernameFormatValid(trimmed)) {
+      setUsernameError(USERNAME_FORMAT_MESSAGE);
       return;
     }
 
-    if (!isUsernameFormatValid(trimmedDisplayName)) {
-      setErrorMessage(USERNAME_FORMAT_MESSAGE);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setIsSavingUsername(true);
+    setUsernameError(null);
+    setUsernameSuccess(null);
 
     const response = await fetch("/api/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        display_name: trimmedDisplayName,
-      }),
+      body: JSON.stringify({ display_name: trimmed }),
     });
 
-    setIsSubmitting(false);
+    setIsSavingUsername(false);
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      setErrorMessage(data.error ?? "Unable to update profile.");
+      setUsernameError(data.error ?? "Unable to update username.");
       return;
     }
 
     const data = await response.json();
     if (data.profile) {
       setProfile(data.profile);
-      setSuccessMessage(
-        "Username saved. This is the name shown to other people in the app."
-      );
+      setEditUsername(data.profile.display_name ?? "");
+      setUsernameSuccess("Username updated.");
+      setIsEditing(false);
     }
-  });
+  };
+
+  const cancelEdit = () => {
+    setEditUsername(profile?.display_name ?? "");
+    setUsernameError(null);
+    setUsernameSuccess(null);
+    setIsEditing(false);
+  };
+
+  const savePrivacy = async (value: "public" | "friends" | "private") => {
+    setPrivacyValue(value);
+    setIsSavingPrivacy(true);
+    setPrivacyMessage(null);
+
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ default_entry_privacy: value }),
+    });
+
+    setIsSavingPrivacy(false);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setPrivacyMessage(data.error ?? "Unable to update privacy setting.");
+      return;
+    }
+
+    const data = await response.json();
+    if (data.profile) {
+      setProfile(data.profile);
+      setPrivacyMessage("Default privacy updated.");
+      setTimeout(() => setPrivacyMessage(null), 3000);
+    }
+  };
+
+  const savePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    setIsSavingPassword(false);
+
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordSuccess("Password updated successfully.");
+  };
 
   if (loading) {
     return (
@@ -129,75 +221,288 @@ export default function ProfilePage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <div className="mx-auto max-w-2xl space-y-8">
-        <header className="space-y-2">
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-            My profile
-          </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
-            Edit how you appear
-          </h1>
-          <p className="text-sm text-zinc-300">
-            Set your username so friends see your name across the app.
-          </p>
-        </header>
+          <header className="space-y-2">
+            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+              My profile
+            </span>
+            <h1 className="text-3xl font-semibold text-zinc-50">
+              Your cellar identity
+            </h1>
+            <p className="text-sm text-zinc-300">
+              Manage how you appear, your preferences, and your account.
+            </p>
+          </header>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-          <form onSubmit={onSubmit} className="space-y-6">
-            {requiresUsernameSetup ? (
-              <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+          {/* ── Section 1: Identity Card ── */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            {requiresUsernameSetup && isEditing ? (
+              <p className="mb-5 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
                 Set a username to continue using CellarSnap.
               </p>
             ) : null}
-            {errorMessage ? (
-              <p className="text-sm text-rose-200">{errorMessage}</p>
-            ) : null}
-            {successMessage ? (
-              <p className="text-sm text-emerald-200">{successMessage}</p>
-            ) : null}
 
-            <div>
-              <label
-                className="mb-1 block text-sm font-medium text-zinc-300"
-                htmlFor="display_name"
+            {isEditing ? (
+              /* ── Edit mode ── */
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    Edit profile
+                  </h2>
+                </div>
+
+                <div>
+                  <label
+                    className="mb-1 block text-sm font-medium text-zinc-300"
+                    htmlFor="edit-username"
+                  >
+                    Username
+                  </label>
+                  <p className="mb-2 text-xs text-zinc-500">
+                    Minimum 3 characters. No spaces or the @ sign.
+                  </p>
+                  <input
+                    id="edit-username"
+                    type="text"
+                    placeholder="e.g. wine_lover"
+                    maxLength={100}
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  />
+                </div>
+
+                {usernameError ? (
+                  <p className="text-sm text-rose-200">{usernameError}</p>
+                ) : null}
+                {usernameSuccess ? (
+                  <p className="text-sm text-emerald-200">{usernameSuccess}</p>
+                ) : null}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={isSavingUsername}
+                    onClick={saveUsername}
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                  >
+                    {isSavingUsername ? "Saving..." : "Save username"}
+                  </button>
+                  {!requiresUsernameSetup ? (
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="text-sm font-medium text-zinc-400 transition hover:text-zinc-200"
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              /* ── Read mode ── */
+              <div className="space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        Username
+                      </p>
+                      <p className="mt-1 text-xl font-semibold text-zinc-50">
+                        {profile?.display_name || "Not set"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        Email
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-300">
+                        {profile?.email ?? "—"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        Member since
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-300">
+                        {formatMemberSince(profile?.created_at ?? null)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsernameSuccess(null);
+                      setIsEditing(true);
+                    }}
+                    className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                  >
+                    Edit profile
+                  </button>
+                </div>
+
+                {usernameSuccess ? (
+                  <p className="text-sm text-emerald-200">{usernameSuccess}</p>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {/* ── Section 2: Settings ── */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              Settings
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Choose the default visibility for new entries you create.
+            </p>
+
+            <fieldset className="mt-5 space-y-3">
+              <legend className="sr-only">Default entry privacy</legend>
+              {(
+                [
+                  {
+                    value: "public" as const,
+                    label: "Public",
+                    description: "Visible to everyone on the feed",
+                  },
+                  {
+                    value: "friends" as const,
+                    label: "Friends only",
+                    description: "Only your friends can see these entries",
+                  },
+                  {
+                    value: "private" as const,
+                    label: "Private",
+                    description: "Only you can see these entries",
+                  },
+                ] as const
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                    privacyValue === option.value
+                      ? "border-amber-300/60 bg-amber-400/10"
+                      : "border-white/10 bg-black/20 hover:border-white/20"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="default_entry_privacy"
+                    value={option.value}
+                    checked={privacyValue === option.value}
+                    onChange={() => savePrivacy(option.value)}
+                    disabled={isSavingPrivacy}
+                    className="mt-0.5 h-4 w-4 accent-amber-400"
+                  />
+                  <div>
+                    <p
+                      className={`text-sm font-medium ${
+                        privacyValue === option.value
+                          ? "text-amber-200"
+                          : "text-zinc-200"
+                      }`}
+                    >
+                      {option.label}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {option.description}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </fieldset>
+
+            {privacyMessage ? (
+              <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>
+            ) : null}
+          </div>
+
+          {/* ── Section 3: Change Password ── */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              Change password
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Update your account password. Must be at least 8 characters.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label
+                  className="mb-1 block text-sm font-medium text-zinc-300"
+                  htmlFor="new-password"
+                >
+                  New password
+                </label>
+                <div className="relative">
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((p) => !p)}
+                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                  >
+                    {showNewPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  className="mb-1 block text-sm font-medium text-zinc-300"
+                  htmlFor="confirm-password"
+                >
+                  Confirm password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter new password"
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((p) => !p)}
+                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              {passwordError ? (
+                <p className="text-sm text-rose-200">{passwordError}</p>
+              ) : null}
+              {passwordSuccess ? (
+                <p className="text-sm text-emerald-200">{passwordSuccess}</p>
+              ) : null}
+
+              <button
+                type="button"
+                disabled={isSavingPassword || !newPassword || !confirmPassword}
+                onClick={savePassword}
+                className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Username
-              </label>
-              <p className="mb-2 text-xs text-zinc-500">
-                This name is shown across the app. Minimum 3 characters, no spaces or
-                the at sign (@).
-              </p>
-              <input
-                id="display_name"
-                type="text"
-                placeholder="e.g. wine_lover"
-                maxLength={100}
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("display_name", { required: true })}
-              />
+                {isSavingPassword ? "Updating..." : "Update password"}
+              </button>
             </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-500">
-                Email
-              </label>
-              <p className="text-sm text-zinc-300">
-                {profile?.email ?? "—"}
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                Your email is used to sign in and is not editable here.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
-            >
-              {isSubmitting ? "Saving…" : "Save changes"}
-            </button>
-          </form>
-        </div>
-
+          </div>
         </div>
       </div>
     </div>
