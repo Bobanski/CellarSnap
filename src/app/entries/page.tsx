@@ -19,9 +19,50 @@ export default function EntriesPage() {
     "consumed_at"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [filterType, setFilterType] = useState<"vintage" | "country" | "rating" | "">("");
+  const [filterValue, setFilterValue] = useState<string>("");
+
+  // Extract unique values for filters
+  const uniqueValues = useMemo(() => {
+    const vintages = new Set<string>();
+    const countries = new Set<string>();
+    const ratings = new Set<string>();
+
+    entries.forEach((entry) => {
+      if (entry.vintage) vintages.add(entry.vintage);
+      if (entry.country) countries.add(entry.country);
+      if (entry.rating !== null && entry.rating !== undefined) {
+        ratings.add(String(entry.rating));
+      }
+    });
+
+    return {
+      vintage: Array.from(vintages).sort((a, b) => Number(b) - Number(a)),
+      country: Array.from(countries).sort(),
+      rating: Array.from(ratings).sort((a, b) => Number(b) - Number(a)),
+    };
+  }, [entries]);
+
+  // Filter entries
+  const filteredEntries = useMemo(() => {
+    if (!filterType || !filterValue) return entries;
+
+    return entries.filter((entry) => {
+      if (filterType === "vintage") {
+        return entry.vintage === filterValue;
+      }
+      if (filterType === "country") {
+        return entry.country === filterValue;
+      }
+      if (filterType === "rating") {
+        return String(entry.rating) === filterValue;
+      }
+      return true;
+    });
+  }, [entries, filterType, filterValue]);
 
   const sortedEntries = useMemo(() => {
-    const copy = [...entries];
+    const copy = [...filteredEntries];
     const mult = sortOrder === "asc" ? 1 : -1;
 
     if (sortBy === "rating") {
@@ -43,7 +84,7 @@ export default function EntriesPage() {
     return copy.sort(
       (a, b) => mult * a.consumed_at.localeCompare(b.consumed_at)
     );
-  }, [entries, sortBy, sortOrder]);
+  }, [filteredEntries, sortBy, sortOrder]);
 
   useEffect(() => {
     let isMounted = true;
@@ -181,6 +222,55 @@ export default function EntriesPage() {
           <span className="text-xs text-zinc-400">
             {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
           </span>
+        </section>
+
+        <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              Filter by
+            </label>
+            <select
+              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              value={filterType}
+              onChange={(event) => {
+                const newFilterType = event.target.value as "vintage" | "country" | "rating" | "";
+                setFilterType(newFilterType);
+                setFilterValue(""); // Reset filter value when type changes
+              }}
+            >
+              <option value="">None</option>
+              <option value="vintage">Vintage</option>
+              <option value="country">Country</option>
+              <option value="rating">Rating</option>
+            </select>
+            {filterType && (
+              <select
+                className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                value={filterValue}
+                onChange={(event) => setFilterValue(event.target.value)}
+              >
+                <option value="">All</option>
+                {filterType === "vintage" &&
+                  uniqueValues.vintage.map((vintage) => (
+                    <option key={vintage} value={vintage}>
+                      {vintage}
+                    </option>
+                  ))}
+                {filterType === "country" &&
+                  uniqueValues.country.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                {filterType === "rating" &&
+                  uniqueValues.rating.map((rating) => (
+                    <option key={rating} value={rating}>
+                      {rating}/100
+                    </option>
+                  ))}
+              </select>
+            )}
+          </div>
         </section>
 
         {loading ? (
