@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
@@ -10,14 +10,21 @@ import NavBar from "@/components/NavBar";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
+type FriendStatus = "none" | "request_sent" | "request_received" | "friends";
+
 export default function FriendProfilePage() {
   const params = useParams<{ userId: string }>();
+  const router = useRouter();
   const userId = params.userId;
 
   const [profile, setProfile] = useState<{
     id: string;
     display_name: string | null;
   } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
+  const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
+  const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [theirEntries, setTheirEntries] = useState<EntryWithAuthor[]>([]);
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,11 +43,14 @@ export default function FriendProfilePage() {
       setLoading(true);
       setErrorMessage(null);
 
-      const [profileRes, entriesRes, taggedRes] = await Promise.all([
-        fetch(`/api/users/${userId}`, { cache: "no-store" }),
-        fetch(`/api/users/${userId}/entries`, { cache: "no-store" }),
-        fetch(`/api/users/${userId}/tagged`, { cache: "no-store" }),
-      ]);
+      const [profileRes, entriesRes, taggedRes, myProfileRes, requestsRes] =
+        await Promise.all([
+          fetch(`/api/users/${userId}`, { cache: "no-store" }),
+          fetch(`/api/users/${userId}/entries`, { cache: "no-store" }),
+          fetch(`/api/users/${userId}/tagged`, { cache: "no-store" }),
+          fetch("/api/profile", { cache: "no-store" }),
+          fetch("/api/friends/requests", { cache: "no-store" }),
+        ]);
 
       if (!profileRes.ok) {
         if (isMounted) {
@@ -51,13 +61,50 @@ export default function FriendProfilePage() {
       }
 
       const profileData = await profileRes.json();
-      const entriesData = entriesRes.ok ? await entriesRes.json() : { entries: [] };
-      const taggedData = taggedRes.ok ? await taggedRes.json() : { entries: [] };
+      const entriesData = entriesRes.ok
+        ? await entriesRes.json()
+        : { entries: [] };
+      const taggedData = taggedRes.ok
+        ? await taggedRes.json()
+        : { entries: [] };
+      const myProfileData = myProfileRes.ok
+        ? await myProfileRes.json()
+        : { profile: null };
+      const requestsData = requestsRes.ok
+        ? await requestsRes.json()
+        : { incoming: [], outgoing: [] };
 
       if (isMounted) {
         setProfile(profileData.profile);
+        setCurrentUserId(myProfileData.profile?.id ?? null);
         setTheirEntries(entriesData.entries ?? []);
         setTaggedEntries(taggedData.entries ?? []);
+
+        // Determine friend status from pending requests
+        const outgoing = (requestsData.outgoing ?? []).find(
+          (r: { recipient: { id: string } }) => r.recipient.id === userId
+        );
+        const incoming = (requestsData.incoming ?? []).find(
+          (r: { requester: { id: string } }) => r.requester.id === userId
+        );
+
+        if (outgoing) {
+          setFriendStatus("request_sent");
+        } else if (incoming) {
+          setFriendStatus("request_received");
+          setIncomingRequestId(incoming.id);
+        } else {
+          // Check if already friends (accepted requests come from /api/friends)
+          const friendsRes = await fetch("/api/friends", { cache: "no-store" });
+          if (friendsRes.ok) {
+            const friendsData = await friendsRes.json();
+            const isFriend = (friendsData.friends ?? []).some(
+              (f: { id: string }) => f.id === userId
+            );
+            setFriendStatus(isFriend ? "friends" : "none");
+          }
+        }
+
         setLoading(false);
       }
     };
@@ -68,6 +115,40 @@ export default function FriendProfilePage() {
       isMounted = false;
     };
   }, [userId]);
+
+  const sendFriendRequest = async () => {
+    setFriendActionLoading(true);
+    const response = await fetch("/api/friends/requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: userId }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === "accepted") {
+        setFriendStatus("friends");
+      } else {
+        setFriendStatus("request_sent");
+      }
+    }
+    setFriendActionLoading(false);
+  };
+
+  const acceptRequest = async () => {
+    if (!incomingRequestId) return;
+    setFriendActionLoading(true);
+    const response = await fetch(
+      `/api/friends/requests/${incomingRequestId}/accept`,
+      { method: "POST" }
+    );
+    if (response.ok) {
+      setFriendStatus("friends");
+    }
+    setFriendActionLoading(false);
+  };
+
+  const isOwnProfile = currentUserId === userId;
 
   if (loading) {
     return (
@@ -113,19 +194,68 @@ export default function FriendProfilePage() {
             ← Back to Friends
           </Link>
           <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-            Friend profile
+            {isOwnProfile ? "Your profile" : "Profile"}
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
-            {profile.display_name ?? "Unknown"}
-          </h1>
-          <p className="text-sm text-zinc-300">
-            Wines they've logged and wines they've been tagged in.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold text-zinc-50">
+                {profile.display_name ?? "Unknown"}
+              </h1>
+              <p className="text-sm text-zinc-300">
+                Wines they&rsquo;ve logged and wines they&rsquo;ve been tagged in.
+              </p>
+            </div>
+
+            {/* ── Friend action button ── */}
+            {!isOwnProfile ? (
+              <div className="shrink-0">
+                {friendStatus === "friends" ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Friends
+                  </span>
+                ) : friendStatus === "request_sent" ? (
+                  <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+                    Request sent
+                  </span>
+                ) : friendStatus === "request_received" ? (
+                  <button
+                    type="button"
+                    disabled={friendActionLoading}
+                    onClick={acceptRequest}
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                  >
+                    {friendActionLoading ? "Accepting..." : "Accept friend request"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={friendActionLoading}
+                    onClick={sendFriendRequest}
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                  >
+                    {friendActionLoading ? "Sending..." : "Add friend"}
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
         </header>
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-zinc-50">
-            Wines they've uploaded
+            Wines they&rsquo;ve uploaded
           </h2>
           {theirEntries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
@@ -166,7 +296,7 @@ export default function FriendProfilePage() {
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-wide">
-                        {entry.rating}/100
+                        {entry.rating ? `${entry.rating}/100` : "Unrated"}
                       </span>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
@@ -223,7 +353,7 @@ export default function FriendProfilePage() {
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-wide">
-                        {entry.rating}/100
+                        {entry.rating ? `${entry.rating}/100` : "Unrated"}
                       </span>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
