@@ -141,7 +141,7 @@ export default function EntriesPage() {
               Sort
             </label>
             <select
-              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-950 focus:border-amber-300 focus:outline-none"
+              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
               value={sortBy}
               onChange={(event) =>
                 setSortBy(
@@ -154,7 +154,7 @@ export default function EntriesPage() {
               <option value="vintage">Vintage</option>
             </select>
             <select
-              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-950 focus:border-amber-300 focus:outline-none"
+              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
               value={sortOrder}
               onChange={(event) =>
                 setSortOrder(event.target.value as "asc" | "desc")

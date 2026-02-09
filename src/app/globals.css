@@ -52,3 +52,8 @@ body {
 .rdp-consumed .rdp-weekday {
   color: #a8a29e;
 }
+
+/* Sort dropdown options - black text */
+select option {
+  color: rgb(24 24 27);
+}
