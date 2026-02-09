@@ -25,9 +25,13 @@ type CircleEntry = RecentEntry & {
 export default function HomePage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [totalEntryCount, setTotalEntryCount] = useState(0);
+  const [friendCount, setFriendCount] = useState(0);
   const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([]);
   const [circleEntries, setCircleEntries] = useState<CircleEntry[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const isFirstTime = totalEntryCount === 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -47,6 +51,8 @@ export default function HomePage() {
       const data = await response.json();
       if (isMounted) {
         setDisplayName(data.displayName ?? null);
+        setTotalEntryCount(data.totalEntryCount ?? 0);
+        setFriendCount(data.friendCount ?? 0);
         setRecentEntries(data.recentEntries ?? []);
         setCircleEntries(data.circleEntries ?? []);
         setLoading(false);
@@ -81,41 +87,57 @@ export default function HomePage() {
         {/* ── Header ── */}
         <header className="space-y-3">
           <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-            Home
+            {isFirstTime ? "Getting started" : "Home"}
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
-            {displayName ? `Welcome back, ${displayName}.` : "Welcome back."}
+            {isFirstTime
+              ? displayName
+                ? `Welcome to CellarSnap, ${displayName}.`
+                : "Welcome to CellarSnap."
+              : displayName
+                ? `Welcome back, ${displayName}.`
+                : "Welcome back."}
           </h1>
           <p className="text-sm text-zinc-300">
-            What&rsquo;s happening in your wine world right now?
+            {isFirstTime
+              ? "Your personal wine journal. Snap a label, log the moment, share with friends."
+              : "What\u2019s happening in your wine world right now?"}
           </p>
+        </header>
+
+        {/* ── First-time hero CTA ── */}
+        {isFirstTime ? (
+          <div className="rounded-3xl border border-amber-300/30 bg-amber-400/5 p-8 text-center backdrop-blur">
+            <h2 className="text-xl font-semibold text-zinc-50">
+              Record your first pour
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+              Snap a photo of the label and we&rsquo;ll autofill the details.
+              Or just jot down what you&rsquo;re drinking &mdash; it only takes a moment.
+            </p>
+            <Link
+              href="/entries/new"
+              className="mt-5 inline-block rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+            >
+              + Record a new pour
+            </Link>
+          </div>
+        ) : (
           <Link
             href="/entries/new"
-            className="mt-1 inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+            className="inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
           >
             + Record a new pour
           </Link>
-        </header>
+        )}
 
         {/* ── Section 1: Recent from you ── */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-            Recent from you
-          </h2>
+        {!isFirstTime ? (
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              Recent from you
+            </h2>
 
-          {recentEntries.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <p className="text-sm text-zinc-300">
-                You haven&rsquo;t recorded any pours yet.
-              </p>
-              <Link
-                href="/entries/new"
-                className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
-              >
-                Record your first pour &rarr;
-              </Link>
-            </div>
-          ) : (
             <div className="space-y-3">
               {recentEntries.map((entry) => (
                 <article
@@ -151,7 +173,7 @@ export default function HomePage() {
                       </p>
                       <p className="truncate text-xs text-zinc-400">
                         {entry.producer || "Unknown producer"}
-                        {entry.vintage ? ` · ${entry.vintage}` : ""}
+                        {entry.vintage ? ` \u00b7 ${entry.vintage}` : ""}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 text-xs text-zinc-400">
@@ -173,8 +195,8 @@ export default function HomePage() {
                 View all my entries &rarr;
               </Link>
             </div>
-          )}
-        </section>
+          </section>
+        ) : null}
 
         {/* ── Section 2: From your circle ── */}
         <section className="space-y-4">
@@ -184,15 +206,33 @@ export default function HomePage() {
 
           {circleEntries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <p className="text-sm text-zinc-300">
-                Follow some friends to see what they&rsquo;re sipping.
-              </p>
-              <Link
-                href="/friends"
-                className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
-              >
-                Find friends &rarr;
-              </Link>
+              {friendCount === 0 ? (
+                <>
+                  <p className="text-sm text-zinc-300">
+                    {isFirstTime
+                      ? "CellarSnap is better with friends. Add the people you drink with and see what they\u2019re enjoying."
+                      : "You haven\u2019t added any friends yet."}
+                  </p>
+                  <Link
+                    href="/friends"
+                    className="mt-3 inline-block rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                  >
+                    Find friends
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-zinc-300">
+                    Your friends haven&rsquo;t posted anything yet. Check back soon!
+                  </p>
+                  <Link
+                    href="/feed"
+                    className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
+                  >
+                    Browse the public feed &rarr;
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

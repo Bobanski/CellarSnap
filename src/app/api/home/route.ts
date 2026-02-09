@@ -36,6 +36,12 @@ export async function GET() {
     .eq("id", user.id)
     .maybeSingle();
 
+  // ── Fetch user's total entry count (for first-time detection) ──
+  const { count: totalEntryCount } = await supabase
+    .from("wine_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
   // ── Fetch user's 3 most recent entries ──
   const { data: ownRows } = await supabase
     .from("wine_entries")
@@ -157,6 +163,8 @@ export async function GET() {
 
   return NextResponse.json({
     displayName: profile?.display_name ?? null,
+    totalEntryCount: totalEntryCount ?? 0,
+    friendCount: friendIds.length,
     recentEntries,
     circleEntries: circlEntries,
   });
