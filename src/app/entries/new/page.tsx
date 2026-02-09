@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,6 +30,9 @@ export default function NewEntryPage() {
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
   const [pairingFile, setPairingFile] = useState<File | null>(null);
+  const [labelPreview, setLabelPreview] = useState<string | null>(null);
+  const [placePreview, setPlacePreview] = useState<string | null>(null);
+  const [pairingPreview, setPairingPreview] = useState<string | null>(null);
   const [autofillStatus, setAutofillStatus] = useState<
     "idle" | "loading" | "success" | "error" | "timeout"
   >("idle");
@@ -40,6 +43,9 @@ export default function NewEntryPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const labelInputRef = useRef<HTMLInputElement | null>(null);
+  const placeInputRef = useRef<HTMLInputElement | null>(null);
+  const pairingInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -62,6 +68,14 @@ export default function NewEntryPage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (labelPreview) URL.revokeObjectURL(labelPreview);
+      if (placePreview) URL.revokeObjectURL(placePreview);
+      if (pairingPreview) URL.revokeObjectURL(pairingPreview);
+    };
+  }, [labelPreview, placePreview, pairingPreview]);
 
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
@@ -381,24 +395,37 @@ export default function NewEntryPage() {
               ) : null}
             </div>
             <input
+              ref={labelInputRef}
               id="label-upload"
               type="file"
               accept="image/*"
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0] ?? null;
+                if (labelPreview) URL.revokeObjectURL(labelPreview);
                 setLabelFile(file);
+                setLabelPreview(file ? URL.createObjectURL(file) : null);
                 if (file) {
                   runAutofill(file);
                 }
               }}
             />
-            <label
-              htmlFor="label-upload"
-              className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+            {labelPreview ? (
+              <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
+                <img
+                  src={labelPreview}
+                  alt="Label preview"
+                  className="h-40 w-full object-cover"
+                />
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              onClick={() => labelInputRef.current?.click()}
             >
               Upload image
-            </label>
+            </button>
             {autofillMessage ? (
               <p
                 className={`mt-2 text-sm ${
@@ -513,18 +540,34 @@ export default function NewEntryPage() {
                 Add a photo of the place you enjoyed this wine.
               </p>
               <input
+                ref={placeInputRef}
                 id="place-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  if (placePreview) URL.revokeObjectURL(placePreview);
+                  setPlaceFile(file);
+                  setPlacePreview(file ? URL.createObjectURL(file) : null);
+                }}
               />
-              <label
-                htmlFor="place-upload"
-                className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              {placePreview ? (
+                <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
+                  <img
+                    src={placePreview}
+                    alt="Place preview"
+                    className="h-40 w-full object-cover"
+                  />
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                onClick={() => placeInputRef.current?.click()}
               >
                 Upload image
-              </label>
+              </button>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
@@ -534,18 +577,34 @@ export default function NewEntryPage() {
                 Capture the dish or pairing you enjoyed.
               </p>
               <input
+                ref={pairingInputRef}
                 id="pairing-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(event) => setPairingFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  if (pairingPreview) URL.revokeObjectURL(pairingPreview);
+                  setPairingFile(file);
+                  setPairingPreview(file ? URL.createObjectURL(file) : null);
+                }}
               />
-              <label
-                htmlFor="pairing-upload"
-                className="mt-3 inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              {pairingPreview ? (
+                <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
+                  <img
+                    src={pairingPreview}
+                    alt="Pairing preview"
+                    className="h-40 w-full object-cover"
+                  />
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                onClick={() => pairingInputRef.current?.click()}
               >
                 Upload image
-              </label>
+              </button>
             </div>
           </div>
 
