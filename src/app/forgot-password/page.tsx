@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
             Reset access
           </span>
           <h1 className="text-2xl font-semibold text-zinc-50">
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
               id="email"
               type="email"
               autoComplete="email"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
               placeholder="you@example.com"
               {...register("email", { required: true })}
             />
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
             Send reset link
@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center">
           <Link
             href="/login"
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-amber-200"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-[#e7bfd0]"
           >
             Back to sign in
           </Link>

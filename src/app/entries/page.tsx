@@ -142,7 +142,7 @@ export default function EntriesPage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
             Your cellar
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
@@ -159,7 +159,7 @@ export default function EntriesPage() {
               Sort
             </label>
             <select
-              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-[#c27b97] focus:outline-none"
               value={sortBy}
               onChange={(event) =>
                 setSortBy(
@@ -172,7 +172,7 @@ export default function EntriesPage() {
               <option value="vintage">Vintage</option>
             </select>
             <select
-              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-[#c27b97] focus:outline-none"
               value={sortOrder}
               onChange={(event) =>
                 setSortOrder(event.target.value as "asc" | "desc")
@@ -207,7 +207,7 @@ export default function EntriesPage() {
               Filter by
             </label>
             <select
-              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-[#c27b97] focus:outline-none"
               value={filterType}
               onChange={(event) => {
                 const newFilterType = event.target.value as "vintage" | "country" | "rating" | "";
@@ -224,7 +224,7 @@ export default function EntriesPage() {
             </select>
             {filterType === "country" && (
               <select
-                className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-[#c27b97] focus:outline-none"
                 value={filterValue}
                 onChange={(event) => setFilterValue(event.target.value)}
               >
@@ -239,7 +239,7 @@ export default function EntriesPage() {
             {(filterType === "rating" || filterType === "vintage") && (
               <div className="flex flex-wrap items-center gap-2">
                 <input
-                  className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                  className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-[#c27b97] focus:outline-none"
                   type="number"
                   inputMode="numeric"
                   placeholder="Min"
@@ -247,7 +247,7 @@ export default function EntriesPage() {
                   onChange={(event) => setFilterMin(event.target.value)}
                 />
                 <input
-                  className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                  className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-[#c27b97] focus:outline-none"
                   type="number"
                   inputMode="numeric"
                   placeholder="Max"
@@ -281,7 +281,7 @@ export default function EntriesPage() {
               <Link
                 key={entry.id}
                 href={`/entries/${entry.id}`}
-                className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[#c27b97]/40"
               >
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                   {entry.label_image_url ? (

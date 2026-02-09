@@ -110,7 +110,7 @@ export default function FeedPage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
             Social feed
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
@@ -136,7 +136,7 @@ export default function FeedPage() {
                 setSearchResults([]);
               }
             }}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
             aria-describedby="search-results-desc"
           />
           <p id="search-results-desc" className="sr-only">
@@ -172,7 +172,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("public")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "public"
-                ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
+                ? "border border-[#c27b97]/60 bg-[#a44767]/10 text-[#e7bfd0]"
                 : "border border-white/10 text-zinc-200 hover:border-white/30"
             }`}
           >
@@ -183,7 +183,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("friends")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "friends"
-                ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
+                ? "border border-[#c27b97]/60 bg-[#a44767]/10 text-[#e7bfd0]"
                 : "border border-white/10 text-zinc-200 hover:border-white/30"
             }`}
           >
@@ -208,7 +208,7 @@ export default function FeedPage() {
             {entries.map((entry) => (
               <article
                 key={entry.id}
-                className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[#c27b97]/40"
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/entries/${entry.id}`)}
@@ -227,7 +227,7 @@ export default function FeedPage() {
                         event.stopPropagation();
                         router.push(`/profile/${entry.user_id}`);
                       }}
-                      className="font-medium text-zinc-200 hover:text-amber-200"
+                      className="font-medium text-zinc-200 hover:text-[#e7bfd0]"
                     >
                       {entry.author_name}
                     </button>

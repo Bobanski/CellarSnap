@@ -107,7 +107,7 @@ export default function NavBar() {
     return (
       <span className="inline-flex items-center gap-2">
         {label}
-        <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+        <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[#a44767] px-1.5 py-0.5 text-[10px] font-bold text-[#fff7fa]">
           {pendingLabel}
         </span>
       </span>
@@ -120,7 +120,7 @@ export default function NavBar() {
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/"
-          className="text-lg font-semibold tracking-tight text-zinc-50 transition hover:text-amber-200"
+          className="text-lg font-semibold tracking-tight text-zinc-50 transition hover:text-[#e7bfd0]"
         >
           CellarSnap
         </Link>
@@ -132,7 +132,7 @@ export default function NavBar() {
             return active ? (
               <span
                 key={href}
-                className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+                className="rounded-full border border-[#c27b97]/60 bg-[#a44767]/10 px-4 py-2 text-sm font-semibold text-[#e7bfd0]"
               >
                 {renderNavLabel(label, href)}
               </span>
@@ -147,13 +147,13 @@ export default function NavBar() {
             );
           })}
           {isNewEntryActive ? (
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+            <span className="rounded-full border border-[#c27b97]/60 bg-[#a44767]/10 px-4 py-2 text-sm font-semibold text-[#e7bfd0]">
               New entry
             </span>
           ) : (
             <Link
               href="/entries/new"
-              className="rounded-full bg-amber-400/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="rounded-full bg-[#a44767]/90 px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657]"
             >
               + New entry
             </Link>
@@ -171,13 +171,13 @@ export default function NavBar() {
         {/* ── Mobile controls (<md) ── */}
         <div className="flex items-center gap-2 md:hidden">
           {isNewEntryActive ? (
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-3 py-1.5 text-sm font-semibold text-amber-200">
+            <span className="rounded-full border border-[#c27b97]/60 bg-[#a44767]/10 px-3 py-1.5 text-sm font-semibold text-[#e7bfd0]">
               New entry
             </span>
           ) : (
             <Link
               href="/entries/new"
-              className="rounded-full bg-amber-400/90 px-3 py-1.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="rounded-full bg-[#a44767]/90 px-3 py-1.5 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657]"
             >
               + New
             </Link>
@@ -225,7 +225,7 @@ export default function NavBar() {
               </svg>
             )}
             {pendingIncomingCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1 py-0.5 text-[10px] font-bold text-zinc-950">
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#a44767] px-1 py-0.5 text-[10px] font-bold text-[#fff7fa]">
                 {pendingLabel}
               </span>
             ) : null}
@@ -245,7 +245,7 @@ export default function NavBar() {
                   href={href}
                   className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     active
-                      ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
+                      ? "border border-[#c27b97]/60 bg-[#a44767]/10 text-[#e7bfd0]"
                       : "text-zinc-200 hover:bg-white/5"
                   }`}
                 >
@@ -256,7 +256,7 @@ export default function NavBar() {
             {!isNewEntryActive ? (
               <Link
                 href="/entries/new"
-                className="block rounded-xl bg-amber-400/90 px-4 py-3 text-center text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+                className="block rounded-xl bg-[#a44767]/90 px-4 py-3 text-center text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657]"
               >
                 + New entry
               </Link>

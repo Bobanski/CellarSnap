@@ -447,7 +447,7 @@ export default function NewEntryPage() {
       </div>
       <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
             New entry
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
@@ -472,7 +472,7 @@ export default function NewEntryPage() {
               {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
                 <button
                   type="button"
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                   onClick={() => {
                     const first = labelPhotos[0];
                     if (first) runAutofill(first.file);
@@ -511,7 +511,7 @@ export default function NewEntryPage() {
                       <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
                         <button
                           type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                           disabled={index === 0}
                           onClick={() => movePhoto("label", index, "up")}
                           aria-label="Move label photo up"
@@ -520,7 +520,7 @@ export default function NewEntryPage() {
                         </button>
                         <button
                           type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                           disabled={index === labelPhotos.length - 1}
                           onClick={() => movePhoto("label", index, "down")}
                           aria-label="Move label photo down"
@@ -549,7 +549,7 @@ export default function NewEntryPage() {
             ) : null}
             <button
               type="button"
-              className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
               onClick={() => labelInputRef.current?.click()}
               disabled={labelPhotos.length >= MAX_PHOTOS}
             >
@@ -577,7 +577,7 @@ export default function NewEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Wine name</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 placeholder="Optional"
                 {...register("wine_name")}
               />
@@ -585,7 +585,7 @@ export default function NewEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Producer</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 placeholder="Optional"
                 {...register("producer")}
               />
@@ -593,7 +593,7 @@ export default function NewEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Vintage</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 placeholder="Optional"
                 {...register("vintage")}
               />
@@ -601,7 +601,7 @@ export default function NewEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Country</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 placeholder="Optional"
                 {...register("country")}
               />
@@ -609,7 +609,7 @@ export default function NewEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Region</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 placeholder="Optional"
                 {...register("region")}
               />
@@ -617,7 +617,7 @@ export default function NewEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Appellation</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 placeholder="Optional"
                 {...register("appellation")}
               />
@@ -628,7 +628,7 @@ export default function NewEntryPage() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                 {...register("rating", {
                   setValueAs: (value) => (value === "" ? undefined : Number(value)),
                 })}
@@ -645,7 +645,7 @@ export default function NewEntryPage() {
                     value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                     required
                   />
                 )}
@@ -656,7 +656,7 @@ export default function NewEntryPage() {
           <div>
             <label className="text-sm font-medium text-zinc-200">Location</label>
             <input
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
               placeholder="Optional location"
               {...register("location_text")}
             />
@@ -665,7 +665,7 @@ export default function NewEntryPage() {
           <div>
             <label className="text-sm font-medium text-zinc-200">Notes</label>
             <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
               placeholder="Optional tasting notes"
               {...register("notes")}
             />
@@ -708,7 +708,7 @@ export default function NewEntryPage() {
                       <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
                         <button
                           type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                           disabled={index === 0}
                           onClick={() => movePhoto("place", index, "up")}
                           aria-label="Move place photo up"
@@ -717,7 +717,7 @@ export default function NewEntryPage() {
                         </button>
                         <button
                           type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                           disabled={index === placePhotos.length - 1}
                           onClick={() => movePhoto("place", index, "down")}
                           aria-label="Move place photo down"
@@ -740,7 +740,7 @@ export default function NewEntryPage() {
               ) : null}
               <button
                 type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                 onClick={() => placeInputRef.current?.click()}
                 disabled={placePhotos.length >= MAX_PHOTOS}
               >
@@ -785,7 +785,7 @@ export default function NewEntryPage() {
                       <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
                         <button
                           type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                           disabled={index === 0}
                           onClick={() => movePhoto("pairing", index, "up")}
                           aria-label="Move pairing photo up"
@@ -794,7 +794,7 @@ export default function NewEntryPage() {
                         </button>
                         <button
                           type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                           disabled={index === pairingPhotos.length - 1}
                           onClick={() => movePhoto("pairing", index, "down")}
                           aria-label="Move pairing photo down"
@@ -817,7 +817,7 @@ export default function NewEntryPage() {
               ) : null}
               <button
                 type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                 onClick={() => pairingInputRef.current?.click()}
                 disabled={pairingPhotos.length >= MAX_PHOTOS}
               >
@@ -843,7 +843,7 @@ export default function NewEntryPage() {
                     <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-[#a44767]"
                         checked={isChecked}
                         onChange={(event) => {
                           setSelectedUserIds((prev) =>
@@ -872,7 +872,7 @@ export default function NewEntryPage() {
               <PrivacyBadge level={selectedEntryPrivacy} />
             </div>
             <select
-              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
               {...register("entry_privacy")}
             >
               <option value="public">Public</option>
@@ -888,7 +888,7 @@ export default function NewEntryPage() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-[#a44767] px-5 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting}
             >
               Save entry

@@ -265,7 +265,7 @@ export default function ProfilePage() {
         <NavBar />
         <div className="mx-auto max-w-2xl space-y-8">
           <header className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
               My profile
             </span>
             <h1 className="text-3xl font-semibold text-zinc-50">
@@ -279,7 +279,7 @@ export default function ProfilePage() {
           {/* ── Section 1: Identity Card ── */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             {requiresUsernameSetup && isEditing ? (
-              <p className="mb-5 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+              <p className="mb-5 rounded-xl border border-[#c27b97]/40 bg-[#7f2f4d]/10 px-3 py-2 text-sm text-[#f4dfe8]">
                 Set a username to continue using CellarSnap.
               </p>
             ) : null}
@@ -310,7 +310,7 @@ export default function ProfilePage() {
                     maxLength={100}
                     value={editUsername}
                     onChange={(e) => setEditUsername(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                   />
                 </div>
 
@@ -326,7 +326,7 @@ export default function ProfilePage() {
                     type="button"
                     disabled={isSavingUsername}
                     onClick={saveUsername}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                    className="rounded-full bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:opacity-50"
                   >
                     {isSavingUsername ? "Saving..." : "Save username"}
                   </button>
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                     key={option.value}
                     className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
                       privacyValue === option.value
-                        ? "border-amber-300/60 bg-amber-400/10"
+                        ? "border-[#c27b97]/60 bg-[#a44767]/10"
                         : "border-white/10 bg-black/20 hover:border-white/20"
                     }`}
                   >
@@ -439,13 +439,13 @@ export default function ProfilePage() {
                       checked={privacyValue === option.value}
                       onChange={() => savePrivacy(option.value)}
                       disabled={isSavingPrivacy}
-                      className="mt-0.5 h-4 w-4 accent-amber-400"
+                      className="mt-0.5 h-4 w-4 accent-[#a44767]"
                     />
                     <div>
                       <p
                         className={`text-sm font-medium ${
                           privacyValue === option.value
-                            ? "text-amber-200"
+                            ? "text-[#e7bfd0]"
                             : "text-zinc-200"
                         }`}
                       >
@@ -513,12 +513,12 @@ export default function ProfilePage() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter your current password"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword((p) => !p)}
-                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-[#e7bfd0]"
                       aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                     >
                       {showCurrentPassword ? "Hide" : "Show"}
@@ -542,12 +542,12 @@ export default function ProfilePage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Minimum 8 characters"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword((p) => !p)}
-                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-[#e7bfd0]"
                       aria-label={showNewPassword ? "Hide password" : "Show password"}
                     >
                       {showNewPassword ? "Hide" : "Show"}
@@ -571,12 +571,12 @@ export default function ProfilePage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter new password"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((p) => !p)}
-                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-[#e7bfd0]"
                       aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     >
                       {showConfirmPassword ? "Hide" : "Show"}
@@ -593,7 +593,7 @@ export default function ProfilePage() {
                     type="button"
                     disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
                     onClick={savePassword}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSavingPassword ? "Updating..." : "Update password"}
                   </button>

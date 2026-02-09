@@ -27,9 +27,9 @@ body {
 
 /* Date picker popover dark theme */
 .rdp-consumed.rdp-root {
-  --rdp-accent-color: rgb(251 191 36);
-  --rdp-accent-background-color: rgb(251 191 36 / 0.25);
-  --rdp-today-color: rgb(251 191 36);
+  --rdp-accent-color: rgb(164 71 103);
+  --rdp-accent-background-color: rgb(164 71 103 / 0.25);
+  --rdp-today-color: rgb(194 123 151);
   color: #e7e5e4;
 }
 .rdp-consumed .rdp-day_button {

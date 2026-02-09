@@ -279,12 +279,12 @@ export default function EntryDetailPage() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Link
-              className="text-sm font-medium text-zinc-400 hover:text-amber-200"
+              className="text-sm font-medium text-zinc-400 hover:text-[#e7bfd0]"
               href={backHref}
             >
               {backLabel}
             </Link>
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
               Cellar entry
             </span>
             <h1 className="text-3xl font-semibold text-zinc-50">
@@ -322,7 +322,7 @@ export default function EntryDetailPage() {
                       <a
                         href={labelGallery[0].signed_url}
                         download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                       >
                         Download
                       </a>
@@ -377,7 +377,7 @@ export default function EntryDetailPage() {
                       <a
                         href={placeGallery[0].signed_url}
                         download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                       >
                         Download
                       </a>
@@ -424,7 +424,7 @@ export default function EntryDetailPage() {
                       <a
                         href={pairingGallery[0].signed_url}
                         download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
                       >
                         Download
                       </a>
