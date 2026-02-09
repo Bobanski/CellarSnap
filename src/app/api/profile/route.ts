@@ -61,7 +61,7 @@ export async function GET() {
     if (fallback.error) {
       return NextResponse.json({ error: fallback.error.message }, { status: 500 });
     }
-    profile = { ...fallback.data, default_entry_privacy: null };
+    profile = { ...fallback.data, default_entry_privacy: "public" };
   } else if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   } else {

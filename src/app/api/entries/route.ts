@@ -143,7 +143,7 @@ export async function POST(request: Request) {
 
   const entryPrivacy = payload.data.entry_privacy ??
     profile?.default_entry_privacy ??
-    "private";
+    "public";
   const labelPhotoPrivacy =
     payload.data.label_photo_privacy ?? null;
   const placePhotoPrivacy =

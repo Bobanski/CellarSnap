@@ -42,7 +42,7 @@ export default function ProfilePage() {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   // Privacy state
-  const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("private");
+  const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("public");
   const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 

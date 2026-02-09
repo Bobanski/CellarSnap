@@ -55,8 +55,18 @@ export default function NewEntryPage() {
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
     let isMounted = true;
+
+    const loadProfile = async () => {
+      const response = await fetch("/api/profile", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (isMounted && data.profile?.default_entry_privacy) {
+        setValue("entry_privacy", data.profile.default_entry_privacy);
+      }
+    };
 
     const loadUsers = async () => {
       const response = await fetch("/api/friends", { cache: "no-store" });
@@ -70,12 +80,13 @@ export default function NewEntryPage() {
       }
     };
 
+    loadProfile();
     loadUsers();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [setValue]);
 
   useEffect(() => {
     return () => {

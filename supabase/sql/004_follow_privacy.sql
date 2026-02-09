@@ -6,7 +6,7 @@ exception
 end $$;
 
 alter table public.profiles
-  add column if not exists default_entry_privacy public.privacy_level not null default 'private';
+  add column if not exists default_entry_privacy public.privacy_level not null default 'public';
 
 alter table public.wine_entries
   add column if not exists entry_privacy public.privacy_level not null default 'public',
