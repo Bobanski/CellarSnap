@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import AlertsMenu from "@/components/AlertsMenu";
 
 type NewEntryForm = {
   wine_name: string;
@@ -370,6 +371,7 @@ export default function NewEntryPage() {
             >
               My profile
             </Link>
+            <AlertsMenu />
           </div>
         </header>
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
+import AlertsMenu from "@/components/AlertsMenu";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { WineEntryWithUrls } from "@/types/wine";
 
@@ -117,6 +118,7 @@ export default function EntriesPage() {
             >
               My profile
             </Link>
+            <AlertsMenu />
             <button
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               type="button"

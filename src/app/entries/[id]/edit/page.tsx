@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import AlertsMenu from "@/components/AlertsMenu";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type EditEntryForm = {
@@ -308,6 +309,7 @@ export default function EditEntryPage() {
             >
               My profile
             </Link>
+            <AlertsMenu />
           </div>
         </header>
 

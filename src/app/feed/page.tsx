@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
+import AlertsMenu from "@/components/AlertsMenu";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type FeedEntry = WineEntryWithUrls & {
@@ -139,6 +140,7 @@ export default function FeedPage() {
             >
               My profile
             </Link>
+            <AlertsMenu />
           </div>
         </header>
 

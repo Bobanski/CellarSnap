@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
+import AlertsMenu from "@/components/AlertsMenu";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
@@ -139,6 +140,7 @@ export default function FriendProfilePage() {
             >
               My profile
             </Link>
+            <AlertsMenu />
           </div>
         </header>
 

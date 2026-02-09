@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
+import AlertsMenu from "@/components/AlertsMenu";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
@@ -239,6 +240,7 @@ export default function EntryDetailPage() {
             >
               My profile
             </Link>
+            <AlertsMenu />
           </div>
         </header>
 
