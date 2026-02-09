@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
+import { formatConsumedDate } from "@/lib/formatDate";
 
 function toYMD(d: Date): string {
   const y = d.getFullYear();
@@ -35,6 +36,7 @@ export default function DatePicker({
   required,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [month, setMonth] = useState<Date>(() => parseYMD(value) ?? new Date());
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,7 +47,12 @@ export default function DatePicker({
     if (d) setMonth(d);
   }, [value]);
 
-  const selectedDate = parseYMD(inputValue) ?? undefined;
+  const selectedDate = parseYMD(value) ?? undefined;
+  const displayValue = focused
+    ? inputValue
+    : parseYMD(value)
+      ? formatConsumedDate(value)
+      : value;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
@@ -57,6 +64,17 @@ export default function DatePicker({
     }
   };
 
+  const handleFocus = () => {
+    setFocused(true);
+    setInputValue(value);
+    setOpen(true);
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    onBlur?.();
+  };
+
   const handleSelect = (date: Date | undefined) => {
     if (!date) return;
     const ymd = toYMD(date);
@@ -64,6 +82,7 @@ export default function DatePicker({
     onChange(ymd);
     setMonth(date);
     setOpen(false);
+    setFocused(false);
   };
 
   useEffect(() => {
@@ -81,12 +100,12 @@ export default function DatePicker({
       <input
         id={id}
         type="text"
-        value={inputValue}
+        value={displayValue}
         onChange={handleInputChange}
-        onBlur={onBlur}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
-        placeholder="YYYY-MM-DD"
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        onClick={handleFocus}
+        placeholder="e.g. Jan 26, 2026"
         required={required}
         autoComplete="off"
         className={className}
