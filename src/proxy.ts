@@ -20,11 +20,13 @@ export async function proxy(request: NextRequest) {
   const isEntriesRoute = pathname.startsWith("/entries");
   const isProfileRoute = pathname.startsWith("/profile");
   const isFeedRoute = pathname.startsWith("/feed");
+  const isFriendsRoute = pathname.startsWith("/friends");
   const isLoginRoute = pathname.startsWith("/login");
   const isSignupRoute = pathname.startsWith("/signup");
   const isUsernameSetupBypass = pathname.startsWith("/profile");
 
-  const isProtected = isEntriesRoute || isProfileRoute || isFeedRoute;
+  const isProtected =
+    isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
   if (isProtected && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
@@ -57,5 +59,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/entries/:path*", "/profile/:path*", "/login", "/signup", "/feed"],
+  matcher: [
+    "/entries/:path*",
+    "/profile/:path*",
+    "/login",
+    "/signup",
+    "/feed",
+    "/friends",
+  ],
 };
