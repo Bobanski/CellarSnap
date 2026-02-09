@@ -67,6 +67,11 @@ export default function NewEntryPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const rating =
+      typeof values.rating === "number" && !Number.isNaN(values.rating)
+        ? Number(values.rating)
+        : undefined;
+
     const response = await fetch("/api/entries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -77,7 +82,7 @@ export default function NewEntryPage() {
         country: values.country || null,
         region: values.region || null,
         appellation: values.appellation || null,
-        rating: values.rating ? Number(values.rating) : null,
+        rating,
         notes: values.notes || null,
         location_text: values.location_text || null,
         consumed_at: values.consumed_at,
@@ -86,8 +91,15 @@ export default function NewEntryPage() {
     });
 
     if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const apiError =
+        typeof payload?.error === "string"
+          ? payload.error
+          : payload?.error?.fieldErrors?.rating?.[0] ??
+            payload?.error?.formErrors?.[0] ??
+            "Unable to create entry.";
       setIsSubmitting(false);
-      setErrorMessage("Unable to create entry.");
+      setErrorMessage(apiError);
       return;
     }
 

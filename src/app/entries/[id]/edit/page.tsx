@@ -143,6 +143,11 @@ export default function EditEntryPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    const rating =
+      typeof values.rating === "number" && !Number.isNaN(values.rating)
+        ? Number(values.rating)
+        : undefined;
+
     const updatePayload: Record<string, unknown> = {
       wine_name: values.wine_name || null,
       producer: values.producer || null,
@@ -150,7 +155,7 @@ export default function EditEntryPage() {
       country: values.country || null,
       region: values.region || null,
       appellation: values.appellation || null,
-      rating: values.rating ? Number(values.rating) : null,
+      rating,
       notes: values.notes || null,
       location_text: values.location_text || null,
       consumed_at: values.consumed_at,
@@ -212,8 +217,15 @@ export default function EditEntryPage() {
     });
 
     if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const apiError =
+        typeof payload?.error === "string"
+          ? payload.error
+          : payload?.error?.fieldErrors?.rating?.[0] ??
+            payload?.error?.formErrors?.[0] ??
+            "Unable to update entry.";
       setIsSubmitting(false);
-      setErrorMessage("Unable to update entry.");
+      setErrorMessage(apiError);
       return;
     }
 
