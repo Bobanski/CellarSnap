@@ -317,7 +317,7 @@ export default function EntryDetailPage() {
                   />
                   <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
                     <span>Label photos</span>
-                    {labelGallery[0].signed_url ? (
+                    {isOwner && labelGallery[0].signed_url ? (
                       <a
                         href={labelGallery[0].signed_url}
                         download
@@ -372,7 +372,7 @@ export default function EntryDetailPage() {
                   />
                   <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
                     <span>Place photos</span>
-                    {placeGallery[0].signed_url ? (
+                    {isOwner && placeGallery[0].signed_url ? (
                       <a
                         href={placeGallery[0].signed_url}
                         download
@@ -419,7 +419,7 @@ export default function EntryDetailPage() {
                   />
                   <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
                     <span>Pairing photos</span>
-                    {pairingGallery[0].signed_url ? (
+                    {isOwner && pairingGallery[0].signed_url ? (
                       <a
                         href={pairingGallery[0].signed_url}
                         download
