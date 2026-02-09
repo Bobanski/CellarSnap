@@ -151,7 +151,7 @@ export default function FriendsPage() {
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/feed"
             >
-              Friends tab
+              Social Feed
             </Link>
             <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
               Friends

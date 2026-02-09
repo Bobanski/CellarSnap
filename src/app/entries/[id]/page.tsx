@@ -204,7 +204,7 @@ export default function EntryDetailPage() {
 
   const isOwner = currentUserId === entry.user_id;
   const backHref = isOwner ? "/entries" : "/feed";
-  const backLabel = isOwner ? "← Back to My entries" : "← Back to Friends tab";
+  const backLabel = isOwner ? "← Back to My entries" : "← Back to Social Feed";
   const sortByPosition = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => a.position - b.position);
   const labelPhotos = sortByPosition(
@@ -307,7 +307,7 @@ export default function EntryDetailPage() {
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/feed"
             >
-              Friends tab
+              Social Feed
             </Link>
             <Link
               className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
