@@ -10,10 +10,12 @@ type Profile = {
   email: string | null;
 };
 
+type Friend = Profile & { request_id: string | null };
+
 type Suggestion = Profile & { mutual_count: number };
 
 export default function FriendsPage() {
-  const [friends, setFriends] = useState<Profile[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<
     { id: string; requester: Profile }[]
   >([]);
@@ -26,6 +28,10 @@ export default function FriendsPage() {
   const [friendError, setFriendError] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  /* ── Confirmation state for destructive actions ── */
+  const [confirmingCancel, setConfirmingCancel] = useState<string | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
 
   const displayName = (profile: Profile | null) =>
     profile?.display_name ?? profile?.email ?? "Unknown";
@@ -115,6 +121,21 @@ export default function FriendsPage() {
     await loadFriends();
   };
 
+  const deleteRequest = async (requestId: string) => {
+    setFriendError(null);
+    const response = await fetch(`/api/friends/requests/${requestId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setFriendError(payload.error ?? "Unable to process request.");
+      return;
+    }
+    setConfirmingCancel(null);
+    setConfirmingRemove(null);
+    await loadFriends();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -140,7 +161,7 @@ export default function FriendsPage() {
             Keep your cellar circle close.
           </h1>
           <p className="text-sm text-zinc-300">
-            Review requests, add friends, and see who you're connected with.
+            Review requests, add friends, and see who you&rsquo;re connected with.
           </p>
         </header>
 
@@ -300,7 +321,7 @@ export default function FriendsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-zinc-200">Your friends</h2>
             <p className="mt-1 text-xs text-zinc-400">
-              People you're connected with.
+              People you&rsquo;re connected with.
             </p>
             {friends.length === 0 ? (
               <p className="mt-4 text-sm text-zinc-500">
@@ -311,14 +332,44 @@ export default function FriendsPage() {
                 {friends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-100"
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
                   >
                     <Link
                       href={`/profile/${friend.id}`}
-                      className="font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
+                      className="text-sm font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
                     >
                       {displayName(friend)}
                     </Link>
+
+                    {friend.request_id ? (
+                      confirmingRemove === friend.request_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-400">Remove?</span>
+                          <button
+                            type="button"
+                            onClick={() => deleteRequest(friend.request_id!)}
+                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingRemove(null)}
+                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingRemove(friend.request_id!)}
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200"
+                        >
+                          Remove
+                        </button>
+                      )
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -333,9 +384,39 @@ export default function FriendsPage() {
                   {outgoingRequests.map((request) => (
                     <div
                       key={request.id}
-                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-200"
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
                     >
-                      {displayName(request.recipient)}
+                      <span className="text-sm text-zinc-200">
+                        {displayName(request.recipient)}
+                      </span>
+
+                      {confirmingCancel === request.id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-400">Cancel?</span>
+                          <button
+                            type="button"
+                            onClick={() => deleteRequest(request.id)}
+                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingCancel(null)}
+                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingCancel(request.id)}
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

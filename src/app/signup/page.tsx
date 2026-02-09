@@ -39,6 +39,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (values.password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
     setInfoMessage(null);
@@ -164,6 +169,9 @@ export default function SignupPage() {
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
+            <p className="mt-1 text-xs text-zinc-500">
+              Must be at least 6 characters.
+            </p>
           </div>
 
           {errorMessage ? (

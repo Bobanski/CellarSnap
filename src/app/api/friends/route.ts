@@ -21,15 +21,17 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const friendIds = Array.from(
-    new Set(
-      (requests ?? []).map((request) =>
-        request.requester_id === user.id
-          ? request.recipient_id
-          : request.requester_id
-      )
-    )
-  );
+  // Build a map: friend_user_id -> request_id
+  const friendMap = new Map<string, string>();
+  for (const request of requests ?? []) {
+    const friendId =
+      request.requester_id === user.id
+        ? request.recipient_id
+        : request.requester_id;
+    friendMap.set(friendId, request.id);
+  }
+
+  const friendIds = Array.from(friendMap.keys());
 
   const { data: profiles } =
     friendIds.length > 0
@@ -46,6 +48,7 @@ export async function GET() {
   return NextResponse.json({
     friends: friendIds.map((id) => ({
       id,
+      request_id: friendMap.get(id) ?? null,
       display_name: profileMap.get(id)?.display_name ?? null,
       email: profileMap.get(id)?.email ?? null,
     })),
