@@ -23,6 +23,13 @@ export default function EntriesPage() {
   const [filterValue, setFilterValue] = useState<string>("");
   const [filterMin, setFilterMin] = useState<string>("");
   const [filterMax, setFilterMax] = useState<string>("");
+  const isRangeFilterActive =
+    (filterType === "rating" || filterType === "vintage") &&
+    (filterMin !== "" || filterMax !== "");
+  const isFilterActive =
+    filterType === "country"
+      ? filterValue !== ""
+      : isRangeFilterActive;
 
   // Extract unique values for filters
   const uniqueValues = useMemo(() => {
@@ -201,7 +208,7 @@ export default function EntriesPage() {
               Sort
             </label>
             <select
-              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
               value={sortBy}
               onChange={(event) =>
                 setSortBy(
@@ -214,7 +221,7 @@ export default function EntriesPage() {
               <option value="vintage">Vintage</option>
             </select>
             <select
-              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
               value={sortOrder}
               onChange={(event) =>
                 setSortOrder(event.target.value as "asc" | "desc")
@@ -249,7 +256,7 @@ export default function EntriesPage() {
               Filter by
             </label>
             <select
-              className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
               value={filterType}
               onChange={(event) => {
                 const newFilterType = event.target.value as "vintage" | "country" | "rating" | "";
@@ -266,7 +273,7 @@ export default function EntriesPage() {
             </select>
             {filterType === "country" && (
               <select
-                className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
                 value={filterValue}
                 onChange={(event) => setFilterValue(event.target.value)}
               >
@@ -280,30 +287,22 @@ export default function EntriesPage() {
             )}
             {(filterType === "rating" || filterType === "vintage") && (
               <div className="flex flex-wrap items-center gap-2">
-                <select
+                <input
                   className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Min"
                   value={filterMin}
                   onChange={(event) => setFilterMin(event.target.value)}
-                >
-                  <option value="">Min</option>
-                  {uniqueValues[filterType].map((value) => (
-                    <option key={`min-${value}`} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-                <select
+                />
+                <input
                   className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Max"
                   value={filterMax}
                   onChange={(event) => setFilterMax(event.target.value)}
-                >
-                  <option value="">Max</option>
-                  {uniqueValues[filterType].map((value) => (
-                    <option key={`max-${value}`} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             )}
           </div>
@@ -319,7 +318,11 @@ export default function EntriesPage() {
           </div>
         ) : sortedEntries.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
-            No entries yet. Add your first bottle!
+            {isRangeFilterActive
+              ? "There are no wines found in this range."
+              : isFilterActive
+                ? "No entries match this filter."
+                : "No entries yet. Add your first bottle!"}
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
