@@ -265,7 +265,7 @@ export default function EntriesPage() {
                 {filterType === "rating" &&
                   uniqueValues.rating.map((rating) => (
                     <option key={rating} value={rating}>
-                      {rating}/100
+                      {rating}
                     </option>
                   ))}
               </select>
