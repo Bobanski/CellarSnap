@@ -12,6 +12,8 @@ type Profile = {
   email: string | null;
 };
 
+type Suggestion = Profile & { mutual_count: number };
+
 export default function FriendsPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -23,6 +25,7 @@ export default function FriendsPage() {
     { id: string; recipient: Profile }[]
   >([]);
   const [allUsers, setAllUsers] = useState<Profile[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
   const [friendError, setFriendError] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
@@ -34,10 +37,11 @@ export default function FriendsPage() {
   const loadFriends = async () => {
     setFriendError(null);
 
-    const [friendsRes, requestsRes, usersRes] = await Promise.all([
+    const [friendsRes, requestsRes, usersRes, suggestionsRes] = await Promise.all([
       fetch("/api/friends", { cache: "no-store" }),
       fetch("/api/friends/requests", { cache: "no-store" }),
       fetch("/api/users", { cache: "no-store" }),
+      fetch("/api/friends/suggestions", { cache: "no-store" }),
     ]);
 
     if (friendsRes.ok) {
@@ -54,6 +58,11 @@ export default function FriendsPage() {
     if (usersRes.ok) {
       const data = await usersRes.json();
       setAllUsers(data.users ?? []);
+    }
+
+    if (suggestionsRes.ok) {
+      const data = await suggestionsRes.json();
+      setSuggestions(data.suggestions ?? []);
     }
   };
 
@@ -223,6 +232,7 @@ export default function FriendsPage() {
             )}
           </div>
 
+          <div className="space-y-6">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-zinc-200">Find friends</h2>
             <p className="mt-1 text-xs text-zinc-400">
@@ -282,6 +292,53 @@ export default function FriendsPage() {
             ) : friendSearch.trim() ? (
               <p className="mt-2 text-sm text-zinc-400">No matches.</p>
             ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold text-zinc-200">
+              People you may know
+            </h2>
+            <p className="mt-1 text-xs text-zinc-400">
+              Suggested based on mutual friends.
+            </p>
+            {suggestions.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-500">
+                No suggestions right now. Add more friends to see recommendations.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {suggestions.map((person) => {
+                  const isFriend = friendIds.has(person.id);
+                  const isOutgoing = outgoingIds.has(person.id);
+                  const mutualLabel =
+                    person.mutual_count === 1
+                      ? "1 mutual friend"
+                      : `${person.mutual_count} mutual friends`;
+                  return (
+                    <div
+                      key={person.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          {displayName(person)}
+                        </p>
+                        <p className="text-xs text-amber-200">{mutualLabel}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isFriend || isOutgoing || isRequesting}
+                        onClick={() => sendRequest(person.id)}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
