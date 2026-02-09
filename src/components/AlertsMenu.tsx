@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type TagNotification = {
   id: string;
@@ -28,6 +29,7 @@ export default function AlertsMenu() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     let isMounted = true;
@@ -79,6 +81,20 @@ export default function AlertsMenu() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -97,8 +113,18 @@ export default function AlertsMenu() {
 
       {open ? (
         <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#14100f] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-          <div className="border-b border-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-zinc-400">
-            Alerts
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+              Alerts
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-semibold text-zinc-200 transition hover:border-white/30"
+              aria-label="Close alerts"
+            >
+              Close
+            </button>
           </div>
           {loading ? (
             <div className="px-4 py-4 text-sm text-zinc-300">Loading...</div>
