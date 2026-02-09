@@ -381,7 +381,7 @@ export default function FriendProfilePage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-wide">
+                      <span className="rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-xs font-semibold tracking-wide text-amber-100">
                         {entry.rating ? `${entry.rating}/100` : "Unrated"}
                       </span>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
@@ -438,7 +438,7 @@ export default function FriendProfilePage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-wide">
+                      <span className="rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-xs font-semibold tracking-wide text-amber-100">
                         {entry.rating ? `${entry.rating}/100` : "Unrated"}
                       </span>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>

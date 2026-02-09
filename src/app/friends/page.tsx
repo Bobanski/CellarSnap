@@ -223,168 +223,7 @@ export default function FriendsPage() {
           </p>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-zinc-200">
-                Incoming requests
-              </h2>
-              {incomingRequests.length > 0 ? (
-                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
-                  {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
-                </span>
-              ) : null}
-            </div>
-            <p className="mt-1 text-xs text-zinc-400">
-              Accept or decline new friend requests.
-            </p>
-            {incomingRequests.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">
-                No new requests right now.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {incomingRequests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="rounded-xl border border-white/10 bg-black/20 p-3"
-                  >
-                    <p className="text-sm font-medium text-zinc-100">
-                      {displayName(request.requester)}
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-300"
-                        disabled={isMutating}
-                        onClick={() => respondToRequest(request.id, "accept")}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300"
-                        disabled={isMutating}
-                        onClick={() => respondToRequest(request.id, "decline")}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold text-zinc-200">Find friends</h2>
-            <p className="mt-1 text-xs text-zinc-400">
-              Search by username to send a request.
-            </p>
-            <input
-              value={friendSearch}
-              onChange={(event) => setFriendSearch(event.target.value)}
-              placeholder="Search by username"
-              className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-            />
-            {friendError ? (
-              <p className="mt-2 text-sm text-rose-200">{friendError}</p>
-            ) : null}
-            {filteredUsers.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {filteredUsers.slice(0, 5).map((user) => {
-                  const label = displayName(user);
-                  const isFriend = friendIds.has(user.id);
-                  const isOutgoing = outgoingIds.has(user.id);
-                  const isIncoming = incomingIds.has(user.id);
-                  return (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-zinc-100">
-                          {label}
-                        </p>
-                        {isFriend ? (
-                          <p className="text-xs text-emerald-200">
-                            Already friends
-                          </p>
-                        ) : isOutgoing ? (
-                          <p className="text-xs text-amber-200">
-                            Request sent
-                          </p>
-                        ) : isIncoming ? (
-                          <p className="text-xs text-amber-200">
-                            Requested you
-                          </p>
-                        ) : null}
-                      </div>
-                      <button
-                        type="button"
-                        disabled={isFriend || isOutgoing || isMutating}
-                        onClick={() => sendRequest(user.id)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : friendSearch.trim() ? (
-              <p className="mt-2 text-sm text-zinc-400">No matches.</p>
-            ) : null}
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold text-zinc-200">
-              People you may know
-            </h2>
-            <p className="mt-1 text-xs text-zinc-400">
-              Suggested based on mutual friends.
-            </p>
-            {suggestions.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">
-                No suggestions right now. Add more friends to see recommendations.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-2">
-                {suggestions.map((person) => {
-                  const isFriend = friendIds.has(person.id);
-                  const isOutgoing = outgoingIds.has(person.id);
-                  const mutualLabel =
-                    person.mutual_count === 1
-                      ? "1 mutual friend"
-                      : `${person.mutual_count} mutual friends`;
-                  return (
-                    <div
-                      key={person.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-zinc-100">
-                          {displayName(person)}
-                        </p>
-                        <p className="text-xs text-amber-200">{mutualLabel}</p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={isFriend || isOutgoing || isMutating}
-                        onClick={() => sendRequest(person.id)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          </div>
-
+        <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-zinc-200">Your friends</h2>
             <p className="mt-1 text-xs text-zinc-400">
@@ -495,6 +334,165 @@ export default function FriendsPage() {
                 </div>
               </div>
             ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-zinc-200">
+                Incoming requests
+              </h2>
+              {incomingRequests.length > 0 ? (
+                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+                  {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs text-zinc-400">
+              Accept or decline new friend requests.
+            </p>
+            {incomingRequests.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-500">
+                No new requests right now.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {incomingRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="rounded-xl border border-white/10 bg-black/20 p-3"
+                  >
+                    <p className="text-sm font-medium text-zinc-100">
+                      {displayName(request.requester)}
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-300"
+                        disabled={isMutating}
+                        onClick={() => respondToRequest(request.id, "accept")}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300"
+                        disabled={isMutating}
+                        onClick={() => respondToRequest(request.id, "decline")}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold text-zinc-200">Find friends</h2>
+            <p className="mt-1 text-xs text-zinc-400">
+              Search by username to send a request.
+            </p>
+            <input
+              value={friendSearch}
+              onChange={(event) => setFriendSearch(event.target.value)}
+              placeholder="Search by username"
+              className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+            />
+            {friendError ? (
+              <p className="mt-2 text-sm text-rose-200">{friendError}</p>
+            ) : null}
+            {filteredUsers.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {filteredUsers.slice(0, 5).map((user) => {
+                  const label = displayName(user);
+                  const isFriend = friendIds.has(user.id);
+                  const isOutgoing = outgoingIds.has(user.id);
+                  const isIncoming = incomingIds.has(user.id);
+                  return (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          {label}
+                        </p>
+                        {isFriend ? (
+                          <p className="text-xs text-emerald-200">
+                            Already friends
+                          </p>
+                        ) : isOutgoing ? (
+                          <p className="text-xs text-amber-200">
+                            Request sent
+                          </p>
+                        ) : isIncoming ? (
+                          <p className="text-xs text-amber-200">
+                            Requested you
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isFriend || isOutgoing || isMutating}
+                        onClick={() => sendRequest(user.id)}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : friendSearch.trim() ? (
+              <p className="mt-2 text-sm text-zinc-400">No matches.</p>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold text-zinc-200">
+              People you may know
+            </h2>
+            <p className="mt-1 text-xs text-zinc-400">
+              Suggested based on mutual friends.
+            </p>
+            {suggestions.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-500">
+                No suggestions right now. Add more friends to see recommendations.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {suggestions.map((person) => {
+                  const isFriend = friendIds.has(person.id);
+                  const isOutgoing = outgoingIds.has(person.id);
+                  const mutualLabel =
+                    person.mutual_count === 1
+                      ? "1 mutual friend"
+                      : `${person.mutual_count} mutual friends`;
+                  return (
+                    <div
+                      key={person.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          {displayName(person)}
+                        </p>
+                        <p className="text-xs text-amber-200">{mutualLabel}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isFriend || isOutgoing || isMutating}
+                        onClick={() => sendRequest(person.id)}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
