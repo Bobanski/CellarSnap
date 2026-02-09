@@ -300,7 +300,12 @@ export default function FriendsPage() {
                     key={friend.id}
                     className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-100"
                   >
-                    {displayName(friend)}
+                    <Link
+                      href={`/profile/${friend.id}`}
+                      className="font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
+                    >
+                      {displayName(friend)}
+                    </Link>
                   </div>
                 ))}
               </div>
