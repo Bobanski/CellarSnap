@@ -32,6 +32,26 @@ export default function SignupPage() {
     setErrorMessage(null);
     setInfoMessage(null);
 
+    const checkResponse = await fetch("/api/username-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+
+    if (!checkResponse.ok) {
+      const payload = await checkResponse.json().catch(() => ({}));
+      setIsSubmitting(false);
+      setErrorMessage(payload.error ?? "Unable to check username.");
+      return;
+    }
+
+    const checkData = await checkResponse.json();
+    if (!checkData.available) {
+      setIsSubmitting(false);
+      setErrorMessage("That username is already taken.");
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
@@ -44,11 +64,16 @@ export default function SignupPage() {
     }
 
     if (data.session) {
-      await fetch("/api/profile", {
+      const profileResponse = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ display_name: username }),
       });
+      if (!profileResponse.ok) {
+        const payload = await profileResponse.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to save username.");
+        return;
+      }
       router.push("/entries");
       return;
     }

@@ -25,7 +25,31 @@ export default function LoginPage() {
     setErrorMessage(null);
     setInfoMessage(null);
 
-    const { error } = await supabase.auth.signInWithPassword(values);
+    const identifier = values.email.trim();
+    let email = identifier;
+
+    if (!identifier.includes("@")) {
+      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier }),
+      });
+
+      if (!resolveResponse.ok) {
+        const payload = await resolveResponse.json().catch(() => ({}));
+        setIsSubmitting(false);
+        setErrorMessage(payload.error ?? "Username not found.");
+        return;
+      }
+
+      const data = await resolveResponse.json();
+      email = data.email;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: values.password,
+    });
     setIsSubmitting(false);
 
     if (error) {

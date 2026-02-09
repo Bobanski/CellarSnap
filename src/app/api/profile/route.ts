@@ -78,6 +78,20 @@ export async function PATCH(request: Request) {
 
   const updates: Record<string, string> = {};
   if (parsed.data.display_name !== undefined) {
+    const { data: exists } = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("display_name", parsed.data.display_name)
+      .neq("id", user.id)
+      .maybeSingle();
+
+    if (exists) {
+      return NextResponse.json(
+        { error: "That username is already taken." },
+        { status: 400 }
+      );
+    }
+
     updates.display_name = parsed.data.display_name;
   }
   if (parsed.data.default_entry_privacy !== undefined) {
