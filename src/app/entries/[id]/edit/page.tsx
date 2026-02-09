@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -37,6 +37,9 @@ export default function EditEntryPage() {
   const [labelFile, setLabelFile] = useState<File | null>(null);
   const [placeFile, setPlaceFile] = useState<File | null>(null);
   const [pairingFile, setPairingFile] = useState<File | null>(null);
+  const labelInputRef = useRef<HTMLInputElement | null>(null);
+  const placeInputRef = useRef<HTMLInputElement | null>(null);
+  const pairingInputRef = useRef<HTMLInputElement | null>(null);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null }[]
   >([]);
@@ -527,54 +530,57 @@ export default function EditEntryPage() {
                 Replace label photo
               </label>
               <input
-                id="label-file"
                 type="file"
                 accept="image/*"
                 className="sr-only"
+                ref={labelInputRef}
                 onChange={(event) => setLabelFile(event.target.files?.[0] ?? null)}
               />
-              <label
-                htmlFor="label-file"
+              <button
+                type="button"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                onClick={() => labelInputRef.current?.click()}
               >
                 Upload image
-              </label>
+              </button>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace place photo
               </label>
               <input
-                id="place-file"
                 type="file"
                 accept="image/*"
                 className="sr-only"
+                ref={placeInputRef}
                 onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
               />
-              <label
-                htmlFor="place-file"
+              <button
+                type="button"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                onClick={() => placeInputRef.current?.click()}
               >
                 Upload image
-              </label>
+              </button>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace pairing photo
               </label>
               <input
-                id="pairing-file"
                 type="file"
                 accept="image/*"
                 className="sr-only"
+                ref={pairingInputRef}
                 onChange={(event) => setPairingFile(event.target.files?.[0] ?? null)}
               />
-              <label
-                htmlFor="pairing-file"
+              <button
+                type="button"
                 className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                onClick={() => pairingInputRef.current?.click()}
               >
                 Upload image
-              </label>
+              </button>
             </div>
           </div>
 
