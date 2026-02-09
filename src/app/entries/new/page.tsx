@@ -158,6 +158,31 @@ export default function NewEntryPage() {
     });
   };
 
+  const movePhoto = (
+    type: "label" | "place" | "pairing",
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    const swap = (list: { file: File; preview: string }[]) => {
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= list.length) return list;
+      const copy = [...list];
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return copy;
+    };
+    if (type === "label") {
+      setLabelPhotos((prev) => swap(prev));
+      return;
+    }
+    if (type === "place") {
+      setPlacePhotos((prev) => swap(prev));
+      return;
+    }
+    setPairingPhotos((prev) => swap(prev));
+  };
+
   const uploadPhotos = async (
     entryId: string,
     type: "label" | "place" | "pairing",
@@ -490,6 +515,28 @@ export default function NewEntryPage() {
                       alt={`Label preview ${index + 1}`}
                       className="h-32 w-full object-cover"
                     />
+                    {labelPhotos.length > 1 ? (
+                      <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          disabled={index === 0}
+                          onClick={() => movePhoto("label", index, "up")}
+                          aria-label="Move label photo up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          disabled={index === labelPhotos.length - 1}
+                          onClick={() => movePhoto("label", index, "down")}
+                          aria-label="Move label photo down"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    ) : null}
                     <button
                       type="button"
                       className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
@@ -646,7 +693,7 @@ export default function NewEntryPage() {
               />
               {placePhotos.length > 0 ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {placePhotos.map((photo, index) => (
+                {placePhotos.map((photo, index) => (
                     <div
                       key={photo.preview}
                       className="group relative overflow-hidden rounded-2xl border border-white/10"
@@ -656,6 +703,28 @@ export default function NewEntryPage() {
                         alt={`Place preview ${index + 1}`}
                         className="h-32 w-full object-cover"
                       />
+                    {placePhotos.length > 1 ? (
+                      <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          disabled={index === 0}
+                          onClick={() => movePhoto("place", index, "up")}
+                          aria-label="Move place photo up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          disabled={index === placePhotos.length - 1}
+                          onClick={() => movePhoto("place", index, "down")}
+                          aria-label="Move place photo down"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    ) : null}
                       <button
                         type="button"
                         className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
@@ -701,7 +770,7 @@ export default function NewEntryPage() {
               />
               {pairingPhotos.length > 0 ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {pairingPhotos.map((photo, index) => (
+                {pairingPhotos.map((photo, index) => (
                     <div
                       key={photo.preview}
                       className="group relative overflow-hidden rounded-2xl border border-white/10"
@@ -711,6 +780,28 @@ export default function NewEntryPage() {
                         alt={`Pairing preview ${index + 1}`}
                         className="h-32 w-full object-cover"
                       />
+                    {pairingPhotos.length > 1 ? (
+                      <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          disabled={index === 0}
+                          onClick={() => movePhoto("pairing", index, "up")}
+                          aria-label="Move pairing photo up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          disabled={index === pairingPhotos.length - 1}
+                          onClick={() => movePhoto("pairing", index, "down")}
+                          aria-label="Move pairing photo down"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    ) : null}
                       <button
                         type="button"
                         className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
