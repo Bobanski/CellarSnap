@@ -225,7 +225,7 @@ export default function FeedPage() {
           </div>
         ) : entries.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
-            No entries yet. Be the first to log a wine.
+            No entries yet.
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2">

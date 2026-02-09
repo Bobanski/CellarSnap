@@ -18,6 +18,7 @@ type NewEntryForm = {
   notes: string;
   location_text: string;
   consumed_at: string;
+  entry_privacy: "public" | "friends";
 };
 
 export default function NewEntryPage() {
@@ -26,6 +27,7 @@ export default function NewEntryPage() {
   const { register, handleSubmit, getValues, setValue } = useForm<NewEntryForm>({
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
+      entry_privacy: "public",
     },
   });
   const [labelFile, setLabelFile] = useState<File | null>(null);
@@ -102,6 +104,7 @@ export default function NewEntryPage() {
         location_text: values.location_text || null,
         consumed_at: values.consumed_at,
         tasted_with_user_ids: selectedUserIds,
+        entry_privacy: values.entry_privacy,
       }),
     });
 
@@ -688,6 +691,19 @@ export default function NewEntryPage() {
                 })}
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200">
+              Visibility
+            </label>
+            <select
+              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              {...register("entry_privacy")}
+            >
+              <option value="public">Public</option>
+              <option value="friends">Private (friends only)</option>
+            </select>
           </div>
 
           {errorMessage ? (

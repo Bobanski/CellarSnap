@@ -19,6 +19,7 @@ type EditEntryForm = {
   notes: string;
   location_text: string;
   consumed_at: string;
+  entry_privacy: "public" | "friends";
 };
 
 export default function EditEntryPage() {
@@ -29,6 +30,7 @@ export default function EditEntryPage() {
   const { register, handleSubmit, reset } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
+      entry_privacy: "public",
     },
   });
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
@@ -82,6 +84,10 @@ export default function EditEntryPage() {
           notes: data.entry.notes ?? "",
           location_text: data.entry.location_text ?? "",
           consumed_at: data.entry.consumed_at,
+          entry_privacy:
+            data.entry.entry_privacy === "private"
+              ? "friends"
+              : data.entry.entry_privacy ?? "public",
         });
         setLoading(false);
       }
@@ -161,6 +167,7 @@ export default function EditEntryPage() {
       location_text: values.location_text || null,
       consumed_at: values.consumed_at,
       tasted_with_user_ids: selectedUserIds,
+      entry_privacy: values.entry_privacy,
     };
 
     if (labelFile) {
@@ -501,39 +508,73 @@ export default function EditEntryPage() {
             />
           </div>
 
+          <div>
+            <label className="text-sm font-medium text-zinc-200">
+              Visibility
+            </label>
+            <select
+              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              {...register("entry_privacy")}
+            >
+              <option value="public">Public</option>
+              <option value="friends">Private (friends only)</option>
+            </select>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace label photo
               </label>
               <input
+                id="label-file"
                 type="file"
                 accept="image/*"
-                className="mt-3 w-full text-sm text-zinc-300"
+                className="sr-only"
                 onChange={(event) => setLabelFile(event.target.files?.[0] ?? null)}
               />
+              <label
+                htmlFor="label-file"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              >
+                Upload image
+              </label>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace place photo
               </label>
               <input
+                id="place-file"
                 type="file"
                 accept="image/*"
-                className="mt-3 w-full text-sm text-zinc-300"
+                className="sr-only"
                 onChange={(event) => setPlaceFile(event.target.files?.[0] ?? null)}
               />
+              <label
+                htmlFor="place-file"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              >
+                Upload image
+              </label>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
               <label className="text-sm font-medium text-zinc-200">
                 Replace pairing photo
               </label>
               <input
+                id="pairing-file"
                 type="file"
                 accept="image/*"
-                className="mt-3 w-full text-sm text-zinc-300"
+                className="sr-only"
                 onChange={(event) => setPairingFile(event.target.files?.[0] ?? null)}
               />
+              <label
+                htmlFor="pairing-file"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+              >
+                Upload image
+              </label>
             </div>
           </div>
 

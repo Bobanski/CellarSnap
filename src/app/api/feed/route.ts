@@ -54,9 +54,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ entries: [] });
     }
 
-    entriesQuery = entriesQuery.in("user_id", friendIds);
+    entriesQuery = entriesQuery
+      .in("user_id", friendIds)
+      .in("entry_privacy", ["public", "friends"]);
   } else {
-    entriesQuery = entriesQuery.neq("user_id", user.id);
+    entriesQuery = entriesQuery.eq("entry_privacy", "public").neq("user_id", user.id);
   }
 
   const { data: entries, error } = await entriesQuery.order("created_at", {
