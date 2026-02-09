@@ -152,6 +152,53 @@ export default function EditEntryPage() {
       .filter((photo) => photo.type === type)
       .sort((a, b) => a.position - b.position);
 
+  const displayPhotosByType = (type: "label" | "place" | "pairing") => {
+    const list = photosByType(type);
+    if (list.length > 0 || !entry) {
+      return list;
+    }
+    if (type === "label" && entry.label_image_url) {
+      return [
+        {
+          id: "legacy-label",
+          entry_id: entry.id,
+          type: "label",
+          path: entry.label_image_path ?? "",
+          position: 0,
+          created_at: entry.created_at,
+          signed_url: entry.label_image_url,
+        },
+      ];
+    }
+    if (type === "place" && entry.place_image_url) {
+      return [
+        {
+          id: "legacy-place",
+          entry_id: entry.id,
+          type: "place",
+          path: entry.place_image_path ?? "",
+          position: 0,
+          created_at: entry.created_at,
+          signed_url: entry.place_image_url,
+        },
+      ];
+    }
+    if (type === "pairing" && entry.pairing_image_url) {
+      return [
+        {
+          id: "legacy-pairing",
+          entry_id: entry.id,
+          type: "pairing",
+          path: entry.pairing_image_path ?? "",
+          position: 0,
+          created_at: entry.created_at,
+          signed_url: entry.pairing_image_url,
+        },
+      ];
+    }
+    return list;
+  };
+
   const legacyPhotos = (type: "label" | "place" | "pairing") => {
     if (!entry) return [];
     const legacyUrl =
@@ -627,7 +674,7 @@ export default function EditEntryPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             {(["label", "place", "pairing"] as const).map((type) => {
-              const list = photosByType(type);
+              const list = displayPhotosByType(type);
               const isUploading = uploadingType === type;
               return (
                 <div
@@ -673,7 +720,7 @@ export default function EditEntryPage() {
                               <button
                                 type="button"
                                 className="rounded-full border border-white/10 px-2 py-1 transition hover:border-white/30"
-                                disabled={index === 0}
+                                disabled={list.length <= 1 || index === 0}
                                 onClick={() => movePhoto(type, index, "up")}
                               >
                                 ↑
@@ -681,19 +728,25 @@ export default function EditEntryPage() {
                               <button
                                 type="button"
                                 className="rounded-full border border-white/10 px-2 py-1 transition hover:border-white/30"
-                                disabled={index === list.length - 1}
+                                disabled={list.length <= 1 || index === list.length - 1}
                                 onClick={() => movePhoto(type, index, "down")}
                               >
                                 ↓
                               </button>
                             </div>
-                            <button
-                              type="button"
-                              className="rounded-full border border-rose-500/40 px-2 py-1 text-rose-200 transition hover:border-rose-300"
-                              onClick={() => deletePhoto(photo.id)}
-                            >
-                              Delete
-                            </button>
+                            {photo.id.startsWith("legacy-") ? (
+                              <span className="text-[11px] text-zinc-500">
+                                Saved from earlier entry
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="rounded-full border border-rose-500/40 px-2 py-1 text-rose-200 transition hover:border-rose-300"
+                                onClick={() => deletePhoto(photo.id)}
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
