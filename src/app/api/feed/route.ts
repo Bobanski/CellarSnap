@@ -20,7 +20,7 @@ async function createSignedUrl(
   return data.signedUrl;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -30,11 +30,38 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: entries, error } = await supabase
-    .from("wine_entries")
-    .select("*")
-    .neq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const url = new URL(request.url);
+  const scope = url.searchParams.get("scope");
+
+  let entriesQuery = supabase.from("wine_entries").select("*");
+
+  if (scope === "friends") {
+    const { data: friendRows } = await supabase
+      .from("friend_requests")
+      .select("requester_id, recipient_id")
+      .eq("status", "accepted")
+      .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
+
+    const friendIds = Array.from(
+      new Set(
+        (friendRows ?? []).map((row) =>
+          row.requester_id === user.id ? row.recipient_id : row.requester_id
+        )
+      )
+    );
+
+    if (friendIds.length === 0) {
+      return NextResponse.json({ entries: [] });
+    }
+
+    entriesQuery = entriesQuery.in("user_id", friendIds);
+  } else {
+    entriesQuery = entriesQuery.neq("user_id", user.id);
+  }
+
+  const { data: entries, error } = await entriesQuery.order("created_at", {
+    ascending: false,
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

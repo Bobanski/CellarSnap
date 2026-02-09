@@ -3,14 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-type NotificationItem = {
+type TagNotification = {
   id: string;
+  type: "tagged";
   entry_id: string;
   actor_name: string;
   wine_name: string | null;
-  consumed_at: string;
   created_at: string;
 };
+
+type FriendRequestNotification = {
+  id: string;
+  type: "friend_request";
+  requester_id: string;
+  requester_name: string;
+  created_at: string;
+};
+
+type NotificationItem = TagNotification | FriendRequestNotification;
 
 export default function AlertsMenu() {
   const [open, setOpen] = useState(false);
@@ -94,27 +104,52 @@ export default function AlertsMenu() {
             <div className="px-4 py-4 text-sm text-zinc-300">Loading...</div>
           ) : items.length === 0 ? (
             <div className="px-4 py-4 text-sm text-zinc-300">
-              No new tags yet.
+              No new alerts yet.
             </div>
           ) : (
             <ul className="max-h-72 overflow-y-auto">
-              {items.map((item) => (
-                <li key={item.id} className="border-b border-white/5 last:border-none">
-                  <Link
-                    href={`/entries/${item.entry_id}`}
-                    className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
-                    onClick={() => setOpen(false)}
+              {items.map((item) => {
+                if (item.type === "friend_request") {
+                  return (
+                    <li
+                      key={item.id}
+                      className="border-b border-white/5 last:border-none"
+                    >
+                      <Link
+                        href="/profile"
+                        className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
+                        onClick={() => setOpen(false)}
+                      >
+                        <span className="font-semibold text-amber-200">
+                          {item.requester_name}
+                        </span>{" "}
+                        sent you a friend request
+                      </Link>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li
+                    key={item.id}
+                    className="border-b border-white/5 last:border-none"
                   >
-                    <span className="font-semibold text-amber-200">
-                      {item.actor_name}
-                    </span>{" "}
-                    tagged you in{" "}
-                    <span className="text-zinc-100">
-                      {item.wine_name || "a wine"}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                    <Link
+                      href={`/entries/${item.entry_id}`}
+                      className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
+                      onClick={() => setOpen(false)}
+                    >
+                      <span className="font-semibold text-amber-200">
+                        {item.actor_name}
+                      </span>{" "}
+                      tagged you in{" "}
+                      <span className="text-zinc-100">
+                        {item.wine_name || "a wine"}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

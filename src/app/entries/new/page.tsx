@@ -52,14 +52,14 @@ export default function NewEntryPage() {
     let isMounted = true;
 
     const loadUsers = async () => {
-      const response = await fetch("/api/users", { cache: "no-store" });
+      const response = await fetch("/api/friends", { cache: "no-store" });
       if (!response.ok) {
         return;
       }
 
       const data = await response.json();
       if (isMounted) {
-        setUsers(data.users ?? []);
+        setUsers(data.friends ?? []);
       }
     };
 

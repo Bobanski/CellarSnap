@@ -15,6 +15,7 @@ Supabase SQL steps:
 - Run `supabase/sql/003_social.sql` to add profiles and social fields.
 - Run `supabase/sql/004_pairing_and_rating.sql` to add pairing photo + optional rating.
 - Run `supabase/sql/005_notifications.sql` to add notifications for tags.
+- Run `supabase/sql/006_friends.sql` to add friend requests and relationships.
 - Run `supabase/sql/004_follow_privacy.sql` to add follows + privacy levels (`public` / `friends` / `private`) for entries and photos.
 
 Local development:

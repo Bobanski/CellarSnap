@@ -25,6 +25,17 @@ export default function ProfilePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [friends, setFriends] = useState<Profile[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<
+    { id: string; requester: Profile }[]
+  >([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<
+    { id: string; recipient: Profile }[]
+  >([]);
+  const [allUsers, setAllUsers] = useState<Profile[]>([]);
+  const [friendSearch, setFriendSearch] = useState("");
+  const [friendError, setFriendError] = useState<string | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
   const requiresUsernameSetup =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("setup") === "username";
@@ -66,6 +77,36 @@ export default function ProfilePage() {
     };
   }, [reset, router]);
 
+  const loadFriends = async () => {
+    setFriendError(null);
+
+    const [friendsRes, requestsRes, usersRes] = await Promise.all([
+      fetch("/api/friends", { cache: "no-store" }),
+      fetch("/api/friends/requests", { cache: "no-store" }),
+      fetch("/api/users", { cache: "no-store" }),
+    ]);
+
+    if (friendsRes.ok) {
+      const data = await friendsRes.json();
+      setFriends(data.friends ?? []);
+    }
+
+    if (requestsRes.ok) {
+      const data = await requestsRes.json();
+      setIncomingRequests(data.incoming ?? []);
+      setOutgoingRequests(data.outgoing ?? []);
+    }
+
+    if (usersRes.ok) {
+      const data = await usersRes.json();
+      setAllUsers(data.users ?? []);
+    }
+  };
+
+  useEffect(() => {
+    loadFriends().catch(() => null);
+  }, []);
+
   const onSubmit = handleSubmit(async (values) => {
     const trimmedDisplayName = values.display_name.trim();
     if (trimmedDisplayName.length < 3) {
@@ -105,6 +146,55 @@ export default function ProfilePage() {
   const onSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const displayName = (profile: Profile | null) =>
+    profile?.display_name ?? profile?.email ?? "Unknown";
+
+  const friendIds = new Set(friends.map((friend) => friend.id));
+  const outgoingIds = new Set(
+    outgoingRequests.map((request) => request.recipient.id)
+  );
+  const incomingIds = new Set(
+    incomingRequests.map((request) => request.requester.id)
+  );
+
+  const filteredUsers = allUsers.filter((user) => {
+    if (!friendSearch.trim()) return false;
+    const query = friendSearch.trim().toLowerCase();
+    const name = displayName(user).toLowerCase();
+    return name.includes(query);
+  });
+
+  const sendRequest = async (userId: string) => {
+    setIsRequesting(true);
+    setFriendError(null);
+    const response = await fetch("/api/friends/requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: userId }),
+    });
+    setIsRequesting(false);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setFriendError(payload.error ?? "Unable to send request.");
+      return;
+    }
+    setFriendSearch("");
+    await loadFriends();
+  };
+
+  const respondToRequest = async (id: string, action: "accept" | "decline") => {
+    setFriendError(null);
+    const response = await fetch(`/api/friends/requests/${id}/${action}`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setFriendError(payload.error ?? "Unable to update request.");
+      return;
+    }
+    await loadFriends();
   };
 
   if (loading) {
@@ -219,6 +309,167 @@ export default function ProfilePage() {
               {isSubmitting ? "Saving…" : "Save changes"}
             </button>
           </form>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+          <div className="space-y-2">
+            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+              Friends
+            </span>
+            <h2 className="text-2xl font-semibold text-zinc-50">
+              Manage your friends
+            </h2>
+            <p className="text-sm text-zinc-300">
+              Add friends, review requests, and keep your circle close.
+            </p>
+          </div>
+
+          <div className="mt-6 space-y-6">
+            <div>
+              <label className="text-sm font-medium text-zinc-300">
+                Find people
+              </label>
+              <input
+                value={friendSearch}
+                onChange={(event) => setFriendSearch(event.target.value)}
+                placeholder="Search by name or email"
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              />
+              {friendError ? (
+                <p className="mt-2 text-sm text-rose-200">{friendError}</p>
+              ) : null}
+              {filteredUsers.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {filteredUsers.slice(0, 5).map((user) => {
+                    const label = displayName(user);
+                    const isFriend = friendIds.has(user.id);
+                    const isOutgoing = outgoingIds.has(user.id);
+                    const isIncoming = incomingIds.has(user.id);
+                    return (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-zinc-100">
+                            {label}
+                          </p>
+                          {isFriend ? (
+                            <p className="text-xs text-emerald-200">
+                              Already friends
+                            </p>
+                          ) : isOutgoing ? (
+                            <p className="text-xs text-amber-200">
+                              Request sent
+                            </p>
+                          ) : isIncoming ? (
+                            <p className="text-xs text-amber-200">
+                              Requested you
+                            </p>
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isFriend || isOutgoing || isRequesting}
+                          onClick={() => sendRequest(user.id)}
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isFriend
+                            ? "Friends"
+                            : isOutgoing
+                            ? "Pending"
+                            : "Add"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : friendSearch.trim() ? (
+                <p className="mt-2 text-sm text-zinc-400">No matches.</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-zinc-200">
+                  Incoming requests
+                </h3>
+                {incomingRequests.length === 0 ? (
+                  <p className="text-sm text-zinc-500">No new requests.</p>
+                ) : (
+                  incomingRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="rounded-xl border border-white/10 bg-black/20 p-3"
+                    >
+                      <p className="text-sm font-medium text-zinc-100">
+                        {displayName(request.requester)}
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-300"
+                          onClick={() => respondToRequest(request.id, "accept")}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300"
+                          onClick={() => respondToRequest(request.id, "decline")}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-zinc-200">
+                  Outgoing requests
+                </h3>
+                {outgoingRequests.length === 0 ? (
+                  <p className="text-sm text-zinc-500">No pending invites.</p>
+                ) : (
+                  outgoingRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="rounded-xl border border-white/10 bg-black/20 p-3"
+                    >
+                      <p className="text-sm font-medium text-zinc-100">
+                        {displayName(request.recipient)}
+                      </p>
+                      <p className="text-xs text-amber-200">
+                        Awaiting response
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-zinc-200">Friends</h3>
+                {friends.length === 0 ? (
+                  <p className="text-sm text-zinc-500">
+                    No friends yet. Add someone above.
+                  </p>
+                ) : (
+                  friends.map((friend) => (
+                    <div
+                      key={friend.id}
+                      className="rounded-xl border border-white/10 bg-black/20 p-3"
+                    >
+                      <p className="text-sm font-medium text-zinc-100">
+                        {displayName(friend)}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

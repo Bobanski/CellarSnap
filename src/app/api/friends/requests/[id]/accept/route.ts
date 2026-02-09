@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function POST() {
+export async function POST(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -11,25 +14,20 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = params;
+
   const { error } = await supabase
-    .from("wine_notifications")
-    .update({ seen_at: new Date().toISOString() })
-    .eq("user_id", user.id)
-    .is("seen_at", null);
+    .from("friend_requests")
+    .update({
+      status: "accepted",
+      responded_at: new Date().toISOString(),
+      seen_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("recipient_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const { error: requestsError } = await supabase
-    .from("friend_requests")
-    .update({ seen_at: new Date().toISOString() })
-    .eq("recipient_id", user.id)
-    .eq("status", "pending")
-    .is("seen_at", null);
-
-  if (requestsError) {
-    return NextResponse.json({ error: requestsError.message }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

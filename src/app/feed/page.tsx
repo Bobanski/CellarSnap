@@ -29,6 +29,7 @@ export default function FeedPage() {
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [feedScope, setFeedScope] = useState<"public" | "friends">("public");
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim();
@@ -70,7 +71,7 @@ export default function FeedPage() {
       setErrorMessage(null);
 
       const [feedResponse, usersResponse, profileResponse] = await Promise.all([
-        fetch("/api/feed", { cache: "no-store" }),
+        fetch(`/api/feed?scope=${feedScope}`, { cache: "no-store" }),
         fetch("/api/users", { cache: "no-store" }),
         fetch("/api/profile", { cache: "no-store" }),
       ]);
@@ -98,7 +99,7 @@ export default function FeedPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [feedScope]);
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -187,6 +188,31 @@ export default function FeedPage() {
               )}
             </div>
           )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFeedScope("public")}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              feedScope === "public"
+                ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
+                : "border border-white/10 text-zinc-200 hover:border-white/30"
+            }`}
+          >
+            Public feed
+          </button>
+          <button
+            type="button"
+            onClick={() => setFeedScope("friends")}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              feedScope === "friends"
+                ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
+                : "border border-white/10 text-zinc-200 hover:border-white/30"
+            }`}
+          >
+            Friends only
+          </button>
         </div>
 
         {loading ? (
