@@ -30,6 +30,7 @@ export default function EntryDetailPage() {
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const userMap = useMemo(() => {
     const map = new Map(
@@ -137,10 +138,6 @@ export default function EntryDetailPage() {
       return;
     }
 
-    if (!confirm("Delete this entry?")) {
-      return;
-    }
-
     const response = await fetch(`/api/entries/${entryId}`, {
       method: "DELETE",
     });
@@ -174,10 +171,18 @@ export default function EntryDetailPage() {
   }
 
   const isOwner = currentUserId === entry.user_id;
+  const backHref = isOwner ? "/entries" : "/feed";
+  const backLabel = isOwner ? "← Back to My entries" : "← Back to Friends tab";
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-5xl space-y-8">
+        <Link
+          className="text-sm font-medium text-zinc-400 hover:text-amber-200"
+          href={backHref}
+        >
+          {backLabel}
+        </Link>
         <header className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
@@ -199,31 +204,16 @@ export default function EntryDetailPage() {
                 >
                   Edit
                 </Link>
-                <button
-                  className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-400"
-                  type="button"
-                  onClick={onDelete}
-                >
-                  Delete
-                </button>
               </>
             ) : null}
             <Link
-              className={
-                isOwner
-                  ? "rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
-                  : "rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              }
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/entries"
             >
               My entries
             </Link>
             <Link
-              className={
-                !isOwner
-                  ? "rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
-                  : "rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              }
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               href="/feed"
             >
               Friends tab
@@ -241,6 +231,9 @@ export default function EntryDetailPage() {
               My profile
             </Link>
             <AlertsMenu />
+            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+              Entry
+            </span>
           </div>
         </header>
 
@@ -406,7 +399,65 @@ export default function EntryDetailPage() {
         {errorMessage ? (
           <p className="text-sm text-rose-300">{errorMessage}</p>
         ) : null}
+
+        {isOwner ? (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-rose-100">
+                  Danger zone
+                </h2>
+                <p className="text-xs text-rose-200/80">
+                  Deleting removes this entry and its photos.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-rose-400/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete entry
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#14100f] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+            <h3 className="text-lg font-semibold text-zinc-50">
+              Delete this entry?
+            </h3>
+            <p className="mt-2 text-sm text-zinc-300">
+              This action can’t be undone. The entry and its photos will be removed.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-rose-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-rose-300"
+                onClick={async () => {
+                  setShowDeleteConfirm(false);
+                  await onDelete();
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

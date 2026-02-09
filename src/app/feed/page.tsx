@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import AlertsMenu from "@/components/AlertsMenu";
 import type { WineEntryWithUrls } from "@/types/wine";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type FeedEntry = WineEntryWithUrls & {
   author_name: string;
@@ -17,6 +19,8 @@ type UserOption = {
 };
 
 export default function FeedPage() {
+  const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [currentUserProfile, setCurrentUserProfile] = useState<{
@@ -101,6 +105,11 @@ export default function FeedPage() {
     };
   }, [feedScope]);
 
+  const onSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-6xl space-y-8">
@@ -142,6 +151,13 @@ export default function FeedPage() {
               My profile
             </Link>
             <AlertsMenu />
+            <button
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              type="button"
+              onClick={onSignOut}
+            >
+              Sign out
+            </button>
           </div>
         </header>
 
@@ -232,15 +248,28 @@ export default function FeedPage() {
             {entries.map((entry) => (
               <article
                 key={entry.id}
-                className="group rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                role="button"
+                tabIndex={0}
+                onClick={() => router.push(`/entries/${entry.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/entries/${entry.id}`);
+                  }
+                }}
               >
                 <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <Link
-                    href={`/profile/${entry.user_id}`}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      router.push(`/profile/${entry.user_id}`);
+                    }}
                     className="font-medium text-zinc-200 hover:text-amber-200"
                   >
                     {entry.author_name}
-                  </Link>
+                  </button>
                   <span>{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
                 <div className="mt-4 flex gap-4">
@@ -287,14 +316,6 @@ export default function FeedPage() {
                           .map((id) => userMap.get(id) ?? "Unknown")
                           .join(", ")
                       : "No one listed"}
-                </div>
-                <div className="mt-4">
-                  <Link
-                    href={`/entries/${entry.id}`}
-                    className="inline-flex rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                  >
-                    View entry
-                  </Link>
                 </div>
               </article>
             ))}

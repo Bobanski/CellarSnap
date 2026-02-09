@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
 import AlertsMenu from "@/components/AlertsMenu";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
 export default function FriendProfilePage() {
+  const router = useRouter();
   const params = useParams<{ userId: string }>();
   const userId = params.userId;
+  const supabase = createSupabaseBrowserClient();
 
   const [profile, setProfile] = useState<{
     id: string;
@@ -68,6 +71,11 @@ export default function FriendProfilePage() {
       isMounted = false;
     };
   }, [userId]);
+
+  const onSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   if (loading) {
     return (
@@ -141,6 +149,13 @@ export default function FriendProfilePage() {
               My profile
             </Link>
             <AlertsMenu />
+            <button
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              type="button"
+              onClick={onSignOut}
+            >
+              Sign out
+            </button>
           </div>
         </header>
 
