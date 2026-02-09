@@ -36,53 +36,28 @@ export default function DatePicker({
   required,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [inputValue, setInputValue] = useState(value);
   const [month, setMonth] = useState<Date>(() => parseYMD(value) ?? new Date());
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setInputValue(value);
     const d = parseYMD(value);
     if (d) setMonth(d);
   }, [value]);
 
   const selectedDate = parseYMD(value) ?? undefined;
-  const displayValue = focused
-    ? inputValue
-    : parseYMD(value)
-      ? formatConsumedDate(value)
-      : value;
+  const displayValue = parseYMD(value)
+    ? formatConsumedDate(value)
+    : value;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value;
-    setInputValue(v);
-    const d = parseYMD(v);
-    if (d) {
-      onChange(toYMD(d));
-      setMonth(d);
-    }
-  };
+  const handleFocus = () => setOpen(true);
 
-  const handleFocus = () => {
-    setFocused(true);
-    setInputValue(value);
-    setOpen(true);
-  };
-
-  const handleBlur = () => {
-    setFocused(false);
-    onBlur?.();
-  };
+  const handleBlur = () => onBlur?.();
 
   const handleSelect = (date: Date | undefined) => {
     if (!date) return;
-    const ymd = toYMD(date);
-    setInputValue(ymd);
-    onChange(ymd);
+    onChange(toYMD(date));
     setMonth(date);
     setOpen(false);
-    setFocused(false);
   };
 
   useEffect(() => {
@@ -101,7 +76,7 @@ export default function DatePicker({
         id={id}
         type="text"
         value={displayValue}
-        onChange={handleInputChange}
+        readOnly
         onBlur={handleBlur}
         onFocus={handleFocus}
         onClick={handleFocus}
