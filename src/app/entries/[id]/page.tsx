@@ -7,6 +7,7 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import RatingBadge from "@/components/RatingBadge";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
@@ -462,9 +463,12 @@ export default function EntryDetailPage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                   Rating
                 </p>
-                <p className="text-2xl font-semibold text-zinc-50">
-                  {entry.rating ? `${entry.rating}/100` : "Unrated"}
-                </p>
+                <div className="mt-1">
+                  <RatingBadge
+                    rating={entry.rating}
+                    className="px-4 py-1.5 text-sm font-bold"
+                  />
+                </div>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">

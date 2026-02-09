@@ -44,14 +44,15 @@ export async function GET() {
   ) {
     const fallback = await supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, created_at")
       .eq("id", user.id)
       .maybeSingle();
     profile = fallback.data
       ? {
           ...fallback.data,
           default_entry_privacy: "public",
-          privacy_confirmed_at: null,
+          privacy_confirmed_at:
+            fallback.data.created_at ?? new Date().toISOString(),
         }
       : null;
   } else if (profileError) {

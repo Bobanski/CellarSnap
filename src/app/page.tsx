@@ -7,6 +7,7 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import PrivacyBadge from "@/components/PrivacyBadge";
+import RatingBadge from "@/components/RatingBadge";
 import type { PrivacyLevel } from "@/types/wine";
 
 type RecentEntry = {
@@ -266,9 +267,7 @@ export default function HomePage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 text-xs text-zinc-400">
-                      <span className="rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-xs font-semibold tracking-wide text-amber-100">
-                        {entry.rating ? `${entry.rating}/100` : "Unrated"}
-                      </span>
+                      <RatingBadge rating={entry.rating} />
                       <span className="hidden sm:inline">
                         {formatConsumedDate(entry.consumed_at)}
                       </span>
@@ -377,9 +376,7 @@ export default function HomePage() {
                           </p>
                         </div>
                         <div className="text-xs text-zinc-400">
-                          <span className="rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-xs font-semibold tracking-wide text-amber-100">
-                            {entry.rating ? `${entry.rating}/100` : "Unrated"}
-                          </span>
+                          <RatingBadge rating={entry.rating} />
                         </div>
                       </div>
                     </div>

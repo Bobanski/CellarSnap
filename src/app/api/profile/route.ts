@@ -33,6 +33,13 @@ const updateProfileSchema = z.object({
   { message: "No profile updates provided." }
 );
 
+function hasMissingPrivacyColumns(message: string) {
+  return (
+    message.includes("default_entry_privacy") ||
+    message.includes("privacy_confirmed_at")
+  );
+}
+
 export async function GET() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -54,11 +61,7 @@ export async function GET() {
     .eq("id", user.id)
     .single();
 
-  if (
-    error &&
-    (error.message.includes("default_entry_privacy") ||
-      error.message.includes("privacy_confirmed_at"))
-  ) {
+  if (error && hasMissingPrivacyColumns(error.message)) {
     const fallback = await supabase
       .from("profiles")
       .select("id, display_name, email, created_at")
@@ -71,7 +74,7 @@ export async function GET() {
     profile = {
       ...fallback.data,
       default_entry_privacy: "public",
-      privacy_confirmed_at: null,
+      privacy_confirmed_at: fallback.data?.created_at ?? null,
     };
   } else if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -117,6 +120,10 @@ export async function PATCH(request: Request) {
     );
   }
 
+  const confirmedPrivacyAt = parsed.data.confirm_privacy_onboarding
+    ? new Date().toISOString()
+    : null;
+
   const updates: Record<string, string> = {};
   if (parsed.data.display_name !== undefined) {
     const { data: exists } = await supabase
@@ -138,19 +145,77 @@ export async function PATCH(request: Request) {
   if (parsed.data.default_entry_privacy !== undefined) {
     updates.default_entry_privacy = parsed.data.default_entry_privacy;
   }
-  if (parsed.data.confirm_privacy_onboarding) {
-    updates.privacy_confirmed_at = new Date().toISOString();
+  if (confirmedPrivacyAt) {
+    updates.privacy_confirmed_at = confirmedPrivacyAt;
   }
 
-  const { data, error } = await supabase
+  let profileData:
+    | {
+        id: string;
+        display_name: string | null;
+        email: string | null;
+        created_at: string;
+      }
+    | null = null;
+  let missingPrivacyColumns = false;
+
+  const initialUpdate = await supabase
     .from("profiles")
     .update(updates)
     .eq("id", user.id)
     .select("id, display_name, email, created_at")
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (initialUpdate.error && hasMissingPrivacyColumns(initialUpdate.error.message)) {
+    missingPrivacyColumns = true;
+
+    const fallbackUpdates: Record<string, string> = {};
+    if (updates.display_name !== undefined) {
+      fallbackUpdates.display_name = updates.display_name;
+    }
+
+    if (Object.keys(fallbackUpdates).length > 0) {
+      const fallbackUpdate = await supabase
+        .from("profiles")
+        .update(fallbackUpdates)
+        .eq("id", user.id)
+        .select("id, display_name, email, created_at")
+        .single();
+
+      if (fallbackUpdate.error) {
+        return NextResponse.json({ error: fallbackUpdate.error.message }, { status: 500 });
+      }
+      profileData = fallbackUpdate.data;
+    } else {
+      const fallbackProfile = await supabase
+        .from("profiles")
+        .select("id, display_name, email, created_at")
+        .eq("id", user.id)
+        .single();
+
+      if (fallbackProfile.error) {
+        return NextResponse.json({ error: fallbackProfile.error.message }, { status: 500 });
+      }
+      profileData = fallbackProfile.data;
+    }
+  } else if (initialUpdate.error) {
+    return NextResponse.json({ error: initialUpdate.error.message }, { status: 500 });
+  } else {
+    profileData = initialUpdate.data;
+  }
+
+  if (!profileData) {
+    return NextResponse.json({ error: "Unable to update profile." }, { status: 500 });
+  }
+
+  if (missingPrivacyColumns) {
+    return NextResponse.json({
+      profile: {
+        ...profileData,
+        default_entry_privacy: parsed.data.default_entry_privacy ?? "public",
+        privacy_confirmed_at: confirmedPrivacyAt ?? profileData.created_at ?? null,
+      },
+    });
   }
 
   // Re-read with privacy columns if they exist.
@@ -160,16 +225,12 @@ export async function PATCH(request: Request) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (
-    full.error &&
-    !full.error.message.includes("default_entry_privacy") &&
-    !full.error.message.includes("privacy_confirmed_at")
-  ) {
+  if (full.error && !hasMissingPrivacyColumns(full.error.message)) {
     return NextResponse.json({ error: full.error.message }, { status: 500 });
   }
 
   const profile = {
-    ...data,
+    ...profileData,
     default_entry_privacy: full.data?.default_entry_privacy ?? null,
     privacy_confirmed_at: full.data?.privacy_confirmed_at ?? null,
   };

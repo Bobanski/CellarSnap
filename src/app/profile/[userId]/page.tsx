@@ -7,6 +7,7 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import RatingBadge from "@/components/RatingBadge";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
@@ -381,9 +382,7 @@ export default function FriendProfilePage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span className="rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-xs font-semibold tracking-wide text-amber-100">
-                        {entry.rating ? `${entry.rating}/100` : "Unrated"}
-                      </span>
+                      <RatingBadge rating={entry.rating} />
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                   </div>
@@ -438,9 +437,7 @@ export default function FriendProfilePage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span className="rounded-full border border-amber-300/50 bg-amber-400/15 px-3 py-1 text-xs font-semibold tracking-wide text-amber-100">
-                        {entry.rating ? `${entry.rating}/100` : "Unrated"}
-                      </span>
+                      <RatingBadge rating={entry.rating} />
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                   </div>
