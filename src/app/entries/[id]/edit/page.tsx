@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AlertsMenu from "@/components/AlertsMenu";
+import DatePicker from "@/components/DatePicker";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EditEntryForm = {
@@ -27,7 +28,7 @@ export default function EditEntryPage() {
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
-  const { register, handleSubmit, reset } = useForm<EditEntryForm>({
+  const { control, register, handleSubmit, reset } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
       entry_privacy: "public",
@@ -605,10 +606,19 @@ export default function EditEntryPage() {
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Consumed date</label>
-              <input
-                type="date"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("consumed_at", { required: true })}
+              <Controller
+                control={control}
+                name="consumed_at"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    required
+                  />
+                )}
               />
             </div>
           </div>

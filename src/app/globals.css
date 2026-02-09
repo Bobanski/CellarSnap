@@ -24,3 +24,31 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Date picker popover dark theme */
+.rdp-consumed.rdp-root {
+  --rdp-accent-color: rgb(251 191 36);
+  --rdp-accent-background-color: rgb(251 191 36 / 0.25);
+  --rdp-today-color: rgb(251 191 36);
+  color: #e7e5e4;
+}
+.rdp-consumed .rdp-day_button {
+  color: #e7e5e4;
+}
+.rdp-consumed .rdp-day_button:hover:not([disabled]):not(.rdp-selected) {
+  background: rgb(255 255 255 / 0.1);
+  color: #fafaf9;
+}
+.rdp-consumed .rdp-caption_label {
+  color: #e7e5e4;
+}
+.rdp-consumed .rdp-nav_button {
+  color: #a8a29e;
+}
+.rdp-consumed .rdp-nav_button:hover {
+  color: #fafaf9;
+  background: rgb(255 255 255 / 0.1);
+}
+.rdp-consumed .rdp-weekday {
+  color: #a8a29e;
+}
