@@ -90,7 +90,7 @@ export default function SignupPage() {
         setErrorMessage(payload.error ?? "Unable to save username.");
         return;
       }
-      router.push("/entries");
+      router.push("/");
       return;
     }
 

@@ -22,12 +22,25 @@ Supabase SQL steps:
 - Run `supabase/sql/009_friendship_source_of_truth.sql` to make friendship/privacy checks use accepted friend requests.
 - Run `supabase/sql/010_friend_cancel_unfriend.sql` to allow cancelling pending requests and unfriending.
 - Run `supabase/sql/011_deprecate_user_follows.sql` to remove legacy `user_follows` after friendship is fully backed by `friend_requests`.
+- Run `supabase/sql/012_privacy_onboarding.sql` to add explicit onboarding confirmation for default privacy.
 
 Local development:
 
 ```bash
 npm run dev
 ```
+
+E2E happy path tests:
+
+- Set these env vars before running:
+  - `E2E_USER_A_ID`
+  - `E2E_USER_A_IDENTIFIER`
+  - `E2E_USER_A_PASSWORD`
+  - `E2E_USER_B_ID`
+  - `E2E_USER_B_IDENTIFIER`
+  - `E2E_USER_B_PASSWORD`
+  - Optional: `E2E_BASE_URL` (defaults to `http://127.0.0.1:3000`)
+- Run `npm run e2e`.
 
 ## Getting Started
 

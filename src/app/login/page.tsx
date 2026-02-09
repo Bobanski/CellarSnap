@@ -74,7 +74,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/entries");
+    router.push("/");
   });
 
   return (

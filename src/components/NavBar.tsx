@@ -34,14 +34,38 @@ export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpenPathname, setMobileOpenPathname] = useState<string | null>(null);
+  const [pendingIncomingCount, setPendingIncomingCount] = useState(0);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  const mobileOpen = mobileOpenPathname === pathname;
   const isNewEntryActive = pathname === "/entries/new";
+  const pendingLabel =
+    pendingIncomingCount > 99 ? "99+" : String(pendingIncomingCount);
 
-  // Close mobile menu on route change
   useEffect(() => {
-    setMobileOpen(false);
+    let isMounted = true;
+
+    const loadPendingIncomingCount = async () => {
+      const response = await fetch("/api/friends/requests/count", {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = await response.json().catch(() => ({}));
+      if (isMounted) {
+        setPendingIncomingCount(data.pending_incoming_count ?? 0);
+      }
+    };
+
+    loadPendingIncomingCount().catch(() => null);
+    const intervalId = window.setInterval(() => {
+      loadPendingIncomingCount().catch(() => null);
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
   }, [pathname]);
 
   // Close mobile menu on click outside
@@ -50,7 +74,7 @@ export default function NavBar() {
 
     const onClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMobileOpen(false);
+        setMobileOpenPathname(null);
       }
     };
 
@@ -63,7 +87,7 @@ export default function NavBar() {
     if (!mobileOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+      if (event.key === "Escape") setMobileOpenPathname(null);
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -73,6 +97,21 @@ export default function NavBar() {
   const onSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const renderNavLabel = (label: string, href: string) => {
+    if (href !== "/friends" || pendingIncomingCount <= 0) {
+      return label;
+    }
+
+    return (
+      <span className="inline-flex items-center gap-2">
+        {label}
+        <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+          {pendingLabel}
+        </span>
+      </span>
+    );
   };
 
   return (
@@ -95,7 +134,7 @@ export default function NavBar() {
                 key={href}
                 className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
               >
-                {label}
+                {renderNavLabel(label, href)}
               </span>
             ) : (
               <Link
@@ -103,7 +142,7 @@ export default function NavBar() {
                 href={href}
                 className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               >
-                {label}
+                {renderNavLabel(label, href)}
               </Link>
             );
           })}
@@ -146,8 +185,10 @@ export default function NavBar() {
           <AlertsMenu />
           <button
             type="button"
-            onClick={() => setMobileOpen((prev) => !prev)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-white/30"
+            onClick={() =>
+              setMobileOpenPathname((prev) => (prev === pathname ? null : pathname))
+            }
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-white/30"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
           >
@@ -183,6 +224,11 @@ export default function NavBar() {
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             )}
+            {pendingIncomingCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1 py-0.5 text-[10px] font-bold text-zinc-950">
+                {pendingLabel}
+              </span>
+            ) : null}
           </button>
         </div>
       </div>
@@ -203,7 +249,7 @@ export default function NavBar() {
                       : "text-zinc-200 hover:bg-white/5"
                   }`}
                 >
-                  {label}
+                  {renderNavLabel(label, href)}
                 </Link>
               );
             })}

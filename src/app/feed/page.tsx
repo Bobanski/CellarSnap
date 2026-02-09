@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import PrivacyBadge from "@/components/PrivacyBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type FeedEntry = WineEntryWithUrls & {
@@ -218,16 +219,19 @@ export default function FeedPage() {
                 }}
               >
                 <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      router.push(`/profile/${entry.user_id}`);
-                    }}
-                    className="font-medium text-zinc-200 hover:text-amber-200"
-                  >
-                    {entry.author_name}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        router.push(`/profile/${entry.user_id}`);
+                      }}
+                      className="font-medium text-zinc-200 hover:text-amber-200"
+                    >
+                      {entry.author_name}
+                    </button>
+                    <PrivacyBadge level={entry.entry_privacy} compact />
+                  </div>
                   <span>{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
                 <div className="mt-4 flex gap-4">

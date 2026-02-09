@@ -156,7 +156,10 @@ export default function ProfilePage() {
     const response = await fetch("/api/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ default_entry_privacy: value }),
+      body: JSON.stringify({
+        default_entry_privacy: value,
+        confirm_privacy_onboarding: true,
+      }),
     });
 
     setIsSavingPrivacy(false);

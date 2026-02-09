@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
+import PrivacyBadge from "@/components/PrivacyBadge";
 
 type NewEntryForm = {
   wine_name: string;
@@ -31,6 +32,11 @@ export default function NewEntryPage() {
       entry_privacy: "public",
     },
   });
+  const selectedEntryPrivacy =
+    useWatch({
+      control,
+      name: "entry_privacy",
+    }) ?? "public";
   const [labelPhotos, setLabelPhotos] = useState<
     { file: File; preview: string }[]
   >([]);
@@ -859,8 +865,14 @@ export default function NewEntryPage() {
             <label className="text-sm font-medium text-zinc-200">
               Visibility
             </label>
+            <p className="mt-1 text-xs text-zinc-400">
+              This sets who can view this entry in feeds and on your profile.
+            </p>
+            <div className="mt-2">
+              <PrivacyBadge level={selectedEntryPrivacy} />
+            </div>
             <select
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("entry_privacy")}
             >
               <option value="public">Public</option>

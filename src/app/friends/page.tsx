@@ -225,9 +225,16 @@ export default function FriendsPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold text-zinc-200">
-              Incoming requests
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-zinc-200">
+                Incoming requests
+              </h2>
+              {incomingRequests.length > 0 ? (
+                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+                  {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
+                </span>
+              ) : null}
+            </div>
             <p className="mt-1 text-xs text-zinc-400">
               Accept or decline new friend requests.
             </p>

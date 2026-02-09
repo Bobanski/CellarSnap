@@ -30,11 +30,33 @@ export async function GET() {
   }
 
   // ── Fetch user profile ──
-  const { data: profile } = await supabase
+  const { data: profileWithPrivacy, error: profileError } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, default_entry_privacy, privacy_confirmed_at")
     .eq("id", user.id)
     .maybeSingle();
+
+  let profile = profileWithPrivacy;
+  if (
+    profileError &&
+    (profileError.message.includes("default_entry_privacy") ||
+      profileError.message.includes("privacy_confirmed_at"))
+  ) {
+    const fallback = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = fallback.data
+      ? {
+          ...fallback.data,
+          default_entry_privacy: "public",
+          privacy_confirmed_at: null,
+        }
+      : null;
+  } else if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
 
   // ── Fetch user's total entry count (for first-time detection) ──
   const { count: totalEntryCount } = await supabase
@@ -163,6 +185,8 @@ export async function GET() {
 
   return NextResponse.json({
     displayName: profile?.display_name ?? null,
+    defaultEntryPrivacy: profile?.default_entry_privacy ?? "public",
+    privacyConfirmedAt: profile?.privacy_confirmed_at ?? null,
     totalEntryCount: totalEntryCount ?? 0,
     friendCount: friendIds.length,
     recentEntries,

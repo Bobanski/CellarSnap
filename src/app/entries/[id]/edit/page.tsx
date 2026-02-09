@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
+import PrivacyBadge from "@/components/PrivacyBadge";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EditEntryForm = {
@@ -34,6 +35,11 @@ export default function EditEntryPage() {
       entry_privacy: "public",
     },
   });
+  const selectedEntryPrivacy =
+    useWatch({
+      control,
+      name: "entry_privacy",
+    }) ?? "public";
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -127,7 +133,7 @@ export default function EditEntryPage() {
 
   const MAX_PHOTOS = 3;
 
-  const loadPhotos = async () => {
+  const loadPhotos = useCallback(async () => {
     if (!entryId) return;
     setPhotoError(null);
     const response = await fetch(`/api/entries/${entryId}/photos`, {
@@ -139,11 +145,11 @@ export default function EditEntryPage() {
     }
     const data = await response.json();
     setPhotos(data.photos ?? []);
-  };
+  }, [entryId]);
 
   useEffect(() => {
     loadPhotos().catch(() => null);
-  }, [entryId]);
+  }, [loadPhotos]);
 
   const photosByType = (type: "label" | "place" | "pairing") =>
     photos
@@ -195,33 +201,6 @@ export default function EditEntryPage() {
       ];
     }
     return list;
-  };
-
-  const legacyPhotos = (type: "label" | "place" | "pairing") => {
-    if (!entry) return [];
-    const legacyUrl =
-      type === "label"
-        ? entry.label_image_url
-        : type === "place"
-        ? entry.place_image_url
-        : entry.pairing_image_url;
-    if (!legacyUrl) return [];
-    return [
-      {
-        id: `legacy-${type}`,
-        entry_id: entry.id,
-        type,
-        path: "",
-        position: 0,
-        created_at: entry.created_at,
-        signed_url: legacyUrl,
-      },
-    ];
-  };
-
-  const galleryForType = (type: "label" | "place" | "pairing") => {
-    const list = photosByType(type);
-    return list.length > 0 ? list : legacyPhotos(type);
   };
 
   const uploadPhotos = async (
@@ -657,8 +636,14 @@ export default function EditEntryPage() {
             <label className="text-sm font-medium text-zinc-200">
               Visibility
             </label>
+            <p className="mt-1 text-xs text-zinc-400">
+              This controls who can view this entry in feeds and on your profile.
+            </p>
+            <div className="mt-2">
+              <PrivacyBadge level={selectedEntryPrivacy} />
+            </div>
             <select
-              className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("entry_privacy")}
             >
               <option value="public">Public</option>

@@ -24,10 +24,12 @@ const updateProfileSchema = z.object({
     )
     .optional(),
   default_entry_privacy: privacyLevelSchema.optional(),
+  confirm_privacy_onboarding: z.literal(true).optional(),
 }).refine(
   (value) =>
     value.display_name !== undefined ||
-    value.default_entry_privacy !== undefined,
+    value.default_entry_privacy !== undefined ||
+    value.confirm_privacy_onboarding !== undefined,
   { message: "No profile updates provided." }
 );
 
@@ -41,17 +43,22 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Try fetching with default_entry_privacy; fall back without it if the column
-  // hasn't been added yet (004_follow_privacy.sql not run).
+  // Try fetching with privacy columns; fall back if columns were not added yet.
   let profile: Record<string, unknown> | null = null;
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, email, default_entry_privacy, created_at")
+    .select(
+      "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at"
+    )
     .eq("id", user.id)
     .single();
 
-  if (error && error.message.includes("default_entry_privacy")) {
+  if (
+    error &&
+    (error.message.includes("default_entry_privacy") ||
+      error.message.includes("privacy_confirmed_at"))
+  ) {
     const fallback = await supabase
       .from("profiles")
       .select("id, display_name, email, created_at")
@@ -61,7 +68,11 @@ export async function GET() {
     if (fallback.error) {
       return NextResponse.json({ error: fallback.error.message }, { status: 500 });
     }
-    profile = { ...fallback.data, default_entry_privacy: "public" };
+    profile = {
+      ...fallback.data,
+      default_entry_privacy: "public",
+      privacy_confirmed_at: null,
+    };
   } else if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
@@ -98,6 +109,7 @@ export async function PATCH(request: Request) {
       flattened.formErrors[0] ??
       flattened.fieldErrors.display_name?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
+      flattened.fieldErrors.confirm_privacy_onboarding?.[0] ??
       "Invalid profile update.";
     return NextResponse.json(
       { error: message },
@@ -126,6 +138,9 @@ export async function PATCH(request: Request) {
   if (parsed.data.default_entry_privacy !== undefined) {
     updates.default_entry_privacy = parsed.data.default_entry_privacy;
   }
+  if (parsed.data.confirm_privacy_onboarding) {
+    updates.privacy_confirmed_at = new Date().toISOString();
+  }
 
   const { data, error } = await supabase
     .from("profiles")
@@ -138,16 +153,25 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Re-read with privacy column if it exists
+  // Re-read with privacy columns if they exist.
   const full = await supabase
     .from("profiles")
-    .select("default_entry_privacy")
+    .select("default_entry_privacy, privacy_confirmed_at")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (
+    full.error &&
+    !full.error.message.includes("default_entry_privacy") &&
+    !full.error.message.includes("privacy_confirmed_at")
+  ) {
+    return NextResponse.json({ error: full.error.message }, { status: 500 });
+  }
 
   const profile = {
     ...data,
     default_entry_privacy: full.data?.default_entry_privacy ?? null,
+    privacy_confirmed_at: full.data?.privacy_confirmed_at ?? null,
   };
 
   return NextResponse.json({ profile });

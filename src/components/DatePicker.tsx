@@ -39,17 +39,18 @@ export default function DatePicker({
   const [month, setMonth] = useState<Date>(() => parseYMD(value) ?? new Date());
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const d = parseYMD(value);
-    if (d) setMonth(d);
-  }, [value]);
-
   const selectedDate = parseYMD(value) ?? undefined;
   const displayValue = parseYMD(value)
     ? formatConsumedDate(value)
     : value;
 
-  const handleFocus = () => setOpen(true);
+  const handleFocus = () => {
+    const parsed = parseYMD(value);
+    if (parsed) {
+      setMonth(parsed);
+    }
+    setOpen(true);
+  };
 
   const handleBlur = () => onBlur?.();
 
@@ -85,7 +86,6 @@ export default function DatePicker({
         autoComplete="off"
         className={className}
         aria-haspopup="dialog"
-        aria-expanded={open}
       />
       {open && (
         <div

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import PrivacyBadge from "@/components/PrivacyBadge";
+import type { PrivacyLevel } from "@/types/wine";
 
 type RecentEntry = {
   id: string;
@@ -25,6 +27,10 @@ type CircleEntry = RecentEntry & {
 export default function HomePage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
+  const [privacyConfirmedAt, setPrivacyConfirmedAt] = useState<string | null>(null);
+  const [privacyOnboardingError, setPrivacyOnboardingError] = useState<string | null>(null);
+  const [savingPrivacyOnboarding, setSavingPrivacyOnboarding] = useState(false);
   const [totalEntryCount, setTotalEntryCount] = useState(0);
   const [friendCount, setFriendCount] = useState(0);
   const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([]);
@@ -51,6 +57,8 @@ export default function HomePage() {
       const data = await response.json();
       if (isMounted) {
         setDisplayName(data.displayName ?? null);
+        setDefaultEntryPrivacy(data.defaultEntryPrivacy ?? "public");
+        setPrivacyConfirmedAt(data.privacyConfirmedAt ?? null);
         setTotalEntryCount(data.totalEntryCount ?? 0);
         setFriendCount(data.friendCount ?? 0);
         setRecentEntries(data.recentEntries ?? []);
@@ -65,6 +73,33 @@ export default function HomePage() {
       isMounted = false;
     };
   }, [router]);
+
+  const confirmDefaultPrivacy = async () => {
+    setSavingPrivacyOnboarding(true);
+    setPrivacyOnboardingError(null);
+
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        default_entry_privacy: defaultEntryPrivacy,
+        confirm_privacy_onboarding: true,
+      }),
+    });
+
+    setSavingPrivacyOnboarding(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setPrivacyOnboardingError(
+        payload.error ?? "Unable to confirm privacy preference."
+      );
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    setPrivacyConfirmedAt(payload.profile?.privacy_confirmed_at ?? new Date().toISOString());
+  };
 
   if (loading) {
     return (
@@ -104,6 +139,60 @@ export default function HomePage() {
               : "What\u2019s happening in your wine world right now?"}
           </p>
         </header>
+
+        {!privacyConfirmedAt ? (
+          <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
+              Onboarding privacy check
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-zinc-50">
+              Confirm who should see new entries by default
+            </h2>
+            <p className="mt-1 text-sm text-zinc-300">
+              You can still override visibility per entry at any time.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {([
+                { value: "public" as const, description: "Visible to everyone" },
+                {
+                  value: "friends" as const,
+                  description: "Visible only to accepted friends",
+                },
+                { value: "private" as const, description: "Visible only to you" },
+              ]).map((option) => {
+                const selected = defaultEntryPrivacy === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setDefaultEntryPrivacy(option.value)}
+                    className={`rounded-xl border px-3 py-2 text-left transition ${
+                      selected
+                        ? "border-amber-300/60 bg-amber-400/10"
+                        : "border-white/10 bg-black/20 hover:border-white/30"
+                    }`}
+                  >
+                    <PrivacyBadge level={option.value} />
+                    <p className="mt-1 text-xs text-zinc-300">{option.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {privacyOnboardingError ? (
+              <p className="mt-3 text-sm text-rose-200">{privacyOnboardingError}</p>
+            ) : null}
+            <button
+              type="button"
+              onClick={confirmDefaultPrivacy}
+              disabled={savingPrivacyOnboarding}
+              className="mt-4 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {savingPrivacyOnboarding
+                ? "Saving..."
+                : "Confirm default privacy"}
+            </button>
+          </section>
+        ) : null}
 
         {/* ── First-time hero CTA ── */}
         {isFirstTime ? (

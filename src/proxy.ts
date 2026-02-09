@@ -50,7 +50,7 @@ export async function proxy(request: NextRequest) {
 
     if (isLoginRoute || isSignupRoute) {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = hasUsername ? "/entries" : "/profile";
+      redirectUrl.pathname = hasUsername ? "/" : "/profile";
       return NextResponse.redirect(redirectUrl);
     }
   }
