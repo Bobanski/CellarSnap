@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AlertsMenu from "@/components/AlertsMenu";
 
 const NAV_ITEMS = [
+  { label: "Home", href: "/" },
   { label: "My entries", href: "/entries" },
   { label: "Feed", href: "/feed" },
   { label: "Friends", href: "/friends" },
@@ -13,6 +14,9 @@ const NAV_ITEMS = [
 ];
 
 function isItemActive(href: string, pathname: string): boolean {
+  if (href === "/") {
+    return pathname === "/";
+  }
   if (href === "/entries") {
     return (
       pathname === "/entries" ||
