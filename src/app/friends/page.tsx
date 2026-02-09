@@ -13,6 +13,12 @@ type Profile = {
 type Friend = Profile & { request_id: string | null };
 
 type Suggestion = Profile & { mutual_count: number };
+type FriendMutationPayload = {
+  success?: boolean;
+  status?: string;
+  request_id?: string;
+  error?: string;
+};
 
 export default function FriendsPage() {
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -26,7 +32,7 @@ export default function FriendsPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
   const [friendError, setFriendError] = useState<string | null>(null);
-  const [isRequesting, setIsRequesting] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const [loading, setLoading] = useState(true);
 
   /* ── Confirmation state for destructive actions ── */
@@ -35,6 +41,11 @@ export default function FriendsPage() {
 
   const displayName = (profile: Profile | null) =>
     profile?.display_name ?? profile?.email ?? "Unknown";
+
+  const parseMutationPayload = async (
+    response: Response
+  ): Promise<FriendMutationPayload> =>
+    (await response.json().catch(() => ({}))) as FriendMutationPayload;
 
   const loadFriends = async () => {
     setFriendError(null);
@@ -69,9 +80,8 @@ export default function FriendsPage() {
   };
 
   useEffect(() => {
-    setLoading(true);
     loadFriends()
-      .catch(() => null)
+      .catch(() => setFriendError("Unable to load friends right now."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -91,49 +101,97 @@ export default function FriendsPage() {
   });
 
   const sendRequest = async (userId: string) => {
-    setIsRequesting(true);
+    setIsMutating(true);
     setFriendError(null);
-    const response = await fetch("/api/friends/requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipient_id: userId }),
-    });
-    setIsRequesting(false);
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      setFriendError(payload.error ?? "Unable to send request.");
-      return;
+    try {
+      const response = await fetch("/api/friends/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient_id: userId }),
+      });
+      const payload = await parseMutationPayload(response);
+
+      if (!response.ok) {
+        setFriendError(payload.error ?? "Unable to send request.");
+        return;
+      }
+
+      if (
+        !payload.request_id ||
+        (payload.status !== "pending" && payload.status !== "accepted")
+      ) {
+        setFriendError("Unexpected response while sending request.");
+        return;
+      }
+
+      setFriendSearch("");
+      await loadFriends();
+    } catch {
+      setFriendError("Unable to send request.");
+    } finally {
+      setIsMutating(false);
     }
-    setFriendSearch("");
-    await loadFriends();
   };
 
   const respondToRequest = async (id: string, action: "accept" | "decline") => {
     setFriendError(null);
-    const response = await fetch(`/api/friends/requests/${id}/${action}`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      setFriendError(payload.error ?? "Unable to update request.");
-      return;
+    setIsMutating(true);
+    try {
+      const response = await fetch(`/api/friends/requests/${id}/${action}`, {
+        method: "POST",
+      });
+      const payload = await parseMutationPayload(response);
+
+      if (!response.ok) {
+        setFriendError(payload.error ?? "Unable to update request.");
+        return;
+      }
+
+      const expectedStatus = action === "accept" ? "accepted" : "declined";
+      if (
+        payload.success !== true ||
+        payload.request_id !== id ||
+        payload.status !== expectedStatus
+      ) {
+        setFriendError("Request state changed unexpectedly. Please refresh.");
+        return;
+      }
+
+      await loadFriends();
+    } catch {
+      setFriendError("Unable to update request.");
+    } finally {
+      setIsMutating(false);
     }
-    await loadFriends();
   };
 
   const deleteRequest = async (requestId: string) => {
     setFriendError(null);
-    const response = await fetch(`/api/friends/requests/${requestId}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      setFriendError(payload.error ?? "Unable to process request.");
-      return;
+    setIsMutating(true);
+    try {
+      const response = await fetch(`/api/friends/requests/${requestId}`, {
+        method: "DELETE",
+      });
+      const payload = await parseMutationPayload(response);
+
+      if (!response.ok) {
+        setFriendError(payload.error ?? "Unable to process request.");
+        return;
+      }
+
+      if (payload.success !== true || payload.request_id !== requestId) {
+        setFriendError("Request state changed unexpectedly. Please refresh.");
+        return;
+      }
+
+      setConfirmingCancel(null);
+      setConfirmingRemove(null);
+      await loadFriends();
+    } catch {
+      setFriendError("Unable to process request.");
+    } finally {
+      setIsMutating(false);
     }
-    setConfirmingCancel(null);
-    setConfirmingRemove(null);
-    await loadFriends();
   };
 
   if (loading) {
@@ -191,6 +249,7 @@ export default function FriendsPage() {
                       <button
                         type="button"
                         className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-300"
+                        disabled={isMutating}
                         onClick={() => respondToRequest(request.id, "accept")}
                       >
                         Accept
@@ -198,6 +257,7 @@ export default function FriendsPage() {
                       <button
                         type="button"
                         className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300"
+                        disabled={isMutating}
                         onClick={() => respondToRequest(request.id, "decline")}
                       >
                         Decline
@@ -256,7 +316,7 @@ export default function FriendsPage() {
                       </div>
                       <button
                         type="button"
-                        disabled={isFriend || isOutgoing || isRequesting}
+                        disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(user.id)}
                         className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -304,7 +364,7 @@ export default function FriendsPage() {
                       </div>
                       <button
                         type="button"
-                        disabled={isFriend || isOutgoing || isRequesting}
+                        disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(person.id)}
                         className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -347,15 +407,17 @@ export default function FriendsPage() {
                           <span className="text-xs text-zinc-400">Remove?</span>
                           <button
                             type="button"
+                            disabled={isMutating}
                             onClick={() => deleteRequest(friend.request_id!)}
-                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500"
+                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
                           >
                             Yes
                           </button>
                           <button
                             type="button"
+                            disabled={isMutating}
                             onClick={() => setConfirmingRemove(null)}
-                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20"
+                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
                           >
                             No
                           </button>
@@ -363,8 +425,9 @@ export default function FriendsPage() {
                       ) : (
                         <button
                           type="button"
+                          disabled={isMutating}
                           onClick={() => setConfirmingRemove(friend.request_id!)}
-                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200"
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
                         >
                           Remove
                         </button>
@@ -395,15 +458,17 @@ export default function FriendsPage() {
                           <span className="text-xs text-zinc-400">Cancel?</span>
                           <button
                             type="button"
+                            disabled={isMutating}
                             onClick={() => deleteRequest(request.id)}
-                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500"
+                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
                           >
                             Yes
                           </button>
                           <button
                             type="button"
+                            disabled={isMutating}
                             onClick={() => setConfirmingCancel(null)}
-                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20"
+                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
                           >
                             No
                           </button>
@@ -411,8 +476,9 @@ export default function FriendsPage() {
                       ) : (
                         <button
                           type="button"
+                          disabled={isMutating}
                           onClick={() => setConfirmingCancel(request.id)}
-                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200"
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
                         >
                           Cancel
                         </button>

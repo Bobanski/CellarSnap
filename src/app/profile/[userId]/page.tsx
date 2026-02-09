@@ -11,6 +11,12 @@ import NavBar from "@/components/NavBar";
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
 type FriendStatus = "none" | "request_sent" | "request_received" | "friends";
+type RelationshipPayload = {
+  friend_status?: FriendStatus;
+  incoming_request_id?: string | null;
+  friend_request_id?: string | null;
+  error?: string;
+};
 
 export default function FriendProfilePage() {
   const params = useParams<{ userId: string }>();
@@ -23,7 +29,6 @@ export default function FriendProfilePage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
   const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
-  const [friendRequestId, setFriendRequestId] = useState<string | null>(null);
   const [confirmingUnfriend, setConfirmingUnfriend] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [friendActionError, setFriendActionError] = useState<string | null>(null);
@@ -31,6 +36,18 @@ export default function FriendProfilePage() {
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const applyRelationshipPayload = (payload: RelationshipPayload) => {
+    const nextStatus = payload.friend_status;
+    if (!nextStatus) {
+      return false;
+    }
+
+    setFriendStatus(nextStatus);
+    setIncomingRequestId(payload.incoming_request_id ?? null);
+    setConfirmingUnfriend(false);
+    return true;
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -81,7 +98,6 @@ export default function FriendProfilePage() {
         setTaggedEntries(taggedData.entries ?? []);
         setFriendStatus(profileData.profile?.friend_status ?? "none");
         setIncomingRequestId(profileData.profile?.incoming_request_id ?? null);
-        setFriendRequestId(profileData.profile?.friend_request_id ?? null);
 
         setLoading(false);
       }
@@ -97,32 +113,30 @@ export default function FriendProfilePage() {
   const sendFriendRequest = async () => {
     setFriendActionLoading(true);
     setFriendActionError(null);
-    const response = await fetch("/api/friends/requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipient_id: userId }),
-    });
+    try {
+      const response = await fetch(`/api/users/${userId}/follow`, {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => ({}))) as RelationshipPayload;
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.status === "accepted") {
-        setFriendStatus("friends");
-        setFriendRequestId(data.request_id ?? null);
-        setIncomingRequestId(null);
-        setConfirmingUnfriend(false);
-      } else if (data.status === "pending") {
-        setFriendStatus("request_sent");
-        setFriendRequestId(data.request_id ?? null);
-        setIncomingRequestId(null);
-        setConfirmingUnfriend(false);
-      } else {
-        setFriendActionError("Unable to send friend request.");
+      if (!response.ok) {
+        setFriendActionError(payload.error ?? "Unable to send friend request.");
+        return;
       }
-    } else {
-      const payload = await response.json().catch(() => ({}));
-      setFriendActionError(payload.error ?? "Unable to send friend request.");
+
+      const applied = applyRelationshipPayload(payload);
+      if (
+        !applied ||
+        (payload.friend_status !== "request_sent" &&
+          payload.friend_status !== "friends")
+      ) {
+        setFriendActionError("Unexpected response while sending request.");
+      }
+    } catch {
+      setFriendActionError("Unable to send friend request.");
+    } finally {
+      setFriendActionLoading(false);
     }
-    setFriendActionLoading(false);
   };
 
   const acceptRequest = async () => {
@@ -134,10 +148,13 @@ export default function FriendProfilePage() {
       { method: "POST" }
     );
     if (response.ok) {
-      const data = await response.json();
-      if (data.status === "accepted") {
+      const data = await response.json().catch(() => ({}));
+      if (
+        data.success === true &&
+        data.status === "accepted" &&
+        data.request_id === incomingRequestId
+      ) {
         setFriendStatus("friends");
-        setFriendRequestId(data.request_id ?? incomingRequestId);
         setIncomingRequestId(null);
         setConfirmingUnfriend(false);
       } else {
@@ -150,24 +167,6 @@ export default function FriendProfilePage() {
     setFriendActionLoading(false);
   };
 
-  const resolveFriendRequestId = async () => {
-    if (friendRequestId) {
-      return friendRequestId;
-    }
-
-    const friendsRes = await fetch("/api/friends", { cache: "no-store" });
-    if (!friendsRes.ok) {
-      return null;
-    }
-
-    const friendsData = await friendsRes.json();
-    const friend = (friendsData.friends ?? []).find(
-      (f: { id: string; request_id: string | null }) => f.id === userId
-    );
-
-    return friend?.request_id ?? null;
-  };
-
   const removeFriend = async () => {
     if (friendActionLoading) {
       return;
@@ -175,30 +174,26 @@ export default function FriendProfilePage() {
 
     setFriendActionLoading(true);
     setFriendActionError(null);
+    try {
+      const response = await fetch(`/api/users/${userId}/follow`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => ({}))) as RelationshipPayload;
 
-    const requestId = await resolveFriendRequestId();
-    if (!requestId) {
-      setFriendActionError("Unable to remove friend right now.");
+      if (!response.ok) {
+        setFriendActionError(payload.error ?? "Unable to remove friend.");
+        return;
+      }
+
+      const applied = applyRelationshipPayload(payload);
+      if (!applied || payload.friend_status !== "none") {
+        setFriendActionError("Friend status did not update as expected.");
+      }
+    } catch {
+      setFriendActionError("Unable to remove friend.");
+    } finally {
       setFriendActionLoading(false);
-      return;
     }
-
-    const response = await fetch(`/api/friends/requests/${requestId}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok || response.status === 404) {
-      setFriendStatus("none");
-      setFriendRequestId(null);
-      setIncomingRequestId(null);
-      setConfirmingUnfriend(false);
-      setFriendActionLoading(false);
-      return;
-    }
-
-    const payload = await response.json().catch(() => ({}));
-    setFriendActionError(payload.error ?? "Unable to remove friend.");
-    setFriendActionLoading(false);
   };
 
   const isOwnProfile = currentUserId === userId;

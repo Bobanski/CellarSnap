@@ -18,8 +18,10 @@ Supabase SQL steps:
 - Run `supabase/sql/006_friends.sql` to add friend requests and relationships.
 - Run `supabase/sql/007_entry_photos.sql` to add multi-photo support (max 3 per type).
 - Run `supabase/sql/008_username_login.sql` to enforce unique usernames and enable username login.
-- Run `supabase/sql/004_follow_privacy.sql` to add follows + privacy levels (`public` / `friends` / `private`) for entries and photos.
+- Run `supabase/sql/004_follow_privacy.sql` to add privacy levels (`public` / `friends` / `private`) for entries and photos.
 - Run `supabase/sql/009_friendship_source_of_truth.sql` to make friendship/privacy checks use accepted friend requests.
+- Run `supabase/sql/010_friend_cancel_unfriend.sql` to allow cancelling pending requests and unfriending.
+- Run `supabase/sql/011_deprecate_user_follows.sql` to remove legacy `user_follows` after friendship is fully backed by `friend_requests`.
 
 Local development:
 
