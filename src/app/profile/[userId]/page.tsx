@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
@@ -14,7 +14,6 @@ type FriendStatus = "none" | "request_sent" | "request_received" | "friends";
 
 export default function FriendProfilePage() {
   const params = useParams<{ userId: string }>();
-  const router = useRouter();
   const userId = params.userId;
 
   const [profile, setProfile] = useState<{
@@ -24,7 +23,10 @@ export default function FriendProfilePage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
   const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
+  const [friendRequestId, setFriendRequestId] = useState<string | null>(null);
+  const [confirmingUnfriend, setConfirmingUnfriend] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [friendActionError, setFriendActionError] = useState<string | null>(null);
   const [theirEntries, setTheirEntries] = useState<EntryWithAuthor[]>([]);
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,8 @@ export default function FriendProfilePage() {
 
       setLoading(true);
       setErrorMessage(null);
+      setFriendActionError(null);
+      setConfirmingUnfriend(false);
 
       const [profileRes, entriesRes, taggedRes, myProfileRes, requestsRes] =
         await Promise.all([
@@ -90,18 +94,27 @@ export default function FriendProfilePage() {
 
         if (outgoing) {
           setFriendStatus("request_sent");
+          setIncomingRequestId(null);
+          setFriendRequestId(null);
         } else if (incoming) {
           setFriendStatus("request_received");
           setIncomingRequestId(incoming.id);
+          setFriendRequestId(null);
         } else {
           // Check if already friends (accepted requests come from /api/friends)
           const friendsRes = await fetch("/api/friends", { cache: "no-store" });
           if (friendsRes.ok) {
             const friendsData = await friendsRes.json();
-            const isFriend = (friendsData.friends ?? []).some(
-              (f: { id: string }) => f.id === userId
+            const friend = (friendsData.friends ?? []).find(
+              (f: { id: string; request_id: string | null }) => f.id === userId
             );
-            setFriendStatus(isFriend ? "friends" : "none");
+            setFriendStatus(friend ? "friends" : "none");
+            setIncomingRequestId(null);
+            setFriendRequestId(friend?.request_id ?? null);
+          } else {
+            setFriendStatus("none");
+            setIncomingRequestId(null);
+            setFriendRequestId(null);
           }
         }
 
@@ -118,6 +131,7 @@ export default function FriendProfilePage() {
 
   const sendFriendRequest = async () => {
     setFriendActionLoading(true);
+    setFriendActionError(null);
     const response = await fetch("/api/friends/requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -128,9 +142,18 @@ export default function FriendProfilePage() {
       const data = await response.json();
       if (data.status === "accepted") {
         setFriendStatus("friends");
+        setFriendRequestId(data.request_id ?? null);
+        setIncomingRequestId(null);
+        setConfirmingUnfriend(false);
       } else {
         setFriendStatus("request_sent");
+        setFriendRequestId(null);
+        setIncomingRequestId(null);
+        setConfirmingUnfriend(false);
       }
+    } else {
+      const payload = await response.json().catch(() => ({}));
+      setFriendActionError(payload.error ?? "Unable to send friend request.");
     }
     setFriendActionLoading(false);
   };
@@ -138,13 +161,71 @@ export default function FriendProfilePage() {
   const acceptRequest = async () => {
     if (!incomingRequestId) return;
     setFriendActionLoading(true);
+    setFriendActionError(null);
     const response = await fetch(
       `/api/friends/requests/${incomingRequestId}/accept`,
       { method: "POST" }
     );
     if (response.ok) {
       setFriendStatus("friends");
+      setFriendRequestId(incomingRequestId);
+      setIncomingRequestId(null);
+      setConfirmingUnfriend(false);
+    } else {
+      const payload = await response.json().catch(() => ({}));
+      setFriendActionError(payload.error ?? "Unable to accept friend request.");
     }
+    setFriendActionLoading(false);
+  };
+
+  const resolveFriendRequestId = async () => {
+    if (friendRequestId) {
+      return friendRequestId;
+    }
+
+    const friendsRes = await fetch("/api/friends", { cache: "no-store" });
+    if (!friendsRes.ok) {
+      return null;
+    }
+
+    const friendsData = await friendsRes.json();
+    const friend = (friendsData.friends ?? []).find(
+      (f: { id: string; request_id: string | null }) => f.id === userId
+    );
+
+    return friend?.request_id ?? null;
+  };
+
+  const removeFriend = async () => {
+    if (friendActionLoading) {
+      return;
+    }
+
+    setFriendActionLoading(true);
+    setFriendActionError(null);
+
+    const requestId = await resolveFriendRequestId();
+    if (!requestId) {
+      setFriendActionError("Unable to remove friend right now.");
+      setFriendActionLoading(false);
+      return;
+    }
+
+    const response = await fetch(`/api/friends/requests/${requestId}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok || response.status === 404) {
+      setFriendStatus("none");
+      setFriendRequestId(null);
+      setIncomingRequestId(null);
+      setConfirmingUnfriend(false);
+      setFriendActionLoading(false);
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    setFriendActionError(payload.error ?? "Unable to remove friend.");
     setFriendActionLoading(false);
   };
 
@@ -208,23 +289,58 @@ export default function FriendProfilePage() {
 
             {/* ── Friend action button ── */}
             {!isOwnProfile ? (
-              <div className="shrink-0">
+              <div className="shrink-0 space-y-2">
                 {friendStatus === "friends" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    Friends
-                  </span>
+                  confirmingUnfriend ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="text-xs text-zinc-400">Remove friend?</span>
+                      <button
+                        type="button"
+                        disabled={friendActionLoading}
+                        onClick={removeFriend}
+                        className="rounded-full bg-rose-500/80 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                      >
+                        {friendActionLoading ? "Removing..." : "Yes, remove"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={friendActionLoading}
+                        onClick={() => setConfirmingUnfriend(false)}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Friends
+                      </span>
+                      <button
+                        type="button"
+                        disabled={friendActionLoading}
+                        onClick={() => {
+                          setFriendActionError(null);
+                          setConfirmingUnfriend(true);
+                        }}
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )
                 ) : friendStatus === "request_sent" ? (
                   <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
                     Request sent
@@ -248,6 +364,9 @@ export default function FriendProfilePage() {
                     {friendActionLoading ? "Sending..." : "Add friend"}
                   </button>
                 )}
+                {friendActionError ? (
+                  <p className="text-right text-xs text-rose-200">{friendActionError}</p>
+                ) : null}
               </div>
             ) : null}
           </div>
