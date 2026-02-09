@@ -404,9 +404,7 @@ export default function EntryDetailPage() {
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-rose-100">
-                  Danger zone
-                </h2>
+                <h2 className="text-sm font-semibold text-rose-100">Delete</h2>
                 <p className="text-xs text-rose-200/80">
                   Deleting removes this entry and its photos.
                 </p>
