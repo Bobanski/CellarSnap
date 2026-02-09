@@ -1,16 +1,273 @@
-import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+"use client";
 
-export default async function Home() {
-  const supabase = await createSupabaseServerClient();
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { formatConsumedDate } from "@/lib/formatDate";
+import Photo from "@/components/Photo";
+import NavBar from "@/components/NavBar";
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+type RecentEntry = {
+  id: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  rating: number | null;
+  consumed_at: string;
+  label_image_url: string | null;
+};
 
-  if (user) {
-    redirect("/entries");
+type CircleEntry = RecentEntry & {
+  user_id: string;
+  author_name: string;
+};
+
+export default function HomePage() {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([]);
+  const [circleEntries, setCircleEntries] = useState<CircleEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      const response = await fetch("/api/home", { cache: "no-store" });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      if (isMounted) {
+        setDisplayName(data.displayName ?? null);
+        setRecentEntries(data.recentEntries ?? []);
+        setCircleEntries(data.circleEntries ?? []);
+        setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+            Loading...
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  redirect("/login");
+  return (
+    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="mx-auto w-full max-w-6xl space-y-10">
+        <NavBar />
+
+        {/* ── Header ── */}
+        <header className="space-y-3">
+          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            Home
+          </span>
+          <h1 className="text-3xl font-semibold text-zinc-50">
+            {displayName ? `Welcome back, ${displayName}.` : "Welcome back."}
+          </h1>
+          <p className="text-sm text-zinc-300">
+            What&rsquo;s happening in your wine world right now?
+          </p>
+          <Link
+            href="/entries/new"
+            className="mt-1 inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+          >
+            + Record a new pour
+          </Link>
+        </header>
+
+        {/* ── Section 1: Recent from you ── */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            Recent from you
+          </h2>
+
+          {recentEntries.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <p className="text-sm text-zinc-300">
+                You haven&rsquo;t recorded any pours yet.
+              </p>
+              <Link
+                href="/entries/new"
+                className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
+              >
+                Record your first pour &rarr;
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentEntries.map((entry) => (
+                <article
+                  key={entry.id}
+                  className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`/entries/${entry.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/entries/${entry.id}`);
+                    }
+                  }}
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black/40 text-[10px] text-zinc-500">
+                    {entry.label_image_url ? (
+                      <Photo
+                        src={entry.label_image_url}
+                        alt={entry.wine_name ?? "Wine label"}
+                        containerClassName="h-full w-full"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      "No photo"
+                    )}
+                  </div>
+                  <div className="flex flex-1 items-center justify-between gap-3 overflow-hidden">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-50">
+                        {entry.wine_name || "Untitled wine"}
+                      </p>
+                      <p className="truncate text-xs text-zinc-400">
+                        {entry.producer || "Unknown producer"}
+                        {entry.vintage ? ` · ${entry.vintage}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-xs text-zinc-400">
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-wide">
+                        {entry.rating ? `${entry.rating}/100` : "Unrated"}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {formatConsumedDate(entry.consumed_at)}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              <Link
+                href="/entries"
+                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
+              >
+                View all my entries &rarr;
+              </Link>
+            </div>
+          )}
+        </section>
+
+        {/* ── Section 2: From your circle ── */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            From your circle
+          </h2>
+
+          {circleEntries.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <p className="text-sm text-zinc-300">
+                Follow some friends to see what they&rsquo;re sipping.
+              </p>
+              <Link
+                href="/friends"
+                className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
+              >
+                Find friends &rarr;
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid gap-5 md:grid-cols-2">
+                {circleEntries.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/entries/${entry.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/entries/${entry.id}`);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between text-xs text-zinc-400">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/profile/${entry.user_id}`);
+                        }}
+                        className="font-medium text-zinc-200 hover:text-amber-200"
+                      >
+                        {entry.author_name}
+                      </button>
+                      <span>{formatConsumedDate(entry.consumed_at)}</span>
+                    </div>
+                    <div className="mt-4 flex gap-4">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                        {entry.label_image_url ? (
+                          <Photo
+                            src={entry.label_image_url}
+                            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                            containerClassName="h-full w-full"
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          "No photo"
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <h3 className="text-base font-semibold text-zinc-50">
+                            {entry.wine_name || "Untitled wine"}
+                          </h3>
+                          <p className="text-sm text-zinc-400">
+                            {entry.producer || "Unknown producer"}
+                          </p>
+                        </div>
+                        <div className="text-xs text-zinc-400">
+                          <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-wide">
+                            {entry.rating ? `${entry.rating}/100` : "Unrated"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <Link
+                href="/feed"
+                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
+              >
+                View full feed &rarr;
+              </Link>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
 }
