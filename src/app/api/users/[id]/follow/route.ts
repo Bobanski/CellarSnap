@@ -1,11 +1,34 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getFriendRelationship } from "@/lib/friends/relationship";
 
 async function getTargetUserId(paramsPromise: Promise<{ id: string }>) {
   const { id } = await paramsPromise;
   const parsed = z.string().uuid().safeParse(id);
   return parsed.success ? parsed.data : null;
+}
+
+async function getRelationshipPayload(
+  currentUserId: string,
+  targetUserId: string
+) {
+  const supabase = await createSupabaseServerClient();
+  const relationship = await getFriendRelationship(
+    supabase,
+    currentUserId,
+    targetUserId
+  );
+
+  return {
+    following: relationship.following,
+    follows_you: relationship.follows_you,
+    friends: relationship.friends,
+    friend_status: relationship.status,
+    outgoing_request_id: relationship.outgoing_request_id,
+    incoming_request_id: relationship.incoming_request_id,
+    friend_request_id: relationship.friend_request_id,
+  };
 }
 
 export async function GET(
@@ -26,29 +49,13 @@ export async function GET(
     return NextResponse.json({ error: "Valid user ID required" }, { status: 400 });
   }
 
-  const [{ data: followingRow }, { data: followsYouRow }] = await Promise.all([
-    supabase
-      .from("user_follows")
-      .select("followee_id")
-      .eq("follower_id", user.id)
-      .eq("followee_id", targetUserId)
-      .maybeSingle(),
-    supabase
-      .from("user_follows")
-      .select("follower_id")
-      .eq("follower_id", targetUserId)
-      .eq("followee_id", user.id)
-      .maybeSingle(),
-  ]);
-
-  const following = Boolean(followingRow);
-  const follows_you = Boolean(followsYouRow);
-
-  return NextResponse.json({
-    following,
-    follows_you,
-    friends: following && follows_you,
-  });
+  try {
+    return NextResponse.json(await getRelationshipPayload(user.id, targetUserId));
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to load relationship";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(
@@ -71,7 +78,7 @@ export async function POST(
 
   if (targetUserId === user.id) {
     return NextResponse.json(
-      { error: "Cannot follow yourself" },
+      { error: "Cannot send a friend request to yourself." },
       { status: 400 }
     );
   }
@@ -86,33 +93,79 @@ export async function POST(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { error } = await supabase.from("user_follows").upsert(
-    {
-      follower_id: user.id,
-      followee_id: targetUserId,
-    },
-    {
-      onConflict: "follower_id,followee_id",
-      ignoreDuplicates: true,
-    }
-  );
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const { data: followsYouRow } = await supabase
-    .from("user_follows")
-    .select("follower_id")
-    .eq("follower_id", targetUserId)
-    .eq("followee_id", user.id)
+  const { data: reverse, error: reverseError } = await supabase
+    .from("friend_requests")
+    .select("id, status")
+    .eq("requester_id", targetUserId)
+    .eq("recipient_id", user.id)
     .maybeSingle();
 
-  return NextResponse.json({
-    following: true,
-    follows_you: Boolean(followsYouRow),
-    friends: Boolean(followsYouRow),
-  });
+  if (reverseError) {
+    return NextResponse.json({ error: reverseError.message }, { status: 500 });
+  }
+
+  if (reverse && reverse.status === "pending") {
+    const { error: acceptError } = await supabase
+      .from("friend_requests")
+      .update({
+        status: "accepted",
+        responded_at: new Date().toISOString(),
+        seen_at: new Date().toISOString(),
+      })
+      .eq("id", reverse.id)
+      .eq("status", "pending")
+      .eq("recipient_id", user.id);
+
+    if (acceptError) {
+      return NextResponse.json({ error: acceptError.message }, { status: 500 });
+    }
+  } else if (!reverse || reverse.status !== "accepted") {
+    const { data: existing, error: existingError } = await supabase
+      .from("friend_requests")
+      .select("id")
+      .eq("requester_id", user.id)
+      .eq("recipient_id", targetUserId)
+      .maybeSingle();
+
+    if (existingError) {
+      return NextResponse.json({ error: existingError.message }, { status: 500 });
+    }
+
+    if (!existing) {
+      const { error: insertError } = await supabase.from("friend_requests").insert({
+        requester_id: user.id,
+        recipient_id: targetUserId,
+        status: "pending",
+      });
+
+      if (insertError) {
+        return NextResponse.json({ error: insertError.message }, { status: 500 });
+      }
+    } else {
+      const { error: reviveError } = await supabase
+        .from("friend_requests")
+        .update({
+          status: "pending",
+          responded_at: null,
+          seen_at: null,
+        })
+        .eq("id", existing.id)
+        .eq("requester_id", user.id)
+        .eq("status", "declined");
+
+      if (reviveError) {
+        return NextResponse.json({ error: reviveError.message }, { status: 500 });
+      }
+    }
+  }
+
+  try {
+    return NextResponse.json(await getRelationshipPayload(user.id, targetUserId));
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to load relationship";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -133,26 +186,47 @@ export async function DELETE(
     return NextResponse.json({ error: "Valid user ID required" }, { status: 400 });
   }
 
-  const { error } = await supabase
-    .from("user_follows")
-    .delete()
-    .eq("follower_id", user.id)
-    .eq("followee_id", targetUserId);
+  const [{ data: outgoing, error: outgoingError }, { data: incoming, error: incomingError }] = await Promise.all([
+    supabase
+      .from("friend_requests")
+      .select("id")
+      .eq("requester_id", user.id)
+      .eq("recipient_id", targetUserId)
+      .in("status", ["pending", "accepted"])
+      .maybeSingle(),
+    supabase
+      .from("friend_requests")
+      .select("id")
+      .eq("requester_id", targetUserId)
+      .eq("recipient_id", user.id)
+      .in("status", ["pending", "accepted"])
+      .maybeSingle(),
+  ]);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (outgoingError || incomingError) {
+    return NextResponse.json(
+      { error: outgoingError?.message ?? incomingError?.message ?? "Unable to remove relationship." },
+      { status: 500 }
+    );
   }
 
-  const { data: followsYouRow } = await supabase
-    .from("user_follows")
-    .select("follower_id")
-    .eq("follower_id", targetUserId)
-    .eq("followee_id", user.id)
-    .maybeSingle();
+  const requestId = outgoing?.id ?? incoming?.id;
+  if (requestId) {
+    const { error: deleteError } = await supabase
+      .from("friend_requests")
+      .delete()
+      .eq("id", requestId);
 
-  return NextResponse.json({
-    following: false,
-    follows_you: Boolean(followsYouRow),
-    friends: false,
-  });
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+  }
+
+  try {
+    return NextResponse.json(await getRelationshipPayload(user.id, targetUserId));
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to load relationship";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

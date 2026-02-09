@@ -111,7 +111,11 @@ export async function POST(request: Request) {
   if (reverse && reverse.status === "pending") {
     const { error: acceptError } = await supabase
       .from("friend_requests")
-      .update({ status: "accepted", responded_at: new Date().toISOString() })
+      .update({
+        status: "accepted",
+        responded_at: new Date().toISOString(),
+        seen_at: new Date().toISOString(),
+      })
       .eq("id", reverse.id);
 
     if (acceptError) {
@@ -133,6 +137,29 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (existing) {
+    if (existing.status === "declined") {
+      const { data: revived, error: reviveError } = await supabase
+        .from("friend_requests")
+        .update({
+          status: "pending",
+          responded_at: null,
+          seen_at: null,
+        })
+        .eq("id", existing.id)
+        .eq("requester_id", user.id)
+        .select("id, status")
+        .single();
+
+      if (reviveError) {
+        return NextResponse.json({ error: reviveError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        status: revived.status,
+        request_id: revived.id,
+      });
+    }
+
     return NextResponse.json({ status: existing.status, request_id: existing.id });
   }
 

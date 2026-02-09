@@ -37,31 +37,70 @@ export async function GET(request: Request) {
     return NextResponse.json({ users: [] });
   }
 
-  const [{ data: followingRows }, { data: followerRows }] = await Promise.all([
+  const [{ data: outgoingRows, error: outgoingError }, { data: incomingRows, error: incomingError }] = await Promise.all([
     supabase
-      .from("user_follows")
-      .select("followee_id")
-      .eq("follower_id", user.id)
-      .in("followee_id", userIds),
+      .from("friend_requests")
+      .select("id, recipient_id, status")
+      .eq("requester_id", user.id)
+      .in("recipient_id", userIds)
+      .in("status", ["pending", "accepted"]),
     supabase
-      .from("user_follows")
-      .select("follower_id")
-      .eq("followee_id", user.id)
-      .in("follower_id", userIds),
+      .from("friend_requests")
+      .select("id, requester_id, status")
+      .eq("recipient_id", user.id)
+      .in("requester_id", userIds)
+      .in("status", ["pending", "accepted"]),
   ]);
 
-  const followingSet = new Set((followingRows ?? []).map((row) => row.followee_id));
-  const followersSet = new Set((followerRows ?? []).map((row) => row.follower_id));
+  if (outgoingError || incomingError) {
+    return NextResponse.json(
+      { error: outgoingError?.message ?? incomingError?.message ?? "Unable to load relationships." },
+      { status: 500 }
+    );
+  }
+
+  const outgoingById = new Map(
+    (outgoingRows ?? []).map((row) => [row.recipient_id, row])
+  );
+  const incomingById = new Map(
+    (incomingRows ?? []).map((row) => [row.requester_id, row])
+  );
 
   return NextResponse.json({
     users: users.map((candidate) => {
-      const following = followingSet.has(candidate.id);
-      const follows_you = followersSet.has(candidate.id);
+      const outgoing = outgoingById.get(candidate.id);
+      const incoming = incomingById.get(candidate.id);
+
+      const outgoingPending = outgoing?.status === "pending";
+      const incomingPending = incoming?.status === "pending";
+      const outgoingAccepted = outgoing?.status === "accepted";
+      const incomingAccepted = incoming?.status === "accepted";
+      const friends = outgoingAccepted || incomingAccepted;
+
+      const friendStatus = friends
+        ? "friends"
+        : outgoingPending
+          ? "request_sent"
+          : incomingPending
+            ? "request_received"
+            : "none";
+
+      const following = friends || outgoingPending;
+      const follows_you = friends || incomingPending;
+
       return {
         ...candidate,
         following,
         follows_you,
-        friends: following && follows_you,
+        friends,
+        friend_status: friendStatus,
+        outgoing_request_id: outgoingPending ? outgoing?.id ?? null : null,
+        incoming_request_id: incomingPending ? incoming?.id ?? null : null,
+        friend_request_id: outgoingAccepted
+          ? outgoing?.id ?? null
+          : incomingAccepted
+            ? incoming?.id ?? null
+            : null,
       };
     }),
   });

@@ -55,5 +55,9 @@ export async function DELETE(
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    request_id: request.id,
+    status: request.status,
+  });
 }

@@ -47,13 +47,12 @@ export default function FriendProfilePage() {
       setFriendActionError(null);
       setConfirmingUnfriend(false);
 
-      const [profileRes, entriesRes, taggedRes, myProfileRes, requestsRes] =
+      const [profileRes, entriesRes, taggedRes, myProfileRes] =
         await Promise.all([
           fetch(`/api/users/${userId}`, { cache: "no-store" }),
           fetch(`/api/users/${userId}/entries`, { cache: "no-store" }),
           fetch(`/api/users/${userId}/tagged`, { cache: "no-store" }),
           fetch("/api/profile", { cache: "no-store" }),
-          fetch("/api/friends/requests", { cache: "no-store" }),
         ]);
 
       if (!profileRes.ok) {
@@ -74,49 +73,15 @@ export default function FriendProfilePage() {
       const myProfileData = myProfileRes.ok
         ? await myProfileRes.json()
         : { profile: null };
-      const requestsData = requestsRes.ok
-        ? await requestsRes.json()
-        : { incoming: [], outgoing: [] };
 
       if (isMounted) {
         setProfile(profileData.profile);
         setCurrentUserId(myProfileData.profile?.id ?? null);
         setTheirEntries(entriesData.entries ?? []);
         setTaggedEntries(taggedData.entries ?? []);
-
-        // Determine friend status from pending requests
-        const outgoing = (requestsData.outgoing ?? []).find(
-          (r: { recipient: { id: string } }) => r.recipient.id === userId
-        );
-        const incoming = (requestsData.incoming ?? []).find(
-          (r: { requester: { id: string } }) => r.requester.id === userId
-        );
-
-        if (outgoing) {
-          setFriendStatus("request_sent");
-          setIncomingRequestId(null);
-          setFriendRequestId(null);
-        } else if (incoming) {
-          setFriendStatus("request_received");
-          setIncomingRequestId(incoming.id);
-          setFriendRequestId(null);
-        } else {
-          // Check if already friends (accepted requests come from /api/friends)
-          const friendsRes = await fetch("/api/friends", { cache: "no-store" });
-          if (friendsRes.ok) {
-            const friendsData = await friendsRes.json();
-            const friend = (friendsData.friends ?? []).find(
-              (f: { id: string; request_id: string | null }) => f.id === userId
-            );
-            setFriendStatus(friend ? "friends" : "none");
-            setIncomingRequestId(null);
-            setFriendRequestId(friend?.request_id ?? null);
-          } else {
-            setFriendStatus("none");
-            setIncomingRequestId(null);
-            setFriendRequestId(null);
-          }
-        }
+        setFriendStatus(profileData.profile?.friend_status ?? "none");
+        setIncomingRequestId(profileData.profile?.incoming_request_id ?? null);
+        setFriendRequestId(profileData.profile?.friend_request_id ?? null);
 
         setLoading(false);
       }
@@ -145,11 +110,13 @@ export default function FriendProfilePage() {
         setFriendRequestId(data.request_id ?? null);
         setIncomingRequestId(null);
         setConfirmingUnfriend(false);
-      } else {
+      } else if (data.status === "pending") {
         setFriendStatus("request_sent");
-        setFriendRequestId(null);
+        setFriendRequestId(data.request_id ?? null);
         setIncomingRequestId(null);
         setConfirmingUnfriend(false);
+      } else {
+        setFriendActionError("Unable to send friend request.");
       }
     } else {
       const payload = await response.json().catch(() => ({}));
@@ -167,10 +134,15 @@ export default function FriendProfilePage() {
       { method: "POST" }
     );
     if (response.ok) {
-      setFriendStatus("friends");
-      setFriendRequestId(incomingRequestId);
-      setIncomingRequestId(null);
-      setConfirmingUnfriend(false);
+      const data = await response.json();
+      if (data.status === "accepted") {
+        setFriendStatus("friends");
+        setFriendRequestId(data.request_id ?? incomingRequestId);
+        setIncomingRequestId(null);
+        setConfirmingUnfriend(false);
+      } else {
+        setFriendActionError("Request was not accepted.");
+      }
     } else {
       const payload = await response.json().catch(() => ({}));
       setFriendActionError(payload.error ?? "Unable to accept friend request.");

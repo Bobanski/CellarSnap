@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getFriendRelationship } from "@/lib/friends/relationship";
 
 export async function GET(
   _request: Request,
@@ -29,31 +30,25 @@ export async function GET(
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  const [{ data: outgoingFollow }, { data: incomingFollow }] = await Promise.all([
-    supabase
-      .from("user_follows")
-      .select("followee_id")
-      .eq("follower_id", user.id)
-      .eq("followee_id", id)
-      .maybeSingle(),
-    supabase
-      .from("user_follows")
-      .select("follower_id")
-      .eq("follower_id", id)
-      .eq("followee_id", user.id)
-      .maybeSingle(),
-  ]);
-
-  const following = Boolean(outgoingFollow);
-  const follows_you = Boolean(incomingFollow);
+  let relationship;
+  try {
+    relationship = await getFriendRelationship(supabase, user.id, id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load relationship";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   return NextResponse.json({
     profile: {
       id: data.id,
       display_name: data.display_name ?? null,
-      following,
-      follows_you,
-      friends: following && follows_you,
+      following: relationship.following,
+      follows_you: relationship.follows_you,
+      friends: relationship.friends,
+      friend_status: relationship.status,
+      outgoing_request_id: relationship.outgoing_request_id,
+      incoming_request_id: relationship.incoming_request_id,
+      friend_request_id: relationship.friend_request_id,
     },
   });
 }

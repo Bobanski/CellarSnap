@@ -24,12 +24,13 @@ type FriendRequestNotification = {
 type NotificationItem = TagNotification | FriendRequestNotification;
 
 export default function AlertsMenu() {
-  const [open, setOpen] = useState(false);
+  const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
+  const open = openPathname === pathname;
 
   useEffect(() => {
     let isMounted = true;
@@ -74,7 +75,7 @@ export default function AlertsMenu() {
     const onClick = (event: MouseEvent) => {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(event.target as Node)) {
-        setOpen(false);
+        setOpenPathname(null);
       }
     };
     document.addEventListener("mousedown", onClick);
@@ -84,23 +85,21 @@ export default function AlertsMenu() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        setOpenPathname(null);
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
   return (
     <div className="relative" ref={menuRef}>
       <button
         type="button"
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() =>
+          setOpenPathname((prev) => (prev === pathname ? null : pathname))
+        }
         aria-label="Alerts"
       >
         <span className="text-lg">🔔</span>
@@ -119,7 +118,7 @@ export default function AlertsMenu() {
             </span>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => setOpenPathname(null)}
               className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-semibold text-zinc-200 transition hover:border-white/30"
               aria-label="Close alerts"
             >
@@ -142,9 +141,9 @@ export default function AlertsMenu() {
                       className="border-b border-white/5 last:border-none"
                     >
                       <Link
-                        href="/profile"
+                        href="/friends"
                         className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
-                        onClick={() => setOpen(false)}
+                        onClick={() => setOpenPathname(null)}
                       >
                         <span className="font-semibold text-amber-200">
                           {item.requester_name}
@@ -163,7 +162,7 @@ export default function AlertsMenu() {
                     <Link
                       href={`/entries/${item.entry_id}`}
                       className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
-                      onClick={() => setOpen(false)}
+                      onClick={() => setOpenPathname(null)}
                     >
                       <span className="font-semibold text-amber-200">
                         {item.actor_name}
