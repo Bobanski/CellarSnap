@@ -19,7 +19,7 @@ type EditEntryForm = {
   notes: string;
   location_text: string;
   consumed_at: string;
-  entry_privacy: "public" | "friends";
+  entry_privacy: "public" | "friends" | "private";
 };
 
 export default function EditEntryPage() {
@@ -89,10 +89,7 @@ export default function EditEntryPage() {
           notes: data.entry.notes ?? "",
           location_text: data.entry.location_text ?? "",
           consumed_at: data.entry.consumed_at,
-          entry_privacy:
-            data.entry.entry_privacy === "private"
-              ? "friends"
-              : data.entry.entry_privacy ?? "public",
+          entry_privacy: data.entry.entry_privacy ?? "public",
         });
         setLoading(false);
       }
@@ -668,7 +665,8 @@ export default function EditEntryPage() {
               {...register("entry_privacy")}
             >
               <option value="public">Public</option>
-              <option value="friends">Private (friends only)</option>
+              <option value="friends">Friends only</option>
+              <option value="private">Private (only me)</option>
             </select>
           </div>
 

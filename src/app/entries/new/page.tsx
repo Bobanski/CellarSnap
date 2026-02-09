@@ -18,7 +18,7 @@ type NewEntryForm = {
   notes: string;
   location_text: string;
   consumed_at: string;
-  entry_privacy: "public" | "friends";
+  entry_privacy: "public" | "friends" | "private";
 };
 
 export default function NewEntryPage() {
@@ -869,7 +869,8 @@ export default function NewEntryPage() {
               {...register("entry_privacy")}
             >
               <option value="public">Public</option>
-              <option value="friends">Private (friends only)</option>
+              <option value="friends">Friends only</option>
+              <option value="private">Private (only me)</option>
             </select>
           </div>
 
