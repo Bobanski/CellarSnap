@@ -89,7 +89,7 @@ export default function FriendProfilePage() {
           <NavBar />
           <Link
             className="text-sm font-medium text-zinc-300 hover:text-zinc-50"
-            href="/feed"
+            href="/friends"
           >
             ← Back to Friends
           </Link>
@@ -108,7 +108,7 @@ export default function FriendProfilePage() {
         <header className="space-y-2">
           <Link
             className="inline-block text-sm font-medium text-zinc-400 hover:text-amber-200"
-            href="/feed"
+            href="/friends"
           >
             ← Back to Friends
           </Link>

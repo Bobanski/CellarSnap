@@ -567,15 +567,6 @@ export default function NewEntryPage() {
             ) : null}
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
-            <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="Optional tasting notes"
-              {...register("notes")}
-            />
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Wine name</label>
@@ -662,6 +653,15 @@ export default function NewEntryPage() {
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="Optional location"
               {...register("location_text")}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200">Notes</label>
+            <textarea
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              placeholder="Optional tasting notes"
+              {...register("notes")}
             />
           </div>
 
