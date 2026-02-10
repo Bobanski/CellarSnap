@@ -61,14 +61,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("profiles")
     .update({ avatar_path: path })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .select("avatar_path")
+    .single();
 
   if (updateError) {
     return NextResponse.json(
       { error: updateError.message },
+      { status: 500 }
+    );
+  }
+
+  if (!updated?.avatar_path) {
+    return NextResponse.json(
+      { error: "Profile update did not persist. Please try again." },
       { status: 500 }
     );
   }
@@ -80,5 +89,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     avatar_url: urlData?.signedUrl ?? null,
     avatar_path: path,
+    saved: true,
   });
 }

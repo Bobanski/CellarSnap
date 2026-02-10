@@ -45,6 +45,7 @@ export default function ProfilePage() {
   // Avatar state
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarSaved, setAvatarSaved] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Privacy state
@@ -159,6 +160,7 @@ export default function ProfilePage() {
     e.target.value = "";
     if (!file) return;
     setAvatarError(null);
+    setAvatarSaved(false);
     setAvatarUploading(true);
     const formData = new FormData();
     formData.set("file", file);
@@ -173,8 +175,20 @@ export default function ProfilePage() {
       return;
     }
     const data = await response.json();
+    setAvatarError(null);
+    setAvatarSaved(true);
+    setTimeout(() => setAvatarSaved(false), 3000);
+    // Update local state immediately so the new photo shows
     if (data.avatar_url && profile) {
       setProfile({ ...profile, avatar_url: data.avatar_url });
+    }
+    // Refetch full profile from server so persistence is confirmed and state stays in sync
+    const profileRes = await fetch("/api/profile", { cache: "no-store" });
+    if (profileRes.ok) {
+      const profileData = await profileRes.json();
+      if (profileData.profile) {
+        setProfile(profileData.profile);
+      }
     }
   };
 
@@ -344,7 +358,9 @@ export default function ProfilePage() {
                 >
                   {avatarUploading ? "Uploading…" : "Choose picture"}
                 </button>
-                {avatarError ? (
+                {avatarSaved ? (
+                  <p className="text-sm text-emerald-200">Photo saved.</p>
+                ) : avatarError ? (
                   <p className="text-sm text-rose-200">{avatarError}</p>
                 ) : null}
               </div>
