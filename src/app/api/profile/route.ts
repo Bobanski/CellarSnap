@@ -76,8 +76,8 @@ export async function GET() {
       default_entry_privacy: "public",
       privacy_confirmed_at: fallback.data?.created_at ?? null,
     };
-  } else if (error && (error.message.includes("avatar_path") || error.message.includes("column"))) {
-    // avatar_path column may not exist yet
+  } else if (error && error.message.includes("avatar_path")) {
+    // avatar_path column may not exist yet (migration not run)
     const fallback = await supabase
       .from("profiles")
       .select("id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at")

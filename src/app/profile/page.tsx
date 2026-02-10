@@ -129,6 +129,8 @@ export default function ProfilePage() {
     const hadPendingAvatar = !!pendingAvatarFile;
     const usernameChanged = trimmed !== (profile?.display_name ?? "").trim();
 
+    let uploadedAvatarUrl: string | null = null;
+
     try {
       // 1. Upload avatar first if user chose a new picture
       if (pendingAvatarFile) {
@@ -144,6 +146,8 @@ export default function ProfilePage() {
           setIsSavingUsername(false);
           return;
         }
+        const avatarData = await avatarRes.json();
+        uploadedAvatarUrl = avatarData.avatar_url ?? null;
         setPendingAvatarFile(null);
         if (pendingAvatarPreview) {
           URL.revokeObjectURL(pendingAvatarPreview);
@@ -166,14 +170,20 @@ export default function ProfilePage() {
         }
       }
 
-      // 3. Refetch profile and exit edit mode
+      // 3. Refetch profile and exit edit mode (preserve avatar URL if refetch doesn't return it yet)
       const profileRes = await fetch("/api/profile", { cache: "no-store" });
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         if (profileData.profile) {
-          setProfile(profileData.profile);
-          setEditUsername(profileData.profile.display_name ?? "");
+          const nextProfile = { ...profileData.profile };
+          if (uploadedAvatarUrl && !nextProfile.avatar_url) {
+            nextProfile.avatar_url = uploadedAvatarUrl;
+          }
+          setProfile(nextProfile);
+          setEditUsername(nextProfile.display_name ?? "");
         }
+      } else if (uploadedAvatarUrl && profile) {
+        setProfile({ ...profile, avatar_url: uploadedAvatarUrl });
       }
       setUsernameSuccess(
         hadPendingAvatar || usernameChanged ? "Profile saved." : "No changes to save."
