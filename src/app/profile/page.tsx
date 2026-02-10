@@ -70,41 +70,42 @@ export default function ProfilePage() {
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("setup") === "username";
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadProfile = async () => {
-      setLoading(true);
-
-      const response = await fetch("/api/profile", { cache: "no-store" });
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push("/login");
-          return;
-        }
-        setLoading(false);
+  const loadProfile = async () => {
+    setLoading(true);
+    const response = await fetch("/api/profile", {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        router.push("/login");
         return;
       }
-
-      const data = await response.json();
-      if (isMounted && data.profile) {
-        setProfile(data.profile);
-        setEditUsername(data.profile.display_name ?? "");
-        setPrivacyValue(data.profile.default_entry_privacy ?? "private");
-        setLoading(false);
-
-        // Auto-open edit mode if username setup is required
-        if (
-          !data.profile.display_name?.trim() ||
-          new URLSearchParams(window.location.search).get("setup") === "username"
-        ) {
-          setIsEditing(true);
-        }
+      setLoading(false);
+      return;
+    }
+    const data = await response.json();
+    if (data.profile) {
+      setProfile(data.profile);
+      setEditUsername(data.profile.display_name ?? "");
+      setPrivacyValue(data.profile.default_entry_privacy ?? "private");
+      setLoading(false);
+      if (
+        !data.profile.display_name?.trim() ||
+        new URLSearchParams(window.location.search).get("setup") === "username"
+      ) {
+        setIsEditing(true);
       }
-    };
+    } else {
+      setLoading(false);
+    }
+  };
 
-    loadProfile();
-
+  useEffect(() => {
+    let isMounted = true;
+    loadProfile().then(() => {
+      if (!isMounted) return;
+    });
     return () => {
       isMounted = false;
     };

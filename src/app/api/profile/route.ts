@@ -93,8 +93,16 @@ export async function GET() {
     profile = data;
   }
 
-  // Resolve avatar URL if path exists
-  const avatarPath = profile?.avatar_path as string | null | undefined;
+  // Resolve avatar: use profile.avatar_path if present, else fetch explicitly (avoids fallback stripping it)
+  let avatarPath = profile?.avatar_path as string | null | undefined;
+  if (avatarPath == null) {
+    const { data: row } = await supabase
+      .from("profiles")
+      .select("avatar_path")
+      .eq("id", user.id)
+      .maybeSingle();
+    avatarPath = row?.avatar_path ?? null;
+  }
   let avatar_url: string | null = null;
   if (avatarPath) {
     const { data: urlData } = await supabase.storage
@@ -103,9 +111,14 @@ export async function GET() {
     avatar_url = urlData?.signedUrl ?? null;
   }
 
-  return NextResponse.json({
-    profile: { ...profile, avatar_url },
-  });
+  return NextResponse.json(
+    { profile: { ...profile, avatar_path: avatarPath, avatar_url } },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    }
+  );
 }
 
 export async function PATCH(request: Request) {
