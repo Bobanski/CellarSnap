@@ -26,6 +26,7 @@ export default function FriendProfilePage() {
   const [profile, setProfile] = useState<{
     id: string;
     display_name: string | null;
+    avatar_url?: string | null;
   } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
@@ -246,13 +247,28 @@ export default function FriendProfilePage() {
             {isOwnProfile ? "Your profile" : "Profile"}
           </span>
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-semibold text-zinc-50">
-                {profile.display_name ?? "Unknown"}
-              </h1>
-              <p className="text-sm text-zinc-300">
-                Wines they&rsquo;ve logged and wines they&rsquo;ve been tagged in.
-              </p>
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/30 ring-2 ring-white/5 sm:h-16 sm:w-16">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-lg font-medium text-zinc-500 sm:text-xl">
+                    {(profile.display_name ?? "?")[0].toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-3xl font-semibold text-zinc-50">
+                  {profile.display_name ?? "Unknown"}
+                </h1>
+                <p className="text-sm text-zinc-300">
+                  Wines they&rsquo;ve logged and wines they&rsquo;ve been tagged in.
+                </p>
+              </div>
             </div>
 
             {/* ── Friend action button ── */}
