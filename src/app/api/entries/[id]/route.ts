@@ -237,6 +237,24 @@ export async function DELETE(
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
+  const { data: photoRows, error: photoFetchError } = await supabase
+    .from("entry_photos")
+    .select("path")
+    .eq("entry_id", id);
+
+  if (photoFetchError) {
+    return NextResponse.json({ error: photoFetchError.message }, { status: 500 });
+  }
+
+  const paths = Array.from(
+    new Set([
+      existing.label_image_path,
+      existing.place_image_path,
+      existing.pairing_image_path,
+      ...(photoRows ?? []).map((photo) => photo.path),
+    ].filter((p): p is string => Boolean(p && p !== "pending")))
+  );
+
   const { error } = await supabase
     .from("wine_entries")
     .delete()
@@ -246,18 +264,6 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const { data: photoRows } = await supabase
-    .from("entry_photos")
-    .select("path")
-    .eq("entry_id", id);
-
-  const paths = [
-    existing.label_image_path,
-    existing.place_image_path,
-    existing.pairing_image_path,
-    ...(photoRows ?? []).map((photo) => photo.path),
-  ].filter((p): p is string => Boolean(p && p !== "pending"));
 
   if (paths.length > 0) {
     await supabase.storage.from("wine-photos").remove(paths);
