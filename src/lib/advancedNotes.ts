@@ -31,29 +31,11 @@ export const BODY_LEVELS = [
   "full",
 ] as const;
 
-export const INTENSITY_LEVELS = [
-  "low",
-  "medium_minus",
-  "medium",
-  "medium_plus",
-  "high",
-] as const;
-
-export const LENGTH_LEVELS = [
-  "short",
-  "medium_minus",
-  "medium",
-  "medium_plus",
-  "long",
-] as const;
-
 export type AcidityLevel = (typeof ACIDITY_LEVELS)[number];
 export type TanninLevel = (typeof TANNIN_LEVELS)[number];
 export type AlcoholLevel = (typeof ALCOHOL_LEVELS)[number];
 export type SweetnessLevel = (typeof SWEETNESS_LEVELS)[number];
 export type BodyLevel = (typeof BODY_LEVELS)[number];
-export type IntensityLevel = (typeof INTENSITY_LEVELS)[number];
-export type LengthLevel = (typeof LENGTH_LEVELS)[number];
 
 export type AdvancedNotes = {
   acidity: AcidityLevel | null;
@@ -61,8 +43,6 @@ export type AdvancedNotes = {
   alcohol: AlcoholLevel | null;
   sweetness: SweetnessLevel | null;
   body: BodyLevel | null;
-  intensity: IntensityLevel | null;
-  length: LengthLevel | null;
 };
 
 export type AdvancedNotesFormValues = {
@@ -71,8 +51,6 @@ export type AdvancedNotesFormValues = {
   alcohol: AlcoholLevel | "";
   sweetness: SweetnessLevel | "";
   body: BodyLevel | "";
-  intensity: IntensityLevel | "";
-  length: LengthLevel | "";
 };
 
 type AdvancedNoteKey = keyof AdvancedNotes;
@@ -115,20 +93,6 @@ export const ADVANCED_NOTE_OPTIONS: Record<AdvancedNoteKey, readonly AdvancedNot
     { value: "medium_plus", label: "Medium+" },
     { value: "full", label: "Full" },
   ],
-  intensity: [
-    { value: "low", label: "Low" },
-    { value: "medium_minus", label: "Medium-" },
-    { value: "medium", label: "Medium" },
-    { value: "medium_plus", label: "Medium+" },
-    { value: "high", label: "High" },
-  ],
-  length: [
-    { value: "short", label: "Short" },
-    { value: "medium_minus", label: "Medium-" },
-    { value: "medium", label: "Medium" },
-    { value: "medium_plus", label: "Medium+" },
-    { value: "long", label: "Long" },
-  ],
 };
 
 export const ADVANCED_NOTE_FIELDS: readonly { key: AdvancedNoteKey; label: string }[] = [
@@ -137,8 +101,6 @@ export const ADVANCED_NOTE_FIELDS: readonly { key: AdvancedNoteKey; label: strin
   { key: "alcohol", label: "Alcohol" },
   { key: "sweetness", label: "Sweetness" },
   { key: "body", label: "Body" },
-  { key: "intensity", label: "Intensity" },
-  { key: "length", label: "Length" },
 ];
 
 export const EMPTY_ADVANCED_NOTES_FORM_VALUES: AdvancedNotesFormValues = {
@@ -147,8 +109,6 @@ export const EMPTY_ADVANCED_NOTES_FORM_VALUES: AdvancedNotesFormValues = {
   alcohol: "",
   sweetness: "",
   body: "",
-  intensity: "",
-  length: "",
 };
 
 function normalizeFromAllowed<T extends readonly string[]>(
@@ -176,8 +136,6 @@ export function normalizeAdvancedNotes(value: unknown): AdvancedNotes | null {
     alcohol: normalizeFromAllowed(input.alcohol, ALCOHOL_LEVELS),
     sweetness: normalizeFromAllowed(input.sweetness, SWEETNESS_LEVELS),
     body: normalizeFromAllowed(input.body, BODY_LEVELS),
-    intensity: normalizeFromAllowed(input.intensity, INTENSITY_LEVELS),
-    length: normalizeFromAllowed(input.length, LENGTH_LEVELS),
   };
 
   const hasValue = Object.values(normalized).some((item) => item !== null);
@@ -196,8 +154,6 @@ export function toAdvancedNotesFormValues(value: unknown): AdvancedNotesFormValu
     alcohol: normalized.alcohol ?? "",
     sweetness: normalized.sweetness ?? "",
     body: normalized.body ?? "",
-    intensity: normalized.intensity ?? "",
-    length: normalized.length ?? "",
   };
 }
 

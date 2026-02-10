@@ -5,8 +5,6 @@ import {
   ACIDITY_LEVELS,
   ALCOHOL_LEVELS,
   BODY_LEVELS,
-  INTENSITY_LEVELS,
-  LENGTH_LEVELS,
   SWEETNESS_LEVELS,
   TANNIN_LEVELS,
   normalizeAdvancedNotes,
@@ -35,8 +33,6 @@ const advancedNotesSchema = z
     alcohol: nullableEnum(ALCOHOL_LEVELS),
     sweetness: nullableEnum(SWEETNESS_LEVELS),
     body: nullableEnum(BODY_LEVELS),
-    intensity: nullableEnum(INTENSITY_LEVELS),
-    length: nullableEnum(LENGTH_LEVELS),
   })
   .nullable()
   .optional();

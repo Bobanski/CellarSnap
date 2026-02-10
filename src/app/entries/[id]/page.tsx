@@ -277,6 +277,16 @@ export default function EntryDetailPage() {
         ]
       : [];
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
+  const populatedAdvancedNotes = advancedNotes
+    ? ADVANCED_NOTE_FIELDS
+        .map((field) => ({ ...field, value: advancedNotes[field.key] }))
+        .filter(
+          (
+            field
+          ): field is (typeof ADVANCED_NOTE_FIELDS)[number] & { value: string } =>
+            field.value !== null
+        )
+    : [];
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -557,26 +567,25 @@ export default function EntryDetailPage() {
               </p>
             </div>
 
-            <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
-                Advanced notes
-              </summary>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {ADVANCED_NOTE_FIELDS.map((field) => (
-                  <div key={field.key}>
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                      {field.label}
-                    </p>
-                    <p className="text-sm text-zinc-200">
-                      {formatAdvancedNoteValue(
-                        field.key,
-                        advancedNotes?.[field.key] ?? null
-                      )}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </details>
+            {populatedAdvancedNotes.length > 0 ? (
+              <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+                  Advanced notes
+                </summary>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {populatedAdvancedNotes.map((field) => (
+                    <div key={field.key}>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                        {field.label}
+                      </p>
+                      <p className="text-sm text-zinc-200">
+                        {formatAdvancedNoteValue(field.key, field.value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </div>
         </div>
 
