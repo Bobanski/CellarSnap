@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -70,7 +70,7 @@ export default function ProfilePage() {
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("setup") === "username";
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     const response = await fetch("/api/profile", {
       cache: "no-store",
@@ -99,17 +99,11 @@ export default function ProfilePage() {
     } else {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    let isMounted = true;
-    loadProfile().then(() => {
-      if (!isMounted) return;
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
+    loadProfile().catch(() => null);
+  }, [loadProfile]);
 
   const saveProfile = async () => {
     const trimmed = editUsername.trim();

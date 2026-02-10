@@ -342,7 +342,7 @@ export default function FriendsPage() {
                 Incoming requests
               </h2>
               {incomingRequests.length > 0 ? (
-                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+                <span className="accent-count-badge inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold">
                   {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
                 </span>
               ) : null}
@@ -367,7 +367,7 @@ export default function FriendsPage() {
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
-                        className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-emerald-300"
+                        className="accent-solid-button rounded-full px-3 py-1 text-xs font-semibold transition"
                         disabled={isMutating}
                         onClick={() => respondToRequest(request.id, "accept")}
                       >

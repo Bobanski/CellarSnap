@@ -238,7 +238,7 @@ export default function FriendProfilePage() {
         <NavBar />
         <header className="space-y-2">
           <Link
-            className="inline-block text-sm font-medium text-zinc-400 hover:text-amber-200"
+            className="accent-link-hover inline-block text-sm font-medium text-zinc-400"
             href="/friends"
           >
             ← Back to Friends
@@ -266,7 +266,9 @@ export default function FriendProfilePage() {
                   {profile.display_name ?? "Unknown"}
                 </h1>
                 <p className="text-sm text-zinc-300">
-                  Wines they&rsquo;ve logged and wines they&rsquo;ve been tagged in.
+                  {isOwnProfile
+                    ? "Wines you&rsquo;ve logged and wines you&rsquo;ve been tagged in."
+                    : "Wines they&rsquo;ve logged and wines they&rsquo;ve been tagged in."}
                 </p>
               </div>
             </div>
@@ -326,7 +328,7 @@ export default function FriendProfilePage() {
                     </div>
                   )
                 ) : friendStatus === "request_sent" ? (
-                  <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+                  <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
                     Request sent
                   </span>
                 ) : friendStatus === "request_received" ? (
@@ -334,7 +336,7 @@ export default function FriendProfilePage() {
                     type="button"
                     disabled={friendActionLoading}
                     onClick={acceptRequest}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                    className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
                   >
                     {friendActionLoading ? "Accepting..." : "Accept friend request"}
                   </button>
@@ -343,7 +345,7 @@ export default function FriendProfilePage() {
                     type="button"
                     disabled={friendActionLoading}
                     onClick={sendFriendRequest}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                    className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
                   >
                     {friendActionLoading ? "Sending..." : "Add friend"}
                   </button>
@@ -358,11 +360,11 @@ export default function FriendProfilePage() {
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-zinc-50">
-            Wines they&rsquo;ve uploaded
+            {isOwnProfile ? "Wines you&rsquo;ve uploaded" : "Wines they&rsquo;ve uploaded"}
           </h2>
           {theirEntries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
-              No wines uploaded yet.
+              {isOwnProfile ? "You haven&rsquo;t uploaded any wines yet." : "No wines uploaded yet."}
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
@@ -410,11 +412,13 @@ export default function FriendProfilePage() {
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-zinc-50">
-            Tagged in by others
+            {isOwnProfile ? "Tagged entries" : "Tagged in by others"}
           </h2>
           {taggedEntries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
-              Not tagged in any entries yet.
+              {isOwnProfile
+                ? "You are not tagged in any entries yet."
+                : "Not tagged in any entries yet."}
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
