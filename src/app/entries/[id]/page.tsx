@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  ADVANCED_NOTE_FIELDS,
+  formatAdvancedNoteValue,
+  normalizeAdvancedNotes,
+  type AdvancedNotes,
+} from "@/lib/advancedNotes";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import RatingBadge from "@/components/RatingBadge";
@@ -12,6 +18,11 @@ import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
+};
+
+type AdvancedNoteField = (typeof ADVANCED_NOTE_FIELDS)[number];
+type PopulatedAdvancedNote = AdvancedNoteField & {
+  value: NonNullable<AdvancedNotes[AdvancedNoteField["key"]]>;
 };
 
 export default function EntryDetailPage() {
@@ -271,6 +282,16 @@ export default function EntryDetailPage() {
           },
         ]
       : [];
+  const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
+  const populatedAdvancedNotes: PopulatedAdvancedNote[] = advancedNotes
+    ? ADVANCED_NOTE_FIELDS.reduce<PopulatedAdvancedNote[]>((acc, field) => {
+        const value = advancedNotes[field.key];
+        if (value !== null) {
+          acc.push({ ...field, value });
+        }
+        return acc;
+      }, [])
+    : [];
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -550,6 +571,26 @@ export default function EntryDetailPage() {
                   : "No one listed"}
               </p>
             </div>
+
+            {populatedAdvancedNotes.length > 0 ? (
+              <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+                  Advanced notes
+                </summary>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {populatedAdvancedNotes.map((field) => (
+                    <div key={field.key}>
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                        {field.label}
+                      </p>
+                      <p className="text-sm text-zinc-200">
+                        {formatAdvancedNoteValue(field.key, field.value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </div>
         </div>
 

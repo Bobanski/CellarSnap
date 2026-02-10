@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  ACIDITY_LEVELS,
+  ALCOHOL_LEVELS,
+  BODY_LEVELS,
+  SWEETNESS_LEVELS,
+  TANNIN_LEVELS,
+  normalizeAdvancedNotes,
+} from "@/lib/advancedNotes";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 
@@ -14,6 +22,23 @@ const nullableString = z.preprocess(
   z.string().nullable().optional()
 );
 
+const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (value) => (value === "" ? null : value),
+    z.enum(values).nullable().optional()
+  );
+
+const advancedNotesSchema = z
+  .object({
+    acidity: nullableEnum(ACIDITY_LEVELS),
+    tannin: nullableEnum(TANNIN_LEVELS),
+    alcohol: nullableEnum(ALCOHOL_LEVELS),
+    sweetness: nullableEnum(SWEETNESS_LEVELS),
+    body: nullableEnum(BODY_LEVELS),
+  })
+  .nullable()
+  .optional();
+
 const createEntrySchema = z.object({
   wine_name: nullableString,
   producer: nullableString,
@@ -23,6 +48,7 @@ const createEntrySchema = z.object({
   appellation: nullableString,
   rating: z.number().int().min(1).max(100).optional(),
   notes: nullableString,
+  advanced_notes: advancedNotesSchema,
   location_text: nullableString,
   consumed_at: z
     .string()
@@ -148,6 +174,7 @@ export async function POST(request: Request) {
     payload.data.label_photo_privacy ?? null;
   const placePhotoPrivacy =
     payload.data.place_photo_privacy ?? null;
+  const advancedNotes = normalizeAdvancedNotes(payload.data.advanced_notes);
 
   const { data, error } = await supabase
     .from("wine_entries")
@@ -161,6 +188,7 @@ export async function POST(request: Request) {
       appellation: payload.data.appellation ?? null,
       rating: payload.data.rating ?? null,
       notes: payload.data.notes ?? null,
+      advanced_notes: advancedNotes,
       location_text: payload.data.location_text ?? null,
       consumed_at: consumedAt,
       tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
@@ -175,6 +203,15 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    if (error.message.includes("advanced_notes")) {
+      return NextResponse.json(
+        {
+          error:
+            "Advanced notes are not available yet. Run supabase/sql/013_advanced_notes.sql and try again.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

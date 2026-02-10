@@ -9,6 +9,14 @@ import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
+import {
+  ADVANCED_NOTE_FIELDS,
+  ADVANCED_NOTE_OPTIONS,
+  EMPTY_ADVANCED_NOTES_FORM_VALUES,
+  toAdvancedNotesFormValues,
+  toAdvancedNotesPayload,
+  type AdvancedNotesFormValues,
+} from "@/lib/advancedNotes";
 
 type EditEntryForm = {
   wine_name: string;
@@ -22,6 +30,7 @@ type EditEntryForm = {
   location_text: string;
   consumed_at: string;
   entry_privacy: "public" | "friends" | "private";
+  advanced_notes: AdvancedNotesFormValues;
 };
 
 export default function EditEntryPage() {
@@ -33,6 +42,7 @@ export default function EditEntryPage() {
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
       entry_privacy: "public",
+      advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
   });
   const selectedEntryPrivacy =
@@ -97,6 +107,7 @@ export default function EditEntryPage() {
           location_text: data.entry.location_text ?? "",
           consumed_at: data.entry.consumed_at,
           entry_privacy: data.entry.entry_privacy ?? "public",
+          advanced_notes: toAdvancedNotesFormValues(data.entry.advanced_notes),
         });
         setLoading(false);
       }
@@ -344,6 +355,7 @@ export default function EditEntryPage() {
       consumed_at: values.consumed_at,
       tasted_with_user_ids: selectedUserIds,
       entry_privacy: values.entry_privacy,
+      advanced_notes: toAdvancedNotesPayload(values.advanced_notes),
     };
 
     const response = await fetch(`/api/entries/${entry.id}`, {
@@ -770,6 +782,35 @@ export default function EditEntryPage() {
               );
             })}
           </div>
+
+          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+              Advanced notes
+            </summary>
+            <p className="mt-2 text-xs text-zinc-400">
+              Optional structure for deeper tasting notes.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {ADVANCED_NOTE_FIELDS.map((field) => (
+                <div key={field.key}>
+                  <label className="text-sm font-medium text-zinc-200">
+                    {field.label}
+                  </label>
+                  <select
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    {...register(`advanced_notes.${field.key}` as const)}
+                  >
+                    <option value="">Not set</option>
+                    {ADVANCED_NOTE_OPTIONS[field.key].map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </details>
 
           {errorMessage ? (
             <p className="text-sm text-rose-300">{errorMessage}</p>
