@@ -42,10 +42,10 @@ export default function ProfilePage() {
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
-  // Avatar state
-  const [avatarUploading, setAvatarUploading] = useState(false);
+  // Avatar state (pending file only applied on Save profile)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarSaved, setAvatarSaved] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Privacy state
@@ -110,7 +110,7 @@ export default function ProfilePage() {
     };
   }, [router]);
 
-  const saveUsername = async () => {
+  const saveProfile = async () => {
     const trimmed = editUsername.trim();
     if (trimmed.length < USERNAME_MIN_LENGTH) {
       setUsernameError(USERNAME_MIN_LENGTH_MESSAGE);
@@ -124,27 +124,63 @@ export default function ProfilePage() {
     setIsSavingUsername(true);
     setUsernameError(null);
     setUsernameSuccess(null);
+    setAvatarError(null);
 
-    const response = await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ display_name: trimmed }),
-    });
+    const hadPendingAvatar = !!pendingAvatarFile;
+    const usernameChanged = trimmed !== (profile?.display_name ?? "").trim();
 
-    setIsSavingUsername(false);
+    try {
+      // 1. Upload avatar first if user chose a new picture
+      if (pendingAvatarFile) {
+        const formData = new FormData();
+        formData.set("file", pendingAvatarFile);
+        const avatarRes = await fetch("/api/profile/avatar", {
+          method: "POST",
+          body: formData,
+        });
+        if (!avatarRes.ok) {
+          const data = await avatarRes.json().catch(() => ({}));
+          setAvatarError(data.error ?? "Photo upload failed.");
+          setIsSavingUsername(false);
+          return;
+        }
+        setPendingAvatarFile(null);
+        if (pendingAvatarPreview) {
+          URL.revokeObjectURL(pendingAvatarPreview);
+          setPendingAvatarPreview(null);
+        }
+      }
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setUsernameError(data.error ?? "Unable to update username.");
-      return;
-    }
+      // 2. Save username if changed
+      if (usernameChanged) {
+        const response = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ display_name: trimmed }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setUsernameError(data.error ?? "Unable to update username.");
+          setIsSavingUsername(false);
+          return;
+        }
+      }
 
-    const data = await response.json();
-    if (data.profile) {
-      setProfile(data.profile);
-      setEditUsername(data.profile.display_name ?? "");
-      setUsernameSuccess("Username updated.");
+      // 3. Refetch profile and exit edit mode
+      const profileRes = await fetch("/api/profile", { cache: "no-store" });
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        if (profileData.profile) {
+          setProfile(profileData.profile);
+          setEditUsername(profileData.profile.display_name ?? "");
+        }
+      }
+      setUsernameSuccess(
+        hadPendingAvatar || usernameChanged ? "Profile saved." : "No changes to save."
+      );
       setIsEditing(false);
+    } finally {
+      setIsSavingUsername(false);
     }
   };
 
@@ -152,44 +188,23 @@ export default function ProfilePage() {
     setEditUsername(profile?.display_name ?? "");
     setUsernameError(null);
     setUsernameSuccess(null);
+    setAvatarError(null);
+    if (pendingAvatarPreview) {
+      URL.revokeObjectURL(pendingAvatarPreview);
+    }
+    setPendingAvatarFile(null);
+    setPendingAvatarPreview(null);
     setIsEditing(false);
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setAvatarError(null);
-    setAvatarSaved(false);
-    setAvatarUploading(true);
-    const formData = new FormData();
-    formData.set("file", file);
-    const response = await fetch("/api/profile/avatar", {
-      method: "POST",
-      body: formData,
-    });
-    setAvatarUploading(false);
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setAvatarError(data.error ?? "Upload failed.");
-      return;
-    }
-    const data = await response.json();
-    setAvatarError(null);
-    setAvatarSaved(true);
-    setTimeout(() => setAvatarSaved(false), 3000);
-    // Update local state immediately so the new photo shows
-    if (data.avatar_url && profile) {
-      setProfile({ ...profile, avatar_url: data.avatar_url });
-    }
-    // Refetch full profile from server so persistence is confirmed and state stays in sync
-    const profileRes = await fetch("/api/profile", { cache: "no-store" });
-    if (profileRes.ok) {
-      const profileData = await profileRes.json();
-      if (profileData.profile) {
-        setProfile(profileData.profile);
-      }
-    }
+    if (pendingAvatarPreview) URL.revokeObjectURL(pendingAvatarPreview);
+    setPendingAvatarFile(file);
+    setPendingAvatarPreview(URL.createObjectURL(file));
   };
 
   const savePrivacy = async (value: "public" | "friends" | "private") => {
@@ -322,50 +337,6 @@ export default function ProfilePage() {
 
           {/* ── Section 1: Identity Card ── */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            {/* Profile picture + choose picture */}
-            <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5">
-                {profile?.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt="Profile"
-                    className="h-24 w-24 object-cover sm:h-28 sm:w-28"
-                  />
-                ) : (
-                  <div className="flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
-                    {avatarUploading ? (
-                      <span className="text-xs">Uploading…</span>
-                    ) : (
-                      <span className="text-xs">No photo</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-1">
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                  disabled={avatarUploading}
-                />
-                <button
-                  type="button"
-                  disabled={avatarUploading}
-                  onClick={() => avatarInputRef.current?.click()}
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
-                >
-                  {avatarUploading ? "Uploading…" : "Choose picture"}
-                </button>
-                {avatarSaved ? (
-                  <p className="text-sm text-emerald-200">Photo saved.</p>
-                ) : avatarError ? (
-                  <p className="text-sm text-rose-200">{avatarError}</p>
-                ) : null}
-              </div>
-            </div>
-
             {requiresUsernameSetup && isEditing ? (
               <p className="mb-5 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
                 Set a username to continue using CellarSnap.
@@ -379,6 +350,48 @@ export default function ProfilePage() {
                   <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
                     Edit profile
                   </h2>
+                </div>
+
+                {/* Avatar + Choose picture (only in edit mode) */}
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                  <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5">
+                    {pendingAvatarPreview ? (
+                      <img
+                        src={pendingAvatarPreview}
+                        alt="New profile"
+                        className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                      />
+                    ) : profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                      />
+                    ) : (
+                      <div className="flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+                        <span className="text-xs">No photo</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                    >
+                      Choose picture
+                    </button>
+                    {avatarError ? (
+                      <p className="text-sm text-rose-200">{avatarError}</p>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div>
@@ -413,10 +426,10 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     disabled={isSavingUsername}
-                    onClick={saveUsername}
+                    onClick={saveProfile}
                     className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
                   >
-                    {isSavingUsername ? "Saving..." : "Save username"}
+                    {isSavingUsername ? "Saving…" : "Save profile"}
                   </button>
                   {!requiresUsernameSetup ? (
                     <button
@@ -433,32 +446,47 @@ export default function ProfilePage() {
               /* ── Read mode ── */
               <div className="space-y-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                        Username
-                      </p>
-                      <p className="mt-1 text-xl font-semibold text-zinc-50">
-                        {profile?.display_name || "Not set"}
-                      </p>
+                  <div className="flex gap-4">
+                    <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5">
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt="Profile"
+                          className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                        />
+                      ) : (
+                        <div className="flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+                          <span className="text-xs">No photo</span>
+                        </div>
+                      )}
                     </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          Username
+                        </p>
+                        <p className="mt-1 text-xl font-semibold text-zinc-50">
+                          {profile?.display_name || "Not set"}
+                        </p>
+                      </div>
 
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                        Email
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-300">
-                        {profile?.email ?? "—"}
-                      </p>
-                    </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          Email
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-300">
+                          {profile?.email ?? "—"}
+                        </p>
+                      </div>
 
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                        Member since
-                      </p>
-                      <p className="mt-1 text-sm text-zinc-300">
-                        {formatMemberSince(profile?.created_at ?? null)}
-                      </p>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          Member since
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-300">
+                          {formatMemberSince(profile?.created_at ?? null)}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
