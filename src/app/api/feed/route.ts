@@ -69,6 +69,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Friend set for can_react (mutual friends only)
+  const { data: friendRowsForReactions } = await supabase
+    .from("friend_requests")
+    .select("requester_id, recipient_id")
+    .eq("status", "accepted")
+    .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
+  const friendIdsSet = new Set(
+    (friendRowsForReactions ?? []).map((row) =>
+      row.requester_id === user.id ? row.recipient_id : row.requester_id
+    )
+  );
+
+  const entryIds = (entries ?? []).map((entry) => entry.id);
   const userIds = Array.from(
     new Set(
       (entries ?? []).flatMap((entry) => [
@@ -77,7 +90,6 @@ export async function GET(request: Request) {
       ])
     )
   );
-  const entryIds = (entries ?? []).map((entry) => entry.id);
   const { data: profilesWithAvatar, error: profilesError } = await supabase
     .from("profiles")
     .select("id, display_name, email, avatar_path")
@@ -125,6 +137,26 @@ export async function GET(request: Request) {
     }
   });
 
+  // Reactions: counts per entry per emoji, and current user's reactions per entry
+  let reactionCountsMap = new Map<string, Record<string, number>>();
+  let myReactionsMap = new Map<string, string[]>();
+  if (entryIds.length > 0) {
+    const { data: reactions } = await supabase
+      .from("entry_reactions")
+      .select("entry_id, user_id, emoji")
+      .in("entry_id", entryIds);
+    (reactions ?? []).forEach((r: { entry_id: string; user_id: string; emoji: string }) => {
+      const counts = reactionCountsMap.get(r.entry_id) ?? {};
+      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+      reactionCountsMap.set(r.entry_id, counts);
+      if (r.user_id === user.id) {
+        const mine = myReactionsMap.get(r.entry_id) ?? [];
+        if (!mine.includes(r.emoji)) mine.push(r.emoji);
+        myReactionsMap.set(r.entry_id, mine);
+      }
+    });
+  }
+
   const feedEntries = await Promise.all(
     (entries ?? []).map(async (entry) => {
       const authorProfile = profileMap.get(entry.user_id);
@@ -136,6 +168,10 @@ export async function GET(request: Request) {
           email: profileMap.get(id)?.email ?? null,
         })
       );
+      const isFriendOfAuthor = friendIdsSet.has(entry.user_id);
+      const can_react = isFriendOfAuthor && entry.user_id !== user.id;
+      const reaction_counts = reactionCountsMap.get(entry.id) ?? {};
+      const my_reactions = myReactionsMap.get(entry.id) ?? [];
 
       return {
         ...entry,
@@ -152,6 +188,9 @@ export async function GET(request: Request) {
         ),
         place_image_url: await createSignedUrl(entry.place_image_path, supabase),
         tasted_with_users: tastedWithUsers,
+        can_react,
+        reaction_counts,
+        my_reactions,
       };
     })
   );

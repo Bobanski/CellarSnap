@@ -10,9 +10,14 @@ import PrivacyBadge from "@/components/PrivacyBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
+const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
+
 type FeedEntry = WineEntryWithUrls & {
   author_name: string;
   author_avatar_url?: string | null;
+  can_react?: boolean;
+  reaction_counts?: Record<string, number>;
+  my_reactions?: string[];
 };
 
 type UserOption = {
@@ -35,6 +40,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedScope, setFeedScope] = useState<"public" | "friends">("public");
+  const [reactionPopupEntryId, setReactionPopupEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim();
@@ -67,6 +73,46 @@ export default function FeedPage() {
     }
     return map;
   }, [users, currentUserProfile]);
+
+  const toggleReaction = async (entryId: string, emoji: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    const counts = entry.reaction_counts ?? {};
+    const mine = entry.my_reactions ?? [];
+    const hasMine = mine.includes(emoji);
+
+    const updateEntry = (next: FeedEntry) =>
+      setEntries((prev) => prev.map((e) => (e.id === entryId ? next : e)));
+
+    if (hasMine) {
+      const res = await fetch(`/api/entries/${entryId}/reactions?emoji=${encodeURIComponent(emoji)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) return;
+      const nextCount = Math.max(0, (counts[emoji] ?? 1) - 1);
+      const nextCounts = { ...counts };
+      if (nextCount === 0) delete nextCounts[emoji];
+      else nextCounts[emoji] = nextCount;
+      updateEntry({
+        ...entry,
+        reaction_counts: nextCounts,
+        my_reactions: mine.filter((e) => e !== emoji),
+      });
+    } else {
+      const res = await fetch(`/api/entries/${entryId}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!res.ok) return;
+      updateEntry({
+        ...entry,
+        reaction_counts: { ...counts, [emoji]: (counts[emoji] ?? 0) + 1 },
+        my_reactions: [...mine, emoji],
+      });
+    }
+    setReactionPopupEntryId(null);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -293,6 +339,92 @@ export default function FeedPage() {
                           .map((id) => userMap.get(id) ?? "Unknown")
                           .join(", ")
                       : "No one listed"}
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
+                  {Object.entries(entry.reaction_counts ?? {}).map(([emoji, count]) =>
+                    count > 0 ? (
+                      entry.can_react ? (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleReaction(entry.id, emoji);
+                          }}
+                          className={`inline-flex items-baseline gap-0.5 rounded-full border px-2 py-0.5 text-xs transition hover:border-amber-300/50 ${
+                            (entry.my_reactions ?? []).includes(emoji)
+                              ? "border-amber-300/60 bg-amber-400/20 text-amber-200"
+                              : "border-white/10 bg-black/20 text-zinc-300"
+                          }`}
+                        >
+                          <span>{emoji}</span>
+                          <span className="text-[10px] font-medium tabular-nums text-zinc-400">
+                            {count}
+                          </span>
+                        </button>
+                      ) : (
+                        <span
+                          key={emoji}
+                          className="inline-flex items-baseline gap-0.5 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-xs text-zinc-300"
+                        >
+                          <span>{emoji}</span>
+                          <span className="text-[10px] font-medium tabular-nums text-zinc-400">
+                            {count}
+                          </span>
+                        </span>
+                      )
+                    ) : null
+                  )}
+                  {entry.can_react ? (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReactionPopupEntryId((id) => (id === entry.id ? null : entry.id));
+                        }}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/20 text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
+                        aria-label="Add reaction"
+                      >
+                        +
+                      </button>
+                      {reactionPopupEntryId === entry.id ? (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            aria-hidden
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReactionPopupEntryId(null);
+                            }}
+                          />
+                          <div
+                            className="absolute bottom-full right-0 z-50 mb-1 flex gap-0.5 rounded-xl border border-white/10 bg-[#1c1917] p-1.5 shadow-xl"
+                            role="menu"
+                          >
+                            {REACTION_EMOJIS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleReaction(entry.id, emoji);
+                                }}
+                                className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${
+                                  (entry.my_reactions ?? []).includes(emoji)
+                                    ? "bg-amber-400/20"
+                                    : ""
+                                }`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </article>
             ))}
