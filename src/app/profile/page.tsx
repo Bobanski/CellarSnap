@@ -242,7 +242,9 @@ export default function ProfilePage() {
 
     const data = await response.json();
     if (data.profile) {
-      setProfile(data.profile);
+      // Merge to preserve fields the PATCH response doesn't include (e.g. avatar_url)
+      setProfile((prev) => prev ? { ...prev, ...data.profile } : data.profile);
+      setPrivacyValue(data.profile.default_entry_privacy ?? value);
       setPrivacyMessage("Default privacy updated.");
       setTimeout(() => setPrivacyMessage(null), 3000);
     }
@@ -456,8 +458,8 @@ export default function ProfilePage() {
             ) : (
               /* ── Read mode ── */
               <div className="space-y-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex gap-4">
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
                       {profile?.avatar_url ? (
                         <img
@@ -471,7 +473,7 @@ export default function ProfilePage() {
                         </div>
                       )}
                     </div>
-                    <div className="space-y-4">
+                    <div className="min-w-0 flex-1 space-y-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                           Username
@@ -507,7 +509,7 @@ export default function ProfilePage() {
                       setUsernameSuccess(null);
                       setIsEditing(true);
                     }}
-                    className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
                   >
                     Edit profile
                   </button>
@@ -530,61 +532,24 @@ export default function ProfilePage() {
                 Choose the default visibility for new entries you create.
               </p>
 
-              <fieldset className="mt-5 space-y-3">
-                <legend className="sr-only">Default entry privacy</legend>
-                {(
-                  [
-                    {
-                      value: "public" as const,
-                      label: "Public",
-                      description: "Visible to everyone on the feed",
-                    },
-                    {
-                      value: "friends" as const,
-                      label: "Friends only",
-                      description: "Only your friends can see these entries",
-                    },
-                    {
-                      value: "private" as const,
-                      label: "Private",
-                      description: "Only you can see these entries",
-                    },
-                  ] as const
-                ).map((option) => (
-                  <label
-                    key={option.value}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
-                      privacyValue === option.value
-                        ? "border-amber-300/60 bg-amber-400/10"
-                        : "border-white/10 bg-black/20 hover:border-white/20"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="default_entry_privacy"
-                      value={option.value}
-                      checked={privacyValue === option.value}
-                      onChange={() => savePrivacy(option.value)}
-                      disabled={isSavingPrivacy}
-                      className="mt-0.5 h-4 w-4 accent-amber-400"
-                    />
-                    <div>
-                      <p
-                        className={`text-sm font-medium ${
-                          privacyValue === option.value
-                            ? "text-amber-200"
-                            : "text-zinc-200"
-                        }`}
-                      >
-                        {option.label}
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        {option.description}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </fieldset>
+              <div className="mt-5">
+                <label htmlFor="privacy-select" className="sr-only">
+                  Default entry privacy
+                </label>
+                <select
+                  id="privacy-select"
+                  value={privacyValue}
+                  onChange={(e) =>
+                    savePrivacy(e.target.value as "public" | "friends" | "private")
+                  }
+                  disabled={isSavingPrivacy}
+                  className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                >
+                  <option value="public">Public — visible to everyone on the feed</option>
+                  <option value="friends">Friends only — only your friends can see</option>
+                  <option value="private">Private — only you can see</option>
+                </select>
+              </div>
 
               {privacyMessage ? (
                 <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>

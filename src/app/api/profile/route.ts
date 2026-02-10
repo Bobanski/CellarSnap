@@ -205,23 +205,44 @@ export async function PATCH(request: Request) {
   if (initialUpdate.error && hasMissingPrivacyColumns(initialUpdate.error.message)) {
     missingPrivacyColumns = true;
 
+    // Strip columns that don't exist in the fallback path
     const fallbackUpdates: Record<string, string> = {};
     if (updates.display_name !== undefined) {
       fallbackUpdates.display_name = updates.display_name;
     }
+    if (updates.default_entry_privacy !== undefined) {
+      fallbackUpdates.default_entry_privacy = updates.default_entry_privacy;
+    }
 
     if (Object.keys(fallbackUpdates).length > 0) {
-      const fallbackUpdate = await supabase
+      // Try with default_entry_privacy included first
+      let fallbackResult = await supabase
         .from("profiles")
         .update(fallbackUpdates)
         .eq("id", user.id)
         .select("id, display_name, email, created_at")
         .single();
 
-      if (fallbackUpdate.error) {
-        return NextResponse.json({ error: fallbackUpdate.error.message }, { status: 500 });
+      // If default_entry_privacy column also doesn't exist, retry without it
+      if (fallbackResult.error && fallbackResult.error.message.includes("default_entry_privacy")) {
+        const minimalUpdates: Record<string, string> = {};
+        if (updates.display_name !== undefined) {
+          minimalUpdates.display_name = updates.display_name;
+        }
+        if (Object.keys(minimalUpdates).length > 0) {
+          fallbackResult = await supabase
+            .from("profiles")
+            .update(minimalUpdates)
+            .eq("id", user.id)
+            .select("id, display_name, email, created_at")
+            .single();
+        }
       }
-      profileData = fallbackUpdate.data;
+
+      if (fallbackResult.error) {
+        return NextResponse.json({ error: fallbackResult.error.message }, { status: 500 });
+      }
+      profileData = fallbackResult.data;
     } else {
       const fallbackProfile = await supabase
         .from("profiles")
