@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -27,12 +27,6 @@ type UserOption = {
 export default function FeedPage() {
   const router = useRouter();
   const [entries, setEntries] = useState<FeedEntry[]>([]);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [currentUserProfile, setCurrentUserProfile] = useState<{
-    id: string;
-    display_name: string | null;
-    email: string | null;
-  } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserOption[]>([]);
   const [searching, setSearching] = useState(false);
@@ -40,6 +34,9 @@ export default function FeedPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedScope, setFeedScope] = useState<"public" | "friends">("public");
   const [reactionPopupEntryId, setReactionPopupEntryId] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim();
@@ -61,17 +58,6 @@ export default function FeedPage() {
     }, 200);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  const userMap = useMemo(() => {
-    const map = new Map(users.map((u) => [u.id, u.display_name ?? "Unknown"]));
-    if (currentUserProfile) {
-      map.set(
-        currentUserProfile.id,
-        currentUserProfile.display_name ?? "You"
-      );
-    }
-    return map;
-  }, [users, currentUserProfile]);
 
   const toggleReaction = async (entryId: string, emoji: string) => {
     const entry = entries.find((e) => e.id === entryId);
@@ -119,12 +105,12 @@ export default function FeedPage() {
     const loadFeed = async () => {
       setLoading(true);
       setErrorMessage(null);
+      setNextCursor(null);
+      setHasMore(false);
 
-      const [feedResponse, usersResponse, profileResponse] = await Promise.all([
-        fetch(`/api/feed?scope=${feedScope}`, { cache: "no-store" }),
-        fetch("/api/users", { cache: "no-store" }),
-        fetch("/api/profile", { cache: "no-store" }),
-      ]);
+      const feedResponse = await fetch(`/api/feed?scope=${feedScope}&limit=30`, {
+        cache: "no-store",
+      });
 
       if (!feedResponse.ok) {
         setErrorMessage("Unable to load feed.");
@@ -133,13 +119,11 @@ export default function FeedPage() {
       }
 
       const feedData = await feedResponse.json();
-      const usersData = usersResponse.ok ? await usersResponse.json() : { users: [] };
-      const profileData = profileResponse.ok ? await profileResponse.json() : { profile: null };
 
       if (isMounted) {
         setEntries(feedData.entries ?? []);
-        setUsers(usersData.users ?? []);
-        setCurrentUserProfile(profileData.profile ?? null);
+        setNextCursor(feedData.next_cursor ?? null);
+        setHasMore(Boolean(feedData.has_more));
         setLoading(false);
       }
     };
@@ -150,6 +134,24 @@ export default function FeedPage() {
       isMounted = false;
     };
   }, [feedScope]);
+
+  const loadMoreFeed = async () => {
+    if (!hasMore || loadingMore || !nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/feed?scope=${feedScope}&limit=30&cursor=${encodeURIComponent(nextCursor)}`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      setEntries((prev) => [...prev, ...(data.entries ?? [])]);
+      setNextCursor(data.next_cursor ?? null);
+      setHasMore(Boolean(data.has_more));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -250,6 +252,7 @@ export default function FeedPage() {
             No entries yet.
           </div>
         ) : (
+          <>
           <div className="grid gap-5 md:grid-cols-2">
             {entries.map((entry) => (
               <article
@@ -329,11 +332,7 @@ export default function FeedPage() {
                             user.display_name ?? user.email ?? "Unknown"
                         )
                         .join(", ")
-                    : entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
-                      ? entry.tasted_with_user_ids
-                          .map((id) => userMap.get(id) ?? "Unknown")
-                          .join(", ")
-                      : "No one listed"}
+                    : "No one listed"}
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
@@ -427,6 +426,19 @@ export default function FeedPage() {
               </article>
             ))}
           </div>
+          {hasMore ? (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={loadMoreFeed}
+                disabled={loadingMore}
+                className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          ) : null}
+          </>
         )}
       </div>
     </div>

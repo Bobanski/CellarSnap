@@ -27,49 +27,79 @@ export default function AlertsMenu() {
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasFetchedItems, setHasFetchedItems] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const open = openPathname === pathname;
 
+  // On mount: fetch only the unseen count (lightweight)
   useEffect(() => {
     let isMounted = true;
 
-    const load = async () => {
-      setLoading(true);
-      const response = await fetch("/api/notifications", { cache: "no-store" });
-      if (!response.ok) {
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
+    const loadCount = async () => {
+      const response = await fetch("/api/notifications?count_only=true", {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
       const data = await response.json();
       if (isMounted) {
         setCount(data.unseen_count ?? 0);
-        setItems(data.notifications ?? []);
-        setLoading(false);
       }
     };
 
-    load();
+    loadCount();
     return () => {
       isMounted = false;
     };
   }, []);
 
+  // When menu opens: fetch full notifications list (lazy)
   useEffect(() => {
     if (!open) return;
 
-    const markSeen = async () => {
-      await fetch("/api/notifications/mark-seen", {
-        method: "POST",
-      }).catch(() => null);
-      setCount(0);
+    // Mark seen in background whenever the menu opens
+    const markSeen = () => {
+      fetch("/api/notifications/mark-seen", { method: "POST" }).catch(
+        () => null
+      );
     };
 
-    markSeen();
-  }, [open]);
+    if (hasFetchedItems) {
+      // Already loaded; just mark as seen
+      markSeen();
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadItems = async () => {
+      setLoading(true);
+      const response = await fetch("/api/notifications", {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+      const data = await response.json();
+      if (isMounted) {
+        setItems(data.notifications ?? []);
+        setLoading(false);
+        setHasFetchedItems(true);
+      }
+
+      markSeen();
+    };
+
+    loadItems();
+    return () => {
+      isMounted = false;
+    };
+  }, [open, hasFetchedItems]);
+
+  // Clear badge when menu opens (derived from open state, avoids setState in effect body)
+  const displayCount = open ? 0 : count;
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
@@ -103,9 +133,9 @@ export default function AlertsMenu() {
         aria-label="Alerts"
       >
         <span className="text-lg">🔔</span>
-        {count > 0 ? (
+        {displayCount > 0 ? (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-semibold text-zinc-950">
-            {count}
+            {displayCount}
           </span>
         ) : null}
       </button>

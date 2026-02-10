@@ -66,7 +66,7 @@ export default function NavBar() {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [pathname]);
+  }, []);
 
   // Close mobile menu on click outside
   useEffect(() => {

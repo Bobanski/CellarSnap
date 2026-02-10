@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -10,6 +10,9 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const url = new URL(request.url);
+  const countOnly = url.searchParams.get("count_only") === "true";
 
   const { count: tagCount } = await supabase
     .from("wine_notifications")
@@ -23,6 +26,11 @@ export async function GET() {
     .eq("recipient_id", user.id)
     .eq("status", "pending")
     .is("seen_at", null);
+
+  // Fast path: only return the count (used by AlertsMenu badge on mount)
+  if (countOnly) {
+    return NextResponse.json({ unseen_count: (tagCount ?? 0) + (requestCount ?? 0) });
+  }
 
   const { data: notifications, error } = await supabase
     .from("wine_notifications")
