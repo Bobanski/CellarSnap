@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  ADVANCED_NOTE_FIELDS,
+  formatAdvancedNoteValue,
+  normalizeAdvancedNotes,
+} from "@/lib/advancedNotes";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import RatingBadge from "@/components/RatingBadge";
@@ -271,6 +276,7 @@ export default function EntryDetailPage() {
           },
         ]
       : [];
+  const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -550,6 +556,27 @@ export default function EntryDetailPage() {
                   : "No one listed"}
               </p>
             </div>
+
+            <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
+              <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+                Advanced notes
+              </summary>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {ADVANCED_NOTE_FIELDS.map((field) => (
+                  <div key={field.key}>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                      {field.label}
+                    </p>
+                    <p className="text-sm text-zinc-200">
+                      {formatAdvancedNoteValue(
+                        field.key,
+                        advancedNotes?.[field.key] ?? null
+                      )}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </details>
           </div>
         </div>
 

@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  ACIDITY_LEVELS,
+  ALCOHOL_LEVELS,
+  BODY_LEVELS,
+  INTENSITY_LEVELS,
+  LENGTH_LEVELS,
+  SWEETNESS_LEVELS,
+  TANNIN_LEVELS,
+  normalizeAdvancedNotes,
+} from "@/lib/advancedNotes";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 
@@ -12,6 +22,25 @@ const nullableString = z.preprocess(
   z.string().nullable().optional()
 );
 
+const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (value) => (value === "" ? null : value),
+    z.enum(values).nullable().optional()
+  );
+
+const advancedNotesSchema = z
+  .object({
+    acidity: nullableEnum(ACIDITY_LEVELS),
+    tannin: nullableEnum(TANNIN_LEVELS),
+    alcohol: nullableEnum(ALCOHOL_LEVELS),
+    sweetness: nullableEnum(SWEETNESS_LEVELS),
+    body: nullableEnum(BODY_LEVELS),
+    intensity: nullableEnum(INTENSITY_LEVELS),
+    length: nullableEnum(LENGTH_LEVELS),
+  })
+  .nullable()
+  .optional();
+
 const updateEntrySchema = z.object({
   wine_name: nullableString,
   producer: nullableString,
@@ -21,6 +50,7 @@ const updateEntrySchema = z.object({
   appellation: nullableString,
   rating: z.number().int().min(1).max(100).optional(),
   notes: nullableString,
+  advanced_notes: advancedNotesSchema,
   location_text: nullableString,
   consumed_at: z
     .string()
@@ -142,8 +172,16 @@ export async function PUT(
     );
   }
 
+  const normalizedData = {
+    ...payload.data,
+    advanced_notes:
+      payload.data.advanced_notes === undefined
+        ? undefined
+        : normalizeAdvancedNotes(payload.data.advanced_notes),
+  };
+
   const updates = Object.fromEntries(
-    Object.entries(payload.data).filter(([, value]) => value !== undefined)
+    Object.entries(normalizedData).filter(([, value]) => value !== undefined)
   );
 
   if (Object.keys(updates).length === 0) {
@@ -159,6 +197,15 @@ export async function PUT(
     .single();
 
   if (error || !data) {
+    if (error?.message.includes("advanced_notes")) {
+      return NextResponse.json(
+        {
+          error:
+            "Advanced notes are not available yet. Run supabase/sql/013_advanced_notes.sql and try again.",
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { error: error?.message ?? "Update failed" },
       { status: 500 }

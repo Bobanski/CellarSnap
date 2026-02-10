@@ -1,3 +1,5 @@
+import type { AdvancedNotes } from "@/lib/advancedNotes";
+
 export type PrivacyLevel = "public" | "friends" | "private";
 
 export type UserSummary = {
@@ -29,6 +31,7 @@ export type WineEntry = {
   appellation: string | null;
   rating: number | null;
   notes: string | null;
+  advanced_notes: AdvancedNotes | null;
   location_text: string | null;
   consumed_at: string;
   tasted_with_user_ids: string[] | null;
@@ -57,6 +60,7 @@ export type WineEntryCreatePayload = {
   appellation?: string | null;
   rating?: number | null;
   notes?: string | null;
+  advanced_notes?: AdvancedNotes | null;
   location_text?: string | null;
   consumed_at?: string;
   tasted_with_user_ids?: string[];
@@ -74,6 +78,7 @@ export type WineEntryUpdatePayload = Partial<{
   appellation: string | null;
   rating: number | null;
   notes: string | null;
+  advanced_notes: AdvancedNotes | null;
   location_text: string | null;
   consumed_at: string;
   tasted_with_user_ids: string[];
