@@ -1245,6 +1245,56 @@ export default function NewEntryPage() {
               How did this wine compare?
             </h2>
 
+            <div className="mt-6 flex flex-col items-start gap-3">
+              <p className="text-base text-zinc-300 sm:text-lg">
+                <span className="font-semibold text-zinc-100">
+                  Compared to the previous wine
+                </span>
+                , I like this wine...
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-5 py-2.5 text-base font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                  onClick={() => submitComparison("more")}
+                  disabled={isSubmittingComparison}
+                >
+                  More
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-5 py-2.5 text-base font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                  onClick={() => submitComparison("same_or_not_sure")}
+                  disabled={isSubmittingComparison}
+                >
+                  Not sure / The same
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-5 py-2.5 text-base font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                  onClick={() => submitComparison("less")}
+                  disabled={isSubmittingComparison}
+                >
+                  Less
+                </button>
+                {comparisonErrorMessage ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                    onClick={continueWithoutSavingComparison}
+                    disabled={isSubmittingComparison}
+                  >
+                    Continue without saving
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {comparisonErrorMessage ? (
+              <p className="mt-4 text-sm text-rose-300">{comparisonErrorMessage}</p>
+            ) : null}
+
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
                 <div className="h-40 w-full bg-black/40">
@@ -1301,56 +1351,6 @@ export default function NewEntryPage() {
                     Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
                   </p>
                 </div>
-              </div>
-            </div>
-
-            {comparisonErrorMessage ? (
-              <p className="mt-4 text-sm text-rose-300">{comparisonErrorMessage}</p>
-            ) : null}
-
-            <div className="mt-6 flex flex-col items-start gap-3">
-              <p className="text-sm text-zinc-300">
-                <span className="font-semibold text-zinc-100">
-                  Compared to the previous wine
-                </span>
-                , I like this wine...
-              </p>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
-                  onClick={() => submitComparison("more")}
-                  disabled={isSubmittingComparison}
-                >
-                  More
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
-                  onClick={() => submitComparison("same_or_not_sure")}
-                  disabled={isSubmittingComparison}
-                >
-                  Not sure / The same
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
-                  onClick={() => submitComparison("less")}
-                  disabled={isSubmittingComparison}
-                >
-                  Less
-                </button>
-                {comparisonErrorMessage ? (
-                  <button
-                    type="button"
-                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                    onClick={continueWithoutSavingComparison}
-                    disabled={isSubmittingComparison}
-                  >
-                    Continue without saving
-                  </button>
-                ) : null}
               </div>
             </div>
           </div>
