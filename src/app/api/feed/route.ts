@@ -78,10 +78,23 @@ export async function GET(request: Request) {
     )
   );
   const entryIds = (entries ?? []).map((entry) => entry.id);
-  const { data: profiles } = await supabase
+  const { data: profilesWithAvatar, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name, email, avatar_path")
     .in("id", userIds);
+
+  let profiles: { id: string; display_name: string | null; email: string | null; avatar_path?: string | null }[] | null = null;
+  if (profilesError && (profilesError.message.includes("avatar_path") || profilesError.message.includes("column"))) {
+    const { data: fallback } = await supabase
+      .from("profiles")
+      .select("id, display_name, email")
+      .in("id", userIds);
+    profiles = (fallback ?? []).map((p) => ({ ...p, avatar_path: null }));
+  } else if (profilesError) {
+    return NextResponse.json({ error: profilesError.message }, { status: 500 });
+  } else {
+    profiles = profilesWithAvatar;
+  }
 
   const profileMap = new Map(
     (profiles ?? []).map((profile) => [
@@ -89,6 +102,7 @@ export async function GET(request: Request) {
       {
         display_name: profile.display_name ?? null,
         email: profile.email ?? null,
+        avatar_path: profile.avatar_path ?? null,
       },
     ])
   );
@@ -113,6 +127,8 @@ export async function GET(request: Request) {
 
   const feedEntries = await Promise.all(
     (entries ?? []).map(async (entry) => {
+      const authorProfile = profileMap.get(entry.user_id);
+      const authorAvatarPath = authorProfile?.avatar_path ?? null;
       const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map(
         (id: string) => ({
           id,
@@ -124,9 +140,12 @@ export async function GET(request: Request) {
       return {
         ...entry,
         author_name:
-          profileMap.get(entry.user_id)?.display_name ??
-          profileMap.get(entry.user_id)?.email ??
+          authorProfile?.display_name ??
+          authorProfile?.email ??
           "Unknown",
+        author_avatar_url: authorAvatarPath
+          ? await createSignedUrl(authorAvatarPath, supabase)
+          : null,
         label_image_url: await createSignedUrl(
           labelMap.get(entry.id) ?? entry.label_image_path,
           supabase

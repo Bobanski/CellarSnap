@@ -12,6 +12,7 @@ import type { WineEntryWithUrls } from "@/types/wine";
 
 type FeedEntry = WineEntryWithUrls & {
   author_name: string;
+  author_avatar_url?: string | null;
 };
 
 type UserOption = {
@@ -219,21 +220,36 @@ export default function FeedPage() {
                   }
                 }}
               >
-                <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-3 text-xs text-zinc-400">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
                         router.push(`/profile/${entry.user_id}`);
                       }}
-                      className="font-medium text-zinc-200 hover:text-amber-200"
+                      className="flex shrink-0 items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
                     >
-                      {entry.author_name}
+                      <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/40 ring-1 ring-white/5">
+                        {entry.author_avatar_url ? (
+                          <img
+                            src={entry.author_avatar_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[10px] font-medium text-zinc-500">
+                            {(entry.author_name || "?")[0].toUpperCase()}
+                          </span>
+                        )}
+                      </span>
+                      <span className="truncate font-medium text-zinc-200 hover:text-amber-200">
+                        {entry.author_name}
+                      </span>
                     </button>
                     <PrivacyBadge level={entry.entry_privacy} compact />
                   </div>
-                  <span>{formatConsumedDate(entry.consumed_at)}</span>
+                  <span className="shrink-0">{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
                 <div className="mt-4 flex gap-4">
                   <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
