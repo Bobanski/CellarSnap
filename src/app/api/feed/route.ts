@@ -32,24 +32,31 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope");
+  const cursor = url.searchParams.get("cursor"); // created_at (ISO)
+  const rawLimit = Number(url.searchParams.get("limit") ?? "");
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(50, Math.max(1, rawLimit)) : 30;
 
-  let entriesQuery = supabase.from("wine_entries").select("*");
+  // Friend set for scope + can_react (mutual friends only)
+  const { data: friendRows } = await supabase
+    .from("friend_requests")
+    .select("requester_id, recipient_id")
+    .eq("status", "accepted")
+    .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
+
+  const friendIds = Array.from(
+    new Set(
+      (friendRows ?? []).map((row) =>
+        row.requester_id === user.id ? row.recipient_id : row.requester_id
+      )
+    )
+  );
+  const friendIdsSet = new Set(friendIds);
+
+  const selectFields =
+    "id, user_id, wine_name, producer, consumed_at, rating, tasted_with_user_ids, label_image_path, entry_privacy, created_at";
+  let entriesQuery = supabase.from("wine_entries").select(selectFields);
 
   if (scope === "friends") {
-    const { data: friendRows } = await supabase
-      .from("friend_requests")
-      .select("requester_id, recipient_id")
-      .eq("status", "accepted")
-      .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
-
-    const friendIds = Array.from(
-      new Set(
-        (friendRows ?? []).map((row) =>
-          row.requester_id === user.id ? row.recipient_id : row.requester_id
-        )
-      )
-    );
-
     if (friendIds.length === 0) {
       return NextResponse.json({ entries: [] });
     }
@@ -61,30 +68,26 @@ export async function GET(request: Request) {
     entriesQuery = entriesQuery.eq("entry_privacy", "public").neq("user_id", user.id);
   }
 
-  const { data: entries, error } = await entriesQuery.order("created_at", {
-    ascending: false,
-  });
+  if (cursor) {
+    entriesQuery = entriesQuery.lt("created_at", cursor);
+  }
+
+  const { data: entries, error } = await entriesQuery
+    .order("created_at", { ascending: false })
+    .limit(limit + 1);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Friend set for can_react (mutual friends only)
-  const { data: friendRowsForReactions } = await supabase
-    .from("friend_requests")
-    .select("requester_id, recipient_id")
-    .eq("status", "accepted")
-    .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
-  const friendIdsSet = new Set(
-    (friendRowsForReactions ?? []).map((row) =>
-      row.requester_id === user.id ? row.recipient_id : row.requester_id
-    )
-  );
+  const pageEntries = entries && entries.length > limit ? entries.slice(0, limit) : (entries ?? []);
+  const has_more = (entries?.length ?? 0) > limit;
+  const next_cursor = has_more ? pageEntries[pageEntries.length - 1]?.created_at ?? null : null;
 
-  const entryIds = (entries ?? []).map((entry) => entry.id);
+  const entryIds = pageEntries.map((entry) => entry.id);
   const userIds = Array.from(
     new Set(
-      (entries ?? []).flatMap((entry) => [
+      pageEntries.flatMap((entry) => [
         entry.user_id,
         ...(entry.tasted_with_user_ids ?? []),
       ])
@@ -138,8 +141,8 @@ export async function GET(request: Request) {
   });
 
   // Reactions: counts per entry per emoji, and current user's reactions per entry
-  let reactionCountsMap = new Map<string, Record<string, number>>();
-  let myReactionsMap = new Map<string, string[]>();
+  const reactionCountsMap = new Map<string, Record<string, number>>();
+  const myReactionsMap = new Map<string, string[]>();
   if (entryIds.length > 0) {
     const { data: reactions } = await supabase
       .from("entry_reactions")
@@ -157,43 +160,63 @@ export async function GET(request: Request) {
     });
   }
 
-  const feedEntries = await Promise.all(
-    (entries ?? []).map(async (entry) => {
-      const authorProfile = profileMap.get(entry.user_id);
-      const authorAvatarPath = authorProfile?.avatar_path ?? null;
-      const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map(
-        (id: string) => ({
-          id,
-          display_name: profileMap.get(id)?.display_name ?? null,
-          email: profileMap.get(id)?.email ?? null,
-        })
-      );
-      const isFriendOfAuthor = friendIdsSet.has(entry.user_id);
-      const can_react = isFriendOfAuthor && entry.user_id !== user.id;
-      const reaction_counts = reactionCountsMap.get(entry.id) ?? {};
-      const my_reactions = myReactionsMap.get(entry.id) ?? [];
+  // Sign only the URLs that this page actually renders (author avatar + label)
+  const pathsToSign = new Set<string>();
+  const authorAvatarPathByUserId = new Map<string, string>();
+  const labelPathByEntryId = new Map<string, string>();
 
-      return {
-        ...entry,
-        author_name:
-          authorProfile?.display_name ??
-          authorProfile?.email ??
-          "Unknown",
-        author_avatar_url: authorAvatarPath
-          ? await createSignedUrl(authorAvatarPath, supabase)
-          : null,
-        label_image_url: await createSignedUrl(
-          labelMap.get(entry.id) ?? entry.label_image_path,
-          supabase
-        ),
-        place_image_url: await createSignedUrl(entry.place_image_path, supabase),
-        tasted_with_users: tastedWithUsers,
-        can_react,
-        reaction_counts,
-        my_reactions,
-      };
+  pageEntries.forEach((entry) => {
+    const authorProfile = profileMap.get(entry.user_id);
+    const avatarPath = authorProfile?.avatar_path ?? null;
+    if (avatarPath) {
+      pathsToSign.add(avatarPath);
+      authorAvatarPathByUserId.set(entry.user_id, avatarPath);
+    }
+
+    const labelPath = labelMap.get(entry.id) ?? entry.label_image_path ?? null;
+    if (labelPath) {
+      pathsToSign.add(labelPath);
+      labelPathByEntryId.set(entry.id, labelPath);
+    }
+  });
+
+  const signedUrlByPath = new Map<string, string | null>();
+  await Promise.all(
+    Array.from(pathsToSign).map(async (path) => {
+      signedUrlByPath.set(path, await createSignedUrl(path, supabase));
     })
   );
 
-  return NextResponse.json({ entries: feedEntries });
+  const feedEntries = pageEntries.map((entry) => {
+    const authorProfile = profileMap.get(entry.user_id);
+    const avatarPath = authorAvatarPathByUserId.get(entry.user_id) ?? null;
+    const labelPath = labelPathByEntryId.get(entry.id) ?? null;
+
+    const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id: string) => ({
+      id,
+      display_name: profileMap.get(id)?.display_name ?? null,
+      email: profileMap.get(id)?.email ?? null,
+    }));
+
+    const isFriendOfAuthor = friendIdsSet.has(entry.user_id);
+    const can_react = isFriendOfAuthor && entry.user_id !== user.id;
+    const reaction_counts = reactionCountsMap.get(entry.id) ?? {};
+    const my_reactions = myReactionsMap.get(entry.id) ?? [];
+
+    return {
+      ...entry,
+      author_name: authorProfile?.display_name ?? authorProfile?.email ?? "Unknown",
+      author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
+      label_image_url: labelPath ? signedUrlByPath.get(labelPath) ?? null : null,
+      // Not used by /feed UI; omit signing work (kept as null for compatibility)
+      place_image_url: null,
+      pairing_image_url: null,
+      tasted_with_users: tastedWithUsers,
+      can_react,
+      reaction_counts,
+      my_reactions,
+    };
+  });
+
+  return NextResponse.json({ entries: feedEntries, next_cursor, has_more });
 }

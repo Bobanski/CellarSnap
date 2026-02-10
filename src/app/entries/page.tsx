@@ -12,6 +12,9 @@ export default function EntriesPage() {
   const [entries, setEntries] = useState<WineEntryWithUrls[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [sortBy, setSortBy] = useState<"consumed_at" | "rating" | "vintage">(
     "consumed_at"
   );
@@ -115,8 +118,10 @@ export default function EntriesPage() {
     const loadEntries = async () => {
       setLoading(true);
       setErrorMessage(null);
+      setNextCursor(null);
+      setHasMore(false);
 
-      const response = await fetch("/api/entries", { cache: "no-store" });
+      const response = await fetch("/api/entries?limit=50", { cache: "no-store" });
       if (!response.ok) {
         setErrorMessage("Unable to load entries.");
         setLoading(false);
@@ -126,6 +131,8 @@ export default function EntriesPage() {
       const data = await response.json();
       if (isMounted) {
         setEntries(data.entries ?? []);
+        setNextCursor(data.next_cursor ?? null);
+        setHasMore(Boolean(data.has_more));
         setLoading(false);
       }
     };
@@ -136,6 +143,31 @@ export default function EntriesPage() {
       isMounted = false;
     };
   }, []);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore || !nextCursor) {
+      return;
+    }
+
+    setLoadingMore(true);
+    setErrorMessage(null);
+    try {
+      const response = await fetch(
+        `/api/entries?limit=50&cursor=${encodeURIComponent(nextCursor)}`,
+        { cache: "no-store" }
+      );
+      if (!response.ok) {
+        setErrorMessage("Unable to load more entries.");
+        return;
+      }
+      const data = await response.json();
+      setEntries((prev) => [...prev, ...(data.entries ?? [])]);
+      setNextCursor(data.next_cursor ?? null);
+      setHasMore(Boolean(data.has_more));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -269,61 +301,89 @@ export default function EntriesPage() {
           </div>
         ) : sortedEntries.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
-            {isRangeFilterActive
-              ? "There are no wines found in this range."
-              : isFilterActive
-                ? "No entries match this filter."
-                : "No entries yet. Add your first bottle!"}
+            <p>
+              {isRangeFilterActive
+                ? "There are no wines found in this range."
+                : isFilterActive
+                  ? hasMore
+                    ? "No entries match this filter yet. Try loading more."
+                    : "No entries match this filter."
+                  : "No entries yet. Add your first bottle!"}
+            </p>
+            {hasMore ? (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="mt-4 inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            ) : null}
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2">
-            {sortedEntries.map((entry) => (
-              <Link
-                key={entry.id}
-                href={`/entries/${entry.id}`}
-                className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
-              >
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
-                  {entry.label_image_url ? (
-                    <Photo
-                      src={entry.label_image_url}
-                      alt={entry.wine_name ?? entry.producer ?? "Wine label"}
-                      containerClassName="h-full w-full"
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  ) : (
-                    "No photo"
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-zinc-50">
-                      {entry.wine_name || "Untitled wine"}
-                    </h2>
-                    <p className="text-sm text-zinc-400">
-                      {entry.producer || "Unknown producer"}
-                      {entry.vintage ? (
-                        <span className="text-zinc-500">
-                          {" · "}
-                          {entry.vintage}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {[entry.country, entry.region, entry.appellation]
-                        .filter(Boolean)
-                        .join(" · ") || "Location not set"}
-                    </p>
+          <>
+            <div className="grid gap-5 md:grid-cols-2">
+              {sortedEntries.map((entry) => (
+                <Link
+                  key={entry.id}
+                  href={`/entries/${entry.id}`}
+                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                >
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                    {entry.label_image_url ? (
+                      <Photo
+                        src={entry.label_image_url}
+                        alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                        containerClassName="h-full w-full"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      "No photo"
+                    )}
                   </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-400">
-                    <RatingBadge rating={entry.rating} className="text-sm font-bold text-amber-200" />
-                    <span>{formatConsumedDate(entry.consumed_at)}</span>
+                  <div className="flex flex-1 flex-col justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-zinc-50">
+                        {entry.wine_name || "Untitled wine"}
+                      </h2>
+                      <p className="text-sm text-zinc-400">
+                        {entry.producer || "Unknown producer"}
+                        {entry.vintage ? (
+                          <span className="text-zinc-500">
+                            {" · "}
+                            {entry.vintage}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {[entry.country, entry.region, entry.appellation]
+                          .filter(Boolean)
+                          .join(" · ") || "Location not set"}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-zinc-400">
+                      <RatingBadge rating={entry.rating} className="text-sm font-bold text-amber-200" />
+                      <span>{formatConsumedDate(entry.consumed_at)}</span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+            {hasMore ? (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </div>

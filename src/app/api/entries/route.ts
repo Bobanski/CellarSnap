@@ -78,7 +78,7 @@ async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
   return data.signedUrl;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -89,17 +89,35 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  const url = new URL(request.url);
+  const cursor = url.searchParams.get("cursor"); // created_at (ISO)
+  const rawLimit = Number(url.searchParams.get("limit") ?? "");
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 50;
+
+  const selectFields =
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, consumed_at, tasted_with_user_ids, label_image_path, created_at";
+
+  let query = supabase
     .from("wine_entries")
-    .select("*")
+    .select(selectFields)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  if (cursor) {
+    query = query.lt("created_at", cursor);
+  }
+
+  const { data, error } = await query.limit(limit + 1);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const entryIds = (data ?? []).map((entry) => entry.id);
+  const pageRows = data && data.length > limit ? data.slice(0, limit) : (data ?? []);
+  const has_more = (data?.length ?? 0) > limit;
+  const next_cursor = has_more ? pageRows[pageRows.length - 1]?.created_at ?? null : null;
+
+  const entryIds = pageRows.map((entry) => entry.id);
   const { data: labelPhotos } =
     entryIds.length > 0
       ? await supabase
@@ -118,18 +136,35 @@ export async function GET() {
     }
   });
 
-  const entries = await Promise.all(
-    (data ?? []).map(async (entry) => ({
-      ...entry,
-      label_image_url: await createSignedUrl(
-        labelMap.get(entry.id) ?? entry.label_image_path,
-        supabase
-      ),
-      place_image_url: await createSignedUrl(entry.place_image_path, supabase),
-    }))
+  const labelPathsToSign = new Set<string>();
+  const labelPathByEntryId = new Map<string, string>();
+  pageRows.forEach((entry) => {
+    const labelPath = labelMap.get(entry.id) ?? entry.label_image_path ?? null;
+    if (labelPath) {
+      labelPathsToSign.add(labelPath);
+      labelPathByEntryId.set(entry.id, labelPath);
+    }
+  });
+
+  const signedUrlByPath = new Map<string, string | null>();
+  await Promise.all(
+    Array.from(labelPathsToSign).map(async (path) => {
+      signedUrlByPath.set(path, await createSignedUrl(path, supabase));
+    })
   );
 
-  return NextResponse.json({ entries });
+  const entries = pageRows.map((entry) => {
+    const labelPath = labelPathByEntryId.get(entry.id) ?? null;
+    return {
+      ...entry,
+      label_image_url: labelPath ? signedUrlByPath.get(labelPath) ?? null : null,
+      // Not used by /entries list UI; avoid extra signing work
+      place_image_url: null,
+      pairing_image_url: null,
+    };
+  });
+
+  return NextResponse.json({ entries, next_cursor, has_more });
 }
 
 export async function POST(request: Request) {
