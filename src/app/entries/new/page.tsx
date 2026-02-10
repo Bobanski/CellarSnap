@@ -5,6 +5,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { formatConsumedDate } from "@/lib/formatDate";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
@@ -43,6 +44,25 @@ type NewEntryForm = {
   entry_privacy: "public" | "friends" | "private";
   advanced_notes: AdvancedNotesFormValues;
 };
+
+type EntryComparisonCard = {
+  id: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+};
+
+type ComparisonCandidate = EntryComparisonCard & {
+  consumed_at: string;
+  label_image_url: string | null;
+};
+
+type CreateEntryResponse = {
+  entry: EntryComparisonCard;
+  comparison_candidate?: ComparisonCandidate | null;
+};
+
+type ComparisonResponse = "more" | "less" | "same_or_not_sure";
 
 export default function NewEntryPage() {
   const router = useRouter();
@@ -92,6 +112,14 @@ export default function NewEntryPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingComparison, setPendingComparison] = useState<{
+    entry: EntryComparisonCard;
+    candidate: ComparisonCandidate;
+  } | null>(null);
+  const [comparisonErrorMessage, setComparisonErrorMessage] = useState<
+    string | null
+  >(null);
+  const [isSubmittingComparison, setIsSubmittingComparison] = useState(false);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
@@ -267,9 +295,82 @@ export default function NewEntryPage() {
     }
   };
 
+  const submitComparison = async (response: ComparisonResponse) => {
+    if (!pendingComparison || isSubmittingComparison) {
+      return;
+    }
+
+    setComparisonErrorMessage(null);
+    setIsSubmittingComparison(true);
+
+    try {
+      const apiResponse = await fetch(
+        `/api/entries/${pendingComparison.entry.id}/comparison`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            comparison_entry_id: pendingComparison.candidate.id,
+            response,
+          }),
+        }
+      );
+
+      if (!apiResponse.ok && apiResponse.status !== 409) {
+        const payload = await apiResponse.json().catch(() => null);
+        const apiError =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Unable to save comparison response.";
+        setComparisonErrorMessage(apiError);
+        setIsSubmittingComparison(false);
+        return;
+      }
+
+      router.push(`/entries/${pendingComparison.entry.id}`);
+    } catch {
+      setComparisonErrorMessage(
+        "Unable to save comparison response. Check your connection and try again."
+      );
+      setIsSubmittingComparison(false);
+    }
+  };
+
+  const continueWithoutSavingComparison = () => {
+    if (!pendingComparison) {
+      return;
+    }
+    router.push(`/entries/${pendingComparison.entry.id}`);
+  };
+
+  const formatWineTitle = (wine: {
+    wine_name: string | null;
+    producer: string | null;
+    vintage: string | null;
+  }) => wine.wine_name?.trim() || "Untitled wine";
+
+  const formatWineMeta = (wine: {
+    wine_name: string | null;
+    producer: string | null;
+    vintage: string | null;
+  }) => {
+    if (wine.producer && wine.vintage) {
+      return `${wine.producer} · ${wine.vintage}`;
+    }
+    if (wine.producer) {
+      return wine.producer;
+    }
+    if (wine.vintage) {
+      return wine.vintage;
+    }
+    return "No producer or vintage";
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
     setErrorMessage(null);
+    setPendingComparison(null);
+    setComparisonErrorMessage(null);
 
     const rating =
       typeof values.rating === "number" && !Number.isNaN(values.rating)
@@ -294,29 +395,37 @@ export default function NewEntryPage() {
       return;
     }
 
-    const response = await fetch("/api/entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        wine_name: values.wine_name.trim(),
-        producer: values.producer || null,
-        vintage: values.vintage || null,
-        country: values.country || null,
-        region: values.region || null,
-        appellation: values.appellation || null,
-        rating,
-        price_paid: pricePaid ?? null,
-        price_paid_currency: pricePaid !== undefined ? pricePaidCurrency : null,
-        price_paid_source: pricePaidSource ?? null,
-        qpr_level: values.qpr_level || null,
-        notes: values.notes || null,
-        location_text: values.location_text || null,
-        consumed_at: values.consumed_at,
-        tasted_with_user_ids: selectedUserIds,
-        entry_privacy: values.entry_privacy,
-        advanced_notes: toAdvancedNotesPayload(values.advanced_notes),
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wine_name: values.wine_name.trim(),
+          producer: values.producer || null,
+          vintage: values.vintage || null,
+          country: values.country || null,
+          region: values.region || null,
+          appellation: values.appellation || null,
+          rating,
+          price_paid: pricePaid ?? null,
+          price_paid_currency:
+            pricePaid !== undefined ? pricePaidCurrency : null,
+          price_paid_source: pricePaidSource ?? null,
+          qpr_level: values.qpr_level || null,
+          notes: values.notes || null,
+          location_text: values.location_text || null,
+          consumed_at: values.consumed_at,
+          tasted_with_user_ids: selectedUserIds,
+          entry_privacy: values.entry_privacy,
+          advanced_notes: toAdvancedNotesPayload(values.advanced_notes),
+        }),
+      });
+    } catch {
+      setIsSubmitting(false);
+      setErrorMessage("Unable to create entry. Check your connection.");
+      return;
+    }
 
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
@@ -331,7 +440,23 @@ export default function NewEntryPage() {
       return;
     }
 
-    const { entry } = await response.json();
+    let createPayload: CreateEntryResponse;
+    try {
+      createPayload = (await response.json()) as CreateEntryResponse;
+    } catch {
+      setIsSubmitting(false);
+      setErrorMessage("Entry created, but response parsing failed.");
+      return;
+    }
+
+    const entry = createPayload.entry;
+    const comparisonCandidate = createPayload.comparison_candidate ?? null;
+
+    if (!entry?.id) {
+      setIsSubmitting(false);
+      setErrorMessage("Entry created, but entry ID was missing.");
+      return;
+    }
 
     try {
       if (labelPhotos.length > 0) {
@@ -348,6 +473,16 @@ export default function NewEntryPage() {
       setErrorMessage(
         error instanceof Error ? error.message : "Photo upload failed."
       );
+      return;
+    }
+
+    setIsSubmitting(false);
+
+    if (comparisonCandidate) {
+      setPendingComparison({
+        entry,
+        candidate: comparisonCandidate,
+      });
       return;
     }
 
@@ -497,6 +632,8 @@ export default function NewEntryPage() {
       setAutofillMessage("Could not read the label. Try again.");
     }
   };
+
+  const newlyLoggedWinePreviewUrl = labelPhotos[0]?.preview ?? null;
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -1090,6 +1227,130 @@ export default function NewEntryPage() {
           </div>
         </form>
       </div>
+
+      {pendingComparison ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/75" aria-hidden />
+          <div className="relative w-full max-w-3xl rounded-3xl border border-white/10 bg-[#14100f] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] sm:p-8">
+            <button
+              type="button"
+              className="absolute right-5 top-5 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
+              onClick={() => submitComparison("same_or_not_sure")}
+              disabled={isSubmittingComparison}
+            >
+              Skip
+            </button>
+
+            <h2 className="text-2xl font-semibold text-zinc-50">
+              How did this wine compare?
+            </h2>
+            <p className="mt-2 text-sm text-zinc-300">
+              Do you like the wine you just logged more or less than this
+              previous wine?
+            </p>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                <div className="h-40 w-full bg-black/40">
+                  {newlyLoggedWinePreviewUrl ? (
+                    <img
+                      src={newlyLoggedWinePreviewUrl}
+                      alt="Wine you just logged"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-zinc-500">
+                      No photo
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1 border-t border-white/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                    Wine you just logged
+                  </p>
+                  <p className="text-sm font-semibold text-zinc-50">
+                    {formatWineTitle(pendingComparison.entry)}
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    {formatWineMeta(pendingComparison.entry)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                <div className="h-40 w-full bg-black/40">
+                  {pendingComparison.candidate.label_image_url ? (
+                    <img
+                      src={pendingComparison.candidate.label_image_url}
+                      alt="Previous wine for comparison"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-zinc-500">
+                      No photo
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1 border-t border-white/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                    Previous wine
+                  </p>
+                  <p className="text-sm font-semibold text-zinc-50">
+                    {formatWineTitle(pendingComparison.candidate)}
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    {formatWineMeta(pendingComparison.candidate)}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {comparisonErrorMessage ? (
+              <p className="mt-4 text-sm text-rose-300">{comparisonErrorMessage}</p>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+              {comparisonErrorMessage ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                  onClick={continueWithoutSavingComparison}
+                  disabled={isSubmittingComparison}
+                >
+                  Continue without saving
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                onClick={() => submitComparison("less")}
+                disabled={isSubmittingComparison}
+              >
+                Less
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                onClick={() => submitComparison("same_or_not_sure")}
+                disabled={isSubmittingComparison}
+              >
+                Not sure / same
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60"
+                onClick={() => submitComparison("more")}
+                disabled={isSubmittingComparison}
+              >
+                More
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

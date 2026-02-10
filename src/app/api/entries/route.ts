@@ -150,6 +150,71 @@ async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
   return data.signedUrl;
 }
 
+type ComparisonCandidate = {
+  id: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  consumed_at: string;
+  label_image_url: string | null;
+};
+
+async function getRandomComparisonCandidate({
+  userId,
+  newEntryId,
+  supabase,
+}: {
+  userId: string;
+  newEntryId: string;
+  supabase: SupabaseClient;
+}): Promise<ComparisonCandidate | null> {
+  const { count, error: countError } = await supabase
+    .from("wine_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .neq("id", newEntryId);
+
+  if (countError || !count || count <= 0) {
+    return null;
+  }
+
+  const randomOffset = Math.floor(Math.random() * count);
+
+  const { data: candidate, error: candidateError } = await supabase
+    .from("wine_entries")
+    .select("id, wine_name, producer, vintage, consumed_at, label_image_path")
+    .eq("user_id", userId)
+    .neq("id", newEntryId)
+    .order("created_at", { ascending: false })
+    .range(randomOffset, randomOffset)
+    .maybeSingle();
+
+  if (candidateError || !candidate) {
+    return null;
+  }
+
+  const { data: labelPhoto } = await supabase
+    .from("entry_photos")
+    .select("path")
+    .eq("entry_id", candidate.id)
+    .eq("type", "label")
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const labelPath = labelPhoto?.path ?? candidate.label_image_path ?? null;
+
+  return {
+    id: candidate.id,
+    wine_name: candidate.wine_name,
+    producer: candidate.producer,
+    vintage: candidate.vintage,
+    consumed_at: candidate.consumed_at,
+    label_image_url: await createSignedUrl(labelPath, supabase),
+  };
+}
+
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
 
@@ -349,5 +414,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ entry: data });
+  let comparisonCandidate: ComparisonCandidate | null = null;
+  try {
+    comparisonCandidate = await getRandomComparisonCandidate({
+      userId: user.id,
+      newEntryId: data.id,
+      supabase,
+    });
+  } catch {
+    comparisonCandidate = null;
+  }
+
+  return NextResponse.json({
+    entry: data,
+    comparison_candidate: comparisonCandidate,
+  });
 }

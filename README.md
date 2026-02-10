@@ -30,6 +30,8 @@ Supabase SQL steps:
   - `supabase/sql/014_entry_reactions.sql`
   - `supabase/sql/015_entry_photos_visibility.sql`
   - `supabase/sql/016_entry_pricing_qpr.sql`
+  - `supabase/sql/017_entry_price_currency.sql`
+  - `supabase/sql/018_entry_comparison_feedback.sql`
 
 Notes:
 - Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.

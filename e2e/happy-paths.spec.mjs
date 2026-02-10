@@ -71,6 +71,14 @@ test.describe("Core happy paths", () => {
     await page.getByLabel("Wine name").fill(wineName);
     await page.getByLabel("Visibility").selectOption("friends");
     await page.getByRole("button", { name: "Save entry" }).click();
+    const skipComparisonButton = page.getByRole("button", { name: "Skip" });
+    if (
+      await skipComparisonButton
+        .isVisible({ timeout: 5000 })
+        .catch(() => false)
+    ) {
+      await skipComparisonButton.click();
+    }
     await expect(page).toHaveURL(/\/entries\/[^/]+$/);
     await expect(page.getByRole("heading", { name: wineName })).toBeVisible();
     await signOut(page);
