@@ -470,7 +470,7 @@ export default function ProfilePage() {
                     Edit profile
                   </button>
 
-                  <div className="flex flex-col gap-4 pr-28 sm:flex-row sm:items-start sm:pr-0">
+                  <div className="flex flex-col gap-4 pr-28 sm:flex-row sm:items-start sm:pr-28">
                     <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
                       {profile?.avatar_url ? (
                         <img
