@@ -617,41 +617,9 @@ export default function EditEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-200">Price paid</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9]*[.]?[0-9]*"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="Optional (e.g. 28.50)"
-                {...register("price_paid", {
-                  setValueAs: (value) => {
-                    if (value === "") return undefined;
-                    const parsed = Number(value);
-                    return Number.isFinite(parsed) ? parsed : undefined;
-                  },
-                })}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Consumed date</label>
-              <Controller
-                control={control}
-                name="consumed_at"
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    required
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">QPR</label>
+              <label className="text-sm font-medium text-zinc-200">
+                QPR (Quality : Price Ratio)
+              </label>
               <select
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("qpr_level")}
@@ -664,55 +632,76 @@ export default function EditEntryPage() {
                 ))}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-sm font-medium text-zinc-200">Price source</label>
-                {selectedPricePaidSource ? (
-                  <button
-                    type="button"
-                    className="text-xs text-zinc-400 transition hover:text-zinc-200"
-                    onClick={() =>
-                      setValue("price_paid_source", "", {
-                        shouldDirty: true,
-                      })
-                    }
-                  >
-                    Clear
-                  </button>
-                ) : null}
-              </div>
-              <input type="hidden" {...register("price_paid_source")} />
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {PRICE_PAID_SOURCE_VALUES.map((source) => {
-                  const selected = selectedPricePaidSource === source;
-                  return (
-                    <button
-                      key={source}
-                      type="button"
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
-                        selected
-                          ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
-                          : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
-                      }`}
-                      onClick={() =>
-                        setValue("price_paid_source", source, {
-                          shouldDirty: true,
-                        })
-                      }
-                    >
-                      <span
-                        className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                          selected
-                            ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
-                            : "border-white/20 text-transparent"
-                        }`}
+            <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">Price paid</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.]?[0-9]*"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    placeholder="Optional (e.g. 28.50)"
+                    {...register("price_paid", {
+                      setValueAs: (value) => {
+                        if (value === "") return undefined;
+                        const parsed = Number(value);
+                        return Number.isFinite(parsed) ? parsed : undefined;
+                      },
+                    })}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-sm font-medium text-zinc-200">Price source</label>
+                    {selectedPricePaidSource ? (
+                      <button
+                        type="button"
+                        className="text-xs text-zinc-400 transition hover:text-zinc-200"
+                        onClick={() =>
+                          setValue("price_paid_source", "", {
+                            shouldDirty: true,
+                          })
+                        }
                       >
-                        ✓
-                      </span>
-                      {PRICE_PAID_SOURCE_LABELS[source]}
-                    </button>
-                  );
-                })}
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+                  <input type="hidden" {...register("price_paid_source")} />
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {PRICE_PAID_SOURCE_VALUES.map((source) => {
+                      const selected = selectedPricePaidSource === source;
+                      return (
+                        <button
+                          key={source}
+                          type="button"
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+                            selected
+                              ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
+                              : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
+                          }`}
+                          onClick={() =>
+                            setValue("price_paid_source", source, {
+                              shouldDirty: true,
+                            })
+                          }
+                        >
+                          <span
+                            className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                              selected
+                                ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
+                                : "border-white/20 text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          {PRICE_PAID_SOURCE_LABELS[source]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -759,14 +748,6 @@ export default function EditEntryPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-200">Location</label>
-            <input
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              {...register("location_text")}
-            />
-          </div>
-
-          <div>
             <label className="text-sm font-medium text-zinc-200">
               Visibility
             </label>
@@ -784,6 +765,33 @@ export default function EditEntryPage() {
               <option value="friends">Friends only</option>
               <option value="private">Private (only me)</option>
             </select>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-zinc-200">Location</label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("location_text")}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-200">Consumed date</label>
+              <Controller
+                control={control}
+                name="consumed_at"
+                rules={{ required: true }}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    required
+                  />
+                )}
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">

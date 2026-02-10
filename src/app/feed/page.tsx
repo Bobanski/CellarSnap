@@ -315,30 +315,34 @@ export default function FeedPage() {
                   </div>
                     <div className="flex flex-1 flex-col justify-between">
                     <div>
-                      <h2 className="text-base font-semibold text-zinc-50">
-                        {entry.wine_name || "Untitled wine"}
-                      </h2>
-                      <p className="text-sm text-zinc-400">
-                        {entry.producer || "Unknown producer"}
-                      </p>
+                      {entry.wine_name ? (
+                        <h2 className="text-base font-semibold text-zinc-50">
+                          {entry.wine_name}
+                        </h2>
+                      ) : null}
+                      {entry.producer ? (
+                        <p className="text-sm text-zinc-400">
+                          {entry.producer}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 text-xs text-zinc-400">
-                  Tasted with:{" "}
-                  {entry.tasted_with_users && entry.tasted_with_users.length > 0
-                    ? entry.tasted_with_users
-                        .map(
-                          (user) =>
-                            user.display_name ?? user.email ?? "Unknown"
-                        )
-                        .join(", ")
-                    : "No one listed"}
-                </div>
+                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
+                  <div className="mt-3 text-xs text-zinc-400">
+                    Tasted with:{" "}
+                    {entry.tasted_with_users
+                      .map((user) => user.display_name ?? user.email ?? "Unknown")
+                      .join(", ")}
+                  </div>
+                ) : null}
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <RatingBadge rating={entry.rating} />
+                    {typeof entry.rating === "number" &&
+                    !Number.isNaN(entry.rating) ? (
+                      <RatingBadge rating={entry.rating} />
+                    ) : null}
                     {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">

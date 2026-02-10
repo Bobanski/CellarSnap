@@ -346,29 +346,47 @@ export default function EntriesPage() {
                   </div>
                     <div className="flex flex-1 flex-col justify-between">
                       <div>
-                        <h2 className="text-lg font-semibold text-zinc-50">
-                        {entry.wine_name || "Untitled wine"}
-                      </h2>
-                      <p className="text-sm text-zinc-400">
-                        {entry.producer || "Unknown producer"}
-                        {entry.vintage ? (
-                          <span className="text-zinc-500">
-                            {" · "}
-                            {entry.vintage}
-                          </span>
+                        {entry.wine_name ? (
+                          <h2 className="text-lg font-semibold text-zinc-50">
+                            {entry.wine_name}
+                          </h2>
                         ) : null}
-                      </p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          {[entry.country, entry.region, entry.appellation]
-                            .filter(Boolean)
-                            .join(" · ") || "Location not set"}
-                        </p>
+                        {entry.producer || entry.vintage ? (
+                          <p className="text-sm text-zinc-400">
+                            {entry.producer ?? ""}
+                            {entry.producer && entry.vintage ? (
+                              <span className="text-zinc-500">
+                                {" · "}
+                                {entry.vintage}
+                              </span>
+                            ) : entry.vintage ? (
+                              <span className="text-zinc-500">{entry.vintage}</span>
+                            ) : null}
+                          </p>
+                        ) : null}
+                        {[entry.country, entry.region, entry.appellation].filter(Boolean)
+                          .length > 0 ? (
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {[entry.country, entry.region, entry.appellation]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <RatingBadge rating={entry.rating} />
-                          {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                        </div>
+                        {((typeof entry.rating === "number" &&
+                          !Number.isNaN(entry.rating)) ||
+                          entry.qpr_level) ? (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {typeof entry.rating === "number" &&
+                            !Number.isNaN(entry.rating) ? (
+                              <RatingBadge rating={entry.rating} />
+                            ) : null}
+                            {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                          </div>
+                        ) : (
+                          <span />
+                        )}
                         <span>{formatConsumedDate(entry.consumed_at)}</span>
                       </div>
                     </div>
