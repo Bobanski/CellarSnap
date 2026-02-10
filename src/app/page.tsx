@@ -261,16 +261,27 @@ export default function HomePage() {
                   </div>
                   <div className="flex flex-1 items-center justify-between gap-3 overflow-hidden">
                     <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-zinc-50">
-                        {entry.wine_name || "Untitled wine"}
-                      </p>
-                      <p className="truncate text-xs text-zinc-400">
-                        {entry.producer || "Unknown producer"}
-                        {entry.vintage ? ` \u00b7 ${entry.vintage}` : ""}
-                      </p>
+                      {entry.wine_name ? (
+                        <p className="truncate text-base font-semibold text-zinc-50">
+                          {entry.wine_name}
+                        </p>
+                      ) : null}
+                      {entry.producer || entry.vintage ? (
+                        <p className="truncate text-xs text-zinc-400">
+                          {entry.producer ?? ""}
+                          {entry.producer && entry.vintage
+                            ? ` \u00b7 ${entry.vintage}`
+                            : entry.vintage
+                              ? entry.vintage
+                              : ""}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} />
+                      {typeof entry.rating === "number" &&
+                      !Number.isNaN(entry.rating) ? (
+                        <RatingBadge rating={entry.rating} />
+                      ) : null}
                       {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                       <span className="hidden sm:inline">
                         {formatConsumedDate(entry.consumed_at)}
@@ -335,11 +346,11 @@ export default function HomePage() {
                     className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                     role="button"
                     tabIndex={0}
-                    onClick={() => router.push(`/entries/${entry.id}`)}
+                    onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        router.push(`/entries/${entry.id}`);
+                        router.push(`/entries/${entry.id}?from=feed`);
                       }
                     }}
                   >
@@ -372,15 +383,20 @@ export default function HomePage() {
                       </div>
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
-                          <h3 className="text-base font-semibold text-zinc-50">
-                            {entry.wine_name || "Untitled wine"}
-                          </h3>
-                          <p className="text-sm text-zinc-400">
-                            {entry.producer || "Unknown producer"}
-                          </p>
+                          {entry.wine_name ? (
+                            <h3 className="text-base font-semibold text-zinc-50">
+                              {entry.wine_name}
+                            </h3>
+                          ) : null}
+                          {entry.producer ? (
+                            <p className="text-sm text-zinc-400">{entry.producer}</p>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
-                          <RatingBadge rating={entry.rating} />
+                          {typeof entry.rating === "number" &&
+                          !Number.isNaN(entry.rating) ? (
+                            <RatingBadge rating={entry.rating} />
+                          ) : null}
                           {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                         </div>
                       </div>

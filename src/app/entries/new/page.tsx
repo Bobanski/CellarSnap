@@ -71,7 +71,7 @@ export default function NewEntryPage() {
     useWatch({
       control,
       name: "price_paid_currency",
-    }) ?? "usd";
+    }) || "usd";
   const [labelPhotos, setLabelPhotos] = useState<
     { file: File; preview: string }[]
   >([]);

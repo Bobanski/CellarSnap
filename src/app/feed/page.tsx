@@ -261,11 +261,11 @@ export default function FeedPage() {
                 className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 role="button"
                 tabIndex={0}
-                onClick={() => router.push(`/entries/${entry.id}`)}
+                onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    router.push(`/entries/${entry.id}`);
+                    router.push(`/entries/${entry.id}?from=feed`);
                   }
                 }}
               >

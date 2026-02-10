@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
@@ -32,6 +32,7 @@ type PopulatedAdvancedNote = AdvancedNoteField & {
 
 export default function EntryDetailPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
@@ -225,9 +226,13 @@ export default function EntryDetailPage() {
     );
   }
 
+  const openedFromFeed = searchParams.get("from") === "feed";
   const isOwner = currentUserId === entry.user_id;
-  const backHref = isOwner ? "/entries" : "/feed";
-  const backLabel = isOwner ? "← Back to My entries" : "← Back to Social Feed";
+  const backHref = openedFromFeed ? "/feed" : isOwner ? "/entries" : "/feed";
+  const backLabel =
+    openedFromFeed || !isOwner
+      ? "← Back to Social Feed"
+      : "← Back to My entries";
   const sortByPosition = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => a.position - b.position);
   const labelPhotos = sortByPosition(
@@ -510,24 +515,22 @@ export default function EntryDetailPage() {
                   {formatConsumedDate(entry.consumed_at)}
                 </p>
               </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                  Price paid
-                </p>
-                <p className="text-sm text-zinc-200">
-                  {pricePaidDisplay || "Not set"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                  QPR
-                </p>
-                {entry.qpr_level ? (
+              {pricePaidDisplay ? (
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                    Price paid
+                  </p>
+                  <p className="text-sm text-zinc-200">{pricePaidDisplay}</p>
+                </div>
+              ) : null}
+              {entry.qpr_level ? (
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                    QPR
+                  </p>
                   <QprBadge level={entry.qpr_level} className="mt-1" />
-                ) : (
-                  <p className="text-sm text-zinc-200">Not set</p>
-                )}
-              </div>
+                </div>
+              ) : null}
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                   Region

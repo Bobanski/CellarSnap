@@ -75,7 +75,7 @@ export default function EditEntryPage() {
     useWatch({
       control,
       name: "price_paid_currency",
-    }) ?? "usd";
+    }) || "usd";
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);

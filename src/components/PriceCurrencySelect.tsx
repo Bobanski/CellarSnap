@@ -20,6 +20,11 @@ export default function PriceCurrencySelect({
 }: PriceCurrencySelectProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const resolvedValue = PRICE_PAID_CURRENCY_OPTIONS.some(
+    (option) => option.value === value
+  )
+    ? value
+    : "usd";
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -51,7 +56,7 @@ export default function PriceCurrencySelect({
         aria-expanded={open}
         onClick={() => setOpen((previous) => !previous)}
       >
-        <span>{PRICE_PAID_CURRENCY_SYMBOLS[value]}</span>
+        <span>{PRICE_PAID_CURRENCY_SYMBOLS[resolvedValue]}</span>
         <span className="text-[10px] text-zinc-500">▼</span>
       </button>
       {open ? (
@@ -60,7 +65,7 @@ export default function PriceCurrencySelect({
           className="absolute left-0 top-full z-30 mt-2 w-40 overflow-hidden rounded-xl border border-white/15 bg-[#1f1b18] shadow-xl"
         >
           {PRICE_PAID_CURRENCY_OPTIONS.map((option) => {
-            const selected = option.value === value;
+            const selected = option.value === resolvedValue;
             return (
               <li key={option.value}>
                 <button
