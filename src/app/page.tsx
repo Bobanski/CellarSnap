@@ -231,65 +231,70 @@ export default function HomePage() {
               Recent from you
             </h2>
 
-            <div className="space-y-3">
-              {recentEntries.map((entry) => (
-                <article
-                  key={entry.id}
-                  className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:border-amber-300/40"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => router.push(`/entries/${entry.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(`/entries/${entry.id}`);
-                    }
-                  }}
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-black/40 text-[10px] text-zinc-500">
-                    {entry.label_image_url ? (
-                      <Photo
-                        src={entry.label_image_url}
-                        alt={entry.wine_name ?? "Wine label"}
-                        containerClassName="h-full w-full"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      "No photo"
-                    )}
-                  </div>
-                  <div className="flex flex-1 items-center justify-between gap-3 overflow-hidden">
-                    <div className="min-w-0">
-                      {entry.wine_name ? (
-                        <p className="truncate text-base font-semibold text-zinc-50">
-                          {entry.wine_name}
-                        </p>
-                      ) : null}
-                      {entry.producer || entry.vintage ? (
-                        <p className="truncate text-xs text-zinc-400">
-                          {entry.producer ?? ""}
-                          {entry.producer && entry.vintage
-                            ? ` \u00b7 ${entry.vintage}`
-                            : entry.vintage
-                              ? entry.vintage
-                              : ""}
-                        </p>
-                      ) : null}
+            <div className="space-y-4">
+              <div className="grid gap-5 md:grid-cols-2">
+                {recentEntries.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/entries/${entry.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/entries/${entry.id}`);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between text-xs text-zinc-400">
+                      <span className="font-medium text-zinc-200">You</span>
+                      <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
-                      {typeof entry.rating === "number" &&
-                      !Number.isNaN(entry.rating) ? (
-                        <RatingBadge rating={entry.rating} variant="text" />
-                      ) : null}
-                      {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                      <span className="hidden sm:inline">
-                        {formatConsumedDate(entry.consumed_at)}
-                      </span>
+                    <div className="mt-4 flex gap-4">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                        {entry.label_image_url ? (
+                          <Photo
+                            src={entry.label_image_url}
+                            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                            containerClassName="h-full w-full"
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          "No photo"
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          {entry.wine_name ? (
+                            <h3 className="text-base font-semibold text-zinc-50">
+                              {entry.wine_name}
+                            </h3>
+                          ) : null}
+                          {entry.producer || entry.vintage ? (
+                            <p className="text-sm text-zinc-400">
+                              {entry.producer ?? ""}
+                              {entry.producer && entry.vintage
+                                ? ` \u00b7 ${entry.vintage}`
+                                : entry.vintage
+                                  ? entry.vintage
+                                  : ""}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+                          {typeof entry.rating === "number" &&
+                          !Number.isNaN(entry.rating) ? (
+                            <RatingBadge rating={entry.rating} variant="text" />
+                          ) : null}
+                          {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                ))}
+              </div>
 
               <Link
                 href="/entries"
