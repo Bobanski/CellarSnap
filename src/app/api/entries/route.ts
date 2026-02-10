@@ -40,7 +40,7 @@ const advancedNotesSchema = z
   .optional();
 
 const createEntrySchema = z.object({
-  wine_name: nullableString,
+  wine_name: z.string().min(1, "Wine name is required"),
   producer: nullableString,
   vintage: nullableString,
   country: nullableString,

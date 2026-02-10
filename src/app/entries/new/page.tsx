@@ -34,7 +34,7 @@ type NewEntryForm = {
 export default function NewEntryPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { control, register, handleSubmit, getValues, setValue } = useForm<NewEntryForm>({
+  const { control, register, handleSubmit, getValues, setValue, formState: { errors } } = useForm<NewEntryForm>({
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
       entry_privacy: "public",
@@ -254,7 +254,7 @@ export default function NewEntryPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        wine_name: values.wine_name || null,
+        wine_name: values.wine_name.trim(),
         producer: values.producer || null,
         vintage: values.vintage || null,
         country: values.country || null,
@@ -585,12 +585,15 @@ export default function NewEntryPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-zinc-200">Wine name</label>
+              <label className="text-sm font-medium text-zinc-200">Wine name <span className="text-amber-400">*</span></label>
               <input
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="Optional"
-                {...register("wine_name")}
+                placeholder="Required"
+                {...register("wine_name", { required: "Wine name is required" })}
               />
+              {errors.wine_name ? (
+                <p className="mt-1 text-xs text-rose-300">{errors.wine_name.message}</p>
+              ) : null}
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Producer</label>
