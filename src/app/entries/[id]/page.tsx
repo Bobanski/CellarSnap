@@ -18,7 +18,7 @@ import RatingBadge from "@/components/RatingBadge";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 import {
   PRICE_PAID_SOURCE_LABELS,
-  formatUsdAmount,
+  formatPricePaidAmount,
 } from "@/lib/entryMeta";
 
 type EntryDetail = WineEntryWithUrls & {
@@ -288,7 +288,10 @@ export default function EntryDetailPage() {
         ]
       : [];
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
-  const formattedPricePaid = formatUsdAmount(entry.price_paid);
+  const formattedPricePaid = formatPricePaidAmount(
+    entry.price_paid,
+    entry.price_paid_currency
+  );
   const pricePaidDisplay = formattedPricePaid
     ? entry.price_paid_source
       ? `${formattedPricePaid} (${PRICE_PAID_SOURCE_LABELS[entry.price_paid_source]})`

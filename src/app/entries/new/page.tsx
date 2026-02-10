@@ -8,6 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
+import PriceCurrencySelect from "@/components/PriceCurrencySelect";
 import {
   ADVANCED_NOTE_FIELDS,
   ADVANCED_NOTE_OPTIONS,
@@ -16,6 +17,7 @@ import {
   toAdvancedNotesPayload,
 } from "@/lib/advancedNotes";
 import {
+  type PricePaidCurrency,
   PRICE_PAID_SOURCE_LABELS,
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_LABELS,
@@ -32,6 +34,7 @@ type NewEntryForm = {
   appellation: string;
   rating?: number;
   price_paid?: number;
+  price_paid_currency: PricePaidCurrency;
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
   notes: string;
@@ -48,6 +51,7 @@ export default function NewEntryPage() {
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
       entry_privacy: "public",
+      price_paid_currency: "usd",
       price_paid_source: "",
       qpr_level: "",
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
@@ -63,6 +67,11 @@ export default function NewEntryPage() {
       control,
       name: "price_paid_source",
     }) ?? "";
+  const selectedPricePaidCurrency =
+    useWatch({
+      control,
+      name: "price_paid_currency",
+    }) ?? "usd";
   const [labelPhotos, setLabelPhotos] = useState<
     { file: File; preview: string }[]
   >([]);
@@ -270,6 +279,7 @@ export default function NewEntryPage() {
       typeof values.price_paid === "number" && !Number.isNaN(values.price_paid)
         ? Number(values.price_paid.toFixed(2))
         : undefined;
+    const pricePaidCurrency = values.price_paid_currency || "usd";
     const pricePaidSource = values.price_paid_source || undefined;
 
     if (pricePaid !== undefined && !pricePaidSource) {
@@ -296,6 +306,7 @@ export default function NewEntryPage() {
         appellation: values.appellation || null,
         rating,
         price_paid: pricePaid ?? null,
+        price_paid_currency: pricePaid !== undefined ? pricePaidCurrency : null,
         price_paid_source: pricePaidSource ?? null,
         qpr_level: values.qpr_level || null,
         notes: values.notes || null,
@@ -704,20 +715,31 @@ export default function NewEntryPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-zinc-200">Price paid</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    pattern="[0-9]*[.]?[0-9]*"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    placeholder="Optional (e.g. 28.50)"
-                    {...register("price_paid", {
-                      setValueAs: (value) => {
-                        if (value === "") return undefined;
-                        const parsed = Number(value);
-                        return Number.isFinite(parsed) ? parsed : undefined;
-                      },
-                    })}
-                  />
+                  <div className="mt-1 flex">
+                    <input type="hidden" {...register("price_paid_currency")} />
+                    <PriceCurrencySelect
+                      value={selectedPricePaidCurrency}
+                      onChange={(currency) =>
+                        setValue("price_paid_currency", currency, {
+                          shouldDirty: true,
+                        })
+                      }
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9]*[.]?[0-9]*"
+                      className="h-10 w-full rounded-r-xl border border-white/10 border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      placeholder="Optional (e.g. 28.50)"
+                      {...register("price_paid", {
+                        setValueAs: (value) => {
+                          if (value === "") return undefined;
+                          const parsed = Number(value);
+                          return Number.isFinite(parsed) ? parsed : undefined;
+                        },
+                      })}
+                    />
+                  </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between gap-2">

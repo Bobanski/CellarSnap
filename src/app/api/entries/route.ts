@@ -10,11 +10,13 @@ import {
   normalizeAdvancedNotes,
 } from "@/lib/advancedNotes";
 import {
+  PRICE_PAID_CURRENCY_VALUES,
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_VALUES,
 } from "@/lib/entryMeta";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
 const pricePaidSourceSchema = z.enum(PRICE_PAID_SOURCE_VALUES);
 const qprLevelSchema = z.enum(QPR_LEVEL_VALUES);
 
@@ -72,6 +74,10 @@ const createEntrySchema = z.object({
   appellation: nullableString,
   rating: z.number().int().min(1).max(100).optional(),
   price_paid: optionalPricePaidSchema,
+  price_paid_currency: z.preprocess(
+    (value) => (value === "" ? null : value),
+    pricePaidCurrencySchema.nullable().optional()
+  ),
   price_paid_source: z
     .preprocess((value) => (value === "" ? null : value), pricePaidSourceSchema.nullable().optional()),
   qpr_level: z.preprocess((value) => (value === "" ? null : value), qprLevelSchema.nullable().optional()),
@@ -88,14 +94,32 @@ const createEntrySchema = z.object({
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
 }).superRefine((data, ctx) => {
   const hasPrice = data.price_paid !== undefined;
+  const hasPriceCurrency =
+    data.price_paid_currency !== undefined && data.price_paid_currency !== null;
   const hasPriceSource =
     data.price_paid_source !== undefined && data.price_paid_source !== null;
+
+  if (hasPrice && !hasPriceCurrency) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select a currency when entering price paid.",
+      path: ["price_paid_currency"],
+    });
+  }
 
   if (hasPrice && !hasPriceSource) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Select retail or restaurant when entering price paid.",
       path: ["price_paid_source"],
+    });
+  }
+
+  if (!hasPrice && hasPriceCurrency) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter a price paid amount when selecting a currency.",
+      path: ["price_paid"],
     });
   }
 
@@ -143,7 +167,7 @@ export async function GET(request: Request) {
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 50;
 
   const selectFields =
-    "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, price_paid, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
 
   let query = supabase
     .from("wine_entries")
@@ -271,6 +295,7 @@ export async function POST(request: Request) {
       appellation: payload.data.appellation ?? null,
       rating: payload.data.rating ?? null,
       price_paid: payload.data.price_paid ?? null,
+      price_paid_currency: payload.data.price_paid_currency ?? null,
       price_paid_source: payload.data.price_paid_source ?? null,
       qpr_level: payload.data.qpr_level ?? null,
       notes: payload.data.notes ?? null,
@@ -302,20 +327,21 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Price paid and source must be set together. Select retail or restaurant when entering a price.",
+            "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
         },
         { status: 400 }
       );
     }
     if (
       error.message.includes("price_paid") ||
+      error.message.includes("price_paid_currency") ||
       error.message.includes("price_paid_source") ||
       error.message.includes("qpr_level")
     ) {
       return NextResponse.json(
         {
           error:
-            "Entry pricing and QPR fields are not available yet. Run supabase/sql/016_entry_pricing_qpr.sql and try again.",
+            "Entry pricing and QPR fields are not available yet. Run supabase/sql/016_entry_pricing_qpr.sql and supabase/sql/017_entry_price_currency.sql and try again.",
         },
         { status: 500 }
       );
