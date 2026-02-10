@@ -267,7 +267,7 @@ export default function HomePage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3 text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} className="text-sm font-bold text-amber-200" />
+                      <RatingBadge rating={entry.rating} className="text-xs font-bold text-amber-200" />
                       <span className="hidden sm:inline">
                         {formatConsumedDate(entry.consumed_at)}
                       </span>
