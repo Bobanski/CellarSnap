@@ -484,12 +484,9 @@ export default function EntryDetailPage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                   Rating
                 </p>
-                <div className="mt-1">
-                  <RatingBadge
-                    rating={entry.rating}
-                    className="px-4 py-1.5 text-sm font-bold"
-                  />
-                </div>
+                <p className="mt-1 text-sm text-zinc-400">
+                  <RatingBadge rating={entry.rating} />
+                </p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
