@@ -336,7 +336,7 @@ export default function FeedPage() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
-                  <RatingBadge rating={entry.rating} className="text-sm font-bold text-amber-200" />
+                  <RatingBadge rating={entry.rating} />
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
                   {Object.entries(entry.reaction_counts ?? {}).map(([emoji, count]) =>
                     count > 0 ? (

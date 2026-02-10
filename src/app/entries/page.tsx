@@ -364,7 +364,7 @@ export default function EntriesPage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} className="text-sm font-bold text-amber-200" />
+                      <RatingBadge rating={entry.rating} />
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                   </div>

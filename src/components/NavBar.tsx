@@ -107,7 +107,7 @@ export default function NavBar() {
     return (
       <span className="inline-flex items-center gap-2">
         {label}
-        <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+        <span className="accent-count-badge inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold">
           {pendingLabel}
         </span>
       </span>
@@ -120,7 +120,7 @@ export default function NavBar() {
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/"
-          className="text-lg font-semibold tracking-tight text-zinc-50 transition hover:text-amber-200"
+          className="accent-link-hover text-lg font-semibold tracking-tight text-zinc-50 transition"
         >
           CellarSnap
         </Link>
@@ -132,7 +132,7 @@ export default function NavBar() {
             return active ? (
               <span
                 key={href}
-                className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200"
+                className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold"
               >
                 {renderNavLabel(label, href)}
               </span>
@@ -147,13 +147,13 @@ export default function NavBar() {
             );
           })}
           {isNewEntryActive ? (
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
+            <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
               New entry
             </span>
           ) : (
             <Link
               href="/entries/new"
-              className="rounded-full bg-amber-400/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition"
             >
               + New entry
             </Link>
@@ -171,13 +171,13 @@ export default function NavBar() {
         {/* ── Mobile controls (<md) ── */}
         <div className="flex items-center gap-2 md:hidden">
           {isNewEntryActive ? (
-            <span className="rounded-full border border-amber-300/60 bg-amber-400/10 px-3 py-1.5 text-sm font-semibold text-amber-200">
+            <span className="accent-soft-chip rounded-full border px-3 py-1.5 text-sm font-semibold">
               New entry
             </span>
           ) : (
             <Link
               href="/entries/new"
-              className="rounded-full bg-amber-400/90 px-3 py-1.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="accent-solid-button rounded-full px-3 py-1.5 text-sm font-semibold transition"
             >
               + New
             </Link>
@@ -225,7 +225,7 @@ export default function NavBar() {
               </svg>
             )}
             {pendingIncomingCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1 py-0.5 text-[10px] font-bold text-zinc-950">
+              <span className="accent-count-badge absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 py-0.5 text-[10px] font-bold">
                 {pendingLabel}
               </span>
             ) : null}
@@ -245,7 +245,7 @@ export default function NavBar() {
                   href={href}
                   className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     active
-                      ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
+                      ? "accent-soft-chip border"
                       : "text-zinc-200 hover:bg-white/5"
                   }`}
                 >
@@ -256,7 +256,7 @@ export default function NavBar() {
             {!isNewEntryActive ? (
               <Link
                 href="/entries/new"
-                className="block rounded-xl bg-amber-400/90 px-4 py-3 text-center text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+                className="accent-solid-button block rounded-xl px-4 py-3 text-center text-sm font-semibold transition"
               >
                 + New entry
               </Link>

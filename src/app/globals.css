@@ -3,6 +3,12 @@
 :root {
   --background: #0f0a09;
   --foreground: #f5f5f4;
+  --accent-solid: #fbbf24;
+  --accent-solid-hover: #fcd34d;
+  --accent-soft-bg: rgba(251, 191, 36, 0.12);
+  --accent-soft-border: rgba(252, 211, 77, 0.55);
+  --accent-soft-text: #fde68a;
+  --accent-link: #fcd34d;
 }
 
 @theme inline {
@@ -25,32 +31,31 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Date picker popover dark theme */
-.rdp-consumed.rdp-root {
-  --rdp-accent-color: rgb(251 191 36);
-  --rdp-accent-background-color: rgb(251 191 36 / 0.25);
-  --rdp-today-color: rgb(251 191 36);
-  color: #e7e5e4;
+.accent-solid-button {
+  background-color: var(--accent-solid);
+  color: rgb(9 9 11);
 }
-.rdp-consumed .rdp-day_button {
-  color: #e7e5e4;
+.accent-solid-button:hover {
+  background-color: var(--accent-solid-hover);
 }
-.rdp-consumed .rdp-day_button:hover:not([disabled]):not(.rdp-selected) {
-  background: rgb(255 255 255 / 0.1);
-  color: #fafaf9;
+.accent-soft-chip {
+  border-color: var(--accent-soft-border);
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-soft-text);
 }
-.rdp-consumed .rdp-caption_label {
-  color: #e7e5e4;
+.accent-outline-hover:hover {
+  border-color: var(--accent-soft-border);
+  color: var(--accent-link);
 }
-.rdp-consumed .rdp-nav_button {
-  color: #a8a29e;
+.accent-link-hover:hover {
+  color: var(--accent-link);
 }
-.rdp-consumed .rdp-nav_button:hover {
-  color: #fafaf9;
-  background: rgb(255 255 255 / 0.1);
+.accent-count-badge {
+  background-color: var(--accent-solid);
+  color: rgb(9 9 11);
 }
-.rdp-consumed .rdp-weekday {
-  color: #a8a29e;
+.accent-text {
+  color: var(--accent-soft-text);
 }
 
 /* Sort dropdown options - black text */
