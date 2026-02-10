@@ -10,19 +10,29 @@ Required environment variables (in `.env.local`):
 
 Supabase SQL steps:
 
-- Run `supabase/sql/001_init.sql` to create `public.wine_entries` and RLS policies.
-- Run `supabase/sql/002_storage.sql` to create the `wine-photos` bucket and storage policies.
-- Run `supabase/sql/003_social.sql` to add profiles and social fields.
-- Run `supabase/sql/004_pairing_and_rating.sql` to add pairing photo + optional rating.
-- Run `supabase/sql/005_notifications.sql` to add notifications for tags.
-- Run `supabase/sql/006_friends.sql` to add friend requests and relationships.
-- Run `supabase/sql/007_entry_photos.sql` to add multi-photo support (max 3 per type).
-- Run `supabase/sql/008_username_login.sql` to enforce unique usernames and enable username login.
-- Run `supabase/sql/004_follow_privacy.sql` to add privacy levels (`public` / `friends` / `private`) for entries and photos.
-- Run `supabase/sql/009_friendship_source_of_truth.sql` to make friendship/privacy checks use accepted friend requests.
-- Run `supabase/sql/010_friend_cancel_unfriend.sql` to allow cancelling pending requests and unfriending.
-- Run `supabase/sql/011_deprecate_user_follows.sql` to remove legacy `user_follows` after friendship is fully backed by `friend_requests`.
-- Run `supabase/sql/012_privacy_onboarding.sql` to add explicit onboarding confirmation for default privacy.
+- Run files in this exact order:
+  - `supabase/sql/001_init.sql`
+  - `supabase/sql/002_storage.sql`
+  - `supabase/sql/003_social.sql`
+  - `supabase/sql/004_pairing_and_rating.sql`
+  - `supabase/sql/004_follow_privacy.sql`
+  - `supabase/sql/005_notifications.sql`
+  - `supabase/sql/006_friends.sql`
+  - `supabase/sql/007_entry_photos.sql`
+  - `supabase/sql/008_username_login.sql`
+  - `supabase/sql/009_friendship_source_of_truth.sql`
+  - `supabase/sql/009_default_public_privacy.sql`
+  - `supabase/sql/010_friend_cancel_unfriend.sql`
+  - `supabase/sql/011_deprecate_user_follows.sql`
+  - `supabase/sql/012_privacy_onboarding.sql`
+  - `supabase/sql/013_advanced_notes.sql`
+  - `supabase/sql/013_profile_avatar.sql`
+  - `supabase/sql/014_entry_reactions.sql`
+  - `supabase/sql/015_entry_photos_visibility.sql`
+
+Notes:
+- Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.
+- `015_entry_photos_visibility.sql` also includes a compatibility overload for `can_view_entry(..., privacy text)` to support older schemas where `entry_privacy` is `text`.
 
 Local development:
 
