@@ -96,7 +96,7 @@ export default function AlertsMenu() {
     <div className="relative" ref={menuRef}>
       <button
         type="button"
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
         onClick={() =>
           setOpenPathname((prev) => (prev === pathname ? null : pathname))
         }
@@ -104,7 +104,7 @@ export default function AlertsMenu() {
       >
         <span className="text-lg">🔔</span>
         {count > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#a44767] px-1 text-[10px] font-semibold text-[#fff7fa]">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-semibold text-zinc-950">
             {count}
           </span>
         ) : null}
@@ -145,7 +145,7 @@ export default function AlertsMenu() {
                         className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
                         onClick={() => setOpenPathname(null)}
                       >
-                        <span className="font-semibold text-[#e7bfd0]">
+                        <span className="font-semibold text-amber-200">
                           {item.requester_name}
                         </span>{" "}
                         sent you a friend request
@@ -164,7 +164,7 @@ export default function AlertsMenu() {
                       className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
                       onClick={() => setOpenPathname(null)}
                     >
-                      <span className="font-semibold text-[#e7bfd0]">
+                      <span className="font-semibold text-amber-200">
                         {item.actor_name}
                       </span>{" "}
                       tagged you in{" "}

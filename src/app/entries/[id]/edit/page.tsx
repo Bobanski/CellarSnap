@@ -426,7 +426,7 @@ export default function EditEntryPage() {
       </div>
       <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
             Edit entry
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
@@ -453,7 +453,7 @@ export default function EditEntryPage() {
                         <a
                           href={entry.label_image_url}
                           download
-                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
+                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                         >
                           Download
                         </a>
@@ -474,7 +474,7 @@ export default function EditEntryPage() {
                         <a
                           href={entry.place_image_url}
                           download
-                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
+                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                         >
                           Download
                         </a>
@@ -495,7 +495,7 @@ export default function EditEntryPage() {
                         <a
                           href={entry.pairing_image_url}
                           download
-                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
+                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                         >
                           Download
                         </a>
@@ -513,42 +513,42 @@ export default function EditEntryPage() {
             <div>
               <label className="text-sm font-medium text-zinc-200">Wine name</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("wine_name")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Producer</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("producer")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Vintage</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("vintage")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Country</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("country")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Region</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("region")}
               />
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">Appellation</label>
               <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("appellation")}
               />
             </div>
@@ -558,7 +558,7 @@ export default function EditEntryPage() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("rating", {
                   setValueAs: (value) => (value === "" ? undefined : Number(value)),
                 })}
@@ -575,7 +575,7 @@ export default function EditEntryPage() {
                     value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                     required
                   />
                 )}
@@ -598,7 +598,7 @@ export default function EditEntryPage() {
                     <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-[#a44767]"
+                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
                         checked={isChecked}
                         onChange={(event) => {
                           setSelectedUserIds((prev) =>
@@ -619,7 +619,7 @@ export default function EditEntryPage() {
           <div>
             <label className="text-sm font-medium text-zinc-200">Notes</label>
             <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("notes")}
             />
           </div>
@@ -627,7 +627,7 @@ export default function EditEntryPage() {
           <div>
             <label className="text-sm font-medium text-zinc-200">Location</label>
             <input
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("location_text")}
             />
           </div>
@@ -643,7 +643,7 @@ export default function EditEntryPage() {
               <PrivacyBadge level={selectedEntryPrivacy} />
             </div>
             <select
-              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("entry_privacy")}
             >
               <option value="public">Public</option>
@@ -752,7 +752,7 @@ export default function EditEntryPage() {
                   />
                   <button
                     type="button"
-                    className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => {
                       if (type === "label") labelInputRef.current?.click();
                       if (type === "place") placeInputRef.current?.click();
@@ -781,7 +781,7 @@ export default function EditEntryPage() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              className="rounded-full bg-[#a44767] px-5 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting}
             >
               Save changes

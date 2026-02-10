@@ -122,7 +122,7 @@ export default function HomePage() {
 
         {/* ── Header ── */}
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
             {isFirstTime ? "Getting started" : "Home"}
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
@@ -142,8 +142,8 @@ export default function HomePage() {
         </header>
 
         {!privacyConfirmedAt ? (
-          <section className="rounded-2xl border border-[#c27b97]/30 bg-[#7f2f4d]/10 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#e7bfd0]">
+          <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
               Onboarding privacy check
             </p>
             <h2 className="mt-2 text-lg font-semibold text-zinc-50">
@@ -169,7 +169,7 @@ export default function HomePage() {
                     onClick={() => setDefaultEntryPrivacy(option.value)}
                     className={`rounded-xl border px-3 py-2 text-left transition ${
                       selected
-                        ? "border-[#c27b97]/60 bg-[#a44767]/10"
+                        ? "border-amber-300/60 bg-amber-400/10"
                         : "border-white/10 bg-black/20 hover:border-white/30"
                     }`}
                   >
@@ -186,7 +186,7 @@ export default function HomePage() {
               type="button"
               onClick={confirmDefaultPrivacy}
               disabled={savingPrivacyOnboarding}
-              className="mt-4 rounded-full bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-4 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {savingPrivacyOnboarding
                 ? "Saving..."
@@ -197,7 +197,7 @@ export default function HomePage() {
 
         {/* ── First-time hero CTA ── */}
         {isFirstTime ? (
-          <div className="rounded-3xl border border-[#c27b97]/30 bg-[#a44767]/5 p-8 text-center backdrop-blur">
+          <div className="rounded-3xl border border-amber-300/30 bg-amber-400/5 p-8 text-center backdrop-blur">
             <h2 className="text-xl font-semibold text-zinc-50">
               Record your first pour
             </h2>
@@ -207,7 +207,7 @@ export default function HomePage() {
             </p>
             <Link
               href="/entries/new"
-              className="mt-5 inline-block rounded-full bg-[#a44767] px-6 py-3 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657]"
+              className="mt-5 inline-block rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
             >
               + Record a new pour
             </Link>
@@ -215,7 +215,7 @@ export default function HomePage() {
         ) : (
           <Link
             href="/entries/new"
-            className="inline-block rounded-full bg-[#a44767]/90 px-5 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657]"
+            className="inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
           >
             + Record a new pour
           </Link>
@@ -232,7 +232,7 @@ export default function HomePage() {
               {recentEntries.map((entry) => (
                 <article
                   key={entry.id}
-                  className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:border-[#c27b97]/40"
+                  className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:-translate-y-0.5 hover:border-amber-300/40"
                   role="button"
                   tabIndex={0}
                   onClick={() => router.push(`/entries/${entry.id}`)}
@@ -278,7 +278,7 @@ export default function HomePage() {
 
               <Link
                 href="/entries"
-                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-[#e7bfd0]"
+                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
               >
                 View all my entries &rarr;
               </Link>
@@ -303,7 +303,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     href="/friends"
-                    className="mt-3 inline-block rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0]"
+                    className="mt-3 inline-block rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                   >
                     Find friends
                   </Link>
@@ -315,7 +315,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     href="/feed"
-                    className="mt-3 inline-block text-sm font-medium text-[#e7bfd0] transition hover:text-[#f4dfe8]"
+                    className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
                   >
                     Browse the public feed &rarr;
                   </Link>
@@ -328,7 +328,7 @@ export default function HomePage() {
                 {circleEntries.map((entry) => (
                   <article
                     key={entry.id}
-                    className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[#c27b97]/40"
+                    className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                     role="button"
                     tabIndex={0}
                     onClick={() => router.push(`/entries/${entry.id}`)}
@@ -346,7 +346,7 @@ export default function HomePage() {
                           e.stopPropagation();
                           router.push(`/profile/${entry.user_id}`);
                         }}
-                        className="font-medium text-zinc-200 hover:text-[#e7bfd0]"
+                        className="font-medium text-zinc-200 hover:text-amber-200"
                       >
                         {entry.author_name}
                       </button>
@@ -386,7 +386,7 @@ export default function HomePage() {
 
               <Link
                 href="/feed"
-                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-[#e7bfd0]"
+                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
               >
                 View full feed &rarr;
               </Link>

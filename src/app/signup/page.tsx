@@ -102,12 +102,12 @@ export default function SignupPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f0a09] px-6">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-[#7f2f4d]/10 blur-3xl" />
+        <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute -bottom-40 left-0 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl" />
       </div>
       <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
             Create account
           </span>
           <h1 className="text-2xl font-semibold text-zinc-50">
@@ -127,7 +127,7 @@ export default function SignupPage() {
               id="email"
               type="email"
               autoComplete="email"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="you@example.com"
               {...register("email", { required: true })}
             />
@@ -141,7 +141,7 @@ export default function SignupPage() {
               id="username"
               type="text"
               autoComplete="username"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="At least 3 characters"
               {...register("username", { required: true })}
             />
@@ -156,14 +156,14 @@ export default function SignupPage() {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 placeholder="********"
                 {...register("password", { required: true })}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:text-[#e7bfd0]"
+                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:text-amber-200"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
@@ -183,7 +183,7 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
             Create account
@@ -192,7 +192,7 @@ export default function SignupPage() {
           <div className="text-center">
             <Link
               href="/login"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-[#e7bfd0]"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-amber-200"
             >
               Back to sign in
             </Link>

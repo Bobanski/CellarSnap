@@ -12,7 +12,7 @@ const PRIVACY_STYLES: Record<PrivacyLevel, string> = {
   public:
     "border-sky-300/40 bg-sky-500/10 text-sky-100",
   friends:
-    "border-[#c27b97]/40 bg-[#7f2f4d]/10 text-[#f4dfe8]",
+    "border-amber-300/40 bg-amber-500/10 text-amber-100",
   private:
     "border-rose-300/40 bg-rose-500/10 text-rose-100",
 };

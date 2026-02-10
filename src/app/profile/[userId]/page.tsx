@@ -237,12 +237,12 @@ export default function FriendProfilePage() {
         <NavBar />
         <header className="space-y-2">
           <Link
-            className="inline-block text-sm font-medium text-zinc-400 hover:text-[#e7bfd0]"
+            className="inline-block text-sm font-medium text-zinc-400 hover:text-amber-200"
             href="/friends"
           >
             ← Back to Friends
           </Link>
-          <span className="block text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
             {isOwnProfile ? "Your profile" : "Profile"}
           </span>
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -310,7 +310,7 @@ export default function FriendProfilePage() {
                     </div>
                   )
                 ) : friendStatus === "request_sent" ? (
-                  <span className="rounded-full border border-[#c27b97]/40 bg-[#a44767]/10 px-4 py-2 text-sm font-semibold text-[#e7bfd0]">
+                  <span className="rounded-full border border-amber-300/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
                     Request sent
                   </span>
                 ) : friendStatus === "request_received" ? (
@@ -318,7 +318,7 @@ export default function FriendProfilePage() {
                     type="button"
                     disabled={friendActionLoading}
                     onClick={acceptRequest}
-                    className="rounded-full bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:opacity-50"
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
                   >
                     {friendActionLoading ? "Accepting..." : "Accept friend request"}
                   </button>
@@ -327,7 +327,7 @@ export default function FriendProfilePage() {
                     type="button"
                     disabled={friendActionLoading}
                     onClick={sendFriendRequest}
-                    className="rounded-full bg-[#a44767] px-4 py-2 text-sm font-semibold text-[#fff7fa] transition hover:bg-[#8f3657] disabled:opacity-50"
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
                   >
                     {friendActionLoading ? "Sending..." : "Add friend"}
                   </button>
@@ -354,7 +354,7 @@ export default function FriendProfilePage() {
                 <Link
                   key={entry.id}
                   href={`/entries/${entry.id}`}
-                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[#c27b97]/40"
+                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 >
                   <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                     {entry.label_image_url ? (
@@ -406,7 +406,7 @@ export default function FriendProfilePage() {
                 <Link
                   key={entry.id}
                   href={`/entries/${entry.id}`}
-                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[#c27b97]/40"
+                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 >
                   <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                     {entry.label_image_url ? (

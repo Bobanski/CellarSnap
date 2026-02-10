@@ -212,7 +212,7 @@ export default function FriendsPage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[#c27b97]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
             Friends
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
@@ -242,7 +242,7 @@ export default function FriendsPage() {
                   >
                     <Link
                       href={`/profile/${friend.id}`}
-                      className="text-sm font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-[#e7bfd0]"
+                      className="text-sm font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
                     >
                       {displayName(friend)}
                     </Link>
@@ -342,7 +342,7 @@ export default function FriendsPage() {
                 Incoming requests
               </h2>
               {incomingRequests.length > 0 ? (
-                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[#a44767] px-1.5 py-0.5 text-[10px] font-bold text-[#fff7fa]">
+                <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
                   {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
                 </span>
               ) : null}
@@ -397,7 +397,7 @@ export default function FriendsPage() {
               value={friendSearch}
               onChange={(event) => setFriendSearch(event.target.value)}
               placeholder="Search by username"
-              className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-[#c27b97] focus:outline-none focus:ring-2 focus:ring-[#c27b97]/30"
+              className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
             />
             {friendError ? (
               <p className="mt-2 text-sm text-rose-200">{friendError}</p>
@@ -423,11 +423,11 @@ export default function FriendsPage() {
                             Already friends
                           </p>
                         ) : isOutgoing ? (
-                          <p className="text-xs text-[#e7bfd0]">
+                          <p className="text-xs text-amber-200">
                             Request sent
                           </p>
                         ) : isIncoming ? (
-                          <p className="text-xs text-[#e7bfd0]">
+                          <p className="text-xs text-amber-200">
                             Requested you
                           </p>
                         ) : null}
@@ -436,7 +436,7 @@ export default function FriendsPage() {
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(user.id)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                       </button>
@@ -478,13 +478,13 @@ export default function FriendsPage() {
                         <p className="text-sm font-medium text-zinc-100">
                           {displayName(person)}
                         </p>
-                        <p className="text-xs text-[#e7bfd0]">{mutualLabel}</p>
+                        <p className="text-xs text-amber-200">{mutualLabel}</p>
                       </div>
                       <button
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(person.id)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-[#c27b97]/60 hover:text-[#e7bfd0] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                       </button>
