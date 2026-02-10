@@ -365,21 +365,21 @@ export default function ProfilePage() {
 
                 {/* Avatar + Choose picture (only in edit mode) */}
                 <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                  <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
                     {pendingAvatarPreview ? (
                       <img
                         src={pendingAvatarPreview}
                         alt="New profile"
-                        className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                        className="h-full w-full object-cover"
                       />
                     ) : profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
                         alt="Profile"
-                        className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                        className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+                      <div className="flex h-full w-full items-center justify-center">
                         <span className="text-xs">No photo</span>
                       </div>
                     )}
@@ -458,15 +458,15 @@ export default function ProfilePage() {
               <div className="space-y-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex gap-4">
-                    <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5">
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
                       {profile?.avatar_url ? (
                         <img
                           src={profile.avatar_url}
                           alt="Profile"
-                          className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+                        <div className="flex h-full w-full items-center justify-center">
                           <span className="text-xs">No photo</span>
                         </div>
                       )}
