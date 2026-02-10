@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -17,6 +17,7 @@ type Profile = {
   email: string | null;
   default_entry_privacy: "public" | "friends" | "private" | null;
   created_at: string | null;
+  avatar_url?: string | null;
 };
 
 function formatMemberSince(dateString: string | null): string {
@@ -40,6 +41,11 @@ export default function ProfilePage() {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+
+  // Avatar state
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Privacy state
   const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("public");
@@ -146,6 +152,30 @@ export default function ProfilePage() {
     setUsernameError(null);
     setUsernameSuccess(null);
     setIsEditing(false);
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAvatarError(null);
+    setAvatarUploading(true);
+    const formData = new FormData();
+    formData.set("file", file);
+    const response = await fetch("/api/profile/avatar", {
+      method: "POST",
+      body: formData,
+    });
+    setAvatarUploading(false);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setAvatarError(data.error ?? "Upload failed.");
+      return;
+    }
+    const data = await response.json();
+    if (data.avatar_url && profile) {
+      setProfile({ ...profile, avatar_url: data.avatar_url });
+    }
   };
 
   const savePrivacy = async (value: "public" | "friends" | "private") => {
@@ -278,6 +308,48 @@ export default function ProfilePage() {
 
           {/* ── Section 1: Identity Card ── */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            {/* Profile picture + choose picture */}
+            <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5">
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+                    {avatarUploading ? (
+                      <span className="text-xs">Uploading…</span>
+                    ) : (
+                      <span className="text-xs">No photo</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  disabled={avatarUploading}
+                />
+                <button
+                  type="button"
+                  disabled={avatarUploading}
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
+                >
+                  {avatarUploading ? "Uploading…" : "Choose picture"}
+                </button>
+                {avatarError ? (
+                  <p className="text-sm text-rose-200">{avatarError}</p>
+                ) : null}
+              </div>
+            </div>
+
             {requiresUsernameSetup && isEditing ? (
               <p className="mb-5 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
                 Set a username to continue using CellarSnap.

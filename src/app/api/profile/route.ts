@@ -53,11 +53,11 @@ export async function GET() {
   // Try fetching with privacy columns; fall back if columns were not added yet.
   let profile: Record<string, unknown> | null = null;
 
+  const selectWithAvatar =
+    "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at, avatar_path";
   const { data, error } = await supabase
     .from("profiles")
-    .select(
-      "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at"
-    )
+    .select(selectWithAvatar)
     .eq("id", user.id)
     .single();
 
@@ -76,13 +76,36 @@ export async function GET() {
       default_entry_privacy: "public",
       privacy_confirmed_at: fallback.data?.created_at ?? null,
     };
+  } else if (error && (error.message.includes("avatar_path") || error.message.includes("column"))) {
+    // avatar_path column may not exist yet
+    const fallback = await supabase
+      .from("profiles")
+      .select("id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at")
+      .eq("id", user.id)
+      .single();
+    if (fallback.error) {
+      return NextResponse.json({ error: fallback.error.message }, { status: 500 });
+    }
+    profile = fallback.data;
   } else if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
     profile = data;
   }
 
-  return NextResponse.json({ profile });
+  // Resolve avatar URL if path exists
+  const avatarPath = profile?.avatar_path as string | null | undefined;
+  let avatar_url: string | null = null;
+  if (avatarPath) {
+    const { data: urlData } = await supabase.storage
+      .from("wine-photos")
+      .createSignedUrl(avatarPath, 60 * 60);
+    avatar_url = urlData?.signedUrl ?? null;
+  }
+
+  return NextResponse.json({
+    profile: { ...profile, avatar_url },
+  });
 }
 
 export async function PATCH(request: Request) {
