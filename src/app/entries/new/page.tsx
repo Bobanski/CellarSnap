@@ -1244,10 +1244,6 @@ export default function NewEntryPage() {
             <h2 className="text-2xl font-semibold text-zinc-50">
               How did this wine compare?
             </h2>
-            <p className="mt-2 text-sm text-zinc-300">
-              Do you like the wine you just logged more or less than this
-              previous wine?
-            </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
@@ -1312,41 +1308,50 @@ export default function NewEntryPage() {
               <p className="mt-4 text-sm text-rose-300">{comparisonErrorMessage}</p>
             ) : null}
 
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-              {comparisonErrorMessage ? (
+            <div className="mt-6 flex flex-col items-start gap-3">
+              <p className="text-sm text-zinc-300">
+                <span className="font-semibold text-zinc-100">
+                  Compared to the previous wine
+                </span>
+                , I like this wine...
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                  onClick={continueWithoutSavingComparison}
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                  onClick={() => submitComparison("more")}
                   disabled={isSubmittingComparison}
                 >
-                  Continue without saving
+                  More
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
-                onClick={() => submitComparison("less")}
-                disabled={isSubmittingComparison}
-              >
-                Less
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
-                onClick={() => submitComparison("same_or_not_sure")}
-                disabled={isSubmittingComparison}
-              >
-                Not sure / same
-              </button>
-              <button
-                type="button"
-                className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60"
-                onClick={() => submitComparison("more")}
-                disabled={isSubmittingComparison}
-              >
-                More
-              </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                  onClick={() => submitComparison("same_or_not_sure")}
+                  disabled={isSubmittingComparison}
+                >
+                  Not sure / The same
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:opacity-60"
+                  onClick={() => submitComparison("less")}
+                  disabled={isSubmittingComparison}
+                >
+                  Less
+                </button>
+                {comparisonErrorMessage ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                    onClick={continueWithoutSavingComparison}
+                    disabled={isSubmittingComparison}
+                  >
+                    Continue without saving
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
