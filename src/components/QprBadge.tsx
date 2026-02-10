@@ -10,10 +10,10 @@ type QprBadgeProps = {
 
 const QPR_STYLES: Record<QprLevel, string> = {
   extortion: "border-rose-400/40 bg-rose-400/10 text-rose-200",
-  pricey: "border-orange-400/40 bg-orange-400/10 text-orange-200",
-  mid: "border-zinc-400/40 bg-zinc-400/10 text-zinc-200",
+  pricey: "border-red-400/40 bg-red-400/10 text-red-200",
+  mid: "border-amber-400/40 bg-amber-400/10 text-amber-200",
   good_value: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-  absolute_steal: "border-teal-400/40 bg-teal-400/10 text-teal-200",
+  absolute_steal: "border-green-400/40 bg-green-400/10 text-green-200",
 };
 
 export default function QprBadge({ level, className = "" }: QprBadgeProps) {

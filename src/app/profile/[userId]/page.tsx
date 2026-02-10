@@ -402,7 +402,10 @@ export default function FriendProfilePage() {
                     </div>
                     <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <RatingBadge rating={entry.rating} />
+                        {typeof entry.rating === "number" &&
+                        !Number.isNaN(entry.rating) ? (
+                          <RatingBadge rating={entry.rating} variant="text" />
+                        ) : null}
                         {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                       </div>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
@@ -462,7 +465,10 @@ export default function FriendProfilePage() {
                     </div>
                     <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <RatingBadge rating={entry.rating} />
+                        {typeof entry.rating === "number" &&
+                        !Number.isNaN(entry.rating) ? (
+                          <RatingBadge rating={entry.rating} variant="text" />
+                        ) : null}
                         {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                       </div>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>

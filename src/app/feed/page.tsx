@@ -341,7 +341,7 @@ export default function FeedPage() {
                   <div className="flex flex-wrap items-center gap-1.5">
                     {typeof entry.rating === "number" &&
                     !Number.isNaN(entry.rating) ? (
-                      <RatingBadge rating={entry.rating} />
+                      <RatingBadge rating={entry.rating} variant="text" />
                     ) : null}
                     {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                   </div>

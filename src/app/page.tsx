@@ -280,7 +280,7 @@ export default function HomePage() {
                     <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
                       {typeof entry.rating === "number" &&
                       !Number.isNaN(entry.rating) ? (
-                        <RatingBadge rating={entry.rating} />
+                        <RatingBadge rating={entry.rating} variant="text" />
                       ) : null}
                       {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                       <span className="hidden sm:inline">
@@ -395,7 +395,7 @@ export default function HomePage() {
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
                           {typeof entry.rating === "number" &&
                           !Number.isNaN(entry.rating) ? (
-                            <RatingBadge rating={entry.rating} />
+                            <RatingBadge rating={entry.rating} variant="text" />
                           ) : null}
                           {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                         </div>
