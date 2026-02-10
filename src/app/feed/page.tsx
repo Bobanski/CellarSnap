@@ -309,7 +309,7 @@ export default function FeedPage() {
                       "No photo"
                     )}
                   </div>
-                  <div className="flex flex-1 flex-col justify-between">
+                    <div className="flex flex-1 flex-col justify-between">
                     <div>
                       <h2 className="text-base font-semibold text-zinc-50">
                         {entry.wine_name || "Untitled wine"}
@@ -317,9 +317,6 @@ export default function FeedPage() {
                       <p className="text-sm text-zinc-400">
                         {entry.producer || "Unknown producer"}
                       </p>
-                    </div>
-                    <div className="text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} />
                     </div>
                   </div>
                 </div>
@@ -339,7 +336,9 @@ export default function FeedPage() {
                       : "No one listed"}
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-1.5">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
+                  <RatingBadge rating={entry.rating} className="text-sm font-bold text-amber-200" />
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
                   {Object.entries(entry.reaction_counts ?? {}).map(([emoji, count]) =>
                     count > 0 ? (
                       entry.can_react ? (
@@ -423,6 +422,7 @@ export default function FeedPage() {
                       ) : null}
                     </div>
                   ) : null}
+                  </div>
                 </div>
               </article>
             ))}
