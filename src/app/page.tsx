@@ -258,7 +258,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex flex-1 items-center justify-between gap-3 overflow-hidden">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-zinc-50">
+                      <p className="truncate text-base font-semibold text-zinc-50">
                         {entry.wine_name || "Untitled wine"}
                       </p>
                       <p className="truncate text-xs text-zinc-400">
