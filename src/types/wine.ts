@@ -1,4 +1,5 @@
 import type { AdvancedNotes } from "@/lib/advancedNotes";
+import type { PricePaidSource, QprLevel } from "@/lib/entryMeta";
 
 export type PrivacyLevel = "public" | "friends" | "private";
 
@@ -30,6 +31,9 @@ export type WineEntry = {
   region: string | null;
   appellation: string | null;
   rating: number | null;
+  price_paid: number | null;
+  price_paid_source: PricePaidSource | null;
+  qpr_level: QprLevel | null;
   notes: string | null;
   advanced_notes: AdvancedNotes | null;
   location_text: string | null;
@@ -59,6 +63,9 @@ export type WineEntryCreatePayload = {
   region?: string | null;
   appellation?: string | null;
   rating?: number | null;
+  price_paid?: number | null;
+  price_paid_source?: PricePaidSource | null;
+  qpr_level?: QprLevel | null;
   notes?: string | null;
   advanced_notes?: AdvancedNotes | null;
   location_text?: string | null;
@@ -77,6 +84,9 @@ export type WineEntryUpdatePayload = Partial<{
   region: string | null;
   appellation: string | null;
   rating: number | null;
+  price_paid: number | null;
+  price_paid_source: PricePaidSource | null;
+  qpr_level: QprLevel | null;
   notes: string | null;
   advanced_notes: AdvancedNotes | null;
   location_text: string | null;

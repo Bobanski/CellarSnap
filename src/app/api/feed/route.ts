@@ -53,7 +53,7 @@ export async function GET(request: Request) {
   const friendIdsSet = new Set(friendIds);
 
   const selectFields =
-    "id, user_id, wine_name, producer, consumed_at, rating, tasted_with_user_ids, label_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, entry_privacy, created_at";
   let entriesQuery = supabase.from("wine_entries").select(selectFields);
 
   if (scope === "friends") {

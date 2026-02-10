@@ -9,8 +9,14 @@ import {
   TANNIN_LEVELS,
   normalizeAdvancedNotes,
 } from "@/lib/advancedNotes";
+import {
+  PRICE_PAID_SOURCE_VALUES,
+  QPR_LEVEL_VALUES,
+} from "@/lib/entryMeta";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+const pricePaidSourceSchema = z.enum(PRICE_PAID_SOURCE_VALUES);
+const qprLevelSchema = z.enum(QPR_LEVEL_VALUES);
 
 const nullableString = z.preprocess(
   (value) => {
@@ -27,6 +33,24 @@ const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
     (value) => (value === "" ? null : value),
     z.enum(values).nullable().optional()
   );
+
+const optionalPricePaidSchema = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined || value === "") {
+      return undefined;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed === "") {
+        return undefined;
+      }
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : value;
+    }
+    return value;
+  },
+  z.number().min(0).max(100000).optional()
+);
 
 const advancedNotesSchema = z
   .object({
@@ -47,6 +71,10 @@ const createEntrySchema = z.object({
   region: nullableString,
   appellation: nullableString,
   rating: z.number().int().min(1).max(100).optional(),
+  price_paid: optionalPricePaidSchema,
+  price_paid_source: z
+    .preprocess((value) => (value === "" ? null : value), pricePaidSourceSchema.nullable().optional()),
+  qpr_level: z.preprocess((value) => (value === "" ? null : value), qprLevelSchema.nullable().optional()),
   notes: nullableString,
   advanced_notes: advancedNotesSchema,
   location_text: nullableString,
@@ -58,6 +86,26 @@ const createEntrySchema = z.object({
   entry_privacy: privacyLevelSchema.optional(),
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
+}).superRefine((data, ctx) => {
+  const hasPrice = data.price_paid !== undefined;
+  const hasPriceSource =
+    data.price_paid_source !== undefined && data.price_paid_source !== null;
+
+  if (hasPrice && !hasPriceSource) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select retail or restaurant when entering price paid.",
+      path: ["price_paid_source"],
+    });
+  }
+
+  if (!hasPrice && hasPriceSource) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter a price paid amount when selecting retail or restaurant.",
+      path: ["price_paid"],
+    });
+  }
 });
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -95,7 +143,7 @@ export async function GET(request: Request) {
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 50;
 
   const selectFields =
-    "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, consumed_at, tasted_with_user_ids, label_image_path, created_at";
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, price_paid, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
 
   let query = supabase
     .from("wine_entries")
@@ -222,6 +270,9 @@ export async function POST(request: Request) {
       region: payload.data.region ?? null,
       appellation: payload.data.appellation ?? null,
       rating: payload.data.rating ?? null,
+      price_paid: payload.data.price_paid ?? null,
+      price_paid_source: payload.data.price_paid_source ?? null,
+      qpr_level: payload.data.qpr_level ?? null,
       notes: payload.data.notes ?? null,
       advanced_notes: advancedNotes,
       location_text: payload.data.location_text ?? null,
@@ -243,6 +294,28 @@ export async function POST(request: Request) {
         {
           error:
             "Advanced notes are not available yet. Run supabase/sql/013_advanced_notes.sql and try again.",
+        },
+        { status: 500 }
+      );
+    }
+    if (error.message.includes("wine_entries_price_source_requires_price_check")) {
+      return NextResponse.json(
+        {
+          error:
+            "Price paid and source must be set together. Select retail or restaurant when entering a price.",
+        },
+        { status: 400 }
+      );
+    }
+    if (
+      error.message.includes("price_paid") ||
+      error.message.includes("price_paid_source") ||
+      error.message.includes("qpr_level")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Entry pricing and QPR fields are not available yet. Run supabase/sql/016_entry_pricing_qpr.sql and try again.",
         },
         { status: 500 }
       );

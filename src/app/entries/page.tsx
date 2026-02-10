@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
@@ -343,9 +344,9 @@ export default function EntriesPage() {
                       "No photo"
                     )}
                   </div>
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-zinc-50">
+                    <div className="flex flex-1 flex-col justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold text-zinc-50">
                         {entry.wine_name || "Untitled wine"}
                       </h2>
                       <p className="text-sm text-zinc-400">
@@ -357,17 +358,20 @@ export default function EntriesPage() {
                           </span>
                         ) : null}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {[entry.country, entry.region, entry.appellation]
-                          .filter(Boolean)
-                          .join(" · ") || "Location not set"}
-                      </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {[entry.country, entry.region, entry.appellation]
+                            .filter(Boolean)
+                            .join(" · ") || "Location not set"}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <RatingBadge rating={entry.rating} />
+                          {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                        </div>
+                        <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} />
-                      <span>{formatConsumedDate(entry.consumed_at)}</span>
-                    </div>
-                  </div>
                 </Link>
               ))}
             </div>

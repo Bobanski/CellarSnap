@@ -13,8 +13,13 @@ import {
 } from "@/lib/advancedNotes";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
+import {
+  PRICE_PAID_SOURCE_LABELS,
+  formatUsdAmount,
+} from "@/lib/entryMeta";
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
@@ -283,6 +288,12 @@ export default function EntryDetailPage() {
         ]
       : [];
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
+  const formattedPricePaid = formatUsdAmount(entry.price_paid);
+  const pricePaidDisplay = formattedPricePaid
+    ? entry.price_paid_source
+      ? `${formattedPricePaid} (${PRICE_PAID_SOURCE_LABELS[entry.price_paid_source]})`
+      : formattedPricePaid
+    : null;
   const populatedAdvancedNotes: PopulatedAdvancedNote[] = advancedNotes
     ? ADVANCED_NOTE_FIELDS.reduce<PopulatedAdvancedNote[]>((acc, field) => {
         const value = advancedNotes[field.key];
@@ -495,6 +506,24 @@ export default function EntryDetailPage() {
                 <p className="text-lg font-semibold text-zinc-50">
                   {formatConsumedDate(entry.consumed_at)}
                 </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Price paid
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {pricePaidDisplay || "Not set"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  QPR
+                </p>
+                {entry.qpr_level ? (
+                  <QprBadge level={entry.qpr_level} className="mt-1" />
+                ) : (
+                  <p className="text-sm text-zinc-200">Not set</p>
+                )}
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">

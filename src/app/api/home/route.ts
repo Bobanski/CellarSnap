@@ -155,6 +155,7 @@ export async function GET() {
       producer: entry.producer,
       vintage: entry.vintage,
       rating: entry.rating,
+      qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
       label_image_url: await createSignedUrl(
         labelMap.get(entry.id) ?? entry.label_image_path,
@@ -172,6 +173,7 @@ export async function GET() {
       producer: entry.producer,
       vintage: entry.vintage,
       rating: entry.rating,
+      qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
       author_name:
         profileMap.get(entry.user_id)?.display_name ??

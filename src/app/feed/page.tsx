@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
@@ -336,7 +337,10 @@ export default function FeedPage() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
-                  <RatingBadge rating={entry.rating} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <RatingBadge rating={entry.rating} />
+                    {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                  </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
                   {Object.entries(entry.reaction_counts ?? {}).map(([emoji, count]) =>
                     count > 0 ? (

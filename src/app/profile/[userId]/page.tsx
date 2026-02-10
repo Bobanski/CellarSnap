@@ -7,6 +7,7 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
+import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
@@ -399,8 +400,11 @@ export default function FriendProfilePage() {
                         ) : null}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} />
+                    <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <RatingBadge rating={entry.rating} />
+                        {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                      </div>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                   </div>
@@ -456,8 +460,11 @@ export default function FriendProfilePage() {
                         ) : null}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <RatingBadge rating={entry.rating} />
+                    <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <RatingBadge rating={entry.rating} />
+                        {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                      </div>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                   </div>

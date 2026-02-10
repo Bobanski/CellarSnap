@@ -17,6 +17,13 @@ import {
   toAdvancedNotesPayload,
   type AdvancedNotesFormValues,
 } from "@/lib/advancedNotes";
+import {
+  PRICE_PAID_SOURCE_LABELS,
+  PRICE_PAID_SOURCE_VALUES,
+  QPR_LEVEL_LABELS,
+  type PricePaidSource,
+  type QprLevel,
+} from "@/lib/entryMeta";
 
 type EditEntryForm = {
   wine_name: string;
@@ -26,6 +33,9 @@ type EditEntryForm = {
   region: string;
   appellation: string;
   rating?: number;
+  price_paid?: number;
+  price_paid_source: PricePaidSource | "";
+  qpr_level: QprLevel | "";
   notes: string;
   location_text: string;
   consumed_at: string;
@@ -38,10 +48,12 @@ export default function EditEntryPage() {
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
-  const { control, register, handleSubmit, reset } = useForm<EditEntryForm>({
+  const { control, register, handleSubmit, reset, setValue } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: new Date().toISOString().slice(0, 10),
       entry_privacy: "public",
+      price_paid_source: "",
+      qpr_level: "",
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
   });
@@ -50,6 +62,11 @@ export default function EditEntryPage() {
       control,
       name: "entry_privacy",
     }) ?? "public";
+  const selectedPricePaidSource =
+    useWatch({
+      control,
+      name: "price_paid_source",
+    }) ?? "";
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -103,6 +120,9 @@ export default function EditEntryPage() {
           region: data.entry.region ?? "",
           appellation: data.entry.appellation ?? "",
           rating: data.entry.rating ?? undefined,
+          price_paid: data.entry.price_paid ?? undefined,
+          price_paid_source: data.entry.price_paid_source ?? "",
+          qpr_level: data.entry.qpr_level ?? "",
           notes: data.entry.notes ?? "",
           location_text: data.entry.location_text ?? "",
           consumed_at: data.entry.consumed_at,
@@ -341,6 +361,23 @@ export default function EditEntryPage() {
       typeof values.rating === "number" && !Number.isNaN(values.rating)
         ? Number(values.rating)
         : undefined;
+    const pricePaid =
+      typeof values.price_paid === "number" && !Number.isNaN(values.price_paid)
+        ? Number(values.price_paid.toFixed(2))
+        : undefined;
+    const pricePaidSource = values.price_paid_source || undefined;
+
+    if (pricePaid !== undefined && !pricePaidSource) {
+      setIsSubmitting(false);
+      setErrorMessage("Select retail or restaurant when entering price paid.");
+      return;
+    }
+
+    if (pricePaid === undefined && pricePaidSource) {
+      setIsSubmitting(false);
+      setErrorMessage("Enter a price paid amount when selecting retail or restaurant.");
+      return;
+    }
 
     const updatePayload: Record<string, unknown> = {
       wine_name: values.wine_name || null,
@@ -350,6 +387,9 @@ export default function EditEntryPage() {
       region: values.region || null,
       appellation: values.appellation || null,
       rating,
+      price_paid: pricePaid ?? null,
+      price_paid_source: pricePaidSource ?? null,
+      qpr_level: values.qpr_level || null,
       notes: values.notes || null,
       location_text: values.location_text || null,
       consumed_at: values.consumed_at,
@@ -577,6 +617,23 @@ export default function EditEntryPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium text-zinc-200">Price paid</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*[.]?[0-9]*"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="Optional (e.g. 28.50)"
+                {...register("price_paid", {
+                  setValueAs: (value) => {
+                    if (value === "") return undefined;
+                    const parsed = Number(value);
+                    return Number.isFinite(parsed) ? parsed : undefined;
+                  },
+                })}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium text-zinc-200">Consumed date</label>
               <Controller
                 control={control}
@@ -592,6 +649,71 @@ export default function EditEntryPage() {
                   />
                 )}
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-200">QPR</label>
+              <select
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("qpr_level")}
+              >
+                <option value="">Not set</option>
+                {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium text-zinc-200">Price source</label>
+                {selectedPricePaidSource ? (
+                  <button
+                    type="button"
+                    className="text-xs text-zinc-400 transition hover:text-zinc-200"
+                    onClick={() =>
+                      setValue("price_paid_source", "", {
+                        shouldDirty: true,
+                      })
+                    }
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+              <input type="hidden" {...register("price_paid_source")} />
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {PRICE_PAID_SOURCE_VALUES.map((source) => {
+                  const selected = selectedPricePaidSource === source;
+                  return (
+                    <button
+                      key={source}
+                      type="button"
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+                        selected
+                          ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
+                          : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
+                      }`}
+                      onClick={() =>
+                        setValue("price_paid_source", source, {
+                          shouldDirty: true,
+                        })
+                      }
+                    >
+                      <span
+                        className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                          selected
+                            ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
+                            : "border-white/20 text-transparent"
+                        }`}
+                      >
+                        ✓
+                      </span>
+                      {PRICE_PAID_SOURCE_LABELS[source]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

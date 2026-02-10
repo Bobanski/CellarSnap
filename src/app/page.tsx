@@ -7,7 +7,9 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import PrivacyBadge from "@/components/PrivacyBadge";
+import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
+import type { QprLevel } from "@/lib/entryMeta";
 import type { PrivacyLevel } from "@/types/wine";
 
 type RecentEntry = {
@@ -16,6 +18,7 @@ type RecentEntry = {
   producer: string | null;
   vintage: string | null;
   rating: number | null;
+  qpr_level: QprLevel | null;
   consumed_at: string;
   label_image_url: string | null;
 };
@@ -266,8 +269,9 @@ export default function HomePage() {
                         {entry.vintage ? ` \u00b7 ${entry.vintage}` : ""}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3 text-xs text-zinc-400">
+                    <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
                       <RatingBadge rating={entry.rating} />
+                      {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                       <span className="hidden sm:inline">
                         {formatConsumedDate(entry.consumed_at)}
                       </span>
@@ -375,8 +379,9 @@ export default function HomePage() {
                             {entry.producer || "Unknown producer"}
                           </p>
                         </div>
-                        <div className="text-xs text-zinc-400">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
                           <RatingBadge rating={entry.rating} />
+                          {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                         </div>
                       </div>
                     </div>
