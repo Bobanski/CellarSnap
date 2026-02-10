@@ -9,6 +9,7 @@ import {
   ADVANCED_NOTE_FIELDS,
   formatAdvancedNoteValue,
   normalizeAdvancedNotes,
+  type AdvancedNotes,
 } from "@/lib/advancedNotes";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
@@ -17,6 +18,11 @@ import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
+};
+
+type AdvancedNoteField = (typeof ADVANCED_NOTE_FIELDS)[number];
+type PopulatedAdvancedNote = AdvancedNoteField & {
+  value: NonNullable<AdvancedNotes[AdvancedNoteField["key"]]>;
 };
 
 export default function EntryDetailPage() {
@@ -277,15 +283,14 @@ export default function EntryDetailPage() {
         ]
       : [];
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
-  const populatedAdvancedNotes = advancedNotes
-    ? ADVANCED_NOTE_FIELDS
-        .map((field) => ({ ...field, value: advancedNotes[field.key] }))
-        .filter(
-          (
-            field
-          ): field is (typeof ADVANCED_NOTE_FIELDS)[number] & { value: string } =>
-            field.value !== null
-        )
+  const populatedAdvancedNotes: PopulatedAdvancedNote[] = advancedNotes
+    ? ADVANCED_NOTE_FIELDS.reduce<PopulatedAdvancedNote[]>((acc, field) => {
+        const value = advancedNotes[field.key];
+        if (value !== null) {
+          acc.push({ ...field, value });
+        }
+        return acc;
+      }, [])
     : [];
 
   return (
