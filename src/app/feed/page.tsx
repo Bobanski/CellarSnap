@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
-import PrivacyBadge from "@/components/PrivacyBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
@@ -293,7 +292,6 @@ export default function FeedPage() {
                         {entry.author_name}
                       </span>
                     </button>
-                    <PrivacyBadge level={entry.entry_privacy} compact />
                   </div>
                   <span className="shrink-0">{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
