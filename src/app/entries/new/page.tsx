@@ -1147,6 +1147,9 @@ export default function NewEntryPage() {
             ) : null}
           </div>
 
+          {/* Hide single-bottle form fields when lineup mode is active */}
+          {lineupWines.length === 0 && !lineupCreating ? (
+          <>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Wine name <span className="text-amber-400">*</span></label>
@@ -1620,6 +1623,8 @@ export default function NewEntryPage() {
               Cancel
             </Link>
           </div>
+          </>
+          ) : null}
         </form>
       </div>
 
