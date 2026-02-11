@@ -195,6 +195,18 @@ const updateEntrySchema = z.object({
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+function isPrimaryGrapeSchemaMissing(message: string) {
+  return (
+    message.includes("grape_varieties") ||
+    message.includes("grape_aliases") ||
+    message.includes("entry_primary_grapes")
+  );
+}
+
+function isClassificationColumnMissing(message: string) {
+  return message.includes("classification");
+}
+
 async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
   if (!path || path === "pending") return null;
 
@@ -328,13 +340,41 @@ export async function PUT(
   let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
 
   if (Object.keys(updates).length > 0) {
-    const { data, error } = await supabase
+    const updatesToApply = { ...updates };
+    let { data, error } = await supabase
       .from("wine_entries")
-      .update(updates)
+      .update(updatesToApply)
       .eq("id", id)
       .eq("user_id", user.id)
       .select("*")
       .single();
+
+    if (error && isClassificationColumnMissing(error.message)) {
+      delete updatesToApply.classification;
+
+      if (Object.keys(updatesToApply).length === 0) {
+        const fallbackExisting = await supabase
+          .from("wine_entries")
+          .select("*")
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .single();
+
+        data = fallbackExisting.data;
+        error = fallbackExisting.error;
+      } else {
+        const fallbackUpdate = await supabase
+          .from("wine_entries")
+          .update(updatesToApply)
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .select("*")
+          .single();
+
+        data = fallbackUpdate.data;
+        error = fallbackUpdate.error;
+      }
+    }
 
     if (error || !data) {
       if (error?.message.includes("advanced_notes")) {
@@ -355,18 +395,6 @@ export async function PUT(
               "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
           },
           { status: 400 }
-        );
-      }
-      if (
-        error?.message.includes("classification") ||
-        error?.message.includes("grape")
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Entry classification and primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
-          },
-          { status: 500 }
         );
       }
       if (
@@ -406,6 +434,8 @@ export async function PUT(
   }
 
   if (primaryGrapeIds !== undefined) {
+    let primaryGrapeSchemaAvailable = true;
+
     if (primaryGrapeIds.length > 0) {
       const { data: grapeRows, error: grapeLookupError } = await supabase
         .from("grape_varieties")
@@ -413,61 +443,44 @@ export async function PUT(
         .in("id", primaryGrapeIds);
 
       if (grapeLookupError) {
-        if (
-          grapeLookupError.message.includes("grape_varieties") ||
-          grapeLookupError.message.includes("grape_aliases")
-        ) {
+        if (isPrimaryGrapeSchemaMissing(grapeLookupError.message)) {
+          primaryGrapeSchemaAvailable = false;
+        } else {
           return NextResponse.json(
-            {
-              error:
-                "Primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
-            },
+            { error: grapeLookupError.message },
             { status: 500 }
           );
         }
-
-        return NextResponse.json(
-          { error: grapeLookupError.message },
-          { status: 500 }
-        );
-      }
-
-      const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
-      if (validGrapeIds.size !== primaryGrapeIds.length) {
-        return NextResponse.json(
-          { error: "One or more selected primary grapes are invalid." },
-          { status: 400 }
-        );
+      } else {
+        const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
+        if (validGrapeIds.size !== primaryGrapeIds.length) {
+          return NextResponse.json(
+            { error: "One or more selected primary grapes are invalid." },
+            { status: 400 }
+          );
+        }
       }
     }
 
-    const { error: deletePrimaryGrapesError } = await supabase
-      .from("entry_primary_grapes")
-      .delete()
-      .eq("entry_id", id);
+    if (primaryGrapeSchemaAvailable) {
+      const { error: deletePrimaryGrapesError } = await supabase
+        .from("entry_primary_grapes")
+        .delete()
+        .eq("entry_id", id);
 
-    if (deletePrimaryGrapesError) {
-      if (
-        deletePrimaryGrapesError.message.includes("entry_primary_grapes") ||
-        deletePrimaryGrapesError.message.includes("grape_varieties") ||
-        deletePrimaryGrapesError.message.includes("grape_aliases")
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
-          },
-          { status: 500 }
-        );
+      if (deletePrimaryGrapesError) {
+        if (isPrimaryGrapeSchemaMissing(deletePrimaryGrapesError.message)) {
+          primaryGrapeSchemaAvailable = false;
+        } else {
+          return NextResponse.json(
+            { error: deletePrimaryGrapesError.message },
+            { status: 500 }
+          );
+        }
       }
-
-      return NextResponse.json(
-        { error: deletePrimaryGrapesError.message },
-        { status: 500 }
-      );
     }
 
-    if (primaryGrapeIds.length > 0) {
+    if (primaryGrapeSchemaAvailable && primaryGrapeIds.length > 0) {
       const { error: insertPrimaryGrapesError } = await supabase
         .from("entry_primary_grapes")
         .insert(
@@ -479,10 +492,14 @@ export async function PUT(
         );
 
       if (insertPrimaryGrapesError) {
+        if (isPrimaryGrapeSchemaMissing(insertPrimaryGrapesError.message)) {
+          // Ignore if migration is not installed yet; entry updates should still succeed.
+        } else {
         return NextResponse.json(
           { error: insertPrimaryGrapesError.message },
           { status: 500 }
         );
+        }
       }
     }
   }

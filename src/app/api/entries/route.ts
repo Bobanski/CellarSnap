@@ -196,6 +196,18 @@ type EntryListRow = {
   created_at: string;
 };
 
+function isPrimaryGrapeSchemaMissing(message: string) {
+  return (
+    message.includes("grape_varieties") ||
+    message.includes("grape_aliases") ||
+    message.includes("entry_primary_grapes")
+  );
+}
+
+function isClassificationColumnMissing(message: string) {
+  return message.includes("classification");
+}
+
 async function getRandomComparisonCandidate({
   userId,
   newEntryId,
@@ -404,6 +416,7 @@ export async function POST(request: Request) {
     payload.data.place_photo_privacy ?? null;
   const advancedNotes = normalizeAdvancedNotes(payload.data.advanced_notes);
   const primaryGrapeIds = normalizePrimaryGrapeIds(payload.data.primary_grape_ids);
+  let primaryGrapeIdsToPersist = primaryGrapeIds;
 
   if (primaryGrapeIds.length > 0) {
     const { data: grapeRows, error: grapeLookupError } = await supabase
@@ -412,64 +425,72 @@ export async function POST(request: Request) {
       .in("id", primaryGrapeIds);
 
     if (grapeLookupError) {
-      if (
-        grapeLookupError.message.includes("grape_varieties") ||
-        grapeLookupError.message.includes("grape_aliases")
-      ) {
+      if (isPrimaryGrapeSchemaMissing(grapeLookupError.message)) {
+        primaryGrapeIdsToPersist = [];
+      } else {
         return NextResponse.json(
-          {
-            error:
-              "Primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
-          },
+          { error: grapeLookupError.message },
           { status: 500 }
         );
       }
-
-      return NextResponse.json(
-        { error: grapeLookupError.message },
-        { status: 500 }
-      );
-    }
-
-    const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
-    if (validGrapeIds.size !== primaryGrapeIds.length) {
-      return NextResponse.json(
-        { error: "One or more selected primary grapes are invalid." },
-        { status: 400 }
-      );
+    } else {
+      const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
+      if (validGrapeIds.size !== primaryGrapeIds.length) {
+        return NextResponse.json(
+          { error: "One or more selected primary grapes are invalid." },
+          { status: 400 }
+        );
+      }
     }
   }
 
-  const { data, error } = await supabase
+  const insertPayload = {
+    user_id: user.id,
+    wine_name: payload.data.wine_name ?? null,
+    producer: payload.data.producer ?? null,
+    vintage: payload.data.vintage ?? null,
+    country: payload.data.country ?? null,
+    region: payload.data.region ?? null,
+    appellation: payload.data.appellation ?? null,
+    classification: payload.data.classification ?? null,
+    rating: payload.data.rating ?? null,
+    price_paid: payload.data.price_paid ?? null,
+    price_paid_currency: payload.data.price_paid_currency ?? null,
+    price_paid_source: payload.data.price_paid_source ?? null,
+    qpr_level: payload.data.qpr_level ?? null,
+    notes: payload.data.notes ?? null,
+    advanced_notes: advancedNotes,
+    location_text: payload.data.location_text ?? null,
+    consumed_at: consumedAt,
+    tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
+    label_image_path: null,
+    place_image_path: null,
+    pairing_image_path: null,
+    entry_privacy: entryPrivacy,
+    label_photo_privacy: labelPhotoPrivacy,
+    place_photo_privacy: placePhotoPrivacy,
+  };
+
+  let { data, error } = await supabase
     .from("wine_entries")
-    .insert({
-      user_id: user.id,
-      wine_name: payload.data.wine_name ?? null,
-      producer: payload.data.producer ?? null,
-      vintage: payload.data.vintage ?? null,
-      country: payload.data.country ?? null,
-      region: payload.data.region ?? null,
-      appellation: payload.data.appellation ?? null,
-      classification: payload.data.classification ?? null,
-      rating: payload.data.rating ?? null,
-      price_paid: payload.data.price_paid ?? null,
-      price_paid_currency: payload.data.price_paid_currency ?? null,
-      price_paid_source: payload.data.price_paid_source ?? null,
-      qpr_level: payload.data.qpr_level ?? null,
-      notes: payload.data.notes ?? null,
-      advanced_notes: advancedNotes,
-      location_text: payload.data.location_text ?? null,
-      consumed_at: consumedAt,
-      tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
-      label_image_path: null,
-      place_image_path: null,
-      pairing_image_path: null,
-      entry_privacy: entryPrivacy,
-      label_photo_privacy: labelPhotoPrivacy,
-      place_photo_privacy: placePhotoPrivacy,
-    })
+    .insert(insertPayload)
     .select("*")
     .single();
+
+  if (error && isClassificationColumnMissing(error.message)) {
+    const fallbackPayload = Object.fromEntries(
+      Object.entries(insertPayload).filter(([key]) => key !== "classification")
+    );
+
+    const fallbackInsert = await supabase
+      .from("wine_entries")
+      .insert(fallbackPayload)
+      .select("*")
+      .single();
+
+    data = fallbackInsert.data;
+    error = fallbackInsert.error;
+  }
 
   if (error) {
     if (error.message.includes("advanced_notes")) {
@@ -491,18 +512,6 @@ export async function POST(request: Request) {
       );
     }
     if (
-      error.message.includes("classification") ||
-      error.message.includes("grape")
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Entry classification and primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
-        },
-        { status: 500 }
-      );
-    }
-    if (
       error.message.includes("price_paid") ||
       error.message.includes("price_paid_currency") ||
       error.message.includes("price_paid_source") ||
@@ -519,11 +528,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (primaryGrapeIds.length > 0) {
+  if (primaryGrapeIdsToPersist.length > 0) {
     const { error: grapeInsertError } = await supabase
       .from("entry_primary_grapes")
       .insert(
-        primaryGrapeIds.map((varietyId, index) => ({
+        primaryGrapeIdsToPersist.map((varietyId, index) => ({
           entry_id: data.id,
           variety_id: varietyId,
           position: index + 1,
@@ -531,30 +540,19 @@ export async function POST(request: Request) {
       );
 
     if (grapeInsertError) {
+      if (isPrimaryGrapeSchemaMissing(grapeInsertError.message)) {
+        primaryGrapeIdsToPersist = [];
+      } else {
       await supabase
         .from("wine_entries")
         .delete()
         .eq("id", data.id)
         .eq("user_id", user.id);
-
-      if (
-        grapeInsertError.message.includes("entry_primary_grapes") ||
-        grapeInsertError.message.includes("grape_varieties") ||
-        grapeInsertError.message.includes("grape_aliases")
-      ) {
         return NextResponse.json(
-          {
-            error:
-              "Primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
-          },
+          { error: grapeInsertError.message },
           { status: 500 }
         );
       }
-
-      return NextResponse.json(
-        { error: grapeInsertError.message },
-        { status: 500 }
-      );
     }
   }
 
