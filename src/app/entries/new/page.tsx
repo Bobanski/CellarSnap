@@ -111,7 +111,6 @@ export default function NewEntryPage() {
     "idle" | "loading" | "success" | "error" | "timeout"
   >("idle");
   const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
-  const [hasAutofillRun, setHasAutofillRun] = useState(false);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null; email: string | null }[]
   >([]);
@@ -258,14 +257,12 @@ export default function NewEntryPage() {
           file,
           preview: URL.createObjectURL(file),
         }));
-        if (!hasAutofillRun && prev.length === 0 && next.length > 0) {
-          filesToAnalyze = next.map((n) => n.file);
-        }
-        return [...prev, ...next];
+        const combined = [...prev, ...next];
+        filesToAnalyze = combined.map((photo) => photo.file);
+        return combined;
       });
       if (filesToAnalyze.length > 0) {
         runAnalysis(filesToAnalyze);
-        setHasAutofillRun(true);
       }
       return;
     }
