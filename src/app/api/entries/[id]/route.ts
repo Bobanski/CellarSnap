@@ -18,6 +18,7 @@ import {
   fetchPrimaryGrapesByEntryId,
   normalizePrimaryGrapeIds,
 } from "@/lib/primaryGrapes";
+import { canUserViewEntry } from "@/lib/access/entryVisibility";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
@@ -241,6 +242,24 @@ export async function GET(
 
   if (error || !data) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+
+  try {
+    const canView = await canUserViewEntry({
+      supabase,
+      viewerUserId: user.id,
+      ownerUserId: data.user_id,
+      entryPrivacy: data.entry_privacy,
+    });
+    if (!canView) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  } catch (visibilityError) {
+    const message =
+      visibilityError instanceof Error
+        ? visibilityError.message
+        : "Unable to verify entry visibility.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   const tastedWithIds = Array.isArray(data.tasted_with_user_ids)

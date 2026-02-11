@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAcceptedFriend } from "@/lib/access/entryVisibility";
 
 async function createSignedUrl(
   path: string | null,
@@ -33,11 +34,33 @@ export async function GET(
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  let canSeeFriendsEntries = false;
+  if (user.id !== userId) {
+    try {
+      canSeeFriendsEntries = await isAcceptedFriend(supabase, user.id, userId);
+    } catch (friendError) {
+      const message =
+        friendError instanceof Error
+          ? friendError.message
+          : "Unable to verify friendship.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
+  let entriesQuery = supabase
     .from("wine_entries")
     .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .eq("user_id", userId);
+
+  if (user.id !== userId) {
+    entriesQuery = canSeeFriendsEntries
+      ? entriesQuery.in("entry_privacy", ["public", "friends"])
+      : entriesQuery.eq("entry_privacy", "public");
+  }
+
+  const { data, error } = await entriesQuery.order("created_at", {
+    ascending: false,
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

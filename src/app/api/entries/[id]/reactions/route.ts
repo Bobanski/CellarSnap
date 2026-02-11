@@ -1,23 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAcceptedFriendIds } from "@/lib/access/entryVisibility";
 
 const ALLOWED_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"];
-
-async function getFriendIds(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  userId: string
-): Promise<Set<string>> {
-  const { data: rows } = await supabase
-    .from("friend_requests")
-    .select("requester_id, recipient_id")
-    .eq("status", "accepted")
-    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`);
-  return new Set(
-    (rows ?? []).map((r) =>
-      r.requester_id === userId ? r.recipient_id : r.requester_id
-    )
-  );
-}
 
 export async function POST(
   request: Request,
@@ -49,7 +34,7 @@ export async function POST(
 
   const { data: entry, error: entryError } = await supabase
     .from("wine_entries")
-    .select("id, user_id")
+    .select("id, user_id, entry_privacy")
     .eq("id", entryId)
     .single();
 
@@ -57,7 +42,31 @@ export async function POST(
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
-  const friendIds = await getFriendIds(supabase, user.id);
+  if (entry.user_id === user.id) {
+    return NextResponse.json(
+      { error: "You cannot react to your own entry." },
+      { status: 403 }
+    );
+  }
+
+  if (entry.entry_privacy === "private") {
+    return NextResponse.json(
+      { error: "Cannot react to a private entry." },
+      { status: 403 }
+    );
+  }
+
+  let friendIds: Set<string>;
+  try {
+    friendIds = await getAcceptedFriendIds(supabase, user.id);
+  } catch (friendError) {
+    const message =
+      friendError instanceof Error
+        ? friendError.message
+        : "Unable to verify friendship.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
   if (!friendIds.has(entry.user_id)) {
     return NextResponse.json(
       { error: "Only mutual friends can react to this entry." },

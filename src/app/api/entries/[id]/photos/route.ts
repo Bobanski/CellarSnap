@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { canUserViewEntry } from "@/lib/access/entryVisibility";
 
 const MAX_PER_TYPE = 3;
 const typeSchema = z.enum(["label", "place", "pairing"]);
@@ -43,29 +44,22 @@ export async function GET(
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
-  if (entry.user_id !== user.id) {
-    if (entry.entry_privacy === "private") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  try {
+    const canView = await canUserViewEntry({
+      supabase,
+      viewerUserId: user.id,
+      ownerUserId: entry.user_id,
+      entryPrivacy: entry.entry_privacy,
+    });
+    if (!canView) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (entry.entry_privacy === "friends") {
-      const { data: friendRows } = await supabase
-        .from("friend_requests")
-        .select("requester_id, recipient_id")
-        .eq("status", "accepted")
-        .or(
-          `requester_id.eq.${user.id},recipient_id.eq.${user.id}`
-        );
-
-      const isFriend = (friendRows ?? []).some(
-        (row) =>
-          (row.requester_id === user.id && row.recipient_id === entry.user_id) ||
-          (row.recipient_id === user.id && row.requester_id === entry.user_id)
-      );
-
-      if (!isFriend) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-      }
-    }
+  } catch (visibilityError) {
+    const message =
+      visibilityError instanceof Error
+        ? visibilityError.message
+        : "Unable to verify entry visibility.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   const { data, error } = await supabase
@@ -115,6 +109,23 @@ export async function POST(
     return NextResponse.json(
       { error: payload.error.flatten() },
       { status: 400 }
+    );
+  }
+
+  const { data: entry, error: entryError } = await supabase
+    .from("wine_entries")
+    .select("id, user_id")
+    .eq("id", id)
+    .single();
+
+  if (entryError || !entry) {
+    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+
+  if (entry.user_id !== user.id) {
+    return NextResponse.json(
+      { error: "Only the entry owner can add photos." },
+      { status: 403 }
     );
   }
 

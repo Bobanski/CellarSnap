@@ -20,6 +20,23 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: entry, error: entryError } = await supabase
+    .from("wine_entries")
+    .select("id, user_id")
+    .eq("id", id)
+    .single();
+
+  if (entryError || !entry) {
+    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+
+  if (entry.user_id !== user.id) {
+    return NextResponse.json(
+      { error: "Only the entry owner can edit photos." },
+      { status: 403 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -35,14 +52,20 @@ export async function PUT(
     );
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("entry_photos")
     .update({ position: payload.data.position })
     .eq("id", photoId)
-    .eq("entry_id", id);
+    .eq("entry_id", id)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!updated) {
+    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
   }
 
   return NextResponse.json({ success: true });
@@ -60,6 +83,23 @@ export async function DELETE(
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: entry, error: entryError } = await supabase
+    .from("wine_entries")
+    .select("id, user_id")
+    .eq("id", id)
+    .single();
+
+  if (entryError || !entry) {
+    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+
+  if (entry.user_id !== user.id) {
+    return NextResponse.json(
+      { error: "Only the entry owner can delete photos." },
+      { status: 403 }
+    );
   }
 
   const { data: photo, error: fetchError } = await supabase
