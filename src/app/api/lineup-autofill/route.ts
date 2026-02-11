@@ -69,6 +69,10 @@ const labelRefineSchema = z.object({
   ),
 });
 
+const bottleCountSchema = z.object({
+  total_bottles_detected: z.number().min(0),
+});
+
 const TIMEOUT_MS = 75000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -325,6 +329,7 @@ export async function POST(request: Request) {
                   "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per bottle, left-to-right order). " +
                   "CRITICAL: wines array length MUST equal total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
                   "If text is unreadable, still include that bottle object with null fields, empty grape array, and low confidence. " +
+                  "Before returning a count of 1, explicitly double-check whether any additional bottle necks, shoulders, or full bottles are visible in the frame. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
@@ -368,6 +373,77 @@ export async function POST(request: Request) {
         { error: "Unable to parse bottle data" },
         { status: 422 }
       );
+    }
+
+    let verifiedBottleCount =
+      typeof parsed.data.total_bottles_detected === "number" &&
+      Number.isFinite(parsed.data.total_bottles_detected)
+        ? Math.max(0, Math.round(parsed.data.total_bottles_detected))
+        : parsed.data.wines.length;
+
+    // Guardrail: when pass 1 says 0/1 bottle, run a dedicated count verification
+    // pass to avoid obvious multi-bottle photos falling into single-bottle mode.
+    if (verifiedBottleCount <= 1) {
+      try {
+        const countResponse = await openai.responses.create(
+          {
+            model: "gpt-5-mini",
+            reasoning: { effort: "minimal" },
+            max_output_tokens: 160,
+            text: {
+              format: {
+                type: "json_schema",
+                name: "lineup_bottle_count",
+                strict: true,
+                schema: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    total_bottles_detected: { type: "number" },
+                  },
+                  required: ["total_bottles_detected"],
+                },
+              },
+            },
+            input: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "input_text",
+                    text:
+                      "Count every distinct glass wine bottle visible in this photo, including partially occluded bottles. " +
+                      "Ignore reflections, people, glasses, and decanters. " +
+                      "Return only total_bottles_detected as a non-negative integer. " +
+                      "Before returning 1, explicitly verify there are no other bottle necks, shoulders, or full bottle bodies visible.",
+                  },
+                  { type: "input_image", image_url: dataUrl, detail: "high" },
+                ],
+              },
+            ],
+            safety_identifier: user.id,
+          },
+          { signal: controller.signal }
+        );
+
+        const countOutput =
+          "output_text" in countResponse &&
+          typeof countResponse.output_text === "string"
+            ? countResponse.output_text
+            : "";
+        if (countOutput.trim()) {
+          const parsedCount = bottleCountSchema.safeParse(extractJson(countOutput));
+          if (parsedCount.success) {
+            const count = Math.max(
+              0,
+              Math.round(parsedCount.data.total_bottles_detected)
+            );
+            verifiedBottleCount = Math.max(verifiedBottleCount, count);
+          }
+        }
+      } catch {
+        // Best-effort count verification only.
+      }
     }
 
     const baseWines = parsed.data.wines.map((wine) => ({
@@ -529,7 +605,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       wines,
-      total_bottles_detected: parsed.data.total_bottles_detected ?? wines.length,
+      total_bottles_detected: Math.max(verifiedBottleCount, wines.length),
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
