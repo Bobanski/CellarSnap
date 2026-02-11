@@ -160,7 +160,7 @@ export async function POST(request: Request) {
       {
         model: "gpt-5-mini",
         reasoning: { effort: "medium" },
-        max_output_tokens: 2000,
+        max_output_tokens: 4000,
         text: {
           format: {
             type: "json_schema",
