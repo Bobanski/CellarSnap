@@ -198,6 +198,7 @@ export default function NewEntryPage() {
     if (list.length === 0) return;
 
     if (type === "label") {
+      let filesToAnalyze: File[] = [];
       setLabelPhotos((prev) => {
         const remaining = MAX_PHOTOS - prev.length;
         if (remaining <= 0) return prev;
@@ -205,12 +206,15 @@ export default function NewEntryPage() {
           file,
           preview: URL.createObjectURL(file),
         }));
-        if (!hasAutofillRun && prev.length === 0 && next[0]) {
-          runAnalysis(next[0].file);
-          setHasAutofillRun(true);
+        if (!hasAutofillRun && prev.length === 0 && next.length > 0) {
+          filesToAnalyze = next.map((n) => n.file);
         }
         return [...prev, ...next];
       });
+      if (filesToAnalyze.length > 0) {
+        runAnalysis(filesToAnalyze);
+        setHasAutofillRun(true);
+      }
       return;
     }
 
@@ -768,73 +772,85 @@ export default function NewEntryPage() {
     }
   };
 
-  const runAnalysis = async (file: File) => {
+  const runAnalysis = async (files: File[]) => {
+    if (files.length === 0) return;
+
     setAutofillStatus("loading");
-    setAutofillMessage("Analyzing photo...");
+    setAutofillMessage(
+      files.length === 1
+        ? "Analyzing photo..."
+        : `Analyzing ${files.length} photos...`
+    );
     setLineupWines([]);
     setLineupCreatedCount(0);
 
-    const resized = await createAutofillImage(file);
-
-    // Fire both endpoints in parallel: lineup detection + single-label autofill
-    const lineupFormData = new FormData();
-    lineupFormData.append("photo", resized);
-    const labelFormData = new FormData();
-    labelFormData.append("label", resized);
+    const resized = await Promise.all(
+      files.map((f) => createAutofillImage(f))
+    );
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 35000);
+    const timeoutMs = files.length > 1 ? 35000 + files.length * 10000 : 35000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const [lineupResult, labelResult] = await Promise.allSettled([
-        fetch("/api/lineup-autofill", {
+      // Fire lineup-autofill for every photo in parallel
+      const lineupFetches = resized.map((file) => {
+        const fd = new FormData();
+        fd.append("photo", file);
+        return fetch("/api/lineup-autofill", {
           method: "POST",
-          body: lineupFormData,
+          body: fd,
           signal: controller.signal,
-        }),
-        fetch("/api/label-autofill", {
+        });
+      });
+
+      // For single photo, also fire label-autofill (richer data with grapes)
+      let labelFetch: Promise<Response> | null = null;
+      if (files.length === 1) {
+        const labelFd = new FormData();
+        labelFd.append("label", resized[0]);
+        labelFetch = fetch("/api/label-autofill", {
           method: "POST",
-          body: labelFormData,
+          body: labelFd,
           signal: controller.signal,
-        }),
-      ]);
+        });
+      }
+
+      const lineupResults = await Promise.allSettled(lineupFetches);
+
+      let labelResult: Response | null = null;
+      if (labelFetch) {
+        try {
+          labelResult = await labelFetch;
+        } catch {
+          labelResult = null;
+        }
+      }
 
       clearTimeout(timeoutId);
 
-      // Parse lineup response to determine bottle count
-      let lineupData: {
-        wines?: Omit<LineupWine, "included">[];
-        total_bottles_detected?: number;
-      } | null = null;
-      if (
-        lineupResult.status === "fulfilled" &&
-        lineupResult.value.ok
-      ) {
-        lineupData = await lineupResult.value.json();
+      // Collect all wines from all lineup results
+      const allWines: LineupWine[] = [];
+      for (const result of lineupResults) {
+        if (result.status === "fulfilled" && result.value.ok) {
+          const data = await result.value.json();
+          const wines: LineupWine[] = (data.wines ?? []).map(
+            (w: Omit<LineupWine, "included">) => ({
+              ...w,
+              included: true,
+            })
+          );
+          allWines.push(...wines);
+        }
       }
 
-      const bottleCount =
-        lineupData?.total_bottles_detected ??
-        lineupData?.wines?.length ??
-        0;
+      const isSingleBottle =
+        files.length === 1 && allWines.length <= 1;
 
-      if (bottleCount >= 2) {
-        // Multiple bottles — lineup mode
-        const wines: LineupWine[] = (lineupData?.wines ?? []).map(
-          (w) => ({ ...w, included: true })
-        );
-        setLineupWines(wines);
-        setAutofillStatus("success");
-        setAutofillMessage(
-          `Detected ${wines.length} bottles. Review and create entries below.`
-        );
-      } else {
-        // Single bottle (or detection failed) — use label autofill
-        if (
-          labelResult.status === "fulfilled" &&
-          labelResult.value.ok
-        ) {
-          const labelData = await labelResult.value.json();
+      if (isSingleBottle) {
+        // Single photo with single bottle — use label autofill for richer data
+        if (labelResult && labelResult.ok) {
+          const labelData = await labelResult.json();
           await applyAutofill(labelData);
           setAutofillStatus("success");
           const confidenceLabel =
@@ -851,18 +867,19 @@ export default function NewEntryPage() {
           setAutofillMessage(
             [confidenceLabel, warningLabel]
               .filter(Boolean)
-              .join(" \u2022 ") || "Autofill complete. Review the details."
+              .join(" \u2022 ") ||
+              "Autofill complete. Review the details."
           );
-        } else if (labelResult.status === "fulfilled") {
-          const errorPayload = await labelResult.value
+        } else if (labelResult && !labelResult.ok) {
+          const errorPayload = await labelResult
             .json()
             .catch(() => ({}));
-          if (labelResult.value.status === 401) {
+          if (labelResult.status === 401) {
             setAutofillStatus("error");
             setAutofillMessage(
               "Your session expired. Sign in again and retry."
             );
-          } else if (labelResult.value.status === 413) {
+          } else if (labelResult.status === 413) {
             setAutofillStatus("error");
             setAutofillMessage("Image too large. Try a smaller photo.");
           } else {
@@ -874,8 +891,28 @@ export default function NewEntryPage() {
           }
         } else {
           setAutofillStatus("error");
-          setAutofillMessage("Could not analyze the photo. Try again.");
+          setAutofillMessage(
+            "Could not analyze the photo. Try again."
+          );
         }
+      } else {
+        // Multiple bottles or multiple photos — lineup mode
+        if (allWines.length === 0) {
+          setAutofillStatus("error");
+          setAutofillMessage(
+            "No bottles detected. Try clearer photos."
+          );
+          return;
+        }
+        setLineupWines(allWines);
+        setAutofillStatus("success");
+        const photoLabel =
+          files.length > 1
+            ? ` across ${files.length} photos`
+            : "";
+        setAutofillMessage(
+          `Detected ${allWines.length} bottle${allWines.length === 1 ? "" : "s"}${photoLabel}. Review and create entries below.`
+        );
       }
     } catch (error) {
       clearTimeout(timeoutId);
@@ -885,7 +922,7 @@ export default function NewEntryPage() {
         return;
       }
       setAutofillStatus("error");
-      setAutofillMessage("Could not analyze the photo. Try again.");
+      setAutofillMessage("Could not analyze the photos. Try again.");
     }
   };
 
@@ -925,8 +962,9 @@ export default function NewEntryPage() {
                   type="button"
                   className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                   onClick={() => {
-                    const first = labelPhotos[0];
-                    if (first) runAnalysis(first.file);
+                    if (labelPhotos.length > 0) {
+                      runAnalysis(labelPhotos.map((p) => p.file));
+                    }
                   }}
                 >
                   Try again
