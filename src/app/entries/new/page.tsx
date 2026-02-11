@@ -160,6 +160,20 @@ export default function NewEntryPage() {
     label_anchor?: LabelAnchor | null;
   };
 
+  type LabelAutofillResult = {
+    wine_name?: string | null;
+    producer?: string | null;
+    vintage?: string | null;
+    country?: string | null;
+    region?: string | null;
+    appellation?: string | null;
+    classification?: string | null;
+    primary_grape_suggestions?: string[] | null;
+    primary_grape_confidence?: number | null;
+    confidence?: number | null;
+    warnings?: string[] | null;
+  };
+
   type LineupWine = {
     wine_name: string | null;
     producer: string | null;
@@ -492,6 +506,28 @@ export default function NewEntryPage() {
       x: Math.min(1, Math.max(0, x)),
       y: Math.min(1, Math.max(0, y)),
     };
+  };
+
+  const hasDetectedWineDetails = (wine: {
+    wine_name: string | null;
+    producer: string | null;
+    vintage: string | null;
+    country: string | null;
+    region: string | null;
+    appellation: string | null;
+    classification: string | null;
+    primary_grape_suggestions?: string[];
+  }) => {
+    return Boolean(
+      wine.wine_name ||
+        wine.producer ||
+        wine.vintage ||
+        wine.country ||
+        wine.region ||
+        wine.appellation ||
+        wine.classification ||
+        (wine.primary_grape_suggestions?.length ?? 0) > 0
+    );
   };
 
   const resolveSuggestedGrapes = async (suggestions: string[]) => {
@@ -900,8 +936,17 @@ export default function NewEntryPage() {
   };
 
   const createLineupEntries = async () => {
-    const included = lineupWines.filter((w) => w.included);
-    if (included.length === 0) return;
+    const selected = lineupWines.filter((w) => w.included);
+    if (selected.length === 0) return;
+
+    const included = selected.filter((wine) => hasDetectedWineDetails(wine));
+    if (included.length === 0) {
+      setAutofillStatus("error");
+      setAutofillMessage(
+        "Selected bottles have no readable label details. Uncheck unknown bottles or retry with a clearer photo."
+      );
+      return;
+    }
 
     setLineupCreating(true);
     setLineupCreatedCount(0);
@@ -937,7 +982,13 @@ export default function NewEntryPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              wine_name: wine.wine_name ?? "Unknown wine",
+              wine_name:
+                wine.wine_name ??
+                wine.producer ??
+                wine.appellation ??
+                wine.region ??
+                wine.primary_grape_suggestions?.[0] ??
+                "Unknown wine",
               producer: wine.producer || null,
               vintage: wine.vintage || null,
               country: wine.country || null,
@@ -1029,7 +1080,28 @@ export default function NewEntryPage() {
         });
       });
 
+      // For single photo, also run label-autofill for richer single-bottle data.
+      let labelFetch: Promise<Response> | null = null;
+      if (files.length === 1) {
+        const labelFd = new FormData();
+        labelFd.append("label", resized[0]);
+        labelFetch = fetch("/api/label-autofill", {
+          method: "POST",
+          body: labelFd,
+          signal: controller.signal,
+        });
+      }
+
       const lineupResults = await Promise.allSettled(lineupFetches);
+
+      let labelResult: Response | null = null;
+      if (labelFetch) {
+        try {
+          labelResult = await labelFetch;
+        } catch {
+          labelResult = null;
+        }
+      }
 
       clearTimeout(timeoutId);
 
@@ -1049,53 +1121,38 @@ export default function NewEntryPage() {
           const wines: LineupWine[] = (Array.isArray(data.wines)
             ? data.wines
             : []
-          ).map((wine: LineupApiWine) => ({
-            wine_name: normalizeTextField(wine.wine_name),
-            producer: normalizeTextField(wine.producer),
-            vintage: normalizeTextField(wine.vintage),
-            country: normalizeTextField(wine.country),
-            region: normalizeTextField(wine.region),
-            appellation: normalizeTextField(wine.appellation),
-            classification: normalizeTextField(wine.classification),
-            primary_grape_suggestions: Array.isArray(
-              wine.primary_grape_suggestions
-            )
-              ? wine.primary_grape_suggestions
-                  .map((value) => value.trim())
-                  .filter((value) => value.length > 0)
-                  .slice(0, 3)
-              : [],
-            confidence:
-              typeof wine.confidence === "number" &&
-              Number.isFinite(wine.confidence)
-                ? Math.min(1, Math.max(0, wine.confidence))
-                : null,
-            bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
-            label_anchor: normalizeLabelAnchor(wine.label_anchor),
-            included: true,
-            photoIndex: pi,
-          }));
+          ).map((wine: LineupApiWine) => {
+            const normalizedWine = {
+              wine_name: normalizeTextField(wine.wine_name),
+              producer: normalizeTextField(wine.producer),
+              vintage: normalizeTextField(wine.vintage),
+              country: normalizeTextField(wine.country),
+              region: normalizeTextField(wine.region),
+              appellation: normalizeTextField(wine.appellation),
+              classification: normalizeTextField(wine.classification),
+              primary_grape_suggestions: Array.isArray(
+                wine.primary_grape_suggestions
+              )
+                ? wine.primary_grape_suggestions
+                    .map((value) => value.trim())
+                    .filter((value) => value.length > 0)
+                    .slice(0, 3)
+                : [],
+              confidence:
+                typeof wine.confidence === "number" &&
+                Number.isFinite(wine.confidence)
+                  ? Math.min(1, Math.max(0, wine.confidence))
+                  : null,
+              bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+              label_anchor: normalizeLabelAnchor(wine.label_anchor),
+            } satisfies Omit<LineupWine, "included" | "photoIndex">;
 
-          // Pad with placeholder entries if AI detected more bottles than
-          // it returned data for, so every bottle gets an entry slot.
-          const missing = detectedForPhoto - wines.length;
-          for (let m = 0; m < missing; m++) {
-            wines.push({
-              wine_name: null,
-              producer: null,
-              vintage: null,
-              country: null,
-              region: null,
-              appellation: null,
-              classification: null,
-              primary_grape_suggestions: [],
-              confidence: 0,
-              bottle_bbox: null,
-              label_anchor: null,
-              included: true,
+            return {
+              ...normalizedWine,
+              included: hasDetectedWineDetails(normalizedWine),
               photoIndex: pi,
-            });
-          }
+            };
+          });
 
           allWines.push(...wines);
         }
@@ -1109,9 +1166,61 @@ export default function NewEntryPage() {
         files.length === 1 && !likelyLineup && allWines.length <= 1;
 
       if (isSingleBottle) {
-        // Single photo with single bottle — use lineup data to fill the form
-        const wine = allWines[0];
-        if (wine) {
+        // Single photo with single bottle — prefer label-autofill (richer fields),
+        // then fall back to lineup if needed.
+        if (labelResult && labelResult.ok) {
+          const rawLabelData = (await labelResult.json()) as LabelAutofillResult;
+          const normalizedLabelData = {
+            wine_name: normalizeTextField(rawLabelData.wine_name),
+            producer: normalizeTextField(rawLabelData.producer),
+            vintage: normalizeTextField(rawLabelData.vintage),
+            country: normalizeTextField(rawLabelData.country),
+            region: normalizeTextField(rawLabelData.region),
+            appellation: normalizeTextField(rawLabelData.appellation),
+            classification: normalizeTextField(rawLabelData.classification),
+            primary_grape_suggestions: Array.isArray(
+              rawLabelData.primary_grape_suggestions
+            )
+              ? rawLabelData.primary_grape_suggestions
+                  .map((value) => value.trim())
+                  .filter((value) => value.length > 0)
+                  .slice(0, 3)
+              : [],
+            primary_grape_confidence:
+              typeof rawLabelData.primary_grape_confidence === "number" &&
+              Number.isFinite(rawLabelData.primary_grape_confidence)
+                ? Math.min(1, Math.max(0, rawLabelData.primary_grape_confidence))
+                : null,
+            confidence:
+              typeof rawLabelData.confidence === "number" &&
+              Number.isFinite(rawLabelData.confidence)
+                ? Math.min(1, Math.max(0, rawLabelData.confidence))
+                : null,
+            warnings: Array.isArray(rawLabelData.warnings)
+              ? rawLabelData.warnings
+                  .map((warning) => warning.trim())
+                  .filter((warning) => warning.length > 0)
+              : [],
+          };
+
+          await applyAutofill(normalizedLabelData);
+          setAutofillStatus("success");
+          const confidenceLabel =
+            typeof normalizedLabelData.confidence === "number"
+              ? `Confidence ${Math.round(normalizedLabelData.confidence * 100)}%`
+              : null;
+          const warningCount = normalizedLabelData.warnings.length;
+          const warningLabel =
+            warningCount > 0
+              ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
+              : null;
+          setAutofillMessage(
+            [confidenceLabel, warningLabel]
+              .filter(Boolean)
+              .join(" • ") || "Autofill complete. Review the details."
+          );
+        } else if (allWines[0]) {
+          const wine = allWines[0];
           await applyAutofill({
             wine_name: wine.wine_name,
             producer: wine.producer,
@@ -1130,6 +1239,20 @@ export default function NewEntryPage() {
           setAutofillMessage(
             confidenceLabel ?? "Autofill complete. Review the details."
           );
+        } else if (labelResult && !labelResult.ok) {
+          const errorPayload = await labelResult.json().catch(() => ({}));
+          if (labelResult.status === 401) {
+            setAutofillStatus("error");
+            setAutofillMessage("Your session expired. Sign in again and retry.");
+          } else if (labelResult.status === 413) {
+            setAutofillStatus("error");
+            setAutofillMessage("Image too large. Try a smaller photo.");
+          } else {
+            setAutofillStatus("error");
+            setAutofillMessage(
+              errorPayload.error ?? "Could not read the label. Try again."
+            );
+          }
         } else {
           // Lineup call failed — surface a useful error
           const firstResult = lineupResults[0];
@@ -1175,10 +1298,13 @@ export default function NewEntryPage() {
           files.length > 1
             ? ` across ${files.length} photos`
             : "";
-        const unresolvedCount = Math.max(0, inferredBottleCount - allWines.length);
+        const identifiedCount = allWines.filter((wine) =>
+          hasDetectedWineDetails(wine)
+        ).length;
+        const unresolvedCount = Math.max(0, inferredBottleCount - identifiedCount);
         if (unresolvedCount > 0) {
           setAutofillMessage(
-            `Detected ${inferredBottleCount} bottles${photoLabel}. Identified ${allWines.length} label${allWines.length === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
+            `Detected ${inferredBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
           );
         } else {
           setAutofillMessage(
@@ -1392,12 +1518,23 @@ export default function NewEntryPage() {
                 <button
                   type="button"
                   className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-amber-500/90 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
-                  disabled={lineupWines.filter((w) => w.included).length === 0}
+                  disabled={
+                    lineupWines.filter(
+                      (w) => w.included && hasDetectedWineDetails(w)
+                    ).length === 0
+                  }
                   onClick={createLineupEntries}
                 >
                   Create{" "}
-                  {lineupWines.filter((w) => w.included).length} entr
-                  {lineupWines.filter((w) => w.included).length === 1
+                  {
+                    lineupWines.filter(
+                      (w) => w.included && hasDetectedWineDetails(w)
+                    ).length
+                  }{" "}
+                  entr
+                  {lineupWines.filter(
+                    (w) => w.included && hasDetectedWineDetails(w)
+                  ).length === 1
                     ? "y"
                     : "ies"}
                 </button>
@@ -1409,7 +1546,12 @@ export default function NewEntryPage() {
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
                 <span className="text-sm text-zinc-300">
                   Creating entries... ({lineupCreatedCount}/
-                  {lineupWines.filter((w) => w.included).length})
+                  {
+                    lineupWines.filter(
+                      (w) => w.included && hasDetectedWineDetails(w)
+                    ).length
+                  }
+                  )
                 </span>
               </div>
             ) : null}
