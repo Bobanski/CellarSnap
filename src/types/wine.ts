@@ -25,6 +25,12 @@ export type EntryPhoto = {
   signed_url?: string | null;
 };
 
+export type PrimaryGrape = {
+  id: string;
+  name: string;
+  position: number;
+};
+
 export type WineEntry = {
   id: string;
   user_id: string;
@@ -34,6 +40,8 @@ export type WineEntry = {
   country: string | null;
   region: string | null;
   appellation: string | null;
+  classification: string | null;
+  primary_grapes?: PrimaryGrape[];
   rating: number | null;
   price_paid: number | null;
   price_paid_currency: PricePaidCurrency | null;
@@ -67,6 +75,8 @@ export type WineEntryCreatePayload = {
   country?: string | null;
   region?: string | null;
   appellation?: string | null;
+  classification?: string | null;
+  primary_grape_ids?: string[];
   rating?: number | null;
   price_paid?: number | null;
   price_paid_currency?: PricePaidCurrency | null;
@@ -89,6 +99,8 @@ export type WineEntryUpdatePayload = Partial<{
   country: string | null;
   region: string | null;
   appellation: string | null;
+  classification: string | null;
+  primary_grape_ids: string[];
   rating: number | null;
   price_paid: number | null;
   price_paid_currency: PricePaidCurrency | null;

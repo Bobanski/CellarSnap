@@ -311,6 +311,13 @@ export default function EntryDetailPage() {
         return acc;
       }, [])
     : [];
+  const primaryGrapeDisplay =
+    entry.primary_grapes && entry.primary_grapes.length > 0
+      ? [...entry.primary_grapes]
+          .sort((a, b) => a.position - b.position)
+          .map((grape) => grape.name)
+          .join(", ")
+      : null;
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -561,6 +568,22 @@ export default function EntryDetailPage() {
                 </p>
                 <p className="text-sm text-zinc-200">
                   {entry.appellation || "Not set"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Classification
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.classification || "Not set"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Primary grapes
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {primaryGrapeDisplay || "Not set"}
                 </p>
               </div>
             </div>

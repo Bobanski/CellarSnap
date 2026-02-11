@@ -14,6 +14,10 @@ import {
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_VALUES,
 } from "@/lib/entryMeta";
+import {
+  fetchPrimaryGrapesByEntryId,
+  normalizePrimaryGrapeIds,
+} from "@/lib/primaryGrapes";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
@@ -55,6 +59,16 @@ const nullablePricePaidSchema = z.preprocess(
   z.number().min(0).max(100000).nullable().optional()
 );
 
+const primaryGrapeIdsSchema = z.preprocess(
+  (value) => {
+    if (!Array.isArray(value)) {
+      return value;
+    }
+    return value.filter((item): item is string => typeof item === "string");
+  },
+  z.array(z.string().uuid()).max(3).optional()
+);
+
 const advancedNotesSchema = z
   .object({
     acidity: nullableEnum(ACIDITY_LEVELS),
@@ -73,6 +87,8 @@ const updateEntrySchema = z.object({
   country: nullableString,
   region: nullableString,
   appellation: nullableString,
+  classification: nullableString,
+  primary_grape_ids: primaryGrapeIdsSchema,
   rating: z.number().int().min(1).max(100).optional(),
   price_paid: nullablePricePaidSchema,
   price_paid_currency: z.preprocess(
@@ -245,6 +261,8 @@ export async function GET(
 
   const entry = {
     ...data,
+    primary_grapes:
+      (await fetchPrimaryGrapesByEntryId(supabase, [data.id])).get(data.id) ?? [],
     label_image_url: await createSignedUrl(data.label_image_path, supabase),
     place_image_url: await createSignedUrl(data.place_image_path, supabase),
     pairing_image_url: await createSignedUrl(data.pairing_image_path, supabase),
@@ -292,64 +310,197 @@ export async function PUT(
         : normalizeAdvancedNotes(payload.data.advanced_notes),
   };
 
+  const primaryGrapeIds =
+    normalizedData.primary_grape_ids === undefined
+      ? undefined
+      : normalizePrimaryGrapeIds(normalizedData.primary_grape_ids);
+  const entryFieldUpdates = { ...normalizedData };
+  delete entryFieldUpdates.primary_grape_ids;
+
   const updates = Object.fromEntries(
-    Object.entries(normalizedData).filter(([, value]) => value !== undefined)
+    Object.entries(entryFieldUpdates).filter(([, value]) => value !== undefined)
   );
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 0 && primaryGrapeIds === undefined) {
     return NextResponse.json({ error: "No updates provided" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
-    .from("wine_entries")
-    .update(updates)
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select("*")
-    .single();
+  let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
 
-  if (error || !data) {
-    if (error?.message.includes("advanced_notes")) {
+  if (Object.keys(updates).length > 0) {
+    const { data, error } = await supabase
+      .from("wine_entries")
+      .update(updates)
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select("*")
+      .single();
+
+    if (error || !data) {
+      if (error?.message.includes("advanced_notes")) {
+        return NextResponse.json(
+          {
+            error:
+              "Advanced notes are not available yet. Run supabase/sql/013_advanced_notes.sql and try again.",
+          },
+          { status: 500 }
+        );
+      }
+      if (
+        error?.message.includes("wine_entries_price_source_requires_price_check")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
+          },
+          { status: 400 }
+        );
+      }
+      if (
+        error?.message.includes("classification") ||
+        error?.message.includes("grape")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Entry classification and primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
+          },
+          { status: 500 }
+        );
+      }
+      if (
+        error?.message.includes("price_paid") ||
+        error?.message.includes("price_paid_currency") ||
+        error?.message.includes("price_paid_source") ||
+        error?.message.includes("qpr_level")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Entry pricing and QPR fields are not available yet. Run supabase/sql/016_entry_pricing_qpr.sql and supabase/sql/017_entry_price_currency.sql and try again.",
+          },
+          { status: 500 }
+        );
+      }
       return NextResponse.json(
-        {
-          error:
-            "Advanced notes are not available yet. Run supabase/sql/013_advanced_notes.sql and try again.",
-        },
+        { error: error?.message ?? "Update failed" },
         { status: 500 }
       );
     }
-    if (
-      error?.message.includes("wine_entries_price_source_requires_price_check")
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
-        },
-        { status: 400 }
-      );
+
+    updatedEntry = data;
+  } else {
+    const { data, error } = await supabase
+      .from("wine_entries")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
-    if (
-      error?.message.includes("price_paid") ||
-      error?.message.includes("price_paid_currency") ||
-      error?.message.includes("price_paid_source") ||
-      error?.message.includes("qpr_level")
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Entry pricing and QPR fields are not available yet. Run supabase/sql/016_entry_pricing_qpr.sql and supabase/sql/017_entry_price_currency.sql and try again.",
-        },
-        { status: 500 }
-      );
-    }
-    return NextResponse.json(
-      { error: error?.message ?? "Update failed" },
-      { status: 500 }
-    );
+
+    updatedEntry = data;
   }
 
-  return NextResponse.json({ entry: data });
+  if (primaryGrapeIds !== undefined) {
+    if (primaryGrapeIds.length > 0) {
+      const { data: grapeRows, error: grapeLookupError } = await supabase
+        .from("grape_varieties")
+        .select("id")
+        .in("id", primaryGrapeIds);
+
+      if (grapeLookupError) {
+        if (
+          grapeLookupError.message.includes("grape_varieties") ||
+          grapeLookupError.message.includes("grape_aliases")
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
+            },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json(
+          { error: grapeLookupError.message },
+          { status: 500 }
+        );
+      }
+
+      const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
+      if (validGrapeIds.size !== primaryGrapeIds.length) {
+        return NextResponse.json(
+          { error: "One or more selected primary grapes are invalid." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const { error: deletePrimaryGrapesError } = await supabase
+      .from("entry_primary_grapes")
+      .delete()
+      .eq("entry_id", id);
+
+    if (deletePrimaryGrapesError) {
+      if (
+        deletePrimaryGrapesError.message.includes("entry_primary_grapes") ||
+        deletePrimaryGrapesError.message.includes("grape_varieties") ||
+        deletePrimaryGrapesError.message.includes("grape_aliases")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Primary grapes are not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: deletePrimaryGrapesError.message },
+        { status: 500 }
+      );
+    }
+
+    if (primaryGrapeIds.length > 0) {
+      const { error: insertPrimaryGrapesError } = await supabase
+        .from("entry_primary_grapes")
+        .insert(
+          primaryGrapeIds.map((varietyId, index) => ({
+            entry_id: id,
+            variety_id: varietyId,
+            position: index + 1,
+          }))
+        );
+
+      if (insertPrimaryGrapesError) {
+        return NextResponse.json(
+          { error: insertPrimaryGrapesError.message },
+          { status: 500 }
+        );
+      }
+    }
+  }
+
+  const primaryGrapesByEntryId = await fetchPrimaryGrapesByEntryId(supabase, [
+    id,
+  ]);
+
+  if (!updatedEntry) {
+    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    entry: {
+      ...updatedEntry,
+      primary_grapes: primaryGrapesByEntryId.get(id) ?? [],
+    },
+  });
 }
 
 export async function DELETE(

@@ -10,6 +10,7 @@ import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PriceCurrencySelect from "@/components/PriceCurrencySelect";
+import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
 import {
   ADVANCED_NOTE_FIELDS,
   ADVANCED_NOTE_OPTIONS,
@@ -25,6 +26,7 @@ import {
   type PricePaidSource,
   type QprLevel,
 } from "@/lib/entryMeta";
+import type { PrimaryGrape } from "@/types/wine";
 
 type NewEntryForm = {
   wine_name: string;
@@ -33,6 +35,7 @@ type NewEntryForm = {
   country: string;
   region: string;
   appellation: string;
+  classification: string;
   rating?: number;
   price_paid?: number;
   price_paid_currency: PricePaidCurrency;
@@ -63,6 +66,7 @@ type CreateEntryResponse = {
 };
 
 type ComparisonResponse = "more" | "less" | "same_or_not_sure";
+type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 
 export default function NewEntryPage() {
   const router = useRouter();
@@ -74,6 +78,7 @@ export default function NewEntryPage() {
       price_paid_currency: "usd",
       price_paid_source: "",
       qpr_level: "",
+      classification: "",
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
   });
@@ -110,6 +115,9 @@ export default function NewEntryPage() {
     { id: string; display_name: string | null; email: string | null }[]
   >([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedPrimaryGrapes, setSelectedPrimaryGrapes] = useState<
+    PrimaryGrapeSelection[]
+  >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingComparison, setPendingComparison] = useState<{
@@ -366,6 +374,55 @@ export default function NewEntryPage() {
     return "No producer or vintage";
   };
 
+  const normalizeGrapeLookupValue = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  const resolveSuggestedGrapes = async (suggestions: string[]) => {
+    const resolved: PrimaryGrapeSelection[] = [];
+    const seenIds = new Set<string>();
+
+    for (const suggestion of suggestions) {
+      const response = await fetch(
+        `/api/grapes?q=${encodeURIComponent(suggestion)}&limit=6`,
+        {
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const payload = (await response.json()) as {
+        grapes?: PrimaryGrapeSelection[];
+      };
+      const options = payload.grapes ?? [];
+      if (options.length === 0) {
+        continue;
+      }
+
+      const normalizedSuggestion = normalizeGrapeLookupValue(suggestion);
+      const exact =
+        options.find(
+          (option) =>
+            normalizeGrapeLookupValue(option.name) === normalizedSuggestion
+        ) ?? options[0];
+
+      if (!exact || seenIds.has(exact.id)) {
+        continue;
+      }
+
+      seenIds.add(exact.id);
+      resolved.push(exact);
+
+      if (resolved.length >= 3) {
+        break;
+      }
+    }
+
+    return resolved;
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -407,6 +464,8 @@ export default function NewEntryPage() {
           country: values.country || null,
           region: values.region || null,
           appellation: values.appellation || null,
+          classification: values.classification || null,
+          primary_grape_ids: selectedPrimaryGrapes.map((grape) => grape.id),
           rating,
           price_paid: pricePaid ?? null,
           price_paid_currency:
@@ -489,13 +548,16 @@ export default function NewEntryPage() {
     router.push(`/entries/${entry.id}`);
   });
 
-  const applyAutofill = (data: {
+  const applyAutofill = async (data: {
     wine_name?: string | null;
     producer?: string | null;
     vintage?: string | null;
     country?: string | null;
     region?: string | null;
     appellation?: string | null;
+    classification?: string | null;
+    primary_grape_suggestions?: string[] | null;
+    primary_grape_confidence?: number | null;
   }) => {
     const current = getValues();
     if (!current.wine_name && data.wine_name) {
@@ -515,6 +577,47 @@ export default function NewEntryPage() {
     }
     if (!current.appellation && data.appellation) {
       setValue("appellation", data.appellation);
+    }
+    if (!current.classification && data.classification) {
+      setValue("classification", data.classification);
+    }
+
+    if (selectedPrimaryGrapes.length > 0) {
+      return;
+    }
+
+    const grapeSuggestions = Array.isArray(data.primary_grape_suggestions)
+      ? data.primary_grape_suggestions
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      : [];
+
+    if (grapeSuggestions.length === 0) {
+      return;
+    }
+
+    const seenSuggestions = new Set<string>();
+    const uniqueSuggestions = grapeSuggestions
+      .filter((suggestion) => {
+        const dedupeKey = suggestion.toLowerCase();
+        if (seenSuggestions.has(dedupeKey)) {
+          return false;
+        }
+        seenSuggestions.add(dedupeKey);
+        return true;
+      })
+      .slice(0, 3);
+    const shouldApplyMultiple =
+      typeof data.primary_grape_confidence === "number" &&
+      data.primary_grape_confidence >= 0.9 &&
+      uniqueSuggestions.length <= 2;
+    const suggestionsToApply = shouldApplyMultiple
+      ? uniqueSuggestions
+      : uniqueSuggestions.slice(0, 1);
+
+    const resolved = await resolveSuggestedGrapes(suggestionsToApply);
+    if (resolved.length > 0) {
+      setSelectedPrimaryGrapes(resolved);
     }
   };
 
@@ -607,7 +710,7 @@ export default function NewEntryPage() {
       }
 
       const data = await response.json();
-      applyAutofill(data);
+      await applyAutofill(data);
       setAutofillStatus("success");
       const confidenceLabel =
         typeof data.confidence === "number"
@@ -821,6 +924,16 @@ export default function NewEntryPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium text-zinc-200">
+                Classification
+              </label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="Optional (e.g. Premier Cru, DOCG)"
+                {...register("classification")}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
               <input
                 type="text"
@@ -847,6 +960,12 @@ export default function NewEntryPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="md:col-span-2">
+              <PrimaryGrapeSelector
+                selected={selectedPrimaryGrapes}
+                onChange={setSelectedPrimaryGrapes}
+              />
             </div>
             <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
               <div className="grid gap-4 md:grid-cols-2">

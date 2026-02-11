@@ -10,6 +10,9 @@ const responseSchema = z.object({
   country: z.string().nullable().optional(),
   region: z.string().nullable().optional(),
   appellation: z.string().nullable().optional(),
+  classification: z.string().nullable().optional(),
+  primary_grape_suggestions: z.array(z.string()).optional(),
+  primary_grape_confidence: z.number().min(0).max(1).nullable().optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
   warnings: z.array(z.string()).optional(),
 });
@@ -21,6 +24,30 @@ function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function normalizeGrapeSuggestions(values?: string[] | null) {
+  if (!Array.isArray(values)) {
+    return [] as string[];
+  }
+
+  const unique = new Set<string>();
+  const suggestions: string[] = [];
+
+  values.forEach((value) => {
+    const normalized = value.trim();
+    if (!normalized) {
+      return;
+    }
+    const dedupeKey = normalized.toLowerCase();
+    if (unique.has(dedupeKey)) {
+      return;
+    }
+    unique.add(dedupeKey);
+    suggestions.push(normalized);
+  });
+
+  return suggestions.slice(0, 3);
 }
 
 function extractJson(text: string) {
@@ -83,7 +110,7 @@ export async function POST(request: Request) {
       {
         model: "gpt-5-mini",
         reasoning: { effort: "minimal" },
-        max_output_tokens: 300,
+        max_output_tokens: 420,
         text: {
           format: {
             type: "json_schema",
@@ -99,6 +126,12 @@ export async function POST(request: Request) {
                 country: { type: ["string", "null"] },
                 region: { type: ["string", "null"] },
                 appellation: { type: ["string", "null"] },
+                classification: { type: ["string", "null"] },
+                primary_grape_suggestions: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+                primary_grape_confidence: { type: ["number", "null"] },
                 confidence: { type: ["number", "null"] },
                 warnings: {
                   type: "array",
@@ -112,6 +145,9 @@ export async function POST(request: Request) {
                 "country",
                 "region",
                 "appellation",
+                "classification",
+                "primary_grape_suggestions",
+                "primary_grape_confidence",
                 "confidence",
                 "warnings",
               ],
@@ -125,9 +161,15 @@ export async function POST(request: Request) {
               {
                 type: "input_text",
                 text:
-                  "You are extracting wine label info. Return ONLY JSON with keys: " +
-                  "wine_name, producer, vintage, country, region, appellation, confidence, warnings. " +
-                  "Use null for unknown values. confidence is 0-1.",
+                  "You are extracting wine label info from a bottle photo. Return ONLY JSON with keys: " +
+                  "wine_name, producer, vintage, country, region, appellation, classification, " +
+                  "primary_grape_suggestions, primary_grape_confidence, confidence, warnings. " +
+                  "Appellation must be place-based only (for example Saint-Aubin, Pauillac, Barolo). " +
+                  "Classification must hold quality tiers or legal quality markers (for example Premier Cru, Grand Cru Classe, DOCG). " +
+                  "For primary_grape_suggestions, include canonical grape variety names and be conservative: prefer one grape by default, " +
+                  "only return multiple grapes if the label explicitly shows a blend or the style implies a highly certain blend. " +
+                  "Do not guess multiple grapes from weak regional hints alone. Use null for unknown scalar fields, [] for unknown grapes. " +
+                  "Both confidence fields are 0-1.",
               },
               { type: "input_image", image_url: dataUrl, detail: "high" },
             ],
@@ -165,6 +207,11 @@ export async function POST(request: Request) {
       country: normalize(data.country),
       region: normalize(data.region),
       appellation: normalize(data.appellation),
+      classification: normalize(data.classification),
+      primary_grape_suggestions: normalizeGrapeSuggestions(
+        data.primary_grape_suggestions
+      ),
+      primary_grape_confidence: data.primary_grape_confidence ?? null,
       confidence: data.confidence ?? null,
       warnings: data.warnings ?? [],
     });

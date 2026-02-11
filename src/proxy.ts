@@ -61,7 +61,9 @@ export async function proxy(request: NextRequest) {
   const isFriendsRoute = pathname.startsWith("/friends");
   const isLoginRoute = pathname.startsWith("/login");
   const isSignupRoute = pathname.startsWith("/signup");
-  const isUsernameSetupBypass = pathname.startsWith("/profile");
+  const isNewEntryRoute = pathname === "/entries/new";
+  const isUsernameSetupBypass =
+    pathname.startsWith("/profile") || isNewEntryRoute;
 
   const isProtected =
     isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;

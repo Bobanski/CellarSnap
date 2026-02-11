@@ -9,7 +9,8 @@ import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PriceCurrencySelect from "@/components/PriceCurrencySelect";
-import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
+import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
+import type { EntryPhoto, PrimaryGrape, WineEntryWithUrls } from "@/types/wine";
 import {
   ADVANCED_NOTE_FIELDS,
   ADVANCED_NOTE_OPTIONS,
@@ -34,6 +35,7 @@ type EditEntryForm = {
   country: string;
   region: string;
   appellation: string;
+  classification: string;
   rating?: number;
   price_paid?: number;
   price_paid_currency: PricePaidCurrency;
@@ -45,6 +47,8 @@ type EditEntryForm = {
   entry_privacy: "public" | "friends" | "private";
   advanced_notes: AdvancedNotesFormValues;
 };
+
+type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 
 export default function EditEntryPage() {
   const router = useRouter();
@@ -58,6 +62,7 @@ export default function EditEntryPage() {
       price_paid_currency: "usd",
       price_paid_source: "",
       qpr_level: "",
+      classification: "",
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
   });
@@ -91,6 +96,9 @@ export default function EditEntryPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedPrimaryGrapes, setSelectedPrimaryGrapes] = useState<
+    PrimaryGrapeSelection[]
+  >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -121,6 +129,16 @@ export default function EditEntryPage() {
       if (isMounted) {
         setEntry(data.entry);
         setSelectedUserIds(data.entry.tasted_with_user_ids ?? []);
+        setSelectedPrimaryGrapes(
+          Array.isArray(data.entry.primary_grapes)
+            ? data.entry.primary_grapes
+                .map((grape: PrimaryGrape) => ({
+                  id: grape.id,
+                  name: grape.name,
+                }))
+                .slice(0, 3)
+            : []
+        );
         reset({
           wine_name: data.entry.wine_name ?? "",
           producer: data.entry.producer ?? "",
@@ -128,6 +146,7 @@ export default function EditEntryPage() {
           country: data.entry.country ?? "",
           region: data.entry.region ?? "",
           appellation: data.entry.appellation ?? "",
+          classification: data.entry.classification ?? "",
           rating: data.entry.rating ?? undefined,
           price_paid: data.entry.price_paid ?? undefined,
           price_paid_currency: data.entry.price_paid_currency ?? "usd",
@@ -397,6 +416,8 @@ export default function EditEntryPage() {
       country: values.country || null,
       region: values.region || null,
       appellation: values.appellation || null,
+      classification: values.classification || null,
+      primary_grape_ids: selectedPrimaryGrapes.map((grape) => grape.id),
       rating,
       price_paid: pricePaid ?? null,
       price_paid_currency: pricePaid !== undefined ? pricePaidCurrency : null,
@@ -617,6 +638,16 @@ export default function EditEntryPage() {
               />
             </div>
             <div>
+              <label className="text-sm font-medium text-zinc-200">
+                Classification
+              </label>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="Optional (e.g. Premier Cru, DOCG)"
+                {...register("classification")}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
               <input
                 type="text"
@@ -643,6 +674,12 @@ export default function EditEntryPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="md:col-span-2">
+              <PrimaryGrapeSelector
+                selected={selectedPrimaryGrapes}
+                onChange={setSelectedPrimaryGrapes}
+              />
             </div>
             <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
               <div className="grid gap-4 md:grid-cols-2">
