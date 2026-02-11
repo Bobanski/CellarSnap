@@ -111,6 +111,11 @@ export default function EditEntryPage() {
       control,
       name: "price_paid_currency",
     }) || "usd";
+  const currentWineName =
+    useWatch({
+      control,
+      name: "wine_name",
+    })?.trim() ?? "";
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -549,6 +554,20 @@ export default function EditEntryPage() {
     );
   }
 
+  const currentLabelPhoto = displayPhotosByType("label")[0] ?? null;
+  const currentPlacePhoto = displayPhotosByType("place")[0] ?? null;
+  const currentPairingPhoto = displayPhotosByType("pairing")[0] ?? null;
+  const currentPhotoCards: Array<{
+    key: "label" | "place" | "pairing";
+    label: string;
+    photo: EntryPhoto | null;
+  }> = [
+    { key: "label", label: "Label", photo: currentLabelPhoto },
+    { key: "place", label: "Place", photo: currentPlacePhoto },
+    { key: "pairing", label: "Pairing", photo: currentPairingPhoto },
+  ];
+  const hasCurrentPhotos = currentPhotoCards.some((card) => card.photo);
+
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-6xl space-y-8">
@@ -598,73 +617,52 @@ export default function EditEntryPage() {
           className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
           onSubmit={onSubmit}
         >
+          {currentWineName ? (
+            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+                Wine
+              </p>
+              <p className="mt-1 text-lg font-semibold text-zinc-50">{currentWineName}</p>
+            </div>
+          ) : null}
+
           <div>
             <p className="text-sm font-medium text-zinc-200">Current photos</p>
-            {entry.label_image_url || entry.place_image_url || entry.pairing_image_url ? (
+            {hasCurrentPhotos ? (
               <div className="mt-2 grid gap-4 md:grid-cols-3">
-                {entry.label_image_url ? (
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                    <img
-                      src={entry.label_image_url}
-                      alt="Current label photo"
-                      className="h-36 w-full object-cover"
-                    />
-                    <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
-                      <span>Label</span>
-                      {currentUserId === entry.user_id ? (
-                        <a
-                          href={entry.label_image_url}
-                          download
-                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                        >
-                          Download
-                        </a>
-                      ) : null}
+                {currentPhotoCards.map((card) => {
+                  if (!card.photo) return null;
+                  return (
+                    <div
+                      key={card.key}
+                      className="overflow-hidden rounded-2xl border border-white/10 bg-black/30"
+                    >
+                      {card.photo.signed_url ? (
+                        <img
+                          src={card.photo.signed_url}
+                          alt={`Current ${card.label.toLowerCase()} photo`}
+                          className="h-36 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-36 items-center justify-center text-xs text-zinc-400">
+                          Photo unavailable
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
+                        <span>{card.label}</span>
+                        {currentUserId === entry.user_id && card.photo.signed_url ? (
+                          <a
+                            href={card.photo.signed_url}
+                            download
+                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          >
+                            Download
+                          </a>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-                {entry.place_image_url ? (
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                    <img
-                      src={entry.place_image_url}
-                      alt="Current place photo"
-                      className="h-36 w-full object-cover"
-                    />
-                    <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
-                      <span>Place</span>
-                      {currentUserId === entry.user_id ? (
-                        <a
-                          href={entry.place_image_url}
-                          download
-                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                        >
-                          Download
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-                {entry.pairing_image_url ? (
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                    <img
-                      src={entry.pairing_image_url}
-                      alt="Current pairing photo"
-                      className="h-36 w-full object-cover"
-                    />
-                    <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
-                      <span>Pairing</span>
-                      {currentUserId === entry.user_id ? (
-                        <a
-                          href={entry.pairing_image_url}
-                          download
-                          className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                        >
-                          Download
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
+                  );
+                })}
               </div>
             ) : (
               <p className="mt-2 text-sm text-zinc-400">No photos uploaded yet.</p>
