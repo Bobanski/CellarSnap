@@ -141,6 +141,13 @@ export default function NewEntryPage() {
     height: number;
   };
 
+  type LabelBbox = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+
   type LabelAnchor = {
     x: number;
     y: number;
@@ -157,6 +164,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[] | null;
     confidence?: number | null;
     bottle_bbox?: BottleBbox | null;
+    label_bbox?: LabelBbox | null;
     label_anchor?: LabelAnchor | null;
   };
 
@@ -185,6 +193,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[];
     confidence: number | null;
     bottle_bbox: BottleBbox | null;
+    label_bbox: LabelBbox | null;
     label_anchor: LabelAnchor | null;
     included: boolean;
     photoIndex: number;
@@ -479,6 +488,48 @@ export default function NewEntryPage() {
     const normalizedHeight = bottom - clampedY;
 
     if (normalizedWidth < 0.05 || normalizedHeight < 0.08) {
+      return null;
+    }
+
+    return {
+      x: clampedX,
+      y: clampedY,
+      width: normalizedWidth,
+      height: normalizedHeight,
+    };
+  };
+
+  const normalizeLabelBbox = (value: unknown): LabelBbox | null => {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+
+    const bbox = value as Partial<LabelBbox>;
+    const x = Number(bbox.x);
+    const y = Number(bbox.y);
+    const width = Number(bbox.width);
+    const height = Number(bbox.height);
+
+    if (
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      !Number.isFinite(width) ||
+      !Number.isFinite(height)
+    ) {
+      return null;
+    }
+
+    const clampedX = Math.min(1, Math.max(0, x));
+    const clampedY = Math.min(1, Math.max(0, y));
+    const clampedWidth = Math.min(1, Math.max(0, width));
+    const clampedHeight = Math.min(1, Math.max(0, height));
+
+    const right = Math.min(1, clampedX + clampedWidth);
+    const bottom = Math.min(1, clampedY + clampedHeight);
+    const normalizedWidth = right - clampedX;
+    const normalizedHeight = bottom - clampedY;
+
+    if (normalizedWidth < 0.03 || normalizedHeight < 0.03) {
       return null;
     }
 
@@ -821,6 +872,7 @@ export default function NewEntryPage() {
   const createLineupBottleThumbnail = async (
     sourceFile: File,
     bottleBbox: BottleBbox | null,
+    labelBbox: LabelBbox | null,
     labelAnchor: LabelAnchor | null,
     outputIndex: number
   ) => {
@@ -839,27 +891,18 @@ export default function NewEntryPage() {
         img.src = imageUrl ?? "";
       });
 
-      // Estimate the label region from the bottle bounding box.
-      // Wine labels typically sit in the middle portion of the bottle,
-      // below the neck (~30% down) and above the base (~75% down).
-      const labelTop = bottleBbox.y + bottleBbox.height * 0.25;
-      const labelBottom = bottleBbox.y + bottleBbox.height * 0.80;
-      const labelHeight = labelBottom - labelTop;
-
       const boxX = Math.round(bottleBbox.x * image.width);
-      const boxY = Math.round(labelTop * image.height);
+      const boxY = Math.round(bottleBbox.y * image.height);
       const boxWidth = Math.round(bottleBbox.width * image.width);
-      const boxHeight = Math.round(labelHeight * image.height);
+      const boxHeight = Math.round(bottleBbox.height * image.height);
 
       if (boxWidth < 8 || boxHeight < 8) {
         return sourceFile;
       }
 
-      // Keep the original tight X framing, but bias Y lower so the label
-      // lands in the center of square feed thumbnails instead of the shoulder.
+      // Keep the original tight X framing so each thumbnail stays isolated
+      // to a single bottle even in dense lineups.
       const horizontalPadding = Math.round(boxWidth * 0.16);
-      const topPadding = Math.round(boxHeight * 0.03);
-      const bottomPadding = Math.round(boxHeight * 0.3);
 
       const cropX = Math.max(0, boxX - horizontalPadding);
       const cropRight = Math.min(image.width, boxX + boxWidth + horizontalPadding);
@@ -870,22 +913,44 @@ export default function NewEntryPage() {
         return sourceFile;
       }
 
-      const fallbackFocusY = boxY + boxHeight * 0.72;
-      const labelFocusY = labelAnchor ? labelAnchor.y * image.height : null;
-      const anchorRelativeY =
-        typeof labelFocusY === "number" && Number.isFinite(labelFocusY)
-          ? (labelFocusY - boxY) / boxHeight
-          : null;
-      const anchorLooksTooHigh =
-        typeof anchorRelativeY === "number" && anchorRelativeY < 0.46;
-      const focusY =
-        typeof labelFocusY === "number" &&
-        Number.isFinite(labelFocusY) &&
-        !anchorLooksTooHigh
-          ? labelFocusY
-          : fallbackFocusY;
-      const minY = boxY - topPadding;
-      const maxY = boxY + boxHeight + bottomPadding;
+      const inferredLabelTop = boxY + boxHeight * 0.28;
+      const inferredLabelBottom = boxY + boxHeight * 0.82;
+
+      let labelTop = inferredLabelTop;
+      let labelBottom = inferredLabelBottom;
+      if (labelBbox) {
+        const modelLabelTop = labelBbox.y * image.height;
+        const modelLabelBottom = (labelBbox.y + labelBbox.height) * image.height;
+        const boundedTop = Math.max(
+          boxY + boxHeight * 0.12,
+          Math.min(boxY + boxHeight * 0.9, modelLabelTop)
+        );
+        const boundedBottom = Math.max(
+          boundedTop + 8,
+          Math.min(boxY + boxHeight * 0.95, modelLabelBottom)
+        );
+        if (boundedBottom - boundedTop >= 8) {
+          labelTop = boundedTop;
+          labelBottom = boundedBottom;
+        }
+      }
+
+      const labelHeight = Math.max(8, labelBottom - labelTop);
+      const labelCenterY = labelTop + labelHeight / 2;
+      const anchorY = labelAnchor ? labelAnchor.y * image.height : null;
+      const anchorIsReasonable =
+        typeof anchorY === "number" &&
+        Number.isFinite(anchorY) &&
+        anchorY >= labelTop - boxHeight * 0.08 &&
+        anchorY <= labelBottom + boxHeight * 0.18;
+      const blendedCenterY = anchorIsReasonable
+        ? labelCenterY * 0.7 + anchorY * 0.3
+        : labelCenterY;
+
+      // Push slightly lower so the main body label is centered in square feed crops.
+      const focusY = blendedCenterY + labelHeight * 0.16;
+      const minY = labelTop + labelHeight * 0.2;
+      const maxY = labelBottom + labelHeight * 0.9;
       const constrainedFocusY = Math.min(
         maxY,
         Math.max(minY, focusY)
@@ -1014,6 +1079,7 @@ export default function NewEntryPage() {
               const thumbnail = await createLineupBottleThumbnail(
                 sourcePhoto.file,
                 wine.bottle_bbox,
+                wine.label_bbox,
                 wine.label_anchor,
                 i
               );
@@ -1065,7 +1131,7 @@ export default function NewEntryPage() {
     );
 
     const controller = new AbortController();
-    const timeoutMs = files.length > 1 ? 70000 + files.length * 10000 : 70000;
+    const timeoutMs = files.length > 1 ? 90000 + files.length * 10000 : 90000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
@@ -1144,6 +1210,7 @@ export default function NewEntryPage() {
                   ? Math.min(1, Math.max(0, wine.confidence))
                   : null,
               bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+              label_bbox: normalizeLabelBbox(wine.label_bbox),
               label_anchor: normalizeLabelAnchor(wine.label_anchor),
             } satisfies Omit<LineupWine, "included" | "photoIndex">;
 
@@ -1457,7 +1524,9 @@ export default function NewEntryPage() {
                 }`}
               >
                 {autofillMessage}
-                {autofillStatus === "loading" && !lineupCreating ? " (Please wait up to 30 seconds.)" : ""}
+                {autofillStatus === "loading" && !lineupCreating
+                  ? " (Please wait up to 90 seconds for larger lineups.)"
+                  : ""}
               </p>
             ) : null}
 

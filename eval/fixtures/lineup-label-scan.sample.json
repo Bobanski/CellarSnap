@@ -1,0 +1,37 @@
+{
+  "model": "gpt-5-nano",
+  "cases": [
+    {
+      "id": "lineup-001",
+      "image_path": "images/lineup-001.jpg",
+      "expected": {
+        "total_bottles_detected": 3,
+        "wines": [
+          {
+            "wine_name": "Example Wine One",
+            "producer": "Example Producer",
+            "vintage": "2019",
+            "country": "France",
+            "region": "Burgundy",
+            "appellation": "Meursault",
+            "classification": "Premier Cru",
+            "label_bbox": {
+              "x": 0.24,
+              "y": 0.47,
+              "width": 0.12,
+              "height": 0.18
+            }
+          },
+          {
+            "wine_name": "Example Wine Two",
+            "producer": "Example Producer",
+            "vintage": "2020"
+          },
+          {
+            "wine_name": "Example Wine Three"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -22,6 +22,15 @@ const wineSchema = z.object({
     })
     .nullable()
     .optional(),
+  label_bbox: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .nullable()
+    .optional(),
   label_anchor: z
     .object({
       x: z.number(),
@@ -36,7 +45,31 @@ const responseSchema = z.object({
   total_bottles_detected: z.number().int().min(0).optional(),
 });
 
-const TIMEOUT_MS = 60000;
+const labelRefineSchema = z.object({
+  labels: z.array(
+    z.object({
+      index: z.number().int().min(0),
+      label_bbox: z
+        .object({
+          x: z.number(),
+          y: z.number(),
+          width: z.number(),
+          height: z.number(),
+        })
+        .nullable()
+        .optional(),
+      label_anchor: z
+        .object({
+          x: z.number(),
+          y: z.number(),
+        })
+        .nullable()
+        .optional(),
+    })
+  ),
+});
+
+const TIMEOUT_MS = 75000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function normalize(value?: string | null) {
@@ -51,6 +84,31 @@ function normalizeBottleBbox(value?: {
   width?: number;
   height?: number;
 } | null) {
+  return normalizeRect(value, 0.05, 0.08);
+}
+
+function normalizeLabelBbox(value?: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+} | null) {
+  return normalizeRect(value, 0.03, 0.03);
+}
+
+function normalizeRect(
+  value:
+    | {
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
+      }
+    | null
+    | undefined,
+  minWidth: number,
+  minHeight: number
+) {
   if (!value) return null;
 
   const x = Number(value.x);
@@ -77,7 +135,7 @@ function normalizeBottleBbox(value?: {
   const finalWidth = right - clampedX;
   const finalHeight = bottom - clampedY;
 
-  if (finalWidth < 0.05 || finalHeight < 0.08) {
+  if (finalWidth < minWidth || finalHeight < minHeight) {
     return null;
   }
 
@@ -213,6 +271,17 @@ export async function POST(request: Request) {
                         },
                         required: ["x", "y", "width", "height"],
                       },
+                      label_bbox: {
+                        type: ["object", "null"],
+                        additionalProperties: false,
+                        properties: {
+                          x: { type: "number" },
+                          y: { type: "number" },
+                          width: { type: "number" },
+                          height: { type: "number" },
+                        },
+                        required: ["x", "y", "width", "height"],
+                      },
                       label_anchor: {
                         type: ["object", "null"],
                         additionalProperties: false,
@@ -234,6 +303,7 @@ export async function POST(request: Request) {
                       "primary_grape_suggestions",
                       "confidence",
                       "bottle_bbox",
+                      "label_bbox",
                       "label_anchor",
                     ],
                   },
@@ -255,9 +325,11 @@ export async function POST(request: Request) {
                   "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per bottle, left-to-right order). " +
                   "CRITICAL: wines array length MUST equal total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
                   "If text is unreadable, still include that bottle object with null fields, empty grape array, and low confidence. " +
-                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_anchor. " +
+                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
+                  "label_bbox is a normalized rectangle for the primary front body label with keys x, y, width, height; use null if that label is not visible. " +
+                  "The label_bbox must tightly frame the main front label and stay inside the same bottle. Do not include neck labels, foil, shoulder emblems, or bottle top. " +
                   "label_anchor is a normalized point with x and y at the visual center of the bottle's primary front label; use null if the label center is not visible. " +
                   "The label_anchor must target the main body label and not the neck label, capsule foil, shoulder badge, crest, or bottle top. " +
                   "Appellation must be place-based only (e.g. Saint-Aubin, Pauillac, Barolo). " +
@@ -298,7 +370,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const wines = parsed.data.wines.map((wine) => ({
+    const baseWines = parsed.data.wines.map((wine) => ({
       wine_name: normalize(wine.wine_name),
       producer: normalize(wine.producer),
       vintage: normalize(wine.vintage),
@@ -312,8 +384,148 @@ export async function POST(request: Request) {
         .slice(0, 3),
       confidence: wine.confidence ?? null,
       bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+      label_bbox: normalizeLabelBbox(wine.label_bbox),
       label_anchor: normalizeAnchor(wine.label_anchor),
     }));
+
+    const boxedWines = baseWines
+      .map((wine, index) => ({ index, bottle_bbox: wine.bottle_bbox }))
+      .filter(
+        (
+          wine
+        ): wine is {
+          index: number;
+          bottle_bbox: NonNullable<typeof wine.bottle_bbox>;
+        } => Boolean(wine.bottle_bbox)
+      );
+
+    const refinedByIndex = new Map<
+      number,
+      {
+        label_bbox: ReturnType<typeof normalizeLabelBbox>;
+        label_anchor: ReturnType<typeof normalizeAnchor>;
+      }
+    >();
+
+    // Pass 2: refine label geometry from known bottle boxes.
+    if (boxedWines.length > 0) {
+      try {
+        const refineResponse = await openai.responses.create(
+          {
+            model: "gpt-5-nano",
+            reasoning: { effort: "minimal" },
+            max_output_tokens: 2200,
+            text: {
+              format: {
+                type: "json_schema",
+                name: "lineup_label_refine",
+                strict: true,
+                schema: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    labels: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        properties: {
+                          index: { type: "number" },
+                          label_bbox: {
+                            type: ["object", "null"],
+                            additionalProperties: false,
+                            properties: {
+                              x: { type: "number" },
+                              y: { type: "number" },
+                              width: { type: "number" },
+                              height: { type: "number" },
+                            },
+                            required: ["x", "y", "width", "height"],
+                          },
+                          label_anchor: {
+                            type: ["object", "null"],
+                            additionalProperties: false,
+                            properties: {
+                              x: { type: "number" },
+                              y: { type: "number" },
+                            },
+                            required: ["x", "y"],
+                          },
+                        },
+                        required: ["index", "label_bbox", "label_anchor"],
+                      },
+                    },
+                  },
+                  required: ["labels"],
+                },
+              },
+            },
+            input: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "input_text",
+                    text:
+                      "You are pass 2 of wine bottle geometry extraction. " +
+                      "For each provided bottle index + bottle_bbox, return a label_bbox and label_anchor for the PRIMARY FRONT BODY LABEL only. " +
+                      "Do not target neck labels, foil capsules, shoulder emblems, medallions, or bottle top. " +
+                      "label_bbox must tightly frame the main front label and remain inside the corresponding bottle_bbox. " +
+                      "If the main label is not visible, return null values for that bottle. " +
+                      "Bottle list (normalized coordinates, 0-1): " +
+                      JSON.stringify(boxedWines),
+                  },
+                  { type: "input_image", image_url: dataUrl, detail: "high" },
+                ],
+              },
+            ],
+            safety_identifier: user.id,
+          },
+          { signal: controller.signal }
+        );
+
+        const refineOutput =
+          "output_text" in refineResponse &&
+          typeof refineResponse.output_text === "string"
+            ? refineResponse.output_text
+            : "";
+        if (refineOutput.trim()) {
+          const parsedRefine = labelRefineSchema.safeParse(
+            extractJson(refineOutput)
+          );
+          if (parsedRefine.success) {
+            parsedRefine.data.labels.forEach((item) => {
+              if (!boxedWines.some((w) => w.index === item.index)) {
+                return;
+              }
+              const normalizedLabel = normalizeLabelBbox(item.label_bbox);
+              const normalizedAnchor = normalizeAnchor(item.label_anchor);
+              if (!normalizedLabel && !normalizedAnchor) {
+                return;
+              }
+              refinedByIndex.set(item.index, {
+                label_bbox: normalizedLabel,
+                label_anchor: normalizedAnchor,
+              });
+            });
+          }
+        }
+      } catch {
+        // Best-effort refinement only; keep first-pass geometry if this fails.
+      }
+    }
+
+    const wines = baseWines.map((wine, index) => {
+      const refined = refinedByIndex.get(index);
+      if (!refined) {
+        return wine;
+      }
+      return {
+        ...wine,
+        label_bbox: refined.label_bbox ?? wine.label_bbox,
+        label_anchor: refined.label_anchor ?? wine.label_anchor,
+      };
+    });
 
     return NextResponse.json({
       wines,
