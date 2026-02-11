@@ -786,29 +786,30 @@ export default function NewEntryPage() {
         return sourceFile;
       }
 
-      // Generate a square thumbnail focused on the label zone (lower-mid bottle),
-      // which reads better in the app's square feed cards than a full-bottle crop.
-      const focusX = boxX + boxWidth / 2;
-      const focusY = boxY + boxHeight * 0.64;
-      const preferredSide = Math.round(Math.max(boxWidth * 1.5, boxHeight * 0.72));
-      const side = Math.min(
-        Math.max(preferredSide, 64),
-        image.width,
-        image.height
-      );
+      // Keep the original tight X framing, but bias Y lower so the label
+      // lands in the center of square feed thumbnails instead of the shoulder.
+      const horizontalPadding = Math.round(boxWidth * 0.16);
+      const topPadding = Math.round(boxHeight * 0.03);
+      const bottomPadding = Math.round(boxHeight * 0.3);
 
-      if (side < 8) {
+      const cropX = Math.max(0, boxX - horizontalPadding);
+      const cropRight = Math.min(image.width, boxX + boxWidth + horizontalPadding);
+      const cropWidth = cropRight - cropX;
+
+      const cropY = Math.max(0, boxY - topPadding);
+      const cropBottom = Math.min(
+        image.height,
+        boxY + boxHeight + bottomPadding
+      );
+      const cropHeight = cropBottom - cropY;
+
+      if (cropWidth < 8 || cropHeight < 8) {
         return sourceFile;
       }
 
-      let cropX = Math.round(focusX - side / 2);
-      let cropY = Math.round(focusY - side / 2);
-      cropX = Math.min(Math.max(0, cropX), image.width - side);
-      cropY = Math.min(Math.max(0, cropY), image.height - side);
-
       const canvas = document.createElement("canvas");
-      canvas.width = side;
-      canvas.height = side;
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         return sourceFile;
@@ -818,12 +819,12 @@ export default function NewEntryPage() {
         image,
         cropX,
         cropY,
-        side,
-        side,
+        cropWidth,
+        cropHeight,
         0,
         0,
-        side,
-        side
+        cropWidth,
+        cropHeight
       );
 
       const blob = await new Promise<Blob | null>((resolve) =>
