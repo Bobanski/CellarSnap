@@ -822,12 +822,8 @@ export default function NewEntryPage() {
       // Keep the original tight X framing, but bias Y lower so the label
       // lands in the center of square feed thumbnails instead of the shoulder.
       const horizontalPadding = Math.round(boxWidth * 0.16);
-<<<<<<< HEAD
       const topPadding = Math.round(boxHeight * 0.03);
       const bottomPadding = Math.round(boxHeight * 0.3);
-=======
-      const verticalPadding = Math.round(boxHeight * 0.15);
->>>>>>> 2ff3cd27326d9132d57ef851f5afc69e72a2b929
 
       const cropX = Math.max(0, boxX - horizontalPadding);
       const cropRight = Math.min(image.width, boxX + boxWidth + horizontalPadding);
@@ -960,21 +956,6 @@ export default function NewEntryPage() {
           const payload = await response.json();
           const entry = payload.entry;
 
-<<<<<<< HEAD
-        // Upload a per-bottle thumbnail (fallback to original source photo)
-        const sourcePhoto = labelPhotos[wine.photoIndex];
-        if (entry?.id && sourcePhoto) {
-          try {
-            const thumbnail = await createLineupBottleThumbnail(
-              sourcePhoto.file,
-              wine.bottle_bbox,
-              wine.label_anchor,
-              i
-            );
-            await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
-          } catch {
-            // Photo upload failed but entry was created, continue
-=======
           // Upload a per-bottle thumbnail (fallback to original source photo)
           const sourcePhoto = labelPhotos[wine.photoIndex];
           if (entry?.id && sourcePhoto) {
@@ -982,13 +963,13 @@ export default function NewEntryPage() {
               const thumbnail = await createLineupBottleThumbnail(
                 sourcePhoto.file,
                 wine.bottle_bbox,
+                wine.label_anchor,
                 i
               );
               await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
             } catch {
               // Photo upload failed but entry was created, continue
             }
->>>>>>> 2ff3cd27326d9132d57ef851f5afc69e72a2b929
           }
 
           created++;
