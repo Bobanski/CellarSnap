@@ -61,9 +61,6 @@ export async function proxy(request: NextRequest) {
   const isFriendsRoute = pathname.startsWith("/friends");
   const isLoginRoute = pathname.startsWith("/login");
   const isSignupRoute = pathname.startsWith("/signup");
-  const isNewEntryRoute = pathname === "/entries/new";
-  const isUsernameSetupBypass =
-    pathname.startsWith("/profile") || isNewEntryRoute;
 
   const isProtected =
     isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
@@ -76,27 +73,11 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const hasUsername = Boolean(profile?.display_name?.trim());
-    if (!hasUsername && !isUsernameSetupBypass) {
-      return redirectWithCookies({
-        request,
-        response,
-        pathname: "/profile",
-        searchParams: { setup: "username" },
-      });
-    }
-
     if (isLoginRoute || isSignupRoute) {
       return redirectWithCookies({
         request,
         response,
-        pathname: hasUsername ? "/" : "/profile",
+        pathname: "/",
       });
     }
   }
