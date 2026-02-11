@@ -22,6 +22,13 @@ const wineSchema = z.object({
     })
     .nullable()
     .optional(),
+  label_anchor: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const responseSchema = z.object({
@@ -79,6 +86,21 @@ function normalizeBottleBbox(value?: {
     y: clampedY,
     width: finalWidth,
     height: finalHeight,
+  };
+}
+
+function normalizeAnchor(value?: { x?: number; y?: number } | null) {
+  if (!value) return null;
+
+  const x = Number(value.x);
+  const y = Number(value.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    return null;
+  }
+
+  return {
+    x: Math.min(1, Math.max(0, x)),
+    y: Math.min(1, Math.max(0, y)),
   };
 }
 
@@ -190,6 +212,15 @@ export async function POST(request: Request) {
                         },
                         required: ["x", "y", "width", "height"],
                       },
+                      label_anchor: {
+                        type: ["object", "null"],
+                        additionalProperties: false,
+                        properties: {
+                          x: { type: "number" },
+                          y: { type: "number" },
+                        },
+                        required: ["x", "y"],
+                      },
                     },
                     required: [
                       "wine_name",
@@ -202,6 +233,7 @@ export async function POST(request: Request) {
                       "primary_grape_suggestions",
                       "confidence",
                       "bottle_bbox",
+                      "label_anchor",
                     ],
                   },
                 },
@@ -221,9 +253,10 @@ export async function POST(request: Request) {
                   "This photo shows one or more wine bottles. Identify each unique bottle visible in the image. " +
                   "For each bottle, extract as much label information as you can read. " +
                   "Return JSON with a 'wines' array (one object per bottle, left-to-right order) and 'total_bottles_detected' (integer). " +
-                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox. " +
+                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
+                  "label_anchor is a normalized point with x and y at the visual center of the bottle's primary front label; use null if the label center is not visible. " +
                   "Appellation must be place-based only (e.g. Saint-Aubin, Pauillac, Barolo). " +
                   "Classification must hold quality tiers or legal quality markers (e.g. Premier Cru, Grand Cru Classe, DOCG). " +
                   "For primary_grape_suggestions, include canonical grape variety names. " +
@@ -276,6 +309,7 @@ export async function POST(request: Request) {
         .slice(0, 3),
       confidence: wine.confidence ?? null,
       bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+      label_anchor: normalizeAnchor(wine.label_anchor),
     }));
 
     return NextResponse.json({

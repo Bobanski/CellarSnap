@@ -141,6 +141,11 @@ export default function NewEntryPage() {
     height: number;
   };
 
+  type LabelAnchor = {
+    x: number;
+    y: number;
+  };
+
   type LineupApiWine = {
     wine_name?: string | null;
     producer?: string | null;
@@ -152,6 +157,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[] | null;
     confidence?: number | null;
     bottle_bbox?: BottleBbox | null;
+    label_anchor?: LabelAnchor | null;
   };
 
   type LineupWine = {
@@ -165,6 +171,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[];
     confidence: number | null;
     bottle_bbox: BottleBbox | null;
+    label_anchor: LabelAnchor | null;
     included: boolean;
     photoIndex: number;
   };
@@ -469,6 +476,24 @@ export default function NewEntryPage() {
     };
   };
 
+  const normalizeLabelAnchor = (value: unknown): LabelAnchor | null => {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+
+    const anchor = value as Partial<LabelAnchor>;
+    const x = Number(anchor.x);
+    const y = Number(anchor.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      return null;
+    }
+
+    return {
+      x: Math.min(1, Math.max(0, x)),
+      y: Math.min(1, Math.max(0, y)),
+    };
+  };
+
   const resolveSuggestedGrapes = async (suggestions: string[]) => {
     const resolved: PrimaryGrapeSelection[] = [];
     const seenIds = new Set<string>();
@@ -760,6 +785,7 @@ export default function NewEntryPage() {
   const createLineupBottleThumbnail = async (
     sourceFile: File,
     bottleBbox: BottleBbox | null,
+    labelAnchor: LabelAnchor | null,
     outputIndex: number
   ) => {
     if (!sourceFile.type.startsWith("image/") || !bottleBbox) {
@@ -795,21 +821,32 @@ export default function NewEntryPage() {
       const cropX = Math.max(0, boxX - horizontalPadding);
       const cropRight = Math.min(image.width, boxX + boxWidth + horizontalPadding);
       const cropWidth = cropRight - cropX;
+      const side = Math.min(cropWidth, image.width, image.height);
 
-      const cropY = Math.max(0, boxY - topPadding);
-      const cropBottom = Math.min(
-        image.height,
-        boxY + boxHeight + bottomPadding
-      );
-      const cropHeight = cropBottom - cropY;
-
-      if (cropWidth < 8 || cropHeight < 8) {
+      if (side < 8) {
         return sourceFile;
       }
 
+      const fallbackFocusY = boxY + boxHeight * 0.72;
+      const labelFocusY = labelAnchor ? labelAnchor.y * image.height : null;
+      const focusY =
+        typeof labelFocusY === "number" && Number.isFinite(labelFocusY)
+          ? labelFocusY
+          : fallbackFocusY;
+      const minY = boxY - topPadding;
+      const maxY = boxY + boxHeight + bottomPadding;
+      const constrainedFocusY = Math.min(
+        maxY,
+        Math.max(minY, focusY)
+      );
+      const cropY = Math.min(
+        Math.max(0, Math.round(constrainedFocusY - side / 2)),
+        image.height - side
+      );
+
       const canvas = document.createElement("canvas");
-      canvas.width = cropWidth;
-      canvas.height = cropHeight;
+      canvas.width = side;
+      canvas.height = side;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         return sourceFile;
@@ -819,12 +856,12 @@ export default function NewEntryPage() {
         image,
         cropX,
         cropY,
-        cropWidth,
-        cropHeight,
+        side,
+        side,
         0,
         0,
-        cropWidth,
-        cropHeight
+        side,
+        side
       );
 
       const blob = await new Promise<Blob | null>((resolve) =>
@@ -906,6 +943,7 @@ export default function NewEntryPage() {
             const thumbnail = await createLineupBottleThumbnail(
               sourcePhoto.file,
               wine.bottle_bbox,
+              wine.label_anchor,
               i
             );
             await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
@@ -1026,6 +1064,7 @@ export default function NewEntryPage() {
                 ? Math.min(1, Math.max(0, wine.confidence))
                 : null,
             bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+            label_anchor: normalizeLabelAnchor(wine.label_anchor),
             included: true,
             photoIndex: pi,
           }));
