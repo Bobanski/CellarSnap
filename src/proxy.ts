@@ -1,6 +1,34 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function redirectWithCookies({
+  request,
+  response,
+  pathname,
+  searchParams,
+}: {
+  request: NextRequest;
+  response: NextResponse;
+  pathname: string;
+  searchParams?: Record<string, string>;
+}) {
+  const redirectUrl = request.nextUrl.clone();
+  redirectUrl.pathname = pathname;
+  redirectUrl.search = "";
+
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      redirectUrl.searchParams.set(key, value);
+    });
+  }
+
+  const redirect = NextResponse.redirect(redirectUrl);
+  response.cookies.getAll().forEach((cookie) => {
+    redirect.cookies.set(cookie.name, cookie.value);
+  });
+  return redirect;
+}
+
 export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -13,8 +41,18 @@ export async function proxy(request: NextRequest) {
   const supabase = await createSupabaseServerClient({ request, response });
 
   const {
-    data: { user },
+    data: { user: authUser },
   } = await supabase.auth.getUser();
+  let user = authUser;
+
+  // Fresh sign-in/sign-up flows can briefly return null from getUser()
+  // while the cookie state settles; fallback to session to avoid false redirects.
+  if (!user) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    user = session?.user ?? null;
+  }
 
   const { pathname } = request.nextUrl;
   const isEntriesRoute = pathname.startsWith("/entries");
@@ -28,9 +66,11 @@ export async function proxy(request: NextRequest) {
   const isProtected =
     isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
   if (isProtected && !user) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
-    return NextResponse.redirect(redirectUrl);
+    return redirectWithCookies({
+      request,
+      response,
+      pathname: "/login",
+    });
   }
 
   if (user) {
@@ -42,16 +82,20 @@ export async function proxy(request: NextRequest) {
 
     const hasUsername = Boolean(profile?.display_name?.trim());
     if (!hasUsername && !isUsernameSetupBypass) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/profile";
-      redirectUrl.searchParams.set("setup", "username");
-      return NextResponse.redirect(redirectUrl);
+      return redirectWithCookies({
+        request,
+        response,
+        pathname: "/profile",
+        searchParams: { setup: "username" },
+      });
     }
 
     if (isLoginRoute || isSignupRoute) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = hasUsername ? "/" : "/profile";
-      return NextResponse.redirect(redirectUrl);
+      return redirectWithCookies({
+        request,
+        response,
+        pathname: hasUsername ? "/" : "/profile",
+      });
     }
   }
 
