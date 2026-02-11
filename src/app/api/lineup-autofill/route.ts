@@ -73,8 +73,13 @@ const bottleCountSchema = z.object({
   total_bottles_detected: z.number().min(0),
 });
 
-const TIMEOUT_MS = 75000;
+const TIMEOUT_MS = 110000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const PRIMARY_LINEUP_MODEL = "gpt-5-mini";
+const PRIMARY_LINEUP_EFFORT = "high" as const;
+const COUNT_VERIFY_MODEL = "gpt-5-mini";
+const COUNT_VERIFY_EFFORT = "high" as const;
+const LABEL_REFINE_MODEL = "gpt-5-mini";
 
 function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
@@ -233,8 +238,8 @@ export async function POST(request: Request) {
   try {
     const response = await openai.responses.create(
       {
-        model: "gpt-5-nano",
-        reasoning: { effort: "high" },
+        model: PRIMARY_LINEUP_MODEL,
+        reasoning: { effort: PRIMARY_LINEUP_EFFORT },
         max_output_tokens: 6000,
         text: {
           format: {
@@ -375,11 +380,13 @@ export async function POST(request: Request) {
       );
     }
 
-    let verifiedBottleCount =
+    const firstPassBottleCount =
       typeof parsed.data.total_bottles_detected === "number" &&
       Number.isFinite(parsed.data.total_bottles_detected)
         ? Math.max(0, Math.round(parsed.data.total_bottles_detected))
         : parsed.data.wines.length;
+    let verifiedBottleCount = firstPassBottleCount;
+    let countVerificationCount: number | null = null;
 
     // Guardrail: when pass 1 says 0/1 bottle, run a dedicated count verification
     // pass to avoid obvious multi-bottle photos falling into single-bottle mode.
@@ -387,9 +394,9 @@ export async function POST(request: Request) {
       try {
         const countResponse = await openai.responses.create(
           {
-            model: "gpt-5-mini",
-            reasoning: { effort: "minimal" },
-            max_output_tokens: 160,
+            model: COUNT_VERIFY_MODEL,
+            reasoning: { effort: COUNT_VERIFY_EFFORT },
+            max_output_tokens: 200,
             text: {
               format: {
                 type: "json_schema",
@@ -415,7 +422,8 @@ export async function POST(request: Request) {
                       "Count every distinct glass wine bottle visible in this photo, including partially occluded bottles. " +
                       "Ignore reflections, people, glasses, and decanters. " +
                       "Return only total_bottles_detected as a non-negative integer. " +
-                      "Before returning 1, explicitly verify there are no other bottle necks, shoulders, or full bottle bodies visible.",
+                      "Before returning 1, explicitly verify there are no other bottle necks, shoulders, body labels, or bottle bodies visible. " +
+                      "If unsure between 1 and 2+, choose the larger plausible count.",
                   },
                   { type: "input_image", image_url: dataUrl, detail: "high" },
                 ],
@@ -438,6 +446,7 @@ export async function POST(request: Request) {
               0,
               Math.round(parsedCount.data.total_bottles_detected)
             );
+            countVerificationCount = count;
             verifiedBottleCount = Math.max(verifiedBottleCount, count);
           }
         }
@@ -488,7 +497,7 @@ export async function POST(request: Request) {
       try {
         const refineResponse = await openai.responses.create(
           {
-            model: "gpt-5-nano",
+            model: LABEL_REFINE_MODEL,
             reasoning: { effort: "minimal" },
             max_output_tokens: 2200,
             text: {
@@ -603,9 +612,28 @@ export async function POST(request: Request) {
       };
     });
 
+    const finalBottleCount = Math.max(verifiedBottleCount, wines.length);
+    if (
+      finalBottleCount !== firstPassBottleCount ||
+      countVerificationCount !== null ||
+      finalBottleCount <= 1
+    ) {
+      console.info(
+        "[lineup-autofill] bottle-count",
+        JSON.stringify({
+          user_id: user.id,
+          first_pass_count: firstPassBottleCount,
+          verification_count: countVerificationCount,
+          wines_length: wines.length,
+          final_count: finalBottleCount,
+          image_bytes: file.size,
+        })
+      );
+    }
+
     return NextResponse.json({
       wines,
-      total_bottles_detected: Math.max(verifiedBottleCount, wines.length),
+      total_bottles_detected: finalBottleCount,
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

@@ -581,6 +581,17 @@ export default function NewEntryPage() {
     );
   };
 
+  const shouldForceLineupForSinglePhoto = (wine: LineupWine | null) => {
+    if (!wine?.bottle_bbox) {
+      return false;
+    }
+
+    const bbox = wine.bottle_bbox;
+    // If the only detected bottle is relatively narrow in-frame, treat it as
+    // likely lineup framing and avoid single-bottle autofill.
+    return bbox.width < 0.42 && bbox.height > 0.45;
+  };
+
   const resolveSuggestedGrapes = async (suggestions: string[]) => {
     const resolved: PrimaryGrapeSelection[] = [];
     const seenIds = new Set<string>();
@@ -1227,8 +1238,17 @@ export default function NewEntryPage() {
 
       const inferredBottleCount =
         detectedBottleCount > 0 ? detectedBottleCount : allWines.length;
+      const singleWine = allWines[0] ?? null;
+      const forceLineupFromGeometry =
+        files.length === 1 &&
+        inferredBottleCount <= 1 &&
+        allWines.length <= 1 &&
+        shouldForceLineupForSinglePhoto(singleWine);
       const likelyLineup =
-        files.length > 1 || allWines.length > 1 || inferredBottleCount > 1;
+        files.length > 1 ||
+        allWines.length > 1 ||
+        inferredBottleCount > 1 ||
+        forceLineupFromGeometry;
       const isSingleBottle =
         files.length === 1 && !likelyLineup && allWines.length <= 1;
 
@@ -1369,7 +1389,11 @@ export default function NewEntryPage() {
           hasDetectedWineDetails(wine)
         ).length;
         const unresolvedCount = Math.max(0, inferredBottleCount - identifiedCount);
-        if (unresolvedCount > 0) {
+        if (forceLineupFromGeometry) {
+          setAutofillMessage(
+            "Detected lineup-style framing in this photo. Switched to lineup review to avoid incorrect single-bottle autofill."
+          );
+        } else if (unresolvedCount > 0) {
           setAutofillMessage(
             `Detected ${inferredBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
           );
