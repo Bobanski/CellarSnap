@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     const response = await openai.responses.create(
       {
         model: "gpt-5-mini",
-        reasoning: { effort: "medium" },
+        reasoning: { effort: "high" },
         max_output_tokens: 2000,
         text: {
           format: {
@@ -183,6 +183,7 @@ export async function POST(request: Request) {
               type: "object",
               additionalProperties: false,
               properties: {
+                total_bottles_detected: { type: "number" },
                 wines: {
                   type: "array",
                   items: {
@@ -237,9 +238,8 @@ export async function POST(request: Request) {
                     ],
                   },
                 },
-                total_bottles_detected: { type: "number" },
               },
-              required: ["wines", "total_bottles_detected"],
+              required: ["total_bottles_detected", "wines"],
             },
           },
         },
@@ -250,10 +250,10 @@ export async function POST(request: Request) {
               {
                 type: "input_text",
                 text:
-                  "This photo shows one or more wine bottles. Identify each unique bottle visible in the image. " +
-                  "For each bottle, extract as much label information as you can read. " +
-                  "Return JSON with a 'wines' array (one object per bottle, left-to-right order) and 'total_bottles_detected' (integer). " +
-                  "CRITICAL: wines array length must match total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
+                  "This photo shows one or more wine bottles. First, count every distinct bottle visible in the image. " +
+                  "Then, for each bottle, extract as much label information as you can read. " +
+                  "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per bottle, left-to-right order). " +
+                  "CRITICAL: wines array length MUST equal total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
                   "If text is unreadable, still include that bottle object with null fields, empty grape array, and low confidence. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
