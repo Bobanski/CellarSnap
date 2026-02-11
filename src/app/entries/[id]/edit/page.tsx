@@ -246,12 +246,14 @@ export default function EditEntryPage() {
     loadPhotos().catch(() => null);
   }, [loadPhotos]);
 
-  const photosByType = (type: "label" | "place" | "pairing") =>
+  const photosByType = (type: "label" | "place" | "pairing"): EntryPhoto[] =>
     photos
       .filter((photo) => photo.type === type)
       .sort((a, b) => a.position - b.position);
 
-  const displayPhotosByType = (type: "label" | "place" | "pairing") => {
+  const displayPhotosByType = (
+    type: "label" | "place" | "pairing"
+  ): EntryPhoto[] => {
     const list = photosByType(type);
     if (list.length > 0 || !entry) {
       return list;
