@@ -145,6 +145,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[];
     confidence: number | null;
     included: boolean;
+    photoIndex: number;
   };
   const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
   const [lineupCreating, setLineupCreating] = useState(false);
@@ -739,10 +740,11 @@ export default function NewEntryPage() {
         const payload = await response.json();
         const entry = payload.entry;
 
-        // Upload the photo as the label photo for each entry
-        if (entry?.id && labelPhotos[0]) {
+        // Upload the correct source photo as label for this entry
+        const sourcePhoto = labelPhotos[wine.photoIndex];
+        if (entry?.id && sourcePhoto) {
           try {
-            await uploadPhotos(entry.id, "label", [labelPhotos[0]]);
+            await uploadPhotos(entry.id, "label", [sourcePhoto]);
           } catch {
             // Photo upload failed but entry was created, continue
           }
@@ -829,15 +831,17 @@ export default function NewEntryPage() {
 
       clearTimeout(timeoutId);
 
-      // Collect all wines from all lineup results
+      // Collect all wines from all lineup results, tracking source photo
       const allWines: LineupWine[] = [];
-      for (const result of lineupResults) {
+      for (let pi = 0; pi < lineupResults.length; pi++) {
+        const result = lineupResults[pi];
         if (result.status === "fulfilled" && result.value.ok) {
           const data = await result.value.json();
           const wines: LineupWine[] = (data.wines ?? []).map(
-            (w: Omit<LineupWine, "included">) => ({
+            (w: Omit<LineupWine, "included" | "photoIndex">) => ({
               ...w,
               included: true,
+              photoIndex: pi,
             })
           );
           allWines.push(...wines);
