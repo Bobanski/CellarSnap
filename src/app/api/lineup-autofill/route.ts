@@ -13,6 +13,15 @@ const wineSchema = z.object({
   classification: z.string().nullable().optional(),
   primary_grape_suggestions: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
+  bottle_bbox: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const responseSchema = z.object({
@@ -27,6 +36,50 @@ function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function normalizeBottleBbox(value?: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+} | null) {
+  if (!value) return null;
+
+  const x = Number(value.x);
+  const y = Number(value.y);
+  const width = Number(value.width);
+  const height = Number(value.height);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height)
+  ) {
+    return null;
+  }
+
+  const clampedX = Math.min(1, Math.max(0, x));
+  const clampedY = Math.min(1, Math.max(0, y));
+  const clampedWidth = Math.min(1, Math.max(0, width));
+  const clampedHeight = Math.min(1, Math.max(0, height));
+
+  const right = Math.min(1, clampedX + clampedWidth);
+  const bottom = Math.min(1, clampedY + clampedHeight);
+  const finalWidth = right - clampedX;
+  const finalHeight = bottom - clampedY;
+
+  if (finalWidth < 0.05 || finalHeight < 0.08) {
+    return null;
+  }
+
+  return {
+    x: clampedX,
+    y: clampedY,
+    width: finalWidth,
+    height: finalHeight,
+  };
 }
 
 function extractJson(text: string) {
@@ -126,6 +179,17 @@ export async function POST(request: Request) {
                         items: { type: "string" },
                       },
                       confidence: { type: ["number", "null"] },
+                      bottle_bbox: {
+                        type: ["object", "null"],
+                        additionalProperties: false,
+                        properties: {
+                          x: { type: "number" },
+                          y: { type: "number" },
+                          width: { type: "number" },
+                          height: { type: "number" },
+                        },
+                        required: ["x", "y", "width", "height"],
+                      },
                     },
                     required: [
                       "wine_name",
@@ -137,6 +201,7 @@ export async function POST(request: Request) {
                       "classification",
                       "primary_grape_suggestions",
                       "confidence",
+                      "bottle_bbox",
                     ],
                   },
                 },
@@ -156,7 +221,9 @@ export async function POST(request: Request) {
                   "This photo shows one or more wine bottles. Identify each unique bottle visible in the image. " +
                   "For each bottle, extract as much label information as you can read. " +
                   "Return JSON with a 'wines' array (one object per bottle, left-to-right order) and 'total_bottles_detected' (integer). " +
-                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence. " +
+                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox. " +
+                  "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
+                  "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
                   "Appellation must be place-based only (e.g. Saint-Aubin, Pauillac, Barolo). " +
                   "Classification must hold quality tiers or legal quality markers (e.g. Premier Cru, Grand Cru Classe, DOCG). " +
                   "For primary_grape_suggestions, include canonical grape variety names. " +
@@ -208,6 +275,7 @@ export async function POST(request: Request) {
         .filter((s) => s.length > 0)
         .slice(0, 3),
       confidence: wine.confidence ?? null,
+      bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
     }));
 
     return NextResponse.json({

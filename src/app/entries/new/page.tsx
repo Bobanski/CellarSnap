@@ -134,6 +134,26 @@ export default function NewEntryPage() {
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
 
   // Lineup detection state
+  type BottleBbox = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+
+  type LineupApiWine = {
+    wine_name?: string | null;
+    producer?: string | null;
+    vintage?: string | null;
+    country?: string | null;
+    region?: string | null;
+    appellation?: string | null;
+    classification?: string | null;
+    primary_grape_suggestions?: string[] | null;
+    confidence?: number | null;
+    bottle_bbox?: BottleBbox | null;
+  };
+
   type LineupWine = {
     wine_name: string | null;
     producer: string | null;
@@ -144,6 +164,7 @@ export default function NewEntryPage() {
     classification: string | null;
     primary_grape_suggestions?: string[];
     confidence: number | null;
+    bottle_bbox: BottleBbox | null;
     included: boolean;
     photoIndex: number;
   };
@@ -399,6 +420,54 @@ export default function NewEntryPage() {
 
   const normalizeGrapeLookupValue = (value: string) =>
     value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  const normalizeTextField = (value: unknown) => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
+  const normalizeBottleBbox = (value: unknown): BottleBbox | null => {
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+
+    const bbox = value as Partial<BottleBbox>;
+    const x = Number(bbox.x);
+    const y = Number(bbox.y);
+    const width = Number(bbox.width);
+    const height = Number(bbox.height);
+
+    if (
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      !Number.isFinite(width) ||
+      !Number.isFinite(height)
+    ) {
+      return null;
+    }
+
+    const clampedX = Math.min(1, Math.max(0, x));
+    const clampedY = Math.min(1, Math.max(0, y));
+    const clampedWidth = Math.min(1, Math.max(0, width));
+    const clampedHeight = Math.min(1, Math.max(0, height));
+
+    const right = Math.min(1, clampedX + clampedWidth);
+    const bottom = Math.min(1, clampedY + clampedHeight);
+    const normalizedWidth = right - clampedX;
+    const normalizedHeight = bottom - clampedY;
+
+    if (normalizedWidth < 0.05 || normalizedHeight < 0.08) {
+      return null;
+    }
+
+    return {
+      x: clampedX,
+      y: clampedY,
+      width: normalizedWidth,
+      height: normalizedHeight,
+    };
+  };
 
   const resolveSuggestedGrapes = async (suggestions: string[]) => {
     const resolved: PrimaryGrapeSelection[] = [];
@@ -688,6 +757,92 @@ export default function NewEntryPage() {
     }
   };
 
+  const createLineupBottleThumbnail = async (
+    sourceFile: File,
+    bottleBbox: BottleBbox | null,
+    outputIndex: number
+  ) => {
+    if (!sourceFile.type.startsWith("image/") || !bottleBbox) {
+      return sourceFile;
+    }
+
+    let imageUrl: string | null = null;
+
+    try {
+      imageUrl = URL.createObjectURL(sourceFile);
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = imageUrl ?? "";
+      });
+
+      const boxX = Math.round(bottleBbox.x * image.width);
+      const boxY = Math.round(bottleBbox.y * image.height);
+      const boxWidth = Math.round(bottleBbox.width * image.width);
+      const boxHeight = Math.round(bottleBbox.height * image.height);
+
+      if (boxWidth < 8 || boxHeight < 8) {
+        return sourceFile;
+      }
+
+      const horizontalPadding = Math.round(boxWidth * 0.16);
+      const verticalPadding = Math.round(boxHeight * 0.1);
+
+      const cropX = Math.max(0, boxX - horizontalPadding);
+      const cropY = Math.max(0, boxY - verticalPadding);
+      const cropRight = Math.min(image.width, boxX + boxWidth + horizontalPadding);
+      const cropBottom = Math.min(
+        image.height,
+        boxY + boxHeight + verticalPadding
+      );
+      const cropWidth = cropRight - cropX;
+      const cropHeight = cropBottom - cropY;
+
+      if (cropWidth < 8 || cropHeight < 8) {
+        return sourceFile;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return sourceFile;
+      }
+
+      ctx.drawImage(
+        image,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        cropWidth,
+        cropHeight
+      );
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.88)
+      );
+      if (!blob) {
+        return sourceFile;
+      }
+
+      const basename = sourceFile.name.replace(/\.[a-z0-9]+$/i, "") || "label";
+      return new File([blob], `${basename}-bottle-${outputIndex + 1}.jpg`, {
+        type: "image/jpeg",
+      });
+    } catch {
+      return sourceFile;
+    } finally {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    }
+  };
+
   const createLineupEntries = async () => {
     const included = lineupWines.filter((w) => w.included);
     if (included.length === 0) return;
@@ -740,11 +895,16 @@ export default function NewEntryPage() {
         const payload = await response.json();
         const entry = payload.entry;
 
-        // Upload the correct source photo as label for this entry
+        // Upload a per-bottle thumbnail (fallback to original source photo)
         const sourcePhoto = labelPhotos[wine.photoIndex];
         if (entry?.id && sourcePhoto) {
           try {
-            await uploadPhotos(entry.id, "label", [sourcePhoto]);
+            const thumbnail = await createLineupBottleThumbnail(
+              sourcePhoto.file,
+              wine.bottle_bbox,
+              i
+            );
+            await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
           } catch {
             // Photo upload failed but entry was created, continue
           }
@@ -837,13 +997,34 @@ export default function NewEntryPage() {
         const result = lineupResults[pi];
         if (result.status === "fulfilled" && result.value.ok) {
           const data = await result.value.json();
-          const wines: LineupWine[] = (data.wines ?? []).map(
-            (w: Omit<LineupWine, "included" | "photoIndex">) => ({
-              ...w,
-              included: true,
-              photoIndex: pi,
-            })
-          );
+          const wines: LineupWine[] = (Array.isArray(data.wines)
+            ? data.wines
+            : []
+          ).map((wine: LineupApiWine) => ({
+            wine_name: normalizeTextField(wine.wine_name),
+            producer: normalizeTextField(wine.producer),
+            vintage: normalizeTextField(wine.vintage),
+            country: normalizeTextField(wine.country),
+            region: normalizeTextField(wine.region),
+            appellation: normalizeTextField(wine.appellation),
+            classification: normalizeTextField(wine.classification),
+            primary_grape_suggestions: Array.isArray(
+              wine.primary_grape_suggestions
+            )
+              ? wine.primary_grape_suggestions
+                  .map((value) => value.trim())
+                  .filter((value) => value.length > 0)
+                  .slice(0, 3)
+              : [],
+            confidence:
+              typeof wine.confidence === "number" &&
+              Number.isFinite(wine.confidence)
+                ? Math.min(1, Math.max(0, wine.confidence))
+                : null,
+            bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+            included: true,
+            photoIndex: pi,
+          }));
           allWines.push(...wines);
         }
       }
