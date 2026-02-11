@@ -152,6 +152,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[] | null;
     confidence?: number | null;
     bottle_bbox?: BottleBbox | null;
+    label_bbox?: BottleBbox | null;
   };
 
   type LineupWine = {
@@ -165,6 +166,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[];
     confidence: number | null;
     bottle_bbox: BottleBbox | null;
+    label_bbox: BottleBbox | null;
     included: boolean;
     photoIndex: number;
   };
@@ -760,11 +762,16 @@ export default function NewEntryPage() {
   const createLineupBottleThumbnail = async (
     sourceFile: File,
     bottleBbox: BottleBbox | null,
+    labelBbox: BottleBbox | null,
     outputIndex: number
   ) => {
-    if (!sourceFile.type.startsWith("image/") || !bottleBbox) {
+    // Prefer label_bbox for tighter label-focused crop; fall back to bottle_bbox
+    const bbox = labelBbox ?? bottleBbox;
+    if (!sourceFile.type.startsWith("image/") || !bbox) {
       return sourceFile;
     }
+
+    const isLabelCrop = labelBbox !== null;
 
     let imageUrl: string | null = null;
 
@@ -777,17 +784,23 @@ export default function NewEntryPage() {
         img.src = imageUrl ?? "";
       });
 
-      const boxX = Math.round(bottleBbox.x * image.width);
-      const boxY = Math.round(bottleBbox.y * image.height);
-      const boxWidth = Math.round(bottleBbox.width * image.width);
-      const boxHeight = Math.round(bottleBbox.height * image.height);
+      const boxX = Math.round(bbox.x * image.width);
+      const boxY = Math.round(bbox.y * image.height);
+      const boxWidth = Math.round(bbox.width * image.width);
+      const boxHeight = Math.round(bbox.height * image.height);
 
       if (boxWidth < 8 || boxHeight < 8) {
         return sourceFile;
       }
 
-      const horizontalPadding = Math.round(boxWidth * 0.16);
-      const verticalPadding = Math.round(boxHeight * 0.1);
+      // Label crops get more generous padding so the label is clearly visible
+      // with surrounding bottle context; bottle crops use tighter padding.
+      const horizontalPadding = Math.round(
+        boxWidth * (isLabelCrop ? 0.25 : 0.16)
+      );
+      const verticalPadding = Math.round(
+        boxHeight * (isLabelCrop ? 0.35 : 0.1)
+      );
 
       const cropX = Math.max(0, boxX - horizontalPadding);
       const cropY = Math.max(0, boxY - verticalPadding);
@@ -851,17 +864,21 @@ export default function NewEntryPage() {
     setLineupCreatedCount(0);
     setAutofillMessage("Resolving grape varieties...");
 
-    // Resolve grape suggestions to IDs for all wines upfront
+    // Resolve grape suggestions to IDs for all wines in parallel
     const grapeIdsByIndex: Map<number, string[]> = new Map();
-    for (let i = 0; i < included.length; i++) {
-      const suggestions = included[i].primary_grape_suggestions ?? [];
-      if (suggestions.length > 0) {
-        const resolved = await resolveSuggestedGrapes(suggestions.slice(0, 2));
-        if (resolved.length > 0) {
-          grapeIdsByIndex.set(i, resolved.map((g) => g.id));
+    await Promise.all(
+      included.map(async (wine, i) => {
+        const suggestions = wine.primary_grape_suggestions ?? [];
+        if (suggestions.length > 0) {
+          const resolved = await resolveSuggestedGrapes(
+            suggestions.slice(0, 2)
+          );
+          if (resolved.length > 0) {
+            grapeIdsByIndex.set(i, resolved.map((g) => g.id));
+          }
         }
-      }
-    }
+      })
+    );
 
     setAutofillMessage(`Creating entries... (0/${included.length})`);
 
@@ -869,56 +886,59 @@ export default function NewEntryPage() {
     const consumedAt = getValues("consumed_at") || getTodayLocalYmd();
     let created = 0;
 
-    for (let i = 0; i < included.length; i++) {
-      const wine = included[i];
-      try {
-        const response = await fetch("/api/entries", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wine_name: wine.wine_name ?? "Unknown wine",
-            producer: wine.producer || null,
-            vintage: wine.vintage || null,
-            country: wine.country || null,
-            region: wine.region || null,
-            appellation: wine.appellation || null,
-            classification: wine.classification || null,
-            primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
-            consumed_at: consumedAt,
-            entry_privacy: privacy,
-            tasted_with_user_ids: [],
-          }),
-        });
+    // Create all entries + upload thumbnails in parallel
+    await Promise.all(
+      included.map(async (wine, i) => {
+        try {
+          const response = await fetch("/api/entries", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              wine_name: wine.wine_name ?? "Unknown wine",
+              producer: wine.producer || null,
+              vintage: wine.vintage || null,
+              country: wine.country || null,
+              region: wine.region || null,
+              appellation: wine.appellation || null,
+              classification: wine.classification || null,
+              primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
+              consumed_at: consumedAt,
+              entry_privacy: privacy,
+              tasted_with_user_ids: [],
+            }),
+          });
 
-        if (!response.ok) continue;
+          if (!response.ok) return;
 
-        const payload = await response.json();
-        const entry = payload.entry;
+          const payload = await response.json();
+          const entry = payload.entry;
 
-        // Upload a per-bottle thumbnail (fallback to original source photo)
-        const sourcePhoto = labelPhotos[wine.photoIndex];
-        if (entry?.id && sourcePhoto) {
-          try {
-            const thumbnail = await createLineupBottleThumbnail(
-              sourcePhoto.file,
-              wine.bottle_bbox,
-              i
-            );
-            await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
-          } catch {
-            // Photo upload failed but entry was created, continue
+          // Upload a per-bottle thumbnail (fallback to original source photo)
+          const sourcePhoto = labelPhotos[wine.photoIndex];
+          if (entry?.id && sourcePhoto) {
+            try {
+              const thumbnail = await createLineupBottleThumbnail(
+                sourcePhoto.file,
+                wine.bottle_bbox,
+                wine.label_bbox,
+                i
+              );
+              await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
+            } catch {
+              // Photo upload failed but entry was created, continue
+            }
           }
-        }
 
-        created++;
-        setLineupCreatedCount(created);
-        setAutofillMessage(
-          `Creating entries... (${created}/${included.length})`
-        );
-      } catch {
-        // Skip failed entries, continue with rest
-      }
-    }
+          created++;
+          setLineupCreatedCount(created);
+          setAutofillMessage(
+            `Creating entries... (${created}/${included.length})`
+          );
+        } catch {
+          // Skip failed entries, continue with rest
+        }
+      })
+    );
 
     setLineupCreating(false);
 
@@ -1022,6 +1042,7 @@ export default function NewEntryPage() {
                 ? Math.min(1, Math.max(0, wine.confidence))
                 : null,
             bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+            label_bbox: normalizeBottleBbox(wine.label_bbox),
             included: true,
             photoIndex: pi,
           }));
