@@ -152,7 +152,6 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[] | null;
     confidence?: number | null;
     bottle_bbox?: BottleBbox | null;
-    label_bbox?: BottleBbox | null;
   };
 
   type LineupWine = {
@@ -166,7 +165,6 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[];
     confidence: number | null;
     bottle_bbox: BottleBbox | null;
-    label_bbox: BottleBbox | null;
     included: boolean;
     photoIndex: number;
   };
@@ -762,16 +760,11 @@ export default function NewEntryPage() {
   const createLineupBottleThumbnail = async (
     sourceFile: File,
     bottleBbox: BottleBbox | null,
-    labelBbox: BottleBbox | null,
     outputIndex: number
   ) => {
-    // Prefer label_bbox for tighter label-focused crop; fall back to bottle_bbox
-    const bbox = labelBbox ?? bottleBbox;
-    if (!sourceFile.type.startsWith("image/") || !bbox) {
+    if (!sourceFile.type.startsWith("image/") || !bottleBbox) {
       return sourceFile;
     }
-
-    const isLabelCrop = labelBbox !== null;
 
     let imageUrl: string | null = null;
 
@@ -784,23 +777,24 @@ export default function NewEntryPage() {
         img.src = imageUrl ?? "";
       });
 
-      const boxX = Math.round(bbox.x * image.width);
-      const boxY = Math.round(bbox.y * image.height);
-      const boxWidth = Math.round(bbox.width * image.width);
-      const boxHeight = Math.round(bbox.height * image.height);
+      // Estimate the label region from the bottle bounding box.
+      // Wine labels typically sit in the middle portion of the bottle,
+      // below the neck (~30% down) and above the base (~75% down).
+      const labelTop = bottleBbox.y + bottleBbox.height * 0.25;
+      const labelBottom = bottleBbox.y + bottleBbox.height * 0.80;
+      const labelHeight = labelBottom - labelTop;
+
+      const boxX = Math.round(bottleBbox.x * image.width);
+      const boxY = Math.round(labelTop * image.height);
+      const boxWidth = Math.round(bottleBbox.width * image.width);
+      const boxHeight = Math.round(labelHeight * image.height);
 
       if (boxWidth < 8 || boxHeight < 8) {
         return sourceFile;
       }
 
-      // Label crops get more generous padding so the label is clearly visible
-      // with surrounding bottle context; bottle crops use tighter padding.
-      const horizontalPadding = Math.round(
-        boxWidth * (isLabelCrop ? 0.25 : 0.16)
-      );
-      const verticalPadding = Math.round(
-        boxHeight * (isLabelCrop ? 0.35 : 0.1)
-      );
+      const horizontalPadding = Math.round(boxWidth * 0.16);
+      const verticalPadding = Math.round(boxHeight * 0.15);
 
       const cropX = Math.max(0, boxX - horizontalPadding);
       const cropY = Math.max(0, boxY - verticalPadding);
@@ -920,7 +914,6 @@ export default function NewEntryPage() {
               const thumbnail = await createLineupBottleThumbnail(
                 sourcePhoto.file,
                 wine.bottle_bbox,
-                wine.label_bbox,
                 i
               );
               await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
@@ -1042,7 +1035,6 @@ export default function NewEntryPage() {
                 ? Math.min(1, Math.max(0, wine.confidence))
                 : null,
             bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
-            label_bbox: normalizeBottleBbox(wine.label_bbox),
             included: true,
             photoIndex: pi,
           }));
