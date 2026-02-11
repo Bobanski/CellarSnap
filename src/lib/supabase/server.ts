@@ -21,14 +21,21 @@ export async function createSupabaseServerClient(context?: MiddlewareContext) {
 
     return createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
         },
-        set(name: string, value: string, options: CookieOptions) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          response.cookies.set({ name, value: "", ...options, maxAge: 0 });
+        setAll(
+          cookiesToSet: { name: string; value: string; options: CookieOptions }[]
+        ) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Keep request/response in sync so subsequent reads see refreshed tokens.
+            try {
+              request.cookies.set(name, value);
+            } catch {
+              // ignore request mutation failures
+            }
+            response.cookies.set({ name, value, ...options });
+          });
         },
       },
     });
@@ -39,23 +46,20 @@ export async function createSupabaseServerClient(context?: MiddlewareContext) {
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll().map(({ name, value }) => ({ name, value }));
       },
-      set(name: string, value: string, options: CookieOptions) {
+      setAll(
+        cookiesToSet: { name: string; value: string; options: CookieOptions }[]
+      ) {
         // Server Components can have read-only cookies; Route Handlers can set.
-        try {
-          cookieStore.set({ name, value, ...options });
-        } catch {
-          // ignore
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-        } catch {
-          // ignore
-        }
+        cookiesToSet.forEach(({ name, value, options }) => {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {
+            // ignore
+          }
+        });
       },
     },
   });

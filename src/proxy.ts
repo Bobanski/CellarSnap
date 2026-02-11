@@ -24,7 +24,8 @@ function redirectWithCookies({
 
   const redirect = NextResponse.redirect(redirectUrl);
   response.cookies.getAll().forEach((cookie) => {
-    redirect.cookies.set(cookie.name, cookie.value);
+    // Preserve cookie attributes (path/expires/sameSite/etc) during redirects.
+    redirect.cookies.set(cookie);
   });
   return redirect;
 }
