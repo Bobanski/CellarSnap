@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import NavBar from "@/components/NavBar";
@@ -53,8 +53,37 @@ type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 
 export default function EditEntryPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const bulkQueue = useMemo(() => {
+    const queueParam = searchParams.get("queue");
+    if (!queueParam) return [] as string[];
+    let decoded = queueParam;
+    try {
+      decoded = decodeURIComponent(queueParam);
+    } catch {
+      decoded = queueParam;
+    }
+    return decoded
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+  }, [searchParams]);
+  const isBulkReview =
+    searchParams.get("bulk") === "1" &&
+    typeof entryId === "string" &&
+    bulkQueue.includes(entryId);
+  const currentBulkIndex =
+    isBulkReview && typeof entryId === "string"
+      ? Math.max(0, bulkQueue.indexOf(entryId))
+      : -1;
+  const nextBulkEntryId =
+    currentBulkIndex >= 0 && currentBulkIndex < bulkQueue.length - 1
+      ? bulkQueue[currentBulkIndex + 1]
+      : null;
+  const bulkProgressLabel =
+    currentBulkIndex >= 0 ? `${currentBulkIndex + 1}/${bulkQueue.length}` : null;
   const supabase = createSupabaseBrowserClient();
   const { control, register, handleSubmit, reset, setValue } = useForm<EditEntryForm>({
     defaultValues: {
@@ -379,6 +408,11 @@ export default function EditEntryPage() {
     };
   }, [supabase]);
 
+  const buildBulkEditHref = (targetEntryId: string, targetIndex: number) => {
+    const queue = encodeURIComponent(bulkQueue.join(","));
+    return `/entries/${targetEntryId}/edit?bulk=1&queue=${queue}&index=${targetIndex}`;
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     if (!entry) {
       return;
@@ -451,6 +485,16 @@ export default function EditEntryPage() {
       return;
     }
 
+    if (isBulkReview && nextBulkEntryId && currentBulkIndex >= 0) {
+      router.push(buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1));
+      return;
+    }
+
+    if (isBulkReview) {
+      router.push("/entries");
+      return;
+    }
+
     router.push(`/entries/${entry.id}`);
   });
 
@@ -511,17 +555,49 @@ export default function EditEntryPage() {
         <NavBar />
       </div>
       <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
-        <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
-            Edit entry
-          </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
-            Refine your tasting notes.
-          </h1>
-          <p className="text-sm text-zinc-300">Update tasting details or photos.</p>
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+              {isBulkReview ? "Bulk review" : "Edit entry"}
+            </span>
+            <h1 className="text-3xl font-semibold text-zinc-50">
+              {isBulkReview
+                ? "Review this wine before posting."
+                : "Refine your tasting notes."}
+            </h1>
+            <p className="text-sm text-zinc-300">
+              {isBulkReview
+                ? `Wine ${bulkProgressLabel ?? "1/1"} in your bulk queue.`
+                : "Update tasting details or photos."}
+            </p>
+          </div>
+          {isBulkReview ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                form="entry-edit-form"
+                className="rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
+                disabled={isSubmitting}
+              >
+                {nextBulkEntryId ? "Next wine" : "Finish review"}
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                onClick={() => router.push("/entries")}
+                disabled={isSubmitting}
+              >
+                Skip all and save
+              </button>
+            </div>
+          ) : null}
         </header>
 
-        <form className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur" onSubmit={onSubmit}>
+        <form
+          id="entry-edit-form"
+          className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
+          onSubmit={onSubmit}
+        >
           <div>
             <p className="text-sm font-medium text-zinc-200">Current photos</p>
             {entry.label_image_url || entry.place_image_url || entry.pairing_image_url ? (

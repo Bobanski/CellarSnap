@@ -1048,7 +1048,7 @@ export default function NewEntryPage() {
     let created = 0;
 
     // Create all entries + upload thumbnails in parallel
-    await Promise.all(
+    const creationResults = await Promise.all(
       included.map(async (wine, i) => {
         try {
           const response = await fetch("/api/entries", {
@@ -1075,7 +1075,7 @@ export default function NewEntryPage() {
             }),
           });
 
-          if (!response.ok) return;
+          if (!response.ok) return null;
 
           const payload = await response.json();
           const entry = payload.entry;
@@ -1102,20 +1102,32 @@ export default function NewEntryPage() {
           setAutofillMessage(
             `Creating entries... (${created}/${included.length})`
           );
+          return typeof entry?.id === "string" ? entry.id : null;
         } catch {
           // Skip failed entries, continue with rest
+          return null;
         }
       })
     );
 
     setLineupCreating(false);
 
-    if (created > 0) {
+    const createdEntryIds = creationResults.filter(
+      (value): value is string => typeof value === "string" && value.length > 0
+    );
+    if (createdEntryIds.length > 0) {
       setAutofillStatus("success");
       setAutofillMessage(
-        `Created ${created} entr${created === 1 ? "y" : "ies"}! Redirecting...`
+        `Created ${createdEntryIds.length} entr${
+          createdEntryIds.length === 1 ? "y" : "ies"
+        }! Opening guided review...`
       );
-      setTimeout(() => router.push("/entries"), 1200);
+      const queue = encodeURIComponent(createdEntryIds.join(","));
+      setTimeout(() => {
+        router.push(
+          `/entries/${createdEntryIds[0]}/edit?bulk=1&queue=${queue}&index=0`
+        );
+      }, 900);
     } else {
       setAutofillStatus("error");
       setAutofillMessage("Failed to create entries. Try again.");
