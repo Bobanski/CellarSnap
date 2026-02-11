@@ -1348,128 +1348,131 @@ export default function NewEntryPage() {
       </div>
 
       {pendingComparison ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center px-3 py-3 sm:items-center sm:px-4 sm:py-4">
-          <div className="absolute inset-0 bg-black/75" aria-hidden />
-          <div className="relative w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] sm:p-8">
-            <button
-              type="button"
-              className="absolute right-5 top-5 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
-              onClick={() => submitComparison("same_or_not_sure")}
-              disabled={isSubmittingComparison}
-            >
-              Skip
-            </button>
-
-            <h2 className="text-2xl font-semibold text-zinc-50">
-              How did this wine compare?
-            </h2>
-
-            <div className="mt-5 flex flex-col items-start gap-3 sm:mt-6">
-              <p className="text-lg leading-snug text-zinc-300 sm:text-xl">
-                <span className="font-semibold text-zinc-100">
-                  Compared to the previous wine
-                </span>
-                , I like this wine...
-              </p>
-
-              <div className="grid w-full max-w-[640px] grid-cols-3 gap-2 sm:gap-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+          <div className="fixed inset-0 bg-black/75" aria-hidden />
+          <div className="relative flex min-h-full items-start justify-center sm:items-center">
+            <div className="relative h-[calc(100dvh-0.75rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:p-8">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-2xl font-semibold text-zinc-50">
+                  How did this wine compare?
+                </h2>
                 <button
                   type="button"
-                  className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
-                  onClick={() => submitComparison("more")}
-                  disabled={isSubmittingComparison}
-                >
-                  More
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
+                  className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
                   onClick={() => submitComparison("same_or_not_sure")}
                   disabled={isSubmittingComparison}
                 >
-                  Not sure / The same
-                </button>
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
-                  onClick={() => submitComparison("less")}
-                  disabled={isSubmittingComparison}
-                >
-                  Less
+                  Skip
                 </button>
               </div>
 
-              {comparisonErrorMessage ? (
-                <p className="text-sm text-rose-300">{comparisonErrorMessage}</p>
-              ) : null}
+              <div className="mt-5 flex flex-col items-start gap-3 sm:mt-6">
+                <p className="text-lg leading-snug text-zinc-300 sm:text-xl">
+                  <span className="font-semibold text-zinc-100">
+                    Compared to the previous wine
+                  </span>
+                  , I like this wine...
+                </p>
 
-              {comparisonErrorMessage ? (
-                <button
-                  type="button"
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 sm:text-base"
-                  onClick={continueWithoutSavingComparison}
-                  disabled={isSubmittingComparison}
-                >
-                  Continue without saving
-                </button>
-              ) : null}
-            </div>
+                <div className="grid w-full max-w-[640px] grid-cols-3 gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
+                    onClick={() => submitComparison("more")}
+                    disabled={isSubmittingComparison}
+                  >
+                    More
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
+                    onClick={() => submitComparison("same_or_not_sure")}
+                    disabled={isSubmittingComparison}
+                  >
+                    Not sure / The same
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
+                    onClick={() => submitComparison("less")}
+                    disabled={isSubmittingComparison}
+                  >
+                    Less
+                  </button>
+                </div>
 
-            <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                <div className="h-32 w-full bg-black/40 sm:h-40">
-                  {newlyLoggedWinePreviewUrl ? (
-                    <img
-                      src={newlyLoggedWinePreviewUrl}
-                      alt="Wine you just logged"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                      No photo
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
-                    Wine you just logged
-                  </p>
-                  <p className="text-sm font-semibold text-zinc-50">
-                    {formatWineTitle(pendingComparison.entry)}
-                  </p>
-                  <p className="text-xs text-zinc-400">
-                    {formatWineMeta(pendingComparison.entry)}
-                  </p>
-                </div>
+                {comparisonErrorMessage ? (
+                  <p className="text-sm text-rose-300">{comparisonErrorMessage}</p>
+                ) : null}
+
+                {comparisonErrorMessage ? (
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 sm:text-base"
+                    onClick={continueWithoutSavingComparison}
+                    disabled={isSubmittingComparison}
+                  >
+                    Continue without saving
+                  </button>
+                ) : null}
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                <div className="h-32 w-full bg-black/40 sm:h-40">
-                  {pendingComparison.candidate.label_image_url ? (
-                    <img
-                      src={pendingComparison.candidate.label_image_url}
-                      alt="Previous wine for comparison"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                      No photo
-                    </div>
-                  )}
+              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                  <div className="h-32 w-full bg-black/40 sm:h-40">
+                    {newlyLoggedWinePreviewUrl ? (
+                      <img
+                        src={newlyLoggedWinePreviewUrl}
+                        alt="Wine you just logged"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-zinc-500">
+                        No photo
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                      Wine you just logged
+                    </p>
+                    <p className="text-sm font-semibold text-zinc-50">
+                      {formatWineTitle(pendingComparison.entry)}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      {formatWineMeta(pendingComparison.entry)}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Previous wine
-                  </p>
-                  <p className="text-sm font-semibold text-zinc-50">
-                    {formatWineTitle(pendingComparison.candidate)}
-                  </p>
-                  <p className="text-xs text-zinc-400">
-                    {formatWineMeta(pendingComparison.candidate)}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
-                  </p>
+
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                  <div className="h-32 w-full bg-black/40 sm:h-40">
+                    {pendingComparison.candidate.label_image_url ? (
+                      <img
+                        src={pendingComparison.candidate.label_image_url}
+                        alt="Previous wine for comparison"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-zinc-500">
+                        No photo
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                      Previous wine
+                    </p>
+                    <p className="text-sm font-semibold text-zinc-50">
+                      {formatWineTitle(pendingComparison.candidate)}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      {formatWineMeta(pendingComparison.candidate)}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
