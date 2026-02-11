@@ -36,7 +36,7 @@ const responseSchema = z.object({
   total_bottles_detected: z.number().int().min(0).optional(),
 });
 
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 60000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function normalize(value?: string | null) {
@@ -171,9 +171,9 @@ export async function POST(request: Request) {
   try {
     const response = await openai.responses.create(
       {
-        model: "gpt-5-mini",
+        model: "gpt-5-nano",
         reasoning: { effort: "high" },
-        max_output_tokens: 2000,
+        max_output_tokens: 6000,
         text: {
           format: {
             type: "json_schema",

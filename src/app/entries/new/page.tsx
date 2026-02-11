@@ -1014,7 +1014,7 @@ export default function NewEntryPage() {
     );
 
     const controller = new AbortController();
-    const timeoutMs = files.length > 1 ? 35000 + files.length * 10000 : 35000;
+    const timeoutMs = files.length > 1 ? 70000 + files.length * 10000 : 70000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
@@ -1096,6 +1096,28 @@ export default function NewEntryPage() {
             included: true,
             photoIndex: pi,
           }));
+
+          // Pad with placeholder entries if AI detected more bottles than
+          // it returned data for, so every bottle gets an entry slot.
+          const missing = detectedForPhoto - wines.length;
+          for (let m = 0; m < missing; m++) {
+            wines.push({
+              wine_name: null,
+              producer: null,
+              vintage: null,
+              country: null,
+              region: null,
+              appellation: null,
+              classification: null,
+              primary_grape_suggestions: [],
+              confidence: 0,
+              bottle_bbox: null,
+              label_anchor: null,
+              included: true,
+              photoIndex: pi,
+            });
+          }
+
           allWines.push(...wines);
         }
       }
