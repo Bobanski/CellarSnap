@@ -45,41 +45,8 @@ const responseSchema = z.object({
   total_bottles_detected: z.number().int().min(0).optional(),
 });
 
-const labelRefineSchema = z.object({
-  labels: z.array(
-    z.object({
-      index: z.number().int().min(0),
-      label_bbox: z
-        .object({
-          x: z.number(),
-          y: z.number(),
-          width: z.number(),
-          height: z.number(),
-        })
-        .nullable()
-        .optional(),
-      label_anchor: z
-        .object({
-          x: z.number(),
-          y: z.number(),
-        })
-        .nullable()
-        .optional(),
-    })
-  ),
-});
-
-const bottleCountSchema = z.object({
-  total_bottles_detected: z.number().min(0),
-});
-
-const TIMEOUT_MS = 110000;
+const TIMEOUT_MS = 55000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const PRIMARY_LINEUP_MODEL = "gpt-5-mini";
-const PRIMARY_LINEUP_EFFORT = "high" as const;
-const COUNT_VERIFY_MODEL = "gpt-5-mini";
-const COUNT_VERIFY_EFFORT = "high" as const;
-const LABEL_REFINE_MODEL = "gpt-5-mini";
 
 function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
@@ -238,8 +205,8 @@ export async function POST(request: Request) {
   try {
     const response = await openai.responses.create(
       {
-        model: PRIMARY_LINEUP_MODEL,
-        reasoning: { effort: PRIMARY_LINEUP_EFFORT },
+        model: "gpt-5-mini",
+        reasoning: { effort: "minimal" },
         max_output_tokens: 6000,
         text: {
           format: {
@@ -334,7 +301,6 @@ export async function POST(request: Request) {
                   "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per bottle, left-to-right order). " +
                   "CRITICAL: wines array length MUST equal total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
                   "If text is unreadable, still include that bottle object with null fields, empty grape array, and low confidence. " +
-                  "Before returning a count of 1, explicitly double-check whether any additional bottle necks, shoulders, or full bottles are visible in the frame. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
@@ -380,82 +346,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const firstPassBottleCount =
-      typeof parsed.data.total_bottles_detected === "number" &&
-      Number.isFinite(parsed.data.total_bottles_detected)
-        ? Math.max(0, Math.round(parsed.data.total_bottles_detected))
-        : parsed.data.wines.length;
-    let verifiedBottleCount = firstPassBottleCount;
-    let countVerificationCount: number | null = null;
-
-    // Guardrail: when pass 1 says 0/1 bottle, run a dedicated count verification
-    // pass to avoid obvious multi-bottle photos falling into single-bottle mode.
-    if (verifiedBottleCount <= 1) {
-      try {
-        const countResponse = await openai.responses.create(
-          {
-            model: COUNT_VERIFY_MODEL,
-            reasoning: { effort: COUNT_VERIFY_EFFORT },
-            max_output_tokens: 200,
-            text: {
-              format: {
-                type: "json_schema",
-                name: "lineup_bottle_count",
-                strict: true,
-                schema: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    total_bottles_detected: { type: "number" },
-                  },
-                  required: ["total_bottles_detected"],
-                },
-              },
-            },
-            input: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "input_text",
-                    text:
-                      "Count every distinct glass wine bottle visible in this photo, including partially occluded bottles. " +
-                      "Ignore reflections, people, glasses, and decanters. " +
-                      "Return only total_bottles_detected as a non-negative integer. " +
-                      "Before returning 1, explicitly verify there are no other bottle necks, shoulders, body labels, or bottle bodies visible. " +
-                      "If unsure between 1 and 2+, choose the larger plausible count.",
-                  },
-                  { type: "input_image", image_url: dataUrl, detail: "high" },
-                ],
-              },
-            ],
-            safety_identifier: user.id,
-          },
-          { signal: controller.signal }
-        );
-
-        const countOutput =
-          "output_text" in countResponse &&
-          typeof countResponse.output_text === "string"
-            ? countResponse.output_text
-            : "";
-        if (countOutput.trim()) {
-          const parsedCount = bottleCountSchema.safeParse(extractJson(countOutput));
-          if (parsedCount.success) {
-            const count = Math.max(
-              0,
-              Math.round(parsedCount.data.total_bottles_detected)
-            );
-            countVerificationCount = count;
-            verifiedBottleCount = Math.max(verifiedBottleCount, count);
-          }
-        }
-      } catch {
-        // Best-effort count verification only.
-      }
-    }
-
-    const baseWines = parsed.data.wines.map((wine) => ({
+    const wines = parsed.data.wines.map((wine) => ({
       wine_name: normalize(wine.wine_name),
       producer: normalize(wine.producer),
       vintage: normalize(wine.vintage),
@@ -473,167 +364,9 @@ export async function POST(request: Request) {
       label_anchor: normalizeAnchor(wine.label_anchor),
     }));
 
-    const boxedWines = baseWines
-      .map((wine, index) => ({ index, bottle_bbox: wine.bottle_bbox }))
-      .filter(
-        (
-          wine
-        ): wine is {
-          index: number;
-          bottle_bbox: NonNullable<typeof wine.bottle_bbox>;
-        } => Boolean(wine.bottle_bbox)
-      );
-
-    const refinedByIndex = new Map<
-      number,
-      {
-        label_bbox: ReturnType<typeof normalizeLabelBbox>;
-        label_anchor: ReturnType<typeof normalizeAnchor>;
-      }
-    >();
-
-    // Pass 2: refine label geometry from known bottle boxes.
-    if (boxedWines.length > 0) {
-      try {
-        const refineResponse = await openai.responses.create(
-          {
-            model: LABEL_REFINE_MODEL,
-            reasoning: { effort: "minimal" },
-            max_output_tokens: 2200,
-            text: {
-              format: {
-                type: "json_schema",
-                name: "lineup_label_refine",
-                strict: true,
-                schema: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    labels: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: {
-                          index: { type: "number" },
-                          label_bbox: {
-                            type: ["object", "null"],
-                            additionalProperties: false,
-                            properties: {
-                              x: { type: "number" },
-                              y: { type: "number" },
-                              width: { type: "number" },
-                              height: { type: "number" },
-                            },
-                            required: ["x", "y", "width", "height"],
-                          },
-                          label_anchor: {
-                            type: ["object", "null"],
-                            additionalProperties: false,
-                            properties: {
-                              x: { type: "number" },
-                              y: { type: "number" },
-                            },
-                            required: ["x", "y"],
-                          },
-                        },
-                        required: ["index", "label_bbox", "label_anchor"],
-                      },
-                    },
-                  },
-                  required: ["labels"],
-                },
-              },
-            },
-            input: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "input_text",
-                    text:
-                      "You are pass 2 of wine bottle geometry extraction. " +
-                      "For each provided bottle index + bottle_bbox, return a label_bbox and label_anchor for the PRIMARY FRONT BODY LABEL only. " +
-                      "Do not target neck labels, foil capsules, shoulder emblems, medallions, or bottle top. " +
-                      "label_bbox must tightly frame the main front label and remain inside the corresponding bottle_bbox. " +
-                      "If the main label is not visible, return null values for that bottle. " +
-                      "Bottle list (normalized coordinates, 0-1): " +
-                      JSON.stringify(boxedWines),
-                  },
-                  { type: "input_image", image_url: dataUrl, detail: "high" },
-                ],
-              },
-            ],
-            safety_identifier: user.id,
-          },
-          { signal: controller.signal }
-        );
-
-        const refineOutput =
-          "output_text" in refineResponse &&
-          typeof refineResponse.output_text === "string"
-            ? refineResponse.output_text
-            : "";
-        if (refineOutput.trim()) {
-          const parsedRefine = labelRefineSchema.safeParse(
-            extractJson(refineOutput)
-          );
-          if (parsedRefine.success) {
-            parsedRefine.data.labels.forEach((item) => {
-              if (!boxedWines.some((w) => w.index === item.index)) {
-                return;
-              }
-              const normalizedLabel = normalizeLabelBbox(item.label_bbox);
-              const normalizedAnchor = normalizeAnchor(item.label_anchor);
-              if (!normalizedLabel && !normalizedAnchor) {
-                return;
-              }
-              refinedByIndex.set(item.index, {
-                label_bbox: normalizedLabel,
-                label_anchor: normalizedAnchor,
-              });
-            });
-          }
-        }
-      } catch {
-        // Best-effort refinement only; keep first-pass geometry if this fails.
-      }
-    }
-
-    const wines = baseWines.map((wine, index) => {
-      const refined = refinedByIndex.get(index);
-      if (!refined) {
-        return wine;
-      }
-      return {
-        ...wine,
-        label_bbox: refined.label_bbox ?? wine.label_bbox,
-        label_anchor: refined.label_anchor ?? wine.label_anchor,
-      };
-    });
-
-    const finalBottleCount = Math.max(verifiedBottleCount, wines.length);
-    if (
-      finalBottleCount !== firstPassBottleCount ||
-      countVerificationCount !== null ||
-      finalBottleCount <= 1
-    ) {
-      console.info(
-        "[lineup-autofill] bottle-count",
-        JSON.stringify({
-          user_id: user.id,
-          first_pass_count: firstPassBottleCount,
-          verification_count: countVerificationCount,
-          wines_length: wines.length,
-          final_count: finalBottleCount,
-          image_bytes: file.size,
-        })
-      );
-    }
-
     return NextResponse.json({
       wines,
-      total_bottles_detected: finalBottleCount,
+      total_bottles_detected: parsed.data.total_bottles_detected ?? wines.length,
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

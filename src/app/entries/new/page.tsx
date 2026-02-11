@@ -1142,7 +1142,7 @@ export default function NewEntryPage() {
     );
 
     const controller = new AbortController();
-    const timeoutMs = files.length > 1 ? 90000 + files.length * 10000 : 90000;
+    const timeoutMs = files.length > 1 ? 65000 + files.length * 7000 : 65000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
@@ -1169,16 +1169,19 @@ export default function NewEntryPage() {
         });
       }
 
-      const lineupResults = await Promise.allSettled(lineupFetches);
-
-      let labelResult: Response | null = null;
-      if (labelFetch) {
-        try {
-          labelResult = await labelFetch;
-        } catch {
-          labelResult = null;
-        }
+      // Fast count guardrail: only consumed later if lineup appears ambiguous.
+      let countFetch: Promise<Response> | null = null;
+      if (files.length === 1) {
+        const countFd = new FormData();
+        countFd.append("photo", resized[0]);
+        countFetch = fetch("/api/bottle-count", {
+          method: "POST",
+          body: countFd,
+          signal: controller.signal,
+        });
       }
+
+      const lineupResults = await Promise.allSettled(lineupFetches);
 
       clearTimeout(timeoutId);
 
@@ -1238,21 +1241,61 @@ export default function NewEntryPage() {
 
       const inferredBottleCount =
         detectedBottleCount > 0 ? detectedBottleCount : allWines.length;
+      let guardrailCount: number | null = null;
+      const needsCountGuardrail =
+        files.length === 1 &&
+        inferredBottleCount <= 1 &&
+        allWines.length <= 1 &&
+        Boolean(countFetch);
+      if (needsCountGuardrail && countFetch) {
+        try {
+          const countResponse = await countFetch;
+          if (countResponse.ok) {
+            const countPayload = (await countResponse.json()) as {
+              total_bottles_detected?: number;
+            };
+            if (
+              typeof countPayload.total_bottles_detected === "number" &&
+              Number.isFinite(countPayload.total_bottles_detected)
+            ) {
+              guardrailCount = Math.max(
+                0,
+                Math.round(countPayload.total_bottles_detected)
+              );
+            }
+          }
+        } catch {
+          guardrailCount = null;
+        }
+      }
+      const effectiveBottleCount = Math.max(
+        inferredBottleCount,
+        guardrailCount ?? 0
+      );
       const singleWine = allWines[0] ?? null;
       const forceLineupFromGeometry =
         files.length === 1 &&
-        inferredBottleCount <= 1 &&
+        effectiveBottleCount <= 1 &&
         allWines.length <= 1 &&
         shouldForceLineupForSinglePhoto(singleWine);
       const likelyLineup =
         files.length > 1 ||
         allWines.length > 1 ||
-        inferredBottleCount > 1 ||
+        effectiveBottleCount > 1 ||
         forceLineupFromGeometry;
       const isSingleBottle =
         files.length === 1 && !likelyLineup && allWines.length <= 1;
 
       if (isSingleBottle) {
+        let labelResult: Response | null = null;
+        if (labelFetch) {
+          try {
+            labelResult = await labelFetch;
+          } catch {
+            labelResult = null;
+          }
+        }
+
         // Single photo with single bottle — prefer label-autofill (richer fields),
         // then fall back to lineup if needed.
         if (labelResult && labelResult.ok) {
@@ -1388,14 +1431,22 @@ export default function NewEntryPage() {
         const identifiedCount = allWines.filter((wine) =>
           hasDetectedWineDetails(wine)
         ).length;
-        const unresolvedCount = Math.max(0, inferredBottleCount - identifiedCount);
-        if (forceLineupFromGeometry) {
+        const unresolvedCount = Math.max(0, effectiveBottleCount - identifiedCount);
+        if (
+          typeof guardrailCount === "number" &&
+          guardrailCount > inferredBottleCount &&
+          guardrailCount > 1
+        ) {
+          setAutofillMessage(
+            `Detected ${guardrailCount} bottles in quick count${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; add a clearer shot for missing bottles.`
+          );
+        } else if (forceLineupFromGeometry) {
           setAutofillMessage(
             "Detected lineup-style framing in this photo. Switched to lineup review to avoid incorrect single-bottle autofill."
           );
         } else if (unresolvedCount > 0) {
           setAutofillMessage(
-            `Detected ${inferredBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
+            `Detected ${effectiveBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
           );
         } else {
           setAutofillMessage(
@@ -1549,7 +1600,7 @@ export default function NewEntryPage() {
               >
                 {autofillMessage}
                 {autofillStatus === "loading" && !lineupCreating
-                  ? " (Please wait up to 90 seconds for larger lineups.)"
+                  ? " (Please wait up to about 60 seconds for larger lineups.)"
                   : ""}
               </p>
             ) : null}
