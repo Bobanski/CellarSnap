@@ -11,6 +11,7 @@ const wineSchema = z.object({
   region: z.string().nullable().optional(),
   appellation: z.string().nullable().optional(),
   classification: z.string().nullable().optional(),
+  primary_grape_suggestions: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
 });
 
@@ -120,6 +121,10 @@ export async function POST(request: Request) {
                       region: { type: ["string", "null"] },
                       appellation: { type: ["string", "null"] },
                       classification: { type: ["string", "null"] },
+                      primary_grape_suggestions: {
+                        type: "array",
+                        items: { type: "string" },
+                      },
                       confidence: { type: ["number", "null"] },
                     },
                     required: [
@@ -130,6 +135,7 @@ export async function POST(request: Request) {
                       "region",
                       "appellation",
                       "classification",
+                      "primary_grape_suggestions",
                       "confidence",
                     ],
                   },
@@ -150,9 +156,13 @@ export async function POST(request: Request) {
                   "This photo shows one or more wine bottles. Identify each unique bottle visible in the image. " +
                   "For each bottle, extract as much label information as you can read. " +
                   "Return JSON with a 'wines' array (one object per bottle, left-to-right order) and 'total_bottles_detected' (integer). " +
-                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, confidence. " +
+                  "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence. " +
                   "Appellation must be place-based only (e.g. Saint-Aubin, Pauillac, Barolo). " +
                   "Classification must hold quality tiers or legal quality markers (e.g. Premier Cru, Grand Cru Classe, DOCG). " +
+                  "For primary_grape_suggestions, include canonical grape variety names. " +
+                  "Infer grapes from what is stated on the label, the wine name, and from high-confidence regional associations " +
+                  "(e.g. Barolo -> Nebbiolo, Chablis -> Chardonnay, Sancerre -> Sauvignon Blanc, Chianti -> Sangiovese). " +
+                  "Only include grapes you are highly confident about. Use [] if unsure. " +
                   "Use null for fields you cannot determine. confidence is 0-1 per bottle. " +
                   "If only one bottle is visible, return an array with one element.",
               },
@@ -193,6 +203,10 @@ export async function POST(request: Request) {
       region: normalize(wine.region),
       appellation: normalize(wine.appellation),
       classification: normalize(wine.classification),
+      primary_grape_suggestions: (wine.primary_grape_suggestions ?? [])
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .slice(0, 3),
       confidence: wine.confidence ?? null,
     }));
 

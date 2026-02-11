@@ -142,6 +142,7 @@ export default function NewEntryPage() {
     region: string | null;
     appellation: string | null;
     classification: string | null;
+    primary_grape_suggestions?: string[];
     confidence: number | null;
     included: boolean;
   };
@@ -688,13 +689,28 @@ export default function NewEntryPage() {
 
     setLineupCreating(true);
     setLineupCreatedCount(0);
+    setAutofillMessage("Resolving grape varieties...");
+
+    // Resolve grape suggestions to IDs for all wines upfront
+    const grapeIdsByIndex: Map<number, string[]> = new Map();
+    for (let i = 0; i < included.length; i++) {
+      const suggestions = included[i].primary_grape_suggestions ?? [];
+      if (suggestions.length > 0) {
+        const resolved = await resolveSuggestedGrapes(suggestions.slice(0, 2));
+        if (resolved.length > 0) {
+          grapeIdsByIndex.set(i, resolved.map((g) => g.id));
+        }
+      }
+    }
+
     setAutofillMessage(`Creating entries... (0/${included.length})`);
 
     const privacy = getValues("entry_privacy") || "public";
     const consumedAt = getValues("consumed_at") || getTodayLocalYmd();
     let created = 0;
 
-    for (const wine of included) {
+    for (let i = 0; i < included.length; i++) {
+      const wine = included[i];
       try {
         const response = await fetch("/api/entries", {
           method: "POST",
@@ -707,6 +723,7 @@ export default function NewEntryPage() {
             region: wine.region || null,
             appellation: wine.appellation || null,
             classification: wine.classification || null,
+            primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
             consumed_at: consumedAt,
             entry_privacy: privacy,
             tasted_with_user_ids: [],
@@ -1042,7 +1059,14 @@ export default function NewEntryPage() {
                         {wine.wine_name || "Unknown wine"}
                       </p>
                       <p className="truncate text-xs text-zinc-400">
-                        {[wine.producer, wine.vintage, wine.region]
+                        {[
+                          wine.producer,
+                          wine.vintage,
+                          wine.region,
+                          ...(wine.primary_grape_suggestions?.length
+                            ? [wine.primary_grape_suggestions.join(", ")]
+                            : []),
+                        ]
                           .filter(Boolean)
                           .join(" \u00b7 ") || "No details detected"}
                       </p>
