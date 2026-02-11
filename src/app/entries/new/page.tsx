@@ -133,6 +133,22 @@ export default function NewEntryPage() {
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Lineup detection state
+  type LineupWine = {
+    wine_name: string | null;
+    producer: string | null;
+    vintage: string | null;
+    country: string | null;
+    region: string | null;
+    appellation: string | null;
+    classification: string | null;
+    confidence: number | null;
+    included: boolean;
+  };
+  const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
+  const [lineupCreating, setLineupCreating] = useState(false);
+  const [lineupCreatedCount, setLineupCreatedCount] = useState(0);
+
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
     let isMounted = true;
@@ -189,7 +205,7 @@ export default function NewEntryPage() {
           preview: URL.createObjectURL(file),
         }));
         if (!hasAutofillRun && prev.length === 0 && next[0]) {
-          runAutofill(next[0].file);
+          runAnalysis(next[0].file);
           setHasAutofillRun(true);
         }
         return [...prev, ...next];
@@ -666,74 +682,193 @@ export default function NewEntryPage() {
     }
   };
 
-  const runAutofill = async (file: File) => {
+  const createLineupEntries = async () => {
+    const included = lineupWines.filter((w) => w.included);
+    if (included.length === 0) return;
+
+    setLineupCreating(true);
+    setLineupCreatedCount(0);
+    setAutofillMessage(`Creating entries... (0/${included.length})`);
+
+    const privacy = getValues("entry_privacy") || "public";
+    const consumedAt = getValues("consumed_at") || getTodayLocalYmd();
+    let created = 0;
+
+    for (const wine of included) {
+      try {
+        const response = await fetch("/api/entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wine_name: wine.wine_name ?? "Unknown wine",
+            producer: wine.producer || null,
+            vintage: wine.vintage || null,
+            country: wine.country || null,
+            region: wine.region || null,
+            appellation: wine.appellation || null,
+            classification: wine.classification || null,
+            consumed_at: consumedAt,
+            entry_privacy: privacy,
+            tasted_with_user_ids: [],
+          }),
+        });
+
+        if (!response.ok) continue;
+
+        const payload = await response.json();
+        const entry = payload.entry;
+
+        // Upload the photo as the label photo for each entry
+        if (entry?.id && labelPhotos[0]) {
+          try {
+            await uploadPhotos(entry.id, "label", [labelPhotos[0]]);
+          } catch {
+            // Photo upload failed but entry was created, continue
+          }
+        }
+
+        created++;
+        setLineupCreatedCount(created);
+        setAutofillMessage(
+          `Creating entries... (${created}/${included.length})`
+        );
+      } catch {
+        // Skip failed entries, continue with rest
+      }
+    }
+
+    setLineupCreating(false);
+
+    if (created > 0) {
+      setAutofillStatus("success");
+      setAutofillMessage(
+        `Created ${created} entr${created === 1 ? "y" : "ies"}! Redirecting...`
+      );
+      setTimeout(() => router.push("/entries"), 1200);
+    } else {
+      setAutofillStatus("error");
+      setAutofillMessage("Failed to create entries. Try again.");
+    }
+  };
+
+  const runAnalysis = async (file: File) => {
     setAutofillStatus("loading");
-    setAutofillMessage("Analyzing label...");
+    setAutofillMessage("Analyzing photo...");
+    setLineupWines([]);
+    setLineupCreatedCount(0);
+
+    const resized = await createAutofillImage(file);
+
+    // Fire both endpoints in parallel: lineup detection + single-label autofill
+    const lineupFormData = new FormData();
+    lineupFormData.append("photo", resized);
+    const labelFormData = new FormData();
+    labelFormData.append("label", resized);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
 
     try {
-      const resized = await createAutofillImage(file);
-      const formData = new FormData();
-      formData.append("label", resized);
-
-      const response = await fetch("/api/label-autofill", {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
-      });
+      const [lineupResult, labelResult] = await Promise.allSettled([
+        fetch("/api/lineup-autofill", {
+          method: "POST",
+          body: lineupFormData,
+          signal: controller.signal,
+        }),
+        fetch("/api/label-autofill", {
+          method: "POST",
+          body: labelFormData,
+          signal: controller.signal,
+        }),
+      ]);
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          setAutofillStatus("error");
-          setAutofillMessage("Your session expired. Sign in again and retry.");
-          return;
-        }
-        if (response.status === 413) {
-          setAutofillStatus("error");
-          setAutofillMessage("Image too large. Try a smaller photo.");
-          return;
-        }
-        if (response.status === 504) {
-          setAutofillStatus("timeout");
-          setAutofillMessage("Autofill timed out. Try again.");
-          return;
-        }
-        setAutofillStatus("error");
-        setAutofillMessage(
-          errorPayload.error ?? "Could not read the label. Try again."
-        );
-        return;
+      // Parse lineup response to determine bottle count
+      let lineupData: {
+        wines?: Omit<LineupWine, "included">[];
+        total_bottles_detected?: number;
+      } | null = null;
+      if (
+        lineupResult.status === "fulfilled" &&
+        lineupResult.value.ok
+      ) {
+        lineupData = await lineupResult.value.json();
       }
 
-      const data = await response.json();
-      await applyAutofill(data);
-      setAutofillStatus("success");
-      const confidenceLabel =
-        typeof data.confidence === "number"
-          ? `Confidence ${Math.round(data.confidence * 100)}%`
-          : null;
-      const warningCount = Array.isArray(data.warnings) ? data.warnings.length : 0;
-      const warningLabel =
-        warningCount > 0 ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain` : null;
-      setAutofillMessage(
-        [confidenceLabel, warningLabel]
-          .filter(Boolean)
-          .join(" • ") || "Autofill complete. Review the details."
-      );
+      const bottleCount =
+        lineupData?.total_bottles_detected ??
+        lineupData?.wines?.length ??
+        0;
+
+      if (bottleCount >= 2) {
+        // Multiple bottles — lineup mode
+        const wines: LineupWine[] = (lineupData?.wines ?? []).map(
+          (w) => ({ ...w, included: true })
+        );
+        setLineupWines(wines);
+        setAutofillStatus("success");
+        setAutofillMessage(
+          `Detected ${wines.length} bottles. Review and create entries below.`
+        );
+      } else {
+        // Single bottle (or detection failed) — use label autofill
+        if (
+          labelResult.status === "fulfilled" &&
+          labelResult.value.ok
+        ) {
+          const labelData = await labelResult.value.json();
+          await applyAutofill(labelData);
+          setAutofillStatus("success");
+          const confidenceLabel =
+            typeof labelData.confidence === "number"
+              ? `Confidence ${Math.round(labelData.confidence * 100)}%`
+              : null;
+          const warningCount = Array.isArray(labelData.warnings)
+            ? labelData.warnings.length
+            : 0;
+          const warningLabel =
+            warningCount > 0
+              ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
+              : null;
+          setAutofillMessage(
+            [confidenceLabel, warningLabel]
+              .filter(Boolean)
+              .join(" \u2022 ") || "Autofill complete. Review the details."
+          );
+        } else if (labelResult.status === "fulfilled") {
+          const errorPayload = await labelResult.value
+            .json()
+            .catch(() => ({}));
+          if (labelResult.value.status === 401) {
+            setAutofillStatus("error");
+            setAutofillMessage(
+              "Your session expired. Sign in again and retry."
+            );
+          } else if (labelResult.value.status === 413) {
+            setAutofillStatus("error");
+            setAutofillMessage("Image too large. Try a smaller photo.");
+          } else {
+            setAutofillStatus("error");
+            setAutofillMessage(
+              errorPayload.error ??
+                "Could not read the label. Try again."
+            );
+          }
+        } else {
+          setAutofillStatus("error");
+          setAutofillMessage("Could not analyze the photo. Try again.");
+        }
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === "AbortError") {
         setAutofillStatus("timeout");
-        setAutofillMessage("Autofill timed out. Try again.");
+        setAutofillMessage("Analysis timed out. Try again.");
         return;
       }
       setAutofillStatus("error");
-      setAutofillMessage("Could not read the label. Try again.");
+      setAutofillMessage("Could not analyze the photo. Try again.");
     }
   };
 
@@ -765,7 +900,7 @@ export default function NewEntryPage() {
                   Label photo (recommended)
                 </label>
                 <p className="text-xs text-zinc-400">
-                  We’ll try to autofill details from the label. You can edit anything after.
+                  One bottle or a full lineup — we’ll identify each wine and fill in the details.
                 </p>
               </div>
               {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
@@ -774,7 +909,7 @@ export default function NewEntryPage() {
                   className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                   onClick={() => {
                     const first = labelPhotos[0];
-                    if (first) runAutofill(first.file);
+                    if (first) runAnalysis(first.file);
                   }}
                 >
                   Try again
@@ -837,6 +972,8 @@ export default function NewEntryPage() {
                         if (index === 0) {
                           setAutofillStatus("idle");
                           setAutofillMessage(null);
+                          setLineupWines([]);
+                          setLineupCreatedCount(0);
                         }
                       }}
                     >
@@ -867,8 +1004,80 @@ export default function NewEntryPage() {
                 }`}
               >
                 {autofillMessage}
-                {autofillStatus === "loading" ? " (Please wait up to 15 seconds.)" : ""}
+                {autofillStatus === "loading" && !lineupCreating ? " (Please wait up to 30 seconds.)" : ""}
               </p>
+            ) : null}
+
+            {/* Lineup review: shown when multiple bottles detected */}
+            {lineupWines.length > 0 && !lineupCreating && lineupCreatedCount === 0 ? (
+              <div className="mt-4 space-y-2">
+                {lineupWines.map((wine, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+                      wine.included
+                        ? "border-white/10 bg-black/20"
+                        : "border-white/5 bg-black/10 opacity-50"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
+                        wine.included
+                          ? "border-amber-400 bg-amber-400/20 text-amber-300"
+                          : "border-zinc-600 text-zinc-600"
+                      }`}
+                      onClick={() => {
+                        setLineupWines((prev) =>
+                          prev.map((w, i) =>
+                            i === index ? { ...w, included: !w.included } : w
+                          )
+                        );
+                      }}
+                    >
+                      {wine.included ? "\u2713" : ""}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-zinc-100">
+                        {wine.wine_name || "Unknown wine"}
+                      </p>
+                      <p className="truncate text-xs text-zinc-400">
+                        {[wine.producer, wine.vintage, wine.region]
+                          .filter(Boolean)
+                          .join(" \u00b7 ") || "No details detected"}
+                      </p>
+                      {wine.confidence !== null ? (
+                        <p className="mt-0.5 text-xs text-zinc-500">
+                          Confidence: {Math.round(wine.confidence * 100)}%
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-amber-500/90 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
+                  disabled={lineupWines.filter((w) => w.included).length === 0}
+                  onClick={createLineupEntries}
+                >
+                  Create{" "}
+                  {lineupWines.filter((w) => w.included).length} entr
+                  {lineupWines.filter((w) => w.included).length === 1
+                    ? "y"
+                    : "ies"}
+                </button>
+              </div>
+            ) : null}
+
+            {lineupCreating ? (
+              <div className="mt-4 flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
+                <span className="text-sm text-zinc-300">
+                  Creating entries... ({lineupCreatedCount}/
+                  {lineupWines.filter((w) => w.included).length})
+                </span>
+              </div>
             ) : null}
           </div>
 
