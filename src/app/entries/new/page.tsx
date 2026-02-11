@@ -1043,10 +1043,17 @@ export default function NewEntryPage() {
 
       // Collect all wines from all lineup results, tracking source photo
       const allWines: LineupWine[] = [];
+      let detectedBottleCount = 0;
       for (let pi = 0; pi < lineupResults.length; pi++) {
         const result = lineupResults[pi];
         if (result.status === "fulfilled" && result.value.ok) {
           const data = await result.value.json();
+          const detectedForPhoto =
+            typeof data.total_bottles_detected === "number" &&
+            Number.isFinite(data.total_bottles_detected)
+              ? Math.max(0, Math.round(data.total_bottles_detected))
+              : 0;
+          detectedBottleCount += detectedForPhoto;
           const wines: LineupWine[] = (Array.isArray(data.wines)
             ? data.wines
             : []
@@ -1080,8 +1087,12 @@ export default function NewEntryPage() {
         }
       }
 
+      const inferredBottleCount =
+        detectedBottleCount > 0 ? detectedBottleCount : allWines.length;
+      const likelyLineup =
+        files.length > 1 || allWines.length > 1 || inferredBottleCount > 1;
       const isSingleBottle =
-        files.length === 1 && allWines.length <= 1;
+        files.length === 1 && !likelyLineup && allWines.length <= 1;
 
       if (isSingleBottle) {
         // Single photo with single bottle — use label autofill for richer data
@@ -1146,9 +1157,16 @@ export default function NewEntryPage() {
           files.length > 1
             ? ` across ${files.length} photos`
             : "";
-        setAutofillMessage(
-          `Detected ${allWines.length} bottle${allWines.length === 1 ? "" : "s"}${photoLabel}. Review and create entries below.`
-        );
+        const unresolvedCount = Math.max(0, inferredBottleCount - allWines.length);
+        if (unresolvedCount > 0) {
+          setAutofillMessage(
+            `Detected ${inferredBottleCount} bottles${photoLabel}. Identified ${allWines.length} label${allWines.length === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
+          );
+        } else {
+          setAutofillMessage(
+            `Detected ${allWines.length} bottle${allWines.length === 1 ? "" : "s"}${photoLabel}. Review and create entries below.`
+          );
+        }
       }
     } catch (error) {
       clearTimeout(timeoutId);

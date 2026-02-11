@@ -253,6 +253,8 @@ export async function POST(request: Request) {
                   "This photo shows one or more wine bottles. Identify each unique bottle visible in the image. " +
                   "For each bottle, extract as much label information as you can read. " +
                   "Return JSON with a 'wines' array (one object per bottle, left-to-right order) and 'total_bottles_detected' (integer). " +
+                  "CRITICAL: wines array length must match total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
+                  "If text is unreadable, still include that bottle object with null fields, empty grape array, and low confidence. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
