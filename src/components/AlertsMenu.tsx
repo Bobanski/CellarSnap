@@ -32,6 +32,15 @@ export default function AlertsMenu() {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const open = openPathname === pathname;
+  const toggleOpen = () => {
+    const nextOpen = !open;
+    if (nextOpen) {
+      setCount(0);
+      setOpenPathname(pathname);
+      return;
+    }
+    setOpenPathname(null);
+  };
 
   // On mount: fetch only the unseen count (lightweight)
   useEffect(() => {
@@ -127,9 +136,7 @@ export default function AlertsMenu() {
       <button
         type="button"
         className="accent-outline-hover relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition"
-        onClick={() =>
-          setOpenPathname((prev) => (prev === pathname ? null : pathname))
-        }
+        onClick={toggleOpen}
         aria-label="Alerts"
       >
         <span className="text-lg">🔔</span>
