@@ -829,8 +829,16 @@ export default function NewEntryPage() {
 
       const fallbackFocusY = boxY + boxHeight * 0.72;
       const labelFocusY = labelAnchor ? labelAnchor.y * image.height : null;
-      const focusY =
+      const anchorRelativeY =
         typeof labelFocusY === "number" && Number.isFinite(labelFocusY)
+          ? (labelFocusY - boxY) / boxHeight
+          : null;
+      const anchorLooksTooHigh =
+        typeof anchorRelativeY === "number" && anchorRelativeY < 0.46;
+      const focusY =
+        typeof labelFocusY === "number" &&
+        Number.isFinite(labelFocusY) &&
+        !anchorLooksTooHigh
           ? labelFocusY
           : fallbackFocusY;
       const minY = boxY - topPadding;

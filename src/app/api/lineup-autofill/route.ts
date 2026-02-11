@@ -257,6 +257,7 @@ export async function POST(request: Request) {
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
                   "label_anchor is a normalized point with x and y at the visual center of the bottle's primary front label; use null if the label center is not visible. " +
+                  "The label_anchor must target the main body label and not the neck label, capsule foil, shoulder badge, crest, or bottle top. " +
                   "Appellation must be place-based only (e.g. Saint-Aubin, Pauillac, Barolo). " +
                   "Classification must hold quality tiers or legal quality markers (e.g. Premier Cru, Grand Cru Classe, DOCG). " +
                   "For primary_grape_suggestions, include canonical grape variety names. " +
