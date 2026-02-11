@@ -48,6 +48,17 @@ export default function ProfilePage() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // Badges state
+  type Badge = {
+    id: string;
+    name: string;
+    symbol: string;
+    threshold: number;
+    count: number;
+    earned: boolean;
+  };
+  const [badges, setBadges] = useState<Badge[]>([]);
+
   // Privacy state
   const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("public");
   const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
@@ -103,6 +114,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile().catch(() => null);
+
+    // Load badges in parallel (independent of profile)
+    fetch("/api/profile/badges", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.badges) setBadges(data.badges);
+      })
+      .catch(() => null);
   }, [loadProfile]);
 
   const saveProfile = async () => {
@@ -516,7 +535,50 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ── Section 2: Settings (only if privacy column exists) ── */}
+          {/* ── Section 2: Badges ── */}
+          {badges.length > 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Badges
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                Earn badges by logging 10 wines from a specific region or style.
+              </p>
+
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                {badges.map((badge) => (
+                  <div
+                    key={badge.id}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-4 text-center transition ${
+                      badge.earned
+                        ? "border-amber-300/40 bg-amber-400/10"
+                        : "border-white/5 bg-black/20 opacity-40"
+                    }`}
+                  >
+                    <span className="text-2xl">{badge.symbol}</span>
+                    <span
+                      className={`text-xs font-semibold leading-tight ${
+                        badge.earned ? "text-amber-200" : "text-zinc-400"
+                      }`}
+                    >
+                      {badge.name}
+                    </span>
+                    <span
+                      className={`text-[10px] tabular-nums ${
+                        badge.earned
+                          ? "font-medium text-amber-300/70"
+                          : "text-zinc-500"
+                      }`}
+                    >
+                      {badge.count}/{badge.threshold}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* ── Section 3: Settings (only if privacy column exists) ── */}
           {profile?.default_entry_privacy !== null && profile?.default_entry_privacy !== undefined ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
               <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
