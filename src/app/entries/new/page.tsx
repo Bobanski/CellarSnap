@@ -26,6 +26,7 @@ import {
   type PricePaidSource,
   type QprLevel,
 } from "@/lib/entryMeta";
+import { getTodayLocalYmd } from "@/lib/dateYmd";
 import type { PrimaryGrape } from "@/types/wine";
 
 type NewEntryForm = {
@@ -73,7 +74,7 @@ export default function NewEntryPage() {
   const supabase = createSupabaseBrowserClient();
   const { control, register, handleSubmit, getValues, setValue, formState: { errors } } = useForm<NewEntryForm>({
     defaultValues: {
-      consumed_at: new Date().toISOString().slice(0, 10),
+      consumed_at: getTodayLocalYmd(),
       entry_privacy: "public",
       price_paid_currency: "usd",
       price_paid_source: "",

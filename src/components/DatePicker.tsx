@@ -1,17 +1,10 @@
 "use client";
 
+import { getTodayLocalYmd } from "@/lib/dateYmd";
+
 function isValidYmd(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
-
-function toYmd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-const TODAY_YMD = toYmd(new Date());
 
 type DatePickerProps = {
   value: string;
@@ -31,6 +24,8 @@ export default function DatePicker({
   required,
 }: DatePickerProps) {
   const normalizedValue = isValidYmd(value) ? value : "";
+  const todayYmd = getTodayLocalYmd();
+
   return (
     <input
       id={id}
@@ -39,7 +34,7 @@ export default function DatePicker({
       onChange={(event) => onChange(event.target.value)}
       onBlur={onBlur}
       required={required}
-      max={TODAY_YMD}
+      max={todayYmd}
       autoComplete="off"
       className={className}
     />
