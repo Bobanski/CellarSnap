@@ -673,58 +673,6 @@ export default function EditEntryPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-zinc-200">Wine name</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("wine_name")}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Producer</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("producer")}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Vintage</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("vintage")}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Country</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("country")}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Region</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("region")}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Appellation</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("appellation")}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">
-                Classification
-              </label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="Optional (e.g. Premier Cru, DOCG)"
-                {...register("classification")}
-              />
-            </div>
-            <div>
               <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
               <input
                 type="text"
@@ -752,95 +700,14 @@ export default function EditEntryPage() {
                 ))}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <PrimaryGrapeSelector
-                selected={selectedPrimaryGrapes}
-                onChange={setSelectedPrimaryGrapes}
-              />
-            </div>
-            <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-zinc-200">Price paid</label>
-                  <div className="mt-1 flex">
-                    <input type="hidden" {...register("price_paid_currency")} />
-                    <PriceCurrencySelect
-                      value={selectedPricePaidCurrency}
-                      onChange={(currency) =>
-                        setValue("price_paid_currency", currency, {
-                          shouldDirty: true,
-                        })
-                      }
-                    />
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      pattern="[0-9]*[.]?[0-9]*"
-                      className="h-10 w-full rounded-r-xl border border-white/10 border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                      placeholder="Optional (e.g. 28.50)"
-                      {...register("price_paid", {
-                        setValueAs: (value) => {
-                          if (value === "") return undefined;
-                          const parsed = Number(value);
-                          return Number.isFinite(parsed) ? parsed : undefined;
-                        },
-                      })}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-sm font-medium text-zinc-200">Price source</label>
-                    {selectedPricePaidSource ? (
-                      <button
-                        type="button"
-                        className="text-xs text-zinc-400 transition hover:text-zinc-200"
-                        onClick={() =>
-                          setValue("price_paid_source", "", {
-                            shouldDirty: true,
-                          })
-                        }
-                      >
-                        Clear
-                      </button>
-                    ) : null}
-                  </div>
-                  <input type="hidden" {...register("price_paid_source")} />
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    {PRICE_PAID_SOURCE_VALUES.map((source) => {
-                      const selected = selectedPricePaidSource === source;
-                      return (
-                        <button
-                          key={source}
-                          type="button"
-                          className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
-                            selected
-                              ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
-                              : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
-                          }`}
-                          onClick={() =>
-                            setValue("price_paid_source", source, {
-                              shouldDirty: true,
-                            })
-                          }
-                        >
-                          <span
-                            className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                              selected
-                                ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
-                                : "border-white/20 text-transparent"
-                            }`}
-                          >
-                            ✓
-                          </span>
-                          {PRICE_PAID_SOURCE_LABELS[source]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200">Notes</label>
+            <textarea
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              {...register("notes")}
+            />
           </div>
 
           <div>
@@ -876,13 +743,186 @@ export default function EditEntryPage() {
             )}
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
-            <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              {...register("notes")}
-            />
-          </div>
+          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+              Wine details
+            </summary>
+            <p className="mt-2 text-xs text-zinc-400">
+              Optional identity and purchase details for this bottle.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Wine name</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("wine_name")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Producer</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("producer")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Vintage</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("vintage")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Country</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("country")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Region</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("region")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Appellation</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("appellation")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-zinc-200">
+                  Classification
+                </label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  placeholder="Optional (e.g. Premier Cru, DOCG)"
+                  {...register("classification")}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <PrimaryGrapeSelector
+                  selected={selectedPrimaryGrapes}
+                  onChange={setSelectedPrimaryGrapes}
+                />
+              </div>
+              <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-200">Price paid</label>
+                    <div className="mt-1 flex">
+                      <input type="hidden" {...register("price_paid_currency")} />
+                      <PriceCurrencySelect
+                        value={selectedPricePaidCurrency}
+                        onChange={(currency) =>
+                          setValue("price_paid_currency", currency, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        pattern="[0-9]*[.]?[0-9]*"
+                        className="h-10 w-full rounded-r-xl border border-white/10 border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        placeholder="Optional (e.g. 28.50)"
+                        {...register("price_paid", {
+                          setValueAs: (value) => {
+                            if (value === "") return undefined;
+                            const parsed = Number(value);
+                            return Number.isFinite(parsed) ? parsed : undefined;
+                          },
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-sm font-medium text-zinc-200">Price source</label>
+                      {selectedPricePaidSource ? (
+                        <button
+                          type="button"
+                          className="text-xs text-zinc-400 transition hover:text-zinc-200"
+                          onClick={() =>
+                            setValue("price_paid_source", "", {
+                              shouldDirty: true,
+                            })
+                          }
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+                    </div>
+                    <input type="hidden" {...register("price_paid_source")} />
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      {PRICE_PAID_SOURCE_VALUES.map((source) => {
+                        const selected = selectedPricePaidSource === source;
+                        return (
+                          <button
+                            key={source}
+                            type="button"
+                            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+                              selected
+                                ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
+                                : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
+                            }`}
+                            onClick={() =>
+                              setValue("price_paid_source", source, {
+                                shouldDirty: true,
+                              })
+                            }
+                          >
+                            <span
+                              className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                                selected
+                                  ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
+                                  : "border-white/20 text-transparent"
+                              }`}
+                            >
+                              ✓
+                            </span>
+                            {PRICE_PAID_SOURCE_LABELS[source]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+              Advanced notes
+            </summary>
+            <p className="mt-2 text-xs text-zinc-400">
+              Optional structure for deeper tasting notes.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {ADVANCED_NOTE_FIELDS.map((field) => (
+                <div key={field.key}>
+                  <label className="text-sm font-medium text-zinc-200">
+                    {field.label}
+                  </label>
+                  <select
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    {...register(`advanced_notes.${field.key}` as const)}
+                  >
+                    <option value="">Not set</option>
+                    {ADVANCED_NOTE_OPTIONS[field.key].map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </details>
 
           <div>
             <label className="text-sm font-medium text-zinc-200">
@@ -1049,35 +1089,6 @@ export default function EditEntryPage() {
               );
             })}
           </div>
-
-          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
-              Advanced notes
-            </summary>
-            <p className="mt-2 text-xs text-zinc-400">
-              Optional structure for deeper tasting notes.
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {ADVANCED_NOTE_FIELDS.map((field) => (
-                <div key={field.key}>
-                  <label className="text-sm font-medium text-zinc-200">
-                    {field.label}
-                  </label>
-                  <select
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    {...register(`advanced_notes.${field.key}` as const)}
-                  >
-                    <option value="">Not set</option>
-                    {ADVANCED_NOTE_OPTIONS[field.key].map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </details>
 
           {errorMessage ? (
             <p className="text-sm text-rose-300">{errorMessage}</p>
