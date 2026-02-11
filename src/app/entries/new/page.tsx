@@ -1029,28 +1029,7 @@ export default function NewEntryPage() {
         });
       });
 
-      // For single photo, also fire label-autofill (richer data with grapes)
-      let labelFetch: Promise<Response> | null = null;
-      if (files.length === 1) {
-        const labelFd = new FormData();
-        labelFd.append("label", resized[0]);
-        labelFetch = fetch("/api/label-autofill", {
-          method: "POST",
-          body: labelFd,
-          signal: controller.signal,
-        });
-      }
-
       const lineupResults = await Promise.allSettled(lineupFetches);
-
-      let labelResult: Response | null = null;
-      if (labelFetch) {
-        try {
-          labelResult = await labelFetch;
-        } catch {
-          labelResult = null;
-        }
-      }
 
       clearTimeout(timeoutId);
 
@@ -1130,52 +1109,56 @@ export default function NewEntryPage() {
         files.length === 1 && !likelyLineup && allWines.length <= 1;
 
       if (isSingleBottle) {
-        // Single photo with single bottle — use label autofill for richer data
-        if (labelResult && labelResult.ok) {
-          const labelData = await labelResult.json();
-          await applyAutofill(labelData);
+        // Single photo with single bottle — use lineup data to fill the form
+        const wine = allWines[0];
+        if (wine) {
+          await applyAutofill({
+            wine_name: wine.wine_name,
+            producer: wine.producer,
+            vintage: wine.vintage,
+            country: wine.country,
+            region: wine.region,
+            appellation: wine.appellation,
+            classification: wine.classification,
+            primary_grape_suggestions: wine.primary_grape_suggestions,
+          });
           setAutofillStatus("success");
           const confidenceLabel =
-            typeof labelData.confidence === "number"
-              ? `Confidence ${Math.round(labelData.confidence * 100)}%`
-              : null;
-          const warningCount = Array.isArray(labelData.warnings)
-            ? labelData.warnings.length
-            : 0;
-          const warningLabel =
-            warningCount > 0
-              ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
+            typeof wine.confidence === "number"
+              ? `Confidence ${Math.round(wine.confidence * 100)}%`
               : null;
           setAutofillMessage(
-            [confidenceLabel, warningLabel]
-              .filter(Boolean)
-              .join(" \u2022 ") ||
-              "Autofill complete. Review the details."
+            confidenceLabel ?? "Autofill complete. Review the details."
           );
-        } else if (labelResult && !labelResult.ok) {
-          const errorPayload = await labelResult
-            .json()
-            .catch(() => ({}));
-          if (labelResult.status === 401) {
-            setAutofillStatus("error");
-            setAutofillMessage(
-              "Your session expired. Sign in again and retry."
-            );
-          } else if (labelResult.status === 413) {
-            setAutofillStatus("error");
-            setAutofillMessage("Image too large. Try a smaller photo.");
+        } else {
+          // Lineup call failed — surface a useful error
+          const firstResult = lineupResults[0];
+          if (firstResult?.status === "fulfilled" && !firstResult.value.ok) {
+            const status = firstResult.value.status;
+            if (status === 401) {
+              setAutofillStatus("error");
+              setAutofillMessage(
+                "Your session expired. Sign in again and retry."
+              );
+            } else if (status === 413) {
+              setAutofillStatus("error");
+              setAutofillMessage("Image too large. Try a smaller photo.");
+            } else {
+              const errorPayload = await firstResult.value
+                .json()
+                .catch(() => ({}));
+              setAutofillStatus("error");
+              setAutofillMessage(
+                errorPayload.error ??
+                  "Could not read the label. Try again."
+              );
+            }
           } else {
             setAutofillStatus("error");
             setAutofillMessage(
-              errorPayload.error ??
-                "Could not read the label. Try again."
+              "Could not analyze the photo. Try again."
             );
           }
-        } else {
-          setAutofillStatus("error");
-          setAutofillMessage(
-            "Could not analyze the photo. Try again."
-          );
         }
       } else {
         // Multiple bottles or multiple photos — lineup mode
