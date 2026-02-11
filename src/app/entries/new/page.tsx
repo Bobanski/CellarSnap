@@ -1140,8 +1140,8 @@ export default function NewEntryPage() {
     setAutofillStatus("loading");
     setAutofillMessage(
       files.length === 1
-        ? "Analyzing photo..."
-        : `Analyzing ${files.length} photos...`
+        ? "Extracting wine details. Please allow more time for larger lineups."
+        : `Extracting wine details from ${files.length} photos. Please allow more time for larger lineups.`
     );
     setLineupWines([]);
     setLineupCreatedCount(0);
@@ -1598,20 +1598,26 @@ export default function NewEntryPage() {
                 : "Upload image"}
             </button>
             {autofillMessage ? (
-              <p
-                className={`mt-2 text-sm ${
-                  autofillStatus === "success"
-                    ? "text-emerald-300"
-                    : autofillStatus === "loading"
-                      ? "text-zinc-200"
+              autofillStatus === "loading" ? (
+                <div
+                  className="mt-2 flex items-center gap-2 text-sm text-zinc-200"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
+                  <span>{autofillMessage}</span>
+                </div>
+              ) : (
+                <p
+                  className={`mt-2 text-sm ${
+                    autofillStatus === "success"
+                      ? "text-emerald-300"
                       : "text-rose-300"
-                }`}
-              >
-                {autofillMessage}
-                {autofillStatus === "loading" && !lineupCreating
-                  ? " (Please wait up to about 60 seconds for larger lineups.)"
-                  : ""}
-              </p>
+                  }`}
+                >
+                  {autofillMessage}
+                </p>
+              )
             ) : null}
 
             {/* Lineup review: shown when multiple bottles detected */}
