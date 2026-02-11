@@ -803,10 +803,17 @@ export default function NewEntryPage() {
         img.src = imageUrl ?? "";
       });
 
+      // Estimate the label region from the bottle bounding box.
+      // Wine labels typically sit in the middle portion of the bottle,
+      // below the neck (~30% down) and above the base (~75% down).
+      const labelTop = bottleBbox.y + bottleBbox.height * 0.25;
+      const labelBottom = bottleBbox.y + bottleBbox.height * 0.80;
+      const labelHeight = labelBottom - labelTop;
+
       const boxX = Math.round(bottleBbox.x * image.width);
-      const boxY = Math.round(bottleBbox.y * image.height);
+      const boxY = Math.round(labelTop * image.height);
       const boxWidth = Math.round(bottleBbox.width * image.width);
-      const boxHeight = Math.round(bottleBbox.height * image.height);
+      const boxHeight = Math.round(labelHeight * image.height);
 
       if (boxWidth < 8 || boxHeight < 8) {
         return sourceFile;
@@ -815,8 +822,12 @@ export default function NewEntryPage() {
       // Keep the original tight X framing, but bias Y lower so the label
       // lands in the center of square feed thumbnails instead of the shoulder.
       const horizontalPadding = Math.round(boxWidth * 0.16);
+<<<<<<< HEAD
       const topPadding = Math.round(boxHeight * 0.03);
       const bottomPadding = Math.round(boxHeight * 0.3);
+=======
+      const verticalPadding = Math.round(boxHeight * 0.15);
+>>>>>>> 2ff3cd27326d9132d57ef851f5afc69e72a2b929
 
       const cropX = Math.max(0, boxX - horizontalPadding);
       const cropRight = Math.min(image.width, boxX + boxWidth + horizontalPadding);
@@ -900,17 +911,21 @@ export default function NewEntryPage() {
     setLineupCreatedCount(0);
     setAutofillMessage("Resolving grape varieties...");
 
-    // Resolve grape suggestions to IDs for all wines upfront
+    // Resolve grape suggestions to IDs for all wines in parallel
     const grapeIdsByIndex: Map<number, string[]> = new Map();
-    for (let i = 0; i < included.length; i++) {
-      const suggestions = included[i].primary_grape_suggestions ?? [];
-      if (suggestions.length > 0) {
-        const resolved = await resolveSuggestedGrapes(suggestions.slice(0, 2));
-        if (resolved.length > 0) {
-          grapeIdsByIndex.set(i, resolved.map((g) => g.id));
+    await Promise.all(
+      included.map(async (wine, i) => {
+        const suggestions = wine.primary_grape_suggestions ?? [];
+        if (suggestions.length > 0) {
+          const resolved = await resolveSuggestedGrapes(
+            suggestions.slice(0, 2)
+          );
+          if (resolved.length > 0) {
+            grapeIdsByIndex.set(i, resolved.map((g) => g.id));
+          }
         }
-      }
-    }
+      })
+    );
 
     setAutofillMessage(`Creating entries... (0/${included.length})`);
 
@@ -918,32 +933,34 @@ export default function NewEntryPage() {
     const consumedAt = getValues("consumed_at") || getTodayLocalYmd();
     let created = 0;
 
-    for (let i = 0; i < included.length; i++) {
-      const wine = included[i];
-      try {
-        const response = await fetch("/api/entries", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wine_name: wine.wine_name ?? "Unknown wine",
-            producer: wine.producer || null,
-            vintage: wine.vintage || null,
-            country: wine.country || null,
-            region: wine.region || null,
-            appellation: wine.appellation || null,
-            classification: wine.classification || null,
-            primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
-            consumed_at: consumedAt,
-            entry_privacy: privacy,
-            tasted_with_user_ids: [],
-          }),
-        });
+    // Create all entries + upload thumbnails in parallel
+    await Promise.all(
+      included.map(async (wine, i) => {
+        try {
+          const response = await fetch("/api/entries", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              wine_name: wine.wine_name ?? "Unknown wine",
+              producer: wine.producer || null,
+              vintage: wine.vintage || null,
+              country: wine.country || null,
+              region: wine.region || null,
+              appellation: wine.appellation || null,
+              classification: wine.classification || null,
+              primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
+              consumed_at: consumedAt,
+              entry_privacy: privacy,
+              tasted_with_user_ids: [],
+            }),
+          });
 
-        if (!response.ok) continue;
+          if (!response.ok) return;
 
-        const payload = await response.json();
-        const entry = payload.entry;
+          const payload = await response.json();
+          const entry = payload.entry;
 
+<<<<<<< HEAD
         // Upload a per-bottle thumbnail (fallback to original source photo)
         const sourcePhoto = labelPhotos[wine.photoIndex];
         if (entry?.id && sourcePhoto) {
@@ -957,18 +974,33 @@ export default function NewEntryPage() {
             await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
           } catch {
             // Photo upload failed but entry was created, continue
+=======
+          // Upload a per-bottle thumbnail (fallback to original source photo)
+          const sourcePhoto = labelPhotos[wine.photoIndex];
+          if (entry?.id && sourcePhoto) {
+            try {
+              const thumbnail = await createLineupBottleThumbnail(
+                sourcePhoto.file,
+                wine.bottle_bbox,
+                i
+              );
+              await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
+            } catch {
+              // Photo upload failed but entry was created, continue
+            }
+>>>>>>> 2ff3cd27326d9132d57ef851f5afc69e72a2b929
           }
-        }
 
-        created++;
-        setLineupCreatedCount(created);
-        setAutofillMessage(
-          `Creating entries... (${created}/${included.length})`
-        );
-      } catch {
-        // Skip failed entries, continue with rest
-      }
-    }
+          created++;
+          setLineupCreatedCount(created);
+          setAutofillMessage(
+            `Creating entries... (${created}/${included.length})`
+          );
+        } catch {
+          // Skip failed entries, continue with rest
+        }
+      })
+    );
 
     setLineupCreating(false);
 

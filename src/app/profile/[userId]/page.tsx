@@ -268,8 +268,8 @@ export default function FriendProfilePage() {
                 </h1>
                 <p className="text-sm text-zinc-300">
                   {isOwnProfile
-                    ? "Wines you&rsquo;ve logged and wines you&rsquo;ve been tagged in."
-                    : "Wines they&rsquo;ve logged and wines they&rsquo;ve been tagged in."}
+                    ? "Wines you&apos;ve logged and wines you&apos;ve been tagged in."
+                    : "Wines they&apos;ve logged and wines they&apos;ve been tagged in."}
                 </p>
               </div>
             </div>
@@ -361,11 +361,11 @@ export default function FriendProfilePage() {
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-zinc-50">
-            {isOwnProfile ? "Wines you&rsquo;ve uploaded" : "Wines they&rsquo;ve uploaded"}
+            {isOwnProfile ? "Wines you&apos;ve uploaded" : "Wines they&apos;ve uploaded"}
           </h2>
           {theirEntries.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
-              {isOwnProfile ? "You haven&rsquo;t uploaded any wines yet." : "No wines uploaded yet."}
+              {isOwnProfile ? "You haven&apos;t uploaded any wines yet." : "No wines uploaded yet."}
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
