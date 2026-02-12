@@ -35,6 +35,7 @@ Supabase SQL steps:
   - `supabase/sql/019_entry_classification_and_primary_grapes.sql`
   - `supabase/sql/020_ai_notes_summary.sql`
   - `supabase/sql/021_feedback.sql`
+  - `supabase/sql/022_add_grape_varieties.sql`
 
 Notes:
 - Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.
