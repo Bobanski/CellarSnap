@@ -14,6 +14,8 @@ import {
 type Profile = {
   id: string;
   display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   default_entry_privacy: "public" | "friends" | "private" | null;
   created_at: string | null;
@@ -39,6 +41,8 @@ export default function ProfilePage() {
   // Identity card state
   const [isEditing, setIsEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
@@ -103,7 +107,11 @@ export default function ProfilePage() {
       const data = await response.json();
       if (data.profile) {
         const profileDisplayName = data.profile.display_name?.trim() ?? "";
+        const profileFirstName = data.profile.first_name?.trim() ?? "";
+        const profileLastName = data.profile.last_name?.trim() ?? "";
         let initialEditUsername = profileDisplayName;
+        let initialEditFirstName = profileFirstName;
+        let initialEditLastName = profileLastName;
         if (!profileDisplayName && typeof window !== "undefined") {
           try {
             const pendingUsername =
@@ -120,9 +128,27 @@ export default function ProfilePage() {
           }
         }
 
-        if (profileDisplayName && typeof window !== "undefined") {
+        if (typeof window !== "undefined") {
           try {
-            window.sessionStorage.removeItem("pendingSignupUsername");
+            if (!profileFirstName) {
+              const pendingFirstName =
+                window.sessionStorage.getItem("pendingSignupFirstName") ?? "";
+              initialEditFirstName = pendingFirstName.trim();
+            }
+            if (!profileLastName) {
+              const pendingLastName =
+                window.sessionStorage.getItem("pendingSignupLastName") ?? "";
+              initialEditLastName = pendingLastName.trim();
+            }
+            if (profileDisplayName) {
+              window.sessionStorage.removeItem("pendingSignupUsername");
+            }
+            if (profileFirstName) {
+              window.sessionStorage.removeItem("pendingSignupFirstName");
+            }
+            if (profileLastName) {
+              window.sessionStorage.removeItem("pendingSignupLastName");
+            }
           } catch {
             // Ignore client storage failures.
           }
@@ -130,6 +156,8 @@ export default function ProfilePage() {
 
         setProfile(data.profile);
         setEditUsername(initialEditUsername);
+        setEditFirstName(initialEditFirstName);
+        setEditLastName(initialEditLastName);
         setPrivacyValue(data.profile.default_entry_privacy ?? "private");
         setLoading(false);
         if (
@@ -162,6 +190,8 @@ export default function ProfilePage() {
 
   const saveProfile = async () => {
     const trimmed = editUsername.trim();
+    const trimmedFirstName = editFirstName.trim();
+    const trimmedLastName = editLastName.trim();
     if (trimmed.length < USERNAME_MIN_LENGTH) {
       setUsernameError(USERNAME_MIN_LENGTH_MESSAGE);
       return;
@@ -178,6 +208,8 @@ export default function ProfilePage() {
 
     const hadPendingAvatar = !!pendingAvatarFile;
     const usernameChanged = trimmed !== (profile?.display_name ?? "").trim();
+    const firstNameChanged = trimmedFirstName !== (profile?.first_name ?? "").trim();
+    const lastNameChanged = trimmedLastName !== (profile?.last_name ?? "").trim();
 
     let uploadedAvatarUrl: string | null = null;
 
@@ -206,15 +238,19 @@ export default function ProfilePage() {
       }
 
       // 2. Save username if changed
-      if (usernameChanged) {
+      if (usernameChanged || firstNameChanged || lastNameChanged) {
         const response = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ display_name: trimmed }),
+          body: JSON.stringify({
+            display_name: trimmed,
+            first_name: trimmedFirstName || null,
+            last_name: trimmedLastName || null,
+          }),
         });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          setUsernameError(data.error ?? "Unable to update username.");
+          setUsernameError(data.error ?? "Unable to update profile.");
           setIsSavingUsername(false);
           return;
         }
@@ -231,17 +267,23 @@ export default function ProfilePage() {
           }
           setProfile(nextProfile);
           setEditUsername(nextProfile.display_name ?? "");
+          setEditFirstName(nextProfile.first_name ?? "");
+          setEditLastName(nextProfile.last_name ?? "");
         }
       } else if (uploadedAvatarUrl && profile) {
         setProfile({ ...profile, avatar_url: uploadedAvatarUrl });
       }
       setUsernameSuccess(
-        hadPendingAvatar || usernameChanged ? "Profile saved." : "No changes to save."
+        hadPendingAvatar || usernameChanged || firstNameChanged || lastNameChanged
+          ? "Profile saved."
+          : "No changes to save."
       );
       setIsEditing(false);
       if (typeof window !== "undefined") {
         try {
           window.sessionStorage.removeItem("pendingSignupUsername");
+          window.sessionStorage.removeItem("pendingSignupFirstName");
+          window.sessionStorage.removeItem("pendingSignupLastName");
         } catch {
           // Ignore client storage failures.
         }
@@ -253,6 +295,8 @@ export default function ProfilePage() {
 
   const cancelEdit = () => {
     setEditUsername(profile?.display_name ?? "");
+    setEditFirstName(profile?.first_name ?? "");
+    setEditLastName(profile?.last_name ?? "");
     setUsernameError(null);
     setUsernameSuccess(null);
     setAvatarError(null);
@@ -477,6 +521,35 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
+                  <label className="mb-1 block text-sm font-medium text-zinc-300">
+                    Full name
+                  </label>
+                  <p className="mb-2 text-xs text-zinc-500">
+                    Your first and last name are shown to friends in CellarSnap.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      id="edit-first-name"
+                      type="text"
+                      placeholder="First name"
+                      maxLength={80}
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                    <input
+                      id="edit-last-name"
+                      type="text"
+                      placeholder="Last name"
+                      maxLength={80}
+                      value={editLastName}
+                      onChange={(e) => setEditLastName(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                  </div>
+                </div>
+
+                <div>
                   <label
                     className="mb-1 block text-sm font-medium text-zinc-300"
                     htmlFor="edit-username"
@@ -560,6 +633,20 @@ export default function ProfilePage() {
                         </p>
                         <p className="mt-1 text-xl font-semibold text-zinc-50">
                           {profile?.display_name || "Not set"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          Full name (friends only)
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-300">
+                          {[
+                            profile?.first_name?.trim() || null,
+                            profile?.last_name?.trim() || null,
+                          ]
+                            .filter((value): value is string => Boolean(value))
+                            .join(" ") || "Not set"}
                         </p>
                       </div>
 

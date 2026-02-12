@@ -16,6 +16,8 @@ type SignupFormValues = {
   email: string;
   password: string;
   username: string;
+  first_name: string;
+  last_name: string;
 };
 
 export default function SignupPage() {
@@ -29,6 +31,19 @@ export default function SignupPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     const username = values.username.trim();
+    const firstName = values.first_name.trim();
+    const lastName = values.last_name.trim();
+
+    if (!firstName) {
+      setErrorMessage("First name is required.");
+      return;
+    }
+
+    if (!lastName) {
+      setErrorMessage("Last name is required.");
+      return;
+    }
+
     if (username.length < USERNAME_MIN_LENGTH) {
       setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
       return;
@@ -81,11 +96,15 @@ export default function SignupPage() {
         const profileResponse = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ display_name: username }),
+          body: JSON.stringify({
+            display_name: username,
+            first_name: firstName,
+            last_name: lastName,
+          }),
         });
         if (!profileResponse.ok) {
           const payload = await profileResponse.json().catch(() => ({}));
-          setErrorMessage(payload.error ?? "Unable to save username.");
+          setErrorMessage(payload.error ?? "Unable to save profile details.");
           return;
         }
         router.push("/");
@@ -95,6 +114,8 @@ export default function SignupPage() {
       if (typeof window !== "undefined") {
         try {
           window.sessionStorage.setItem("pendingSignupUsername", username);
+          window.sessionStorage.setItem("pendingSignupFirstName", firstName);
+          window.sessionStorage.setItem("pendingSignupLastName", lastName);
         } catch {
           // Ignore client storage failures.
         }
@@ -157,6 +178,39 @@ export default function SignupPage() {
               {...register("username", { required: true })}
             />
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-zinc-200" htmlFor="first_name">
+                First name
+              </label>
+              <input
+                id="first_name"
+                type="text"
+                autoComplete="given-name"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="First name"
+                {...register("first_name", { required: true })}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-zinc-200" htmlFor="last_name">
+                Last name
+              </label>
+              <input
+                id="last_name"
+                type="text"
+                autoComplete="family-name"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="Last name"
+                {...register("last_name", { required: true })}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Your first and last name are shown to friends in CellarSnap.
+          </p>
 
           <div>
             <label className="text-sm font-medium text-zinc-200" htmlFor="password">

@@ -27,6 +27,8 @@ export default function FriendProfilePage() {
   const [profile, setProfile] = useState<{
     id: string;
     display_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
     avatar_url?: string | null;
   } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -200,6 +202,13 @@ export default function FriendProfilePage() {
   };
 
   const isOwnProfile = currentUserId === userId;
+  const fullName =
+    profile && (profile.first_name || profile.last_name)
+      ? [profile.first_name, profile.last_name]
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value) => value.length > 0)
+          .join(" ")
+      : "";
 
   if (loading) {
     return (
@@ -266,6 +275,9 @@ export default function FriendProfilePage() {
                 <h1 className="text-3xl font-semibold text-zinc-50">
                   {profile.display_name ?? "Unknown"}
                 </h1>
+                {fullName ? (
+                  <p className="mt-1 text-sm text-zinc-300">{fullName}</p>
+                ) : null}
                 <p className="text-sm text-zinc-300">
                   {isOwnProfile
                     ? "Wines you've logged and wines you've been tagged in."

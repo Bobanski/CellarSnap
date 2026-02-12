@@ -11,33 +11,199 @@ import {
 } from "@/lib/validation/username";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+const NAME_MAX_LENGTH = 80;
 
-const updateProfileSchema = z.object({
-  display_name: z
+const nullableNameSchema = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    }
+    return value;
+  },
+  z
     .string()
-    .trim()
-    .min(USERNAME_MIN_LENGTH, USERNAME_MIN_LENGTH_MESSAGE)
-    .max(USERNAME_MAX_LENGTH, USERNAME_MAX_LENGTH_MESSAGE)
-    .refine(
-      (value) => !USERNAME_DISALLOWED_PATTERN.test(value),
-      USERNAME_FORMAT_MESSAGE
-    )
-    .optional(),
-  default_entry_privacy: privacyLevelSchema.optional(),
-  confirm_privacy_onboarding: z.literal(true).optional(),
-}).refine(
-  (value) =>
-    value.display_name !== undefined ||
-    value.default_entry_privacy !== undefined ||
-    value.confirm_privacy_onboarding !== undefined,
-  { message: "No profile updates provided." }
+    .max(NAME_MAX_LENGTH, `Must be ${NAME_MAX_LENGTH} characters or fewer.`)
+    .nullable()
+    .optional()
 );
+
+const updateProfileSchema = z
+  .object({
+    display_name: z
+      .string()
+      .trim()
+      .min(USERNAME_MIN_LENGTH, USERNAME_MIN_LENGTH_MESSAGE)
+      .max(USERNAME_MAX_LENGTH, USERNAME_MAX_LENGTH_MESSAGE)
+      .refine(
+        (value) => !USERNAME_DISALLOWED_PATTERN.test(value),
+        USERNAME_FORMAT_MESSAGE
+      )
+      .optional(),
+    first_name: nullableNameSchema,
+    last_name: nullableNameSchema,
+    default_entry_privacy: privacyLevelSchema.optional(),
+    confirm_privacy_onboarding: z.literal(true).optional(),
+  })
+  .refine(
+    (value) =>
+      value.display_name !== undefined ||
+      value.first_name !== undefined ||
+      value.last_name !== undefined ||
+      value.default_entry_privacy !== undefined ||
+      value.confirm_privacy_onboarding !== undefined,
+    { message: "No profile updates provided." }
+  );
 
 function hasMissingPrivacyColumns(message: string) {
   return (
     message.includes("default_entry_privacy") ||
     message.includes("privacy_confirmed_at")
   );
+}
+
+function hasMissingNameColumns(message: string) {
+  return message.includes("first_name") || message.includes("last_name");
+}
+
+function hasMissingAvatarColumn(message: string) {
+  return message.includes("avatar_path");
+}
+
+function hasMissingKnownProfileColumns(message: string) {
+  return (
+    hasMissingPrivacyColumns(message) ||
+    hasMissingNameColumns(message) ||
+    hasMissingAvatarColumn(message)
+  );
+}
+
+type ProfileSelectAttempt = {
+  select: string;
+  includesPrivacy: boolean;
+  includesNames: boolean;
+  includesAvatar: boolean;
+};
+
+const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
+  {
+    select:
+      "id, display_name, first_name, last_name, email, default_entry_privacy, privacy_confirmed_at, created_at, avatar_path",
+    includesPrivacy: true,
+    includesNames: true,
+    includesAvatar: true,
+  },
+  {
+    select:
+      "id, display_name, first_name, last_name, email, default_entry_privacy, privacy_confirmed_at, created_at",
+    includesPrivacy: true,
+    includesNames: true,
+    includesAvatar: false,
+  },
+  {
+    select:
+      "id, display_name, first_name, last_name, email, created_at, avatar_path",
+    includesPrivacy: false,
+    includesNames: true,
+    includesAvatar: true,
+  },
+  {
+    select: "id, display_name, first_name, last_name, email, created_at",
+    includesPrivacy: false,
+    includesNames: true,
+    includesAvatar: false,
+  },
+  {
+    select:
+      "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at, avatar_path",
+    includesPrivacy: true,
+    includesNames: false,
+    includesAvatar: true,
+  },
+  {
+    select:
+      "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at",
+    includesPrivacy: true,
+    includesNames: false,
+    includesAvatar: false,
+  },
+  {
+    select: "id, display_name, email, created_at, avatar_path",
+    includesPrivacy: false,
+    includesNames: false,
+    includesAvatar: true,
+  },
+  {
+    select: "id, display_name, email, created_at",
+    includesPrivacy: false,
+    includesNames: false,
+    includesAvatar: false,
+  },
+];
+
+async function selectProfileRow(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+): Promise<{
+  data: Record<string, unknown> | null;
+  attempt: ProfileSelectAttempt | null;
+  error: string | null;
+}> {
+  for (const attempt of PROFILE_SELECT_ATTEMPTS) {
+    const response = (await supabase
+      .from("profiles")
+      .select(attempt.select)
+      .eq("id", userId)
+      .single()) as unknown as {
+      data: Record<string, unknown> | null;
+      error: { message: string } | null;
+    };
+    const { data, error } = response;
+
+    if (!error && data) {
+      return {
+        data,
+        attempt,
+        error: null,
+      };
+    }
+
+    if (error && hasMissingKnownProfileColumns(error.message)) {
+      continue;
+    }
+
+    return {
+      data: null,
+      attempt: null,
+      error: error?.message ?? "Unable to load profile.",
+    };
+  }
+
+  return {
+    data: null,
+    attempt: null,
+    error: "Unable to load profile.",
+  };
+}
+
+function normalizeProfileRow(
+  row: Record<string, unknown>,
+  attempt: ProfileSelectAttempt
+) {
+  const normalized: Record<string, unknown> = { ...row };
+  if (!attempt.includesPrivacy) {
+    normalized.default_entry_privacy = "public";
+    normalized.privacy_confirmed_at =
+      typeof row.created_at === "string" ? row.created_at : null;
+  }
+  if (!attempt.includesNames) {
+    normalized.first_name = null;
+    normalized.last_name = null;
+  }
+  return normalized;
 }
 
 export async function GET() {
@@ -50,59 +216,33 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Try fetching with privacy columns; fall back if columns were not added yet.
-  let profile: Record<string, unknown> | null = null;
-
-  const selectWithAvatar =
-    "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at, avatar_path";
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(selectWithAvatar)
-    .eq("id", user.id)
-    .single();
-
-  if (error && hasMissingPrivacyColumns(error.message)) {
-    const fallback = await supabase
-      .from("profiles")
-      .select("id, display_name, email, created_at")
-      .eq("id", user.id)
-      .single();
-
-    if (fallback.error) {
-      return NextResponse.json({ error: fallback.error.message }, { status: 500 });
-    }
-    profile = {
-      ...fallback.data,
-      default_entry_privacy: "public",
-      privacy_confirmed_at: fallback.data?.created_at ?? null,
-    };
-  } else if (error && error.message.includes("avatar_path")) {
-    // avatar_path column may not exist yet (migration not run)
-    const fallback = await supabase
-      .from("profiles")
-      .select("id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at")
-      .eq("id", user.id)
-      .single();
-    if (fallback.error) {
-      return NextResponse.json({ error: fallback.error.message }, { status: 500 });
-    }
-    profile = fallback.data;
-  } else if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  } else {
-    profile = data;
+  const selected = await selectProfileRow(supabase, user.id);
+  if (!selected.data || !selected.attempt) {
+    return NextResponse.json(
+      { error: selected.error ?? "Unable to load profile." },
+      { status: 500 }
+    );
   }
 
-  // Resolve avatar: use profile.avatar_path if present, else fetch explicitly (avoids fallback stripping it)
-  let avatarPath = profile?.avatar_path as string | null | undefined;
-  if (avatarPath == null) {
-    const { data: row } = await supabase
+  const profile = normalizeProfileRow(selected.data, selected.attempt);
+
+  let avatarPath =
+    typeof profile.avatar_path === "string" ? profile.avatar_path : null;
+  if (!selected.attempt.includesAvatar || avatarPath == null) {
+    const { data: avatarRow, error: avatarError } = await supabase
       .from("profiles")
       .select("avatar_path")
       .eq("id", user.id)
       .maybeSingle();
-    avatarPath = row?.avatar_path ?? null;
+
+    if (avatarError && !hasMissingAvatarColumn(avatarError.message)) {
+      return NextResponse.json({ error: avatarError.message }, { status: 500 });
+    }
+
+    avatarPath =
+      typeof avatarRow?.avatar_path === "string" ? avatarRow.avatar_path : null;
   }
+
   let avatar_url: string | null = null;
   if (avatarPath) {
     const { data: urlData } = await supabase.storage
@@ -135,10 +275,7 @@ export async function PATCH(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = updateProfileSchema.safeParse(body);
@@ -147,20 +284,20 @@ export async function PATCH(request: Request) {
     const message =
       flattened.formErrors[0] ??
       flattened.fieldErrors.display_name?.[0] ??
+      flattened.fieldErrors.first_name?.[0] ??
+      flattened.fieldErrors.last_name?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
       flattened.fieldErrors.confirm_privacy_onboarding?.[0] ??
       "Invalid profile update.";
-    return NextResponse.json(
-      { error: message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const confirmedPrivacyAt = parsed.data.confirm_privacy_onboarding
     ? new Date().toISOString()
     : null;
 
-  const updates: Record<string, string> = {};
+  const updates: Record<string, string | null> = {};
+
   if (parsed.data.display_name !== undefined) {
     const { data: exists } = await supabase
       .from("profiles")
@@ -178,119 +315,74 @@ export async function PATCH(request: Request) {
 
     updates.display_name = parsed.data.display_name;
   }
+
+  if (parsed.data.first_name !== undefined) {
+    updates.first_name = parsed.data.first_name;
+  }
+
+  if (parsed.data.last_name !== undefined) {
+    updates.last_name = parsed.data.last_name;
+  }
+
   if (parsed.data.default_entry_privacy !== undefined) {
     updates.default_entry_privacy = parsed.data.default_entry_privacy;
   }
+
   if (confirmedPrivacyAt) {
     updates.privacy_confirmed_at = confirmedPrivacyAt;
   }
 
-  let profileData:
-    | {
-        id: string;
-        display_name: string | null;
-        email: string | null;
-        created_at: string;
-      }
-    | null = null;
-  let missingPrivacyColumns = false;
+  const updatesToApply: Record<string, string | null> = { ...updates };
+  while (Object.keys(updatesToApply).length > 0) {
+    const updateResult = await supabase
+      .from("profiles")
+      .update(updatesToApply)
+      .eq("id", user.id)
+      .select("id")
+      .single();
 
-  const initialUpdate = await supabase
-    .from("profiles")
-    .update(updates)
-    .eq("id", user.id)
-    .select("id, display_name, email, created_at")
-    .single();
-
-  if (initialUpdate.error && hasMissingPrivacyColumns(initialUpdate.error.message)) {
-    missingPrivacyColumns = true;
-
-    // Strip columns that don't exist in the fallback path
-    const fallbackUpdates: Record<string, string> = {};
-    if (updates.display_name !== undefined) {
-      fallbackUpdates.display_name = updates.display_name;
-    }
-    if (updates.default_entry_privacy !== undefined) {
-      fallbackUpdates.default_entry_privacy = updates.default_entry_privacy;
+    if (!updateResult.error) {
+      break;
     }
 
-    if (Object.keys(fallbackUpdates).length > 0) {
-      // Try with default_entry_privacy included first
-      let fallbackResult = await supabase
-        .from("profiles")
-        .update(fallbackUpdates)
-        .eq("id", user.id)
-        .select("id, display_name, email, created_at")
-        .single();
+    const message = updateResult.error.message;
+    let removedUnsupportedColumn = false;
 
-      // If default_entry_privacy column also doesn't exist, retry without it
-      if (fallbackResult.error && fallbackResult.error.message.includes("default_entry_privacy")) {
-        const minimalUpdates: Record<string, string> = {};
-        if (updates.display_name !== undefined) {
-          minimalUpdates.display_name = updates.display_name;
-        }
-        if (Object.keys(minimalUpdates).length > 0) {
-          fallbackResult = await supabase
-            .from("profiles")
-            .update(minimalUpdates)
-            .eq("id", user.id)
-            .select("id, display_name, email, created_at")
-            .single();
-        }
+    if (hasMissingPrivacyColumns(message)) {
+      if ("default_entry_privacy" in updatesToApply) {
+        delete updatesToApply.default_entry_privacy;
+        removedUnsupportedColumn = true;
       }
-
-      if (fallbackResult.error) {
-        return NextResponse.json({ error: fallbackResult.error.message }, { status: 500 });
+      if ("privacy_confirmed_at" in updatesToApply) {
+        delete updatesToApply.privacy_confirmed_at;
+        removedUnsupportedColumn = true;
       }
-      profileData = fallbackResult.data;
-    } else {
-      const fallbackProfile = await supabase
-        .from("profiles")
-        .select("id, display_name, email, created_at")
-        .eq("id", user.id)
-        .single();
-
-      if (fallbackProfile.error) {
-        return NextResponse.json({ error: fallbackProfile.error.message }, { status: 500 });
-      }
-      profileData = fallbackProfile.data;
     }
-  } else if (initialUpdate.error) {
-    return NextResponse.json({ error: initialUpdate.error.message }, { status: 500 });
-  } else {
-    profileData = initialUpdate.data;
+
+    if (hasMissingNameColumns(message)) {
+      if ("first_name" in updatesToApply) {
+        delete updatesToApply.first_name;
+        removedUnsupportedColumn = true;
+      }
+      if ("last_name" in updatesToApply) {
+        delete updatesToApply.last_name;
+        removedUnsupportedColumn = true;
+      }
+    }
+
+    if (!removedUnsupportedColumn) {
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
 
-  if (!profileData) {
-    return NextResponse.json({ error: "Unable to update profile." }, { status: 500 });
+  const selected = await selectProfileRow(supabase, user.id);
+  if (!selected.data || !selected.attempt) {
+    return NextResponse.json(
+      { error: selected.error ?? "Unable to update profile." },
+      { status: 500 }
+    );
   }
 
-  if (missingPrivacyColumns) {
-    return NextResponse.json({
-      profile: {
-        ...profileData,
-        default_entry_privacy: parsed.data.default_entry_privacy ?? "public",
-        privacy_confirmed_at: confirmedPrivacyAt ?? profileData.created_at ?? null,
-      },
-    });
-  }
-
-  // Re-read with privacy columns if they exist.
-  const full = await supabase
-    .from("profiles")
-    .select("default_entry_privacy, privacy_confirmed_at")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (full.error && !hasMissingPrivacyColumns(full.error.message)) {
-    return NextResponse.json({ error: full.error.message }, { status: 500 });
-  }
-
-  const profile = {
-    ...profileData,
-    default_entry_privacy: full.data?.default_entry_privacy ?? null,
-    privacy_confirmed_at: full.data?.privacy_confirmed_at ?? null,
-  };
-
+  const profile = normalizeProfileRow(selected.data, selected.attempt);
   return NextResponse.json({ profile });
 }
