@@ -671,78 +671,7 @@ export default function EditEntryPage() {
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("rating", {
-                  setValueAs: (value) => (value === "" ? undefined : Number(value)),
-                })}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">
-                QPR (Quality : Price Ratio)
-              </label>
-              <select
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("qpr_level")}
-              >
-                <option value="">Not set</option>
-                {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
-            <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              {...register("notes")}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">
-              Tasted with
-            </label>
-            {users.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-400">No other users yet.</p>
-            ) : (
-              <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                {users.map((user) => {
-                  const label = user.display_name ?? "Unknown";
-                  const isChecked = selectedUserIds.includes(user.id);
-                  return (
-                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
-                        checked={isChecked}
-                        onChange={(event) => {
-                          setSelectedUserIds((prev) =>
-                            event.target.checked
-                              ? [...prev, user.id]
-                              : prev.filter((id) => id !== user.id)
-                          );
-                        }}
-                      />
-                      {label}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
+          {/* Wine details is intentionally first in the form flow */}
           <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
             <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
               Wine details
@@ -894,6 +823,78 @@ export default function EditEntryPage() {
               </div>
             </div>
           </details>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("rating", {
+                  setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-200">
+                QPR (Quality : Price Ratio)
+              </label>
+              <select
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("qpr_level")}
+              >
+                <option value="">Not set</option>
+                {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200">Notes</label>
+            <textarea
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              {...register("notes")}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200">
+              Tasted with
+            </label>
+            {users.length === 0 ? (
+              <p className="mt-2 text-sm text-zinc-400">No other users yet.</p>
+            ) : (
+              <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                {users.map((user) => {
+                  const label = user.display_name ?? "Unknown";
+                  const isChecked = selectedUserIds.includes(user.id);
+                  return (
+                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                        checked={isChecked}
+                        onChange={(event) => {
+                          setSelectedUserIds((prev) =>
+                            event.target.checked
+                              ? [...prev, user.id]
+                              : prev.filter((id) => id !== user.id)
+                          );
+                        }}
+                      />
+                      {label}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
             <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
