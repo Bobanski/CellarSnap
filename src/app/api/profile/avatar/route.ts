@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const AVATAR_PATH_PREFIX = "avatar";
+const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -47,6 +48,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: currentProfile } = await supabase
+    .from("profiles")
+    .select("avatar_path")
+    .eq("id", user.id)
+    .maybeSingle();
+  const currentAvatarPath = currentProfile?.avatar_path ?? null;
+
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/gif" ? "gif" : "jpg";
   const path = `${user.id}/${AVATAR_PATH_PREFIX}.${ext}`;
 
@@ -69,6 +77,9 @@ export async function POST(request: Request) {
     .single();
 
   if (updateError) {
+    if (currentAvatarPath !== path) {
+      await supabase.storage.from("wine-photos").remove([path]);
+    }
     return NextResponse.json(
       { error: updateError.message },
       { status: 500 }
@@ -76,10 +87,20 @@ export async function POST(request: Request) {
   }
 
   if (!updated?.avatar_path) {
+    if (currentAvatarPath !== path) {
+      await supabase.storage.from("wine-photos").remove([path]);
+    }
     return NextResponse.json(
       { error: "Profile update did not persist. Please try again." },
       { status: 500 }
     );
+  }
+
+  const staleAvatarPaths = AVATAR_EXTENSIONS.map(
+    (candidateExt) => `${user.id}/${AVATAR_PATH_PREFIX}.${candidateExt}`
+  ).filter((candidatePath) => candidatePath !== path);
+  if (staleAvatarPaths.length > 0) {
+    await supabase.storage.from("wine-photos").remove(staleAvatarPaths);
   }
 
   const { data: urlData } = await supabase.storage

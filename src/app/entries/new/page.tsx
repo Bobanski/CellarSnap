@@ -1094,14 +1094,20 @@ export default function NewEntryPage() {
             }),
           });
 
-          if (!response.ok) return null;
+          if (!response.ok) {
+            return { entryId: null, rollbackFailed: false };
+          }
 
           const payload = await response.json();
           const entry = payload.entry;
+          const entryId = typeof entry?.id === "string" ? entry.id : null;
+          if (!entryId) {
+            return { entryId: null, rollbackFailed: false };
+          }
 
           // Upload a per-bottle thumbnail (fallback to original source photo)
           const sourcePhoto = labelPhotos[wine.photoIndex];
-          if (entry?.id && sourcePhoto) {
+          if (sourcePhoto) {
             try {
               const thumbnail = await createLineupBottleThumbnail(
                 sourcePhoto.file,
@@ -1110,9 +1116,10 @@ export default function NewEntryPage() {
                 wine.label_anchor,
                 i
               );
-              await uploadPhotos(entry.id, "label", [{ file: thumbnail }]);
+              await uploadPhotos(entryId, "label", [{ file: thumbnail }]);
             } catch {
-              // Photo upload failed but entry was created, continue
+              const rolledBack = await rollbackCreatedEntry(entryId);
+              return { entryId: null, rollbackFailed: !rolledBack };
             }
           }
 
@@ -1121,25 +1128,34 @@ export default function NewEntryPage() {
           setAutofillMessage(
             `Creating entries... (${created}/${included.length})`
           );
-          return typeof entry?.id === "string" ? entry.id : null;
+          return { entryId, rollbackFailed: false };
         } catch {
           // Skip failed entries, continue with rest
-          return null;
+          return { entryId: null, rollbackFailed: false };
         }
       })
     );
 
     setLineupCreating(false);
 
-    const createdEntryIds = creationResults.filter(
-      (value): value is string => typeof value === "string" && value.length > 0
-    );
+    const createdEntryIds = creationResults
+      .map((result) => result.entryId)
+      .filter((value): value is string => typeof value === "string" && value.length > 0);
+    const rollbackFailureCount = creationResults.filter(
+      (result) => result.rollbackFailed
+    ).length;
     if (createdEntryIds.length > 0) {
       setAutofillStatus("success");
       setAutofillMessage(
-        `Created ${createdEntryIds.length} entr${
-          createdEntryIds.length === 1 ? "y" : "ies"
-        }! Opening guided review...`
+        rollbackFailureCount > 0
+          ? `Created ${createdEntryIds.length} entr${
+              createdEntryIds.length === 1 ? "y" : "ies"
+            }. ${rollbackFailureCount} failed upload${
+              rollbackFailureCount === 1 ? "" : "s"
+            } could not be rolled back; review your entries list for partial records. Opening guided review...`
+          : `Created ${createdEntryIds.length} entr${
+              createdEntryIds.length === 1 ? "y" : "ies"
+            }! Opening guided review...`
       );
       const queue = encodeURIComponent(createdEntryIds.join(","));
       setTimeout(() => {
@@ -1149,7 +1165,11 @@ export default function NewEntryPage() {
       }, 900);
     } else {
       setAutofillStatus("error");
-      setAutofillMessage("Failed to create entries. Try again.");
+      setAutofillMessage(
+        rollbackFailureCount > 0
+          ? "Failed to create entries cleanly. Some failed uploads could not be rolled back; review your entries list and delete partial entries if needed."
+          : "Failed to create entries. Try again."
+      );
     }
   };
 
