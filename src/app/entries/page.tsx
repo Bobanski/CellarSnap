@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatConsumedDate } from "@/lib/formatDate";
+import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
@@ -362,19 +363,29 @@ export default function EntriesPage() {
                             {entry.wine_name}
                           </h2>
                         ) : null}
-                        {entry.producer || entry.vintage ? (
-                          <p className="text-sm text-zinc-400">
-                            {entry.producer ?? ""}
-                            {entry.producer && entry.vintage ? (
-                              <span className="text-zinc-500">
-                                {" · "}
-                                {entry.vintage}
-                              </span>
-                            ) : entry.vintage ? (
-                              <span className="text-zinc-500">{entry.vintage}</span>
-                            ) : null}
-                          </p>
-                        ) : null}
+                        {(() => {
+                          const hideProducer = shouldHideProducerInEntryTile(
+                            entry.wine_name,
+                            entry.producer
+                          );
+                          const producer = hideProducer ? null : entry.producer;
+                          if (!producer && !entry.vintage) {
+                            return null;
+                          }
+                          return (
+                            <p className="text-sm text-zinc-400">
+                              {producer ?? ""}
+                              {producer && entry.vintage ? (
+                                <span className="text-zinc-500">
+                                  {" · "}
+                                  {entry.vintage}
+                                </span>
+                              ) : entry.vintage ? (
+                                <span className="text-zinc-500">{entry.vintage}</span>
+                              ) : null}
+                            </p>
+                          );
+                        })()}
                         {[entry.country, entry.region, entry.appellation].filter(Boolean)
                           .length > 0 ? (
                           <p className="mt-1 text-xs text-zinc-500">

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
+import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import type { WineEntryWithUrls } from "@/types/wine";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
@@ -405,12 +406,31 @@ export default function FriendProfilePage() {
                       <h3 className="font-semibold text-zinc-50">
                         {entry.wine_name || "Untitled wine"}
                       </h3>
-                      <p className="text-sm text-zinc-400">
-                        {entry.producer || "Unknown producer"}
-                        {entry.vintage ? (
-                          <span className="text-zinc-500"> · {entry.vintage}</span>
-                        ) : null}
-                      </p>
+                      {(() => {
+                        const hideProducer = shouldHideProducerInEntryTile(
+                          entry.wine_name,
+                          entry.producer
+                        );
+                        const producerLabel = entry.producer
+                          ? hideProducer
+                            ? null
+                            : entry.producer
+                          : "Unknown producer";
+                        if (!producerLabel && !entry.vintage) {
+                          return null;
+                        }
+                        return (
+                          <p className="text-sm text-zinc-400">
+                            {producerLabel ?? ""}
+                            {entry.vintage ? (
+                              <span className="text-zinc-500">
+                                {producerLabel ? " · " : ""}
+                                {entry.vintage}
+                              </span>
+                            ) : null}
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -468,12 +488,31 @@ export default function FriendProfilePage() {
                       <h3 className="font-semibold text-zinc-50">
                         {entry.wine_name || "Untitled wine"}
                       </h3>
-                      <p className="text-sm text-zinc-400">
-                        {entry.producer || "Unknown producer"}
-                        {entry.vintage ? (
-                          <span className="text-zinc-500"> · {entry.vintage}</span>
-                        ) : null}
-                      </p>
+                      {(() => {
+                        const hideProducer = shouldHideProducerInEntryTile(
+                          entry.wine_name,
+                          entry.producer
+                        );
+                        const producerLabel = entry.producer
+                          ? hideProducer
+                            ? null
+                            : entry.producer
+                          : "Unknown producer";
+                        if (!producerLabel && !entry.vintage) {
+                          return null;
+                        }
+                        return (
+                          <p className="text-sm text-zinc-400">
+                            {producerLabel ?? ""}
+                            {entry.vintage ? (
+                              <span className="text-zinc-500">
+                                {producerLabel ? " · " : ""}
+                                {entry.vintage}
+                              </span>
+                            ) : null}
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
                       <div className="flex flex-wrap items-center gap-1.5">

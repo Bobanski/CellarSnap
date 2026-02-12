@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
+import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import PrivacyBadge from "@/components/PrivacyBadge";
@@ -280,16 +281,26 @@ export default function HomePage() {
                               {entry.wine_name}
                             </h3>
                           ) : null}
-                          {entry.producer || entry.vintage ? (
-                            <p className="text-sm text-zinc-400">
-                              {entry.producer ?? ""}
-                              {entry.producer && entry.vintage
-                                ? ` \u00b7 ${entry.vintage}`
-                                : entry.vintage
-                                  ? entry.vintage
-                                  : ""}
-                            </p>
-                          ) : null}
+                          {(() => {
+                            const hideProducer = shouldHideProducerInEntryTile(
+                              entry.wine_name,
+                              entry.producer
+                            );
+                            const producer = hideProducer ? null : entry.producer;
+                            if (!producer && !entry.vintage) {
+                              return null;
+                            }
+                            return (
+                              <p className="text-sm text-zinc-400">
+                                {producer ?? ""}
+                                {producer && entry.vintage
+                                  ? ` \u00b7 ${entry.vintage}`
+                                  : entry.vintage
+                                    ? entry.vintage
+                                    : ""}
+                              </p>
+                            );
+                          })()}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
                           {typeof entry.rating === "number" &&
@@ -401,9 +412,18 @@ export default function HomePage() {
                               {entry.wine_name}
                             </h3>
                           ) : null}
-                          {entry.producer ? (
-                            <p className="text-sm text-zinc-400">{entry.producer}</p>
-                          ) : null}
+                          {(() => {
+                            const hideProducer = shouldHideProducerInEntryTile(
+                              entry.wine_name,
+                              entry.producer
+                            );
+                            if (!entry.producer || hideProducer) {
+                              return null;
+                            }
+                            return (
+                              <p className="text-sm text-zinc-400">{entry.producer}</p>
+                            );
+                          })()}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
                           {typeof entry.rating === "number" &&

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
+import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
@@ -457,10 +458,11 @@ export default function FeedPage() {
                       const wineName = entry.wine_name?.trim() ?? "";
                       const producer = entry.producer?.trim() ?? "";
                       const vintage = entry.vintage?.trim() ?? "";
-                      const showProducer =
-                        producer.length > 0 &&
-                        producer.toLowerCase() !== wineName.toLowerCase();
-                      const meta = [showProducer ? producer : null, vintage || null]
+                      const hideProducer = shouldHideProducerInEntryTile(
+                        wineName,
+                        producer
+                      );
+                      const meta = [hideProducer ? null : producer || null, vintage || null]
                         .filter(Boolean)
                         .join(" · ");
 
