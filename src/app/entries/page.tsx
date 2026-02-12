@@ -187,12 +187,12 @@ export default function EntriesPage() {
         </header>
 
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+          <div className="flex flex-wrap items-start gap-3 sm:items-center">
+            <label className="w-full text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 sm:w-auto">
               Sort
             </label>
             <select
-              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none sm:w-auto"
               value={sortBy}
               onChange={(event) =>
                 setSortBy(
@@ -205,7 +205,7 @@ export default function EntriesPage() {
               <option value="vintage">Vintage</option>
             </select>
             <select
-              className="select-field rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+              className="select-field w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none sm:w-auto"
               value={sortOrder}
               onChange={(event) =>
                 setSortOrder(event.target.value as "asc" | "desc")
