@@ -46,20 +46,6 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   const [index, setIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
 
-  const rawNotes = (entry.notes ?? "").trim();
-  const wordCount = rawNotes ? rawNotes.split(/\s+/).filter(Boolean).length : 0;
-  const shouldShowNotes = wordCount > 0;
-  const displayNote = shouldShowNotes
-    ? wordCount <= 10
-      ? rawNotes
-      : (() => {
-          const summaryBase =
-            (entry.ai_notes_summary ?? "").trim() ||
-            rawNotes.split(/\s+/).slice(0, 10).join(" ") + "…";
-          return `${summaryBase} (summary)`;
-        })()
-    : "";
-
   if (photos.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-zinc-400 md:h-64">
@@ -109,20 +95,6 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
           </div>
         ))}
       </div>
-
-      {shouldShowNotes ? (
-        <div
-          className="pointer-events-none absolute bottom-2 right-2 max-w-[72%] rounded-xl border border-white/10 bg-black/55 px-2 py-1 text-xs leading-snug text-zinc-100 backdrop-blur-sm"
-          style={{
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {displayNote}
-        </div>
-      ) : null}
 
       {photos.length > 1 ? (
         <>
@@ -448,31 +420,58 @@ export default function FeedPage() {
                   <EntryPhotoGallery entry={entry} />
                 </div>
                 <div className="mt-4">
-                  {entry.wine_name ? (
-                    <h2 className="text-base font-semibold text-zinc-50">
-                      {entry.wine_name}
-                    </h2>
-                  ) : null}
-                  {(() => {
-                    const wineName = entry.wine_name?.trim() ?? "";
-                    const producer = entry.producer?.trim() ?? "";
-                    const vintage = entry.vintage?.trim() ?? "";
-                    const showProducer =
-                      producer.length > 0 &&
-                      producer.toLowerCase() !== wineName.toLowerCase();
-                    const meta = [showProducer ? producer : null, vintage || null]
-                      .filter(Boolean)
-                      .join(" · ");
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {entry.wine_name ? (
+                        <h2 className="truncate text-base font-semibold text-zinc-50">
+                          {entry.wine_name}
+                        </h2>
+                      ) : null}
+                      {(() => {
+                        const wineName = entry.wine_name?.trim() ?? "";
+                        const producer = entry.producer?.trim() ?? "";
+                        const vintage = entry.vintage?.trim() ?? "";
+                        const showProducer =
+                          producer.length > 0 &&
+                          producer.toLowerCase() !== wineName.toLowerCase();
+                        const meta = [showProducer ? producer : null, vintage || null]
+                          .filter(Boolean)
+                          .join(" · ");
 
-                    return meta ? (
-                      <p className="text-sm text-zinc-400">{meta}</p>
-                    ) : null;
-                  })()}
-                  {entry.ai_notes_summary ? (
-                    <p className="mt-1 text-sm text-zinc-300/90">
-                      {entry.ai_notes_summary}
-                    </p>
-                  ) : null}
+                        return meta ? (
+                          <p className="truncate text-sm text-zinc-400">{meta}</p>
+                        ) : null;
+                      })()}
+                    </div>
+
+                    {(() => {
+                      const rawNotes = (entry.notes ?? "").trim();
+                      const wordCount = rawNotes
+                        ? rawNotes.split(/\s+/).filter(Boolean).length
+                        : 0;
+                      if (wordCount === 0) return null;
+
+                      const displayNote =
+                        wordCount <= 10
+                          ? rawNotes
+                          : `${((entry.ai_notes_summary ?? "").trim() ||
+                              rawNotes.split(/\s+/).slice(0, 10).join(" ") + "…")} (summary)`;
+
+                      return (
+                        <div
+                          className="max-w-[55%] shrink-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs leading-snug text-zinc-200"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {displayNote}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
                   <div className="mt-3 text-xs text-zinc-400">
