@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AlertsMenu from "@/components/AlertsMenu";
 
@@ -18,32 +18,24 @@ const NAV_ITEMS = [
 function isItemActive({
   href,
   pathname,
-  fromParam,
+  activeHrefOverride,
 }: {
   href: string;
   pathname: string;
-  fromParam: string | null;
+  activeHrefOverride: string | null;
 }): boolean {
-  const viewingEntryFromFeed =
-    pathname.startsWith("/entries/") &&
-    !pathname.startsWith("/entries/new") &&
-    fromParam === "feed";
+  if (activeHrefOverride) {
+    return href === activeHrefOverride;
+  }
 
   if (href === "/") {
     return pathname === "/";
   }
   if (href === "/entries") {
-    if (viewingEntryFromFeed) {
-      return false;
-    }
-
     return (
       pathname === "/entries" ||
       (pathname.startsWith("/entries/") && !pathname.startsWith("/entries/new"))
     );
-  }
-  if (href === "/feed") {
-    return pathname.startsWith("/feed") || viewingEntryFromFeed;
   }
   if (href === "/profile") {
     return pathname === "/profile";
@@ -51,9 +43,12 @@ function isItemActive({
   return pathname.startsWith(href);
 }
 
-export default function NavBar() {
+export default function NavBar({
+  activeHrefOverride = null,
+}: {
+  activeHrefOverride?: string | null;
+}) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [mobileOpenPathname, setMobileOpenPathname] = useState<string | null>(null);
@@ -62,7 +57,6 @@ export default function NavBar() {
 
   const mobileOpen = mobileOpenPathname === pathname;
   const isNewEntryActive = pathname === "/entries/new";
-  const fromParam = searchParams.get("from");
   const pendingLabel =
     pendingIncomingCount > 99 ? "99+" : String(pendingIncomingCount);
 
@@ -151,7 +145,7 @@ export default function NavBar() {
         {/* ── Desktop nav (md+) ── */}
         <div className="hidden items-center gap-2 md:flex">
           {NAV_ITEMS.map(({ label, href }) => {
-            const active = isItemActive({ href, pathname, fromParam });
+            const active = isItemActive({ href, pathname, activeHrefOverride });
             return active ? (
               <span
                 key={href}
@@ -263,7 +257,7 @@ export default function NavBar() {
         <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-white/10 bg-[#14100f] p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:hidden">
           <div className="space-y-1">
             {NAV_ITEMS.map(({ label, href }) => {
-              const active = isItemActive({ href, pathname, fromParam });
+              const active = isItemActive({ href, pathname, activeHrefOverride });
               return (
                 <Link
                   key={href}

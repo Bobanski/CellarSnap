@@ -322,7 +322,7 @@ export default function EntryDetailPage() {
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        <NavBar />
+        <NavBar activeHrefOverride={openedFromFeed ? "/feed" : null} />
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Link
