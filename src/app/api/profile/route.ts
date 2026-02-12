@@ -9,6 +9,11 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   USERNAME_DISALLOWED_PATTERN,
 } from "@/lib/validation/username";
+import {
+  normalizePhone,
+  PHONE_E164_REGEX,
+  PHONE_FORMAT_MESSAGE,
+} from "@/lib/validation/phone";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 const NAME_MAX_LENGTH = 80;
@@ -31,6 +36,27 @@ const nullableNameSchema = z.preprocess(
     .optional()
 );
 
+const nullablePhoneSchema = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return null;
+      }
+      return normalizePhone(trimmed) ?? trimmed;
+    }
+    return value;
+  },
+  z
+    .string()
+    .regex(PHONE_E164_REGEX, PHONE_FORMAT_MESSAGE)
+    .nullable()
+    .optional()
+);
+
 const updateProfileSchema = z
   .object({
     display_name: z
@@ -45,6 +71,7 @@ const updateProfileSchema = z
       .optional(),
     first_name: nullableNameSchema,
     last_name: nullableNameSchema,
+    phone: nullablePhoneSchema,
     default_entry_privacy: privacyLevelSchema.optional(),
     confirm_privacy_onboarding: z.literal(true).optional(),
   })
@@ -53,6 +80,7 @@ const updateProfileSchema = z
       value.display_name !== undefined ||
       value.first_name !== undefined ||
       value.last_name !== undefined ||
+      value.phone !== undefined ||
       value.default_entry_privacy !== undefined ||
       value.confirm_privacy_onboarding !== undefined,
     { message: "No profile updates provided." }
@@ -73,11 +101,16 @@ function hasMissingAvatarColumn(message: string) {
   return message.includes("avatar_path");
 }
 
+function hasMissingPhoneColumn(message: string) {
+  return message.includes("phone");
+}
+
 function hasMissingKnownProfileColumns(message: string) {
   return (
     hasMissingPrivacyColumns(message) ||
     hasMissingNameColumns(message) ||
-    hasMissingAvatarColumn(message)
+    hasMissingAvatarColumn(message) ||
+    hasMissingPhoneColumn(message)
   );
 }
 
@@ -251,8 +284,20 @@ export async function GET() {
     avatar_url = urlData?.signedUrl ?? null;
   }
 
+  const { data: phoneRow, error: phoneError } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (phoneError && !hasMissingPhoneColumn(phoneError.message)) {
+    return NextResponse.json({ error: phoneError.message }, { status: 500 });
+  }
+
+  const phone = typeof phoneRow?.phone === "string" ? phoneRow.phone : null;
+
   return NextResponse.json(
-    { profile: { ...profile, avatar_path: avatarPath, avatar_url } },
+    { profile: { ...profile, phone, avatar_path: avatarPath, avatar_url } },
     {
       headers: {
         "Cache-Control": "private, no-store, max-age=0",
@@ -286,6 +331,7 @@ export async function PATCH(request: Request) {
       flattened.fieldErrors.display_name?.[0] ??
       flattened.fieldErrors.first_name?.[0] ??
       flattened.fieldErrors.last_name?.[0] ??
+      flattened.fieldErrors.phone?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
       flattened.fieldErrors.confirm_privacy_onboarding?.[0] ??
       "Invalid profile update.";
@@ -324,6 +370,42 @@ export async function PATCH(request: Request) {
     updates.last_name = parsed.data.last_name;
   }
 
+  if (parsed.data.phone !== undefined) {
+    if (parsed.data.phone) {
+      const phoneLookup = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("phone", parsed.data.phone)
+        .neq("id", user.id)
+        .maybeSingle();
+
+      if (phoneLookup.error) {
+        if (hasMissingPhoneColumn(phoneLookup.error.message)) {
+          return NextResponse.json(
+            {
+              error:
+                "Phone profile support is not available yet. Run supabase/sql/023_phone_login.sql and try again.",
+            },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json(
+          { error: phoneLookup.error.message },
+          { status: 500 }
+        );
+      }
+
+      if (phoneLookup.data) {
+        return NextResponse.json(
+          { error: "That phone number is already in use." },
+          { status: 400 }
+        );
+      }
+    }
+
+    updates.phone = parsed.data.phone;
+  }
+
   if (parsed.data.default_entry_privacy !== undefined) {
     updates.default_entry_privacy = parsed.data.default_entry_privacy;
   }
@@ -348,6 +430,13 @@ export async function PATCH(request: Request) {
     const message = updateResult.error.message;
     let removedUnsupportedColumn = false;
 
+    if (message.includes("profiles_phone_unique")) {
+      return NextResponse.json(
+        { error: "That phone number is already in use." },
+        { status: 400 }
+      );
+    }
+
     if (hasMissingPrivacyColumns(message)) {
       if ("default_entry_privacy" in updatesToApply) {
         delete updatesToApply.default_entry_privacy;
@@ -370,6 +459,13 @@ export async function PATCH(request: Request) {
       }
     }
 
+    if (hasMissingPhoneColumn(message)) {
+      if ("phone" in updatesToApply) {
+        delete updatesToApply.phone;
+        removedUnsupportedColumn = true;
+      }
+    }
+
     if (!removedUnsupportedColumn) {
       return NextResponse.json({ error: message }, { status: 500 });
     }
@@ -384,5 +480,16 @@ export async function PATCH(request: Request) {
   }
 
   const profile = normalizeProfileRow(selected.data, selected.attempt);
-  return NextResponse.json({ profile });
+  const { data: phoneRow, error: phoneError } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (phoneError && !hasMissingPhoneColumn(phoneError.message)) {
+    return NextResponse.json({ error: phoneError.message }, { status: 500 });
+  }
+
+  const phone = typeof phoneRow?.phone === "string" ? phoneRow.phone : null;
+  return NextResponse.json({ profile: { ...profile, phone } });
 }

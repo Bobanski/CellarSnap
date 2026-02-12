@@ -10,6 +10,7 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   isUsernameFormatValid,
 } from "@/lib/validation/username";
+import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
 
 type Profile = {
   id: string;
@@ -17,6 +18,7 @@ type Profile = {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+  phone: string | null;
   default_entry_privacy: "public" | "friends" | "private" | null;
   created_at: string | null;
   avatar_url?: string | null;
@@ -43,6 +45,7 @@ export default function ProfilePage() {
   const [editUsername, setEditUsername] = useState("");
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
@@ -109,9 +112,11 @@ export default function ProfilePage() {
         const profileDisplayName = data.profile.display_name?.trim() ?? "";
         const profileFirstName = data.profile.first_name?.trim() ?? "";
         const profileLastName = data.profile.last_name?.trim() ?? "";
+        const profilePhone = data.profile.phone?.trim() ?? "";
         let initialEditUsername = profileDisplayName;
         let initialEditFirstName = profileFirstName;
         let initialEditLastName = profileLastName;
+        let initialEditPhone = profilePhone;
         if (!profileDisplayName && typeof window !== "undefined") {
           try {
             const pendingUsername =
@@ -140,6 +145,11 @@ export default function ProfilePage() {
                 window.sessionStorage.getItem("pendingSignupLastName") ?? "";
               initialEditLastName = pendingLastName.trim();
             }
+            if (!profilePhone) {
+              const pendingPhone =
+                window.sessionStorage.getItem("pendingSignupPhone") ?? "";
+              initialEditPhone = pendingPhone.trim();
+            }
             if (profileDisplayName) {
               window.sessionStorage.removeItem("pendingSignupUsername");
             }
@@ -148,6 +158,9 @@ export default function ProfilePage() {
             }
             if (profileLastName) {
               window.sessionStorage.removeItem("pendingSignupLastName");
+            }
+            if (profilePhone) {
+              window.sessionStorage.removeItem("pendingSignupPhone");
             }
           } catch {
             // Ignore client storage failures.
@@ -158,6 +171,7 @@ export default function ProfilePage() {
         setEditUsername(initialEditUsername);
         setEditFirstName(initialEditFirstName);
         setEditLastName(initialEditLastName);
+        setEditPhone(initialEditPhone);
         setPrivacyValue(data.profile.default_entry_privacy ?? "private");
         setLoading(false);
         if (
@@ -192,12 +206,18 @@ export default function ProfilePage() {
     const trimmed = editUsername.trim();
     const trimmedFirstName = editFirstName.trim();
     const trimmedLastName = editLastName.trim();
+    const trimmedPhone = editPhone.trim();
+    const normalizedPhone = trimmedPhone ? normalizePhone(trimmedPhone) : null;
     if (trimmed.length < USERNAME_MIN_LENGTH) {
       setUsernameError(USERNAME_MIN_LENGTH_MESSAGE);
       return;
     }
     if (!isUsernameFormatValid(trimmed)) {
       setUsernameError(USERNAME_FORMAT_MESSAGE);
+      return;
+    }
+    if (trimmedPhone && !normalizedPhone) {
+      setUsernameError(PHONE_FORMAT_MESSAGE);
       return;
     }
 
@@ -210,6 +230,7 @@ export default function ProfilePage() {
     const usernameChanged = trimmed !== (profile?.display_name ?? "").trim();
     const firstNameChanged = trimmedFirstName !== (profile?.first_name ?? "").trim();
     const lastNameChanged = trimmedLastName !== (profile?.last_name ?? "").trim();
+    const phoneChanged = (normalizedPhone ?? null) !== (profile?.phone ?? null);
 
     let uploadedAvatarUrl: string | null = null;
 
@@ -237,8 +258,8 @@ export default function ProfilePage() {
         }
       }
 
-      // 2. Save username if changed
-      if (usernameChanged || firstNameChanged || lastNameChanged) {
+      // 2. Save profile fields if changed
+      if (usernameChanged || firstNameChanged || lastNameChanged || phoneChanged) {
         const response = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -246,6 +267,7 @@ export default function ProfilePage() {
             display_name: trimmed,
             first_name: trimmedFirstName || null,
             last_name: trimmedLastName || null,
+            phone: normalizedPhone,
           }),
         });
         if (!response.ok) {
@@ -269,12 +291,13 @@ export default function ProfilePage() {
           setEditUsername(nextProfile.display_name ?? "");
           setEditFirstName(nextProfile.first_name ?? "");
           setEditLastName(nextProfile.last_name ?? "");
+          setEditPhone(nextProfile.phone ?? "");
         }
       } else if (uploadedAvatarUrl && profile) {
         setProfile({ ...profile, avatar_url: uploadedAvatarUrl });
       }
       setUsernameSuccess(
-        hadPendingAvatar || usernameChanged || firstNameChanged || lastNameChanged
+        hadPendingAvatar || usernameChanged || firstNameChanged || lastNameChanged || phoneChanged
           ? "Profile saved."
           : "No changes to save."
       );
@@ -284,6 +307,7 @@ export default function ProfilePage() {
           window.sessionStorage.removeItem("pendingSignupUsername");
           window.sessionStorage.removeItem("pendingSignupFirstName");
           window.sessionStorage.removeItem("pendingSignupLastName");
+          window.sessionStorage.removeItem("pendingSignupPhone");
         } catch {
           // Ignore client storage failures.
         }
@@ -297,6 +321,7 @@ export default function ProfilePage() {
     setEditUsername(profile?.display_name ?? "");
     setEditFirstName(profile?.first_name ?? "");
     setEditLastName(profile?.last_name ?? "");
+    setEditPhone(profile?.phone ?? "");
     setUsernameError(null);
     setUsernameSuccess(null);
     setAvatarError(null);
@@ -552,6 +577,26 @@ export default function ProfilePage() {
                 <div>
                   <label
                     className="mb-1 block text-sm font-medium text-zinc-300"
+                    htmlFor="edit-phone"
+                  >
+                    Phone
+                  </label>
+                  <p className="mb-2 text-xs text-zinc-500">
+                    Used for sign in. US 10-digit and +E.164 formats are accepted.
+                  </p>
+                  <input
+                    id="edit-phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-1 block text-sm font-medium text-zinc-300"
                     htmlFor="edit-username"
                   >
                     Username
@@ -656,6 +701,15 @@ export default function ProfilePage() {
                         </p>
                         <p className="mt-1 text-sm text-zinc-300">
                           {profile?.email ?? "—"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          Phone
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-300">
+                          {profile?.phone ?? "—"}
                         </p>
                       </div>
 

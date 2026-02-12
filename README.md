@@ -36,6 +36,7 @@ Supabase SQL steps:
   - `supabase/sql/020_ai_notes_summary.sql`
   - `supabase/sql/021_feedback.sql`
   - `supabase/sql/022_add_grape_varieties.sql`
+  - `supabase/sql/023_phone_login.sql`
 
 Notes:
 - Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.
@@ -69,6 +70,7 @@ API rate limiting:
   - `/api/label-autofill`
   - `/api/bottle-count`
   - `/api/username-check`
+  - `/api/phone-check`
   - `/api/auth/resolve-identifier`
 
 ## Getting Started

@@ -5,9 +5,10 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
 
 type LoginFormValues = {
-  email: string;
+  identifier: string;
   password: string;
 };
 
@@ -19,6 +20,79 @@ export default function LoginPage() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [legacyMode, setLegacyMode] = useState(false);
+
+  const signInWithIdentifier = async (
+    identifier: string,
+    password: string
+  ): Promise<string | null> => {
+    if (!legacyMode) {
+      const normalizedPhone = normalizePhone(identifier);
+      if (!normalizedPhone) {
+        return PHONE_FORMAT_MESSAGE;
+      }
+
+      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: normalizedPhone, mode: "phone" }),
+      });
+
+      if (!resolveResponse.ok) {
+        const payload = await resolveResponse.json().catch(() => ({}));
+        return payload.error ?? "No account matches that phone number.";
+      }
+
+      const data = await resolveResponse.json();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password,
+      });
+
+      return error ? error.message : null;
+    }
+
+    const resolveResponse = await fetch("/api/auth/resolve-identifier", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier }),
+    });
+
+    if (!resolveResponse.ok) {
+      const payload = await resolveResponse.json().catch(() => ({}));
+      return payload.error ?? "No account matches that email or username.";
+    }
+
+    const data = await resolveResponse.json();
+    let email = data.email as string;
+
+    let { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error && identifier.includes("@")) {
+      const usernameResolveResponse = await fetch("/api/auth/resolve-identifier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, mode: "username" }),
+      });
+
+      if (usernameResolveResponse.ok) {
+        const usernameData = await usernameResolveResponse.json();
+        if (usernameData.email !== email) {
+          email = usernameData.email;
+          const retry = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          error = retry.error;
+        }
+      }
+    }
+
+    return error ? error.message : null;
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
@@ -26,49 +100,10 @@ export default function LoginPage() {
     setInfoMessage(null);
 
     try {
-      const identifier = values.email.trim();
-      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier }),
-      });
-
-      if (!resolveResponse.ok) {
-        const payload = await resolveResponse.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "No account matches that email or username.");
-        return;
-      }
-
-      const data = await resolveResponse.json();
-      let email = data.email;
-
-      let { error } = await supabase.auth.signInWithPassword({
-        email,
-        password: values.password,
-      });
-
-      if (error && identifier.includes("@")) {
-        const usernameResolveResponse = await fetch("/api/auth/resolve-identifier", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier, mode: "username" }),
-        });
-
-        if (usernameResolveResponse.ok) {
-          const usernameData = await usernameResolveResponse.json();
-          if (usernameData.email !== email) {
-            email = usernameData.email;
-            const retry = await supabase.auth.signInWithPassword({
-              email,
-              password: values.password,
-            });
-            error = retry.error;
-          }
-        }
-      }
-
-      if (error) {
-        setErrorMessage(error.message);
+      const identifier = values.identifier.trim();
+      const signInError = await signInWithIdentifier(identifier, values.password);
+      if (signInError) {
+        setErrorMessage(signInError);
         return;
       }
 
@@ -101,17 +136,33 @@ export default function LoginPage() {
 
         <form className="mt-5 space-y-4 sm:mt-6" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
-              Email or username
+            <label className="text-sm font-medium text-zinc-200" htmlFor="identifier">
+              {legacyMode ? "Email or username (legacy)" : "Phone number"}
             </label>
             <input
-              id="email"
+              id="identifier"
               type="text"
-              autoComplete="email"
+              autoComplete={legacyMode ? "email" : "tel"}
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="you@example.com"
-              {...register("email", { required: true })}
+              placeholder={legacyMode ? "you@example.com" : "(555) 123-4567"}
+              {...register("identifier", { required: true })}
             />
+            <button
+              type="button"
+              onClick={() => {
+                setLegacyMode((prev) => !prev);
+                setErrorMessage(null);
+                setInfoMessage(null);
+              }}
+              className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+            >
+              {legacyMode ? "Use phone sign in" : "Use legacy email sign in"}
+            </button>
+            <p className="mt-1 text-xs text-zinc-500">
+              {legacyMode
+                ? "Legacy mode is for older accounts that have not added a phone number yet."
+                : "Phone sign in is the default. Use legacy mode only for older accounts."}
+            </p>
           </div>
 
           <div>

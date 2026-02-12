@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
+import { normalizePhone } from "@/lib/validation/phone";
 
 const schema = z.object({
   identifier: z.string().trim().min(1),
-  mode: z.enum(["auto", "username"]).optional(),
+  mode: z.enum(["auto", "username", "phone"]).optional(),
 });
 
 const emailSchema = z.string().email();
@@ -45,6 +46,42 @@ export async function POST(request: Request) {
 
   const identifier = parsed.data.identifier;
   const mode = parsed.data.mode ?? "auto";
+
+  if (mode === "phone") {
+    const normalizedPhone = normalizePhone(identifier);
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: "Phone number required." }, { status: 400 });
+    }
+
+    const { data, error } = await supabase.rpc("get_email_for_phone", {
+      phone: normalizedPhone,
+    });
+
+    if (error) {
+      if (error.message.includes("get_email_for_phone")) {
+        return NextResponse.json(
+          {
+            error:
+              "Phone login is not available yet. Run supabase/sql/023_phone_login.sql and try again.",
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "No account matches that phone number." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { email: data },
+      { headers: rateLimitHeaders(rateLimit) }
+    );
+  }
 
   if (mode === "auto") {
     const parsedEmail = emailSchema.safeParse(identifier);

@@ -11,9 +11,11 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   isUsernameFormatValid,
 } from "@/lib/validation/username";
+import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
 
 type SignupFormValues = {
   email: string;
+  phone: string;
   password: string;
   username: string;
   first_name: string;
@@ -33,6 +35,7 @@ export default function SignupPage() {
     const username = values.username.trim();
     const firstName = values.first_name.trim();
     const lastName = values.last_name.trim();
+    const normalizedPhone = normalizePhone(values.phone);
 
     if (!firstName) {
       setErrorMessage("First name is required.");
@@ -54,6 +57,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (!normalizedPhone) {
+      setErrorMessage(PHONE_FORMAT_MESSAGE);
+      return;
+    }
+
     if (values.password.length < 8) {
       setErrorMessage("Password must be at least 8 characters.");
       return;
@@ -64,6 +72,24 @@ export default function SignupPage() {
     setInfoMessage(null);
 
     try {
+      const phoneCheckResponse = await fetch("/api/phone-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+
+      if (!phoneCheckResponse.ok) {
+        const payload = await phoneCheckResponse.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to check phone number.");
+        return;
+      }
+
+      const phoneCheckData = await phoneCheckResponse.json();
+      if (!phoneCheckData.available) {
+        setErrorMessage("That phone number is already in use.");
+        return;
+      }
+
       const checkResponse = await fetch("/api/username-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,6 +126,7 @@ export default function SignupPage() {
             display_name: username,
             first_name: firstName,
             last_name: lastName,
+            phone: normalizedPhone,
           }),
         });
         if (!profileResponse.ok) {
@@ -116,13 +143,14 @@ export default function SignupPage() {
           window.sessionStorage.setItem("pendingSignupUsername", username);
           window.sessionStorage.setItem("pendingSignupFirstName", firstName);
           window.sessionStorage.setItem("pendingSignupLastName", lastName);
+          window.sessionStorage.setItem("pendingSignupPhone", normalizedPhone);
         } catch {
           // Ignore client storage failures.
         }
       }
 
       setInfoMessage(
-        "Check your email to confirm your account. You will set your username after signing in."
+        "Check your email to confirm your account. You will finish profile setup after signing in."
       );
     } catch {
       setErrorMessage("Unable to create account. Check your connection and try again.");
@@ -146,7 +174,7 @@ export default function SignupPage() {
             Join CellarSnap
           </h1>
           <p className="text-sm text-zinc-300">
-            Use your email, pick a username, and set a password.
+            Use your phone to sign in, and keep email on file for account recovery.
           </p>
         </div>
 
@@ -163,6 +191,23 @@ export default function SignupPage() {
               placeholder="you@example.com"
               {...register("email", { required: true })}
             />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
+              Phone
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              placeholder="(555) 123-4567"
+              {...register("phone", { required: true })}
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Used for sign in. US 10-digit and +E.164 formats are accepted.
+            </p>
           </div>
 
           <div>

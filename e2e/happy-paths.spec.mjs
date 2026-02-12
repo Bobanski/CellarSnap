@@ -13,7 +13,20 @@ const missingEnv = requiredEnv.filter((key) => !process.env[key]);
 
 async function login(page, identifier, password) {
   await page.goto("/login");
-  await page.getByLabel("Email or username").fill(identifier);
+  const looksLikePhone = /^[+\d().\s-]{10,}$/.test(identifier);
+
+  if (!looksLikePhone) {
+    const legacyButton = page.getByRole("button", {
+      name: "Use legacy email sign in",
+    });
+    if (await legacyButton.isVisible().catch(() => false)) {
+      await legacyButton.click();
+    }
+    await page.getByLabel("Email or username (legacy)").fill(identifier);
+  } else {
+    await page.getByLabel("Phone number").fill(identifier);
+  }
+
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
   await expect(page).not.toHaveURL(/\/login$/);

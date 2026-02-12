@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   email text,
+  phone text,
   created_at timestamptz not null default now()
 );
 
@@ -38,8 +39,8 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email)
-  values (new.id, new.email)
+  insert into public.profiles (id, email, phone)
+  values (new.id, new.email, new.phone)
   on conflict (id) do nothing;
   return new;
 end;
@@ -51,8 +52,8 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
-insert into public.profiles (id, email)
-select id, email
+insert into public.profiles (id, email, phone)
+select id, email, phone
 from auth.users
 on conflict (id) do nothing;
 
