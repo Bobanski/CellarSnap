@@ -37,9 +37,11 @@ type UserOption = {
 };
 
 function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
-  const fallbackPhotos: FeedPhoto[] = entry.label_image_url
-    ? [{ type: "label", url: entry.label_image_url }]
-    : [];
+  const fallbackPhotos: FeedPhoto[] = entry.place_image_url
+    ? [{ type: "place", url: entry.place_image_url }]
+    : entry.label_image_url
+      ? [{ type: "label", url: entry.label_image_url }]
+      : [];
   const photos = entry.photo_gallery?.length ? entry.photo_gallery : fallbackPhotos;
   const [index, setIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);

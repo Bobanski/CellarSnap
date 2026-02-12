@@ -161,8 +161,8 @@ export async function GET(request: Request) {
     created_at: string;
   };
   const typeOrder: Record<GalleryPhotoType, number> = {
-    label: 0,
-    place: 1,
+    place: 0,
+    label: 1,
     pairing: 2,
   };
 
