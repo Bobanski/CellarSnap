@@ -437,7 +437,7 @@ export default function FeedPage() {
                           </span>
                         )}
                       </span>
-                      <span className="block min-w-0 truncate font-medium text-zinc-200 hover:text-amber-200">
+                      <span className="block min-w-0 whitespace-normal break-words font-medium text-zinc-200 hover:text-amber-200">
                         {entry.author_name}
                       </span>
                     </button>
@@ -450,7 +450,7 @@ export default function FeedPage() {
                 <div className="mt-4">
                   <div className="min-w-0">
                     {entry.wine_name ? (
-                      <h2 className="truncate text-base font-semibold text-zinc-50">
+                      <h2 className="text-base font-semibold leading-snug text-zinc-50 break-words">
                         {entry.wine_name}
                       </h2>
                     ) : null}
@@ -467,7 +467,7 @@ export default function FeedPage() {
                         .join(" · ");
 
                       return meta ? (
-                        <p className="truncate text-sm text-zinc-400">{meta}</p>
+                        <p className="text-sm text-zinc-400 break-words">{meta}</p>
                       ) : null;
                     })()}
                   </div>

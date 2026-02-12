@@ -1689,10 +1689,10 @@ export default function NewEntryPage() {
                       {wine.included ? "\u2713" : ""}
                     </button>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-zinc-100">
+                      <p className="text-sm font-medium text-zinc-100 break-words">
                         {wine.wine_name || "Unknown wine"}
                       </p>
-                      <p className="truncate text-xs text-zinc-400">
+                      <p className="text-xs text-zinc-400 break-words">
                         {[
                           wine.producer,
                           wine.vintage,
