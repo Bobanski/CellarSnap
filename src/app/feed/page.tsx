@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -11,6 +11,16 @@ import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
+const PHOTO_TYPE_LABELS = {
+  label: "Label",
+  place: "Place",
+  pairing: "Pairing",
+} as const;
+
+type FeedPhoto = {
+  type: keyof typeof PHOTO_TYPE_LABELS;
+  url: string;
+};
 
 type FeedEntry = WineEntryWithUrls & {
   author_name: string;
@@ -18,12 +28,117 @@ type FeedEntry = WineEntryWithUrls & {
   can_react?: boolean;
   reaction_counts?: Record<string, number>;
   my_reactions?: string[];
+  photo_gallery?: FeedPhoto[];
 };
 
 type UserOption = {
   id: string;
   display_name: string | null;
 };
+
+function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
+  const fallbackPhotos: FeedPhoto[] = entry.label_image_url
+    ? [{ type: "label", url: entry.label_image_url }]
+    : [];
+  const photos = entry.photo_gallery?.length ? entry.photo_gallery : fallbackPhotos;
+  const [index, setIndex] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
+
+  if (photos.length === 0) {
+    return (
+      <div className="flex h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-zinc-400 md:h-64">
+        No photo
+      </div>
+    );
+  }
+
+  const total = photos.length;
+  const activeIndex = Math.min(index, total - 1);
+  const goPrev = () => setIndex((current) => (current - 1 + total) % total);
+  const goNext = () => setIndex((current) => (current + 1) % total);
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+      <div
+        className="flex h-56 transition-transform duration-300 md:h-64"
+        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        onTouchStart={(event) => {
+          touchStartXRef.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          if (photos.length <= 1 || touchStartXRef.current === null) {
+            touchStartXRef.current = null;
+            return;
+          }
+          const endX = event.changedTouches[0]?.clientX ?? touchStartXRef.current;
+          const delta = touchStartXRef.current - endX;
+          touchStartXRef.current = null;
+          if (Math.abs(delta) < 40) return;
+          if (delta > 0) goNext();
+          else goPrev();
+        }}
+      >
+        {photos.map((photo, photoIndex) => (
+          <div key={`${photo.type}-${photo.url}-${photoIndex}`} className="relative min-w-full">
+            <Photo
+              src={photo.url}
+              alt={`${entry.wine_name ?? entry.producer ?? "Wine"} ${PHOTO_TYPE_LABELS[photo.type]} photo`}
+              containerClassName="h-full w-full"
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              loading="lazy"
+            />
+            <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
+              {PHOTO_TYPE_LABELS[photo.type]}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {photos.length > 1 ? (
+        <>
+          <button
+            type="button"
+            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
+            aria-label="Previous photo"
+            onClick={(event) => {
+              event.stopPropagation();
+              goPrev();
+            }}
+          >
+            {"<"}
+          </button>
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
+            aria-label="Next photo"
+            onClick={(event) => {
+              event.stopPropagation();
+              goNext();
+            }}
+          >
+            {">"}
+          </button>
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/45 px-2 py-1">
+            {photos.map((_, dotIndex) => (
+              <button
+                key={dotIndex}
+                type="button"
+                aria-label={`Go to photo ${dotIndex + 1}`}
+                className={`h-1.5 w-1.5 rounded-full transition ${
+                  dotIndex === activeIndex ? "bg-amber-300" : "bg-zinc-400/70"
+                }`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIndex(dotIndex);
+                }}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 export default function FeedPage() {
   const router = useRouter();
@@ -299,34 +414,20 @@ export default function FeedPage() {
                   </div>
                   <span className="shrink-0">{formatConsumedDate(entry.consumed_at)}</span>
                 </div>
-                <div className="mt-4 flex gap-4">
-                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
-                    {entry.label_image_url ? (
-                      <Photo
-                        src={entry.label_image_url}
-                        alt={entry.wine_name ?? entry.producer ?? "Wine label"}
-                        containerClassName="h-full w-full"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      "No photo"
-                    )}
-                  </div>
-                    <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      {entry.wine_name ? (
-                        <h2 className="text-base font-semibold text-zinc-50">
-                          {entry.wine_name}
-                        </h2>
-                      ) : null}
-                      {entry.producer ? (
-                        <p className="text-sm text-zinc-400">
-                          {entry.producer}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
+                <div className="mt-4">
+                  <EntryPhotoGallery entry={entry} />
+                </div>
+                <div className="mt-4">
+                  {entry.wine_name ? (
+                    <h2 className="text-base font-semibold text-zinc-50">
+                      {entry.wine_name}
+                    </h2>
+                  ) : null}
+                  {entry.producer ? (
+                    <p className="text-sm text-zinc-400">
+                      {entry.producer}
+                    </p>
+                  ) : null}
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
                   <div className="mt-3 text-xs text-zinc-400">

@@ -53,7 +53,7 @@ export async function GET(request: Request) {
   const friendIdsSet = new Set(friendIds);
 
   const selectFields =
-    "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   let entriesQuery = supabase.from("wine_entries").select(selectFields);
 
   if (scope === "friends") {
@@ -122,23 +122,16 @@ export async function GET(request: Request) {
     ])
   );
 
-  const { data: labelPhotos } =
+  const { data: entryPhotos } =
     entryIds.length > 0
       ? await supabase
           .from("entry_photos")
-          .select("entry_id, path, position, created_at")
-          .eq("type", "label")
+          .select("entry_id, type, path, position, created_at")
+          .in("type", ["label", "place", "pairing"])
           .in("entry_id", entryIds)
           .order("position", { ascending: true })
           .order("created_at", { ascending: true })
       : { data: [] };
-
-  const labelMap = new Map<string, string>();
-  (labelPhotos ?? []).forEach((photo) => {
-    if (!labelMap.has(photo.entry_id)) {
-      labelMap.set(photo.entry_id, photo.path);
-    }
-  });
 
   // Reactions: counts per entry per emoji, and current user's reactions per entry
   const reactionCountsMap = new Map<string, Record<string, number>>();
@@ -160,10 +153,78 @@ export async function GET(request: Request) {
     });
   }
 
-  // Sign only the URLs that this page actually renders (author avatar + label)
+  type GalleryPhotoType = "label" | "place" | "pairing";
+  type GalleryPhotoRow = {
+    type: GalleryPhotoType;
+    path: string;
+    position: number;
+    created_at: string;
+  };
+  const typeOrder: Record<GalleryPhotoType, number> = {
+    label: 0,
+    place: 1,
+    pairing: 2,
+  };
+
+  const galleryRowsByEntryId = new Map<string, GalleryPhotoRow[]>();
+  (entryPhotos ?? []).forEach((photo) => {
+    if (photo.type !== "label" && photo.type !== "place" && photo.type !== "pairing") {
+      return;
+    }
+    const current = galleryRowsByEntryId.get(photo.entry_id) ?? [];
+    current.push({
+      type: photo.type,
+      path: photo.path,
+      position: photo.position ?? 0,
+      created_at: photo.created_at ?? "",
+    });
+    galleryRowsByEntryId.set(photo.entry_id, current);
+  });
+
+  pageEntries.forEach((entry) => {
+    const current = galleryRowsByEntryId.get(entry.id) ?? [];
+    const hasLabel = current.some((photo) => photo.type === "label");
+    const hasPlace = current.some((photo) => photo.type === "place");
+    const hasPairing = current.some((photo) => photo.type === "pairing");
+
+    if (!hasLabel && entry.label_image_path) {
+      current.push({
+        type: "label",
+        path: entry.label_image_path,
+        position: 0,
+        created_at: entry.created_at,
+      });
+    }
+    if (!hasPlace && entry.place_image_path) {
+      current.push({
+        type: "place",
+        path: entry.place_image_path,
+        position: 0,
+        created_at: entry.created_at,
+      });
+    }
+    if (!hasPairing && entry.pairing_image_path) {
+      current.push({
+        type: "pairing",
+        path: entry.pairing_image_path,
+        position: 0,
+        created_at: entry.created_at,
+      });
+    }
+
+    current.sort((a, b) => {
+      const typeDiff = typeOrder[a.type] - typeOrder[b.type];
+      if (typeDiff !== 0) return typeDiff;
+      const posDiff = a.position - b.position;
+      if (posDiff !== 0) return posDiff;
+      return a.created_at.localeCompare(b.created_at);
+    });
+    galleryRowsByEntryId.set(entry.id, current);
+  });
+
+  // Sign only the URLs that this page actually renders (author avatar + gallery photos)
   const pathsToSign = new Set<string>();
   const authorAvatarPathByUserId = new Map<string, string>();
-  const labelPathByEntryId = new Map<string, string>();
 
   pageEntries.forEach((entry) => {
     const authorProfile = profileMap.get(entry.user_id);
@@ -172,12 +233,9 @@ export async function GET(request: Request) {
       pathsToSign.add(avatarPath);
       authorAvatarPathByUserId.set(entry.user_id, avatarPath);
     }
-
-    const labelPath = labelMap.get(entry.id) ?? entry.label_image_path ?? null;
-    if (labelPath) {
-      pathsToSign.add(labelPath);
-      labelPathByEntryId.set(entry.id, labelPath);
-    }
+    (galleryRowsByEntryId.get(entry.id) ?? []).forEach((photo) => {
+      pathsToSign.add(photo.path);
+    });
   });
 
   const signedUrlByPath = new Map<string, string | null>();
@@ -190,7 +248,25 @@ export async function GET(request: Request) {
   const feedEntries = pageEntries.map((entry) => {
     const authorProfile = profileMap.get(entry.user_id);
     const avatarPath = authorAvatarPathByUserId.get(entry.user_id) ?? null;
-    const labelPath = labelPathByEntryId.get(entry.id) ?? null;
+    const galleryRows = galleryRowsByEntryId.get(entry.id) ?? [];
+    const photoGallery = galleryRows
+      .map((photo) => {
+        const url = signedUrlByPath.get(photo.path) ?? null;
+        if (!url) return null;
+        return {
+          type: photo.type,
+          url,
+        };
+      })
+      .filter(
+        (photo): photo is { type: GalleryPhotoType; url: string } =>
+          photo !== null
+      );
+
+    const labelPhoto = photoGallery.find((photo) => photo.type === "label")?.url ?? null;
+    const placePhoto = photoGallery.find((photo) => photo.type === "place")?.url ?? null;
+    const pairingPhoto =
+      photoGallery.find((photo) => photo.type === "pairing")?.url ?? null;
 
     const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id: string) => ({
       id,
@@ -207,10 +283,10 @@ export async function GET(request: Request) {
       ...entry,
       author_name: authorProfile?.display_name ?? authorProfile?.email ?? "Unknown",
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
-      label_image_url: labelPath ? signedUrlByPath.get(labelPath) ?? null : null,
-      // Not used by /feed UI; omit signing work (kept as null for compatibility)
-      place_image_url: null,
-      pairing_image_url: null,
+      label_image_url: labelPhoto,
+      place_image_url: placePhoto,
+      pairing_image_url: pairingPhoto,
+      photo_gallery: photoGallery,
       tasted_with_users: tastedWithUsers,
       can_react,
       reaction_counts,
