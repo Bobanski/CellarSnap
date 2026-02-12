@@ -430,6 +430,11 @@ export default function FeedPage() {
                       {entry.producer}
                     </p>
                   ) : null}
+                  {entry.ai_notes_summary ? (
+                    <p className="mt-1 text-sm text-zinc-300/90">
+                      {entry.ai_notes_summary}
+                    </p>
+                  ) : null}
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
                   <div className="mt-3 text-xs text-zinc-400">

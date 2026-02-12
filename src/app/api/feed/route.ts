@@ -1,6 +1,23 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+type FeedEntryRow = {
+  id: string;
+  user_id: string;
+  wine_name: string | null;
+  producer: string | null;
+  consumed_at: string;
+  rating: number | null;
+  qpr_level: string | null;
+  tasted_with_user_ids: string[] | null;
+  ai_notes_summary: string | null;
+  label_image_path: string | null;
+  place_image_path: string | null;
+  pairing_image_path: string | null;
+  entry_privacy: string;
+  created_at: string;
+};
+
 async function createSignedUrl(
   path: string | null,
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
@@ -53,28 +70,51 @@ export async function GET(request: Request) {
   const friendIdsSet = new Set(friendIds);
 
   const selectFields =
+    "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, ai_notes_summary, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+  const fallbackSelectFields =
     "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
-  let entriesQuery = supabase.from("wine_entries").select(selectFields);
+  const buildEntriesQuery = (fields: string) => {
+    let query = supabase.from("wine_entries").select(fields);
 
-  if (scope === "friends") {
-    if (friendIds.length === 0) {
-      return NextResponse.json({ entries: [] });
+    if (scope === "friends") {
+      query = query
+        .in("user_id", friendIds)
+        .in("entry_privacy", ["public", "friends"]);
+    } else {
+      query = query
+        .eq("entry_privacy", "public")
+        .neq("user_id", user.id);
     }
 
-    entriesQuery = entriesQuery
-      .in("user_id", friendIds)
-      .in("entry_privacy", ["public", "friends"]);
-  } else {
-    entriesQuery = entriesQuery.eq("entry_privacy", "public").neq("user_id", user.id);
+    if (cursor) {
+      query = query.lt("created_at", cursor);
+    }
+
+    return query;
+  };
+
+  if (scope === "friends" && friendIds.length === 0) {
+    return NextResponse.json({ entries: [] });
   }
 
-  if (cursor) {
-    entriesQuery = entriesQuery.lt("created_at", cursor);
-  }
-
-  const { data: entries, error } = await entriesQuery
+  const initialEntriesQuery = await buildEntriesQuery(selectFields)
     .order("created_at", { ascending: false })
     .limit(limit + 1);
+  let entries = (initialEntriesQuery.data ?? []) as unknown as FeedEntryRow[];
+  let error = initialEntriesQuery.error;
+
+  if (error?.message.includes("ai_notes_summary")) {
+    const fallbackEntriesQuery = await buildEntriesQuery(fallbackSelectFields)
+      .order("created_at", { ascending: false })
+      .limit(limit + 1);
+    entries = (
+      (fallbackEntriesQuery.data ?? []) as unknown as Omit<
+        FeedEntryRow,
+        "ai_notes_summary"
+      >[]
+    ).map((entry) => ({ ...entry, ai_notes_summary: null }));
+    error = fallbackEntriesQuery.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

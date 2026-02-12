@@ -48,6 +48,7 @@ export type WineEntry = {
   price_paid_source: PricePaidSource | null;
   qpr_level: QprLevel | null;
   notes: string | null;
+  ai_notes_summary: string | null;
   advanced_notes: AdvancedNotes | null;
   location_text: string | null;
   consumed_at: string;
