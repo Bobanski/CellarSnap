@@ -47,31 +47,39 @@ export default function HomePage() {
     let isMounted = true;
 
     const load = async () => {
-      const response = await fetch("/api/home", { cache: "no-store" });
+      try {
+        const response = await fetch("/api/home", { cache: "no-store" });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push("/login");
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.push("/login");
+            return;
+          }
+          if (isMounted) {
+            setLoading(false);
+          }
           return;
         }
-        setLoading(false);
-        return;
-      }
 
-      const data = await response.json();
-      if (isMounted) {
-        setDisplayName(data.displayName ?? null);
-        setDefaultEntryPrivacy(data.defaultEntryPrivacy ?? "public");
-        setPrivacyConfirmedAt(data.privacyConfirmedAt ?? null);
-        setTotalEntryCount(data.totalEntryCount ?? 0);
-        setFriendCount(data.friendCount ?? 0);
-        setRecentEntries(data.recentEntries ?? []);
-        setCircleEntries(data.circleEntries ?? []);
-        setLoading(false);
+        const data = await response.json();
+        if (isMounted) {
+          setDisplayName(data.displayName ?? null);
+          setDefaultEntryPrivacy(data.defaultEntryPrivacy ?? "public");
+          setPrivacyConfirmedAt(data.privacyConfirmedAt ?? null);
+          setTotalEntryCount(data.totalEntryCount ?? 0);
+          setFriendCount(data.friendCount ?? 0);
+          setRecentEntries(data.recentEntries ?? []);
+          setCircleEntries(data.circleEntries ?? []);
+          setLoading(false);
+        }
+      } catch {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    load();
+    load().catch(() => null);
 
     return () => {
       isMounted = false;

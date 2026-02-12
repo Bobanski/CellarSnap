@@ -421,10 +421,17 @@ export default function EditEntryPage() {
     return `/entries/${targetEntryId}/edit?bulk=1&queue=${queue}&index=${targetIndex}`;
   };
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async (values, event) => {
     if (!entry) {
       return;
     }
+
+    const submitIntent =
+      event?.nativeEvent instanceof SubmitEvent
+        ? (
+            event.nativeEvent.submitter as HTMLButtonElement | null
+          )?.dataset.submitIntent ?? null
+        : null;
 
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -493,7 +500,12 @@ export default function EditEntryPage() {
       return;
     }
 
-    if (isBulkReview && nextBulkEntryId && currentBulkIndex >= 0) {
+    if (
+      isBulkReview &&
+      submitIntent !== "exit" &&
+      nextBulkEntryId &&
+      currentBulkIndex >= 0
+    ) {
       router.push(buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1));
       return;
     }
@@ -598,15 +610,17 @@ export default function EditEntryPage() {
               <button
                 type="submit"
                 form="entry-edit-form"
+                data-submit-intent="next"
                 className="rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
                 disabled={isSubmitting}
               >
                 {nextBulkEntryId ? "Next wine" : "Finish review"}
               </button>
               <button
-                type="button"
+                type="submit"
+                form="entry-edit-form"
+                data-submit-intent="exit"
                 className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                onClick={() => router.push("/entries")}
                 disabled={isSubmitting}
               >
                 Skip all and save

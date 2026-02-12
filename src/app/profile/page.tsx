@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const supabase = createSupabaseBrowserClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
 
   // Identity card state
   const [isEditing, setIsEditing] = useState(false);
@@ -83,37 +84,46 @@ export default function ProfilePage() {
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
-    const response = await fetch("/api/profile", {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        router.push("/login");
+    setLoadErrorMessage(null);
+    try {
+      const response = await fetch("/api/profile", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push("/login");
+          return;
+        }
+        setLoadErrorMessage("Unable to load profile right now.");
+        setLoading(false);
         return;
       }
-      setLoading(false);
-      return;
-    }
-    const data = await response.json();
-    if (data.profile) {
-      setProfile(data.profile);
-      setEditUsername(data.profile.display_name ?? "");
-      setPrivacyValue(data.profile.default_entry_privacy ?? "private");
-      setLoading(false);
-      if (
-        !data.profile.display_name?.trim() ||
-        new URLSearchParams(window.location.search).get("setup") === "username"
-      ) {
-        setIsEditing(true);
+
+      const data = await response.json();
+      if (data.profile) {
+        setProfile(data.profile);
+        setEditUsername(data.profile.display_name ?? "");
+        setPrivacyValue(data.profile.default_entry_privacy ?? "private");
+        setLoading(false);
+        if (
+          !data.profile.display_name?.trim() ||
+          new URLSearchParams(window.location.search).get("setup") === "username"
+        ) {
+          setIsEditing(true);
+        }
+      } else {
+        setLoadErrorMessage("Unable to load profile right now.");
+        setLoading(false);
       }
-    } else {
+    } catch {
+      setLoadErrorMessage("Unable to load profile right now.");
       setLoading(false);
     }
   }, [router]);
 
   useEffect(() => {
-    loadProfile().catch(() => null);
+    loadProfile();
 
     // Load badges in parallel (independent of profile)
     fetch("/api/profile/badges", { cache: "no-store" })
@@ -338,6 +348,19 @@ export default function ProfilePage() {
           <NavBar />
           <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
             Loading profile...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <NavBar />
+          <div className="mx-auto max-w-2xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            {loadErrorMessage ?? "Unable to load profile."}
           </div>
         </div>
       </div>

@@ -25,56 +25,59 @@ export default function LoginPage() {
     setErrorMessage(null);
     setInfoMessage(null);
 
-    const identifier = values.email.trim();
-    const resolveResponse = await fetch("/api/auth/resolve-identifier", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier }),
-    });
-
-    if (!resolveResponse.ok) {
-      const payload = await resolveResponse.json().catch(() => ({}));
-      setIsSubmitting(false);
-      setErrorMessage(payload.error ?? "No account matches that email or username.");
-      return;
-    }
-
-    const data = await resolveResponse.json();
-    let email = data.email;
-
-    let { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: values.password,
-    });
-
-    if (error && identifier.includes("@")) {
-      const usernameResolveResponse = await fetch("/api/auth/resolve-identifier", {
+    try {
+      const identifier = values.email.trim();
+      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, mode: "username" }),
+        body: JSON.stringify({ identifier }),
       });
 
-      if (usernameResolveResponse.ok) {
-        const usernameData = await usernameResolveResponse.json();
-        if (usernameData.email !== email) {
-          email = usernameData.email;
-          const retry = await supabase.auth.signInWithPassword({
-            email,
-            password: values.password,
-          });
-          error = retry.error;
+      if (!resolveResponse.ok) {
+        const payload = await resolveResponse.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "No account matches that email or username.");
+        return;
+      }
+
+      const data = await resolveResponse.json();
+      let email = data.email;
+
+      let { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: values.password,
+      });
+
+      if (error && identifier.includes("@")) {
+        const usernameResolveResponse = await fetch("/api/auth/resolve-identifier", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier, mode: "username" }),
+        });
+
+        if (usernameResolveResponse.ok) {
+          const usernameData = await usernameResolveResponse.json();
+          if (usernameData.email !== email) {
+            email = usernameData.email;
+            const retry = await supabase.auth.signInWithPassword({
+              email,
+              password: values.password,
+            });
+            error = retry.error;
+          }
         }
       }
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      router.push("/");
+    } catch {
+      setErrorMessage("Unable to sign in. Check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
-
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
-
-    router.push("/");
   });
 
   return (

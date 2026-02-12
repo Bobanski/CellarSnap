@@ -237,32 +237,43 @@ export default function FeedPage() {
     let isMounted = true;
 
     const loadFeed = async () => {
-      setLoading(true);
-      setErrorMessage(null);
-      setNextCursor(null);
-      setHasMore(false);
-
-      const feedResponse = await fetch(`/api/feed?scope=${feedScope}&limit=30`, {
-        cache: "no-store",
-      });
-
-      if (!feedResponse.ok) {
-        setErrorMessage("Unable to load feed.");
-        setLoading(false);
-        return;
+      if (isMounted) {
+        setLoading(true);
+        setErrorMessage(null);
+        setNextCursor(null);
+        setHasMore(false);
       }
 
-      const feedData = await feedResponse.json();
+      try {
+        const feedResponse = await fetch(`/api/feed?scope=${feedScope}&limit=30`, {
+          cache: "no-store",
+        });
 
-      if (isMounted) {
-        setEntries(feedData.entries ?? []);
-        setNextCursor(feedData.next_cursor ?? null);
-        setHasMore(Boolean(feedData.has_more));
-        setLoading(false);
+        if (!feedResponse.ok) {
+          if (isMounted) {
+            setErrorMessage("Unable to load feed.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        const feedData = await feedResponse.json();
+
+        if (isMounted) {
+          setEntries(feedData.entries ?? []);
+          setNextCursor(feedData.next_cursor ?? null);
+          setHasMore(Boolean(feedData.has_more));
+          setLoading(false);
+        }
+      } catch {
+        if (isMounted) {
+          setErrorMessage("Unable to load feed.");
+          setLoading(false);
+        }
       }
     };
 
-    loadFeed();
+    loadFeed().catch(() => null);
 
     return () => {
       isMounted = false;

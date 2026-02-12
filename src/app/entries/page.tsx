@@ -117,28 +117,39 @@ export default function EntriesPage() {
     let isMounted = true;
 
     const loadEntries = async () => {
-      setLoading(true);
-      setErrorMessage(null);
-      setNextCursor(null);
-      setHasMore(false);
-
-      const response = await fetch("/api/entries?limit=50", { cache: "no-store" });
-      if (!response.ok) {
-        setErrorMessage("Unable to load entries.");
-        setLoading(false);
-        return;
+      if (isMounted) {
+        setLoading(true);
+        setErrorMessage(null);
+        setNextCursor(null);
+        setHasMore(false);
       }
 
-      const data = await response.json();
-      if (isMounted) {
-        setEntries(data.entries ?? []);
-        setNextCursor(data.next_cursor ?? null);
-        setHasMore(Boolean(data.has_more));
-        setLoading(false);
+      try {
+        const response = await fetch("/api/entries?limit=50", { cache: "no-store" });
+        if (!response.ok) {
+          if (isMounted) {
+            setErrorMessage("Unable to load entries.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (isMounted) {
+          setEntries(data.entries ?? []);
+          setNextCursor(data.next_cursor ?? null);
+          setHasMore(Boolean(data.has_more));
+          setLoading(false);
+        }
+      } catch {
+        if (isMounted) {
+          setErrorMessage("Unable to load entries.");
+          setLoading(false);
+        }
       }
     };
 
-    loadEntries();
+    loadEntries().catch(() => null);
 
     return () => {
       isMounted = false;
