@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AlertsMenu from "@/components/AlertsMenu";
 
@@ -15,15 +15,35 @@ const NAV_ITEMS = [
   { label: "Feedback", href: "/feedback" },
 ];
 
-function isItemActive(href: string, pathname: string): boolean {
+function isItemActive({
+  href,
+  pathname,
+  fromParam,
+}: {
+  href: string;
+  pathname: string;
+  fromParam: string | null;
+}): boolean {
+  const viewingEntryFromFeed =
+    pathname.startsWith("/entries/") &&
+    !pathname.startsWith("/entries/new") &&
+    fromParam === "feed";
+
   if (href === "/") {
     return pathname === "/";
   }
   if (href === "/entries") {
+    if (viewingEntryFromFeed) {
+      return false;
+    }
+
     return (
       pathname === "/entries" ||
       (pathname.startsWith("/entries/") && !pathname.startsWith("/entries/new"))
     );
+  }
+  if (href === "/feed") {
+    return pathname.startsWith("/feed") || viewingEntryFromFeed;
   }
   if (href === "/profile") {
     return pathname === "/profile";
@@ -33,6 +53,7 @@ function isItemActive(href: string, pathname: string): boolean {
 
 export default function NavBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [mobileOpenPathname, setMobileOpenPathname] = useState<string | null>(null);
@@ -41,6 +62,7 @@ export default function NavBar() {
 
   const mobileOpen = mobileOpenPathname === pathname;
   const isNewEntryActive = pathname === "/entries/new";
+  const fromParam = searchParams.get("from");
   const pendingLabel =
     pendingIncomingCount > 99 ? "99+" : String(pendingIncomingCount);
 
@@ -129,7 +151,7 @@ export default function NavBar() {
         {/* ── Desktop nav (md+) ── */}
         <div className="hidden items-center gap-2 md:flex">
           {NAV_ITEMS.map(({ label, href }) => {
-            const active = isItemActive(href, pathname);
+            const active = isItemActive({ href, pathname, fromParam });
             return active ? (
               <span
                 key={href}
@@ -241,7 +263,7 @@ export default function NavBar() {
         <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-white/10 bg-[#14100f] p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:hidden">
           <div className="space-y-1">
             {NAV_ITEMS.map(({ label, href }) => {
-              const active = isItemActive(href, pathname);
+              const active = isItemActive({ href, pathname, fromParam });
               return (
                 <Link
                   key={href}
