@@ -6,10 +6,12 @@ type FeedEntryRow = {
   user_id: string;
   wine_name: string | null;
   producer: string | null;
+  vintage: string | null;
   consumed_at: string;
   rating: number | null;
   qpr_level: string | null;
   tasted_with_user_ids: string[] | null;
+  notes: string | null;
   ai_notes_summary: string | null;
   label_image_path: string | null;
   place_image_path: string | null;
@@ -70,9 +72,9 @@ export async function GET(request: Request) {
   const friendIdsSet = new Set(friendIds);
 
   const selectFields =
-    "id, user_id, wine_name, producer, vintage, consumed_at, rating, qpr_level, tasted_with_user_ids, ai_notes_summary, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, ai_notes_summary, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const fallbackSelectFields =
-    "id, user_id, wine_name, producer, vintage, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const buildEntriesQuery = (fields: string) => {
     let query = supabase.from("wine_entries").select(fields);
 

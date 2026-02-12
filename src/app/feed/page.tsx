@@ -46,6 +46,20 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   const [index, setIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
 
+  const rawNotes = (entry.notes ?? "").trim();
+  const wordCount = rawNotes ? rawNotes.split(/\s+/).filter(Boolean).length : 0;
+  const shouldShowNotes = wordCount > 0;
+  const displayNote = shouldShowNotes
+    ? wordCount <= 10
+      ? rawNotes
+      : (() => {
+          const summaryBase =
+            (entry.ai_notes_summary ?? "").trim() ||
+            rawNotes.split(/\s+/).slice(0, 10).join(" ") + "…";
+          return `${summaryBase} (summary)`;
+        })()
+    : "";
+
   if (photos.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-zinc-400 md:h-64">
@@ -95,6 +109,20 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
           </div>
         ))}
       </div>
+
+      {shouldShowNotes ? (
+        <div
+          className="pointer-events-none absolute bottom-2 right-2 max-w-[72%] rounded-xl border border-white/10 bg-black/55 px-2 py-1 text-xs leading-snug text-zinc-100 backdrop-blur-sm"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {displayNote}
+        </div>
+      ) : null}
 
       {photos.length > 1 ? (
         <>
