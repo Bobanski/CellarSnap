@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MAX_LENGTH,
@@ -22,7 +23,23 @@ const schema = z.object({
     ),
 });
 
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 180;
+
 export async function POST(request: Request) {
+  const rateLimit = applyRateLimit({
+    request,
+    routeKey: "username-check",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many username checks. Please wait a bit and try again." },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
   const supabase = await createSupabaseServerClient();
 
   let body: unknown;
@@ -45,5 +62,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ available: Boolean(data) });
+  return NextResponse.json(
+    { available: Boolean(data) },
+    { headers: rateLimitHeaders(rateLimit) }
+  );
 }

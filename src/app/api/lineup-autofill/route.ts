@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
 const wineSchema = z.object({
   wine_name: z.string().nullable().optional(),
@@ -47,6 +48,8 @@ const responseSchema = z.object({
 
 const TIMEOUT_MS = 55000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 60;
 
 function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
@@ -155,6 +158,23 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateLimit = applyRateLimit({
+    request,
+    routeKey: "lineup-autofill",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    userId: user.id,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "Too many lineup scans in a short time. Please wait a bit and try again.",
+      },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -367,6 +387,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       wines,
       total_bottles_detected: parsed.data.total_bottles_detected ?? wines.length,
+    }, {
+      headers: rateLimitHeaders(rateLimit),
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

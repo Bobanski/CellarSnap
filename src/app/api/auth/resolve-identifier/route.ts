@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
 const schema = z.object({
   identifier: z.string().trim().min(1),
@@ -8,8 +9,26 @@ const schema = z.object({
 });
 
 const emailSchema = z.string().email();
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 120;
 
 export async function POST(request: Request) {
+  const rateLimit = applyRateLimit({
+    request,
+    routeKey: "resolve-identifier",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "Too many sign-in identifier checks. Please wait a bit and try again.",
+      },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
   const supabase = await createSupabaseServerClient();
 
   let body: unknown;
@@ -30,7 +49,10 @@ export async function POST(request: Request) {
   if (mode === "auto") {
     const parsedEmail = emailSchema.safeParse(identifier);
     if (parsedEmail.success) {
-      return NextResponse.json({ email: parsedEmail.data });
+      return NextResponse.json(
+        { email: parsedEmail.data },
+        { headers: rateLimitHeaders(rateLimit) }
+      );
     }
   }
 
@@ -49,5 +71,8 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ email: data });
+  return NextResponse.json(
+    { email: data },
+    { headers: rateLimitHeaders(rateLimit) }
+  );
 }

@@ -197,6 +197,16 @@ export default function SignupPage() {
               Back to sign in
             </Link>
           </div>
+
+          <div className="text-center text-[11px] uppercase tracking-[0.2em] text-zinc-500">
+            <Link href="/privacy" className="transition hover:text-amber-200">
+              Privacy
+            </Link>
+            {" · "}
+            <Link href="/terms" className="transition hover:text-amber-200">
+              Terms
+            </Link>
+          </div>
         </form>
       </div>
     </div>

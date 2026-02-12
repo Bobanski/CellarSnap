@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Feed", href: "/feed" },
   { label: "Friends", href: "/friends" },
   { label: "Profile", href: "/profile" },
+  { label: "Feedback", href: "/feedback" },
 ];
 
 function isItemActive(href: string, pathname: string): boolean {
@@ -271,6 +272,15 @@ export default function NavBar() {
             >
               Sign out
             </button>
+            <div className="px-4 pt-2 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
+              <Link href="/privacy" className="transition hover:text-amber-200">
+                Privacy
+              </Link>
+              {" · "}
+              <Link href="/terms" className="transition hover:text-amber-200">
+                Terms
+              </Link>
+            </div>
           </div>
         </div>
       ) : null}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
 const responseSchema = z.object({
   total_bottles_detected: z.number().min(0),
@@ -9,6 +10,8 @@ const responseSchema = z.object({
 
 const TIMEOUT_MS = 12000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 120;
 
 function extractJson(text: string) {
   const start = text.indexOf("{");
@@ -27,6 +30,23 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateLimit = applyRateLimit({
+    request,
+    routeKey: "bottle-count",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    userId: user.id,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "Too many bottle-count checks in a short time. Please wait a bit and try again.",
+      },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -129,6 +149,8 @@ export async function POST(request: Request) {
         0,
         Math.round(parsed.data.total_bottles_detected)
       ),
+    }, {
+      headers: rateLimitHeaders(rateLimit),
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

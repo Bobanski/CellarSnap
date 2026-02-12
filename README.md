@@ -6,7 +6,7 @@ Required environment variables (in `.env.local`):
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `OPENAI_API_KEY` (for label autofill)
+- `OPENAI_API_KEY` (for AI-assisted bottle count and autofill)
 
 Supabase SQL steps:
 
@@ -33,6 +33,8 @@ Supabase SQL steps:
   - `supabase/sql/017_entry_price_currency.sql`
   - `supabase/sql/018_entry_comparison_feedback.sql`
   - `supabase/sql/019_entry_classification_and_primary_grapes.sql`
+  - `supabase/sql/020_ai_notes_summary.sql`
+  - `supabase/sql/021_feedback.sql`
 
 Notes:
 - Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.
@@ -46,6 +48,9 @@ npm run dev
 
 E2E happy path tests:
 
+- Ensure Playwright is installed locally:
+  - `npm install --save-dev @playwright/test`
+  - `npm run e2e:install`
 - Set these env vars before running:
   - `E2E_USER_A_ID`
   - `E2E_USER_A_IDENTIFIER`
@@ -55,6 +60,15 @@ E2E happy path tests:
   - `E2E_USER_B_PASSWORD`
   - Optional: `E2E_BASE_URL` (defaults to `http://127.0.0.1:3000`)
 - Run `npm run e2e`.
+
+API rate limiting:
+
+- Launch-sensitive endpoints have generous per-user/IP limits to prevent abuse while allowing friends-and-family testing:
+  - `/api/lineup-autofill`
+  - `/api/label-autofill`
+  - `/api/bottle-count`
+  - `/api/username-check`
+  - `/api/auth/resolve-identifier`
 
 ## Getting Started
 
@@ -74,7 +88,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Fonts are configured with local/system fallbacks to avoid runtime font fetch requirements during builds.
 
 ## Learn More
 
