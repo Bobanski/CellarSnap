@@ -192,7 +192,7 @@ export default function EntriesPage() {
               Sort
             </label>
             <select
-              className="select-field w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none sm:w-auto"
+              className="select-field w-full max-w-[15rem] rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none sm:w-auto sm:max-w-none"
               value={sortBy}
               onChange={(event) =>
                 setSortBy(
@@ -205,7 +205,7 @@ export default function EntriesPage() {
               <option value="vintage">Vintage</option>
             </select>
             <select
-              className="select-field w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none sm:w-auto"
+              className="select-field w-full max-w-[15rem] rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none sm:w-auto sm:max-w-none"
               value={sortOrder}
               onChange={(event) =>
                 setSortOrder(event.target.value as "asc" | "desc")
