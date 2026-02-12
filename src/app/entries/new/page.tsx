@@ -377,6 +377,17 @@ export default function NewEntryPage() {
     }
   };
 
+  const rollbackCreatedEntry = async (entryId: string) => {
+    try {
+      const response = await fetch(`/api/entries/${entryId}`, {
+        method: "DELETE",
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
   const submitComparison = async (response: ComparisonResponse) => {
     if (!pendingComparison || isSubmittingComparison) {
       return;
@@ -743,9 +754,14 @@ export default function NewEntryPage() {
         await uploadPhotos(entry.id, "pairing", pairingPhotos);
       }
     } catch (error) {
+      const rolledBack = await rollbackCreatedEntry(entry.id);
       setIsSubmitting(false);
+      const uploadErrorMessage =
+        error instanceof Error ? error.message : "Photo upload failed.";
       setErrorMessage(
-        error instanceof Error ? error.message : "Photo upload failed."
+        rolledBack
+          ? `${uploadErrorMessage} Entry creation was rolled back.`
+          : `${uploadErrorMessage} Entry may have been created without all photos. Please delete it and try again.`
       );
       return;
     }

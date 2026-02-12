@@ -356,6 +356,24 @@ export async function PUT(
     return NextResponse.json({ error: "No updates provided" }, { status: 400 });
   }
 
+  const { data: targetEntry, error: targetEntryError } = await supabase
+    .from("wine_entries")
+    .select("id, user_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (targetEntryError) {
+    return NextResponse.json({ error: targetEntryError.message }, { status: 500 });
+  }
+
+  if (!targetEntry) {
+    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+
+  if (targetEntry.user_id !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
 
   if (Object.keys(updates).length > 0) {
@@ -370,7 +388,7 @@ export async function PUT(
           .select("*")
           .eq("id", id)
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         data = existingEntry.data;
         error = existingEntry.error;
@@ -383,7 +401,7 @@ export async function PUT(
         .eq("id", id)
         .eq("user_id", user.id)
         .select("*")
-        .single();
+        .maybeSingle();
 
       data = updateAttempt.data;
       error = updateAttempt.error;
@@ -403,6 +421,10 @@ export async function PUT(
       if (!removedUnsupportedColumn) {
         break;
       }
+    }
+
+    if (!error && !data) {
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
     if (error || !data) {
