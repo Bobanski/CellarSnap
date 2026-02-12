@@ -70,9 +70,9 @@ export async function GET(request: Request) {
   const friendIdsSet = new Set(friendIds);
 
   const selectFields =
-    "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, ai_notes_summary, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, consumed_at, rating, qpr_level, tasted_with_user_ids, ai_notes_summary, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const fallbackSelectFields =
-    "id, user_id, wine_name, producer, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const buildEntriesQuery = (fields: string) => {
     let query = supabase.from("wine_entries").select(fields);
 

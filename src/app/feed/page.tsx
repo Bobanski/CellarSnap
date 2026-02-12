@@ -425,11 +425,21 @@ export default function FeedPage() {
                       {entry.wine_name}
                     </h2>
                   ) : null}
-                  {entry.producer ? (
-                    <p className="text-sm text-zinc-400">
-                      {entry.producer}
-                    </p>
-                  ) : null}
+                  {(() => {
+                    const wineName = entry.wine_name?.trim() ?? "";
+                    const producer = entry.producer?.trim() ?? "";
+                    const vintage = entry.vintage?.trim() ?? "";
+                    const showProducer =
+                      producer.length > 0 &&
+                      producer.toLowerCase() !== wineName.toLowerCase();
+                    const meta = [showProducer ? producer : null, vintage || null]
+                      .filter(Boolean)
+                      .join(" · ");
+
+                    return meta ? (
+                      <p className="text-sm text-zinc-400">{meta}</p>
+                    ) : null;
+                  })()}
                   {entry.ai_notes_summary ? (
                     <p className="mt-1 text-sm text-zinc-300/90">
                       {entry.ai_notes_summary}
