@@ -227,11 +227,24 @@ export default function EntryDetailPage() {
   }
 
   const openedFromFeed = searchParams.get("from") === "feed";
+  const profileContextUserId = searchParams.get("profile");
+  const openedFromProfile =
+    searchParams.get("from") === "profile" &&
+    typeof profileContextUserId === "string" &&
+    /^[0-9a-f-]{36}$/i.test(profileContextUserId);
   const isOwner = currentUserId === entry.user_id;
-  const backHref = openedFromFeed ? "/feed" : isOwner ? "/entries" : "/feed";
+  const backHref = openedFromFeed
+    ? "/feed"
+    : openedFromProfile
+      ? `/profile/${profileContextUserId}`
+      : isOwner
+        ? "/entries"
+        : "/feed";
   const backLabel =
-    openedFromFeed || !isOwner
+    openedFromFeed || (!isOwner && !openedFromProfile)
       ? "← Back to Social Feed"
+      : openedFromProfile
+        ? "← Back to Profile"
       : "← Back to My entries";
   const sortByPosition = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => a.position - b.position);

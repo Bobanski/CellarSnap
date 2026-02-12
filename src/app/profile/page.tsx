@@ -102,12 +102,38 @@ export default function ProfilePage() {
 
       const data = await response.json();
       if (data.profile) {
+        const profileDisplayName = data.profile.display_name?.trim() ?? "";
+        let initialEditUsername = profileDisplayName;
+        if (!profileDisplayName && typeof window !== "undefined") {
+          try {
+            const pendingUsername =
+              window.sessionStorage.getItem("pendingSignupUsername") ?? "";
+            const pendingTrimmed = pendingUsername.trim();
+            if (
+              pendingTrimmed.length >= USERNAME_MIN_LENGTH &&
+              isUsernameFormatValid(pendingTrimmed)
+            ) {
+              initialEditUsername = pendingTrimmed;
+            }
+          } catch {
+            // Ignore client storage failures.
+          }
+        }
+
+        if (profileDisplayName && typeof window !== "undefined") {
+          try {
+            window.sessionStorage.removeItem("pendingSignupUsername");
+          } catch {
+            // Ignore client storage failures.
+          }
+        }
+
         setProfile(data.profile);
-        setEditUsername(data.profile.display_name ?? "");
+        setEditUsername(initialEditUsername);
         setPrivacyValue(data.profile.default_entry_privacy ?? "private");
         setLoading(false);
         if (
-          !data.profile.display_name?.trim() ||
+          !profileDisplayName ||
           new URLSearchParams(window.location.search).get("setup") === "username"
         ) {
           setIsEditing(true);
@@ -213,6 +239,13 @@ export default function ProfilePage() {
         hadPendingAvatar || usernameChanged ? "Profile saved." : "No changes to save."
       );
       setIsEditing(false);
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.removeItem("pendingSignupUsername");
+        } catch {
+          // Ignore client storage failures.
+        }
+      }
     } finally {
       setIsSavingUsername(false);
     }

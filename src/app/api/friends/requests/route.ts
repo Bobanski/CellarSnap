@@ -108,24 +108,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: reverseError.message }, { status: 500 });
   }
 
-  if (reverse && reverse.status === "pending") {
-    const { error: acceptError } = await supabase
-      .from("friend_requests")
-      .update({
-        status: "accepted",
-        responded_at: new Date().toISOString(),
-        seen_at: new Date().toISOString(),
-      })
-      .eq("id", reverse.id);
+  if (reverse && (reverse.status === "pending" || reverse.status === "accepted")) {
+    if (reverse.status === "pending") {
+      const { error: acceptError } = await supabase
+        .from("friend_requests")
+        .update({
+          status: "accepted",
+          responded_at: new Date().toISOString(),
+          seen_at: new Date().toISOString(),
+        })
+        .eq("id", reverse.id)
+        .eq("status", "pending")
+        .eq("recipient_id", user.id);
 
-    if (acceptError) {
-      return NextResponse.json({ error: acceptError.message }, { status: 500 });
+      if (acceptError) {
+        return NextResponse.json({ error: acceptError.message }, { status: 500 });
+      }
     }
 
-    return NextResponse.json({ status: "accepted", request_id: reverse.id });
-  }
+    const { error: cleanupOutgoingError } = await supabase
+      .from("friend_requests")
+      .delete()
+      .eq("requester_id", user.id)
+      .eq("recipient_id", recipientId)
+      .in("status", ["pending", "accepted"]);
 
-  if (reverse && reverse.status === "accepted") {
+    if (cleanupOutgoingError) {
+      return NextResponse.json(
+        { error: cleanupOutgoingError.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ status: "accepted", request_id: reverse.id });
   }
 

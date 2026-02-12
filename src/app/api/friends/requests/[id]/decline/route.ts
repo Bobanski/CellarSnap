@@ -18,7 +18,7 @@ export async function POST(
 
   const { data: requestRow, error: fetchError } = await supabase
     .from("friend_requests")
-    .select("id, recipient_id, status")
+    .select("id, requester_id, recipient_id, status")
     .eq("id", id)
     .maybeSingle();
 
@@ -63,6 +63,17 @@ export async function POST(
       { error: "Request could not be declined." },
       { status: 409 }
     );
+  }
+
+  const { error: cleanupError } = await supabase
+    .from("friend_requests")
+    .delete()
+    .eq("requester_id", user.id)
+    .eq("recipient_id", requestRow.requester_id)
+    .eq("status", "pending");
+
+  if (cleanupError) {
+    return NextResponse.json({ error: cleanupError.message }, { status: 500 });
   }
 
   return NextResponse.json({

@@ -372,7 +372,7 @@ export default function FriendProfilePage() {
               {theirEntries.map((entry) => (
                 <Link
                   key={entry.id}
-                  href={`/entries/${entry.id}`}
+                  href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
                   className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 >
                   <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
@@ -432,7 +432,7 @@ export default function FriendProfilePage() {
               {taggedEntries.map((entry) => (
                 <Link
                   key={entry.id}
-                  href={`/entries/${entry.id}`}
+                  href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
                   className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 >
                   <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">

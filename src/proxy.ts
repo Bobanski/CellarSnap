@@ -66,9 +66,10 @@ export async function proxy(request: NextRequest) {
   const isFriendsRoute = pathname.startsWith("/friends");
   const isLoginRoute = pathname.startsWith("/login");
   const isSignupRoute = pathname.startsWith("/signup");
+  const isHomeRoute = pathname === "/";
 
   const isProtected =
-    isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
+    isHomeRoute || isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
   if (isProtected && !user) {
     // Avoid caching false redirects from speculative route prefetches.
     if (isPrefetchRequest) {
@@ -82,6 +83,29 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user) {
+    const shouldEnforceUsername =
+      isHomeRoute || isEntriesRoute || isFeedRoute || isFriendsRoute;
+
+    if (shouldEnforceUsername && !isProfileRoute) {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profileError) {
+        const hasUsername = Boolean(profile?.display_name?.trim());
+        if (!hasUsername) {
+          return redirectWithCookies({
+            request,
+            response,
+            pathname: "/profile",
+            searchParams: { setup: "username" },
+          });
+        }
+      }
+    }
+
     if (isLoginRoute || isSignupRoute) {
       return redirectWithCookies({
         request,
@@ -96,6 +120,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/entries/:path*",
     "/profile/:path*",
     "/login",

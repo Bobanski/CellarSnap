@@ -104,22 +104,38 @@ export async function POST(
     return NextResponse.json({ error: reverseError.message }, { status: 500 });
   }
 
-  if (reverse && reverse.status === "pending") {
-    const { error: acceptError } = await supabase
-      .from("friend_requests")
-      .update({
-        status: "accepted",
-        responded_at: new Date().toISOString(),
-        seen_at: new Date().toISOString(),
-      })
-      .eq("id", reverse.id)
-      .eq("status", "pending")
-      .eq("recipient_id", user.id);
+  if (reverse && (reverse.status === "pending" || reverse.status === "accepted")) {
+    if (reverse.status === "pending") {
+      const { error: acceptError } = await supabase
+        .from("friend_requests")
+        .update({
+          status: "accepted",
+          responded_at: new Date().toISOString(),
+          seen_at: new Date().toISOString(),
+        })
+        .eq("id", reverse.id)
+        .eq("status", "pending")
+        .eq("recipient_id", user.id);
 
-    if (acceptError) {
-      return NextResponse.json({ error: acceptError.message }, { status: 500 });
+      if (acceptError) {
+        return NextResponse.json({ error: acceptError.message }, { status: 500 });
+      }
     }
-  } else if (!reverse || reverse.status !== "accepted") {
+
+    const { error: cleanupOutgoingError } = await supabase
+      .from("friend_requests")
+      .delete()
+      .eq("requester_id", user.id)
+      .eq("recipient_id", targetUserId)
+      .in("status", ["pending", "accepted"]);
+
+    if (cleanupOutgoingError) {
+      return NextResponse.json(
+        { error: cleanupOutgoingError.message },
+        { status: 500 }
+      );
+    }
+  } else {
     const { data: existing, error: existingError } = await supabase
       .from("friend_requests")
       .select("id")
@@ -186,21 +202,19 @@ export async function DELETE(
     return NextResponse.json({ error: "Valid user ID required" }, { status: 400 });
   }
 
-  const [{ data: outgoing, error: outgoingError }, { data: incoming, error: incomingError }] = await Promise.all([
+  const [{ error: outgoingError }, { error: incomingError }] = await Promise.all([
     supabase
       .from("friend_requests")
-      .select("id")
+      .delete()
       .eq("requester_id", user.id)
       .eq("recipient_id", targetUserId)
-      .in("status", ["pending", "accepted"])
-      .maybeSingle(),
+      .in("status", ["pending", "accepted"]),
     supabase
       .from("friend_requests")
-      .select("id")
+      .delete()
       .eq("requester_id", targetUserId)
       .eq("recipient_id", user.id)
-      .in("status", ["pending", "accepted"])
-      .maybeSingle(),
+      .in("status", ["pending", "accepted"]),
   ]);
 
   if (outgoingError || incomingError) {
@@ -208,18 +222,6 @@ export async function DELETE(
       { error: outgoingError?.message ?? incomingError?.message ?? "Unable to remove relationship." },
       { status: 500 }
     );
-  }
-
-  const requestId = outgoing?.id ?? incoming?.id;
-  if (requestId) {
-    const { error: deleteError } = await supabase
-      .from("friend_requests")
-      .delete()
-      .eq("id", requestId);
-
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 });
-    }
   }
 
   try {

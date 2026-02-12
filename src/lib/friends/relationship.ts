@@ -31,10 +31,10 @@ function relationshipFromRows(
   const friends = outgoingAccepted || incomingAccepted;
   const status: FriendStatus = friends
     ? "friends"
-    : outgoingPending
-      ? "request_sent"
-      : incomingPending
-        ? "request_received"
+    : incomingPending
+      ? "request_received"
+      : outgoingPending
+        ? "request_sent"
         : "none";
 
   return {
@@ -83,4 +83,3 @@ export async function getFriendRelationship(
   const incoming = incomingRes.data as FriendRequestRow | null;
   return relationshipFromRows(outgoing, incoming);
 }
-

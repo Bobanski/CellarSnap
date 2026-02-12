@@ -39,8 +39,8 @@ export default function SignupPage() {
       return;
     }
 
-    if (values.password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters.");
+    if (values.password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters.");
       return;
     }
 
@@ -90,6 +90,14 @@ export default function SignupPage() {
         }
         router.push("/");
         return;
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.setItem("pendingSignupUsername", username);
+        } catch {
+          // Ignore client storage failures.
+        }
       }
 
       setInfoMessage(
@@ -173,7 +181,7 @@ export default function SignupPage() {
               </button>
             </div>
             <p className="mt-1 text-xs text-zinc-500">
-              Must be at least 6 characters.
+              Must be at least 8 characters.
             </p>
           </div>
 

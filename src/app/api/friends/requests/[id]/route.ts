@@ -46,10 +46,30 @@ export async function DELETE(
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
-  const { error: deleteError } = await supabase
-    .from("friend_requests")
-    .delete()
-    .eq("id", id);
+  let deleteError: { message: string } | null = null;
+  if (request.status === "pending" || request.status === "accepted") {
+    const [forwardDelete, reverseDelete] = await Promise.all([
+      supabase
+        .from("friend_requests")
+        .delete()
+        .eq("requester_id", request.requester_id)
+        .eq("recipient_id", request.recipient_id)
+        .in("status", ["pending", "accepted"]),
+      supabase
+        .from("friend_requests")
+        .delete()
+        .eq("requester_id", request.recipient_id)
+        .eq("recipient_id", request.requester_id)
+        .in("status", ["pending", "accepted"]),
+    ]);
+    deleteError = forwardDelete.error ?? reverseDelete.error;
+  } else {
+    const singleDelete = await supabase
+      .from("friend_requests")
+      .delete()
+      .eq("id", id);
+    deleteError = singleDelete.error;
+  }
 
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
