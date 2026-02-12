@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -16,6 +16,12 @@ const PHOTO_TYPE_LABELS = {
   place: "Place",
   pairing: "Pairing",
 } as const;
+const COLLAPSED_NOTES_STYLE: CSSProperties = {
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
 
 type FeedPhoto = {
   type: keyof typeof PHOTO_TYPE_LABELS;
@@ -155,6 +161,16 @@ export default function FeedPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
+    Record<string, boolean>
+  >({});
+
+  const toggleNotesExpanded = (entryId: string) => {
+    setExpandedNotesByEntryId((current) => ({
+      ...current,
+      [entryId]: !current[entryId],
+    }));
+  };
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim();
@@ -272,8 +288,8 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
+    <div className="min-h-screen overflow-x-hidden bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
         <NavBar />
         <header className="space-y-2">
           <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
@@ -371,11 +387,11 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid min-w-0 gap-5 md:grid-cols-2">
             {entries.map((entry) => (
               <article
                 key={entry.id}
-                className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
@@ -386,7 +402,7 @@ export default function FeedPage() {
                   }
                 }}
               >
-                <div className="flex items-center justify-between gap-3 text-xs text-zinc-400">
+                <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-zinc-400">
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <button
                       type="button"
@@ -394,7 +410,7 @@ export default function FeedPage() {
                         event.stopPropagation();
                         router.push(`/profile/${entry.user_id}`);
                       }}
-                      className="flex shrink-0 items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
+                      className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
                     >
                       <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/40 ring-1 ring-white/5">
                         {entry.author_avatar_url ? (
@@ -409,7 +425,7 @@ export default function FeedPage() {
                           </span>
                         )}
                       </span>
-                      <span className="truncate font-medium text-zinc-200 hover:text-amber-200">
+                      <span className="block min-w-0 truncate font-medium text-zinc-200 hover:text-amber-200">
                         {entry.author_name}
                       </span>
                     </button>
@@ -420,61 +436,31 @@ export default function FeedPage() {
                   <EntryPhotoGallery entry={entry} />
                 </div>
                 <div className="mt-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      {entry.wine_name ? (
-                        <h2 className="truncate text-base font-semibold text-zinc-50">
-                          {entry.wine_name}
-                        </h2>
-                      ) : null}
-                      {(() => {
-                        const wineName = entry.wine_name?.trim() ?? "";
-                        const producer = entry.producer?.trim() ?? "";
-                        const vintage = entry.vintage?.trim() ?? "";
-                        const showProducer =
-                          producer.length > 0 &&
-                          producer.toLowerCase() !== wineName.toLowerCase();
-                        const meta = [showProducer ? producer : null, vintage || null]
-                          .filter(Boolean)
-                          .join(" · ");
-
-                        return meta ? (
-                          <p className="truncate text-sm text-zinc-400">{meta}</p>
-                        ) : null;
-                      })()}
-                    </div>
-
+                  <div className="min-w-0">
+                    {entry.wine_name ? (
+                      <h2 className="truncate text-base font-semibold text-zinc-50">
+                        {entry.wine_name}
+                      </h2>
+                    ) : null}
                     {(() => {
-                      const rawNotes = (entry.notes ?? "").trim();
-                      const wordCount = rawNotes
-                        ? rawNotes.split(/\s+/).filter(Boolean).length
-                        : 0;
-                      if (wordCount === 0) return null;
+                      const wineName = entry.wine_name?.trim() ?? "";
+                      const producer = entry.producer?.trim() ?? "";
+                      const vintage = entry.vintage?.trim() ?? "";
+                      const showProducer =
+                        producer.length > 0 &&
+                        producer.toLowerCase() !== wineName.toLowerCase();
+                      const meta = [showProducer ? producer : null, vintage || null]
+                        .filter(Boolean)
+                        .join(" · ");
 
-                      const displayNote =
-                        wordCount <= 10
-                          ? rawNotes
-                          : `${((entry.ai_notes_summary ?? "").trim() ||
-                              rawNotes.split(/\s+/).slice(0, 10).join(" ") + "…")} (summary)`;
-
-                      return (
-                        <div
-                          className="max-w-[55%] shrink-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs leading-snug text-zinc-200"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {displayNote}
-                        </div>
-                      );
+                      return meta ? (
+                        <p className="truncate text-sm text-zinc-400">{meta}</p>
+                      ) : null;
                     })()}
                   </div>
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
-                  <div className="mt-3 text-xs text-zinc-400">
+                  <div className="mt-3 break-words text-xs text-zinc-400">
                     Tasted with:{" "}
                     {entry.tasted_with_users
                       .map((user) => user.display_name ?? user.email ?? "Unknown")
@@ -576,6 +562,32 @@ export default function FeedPage() {
                   ) : null}
                   </div>
                 </div>
+                {(() => {
+                  const notes = (entry.notes ?? "").trim();
+                  if (!notes) {
+                    return null;
+                  }
+
+                  const expanded = Boolean(expandedNotesByEntryId[entry.id]);
+                  return (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleNotesExpanded(entry.id);
+                      }}
+                      className="mt-3 block w-full text-left text-xs leading-relaxed text-zinc-300"
+                      title={expanded ? "Collapse notes" : "Expand notes"}
+                    >
+                      <span
+                        className="block break-words"
+                        style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
+                      >
+                        {notes}
+                      </span>
+                    </button>
+                  );
+                })()}
               </article>
             ))}
           </div>

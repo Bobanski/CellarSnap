@@ -19,7 +19,6 @@ import {
   normalizePrimaryGrapeIds,
 } from "@/lib/primaryGrapes";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
-import { generateAiNotesSummary } from "@/lib/aiNotesSummary";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
@@ -209,10 +208,6 @@ function isClassificationColumnMissing(message: string) {
   return message.includes("classification");
 }
 
-function isAiNotesSummaryColumnMissing(message: string) {
-  return message.includes("ai_notes_summary");
-}
-
 async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
   if (!path || path === "pending") return null;
 
@@ -338,19 +333,8 @@ export async function PUT(
     );
   }
 
-  const aiNotesSummary =
-    payload.data.notes === undefined
-      ? undefined
-      : payload.data.notes
-        ? await generateAiNotesSummary({
-            notes: payload.data.notes,
-            safetyIdentifier: user.id,
-          })
-        : null;
-
   const normalizedData = {
     ...payload.data,
-    ai_notes_summary: aiNotesSummary,
     advanced_notes:
       payload.data.advanced_notes === undefined
         ? undefined
@@ -415,13 +399,6 @@ export async function PUT(
         delete updatesToApply.classification;
         removedUnsupportedColumn = true;
       }
-      if (
-        isAiNotesSummaryColumnMissing(error.message) &&
-        "ai_notes_summary" in updatesToApply
-      ) {
-        delete updatesToApply.ai_notes_summary;
-        removedUnsupportedColumn = true;
-      }
 
       if (!removedUnsupportedColumn) {
         break;
@@ -447,15 +424,6 @@ export async function PUT(
               "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
           },
           { status: 400 }
-        );
-      }
-      if (error?.message.includes("ai_notes_summary")) {
-        return NextResponse.json(
-          {
-            error:
-              "AI notes summaries are not available yet. Run supabase/sql/020_ai_notes_summary.sql and try again.",
-          },
-          { status: 500 }
         );
       }
       if (

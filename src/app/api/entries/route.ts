@@ -18,7 +18,6 @@ import {
   fetchPrimaryGrapesByEntryId,
   normalizePrimaryGrapeIds,
 } from "@/lib/primaryGrapes";
-import { generateAiNotesSummary } from "@/lib/aiNotesSummary";
 
 const privacyLevelSchema = z.enum(["public", "friends", "private"]);
 const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
@@ -207,10 +206,6 @@ function isPrimaryGrapeSchemaMissing(message: string) {
 
 function isClassificationColumnMissing(message: string) {
   return message.includes("classification");
-}
-
-function isAiNotesSummaryColumnMissing(message: string) {
-  return message.includes("ai_notes_summary");
 }
 
 async function getRandomComparisonCandidate({
@@ -422,12 +417,6 @@ export async function POST(request: Request) {
   const advancedNotes = normalizeAdvancedNotes(payload.data.advanced_notes);
   const primaryGrapeIds = normalizePrimaryGrapeIds(payload.data.primary_grape_ids);
   let primaryGrapeIdsToPersist = primaryGrapeIds;
-  const aiNotesSummary = payload.data.notes
-    ? await generateAiNotesSummary({
-        notes: payload.data.notes,
-        safetyIdentifier: user.id,
-      })
-    : null;
 
   if (primaryGrapeIds.length > 0) {
     const { data: grapeRows, error: grapeLookupError } = await supabase
@@ -470,7 +459,6 @@ export async function POST(request: Request) {
     price_paid_source: payload.data.price_paid_source ?? null,
     qpr_level: payload.data.qpr_level ?? null,
     notes: payload.data.notes ?? null,
-    ai_notes_summary: aiNotesSummary,
     advanced_notes: advancedNotes,
     location_text: payload.data.location_text ?? null,
     consumed_at: consumedAt,
@@ -508,13 +496,6 @@ export async function POST(request: Request) {
       delete insertPayloadToApply.classification;
       removedUnsupportedColumn = true;
     }
-    if (
-      isAiNotesSummaryColumnMissing(error.message) &&
-      "ai_notes_summary" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.ai_notes_summary;
-      removedUnsupportedColumn = true;
-    }
 
     if (!removedUnsupportedColumn) {
       break;
@@ -538,15 +519,6 @@ export async function POST(request: Request) {
             "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
         },
         { status: 400 }
-      );
-    }
-    if (error.message.includes("ai_notes_summary")) {
-      return NextResponse.json(
-        {
-          error:
-            "AI notes summaries are not available yet. Run supabase/sql/020_ai_notes_summary.sql and try again.",
-        },
-        { status: 500 }
       );
     }
     if (

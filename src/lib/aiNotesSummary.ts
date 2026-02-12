@@ -3,10 +3,19 @@ import OpenAI from "openai";
 const NOTES_SUMMARY_TIMEOUT_MS = 3000;
 const NOTES_SUMMARY_MAX_CHARS = 140;
 const NOTES_FOR_MODEL_MAX_CHARS = 1200;
-const NOTES_FOR_MODEL_MIN_CHARS = 24;
+const NOTES_SUMMARY_MIN_WORDS = 11;
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function getWordCount(value: string) {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) {
+    return 0;
+  }
+
+  return normalized.split(" ").length;
 }
 
 function truncateWithEllipsis(value: string, maxChars: number) {
@@ -57,11 +66,12 @@ export async function generateAiNotesSummary({
     return null;
   }
 
+  if (getWordCount(normalizedNotes) < NOTES_SUMMARY_MIN_WORDS) {
+    return null;
+  }
+
   const fallback = buildFallbackSummary(normalizedNotes);
-  if (
-    normalizedNotes.length < NOTES_FOR_MODEL_MIN_CHARS ||
-    !process.env.OPENAI_API_KEY
-  ) {
+  if (!process.env.OPENAI_API_KEY) {
     return fallback;
   }
 

@@ -12,7 +12,6 @@ type FeedEntryRow = {
   qpr_level: string | null;
   tasted_with_user_ids: string[] | null;
   notes: string | null;
-  ai_notes_summary: string | null;
   label_image_path: string | null;
   place_image_path: string | null;
   pairing_image_path: string | null;
@@ -72,8 +71,6 @@ export async function GET(request: Request) {
   const friendIdsSet = new Set(friendIds);
 
   const selectFields =
-    "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, ai_notes_summary, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
-  const fallbackSelectFields =
     "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const buildEntriesQuery = (fields: string) => {
     let query = supabase.from("wine_entries").select(fields);
@@ -102,21 +99,8 @@ export async function GET(request: Request) {
   const initialEntriesQuery = await buildEntriesQuery(selectFields)
     .order("created_at", { ascending: false })
     .limit(limit + 1);
-  let entries = (initialEntriesQuery.data ?? []) as unknown as FeedEntryRow[];
-  let error = initialEntriesQuery.error;
-
-  if (error?.message.includes("ai_notes_summary")) {
-    const fallbackEntriesQuery = await buildEntriesQuery(fallbackSelectFields)
-      .order("created_at", { ascending: false })
-      .limit(limit + 1);
-    entries = (
-      (fallbackEntriesQuery.data ?? []) as unknown as Omit<
-        FeedEntryRow,
-        "ai_notes_summary"
-      >[]
-    ).map((entry) => ({ ...entry, ai_notes_summary: null }));
-    error = fallbackEntriesQuery.error;
-  }
+  const entries = (initialEntriesQuery.data ?? []) as unknown as FeedEntryRow[];
+  const error = initialEntriesQuery.error;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
