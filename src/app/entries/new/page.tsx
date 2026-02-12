@@ -27,6 +27,7 @@ import {
   type QprLevel,
 } from "@/lib/entryMeta";
 import { getTodayLocalYmd } from "@/lib/dateYmd";
+import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
 import type { PrimaryGrape } from "@/types/wine";
 
 type NewEntryForm = {
@@ -247,7 +248,7 @@ export default function NewEntryPage() {
     labelPhotosRef.current = labelPhotos;
   }, [labelPhotos]);
 
-  const MAX_PHOTOS = 3;
+  const MAX_PHOTOS = MAX_ENTRY_PHOTOS_PER_TYPE;
 
   const addPhotos = (type: "label" | "place" | "pairing", files: FileList) => {
     const list = Array.from(files);

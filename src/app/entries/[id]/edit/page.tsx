@@ -28,6 +28,7 @@ import {
   type QprLevel,
 } from "@/lib/entryMeta";
 import { getTodayLocalYmd } from "@/lib/dateYmd";
+import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
 
 type EditEntryForm = {
   wine_name: string;
@@ -226,7 +227,7 @@ export default function EditEntryPage() {
     };
   }, []);
 
-  const MAX_PHOTOS = 3;
+  const MAX_PHOTOS = MAX_ENTRY_PHOTOS_PER_TYPE;
 
   const loadPhotos = useCallback(async () => {
     if (!entryId) return;

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
+import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
 
-const MAX_PER_TYPE = 3;
+const MAX_PER_TYPE = MAX_ENTRY_PHOTOS_PER_TYPE;
 const typeSchema = z.enum(["label", "place", "pairing"]);
 
 const createSchema = z.object({
