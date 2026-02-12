@@ -131,6 +131,7 @@ export default function NewEntryPage() {
   const labelInputRef = useRef<HTMLInputElement | null>(null);
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
+  const labelPhotosRef = useRef<{ file: File; preview: string }[]>([]);
 
   // Lineup detection state
   type BottleBbox = {
@@ -242,6 +243,10 @@ export default function NewEntryPage() {
     };
   }, [labelPhotos, placePhotos, pairingPhotos]);
 
+  useEffect(() => {
+    labelPhotosRef.current = labelPhotos;
+  }, [labelPhotos]);
+
   const MAX_PHOTOS = 3;
 
   const addPhotos = (type: "label" | "place" | "pairing", files: FileList) => {
@@ -249,21 +254,18 @@ export default function NewEntryPage() {
     if (list.length === 0) return;
 
     if (type === "label") {
-      let filesToAnalyze: File[] = [];
-      setLabelPhotos((prev) => {
-        const remaining = MAX_PHOTOS - prev.length;
-        if (remaining <= 0) return prev;
-        const next = list.slice(0, remaining).map((file) => ({
-          file,
-          preview: URL.createObjectURL(file),
-        }));
-        const combined = [...prev, ...next];
-        filesToAnalyze = combined.map((photo) => photo.file);
-        return combined;
-      });
-      if (filesToAnalyze.length > 0) {
-        runAnalysis(filesToAnalyze);
-      }
+      const current = labelPhotosRef.current;
+      const remaining = MAX_PHOTOS - current.length;
+      if (remaining <= 0) return;
+      const next = list.slice(0, remaining).map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      if (next.length === 0) return;
+      const combined = [...current, ...next];
+      labelPhotosRef.current = combined;
+      setLabelPhotos(combined);
+      runAnalysis(combined.map((photo) => photo.file));
       return;
     }
 
