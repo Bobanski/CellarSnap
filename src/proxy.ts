@@ -56,6 +56,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+  const isPrefetchRequest =
+    request.headers.get("purpose") === "prefetch" ||
+    request.headers.has("next-router-prefetch") ||
+    request.headers.get("x-middleware-prefetch") === "1";
   const isEntriesRoute = pathname.startsWith("/entries");
   const isProfileRoute = pathname.startsWith("/profile");
   const isFeedRoute = pathname.startsWith("/feed");
@@ -66,6 +70,10 @@ export async function proxy(request: NextRequest) {
   const isProtected =
     isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
   if (isProtected && !user) {
+    // Avoid caching false redirects from speculative route prefetches.
+    if (isPrefetchRequest) {
+      return response;
+    }
     return redirectWithCookies({
       request,
       response,

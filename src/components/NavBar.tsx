@@ -153,6 +153,7 @@ export default function NavBar() {
           ) : (
             <Link
               href="/entries/new"
+              prefetch={false}
               className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition"
             >
               + New entry
@@ -177,6 +178,7 @@ export default function NavBar() {
           ) : (
             <Link
               href="/entries/new"
+              prefetch={false}
               className="accent-solid-button rounded-full px-3 py-1.5 text-sm font-semibold transition"
             >
               + New
@@ -256,6 +258,7 @@ export default function NavBar() {
             {!isNewEntryActive ? (
               <Link
                 href="/entries/new"
+                prefetch={false}
                 className="accent-solid-button block rounded-xl px-4 py-3 text-center text-sm font-semibold transition"
               >
                 + New entry

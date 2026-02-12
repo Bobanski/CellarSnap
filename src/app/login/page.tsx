@@ -78,12 +78,12 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f0a09] px-6">
+    <div className="relative flex min-h-screen items-start justify-center overflow-y-auto bg-[#0f0a09] px-4 py-6 sm:items-center sm:px-6 sm:py-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute -bottom-40 left-0 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl" />
       </div>
-      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-50">CellarSnap</h1>
@@ -96,7 +96,7 @@ export default function LoginPage() {
           </span>
         </div>
 
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+        <form className="mt-5 space-y-4 sm:mt-6" onSubmit={onSubmit}>
           <div>
             <label className="text-sm font-medium text-zinc-200" htmlFor="email">
               Email or username
@@ -143,7 +143,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
             Sign In
@@ -151,7 +151,7 @@ export default function LoginPage() {
 
           <Link
             href="/signup"
-            className="w-full rounded-xl border border-white/10 px-4 py-2 text-center text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+            className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm font-semibold text-zinc-200 transition hover:border-white/30"
           >
             Create Account
           </Link>
