@@ -75,6 +75,23 @@ export default function LoginPage() {
         return;
       }
 
+      try {
+        const profileResponse = await fetch("/api/profile", { cache: "no-store" });
+        if (profileResponse.ok) {
+          const payload = await profileResponse.json().catch(() => ({}));
+          const displayName =
+            typeof payload.profile?.display_name === "string"
+              ? payload.profile.display_name.trim()
+              : "";
+          if (!displayName) {
+            router.push("/profile?setup=username");
+            return;
+          }
+        }
+      } catch {
+        // Ignore profile lookup failures and fall back to home.
+      }
+
       router.push("/");
     } catch {
       setErrorMessage("Unable to sign in. Check your connection and try again.");

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
 import {
@@ -12,32 +12,88 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   isUsernameFormatValid,
 } from "@/lib/validation/username";
-import {
-  normalizePhone,
-  PHONE_FORMAT_MESSAGE,
-} from "@/lib/validation/phone";
+import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
 
-type SignupFormValues = {
+type EmailSignupValues = {
+  email: string;
+};
+
+type PhoneSignupValues = {
   username: string;
+  phone: string;
   email: string;
   password: string;
-  phone?: string;
 };
+
+function createTemporaryPassword(): string {
+  // Create a long random password; the user will set their real password after email confirmation.
+  const token =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? `${crypto.randomUUID()}${crypto.randomUUID()}`
+      : `${Math.random().toString(36).slice(2)}${Date.now()}${Math.random()
+          .toString(36)
+          .slice(2)}`;
+  return `${token}A!`;
+}
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const authMode = getAuthMode();
-  const { register, handleSubmit } = useForm<SignupFormValues>();
+
+  const emailForm = useForm<EmailSignupValues>();
+  const phoneForm = useForm<PhoneSignupValues>();
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const onSubmit = handleSubmit(async (values) => {
-    const username = values.username.trim();
+  const onEmailSubmit = emailForm.handleSubmit(async (values) => {
     const email = values.email.trim().toLowerCase();
-    const normalizedPhone =
-      authMode === "phone" ? normalizePhone(values.phone ?? "") : null;
+
+    if (!email || !email.includes("@")) {
+      setErrorMessage("A valid email is required.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: createTemporaryPassword(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/finish-signup`,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      if (data.session) {
+        router.push("/finish-signup");
+        return;
+      }
+
+      setInfoMessage(
+        "Check your email to confirm your account. After confirming, you'll set your password."
+      );
+    } catch {
+      setErrorMessage("Unable to start signup. Check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  });
+
+  const onPhoneSubmit = phoneForm.handleSubmit(async (values) => {
+    const username = values.username.trim();
+    const normalizedPhone = normalizePhone(values.phone);
+    const email = values.email.trim().toLowerCase();
 
     if (username.length < USERNAME_MIN_LENGTH) {
       setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
@@ -49,7 +105,7 @@ export default function SignupPage() {
       return;
     }
 
-    if (authMode === "phone" && !normalizedPhone) {
+    if (!normalizedPhone) {
       setErrorMessage(PHONE_FORMAT_MESSAGE);
       return;
     }
@@ -66,6 +122,7 @@ export default function SignupPage() {
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    setInfoMessage(null);
 
     try {
       const usernameCheckResponse = await fetch("/api/username-check", {
@@ -86,36 +143,28 @@ export default function SignupPage() {
         return;
       }
 
-      if (authMode === "phone") {
-        const phoneCheckResponse = await fetch("/api/phone-check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: normalizedPhone }),
-        });
+      const phoneCheckResponse = await fetch("/api/phone-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
 
-        if (!phoneCheckResponse.ok) {
-          const payload = await phoneCheckResponse.json().catch(() => ({}));
-          setErrorMessage(payload.error ?? "Unable to check phone number.");
-          return;
-        }
-
-        const phoneCheckData = await phoneCheckResponse.json();
-        if (!phoneCheckData.available) {
-          setErrorMessage("That phone number is already in use.");
-          return;
-        }
+      if (!phoneCheckResponse.ok) {
+        const payload = await phoneCheckResponse.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to check phone number.");
+        return;
       }
 
-      const { data, error } =
-        authMode === "phone"
-          ? await supabase.auth.signUp({
-              phone: normalizedPhone!,
-              password: values.password,
-            })
-          : await supabase.auth.signUp({
-              email,
-              password: values.password,
-            });
+      const phoneCheckData = await phoneCheckResponse.json();
+      if (!phoneCheckData.available) {
+        setErrorMessage("That phone number is already in use.");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        phone: normalizedPhone,
+        password: values.password,
+      });
 
       if (error) {
         setErrorMessage(error.message);
@@ -126,9 +175,7 @@ export default function SignupPage() {
         try {
           window.sessionStorage.setItem("pendingSignupUsername", username);
           window.sessionStorage.setItem("pendingSignupEmail", email);
-          if (authMode === "phone" && normalizedPhone) {
-            window.sessionStorage.setItem("pendingSignupPhone", normalizedPhone);
-          }
+          window.sessionStorage.setItem("pendingSignupPhone", normalizedPhone);
         } catch {
           // Ignore client storage failures.
         }
@@ -141,9 +188,7 @@ export default function SignupPage() {
           body: JSON.stringify({
             display_name: username,
             email,
-            ...(authMode === "phone" && normalizedPhone
-              ? { phone: normalizedPhone }
-              : {}),
+            phone: normalizedPhone,
           }),
         });
 
@@ -157,20 +202,15 @@ export default function SignupPage() {
         return;
       }
 
-      if (authMode === "phone" && normalizedPhone) {
-        router.push(`/verify-phone?phone=${encodeURIComponent(normalizedPhone)}`);
-        return;
-      }
-
-      setErrorMessage(
-        "Check your email to confirm your account, then sign in to finish setup."
-      );
+      router.push(`/verify-phone?phone=${encodeURIComponent(normalizedPhone)}`);
     } catch {
       setErrorMessage("Unable to create account. Check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
   });
+
+  const isPhoneMode = authMode === "phone";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f0a09] px-6">
@@ -185,90 +225,110 @@ export default function SignupPage() {
           </span>
           <h1 className="text-2xl font-semibold text-zinc-50">Join CellarSnap</h1>
           <p className="text-sm text-zinc-300">
-            {authMode === "phone"
+            {isPhoneMode
               ? "Create your account with username, phone, email, and password."
-              : "Create your account with username, email, and password."}
+              : "Enter your email to get started. You'll set your password after confirming your email."}
           </p>
         </div>
 
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="username">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              autoComplete="username"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="At least 3 characters"
-              {...register("username", { required: true })}
-            />
-          </div>
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={isPhoneMode ? onPhoneSubmit : onEmailSubmit}
+        >
+          {isPhoneMode ? (
+            <>
+              <div>
+                <label className="text-sm font-medium text-zinc-200" htmlFor="username">
+                  Username
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  autoComplete="username"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  placeholder="At least 3 characters"
+                  {...phoneForm.register("username", { required: true })}
+                />
+              </div>
 
-          {authMode === "phone" ? (
+              <div>
+                <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
+                  Phone number
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  placeholder="(555) 123-4567"
+                  {...phoneForm.register("phone", { required: true })}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  placeholder="you@example.com"
+                  {...phoneForm.register("email", { required: true })}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-zinc-200" htmlFor="password">
+                  Password
+                </label>
+                <div className="relative mt-1">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    placeholder="********"
+                    {...phoneForm.register("password", { required: true })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:text-amber-200"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">Must be at least 8 characters.</p>
+              </div>
+            </>
+          ) : (
             <div>
-              <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
-                Phone number
+              <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+                Email address
               </label>
               <input
-                id="phone"
-                type="tel"
-                autoComplete="tel"
+                id="email"
+                type="email"
+                autoComplete="email"
                 className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="(555) 123-4567"
-                {...register("phone", { required: true })}
+                placeholder="you@example.com"
+                {...emailForm.register("email", { required: true })}
               />
             </div>
-          ) : null}
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="you@example.com"
-              {...register("email", { required: true })}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="password">
-              Password
-            </label>
-            <div className="relative mt-1">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="********"
-                {...register("password", { required: true })}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:text-amber-200"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-zinc-500">Must be at least 8 characters.</p>
-          </div>
+          )}
 
           {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
+          {infoMessage ? <p className="text-sm text-emerald-300">{infoMessage}</p> : null}
 
           <button
             type="submit"
             className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
-            Create account
+            {isPhoneMode ? "Create account" : "Send confirmation email"}
           </button>
 
           <div className="text-center">
