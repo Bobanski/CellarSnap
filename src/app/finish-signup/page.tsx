@@ -27,16 +27,69 @@ export default function FinishSignupPage() {
     let isMounted = true;
 
     const initSession = async () => {
-      const url = window.location.href;
-      const hasCode = url.includes("code=");
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+      const code = params.get("code");
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
 
-      if (hasCode) {
-        const { error } = await supabase.auth.exchangeCodeForSession(url);
-        if (isMounted) {
-          setLinkValid(!error);
-          if (error) {
-            setErrorMessage("This signup link is invalid or expired.");
+      // Supabase can send different link formats depending on auth flow/settings:
+      // - PKCE: ?code=...
+      // - Verify OTP: ?token_hash=...&type=signup (or magiclink/recovery/invite)
+      // - Implicit: #access_token=...&refresh_token=...
+      try {
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(
+            window.location.href
+          );
+          if (isMounted) {
+            setLinkValid(!error);
+            if (error) {
+              setErrorMessage("This signup link is invalid or expired.");
+            }
+            setReady(true);
           }
+          return;
+        }
+
+        if (tokenHash && type) {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: type as any,
+          });
+          if (isMounted) {
+            setLinkValid(!error);
+            if (error) {
+              setErrorMessage("This signup link is invalid or expired.");
+            }
+            setReady(true);
+          }
+          return;
+        }
+
+        // Handle older implicit grant links where tokens are in the URL hash.
+        if (window.location.hash?.includes("access_token=")) {
+          const hashParams = new URLSearchParams(window.location.hash.slice(1));
+          const access_token = hashParams.get("access_token");
+          const refresh_token = hashParams.get("refresh_token");
+
+          const { error } =
+            access_token && refresh_token
+              ? await supabase.auth.setSession({ access_token, refresh_token })
+              : { error: new Error("Missing session tokens") };
+          if (isMounted) {
+            setLinkValid(!error);
+            if (error) {
+              setErrorMessage("This signup link is invalid or expired.");
+            }
+            setReady(true);
+          }
+          return;
+        }
+      } catch {
+        if (isMounted) {
+          setLinkValid(false);
+          setErrorMessage("This signup link is invalid or expired.");
           setReady(true);
         }
         return;
