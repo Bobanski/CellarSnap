@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 type FeedEntryRow = {
   id: string;
   user_id: string;
+  root_entry_id?: string | null;
+  is_feed_visible?: boolean | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
@@ -70,19 +72,35 @@ export async function GET(request: Request) {
   );
   const friendIdsSet = new Set(friendIds);
 
-  const selectFields =
+  const baseSelectFields =
     "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
-  const buildEntriesQuery = (fields: string) => {
+  const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
+
+  const buildEntriesQuery = ({
+    fields,
+    withTastingSupport,
+  }: {
+    fields: string;
+    withTastingSupport: boolean;
+  }) => {
     let query = supabase.from("wine_entries").select(fields);
 
     if (scope === "friends") {
+      const friendSet = friendIds.join(",");
+      // Include entries from friends, plus public entries where friends were tagged.
       query = query
-        .in("user_id", friendIds)
-        .in("entry_privacy", ["public", "friends"]);
+        .or(
+          `and(user_id.in.(${friendSet}),entry_privacy.in.(public,friends)),and(entry_privacy.eq.public,tasted_with_user_ids.ov.{${friendSet}})`
+        )
+        .neq("user_id", user.id);
     } else {
       query = query
         .eq("entry_privacy", "public")
         .neq("user_id", user.id);
+    }
+
+    if (withTastingSupport) {
+      query = query.eq("is_feed_visible", true);
     }
 
     if (cursor) {
@@ -96,14 +114,38 @@ export async function GET(request: Request) {
     return NextResponse.json({ entries: [] });
   }
 
-  const initialEntriesQuery = await buildEntriesQuery(selectFields)
-    .order("created_at", { ascending: false })
-    .limit(limit + 1);
-  const entries = (initialEntriesQuery.data ?? []) as unknown as FeedEntryRow[];
-  const error = initialEntriesQuery.error;
+  let entries: FeedEntryRow[] = [];
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  {
+    const attempt = await buildEntriesQuery({
+      fields: extendedSelectFields,
+      withTastingSupport: true,
+    })
+      .order("created_at", { ascending: false })
+      .limit(limit + 1);
+
+    if (!attempt.error) {
+      entries = (attempt.data ?? []) as unknown as FeedEntryRow[];
+    } else if (
+      attempt.error.message.includes("is_feed_visible") ||
+      attempt.error.message.includes("root_entry_id") ||
+      attempt.error.message.includes("column")
+    ) {
+      // Backwards compatible: if the tasting columns haven't been added yet, fall back.
+      const fallback = await buildEntriesQuery({
+        fields: baseSelectFields,
+        withTastingSupport: false,
+      })
+        .order("created_at", { ascending: false })
+        .limit(limit + 1);
+
+      if (fallback.error) {
+        return NextResponse.json({ error: fallback.error.message }, { status: 500 });
+      }
+      entries = (fallback.data ?? []) as unknown as FeedEntryRow[];
+    } else {
+      return NextResponse.json({ error: attempt.error.message }, { status: 500 });
+    }
   }
 
   const pageEntries = entries && entries.length > limit ? entries.slice(0, limit) : (entries ?? []);

@@ -1,0 +1,297 @@
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { canUserViewEntry } from "@/lib/access/entryVisibility";
+
+type WineEntryRow = {
+  id: string;
+  user_id: string;
+  root_entry_id?: string | null;
+  wine_name?: string | null;
+  producer?: string | null;
+  vintage?: string | null;
+  country?: string | null;
+  region?: string | null;
+  appellation?: string | null;
+  classification?: string | null;
+  rating?: number | null;
+  price_paid?: number | null;
+  price_paid_currency?: string | null;
+  price_paid_source?: string | null;
+  qpr_level?: string | null;
+  notes?: string | null;
+  ai_notes_summary?: string | null;
+  advanced_notes?: unknown;
+  location_text?: string | null;
+  consumed_at?: string | null;
+  tasted_with_user_ids?: string[] | null;
+  label_image_path?: string | null;
+  place_image_path?: string | null;
+  pairing_image_path?: string | null;
+  entry_privacy?: string;
+  label_photo_privacy?: string | null;
+  place_photo_privacy?: string | null;
+};
+
+function isMissingTastingColumns(error: string) {
+  return (
+    error.includes("root_entry_id") ||
+    error.includes("is_feed_visible") ||
+    error.includes("column") ||
+    error.includes("schema")
+  );
+}
+
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!id) {
+    return NextResponse.json({ error: "Entry ID required." }, { status: 400 });
+  }
+
+  const { data: entry, error: entryError } = await supabase
+    .from("wine_entries")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (entryError || !entry) {
+    return NextResponse.json({ error: "Entry not found." }, { status: 404 });
+  }
+
+  const baseEntry = entry as unknown as WineEntryRow;
+
+  try {
+    const entryPrivacy =
+      baseEntry.entry_privacy === "friends" ||
+      baseEntry.entry_privacy === "private" ||
+      baseEntry.entry_privacy === "public"
+        ? baseEntry.entry_privacy
+        : "public";
+    const canView = await canUserViewEntry({
+      supabase,
+      viewerUserId: user.id,
+      ownerUserId: baseEntry.user_id,
+      entryPrivacy,
+    });
+    if (!canView) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  } catch (visibilityError) {
+    const message =
+      visibilityError instanceof Error
+        ? visibilityError.message
+        : "Unable to verify entry visibility.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  let rootEntry: WineEntryRow = baseEntry;
+  const rootEntryId = baseEntry.root_entry_id ?? null;
+  if (rootEntryId) {
+    const { data: rootRow } = await supabase
+      .from("wine_entries")
+      .select("*")
+      .eq("id", rootEntryId)
+      .maybeSingle();
+    if (rootRow) {
+      rootEntry = rootRow as unknown as WineEntryRow;
+    }
+  }
+
+  const taggedIds = Array.isArray(rootEntry.tasted_with_user_ids)
+    ? rootEntry.tasted_with_user_ids
+    : [];
+
+  if (!taggedIds.includes(user.id)) {
+    return NextResponse.json(
+      { error: "You can only add entries where you were tagged." },
+      { status: 403 }
+    );
+  }
+
+  if (rootEntry.user_id === user.id) {
+    return NextResponse.json(
+      { error: "This is already your entry." },
+      { status: 400 }
+    );
+  }
+
+  // If this entry was already added to the user's log, return it.
+  const existing = await supabase
+    .from("wine_entries")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("root_entry_id", rootEntry.id)
+    .maybeSingle();
+
+  if (existing.error) {
+    if (isMissingTastingColumns(existing.error.message)) {
+      return NextResponse.json(
+        {
+          error:
+            "Shared tastings are not available yet. Run supabase/sql/025_shared_tastings.sql and try again.",
+        },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ error: existing.error.message }, { status: 500 });
+  }
+
+  if (existing.data?.id) {
+    return NextResponse.json({ entry_id: existing.data.id, already_exists: true });
+  }
+
+  // Create a private (non-feed) copy for the tagged user.
+  const insertPayload: Record<string, unknown> = {
+    user_id: user.id,
+    root_entry_id: rootEntry.id,
+    is_feed_visible: false,
+    wine_name: rootEntry.wine_name ?? null,
+    producer: rootEntry.producer ?? null,
+    vintage: rootEntry.vintage ?? null,
+    country: rootEntry.country ?? null,
+    region: rootEntry.region ?? null,
+    appellation: rootEntry.appellation ?? null,
+    classification: rootEntry.classification ?? null,
+    rating: rootEntry.rating ?? null,
+    price_paid: rootEntry.price_paid ?? null,
+    price_paid_currency: rootEntry.price_paid_currency ?? null,
+    price_paid_source: rootEntry.price_paid_source ?? null,
+    qpr_level: rootEntry.qpr_level ?? null,
+    notes: rootEntry.notes ?? null,
+    ai_notes_summary: rootEntry.ai_notes_summary ?? null,
+    advanced_notes: rootEntry.advanced_notes ?? null,
+    location_text: rootEntry.location_text ?? null,
+    consumed_at: rootEntry.consumed_at ?? null,
+    tasted_with_user_ids: [],
+    label_image_path: rootEntry.label_image_path ?? null,
+    place_image_path: rootEntry.place_image_path ?? null,
+    pairing_image_path: rootEntry.pairing_image_path ?? null,
+    entry_privacy: "private",
+    label_photo_privacy: null,
+    place_photo_privacy: null,
+  };
+
+  const requiredColumns = ["root_entry_id", "is_feed_visible"];
+  const optionalColumns = [
+    "classification",
+    "price_paid",
+    "price_paid_currency",
+    "price_paid_source",
+    "qpr_level",
+    "ai_notes_summary",
+    "advanced_notes",
+    "location_text",
+    "label_photo_privacy",
+    "place_photo_privacy",
+    "place_image_path",
+    "pairing_image_path",
+    "country",
+    "region",
+    "appellation",
+  ];
+
+  const insertAttemptPayload: Record<string, unknown> = { ...insertPayload };
+  let insertedId: string | null = null;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const insertAttempt = await supabase
+      .from("wine_entries")
+      .insert(insertAttemptPayload)
+      .select("id")
+      .single();
+
+    if (!insertAttempt.error) {
+      insertedId = insertAttempt.data?.id ?? null;
+      break;
+    }
+
+    const message = insertAttempt.error.message ?? "";
+    const missingRequired = requiredColumns.find((col) => message.includes(col));
+    if (missingRequired) {
+      return NextResponse.json(
+        {
+          error:
+            "Shared tastings are not available yet. Run supabase/sql/025_shared_tastings.sql and try again.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const missingOptional = optionalColumns.find((col) => message.includes(col));
+    if (missingOptional && missingOptional in insertAttemptPayload) {
+      delete insertAttemptPayload[missingOptional];
+      continue;
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  if (!insertedId) {
+    return NextResponse.json(
+      { error: "Unable to add this tasting to your log." },
+      { status: 500 }
+    );
+  }
+
+  // Copy entry photos (if the schema exists).
+  try {
+    const { data: photoRows } = await supabase
+      .from("entry_photos")
+      .select("type, path, position")
+      .eq("entry_id", rootEntry.id)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    const photosToInsert = (photoRows ?? [])
+      .filter((row) => row.type && row.path)
+      .map((row) => ({
+        entry_id: insertedId,
+        type: row.type,
+        path: row.path,
+        position: row.position ?? 0,
+      }));
+
+    if (photosToInsert.length > 0) {
+      await supabase.from("entry_photos").insert(photosToInsert);
+    }
+  } catch {
+    // Ignore photo copy failures (non-critical for log ownership).
+  }
+
+  // Copy primary grapes (if the schema exists).
+  try {
+    const { data: grapeRows } = await supabase
+      .from("entry_primary_grapes")
+      .select("variety_id, position")
+      .eq("entry_id", rootEntry.id)
+      .order("position", { ascending: true });
+
+    const grapesToInsert = (grapeRows ?? [])
+      .filter((row) => row.variety_id && row.position)
+      .map((row) => ({
+        entry_id: insertedId,
+        variety_id: row.variety_id,
+        position: row.position,
+      }));
+
+    if (grapesToInsert.length > 0) {
+      await supabase.from("entry_primary_grapes").insert(grapesToInsert);
+    }
+  } catch {
+    // Ignore primary grape copy failures.
+  }
+
+  return NextResponse.json({ entry_id: insertedId, already_exists: false });
+}

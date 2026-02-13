@@ -94,15 +94,30 @@ export async function GET() {
   let friendEntries: typeof ownEntries = [];
 
   if (friendIds.length > 0) {
-    const { data: friendEntryRows } = await supabase
-      .from("wine_entries")
-      .select("*")
-      .in("user_id", friendIds)
-      .in("entry_privacy", ["public", "friends"])
-      .order("created_at", { ascending: false })
-      .limit(6);
+    const buildFriendQuery = () =>
+      supabase
+        .from("wine_entries")
+        .select("*")
+        .in("user_id", friendIds)
+        .in("entry_privacy", ["public", "friends"])
+        .order("created_at", { ascending: false })
+        .limit(6);
 
-    friendEntries = friendEntryRows ?? [];
+    let friendEntryRows: typeof ownEntries = [];
+    const attempt = await buildFriendQuery().eq("is_feed_visible", true);
+    if (!attempt.error) {
+      friendEntryRows = attempt.data ?? [];
+    } else if (
+      attempt.error.message.includes("is_feed_visible") ||
+      attempt.error.message.includes("column")
+    ) {
+      const fallback = await buildFriendQuery();
+      friendEntryRows = fallback.data ?? [];
+    } else {
+      return NextResponse.json({ error: attempt.error.message }, { status: 500 });
+    }
+
+    friendEntries = friendEntryRows;
   }
 
   // ── Resolve label photos for all entries ──

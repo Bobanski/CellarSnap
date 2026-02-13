@@ -48,6 +48,10 @@ export default function EntryDetailPage() {
     display_name: string | null;
     email: string | null;
   } | null>(null);
+  const [addingToLog, setAddingToLog] = useState(false);
+  const [addToLogEntryId, setAddToLogEntryId] = useState<string | null>(null);
+  const [addToLogMessage, setAddToLogMessage] = useState<string | null>(null);
+  const [addToLogError, setAddToLogError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -233,6 +237,11 @@ export default function EntryDetailPage() {
     typeof profileContextUserId === "string" &&
     /^[0-9a-f-]{36}$/i.test(profileContextUserId);
   const isOwner = currentUserId === entry.user_id;
+  const isTagged =
+    !isOwner &&
+    typeof currentUserId === "string" &&
+    Array.isArray(entry.tasted_with_user_ids) &&
+    entry.tasted_with_user_ids.includes(currentUserId);
   const backHref = openedFromFeed
     ? "/feed"
     : openedFromProfile
@@ -664,6 +673,79 @@ export default function EntryDetailPage() {
 
         {errorMessage ? (
           <p className="text-sm text-rose-300">{errorMessage}</p>
+        ) : null}
+
+        {isTagged ? (
+          <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-amber-100">
+                  You were tagged in this tasting
+                </h2>
+                <p className="mt-1 text-xs text-amber-100/70">
+                  Add it to your cellar without creating a duplicate post in the feed.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={addingToLog}
+                  onClick={async () => {
+                    if (!entryId) return;
+                    setAddToLogError(null);
+                    setAddToLogMessage(null);
+                    setAddingToLog(true);
+
+                    try {
+                      const response = await fetch(
+                        `/api/entries/${entryId}/add-to-log`,
+                        { method: "POST" }
+                      );
+
+                      const payload = await response.json().catch(() => ({}));
+                      if (!response.ok) {
+                        setAddToLogError(
+                          payload.error ?? "Unable to add this tasting right now."
+                        );
+                        return;
+                      }
+
+                      if (typeof payload.entry_id === "string") {
+                        setAddToLogEntryId(payload.entry_id);
+                      }
+                      setAddToLogMessage(
+                        payload.already_exists
+                          ? "Already in your cellar."
+                          : "Added to your cellar."
+                      );
+                    } catch {
+                      setAddToLogError("Unable to add this tasting right now.");
+                    } finally {
+                      setAddingToLog(false);
+                    }
+                  }}
+                >
+                  {addingToLog ? "Adding..." : "Add to my cellar"}
+                </button>
+
+                {addToLogEntryId ? (
+                  <Link
+                    href={`/entries/${addToLogEntryId}/edit`}
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-white/30"
+                  >
+                    Add my notes
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+            {addToLogError ? (
+              <p className="mt-3 text-sm text-rose-300">{addToLogError}</p>
+            ) : null}
+            {addToLogMessage ? (
+              <p className="mt-3 text-sm text-emerald-300">{addToLogMessage}</p>
+            ) : null}
+          </div>
         ) : null}
 
         {isOwner ? (
