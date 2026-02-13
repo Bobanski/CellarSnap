@@ -10,7 +10,12 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   isUsernameFormatValid,
 } from "@/lib/validation/username";
-import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
+import {
+  formatPhoneForDisplay,
+  formatPhoneForInput,
+  normalizePhone,
+  PHONE_FORMAT_MESSAGE,
+} from "@/lib/validation/phone";
 
 type Profile = {
   id: string;
@@ -171,7 +176,7 @@ export default function ProfilePage() {
         setEditUsername(initialEditUsername);
         setEditFirstName(initialEditFirstName);
         setEditLastName(initialEditLastName);
-        setEditPhone(initialEditPhone);
+        setEditPhone(formatPhoneForInput(initialEditPhone));
         setPrivacyValue(data.profile.default_entry_privacy ?? "private");
         setLoading(false);
         if (
@@ -291,7 +296,7 @@ export default function ProfilePage() {
           setEditUsername(nextProfile.display_name ?? "");
           setEditFirstName(nextProfile.first_name ?? "");
           setEditLastName(nextProfile.last_name ?? "");
-          setEditPhone(nextProfile.phone ?? "");
+          setEditPhone(formatPhoneForInput(nextProfile.phone ?? ""));
         }
       } else if (uploadedAvatarUrl && profile) {
         setProfile({ ...profile, avatar_url: uploadedAvatarUrl });
@@ -321,7 +326,7 @@ export default function ProfilePage() {
     setEditUsername(profile?.display_name ?? "");
     setEditFirstName(profile?.first_name ?? "");
     setEditLastName(profile?.last_name ?? "");
-    setEditPhone(profile?.phone ?? "");
+    setEditPhone(formatPhoneForInput(profile?.phone ?? ""));
     setUsernameError(null);
     setUsernameSuccess(null);
     setAvatarError(null);
@@ -589,7 +594,7 @@ export default function ProfilePage() {
                     type="tel"
                     placeholder="(555) 123-4567"
                     value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
+                    onChange={(e) => setEditPhone(formatPhoneForInput(e.target.value))}
                     className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   />
                 </div>
@@ -709,7 +714,7 @@ export default function ProfilePage() {
                           Phone
                         </p>
                         <p className="mt-1 text-sm text-zinc-300">
-                          {profile?.phone ?? "—"}
+                          {formatPhoneForDisplay(profile?.phone)}
                         </p>
                       </div>
 

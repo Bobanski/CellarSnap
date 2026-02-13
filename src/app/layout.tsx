@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import StandaloneHomeLaunchRedirect from "@/components/StandaloneHomeLaunchRedirect";
 
 export const metadata: Metadata = {
   title: "CellarSnap",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <StandaloneHomeLaunchRedirect />
+        {children}
+      </body>
     </html>
   );
 }
