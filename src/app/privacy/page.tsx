@@ -36,6 +36,13 @@ export default function PrivacyPage() {
             For feedback-related requests during the friends-and-family phase, submit a
             note through the in-app feedback page.
           </p>
+          <p>
+            For more info,{" "}
+            <Link href="/privacy/more" className="font-semibold text-amber-200 transition hover:text-amber-100">
+              click here
+            </Link>
+            .
+          </p>
         </section>
 
         <footer className="text-xs uppercase tracking-[0.2em] text-zinc-500">
