@@ -594,7 +594,7 @@ export default function ProfilePage() {
                     className="mb-1 block text-sm font-medium text-zinc-300"
                     htmlFor="edit-phone"
                   >
-                    Phone
+                    Phone (only you)
                   </label>
                   <p className="mb-2 text-xs text-zinc-500">
                     Used for sign in. US 10-digit and +E.164 formats are accepted.
@@ -712,7 +712,7 @@ export default function ProfilePage() {
 
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Email
+                          Email (only you)
                         </p>
                         <p className="mt-1 text-sm text-zinc-300">
                           {profile?.email ?? "—"}
@@ -721,7 +721,7 @@ export default function ProfilePage() {
 
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Phone
+                          Phone (only you)
                         </p>
                         <p className="mt-1 text-sm text-zinc-300">
                           {formatPhoneForDisplay(profile?.phone)}
