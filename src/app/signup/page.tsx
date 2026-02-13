@@ -25,21 +25,6 @@ type PhoneSignupValues = {
   password: string;
 };
 
-function createTemporaryPassword(): string {
-  // Supabase Auth uses bcrypt; passwords longer than 72 characters will be rejected.
-  // We generate a strong temporary password (<= 72 chars) and the user sets a real password after confirmation.
-  const token =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? `${crypto.randomUUID().replace(/-/g, "")}${crypto
-          .randomUUID()
-          .replace(/-/g, "")}`
-      : `${Math.random().toString(36).slice(2)}${Date.now()}${Math.random()
-          .toString(36)
-          .slice(2)}`;
-  // Ensure some complexity markers are present.
-  return `${token.slice(0, 70)}A!`;
-}
-
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -66,10 +51,12 @@ export default function SignupPage() {
     setInfoMessage(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Use OTP email link flow (more reliable than creating a temporary password).
+      // This will create a user if they don't exist and send a link either way.
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password: createTemporaryPassword(),
         options: {
+          shouldCreateUser: true,
           emailRedirectTo: `${window.location.origin}/finish-signup`,
         },
       });
@@ -79,13 +66,8 @@ export default function SignupPage() {
         return;
       }
 
-      if (data.session) {
-        router.push("/finish-signup");
-        return;
-      }
-
       setInfoMessage(
-        "Check your email to confirm your account. After confirming, you'll set your password."
+        "Check your email for the signup link. After confirming, you'll set your password."
       );
     } catch {
       setErrorMessage("Unable to start signup. Check your connection and try again.");
