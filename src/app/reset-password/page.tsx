@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -32,6 +32,7 @@ export default function ResetPasswordPage() {
   const [hasSession, setHasSession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const submitGuardRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -152,6 +153,10 @@ export default function ResetPasswordPage() {
   }, [setValue, supabase]);
 
   const onSubmit = handleSubmit(async (values) => {
+    if (submitGuardRef.current) return;
+    submitGuardRef.current = true;
+
+    try {
     const email = values.email.trim().toLowerCase();
     const code = values.code.trim();
 
@@ -223,6 +228,9 @@ export default function ResetPasswordPage() {
 
     setMessage("Password updated. Redirecting to your cellar...");
     router.push("/entries");
+    } finally {
+      submitGuardRef.current = false;
+    }
   });
 
   return (

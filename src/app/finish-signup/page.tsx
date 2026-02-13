@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -39,6 +39,7 @@ export default function FinishSignupPage() {
   const [hasSession, setHasSession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const submitGuardRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -161,139 +162,151 @@ export default function FinishSignupPage() {
   }, [setValue, supabase]);
 
   const onSubmit = handleSubmit(async (values) => {
-    const email = values.email.trim().toLowerCase();
-    const code = values.code.trim();
-    const username = values.username.trim();
-
-    if (!hasSession) {
-      if (!email || !email.includes("@")) {
-        setErrorMessage("A valid email is required.");
-        return;
-      }
-
-      if (!code) {
-        setErrorMessage("Confirmation code is required.");
-        return;
-      }
-    }
-
-    if (username.length < USERNAME_MIN_LENGTH) {
-      setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
-      return;
-    }
-
-    if (!isUsernameFormatValid(username)) {
-      setErrorMessage(USERNAME_FORMAT_MESSAGE);
-      return;
-    }
-
-    if (values.password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (values.password.length > 72) {
-      setErrorMessage("Password must be 72 characters or fewer.");
-      return;
-    }
-
-    if (values.password !== values.confirmPassword) {
-      setErrorMessage("Passwords do not match.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    setMessage(null);
-
-    const usernameCheckResponse = await fetch("/api/username-check", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username }),
-    });
-
-    if (!usernameCheckResponse.ok) {
-      const payload = await usernameCheckResponse.json().catch(() => ({}));
-      setIsSubmitting(false);
-      setErrorMessage(payload.error ?? "Unable to check username.");
-      return;
-    }
-
-    const usernameCheckData = await usernameCheckResponse.json();
-    if (!usernameCheckData.available) {
-      setIsSubmitting(false);
-      setErrorMessage("That username is already taken.");
-      return;
-    }
-
-    if (!hasSession) {
-      const verifyTypes: VerifyOtpType[] = ["email", "signup", "magiclink"];
-      let lastError: string | null = null;
-      let verified = false;
-
-      for (const verifyType of verifyTypes) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          email,
-          token: code,
-          type: verifyType,
-        });
-
-        if (!verifyError) {
-          verified = true;
-          break;
-        }
-        lastError = verifyError.message;
-      }
-
-      if (!verified) {
-        setIsSubmitting(false);
-        setErrorMessage(lastError ?? "Unable to verify confirmation code.");
-        return;
-      }
-
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        setIsSubmitting(false);
-        setErrorMessage("Unable to verify confirmation code.");
-        return;
-      }
-
-      setHasSession(true);
-    }
-
-    const { error } = await supabase.auth.updateUser({
-      password: values.password,
-    });
-
-    if (error) {
-      setIsSubmitting(false);
-      setErrorMessage(error.message);
-      return;
-    }
-
-    const profileResponse = await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ display_name: username }),
-    });
-
-    setIsSubmitting(false);
-
-    if (!profileResponse.ok) {
-      const payload = await profileResponse.json().catch(() => ({}));
-      setErrorMessage(payload.error ?? "Unable to finish account setup.");
-      return;
-    }
+    if (submitGuardRef.current) return;
+    submitGuardRef.current = true;
 
     try {
-      window.sessionStorage.removeItem("pendingEmailSignupEmail");
-      window.sessionStorage.removeItem("pendingSignupEmail");
-    } catch {
-      // Ignore storage failures.
-    }
+      const email = values.email.trim().toLowerCase();
+      const code = values.code.trim();
+      const username = values.username.trim();
 
-    setMessage("Account created. Taking you home...");
-    router.push("/");
+      if (!hasSession) {
+        if (!email || !email.includes("@")) {
+          setErrorMessage("A valid email is required.");
+          return;
+        }
+
+        if (!code) {
+          setErrorMessage("Confirmation code is required.");
+          return;
+        }
+      }
+
+      if (username.length < USERNAME_MIN_LENGTH) {
+        setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
+        return;
+      }
+
+      if (!isUsernameFormatValid(username)) {
+        setErrorMessage(USERNAME_FORMAT_MESSAGE);
+        return;
+      }
+
+      if (values.password.length < 8) {
+        setErrorMessage("Password must be at least 8 characters.");
+        return;
+      }
+
+      if (values.password.length > 72) {
+        setErrorMessage("Password must be 72 characters or fewer.");
+        return;
+      }
+
+      if (values.password !== values.confirmPassword) {
+        setErrorMessage("Passwords do not match.");
+        return;
+      }
+
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      setMessage(null);
+
+      const usernameCheckResponse = await fetch("/api/username-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+
+      if (!usernameCheckResponse.ok) {
+        const payload = await usernameCheckResponse.json().catch(() => ({}));
+        setIsSubmitting(false);
+        setErrorMessage(payload.error ?? "Unable to check username.");
+        return;
+      }
+
+      const usernameCheckData = await usernameCheckResponse.json();
+      if (!usernameCheckData.available) {
+        setIsSubmitting(false);
+        setErrorMessage("That username is already taken.");
+        return;
+      }
+
+      if (!hasSession) {
+        const verifyTypes: VerifyOtpType[] = ["email", "signup", "magiclink"];
+        let lastError: string | null = null;
+        let verified = false;
+
+        for (const verifyType of verifyTypes) {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            email,
+            token: code,
+            type: verifyType,
+          });
+
+          if (!verifyError) {
+            verified = true;
+            break;
+          }
+          lastError = verifyError.message;
+        }
+
+        if (!verified) {
+          setIsSubmitting(false);
+          setErrorMessage(lastError ?? "Unable to verify confirmation code.");
+          return;
+        }
+
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          setIsSubmitting(false);
+          setErrorMessage("Unable to verify confirmation code.");
+          return;
+        }
+
+        setHasSession(true);
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: values.password,
+      });
+
+      // If a double-submit happens, the password may have already been set successfully.
+      // Supabase then rejects setting the same password again with this error.
+      if (error) {
+        const msg = error.message.toLowerCase();
+        if (!msg.includes("different from the old password")) {
+          setIsSubmitting(false);
+          setErrorMessage(error.message);
+          return;
+        }
+      }
+
+      const profileResponse = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: username }),
+      });
+
+      setIsSubmitting(false);
+
+      if (!profileResponse.ok) {
+        const payload = await profileResponse.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to finish account setup.");
+        return;
+      }
+
+      try {
+        window.sessionStorage.removeItem("pendingEmailSignupEmail");
+        window.sessionStorage.removeItem("pendingSignupEmail");
+      } catch {
+        // Ignore storage failures.
+      }
+
+      setMessage("Account created. Taking you home...");
+      router.push("/");
+    } finally {
+      submitGuardRef.current = false;
+    }
   });
 
   return (
