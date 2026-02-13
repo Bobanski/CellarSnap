@@ -95,8 +95,8 @@ export default function SignupPage() {
     setInfoMessage(null);
 
     try {
-      // Use OTP email link flow (more reliable than creating a temporary password).
-      // This will create a user if they don't exist and send a link either way.
+      // Use Supabase email OTP. If the email template contains `{{ .Token }}`, Supabase sends a
+      // numeric code. If it contains `{{ .ConfirmationURL }}`, Supabase sends a link.
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -121,9 +121,16 @@ export default function SignupPage() {
 
       // Prevent accidental double-requests right after success.
       setEmailCooldown(60 * 1000);
-      setInfoMessage(
-        "Check your email for the signup link. After confirming, you'll set your password."
-      );
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.setItem("pendingEmailSignupEmail", email);
+        } catch {
+          // Ignore client storage failures.
+        }
+      }
+
+      setInfoMessage("Confirmation code sent. Check your email to continue.");
+      router.push(`/finish-signup?email=${encodeURIComponent(email)}`);
     } catch {
       setErrorMessage("Unable to start signup. Check your connection and try again.");
     } finally {
@@ -273,7 +280,7 @@ export default function SignupPage() {
           <p className="text-sm text-zinc-300">
             {isPhoneMode
               ? "Create your account with username, phone, email, and password."
-              : "Enter your email to get started. You'll set your password after confirming your email."}
+              : "Enter your email to get started. We'll send a confirmation code, then you'll set your password."}
           </p>
         </div>
 
@@ -374,7 +381,7 @@ export default function SignupPage() {
             className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting || emailCooldownSeconds > 0}
           >
-            {isPhoneMode ? "Create account" : "Send confirmation email"}
+            {isPhoneMode ? "Create account" : "Send confirmation code"}
           </button>
           {!isPhoneMode && emailCooldownSeconds > 0 ? (
             <p className="text-center text-xs text-zinc-500">

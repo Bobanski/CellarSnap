@@ -7,19 +7,29 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type ResetFormValues = {
+  email: string;
+  code: string;
   password: string;
   confirmPassword: string;
 };
 
+type VerifyOtpType =
+  | "signup"
+  | "invite"
+  | "magiclink"
+  | "recovery"
+  | "email_change"
+  | "email";
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { register, handleSubmit } = useForm<ResetFormValues>();
+  const { register, handleSubmit, setValue } = useForm<ResetFormValues>();
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ready, setReady] = useState(false);
-  const [linkValid, setLinkValid] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -27,27 +37,108 @@ export default function ResetPasswordPage() {
     let isMounted = true;
 
     const initSession = async () => {
-      const url = window.location.href;
-      const hasCode = url.includes("code=");
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
 
-      if (hasCode) {
-        const { error } = await supabase.auth.exchangeCodeForSession(url);
-        if (isMounted) {
-          setLinkValid(!error);
-          if (error) {
-            setErrorMessage("This reset link is invalid or expired.");
-          }
-          setReady(true);
-        }
-        return;
+      const emailFromQuery = params.get("email") ?? "";
+      let emailFromStorage = "";
+      try {
+        emailFromStorage = window.sessionStorage.getItem("pendingRecoveryEmail") ?? "";
+      } catch {
+        // Ignore storage failures.
+      }
+      const emailPrefill = (emailFromQuery || emailFromStorage).trim().toLowerCase();
+      if (emailPrefill) {
+        setValue("email", emailPrefill);
       }
 
-      const { data } = await supabase.auth.getSession();
+      const code = params.get("code");
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
+      const allowedVerifyTypes = new Set([
+        "signup",
+        "invite",
+        "magiclink",
+        "recovery",
+        "email_change",
+        "email",
+      ]);
+      const otpType: VerifyOtpType | null =
+        type && allowedVerifyTypes.has(type) ? (type as VerifyOtpType) : null;
+      const sessionExists = async () => {
+        const { data } = await supabase.auth.getSession();
+        return Boolean(data.session);
+      };
+      const hadCallbackParams = Boolean(
+        code ||
+          (tokenHash && otpType) ||
+          window.location.hash?.includes("access_token=")
+      );
+
+      // Supabase can send different link formats depending on auth flow/settings:
+      // - PKCE: ?code=...
+      // - Verify OTP: ?token_hash=...&type=recovery
+      // - Implicit: #access_token=...&refresh_token=...
+      try {
+        // If Supabase auto-detected the session from the URL already, trust it.
+        if (await sessionExists()) {
+          if (isMounted) {
+            setHasSession(true);
+            setReady(true);
+          }
+          return;
+        }
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+          const valid = await sessionExists();
+          if (isMounted) {
+            setHasSession(valid);
+            setReady(true);
+          }
+          return;
+        }
+
+        if (tokenHash && otpType) {
+          await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: otpType,
+          });
+          const valid = await sessionExists();
+          if (isMounted) {
+            setHasSession(valid);
+            setReady(true);
+          }
+          return;
+        }
+
+        if (window.location.hash?.includes("access_token=")) {
+          const hashParams = new URLSearchParams(window.location.hash.slice(1));
+          const access_token = hashParams.get("access_token");
+          const refresh_token = hashParams.get("refresh_token");
+
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          }
+
+          const valid = await sessionExists();
+          if (isMounted) {
+            setHasSession(valid);
+            setReady(true);
+          }
+          return;
+        }
+      } catch {
+        // Fall back to showing the OTP entry form below.
+      }
+
+      const valid = await sessionExists();
       if (isMounted) {
-        const valid = !!data.session;
-        setLinkValid(valid);
-        if (!valid) {
-          setErrorMessage("This reset link is invalid or expired.");
+        setHasSession(valid);
+        if (!valid && hadCallbackParams) {
+          setErrorMessage(
+            "This reset link is invalid or expired. You can still enter the recovery code from your email below."
+          );
         }
         setReady(true);
       }
@@ -58,9 +149,12 @@ export default function ResetPasswordPage() {
     return () => {
       isMounted = false;
     };
-  }, [supabase]);
+  }, [setValue, supabase]);
 
   const onSubmit = handleSubmit(async (values) => {
+    const email = values.email.trim().toLowerCase();
+    const code = values.code.trim();
+
     if (values.password.length < 8) {
       setErrorMessage("Password must be at least 8 characters.");
       return;
@@ -75,6 +169,41 @@ export default function ResetPasswordPage() {
     setErrorMessage(null);
     setMessage(null);
 
+    if (!hasSession) {
+      if (!email || !email.includes("@")) {
+        setIsSubmitting(false);
+        setErrorMessage("A valid email is required.");
+        return;
+      }
+
+      if (!code) {
+        setIsSubmitting(false);
+        setErrorMessage("Recovery code is required.");
+        return;
+      }
+
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "recovery",
+      });
+
+      if (verifyError) {
+        setIsSubmitting(false);
+        setErrorMessage(verifyError.message);
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setIsSubmitting(false);
+        setErrorMessage("Unable to verify recovery code.");
+        return;
+      }
+
+      setHasSession(true);
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: values.password,
     });
@@ -84,6 +213,12 @@ export default function ResetPasswordPage() {
     if (error) {
       setErrorMessage(error.message);
       return;
+    }
+
+    try {
+      window.sessionStorage.removeItem("pendingRecoveryEmail");
+    } catch {
+      // Ignore storage failures.
     }
 
     setMessage("Password updated. Redirecting to your cellar...");
@@ -107,20 +242,50 @@ export default function ResetPasswordPage() {
 
         {!ready ? (
           <p className="text-sm text-zinc-300">Preparing reset form...</p>
-        ) : !linkValid ? (
-          <div className="space-y-4">
-            <p className="text-sm text-rose-300">
-              {errorMessage ?? "This reset link is invalid or expired."}
-            </p>
-            <Link
-              href="/login"
-              className="inline-block rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-            >
-              ← Back to login
-            </Link>
-          </div>
         ) : (
           <form className="space-y-4" onSubmit={onSubmit}>
+            {!hasSession ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+                    Email address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    placeholder="you@example.com"
+                    {...register("email", { required: true })}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-zinc-200" htmlFor="code">
+                    Recovery code
+                  </label>
+                  <input
+                    id="code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    placeholder="6-digit code"
+                    {...register("code", { required: true })}
+                  />
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Need a new code?{" "}
+                    <Link
+                      href="/forgot-password"
+                      className="font-medium text-zinc-200 transition hover:text-amber-200"
+                    >
+                      Go back and resend.
+                    </Link>
+                  </p>
+                </div>
+              </>
+            ) : null}
+
             <div>
               <label className="text-sm font-medium text-zinc-200" htmlFor="password">
                 New password

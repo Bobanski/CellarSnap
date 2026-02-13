@@ -76,9 +76,16 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        setMessage(
-          "Password reset email sent (this account does not have a phone number yet)."
-        );
+        if (typeof window !== "undefined") {
+          try {
+            window.sessionStorage.setItem("pendingRecoveryEmail", email);
+          } catch {
+            // Ignore client storage failures.
+          }
+        }
+
+        setMessage("Recovery email sent. Enter the code to reset your password.");
+        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
         return;
       }
 
@@ -118,7 +125,8 @@ export default function ForgotPasswordPage() {
           </span>
           <h1 className="text-2xl font-semibold text-zinc-50">Forgot your password?</h1>
           <p className="text-sm text-zinc-300">
-            Enter your username, phone number, or email. We will send a recovery code to your phone.
+            Enter your username, phone number, or email. We will send a recovery code to your phone
+            (or email if your account does not have a phone number yet).
           </p>
         </div>
 

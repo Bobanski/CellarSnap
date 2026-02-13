@@ -13,6 +13,8 @@ import {
 } from "@/lib/validation/username";
 
 type FinishSignupValues = {
+  email: string;
+  code: string;
   username: string;
   password: string;
   confirmPassword: string;
@@ -23,17 +25,18 @@ type VerifyOtpType =
   | "invite"
   | "magiclink"
   | "recovery"
-  | "email_change";
+  | "email_change"
+  | "email";
 
 export default function FinishSignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { register, handleSubmit } = useForm<FinishSignupValues>();
+  const { register, handleSubmit, setValue } = useForm<FinishSignupValues>();
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ready, setReady] = useState(false);
-  const [linkValid, setLinkValid] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -43,6 +46,21 @@ export default function FinishSignupPage() {
     const initSession = async () => {
       const url = new URL(window.location.href);
       const params = url.searchParams;
+      const emailFromQuery = params.get("email") ?? "";
+      let emailFromStorage = "";
+      try {
+        emailFromStorage =
+          window.sessionStorage.getItem("pendingEmailSignupEmail") ??
+          window.sessionStorage.getItem("pendingSignupEmail") ??
+          "";
+      } catch {
+        // Ignore storage failures.
+      }
+      const emailPrefill = (emailFromQuery || emailFromStorage).trim().toLowerCase();
+      if (emailPrefill) {
+        setValue("email", emailPrefill);
+      }
+
       const code = params.get("code");
       const tokenHash = params.get("token_hash");
       const type = params.get("type");
@@ -52,13 +70,19 @@ export default function FinishSignupPage() {
         "magiclink",
         "recovery",
         "email_change",
+        "email",
       ]);
       const otpType: VerifyOtpType | null =
         type && allowedVerifyTypes.has(type) ? (type as VerifyOtpType) : null;
-      const hasSession = async () => {
+      const sessionExists = async () => {
         const { data } = await supabase.auth.getSession();
         return Boolean(data.session);
       };
+      const hadCallbackParams = Boolean(
+        code ||
+          (tokenHash && otpType) ||
+          window.location.hash?.includes("access_token=")
+      );
 
       // Supabase can send different link formats depending on auth flow/settings:
       // - PKCE: ?code=...
@@ -66,9 +90,9 @@ export default function FinishSignupPage() {
       // - Implicit: #access_token=...&refresh_token=...
       try {
         // If Supabase auto-detected the session from the URL already, trust it.
-        if (await hasSession()) {
+        if (await sessionExists()) {
           if (isMounted) {
-            setLinkValid(true);
+            setHasSession(true);
             setReady(true);
           }
           return;
@@ -76,12 +100,9 @@ export default function FinishSignupPage() {
 
         if (code) {
           await supabase.auth.exchangeCodeForSession(window.location.href);
-          const valid = await hasSession();
+          const valid = await sessionExists();
           if (isMounted) {
-            setLinkValid(valid);
-            if (!valid) {
-              setErrorMessage("This signup link is invalid or expired.");
-            }
+            setHasSession(valid);
             setReady(true);
           }
           return;
@@ -92,12 +113,9 @@ export default function FinishSignupPage() {
             token_hash: tokenHash,
             type: otpType,
           });
-          const valid = await hasSession();
+          const valid = await sessionExists();
           if (isMounted) {
-            setLinkValid(valid);
-            if (!valid) {
-              setErrorMessage("This signup link is invalid or expired.");
-            }
+            setHasSession(valid);
             setReady(true);
           }
           return;
@@ -112,30 +130,24 @@ export default function FinishSignupPage() {
           if (access_token && refresh_token) {
             await supabase.auth.setSession({ access_token, refresh_token });
           }
-          const valid = await hasSession();
+          const valid = await sessionExists();
           if (isMounted) {
-            setLinkValid(valid);
-            if (!valid) {
-              setErrorMessage("This signup link is invalid or expired.");
-            }
+            setHasSession(valid);
             setReady(true);
           }
           return;
         }
       } catch {
-        if (isMounted) {
-          setLinkValid(false);
-          setErrorMessage("This signup link is invalid or expired.");
-          setReady(true);
-        }
-        return;
+        // Fall back to showing the OTP entry form below.
       }
 
-      const valid = await hasSession();
+      const valid = await sessionExists();
       if (isMounted) {
-        setLinkValid(valid);
-        if (!valid) {
-          setErrorMessage("This signup link is invalid or expired.");
+        setHasSession(valid);
+        if (!valid && hadCallbackParams) {
+          setErrorMessage(
+            "This signup link is invalid or expired. You can still enter your confirmation code below."
+          );
         }
         setReady(true);
       }
@@ -146,10 +158,24 @@ export default function FinishSignupPage() {
     return () => {
       isMounted = false;
     };
-  }, [supabase]);
+  }, [setValue, supabase]);
 
   const onSubmit = handleSubmit(async (values) => {
+    const email = values.email.trim().toLowerCase();
+    const code = values.code.trim();
     const username = values.username.trim();
+
+    if (!hasSession) {
+      if (!email || !email.includes("@")) {
+        setErrorMessage("A valid email is required.");
+        return;
+      }
+
+      if (!code) {
+        setErrorMessage("Confirmation code is required.");
+        return;
+      }
+    }
 
     if (username.length < USERNAME_MIN_LENGTH) {
       setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
@@ -200,6 +226,41 @@ export default function FinishSignupPage() {
       return;
     }
 
+    if (!hasSession) {
+      const verifyTypes: VerifyOtpType[] = ["email", "signup", "magiclink"];
+      let lastError: string | null = null;
+      let verified = false;
+
+      for (const verifyType of verifyTypes) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          email,
+          token: code,
+          type: verifyType,
+        });
+
+        if (!verifyError) {
+          verified = true;
+          break;
+        }
+        lastError = verifyError.message;
+      }
+
+      if (!verified) {
+        setIsSubmitting(false);
+        setErrorMessage(lastError ?? "Unable to verify confirmation code.");
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setIsSubmitting(false);
+        setErrorMessage("Unable to verify confirmation code.");
+        return;
+      }
+
+      setHasSession(true);
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: values.password,
     });
@@ -224,6 +285,13 @@ export default function FinishSignupPage() {
       return;
     }
 
+    try {
+      window.sessionStorage.removeItem("pendingEmailSignupEmail");
+      window.sessionStorage.removeItem("pendingSignupEmail");
+    } catch {
+      // Ignore storage failures.
+    }
+
     setMessage("Account created. Taking you home...");
     router.push("/");
   });
@@ -239,27 +307,58 @@ export default function FinishSignupPage() {
             Create your account
           </h1>
           <p className="text-sm text-zinc-300">
-            Your email is confirmed. Choose a username and password to sign in
-            going forward.
+            {hasSession
+              ? "Your email is confirmed. Choose a username and password to sign in going forward."
+              : "Enter the confirmation code from your email, then choose a username and password."}
           </p>
         </div>
 
         {!ready ? (
           <p className="text-sm text-zinc-300">Preparing signup...</p>
-        ) : !linkValid ? (
-          <div className="space-y-4">
-            <p className="text-sm text-rose-300">
-              {errorMessage ?? "This signup link is invalid or expired."}
-            </p>
-            <Link
-              href="/signup"
-              className="inline-block rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-            >
-              ← Back to create account
-            </Link>
-          </div>
         ) : (
           <form className="space-y-4" onSubmit={onSubmit}>
+            {!hasSession ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+                    Email address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    placeholder="you@example.com"
+                    {...register("email", { required: true })}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-zinc-200" htmlFor="code">
+                    Confirmation code
+                  </label>
+                  <input
+                    id="code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    placeholder="6-digit code"
+                    {...register("code", { required: true })}
+                  />
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Need a new code?{" "}
+                    <Link
+                      href="/signup"
+                      className="font-medium text-zinc-200 transition hover:text-amber-200"
+                    >
+                      Go back and resend.
+                    </Link>
+                  </p>
+                </div>
+              </>
+            ) : null}
+
             <div>
               <label className="text-sm font-medium text-zinc-200" htmlFor="username">
                 Username
