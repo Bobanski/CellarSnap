@@ -157,6 +157,7 @@ export default function ProfilePage() {
             }
             if (profileDisplayName) {
               window.sessionStorage.removeItem("pendingSignupUsername");
+              window.sessionStorage.removeItem("pendingSignupEmail");
             }
             if (profileFirstName) {
               window.sessionStorage.removeItem("pendingSignupFirstName");
@@ -310,6 +311,7 @@ export default function ProfilePage() {
       if (typeof window !== "undefined") {
         try {
           window.sessionStorage.removeItem("pendingSignupUsername");
+          window.sessionStorage.removeItem("pendingSignupEmail");
           window.sessionStorage.removeItem("pendingSignupFirstName");
           window.sessionStorage.removeItem("pendingSignupLastName");
           window.sessionStorage.removeItem("pendingSignupPhone");
@@ -399,16 +401,21 @@ export default function ProfilePage() {
 
     setIsSavingPassword(true);
 
-    // Verify current password by attempting to sign in
-    const email = profile?.email;
-    if (!email) {
-      setPasswordError("Unable to verify current password — no email found.");
+    // Verify current password by attempting to sign in with the account's primary auth identifier.
+    const loginIdentifier = profile?.phone?.trim()
+      ? { phone: profile.phone.trim() }
+      : profile?.email?.trim()
+        ? { email: profile.email.trim().toLowerCase() }
+        : null;
+
+    if (!loginIdentifier) {
+      setPasswordError("Unable to verify current password.");
       setIsSavingPassword(false);
       return;
     }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      ...loginIdentifier,
       password: currentPassword,
     });
 

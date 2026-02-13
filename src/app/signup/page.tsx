@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -11,38 +11,31 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   isUsernameFormatValid,
 } from "@/lib/validation/username";
+import {
+  formatPhoneForInput,
+  normalizePhone,
+  PHONE_FORMAT_MESSAGE,
+} from "@/lib/validation/phone";
 
 type SignupFormValues = {
+  username: string;
+  phone: string;
   email: string;
   password: string;
-  username: string;
-  first_name: string;
-  last_name: string;
 };
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { register, handleSubmit } = useForm<SignupFormValues>();
+  const { control, register, handleSubmit } = useForm<SignupFormValues>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = handleSubmit(async (values) => {
     const username = values.username.trim();
-    const firstName = values.first_name.trim();
-    const lastName = values.last_name.trim();
-
-    if (!firstName) {
-      setErrorMessage("First name is required.");
-      return;
-    }
-
-    if (!lastName) {
-      setErrorMessage("Last name is required.");
-      return;
-    }
+    const normalizedPhone = normalizePhone(values.phone);
+    const email = values.email.trim().toLowerCase();
 
     if (username.length < USERNAME_MIN_LENGTH) {
       setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
@@ -54,6 +47,16 @@ export default function SignupPage() {
       return;
     }
 
+    if (!normalizedPhone) {
+      setErrorMessage(PHONE_FORMAT_MESSAGE);
+      return;
+    }
+
+    if (!email || !email.includes("@")) {
+      setErrorMessage("A valid email is required.");
+      return;
+    }
+
     if (values.password.length < 8) {
       setErrorMessage("Password must be at least 8 characters.");
       return;
@@ -61,29 +64,46 @@ export default function SignupPage() {
 
     setIsSubmitting(true);
     setErrorMessage(null);
-    setInfoMessage(null);
 
     try {
-      const checkResponse = await fetch("/api/username-check", {
+      const usernameCheckResponse = await fetch("/api/username-check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),
       });
 
-      if (!checkResponse.ok) {
-        const payload = await checkResponse.json().catch(() => ({}));
+      if (!usernameCheckResponse.ok) {
+        const payload = await usernameCheckResponse.json().catch(() => ({}));
         setErrorMessage(payload.error ?? "Unable to check username.");
         return;
       }
 
-      const checkData = await checkResponse.json();
-      if (!checkData.available) {
+      const usernameCheckData = await usernameCheckResponse.json();
+      if (!usernameCheckData.available) {
         setErrorMessage("That username is already taken.");
         return;
       }
 
+      const phoneCheckResponse = await fetch("/api/phone-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+
+      if (!phoneCheckResponse.ok) {
+        const payload = await phoneCheckResponse.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to check phone number.");
+        return;
+      }
+
+      const phoneCheckData = await phoneCheckResponse.json();
+      if (!phoneCheckData.available) {
+        setErrorMessage("That phone number is already in use.");
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
-        email: values.email,
+        phone: normalizedPhone,
         password: values.password,
       });
 
@@ -92,38 +112,38 @@ export default function SignupPage() {
         return;
       }
 
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.setItem("pendingSignupUsername", username);
+          window.sessionStorage.setItem("pendingSignupEmail", email);
+          window.sessionStorage.setItem("pendingSignupPhone", normalizedPhone);
+        } catch {
+          // Ignore client storage failures.
+        }
+      }
+
       if (data.session) {
         const profileResponse = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             display_name: username,
-            first_name: firstName,
-            last_name: lastName,
+            email,
+            phone: normalizedPhone,
           }),
         });
+
         if (!profileResponse.ok) {
           const payload = await profileResponse.json().catch(() => ({}));
           setErrorMessage(payload.error ?? "Unable to save profile details.");
           return;
         }
+
         router.push("/");
         return;
       }
 
-      if (typeof window !== "undefined") {
-        try {
-          window.sessionStorage.setItem("pendingSignupUsername", username);
-          window.sessionStorage.setItem("pendingSignupFirstName", firstName);
-          window.sessionStorage.setItem("pendingSignupLastName", lastName);
-        } catch {
-          // Ignore client storage failures.
-        }
-      }
-
-      setInfoMessage(
-        "Check your email to confirm your account. You will finish profile setup after signing in."
-      );
+      router.push(`/verify-phone?phone=${encodeURIComponent(normalizedPhone)}`);
     } catch {
       setErrorMessage("Unable to create account. Check your connection and try again.");
     } finally {
@@ -142,29 +162,13 @@ export default function SignupPage() {
           <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
             Create account
           </span>
-          <h1 className="text-2xl font-semibold text-zinc-50">
-            Join CellarSnap
-          </h1>
+          <h1 className="text-2xl font-semibold text-zinc-50">Join CellarSnap</h1>
           <p className="text-sm text-zinc-300">
-            Use your email, pick a username, and set a password.
+            Create your account with username, phone, email, and password.
           </p>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="you@example.com"
-              {...register("email", { required: true })}
-            />
-          </div>
-
           <div>
             <label className="text-sm font-medium text-zinc-200" htmlFor="username">
               Username
@@ -179,38 +183,44 @@ export default function SignupPage() {
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200" htmlFor="first_name">
-                First name
-              </label>
-              <input
-                id="first_name"
-                type="text"
-                autoComplete="given-name"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="First name"
-                {...register("first_name", { required: true })}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-zinc-200" htmlFor="last_name">
-                Last name
-              </label>
-              <input
-                id="last_name"
-                type="text"
-                autoComplete="family-name"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="Last name"
-                {...register("last_name", { required: true })}
-              />
-            </div>
+          <div>
+            <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
+              Phone number
+            </label>
+            <Controller
+              name="phone"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  placeholder="(555) 123-4567"
+                  value={field.value ?? ""}
+                  onChange={(event) => {
+                    field.onChange(formatPhoneForInput(event.target.value));
+                  }}
+                />
+              )}
+            />
           </div>
-          <p className="text-xs text-zinc-500">
-            Your first and last name are shown to friends in CellarSnap.
-          </p>
+
+          <div>
+            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              placeholder="you@example.com"
+              {...register("email", { required: true })}
+            />
+          </div>
 
           <div>
             <label className="text-sm font-medium text-zinc-200" htmlFor="password">
@@ -234,17 +244,10 @@ export default function SignupPage() {
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
-              Must be at least 8 characters.
-            </p>
+            <p className="mt-1 text-xs text-zinc-500">Must be at least 8 characters.</p>
           </div>
 
-          {errorMessage ? (
-            <p className="text-sm text-rose-300">{errorMessage}</p>
-          ) : null}
-          {infoMessage ? (
-            <p className="text-sm text-emerald-300">{infoMessage}</p>
-          ) : null}
+          {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
 
           <button
             type="submit"

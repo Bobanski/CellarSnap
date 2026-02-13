@@ -36,6 +36,20 @@ const nullableNameSchema = z.preprocess(
     .optional()
 );
 
+const optionalEmailSchema = z.preprocess(
+  (value) => {
+    if (value === undefined) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim().toLowerCase();
+      return trimmed;
+    }
+    return value;
+  },
+  z.string().email("Enter a valid email address.").optional()
+);
+
 const nullablePhoneSchema = z.preprocess(
   (value) => {
     if (value === undefined || value === null) {
@@ -71,6 +85,7 @@ const updateProfileSchema = z
       .optional(),
     first_name: nullableNameSchema,
     last_name: nullableNameSchema,
+    email: optionalEmailSchema,
     phone: nullablePhoneSchema,
     default_entry_privacy: privacyLevelSchema.optional(),
     confirm_privacy_onboarding: z.literal(true).optional(),
@@ -80,6 +95,7 @@ const updateProfileSchema = z
       value.display_name !== undefined ||
       value.first_name !== undefined ||
       value.last_name !== undefined ||
+      value.email !== undefined ||
       value.phone !== undefined ||
       value.default_entry_privacy !== undefined ||
       value.confirm_privacy_onboarding !== undefined,
@@ -331,6 +347,7 @@ export async function PATCH(request: Request) {
       flattened.fieldErrors.display_name?.[0] ??
       flattened.fieldErrors.first_name?.[0] ??
       flattened.fieldErrors.last_name?.[0] ??
+      flattened.fieldErrors.email?.[0] ??
       flattened.fieldErrors.phone?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
       flattened.fieldErrors.confirm_privacy_onboarding?.[0] ??
@@ -368,6 +385,10 @@ export async function PATCH(request: Request) {
 
   if (parsed.data.last_name !== undefined) {
     updates.last_name = parsed.data.last_name;
+  }
+
+  if (parsed.data.email !== undefined) {
+    updates.email = parsed.data.email;
   }
 
   if (parsed.data.phone !== undefined) {
