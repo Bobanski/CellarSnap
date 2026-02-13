@@ -66,6 +66,11 @@ export default function FinishSignupPage() {
       return;
     }
 
+    if (values.password.length > 72) {
+      setErrorMessage("Password must be 72 characters or fewer.");
+      return;
+    }
+
     if (values.password !== values.confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;

@@ -26,14 +26,18 @@ type PhoneSignupValues = {
 };
 
 function createTemporaryPassword(): string {
-  // Create a long random password; the user will set their real password after email confirmation.
+  // Supabase Auth uses bcrypt; passwords longer than 72 characters will be rejected.
+  // We generate a strong temporary password (<= 72 chars) and the user sets a real password after confirmation.
   const token =
     typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? `${crypto.randomUUID()}${crypto.randomUUID()}`
+      ? `${crypto.randomUUID().replace(/-/g, "")}${crypto
+          .randomUUID()
+          .replace(/-/g, "")}`
       : `${Math.random().toString(36).slice(2)}${Date.now()}${Math.random()
           .toString(36)
           .slice(2)}`;
-  return `${token}A!`;
+  // Ensure some complexity markers are present.
+  return `${token.slice(0, 70)}A!`;
 }
 
 export default function SignupPage() {
@@ -117,6 +121,11 @@ export default function SignupPage() {
 
     if (values.password.length < 8) {
       setErrorMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (values.password.length > 72) {
+      setErrorMessage("Password must be 72 characters or fewer.");
       return;
     }
 
