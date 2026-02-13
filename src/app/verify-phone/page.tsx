@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -17,6 +17,22 @@ type VerifyPhoneFormValues = {
 };
 
 export default function VerifyPhonePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+          <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+            Loading...
+          </div>
+        </div>
+      }
+    >
+      <VerifyPhoneInner />
+    </Suspense>
+  );
+}
+
+function VerifyPhoneInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
