@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -37,12 +37,56 @@ export default function SignupPage() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailCooldownUntil, setEmailCooldownUntil] = useState<number>(0);
+  const [cooldownTick, setCooldownTick] = useState(0);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("emailSignupCooldownUntil");
+      const parsed = stored ? Number(stored) : 0;
+      if (Number.isFinite(parsed) && parsed > Date.now()) {
+        setEmailCooldownUntil(parsed);
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!emailCooldownUntil) return;
+    const remaining = emailCooldownUntil - Date.now();
+    if (remaining <= 0) return;
+    const id = window.setInterval(() => setCooldownTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [emailCooldownUntil]);
+
+  const emailCooldownSeconds = useMemo(() => {
+    void cooldownTick;
+    return Math.max(0, Math.ceil((emailCooldownUntil - Date.now()) / 1000));
+  }, [emailCooldownUntil, cooldownTick]);
+
+  const setEmailCooldown = (msFromNow: number) => {
+    const until = Date.now() + msFromNow;
+    setEmailCooldownUntil(until);
+    try {
+      window.localStorage.setItem("emailSignupCooldownUntil", String(until));
+    } catch {
+      // Ignore storage failures.
+    }
+  };
 
   const onEmailSubmit = emailForm.handleSubmit(async (values) => {
     const email = values.email.trim().toLowerCase();
 
     if (!email || !email.includes("@")) {
       setErrorMessage("A valid email is required.");
+      return;
+    }
+
+    if (emailCooldownSeconds > 0) {
+      setErrorMessage(
+        `Please wait ${emailCooldownSeconds}s before requesting another signup email.`
+      );
       return;
     }
 
@@ -62,10 +106,21 @@ export default function SignupPage() {
       });
 
       if (error) {
-        setErrorMessage(error.message);
+        const msg = error.message || "Unable to send signup email.";
+        if (msg.toLowerCase().includes("rate limit")) {
+          // Supabase email rate limits are enforced server-side. Cool down locally to prevent spamming.
+          setEmailCooldown(5 * 60 * 1000);
+          setErrorMessage(
+            "Too many signup emails were requested recently. Please wait a few minutes and try again."
+          );
+          return;
+        }
+        setErrorMessage(msg);
         return;
       }
 
+      // Prevent accidental double-requests right after success.
+      setEmailCooldown(60 * 1000);
       setInfoMessage(
         "Check your email for the signup link. After confirming, you'll set your password."
       );
@@ -317,10 +372,15 @@ export default function SignupPage() {
           <button
             type="submit"
             className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={isSubmitting}
+            disabled={isSubmitting || emailCooldownSeconds > 0}
           >
             {isPhoneMode ? "Create account" : "Send confirmation email"}
           </button>
+          {!isPhoneMode && emailCooldownSeconds > 0 ? (
+            <p className="text-center text-xs text-zinc-500">
+              You can request another email in {emailCooldownSeconds}s.
+            </p>
+          ) : null}
 
           <div className="text-center">
             <Link
