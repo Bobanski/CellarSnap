@@ -56,9 +56,11 @@ E2E happy path tests:
 - Set these env vars before running:
   - `E2E_USER_A_ID`
   - `E2E_USER_A_IDENTIFIER`
+  - `E2E_USER_A_EMAIL`
   - `E2E_USER_A_PASSWORD`
   - `E2E_USER_B_ID`
   - `E2E_USER_B_IDENTIFIER`
+  - `E2E_USER_B_EMAIL`
   - `E2E_USER_B_PASSWORD`
   - Optional: `E2E_BASE_URL` (defaults to `http://127.0.0.1:3000`)
 - Run `npm run e2e`.

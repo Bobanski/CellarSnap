@@ -3,30 +3,20 @@ import { expect, test } from "@playwright/test";
 const requiredEnv = [
   "E2E_USER_A_ID",
   "E2E_USER_A_IDENTIFIER",
+  "E2E_USER_A_EMAIL",
   "E2E_USER_A_PASSWORD",
   "E2E_USER_B_ID",
   "E2E_USER_B_IDENTIFIER",
+  "E2E_USER_B_EMAIL",
   "E2E_USER_B_PASSWORD",
 ];
 
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
 
-async function login(page, identifier, password) {
+async function login(page, identifier, email, password) {
   await page.goto("/login");
-  const looksLikePhone = /^[+\d().\s-]{10,}$/.test(identifier);
-
-  if (!looksLikePhone) {
-    const legacyButton = page.getByRole("button", {
-      name: "Use legacy email sign in",
-    });
-    if (await legacyButton.isVisible().catch(() => false)) {
-      await legacyButton.click();
-    }
-    await page.getByLabel("Email or username (legacy)").fill(identifier);
-  } else {
-    await page.getByLabel("Phone number").fill(identifier);
-  }
-
+  await page.getByLabel("Phone number").fill(identifier);
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
   await expect(page).not.toHaveURL(/\/login$/);
@@ -56,13 +46,15 @@ test.describe("Core happy paths", () => {
   }) => {
     const userAId = process.env.E2E_USER_A_ID;
     const userAIdentifier = process.env.E2E_USER_A_IDENTIFIER;
+    const userAEmail = process.env.E2E_USER_A_EMAIL;
     const userAPassword = process.env.E2E_USER_A_PASSWORD;
     const userBId = process.env.E2E_USER_B_ID;
     const userBIdentifier = process.env.E2E_USER_B_IDENTIFIER;
+    const userBEmail = process.env.E2E_USER_B_EMAIL;
     const userBPassword = process.env.E2E_USER_B_PASSWORD;
     const wineName = `E2E Friends Only ${Date.now()}`;
 
-    await login(page, userAIdentifier, userAPassword);
+    await login(page, userAIdentifier, userAEmail, userAPassword);
     await clearRelationship(page, userBId);
 
     await page.goto(`/profile/${userBId}`);
@@ -70,7 +62,7 @@ test.describe("Core happy paths", () => {
     await expect(page.getByText("Request sent")).toBeVisible();
     await signOut(page);
 
-    await login(page, userBIdentifier, userBPassword);
+    await login(page, userBIdentifier, userBEmail, userBPassword);
     await page.goto(`/profile/${userAId}`);
     await expect(
       page.getByRole("button", { name: "Accept friend request" })
@@ -79,7 +71,7 @@ test.describe("Core happy paths", () => {
     await expect(page.getByRole("button", { name: /^Remove$/ })).toBeVisible();
     await signOut(page);
 
-    await login(page, userAIdentifier, userAPassword);
+    await login(page, userAIdentifier, userAEmail, userAPassword);
     await page.goto("/entries/new");
     await page.getByLabel("Wine name").fill(wineName);
     await page.getByLabel("Visibility").selectOption("friends");
@@ -96,7 +88,7 @@ test.describe("Core happy paths", () => {
     await expect(page.getByRole("heading", { name: wineName })).toBeVisible();
     await signOut(page);
 
-    await login(page, userBIdentifier, userBPassword);
+    await login(page, userBIdentifier, userBEmail, userBPassword);
     await page.goto("/feed");
     await page.getByRole("button", { name: "Friends only" }).click();
     await expect(page.getByRole("heading", { name: wineName })).toBeVisible();
