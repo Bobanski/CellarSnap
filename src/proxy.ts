@@ -56,6 +56,26 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+  const authCode = request.nextUrl.searchParams.get("code");
+  const tokenHash = request.nextUrl.searchParams.get("token_hash");
+  const tokenType = request.nextUrl.searchParams.get("type");
+
+  // If Supabase redirects auth callbacks to the Site URL (often "/") instead of our intended page,
+  // preserve the callback params and route the user to the finish-signup flow.
+  // This avoids middleware redirecting unauthenticated users to /login and dropping the auth params.
+  if ((authCode || tokenHash) && pathname !== "/finish-signup") {
+    const params: Record<string, string> = {};
+    if (authCode) params.code = authCode;
+    if (tokenHash) params.token_hash = tokenHash;
+    if (tokenType) params.type = tokenType;
+    return redirectWithCookies({
+      request,
+      response,
+      pathname: "/finish-signup",
+      searchParams: params,
+    });
+  }
+
   const isPrefetchRequest =
     request.headers.get("purpose") === "prefetch" ||
     request.headers.has("next-router-prefetch") ||
