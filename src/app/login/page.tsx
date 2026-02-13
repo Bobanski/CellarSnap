@@ -5,10 +5,9 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
 
 type LoginFormValues = {
-  phone: string;
+  email: string;
   password: string;
 };
 
@@ -27,14 +26,14 @@ export default function LoginPage() {
     setInfoMessage(null);
 
     try {
-      const normalizedPhone = normalizePhone(values.phone);
-      if (!normalizedPhone) {
-        setErrorMessage(PHONE_FORMAT_MESSAGE);
+      const email = values.email.trim().toLowerCase();
+      if (!email) {
+        setErrorMessage("Email is required.");
         return;
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        phone: normalizedPhone,
+        email,
         password: values.password,
       });
 
@@ -72,19 +71,19 @@ export default function LoginPage() {
 
         <form className="mt-5 space-y-4 sm:mt-6" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
-              Phone number
+            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+              Email
             </label>
             <input
-              id="phone"
-              type="text"
-              autoComplete="tel"
+              id="email"
+              type="email"
+              autoComplete="email"
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="(555) 123-4567"
-              {...register("phone", { required: true })}
+              placeholder="you@example.com"
+              {...register("email", { required: true })}
             />
             <p className="mt-1 text-xs text-zinc-500">
-              Sign in with the phone number attached to your account.
+              Sign in with the email attached to your account.
             </p>
           </div>
 
