@@ -193,6 +193,48 @@ const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
   },
 ];
 
+async function ensureProfileRowExists(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  user: { id: string; email?: string | null; phone?: string | null }
+) {
+  const existing = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing.data?.id) {
+    return;
+  }
+
+  if (existing.error) {
+    // If we can't check (RLS / transient), don't block GET/PATCH.
+    return;
+  }
+
+  const insertPayload: Record<string, unknown> = { id: user.id };
+  if (typeof user.email === "string" && user.email.trim()) {
+    insertPayload.email = user.email.trim().toLowerCase();
+  }
+  const userPhone = typeof user.phone === "string" ? user.phone.trim() : "";
+  if (userPhone) {
+    insertPayload.phone = userPhone;
+  }
+
+  const insertResult = await supabase.from("profiles").insert(insertPayload);
+  if (!insertResult.error) {
+    return;
+  }
+
+  // Retry with minimal shape if columns don't exist yet.
+  if (
+    insertResult.error.message.includes("email") ||
+    insertResult.error.message.includes("phone")
+  ) {
+    await supabase.from("profiles").insert({ id: user.id });
+  }
+}
+
 async function selectProfileRow(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string
@@ -265,6 +307,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await ensureProfileRowExists(supabase, {
+    id: user.id,
+    email: user.email,
+    phone: (user as unknown as { phone?: string | null }).phone ?? null,
+  });
+
   const selected = await selectProfileRow(supabase, user.id);
   if (!selected.data || !selected.attempt) {
     return NextResponse.json(
@@ -331,6 +379,12 @@ export async function PATCH(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await ensureProfileRowExists(supabase, {
+    id: user.id,
+    email: user.email,
+    phone: (user as unknown as { phone?: string | null }).phone ?? null,
+  });
 
   let body: unknown;
   try {

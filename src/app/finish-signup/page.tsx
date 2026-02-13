@@ -5,11 +5,25 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import {
+  USERNAME_FORMAT_MESSAGE,
+  USERNAME_MIN_LENGTH,
+  USERNAME_MIN_LENGTH_MESSAGE,
+  isUsernameFormatValid,
+} from "@/lib/validation/username";
 
 type FinishSignupValues = {
+  username: string;
   password: string;
   confirmPassword: string;
 };
+
+type VerifyOtpType =
+  | "signup"
+  | "invite"
+  | "magiclink"
+  | "recovery"
+  | "email_change";
 
 export default function FinishSignupPage() {
   const router = useRouter();
@@ -32,19 +46,40 @@ export default function FinishSignupPage() {
       const code = params.get("code");
       const tokenHash = params.get("token_hash");
       const type = params.get("type");
+      const allowedVerifyTypes = new Set([
+        "signup",
+        "invite",
+        "magiclink",
+        "recovery",
+        "email_change",
+      ]);
+      const otpType: VerifyOtpType | null =
+        type && allowedVerifyTypes.has(type) ? (type as VerifyOtpType) : null;
+      const hasSession = async () => {
+        const { data } = await supabase.auth.getSession();
+        return Boolean(data.session);
+      };
 
       // Supabase can send different link formats depending on auth flow/settings:
       // - PKCE: ?code=...
       // - Verify OTP: ?token_hash=...&type=signup (or magiclink/recovery/invite)
       // - Implicit: #access_token=...&refresh_token=...
       try {
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(
-            window.location.href
-          );
+        // If Supabase auto-detected the session from the URL already, trust it.
+        if (await hasSession()) {
           if (isMounted) {
-            setLinkValid(!error);
-            if (error) {
+            setLinkValid(true);
+            setReady(true);
+          }
+          return;
+        }
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+          const valid = await hasSession();
+          if (isMounted) {
+            setLinkValid(valid);
+            if (!valid) {
               setErrorMessage("This signup link is invalid or expired.");
             }
             setReady(true);
@@ -52,14 +87,15 @@ export default function FinishSignupPage() {
           return;
         }
 
-        if (tokenHash && type) {
-          const { error } = await supabase.auth.verifyOtp({
+        if (tokenHash && otpType) {
+          await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: type as any,
+            type: otpType,
           });
+          const valid = await hasSession();
           if (isMounted) {
-            setLinkValid(!error);
-            if (error) {
+            setLinkValid(valid);
+            if (!valid) {
               setErrorMessage("This signup link is invalid or expired.");
             }
             setReady(true);
@@ -73,13 +109,13 @@ export default function FinishSignupPage() {
           const access_token = hashParams.get("access_token");
           const refresh_token = hashParams.get("refresh_token");
 
-          const { error } =
-            access_token && refresh_token
-              ? await supabase.auth.setSession({ access_token, refresh_token })
-              : { error: new Error("Missing session tokens") };
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          }
+          const valid = await hasSession();
           if (isMounted) {
-            setLinkValid(!error);
-            if (error) {
+            setLinkValid(valid);
+            if (!valid) {
               setErrorMessage("This signup link is invalid or expired.");
             }
             setReady(true);
@@ -95,9 +131,8 @@ export default function FinishSignupPage() {
         return;
       }
 
-      const { data } = await supabase.auth.getSession();
+      const valid = await hasSession();
       if (isMounted) {
-        const valid = !!data.session;
         setLinkValid(valid);
         if (!valid) {
           setErrorMessage("This signup link is invalid or expired.");
@@ -114,6 +149,18 @@ export default function FinishSignupPage() {
   }, [supabase]);
 
   const onSubmit = handleSubmit(async (values) => {
+    const username = values.username.trim();
+
+    if (username.length < USERNAME_MIN_LENGTH) {
+      setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
+      return;
+    }
+
+    if (!isUsernameFormatValid(username)) {
+      setErrorMessage(USERNAME_FORMAT_MESSAGE);
+      return;
+    }
+
     if (values.password.length < 8) {
       setErrorMessage("Password must be at least 8 characters.");
       return;
@@ -133,19 +180,52 @@ export default function FinishSignupPage() {
     setErrorMessage(null);
     setMessage(null);
 
+    const usernameCheckResponse = await fetch("/api/username-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+
+    if (!usernameCheckResponse.ok) {
+      const payload = await usernameCheckResponse.json().catch(() => ({}));
+      setIsSubmitting(false);
+      setErrorMessage(payload.error ?? "Unable to check username.");
+      return;
+    }
+
+    const usernameCheckData = await usernameCheckResponse.json();
+    if (!usernameCheckData.available) {
+      setIsSubmitting(false);
+      setErrorMessage("That username is already taken.");
+      return;
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: values.password,
     });
 
-    setIsSubmitting(false);
-
     if (error) {
+      setIsSubmitting(false);
       setErrorMessage(error.message);
       return;
     }
 
-    setMessage("Password set. Taking you to profile setup...");
-    router.push("/profile?setup=username");
+    const profileResponse = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ display_name: username }),
+    });
+
+    setIsSubmitting(false);
+
+    if (!profileResponse.ok) {
+      const payload = await profileResponse.json().catch(() => ({}));
+      setErrorMessage(payload.error ?? "Unable to finish account setup.");
+      return;
+    }
+
+    setMessage("Account created. Taking you home...");
+    router.push("/");
   });
 
   return (
@@ -155,9 +235,12 @@ export default function FinishSignupPage() {
           <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
             Finish signup
           </span>
-          <h1 className="text-2xl font-semibold text-zinc-50">Create your password</h1>
+          <h1 className="text-2xl font-semibold text-zinc-50">
+            Create your account
+          </h1>
           <p className="text-sm text-zinc-300">
-            Your email is confirmed. Set a password to sign in going forward.
+            Your email is confirmed. Choose a username and password to sign in
+            going forward.
           </p>
         </div>
 
@@ -177,6 +260,23 @@ export default function FinishSignupPage() {
           </div>
         ) : (
           <form className="space-y-4" onSubmit={onSubmit}>
+            <div>
+              <label className="text-sm font-medium text-zinc-200" htmlFor="username">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                autoComplete="username"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="At least 3 characters"
+                {...register("username", { required: true })}
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                No spaces and no @.
+              </p>
+            </div>
+
             <div>
               <label className="text-sm font-medium text-zinc-200" htmlFor="password">
                 Password
@@ -233,7 +333,7 @@ export default function FinishSignupPage() {
               className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting}
             >
-              Set password
+              Create account
             </button>
 
             <p className="text-center text-sm text-zinc-400">
