@@ -9,7 +9,6 @@ import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
 
 type LoginFormValues = {
   phone: string;
-  email: string;
   password: string;
 };
 
@@ -31,32 +30,6 @@ export default function LoginPage() {
       const normalizedPhone = normalizePhone(values.phone);
       if (!normalizedPhone) {
         setErrorMessage(PHONE_FORMAT_MESSAGE);
-        return;
-      }
-
-      const enteredEmail = values.email.trim().toLowerCase();
-      if (!enteredEmail) {
-        setErrorMessage("Email is required.");
-        return;
-      }
-
-      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: normalizedPhone, mode: "phone" }),
-      });
-
-      if (!resolveResponse.ok) {
-        const payload = await resolveResponse.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "No account matches that phone number.");
-        return;
-      }
-
-      const data = (await resolveResponse.json()) as { email?: string };
-      const accountEmail = data.email?.trim().toLowerCase();
-
-      if (!accountEmail || accountEmail !== enteredEmail) {
-        setErrorMessage("Phone number and email do not match.");
         return;
       }
 
@@ -110,22 +83,8 @@ export default function LoginPage() {
               placeholder="(555) 123-4567"
               {...register("phone", { required: true })}
             />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="you@example.com"
-              {...register("email", { required: true })}
-            />
             <p className="mt-1 text-xs text-zinc-500">
-              Required to verify the account attached to your phone number.
+              Sign in with the phone number attached to your account.
             </p>
           </div>
 

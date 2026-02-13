@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { normalizePhone } from "@/lib/validation/phone";
 
 type ForgotFormValues = {
-  email: string;
+  identifier: string;
 };
 
 export default function ForgotPasswordPage() {
@@ -17,8 +18,9 @@ export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = handleSubmit(async (values) => {
-    if (!values.email) {
-      setErrorMessage("Enter your email to reset your password.");
+    const identifier = values.identifier.trim();
+    if (!identifier) {
+      setErrorMessage("Enter your email or phone number to reset your password.");
       return;
     }
 
@@ -26,7 +28,40 @@ export default function ForgotPasswordPage() {
     setErrorMessage(null);
     setMessage(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+    let targetEmail: string | null = null;
+    const normalizedPhone = normalizePhone(identifier);
+
+    if (normalizedPhone) {
+      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: normalizedPhone, mode: "phone" }),
+      });
+
+      if (!resolveResponse.ok) {
+        const payload = await resolveResponse.json().catch(() => ({}));
+        setIsSubmitting(false);
+        setErrorMessage(payload.error ?? "No account matches that phone number.");
+        return;
+      }
+
+      const payload = (await resolveResponse.json()) as { email?: string };
+      targetEmail = payload.email?.trim() ?? null;
+    } else if (identifier.includes("@")) {
+      targetEmail = identifier;
+    } else {
+      setIsSubmitting(false);
+      setErrorMessage("Enter a valid email or phone number.");
+      return;
+    }
+
+    if (!targetEmail) {
+      setIsSubmitting(false);
+      setErrorMessage("No account email is available for this reset request.");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
 
@@ -51,22 +86,22 @@ export default function ForgotPasswordPage() {
             Forgot your password?
           </h1>
           <p className="text-sm text-zinc-300">
-            Enter your account email and we’ll send a reset link.
+            Enter your account email or phone number and we’ll send a reset link.
           </p>
         </div>
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="email">
-              Email
+            <label className="text-sm font-medium text-zinc-200" htmlFor="identifier">
+              Email or phone
             </label>
             <input
-              id="email"
-              type="email"
+              id="identifier"
+              type="text"
               autoComplete="email"
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="you@example.com"
-              {...register("email", { required: true })}
+              placeholder="you@example.com or (555) 123-4567"
+              {...register("identifier", { required: true })}
             />
           </div>
 
