@@ -13,7 +13,8 @@ const missingEnv = requiredEnv.filter((key) => !process.env[key]);
 
 async function login(page, identifier, password) {
   await page.goto("/login");
-  await page.getByLabel("Username or phone number").fill(identifier);
+  // Default auth mode is email; tests use the visible label.
+  await page.getByLabel("Email or username").fill(identifier);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign In" }).click();
   await expect(page).not.toHaveURL(/\/login$/);

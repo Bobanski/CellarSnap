@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthMode } from "@/lib/auth/mode";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MIN_LENGTH,
@@ -41,6 +42,7 @@ function formatMemberSince(dateString: string | null): string {
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
+  const authMode = getAuthMode();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
@@ -402,11 +404,12 @@ export default function ProfilePage() {
     setIsSavingPassword(true);
 
     // Verify current password by attempting to sign in with the account's primary auth identifier.
-    const loginIdentifier = profile?.phone?.trim()
-      ? { phone: profile.phone.trim() }
-      : profile?.email?.trim()
-        ? { email: profile.email.trim().toLowerCase() }
-        : null;
+    const loginIdentifier =
+      authMode === "phone" && profile?.phone?.trim()
+        ? { phone: profile.phone.trim() }
+        : profile?.email?.trim()
+          ? { email: profile.email.trim().toLowerCase() }
+          : null;
 
     if (!loginIdentifier) {
       setPasswordError("Unable to verify current password.");

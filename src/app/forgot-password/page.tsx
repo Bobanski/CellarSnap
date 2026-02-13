@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthMode } from "@/lib/auth/mode";
 
 type ForgotFormValues = {
   identifier: string;
@@ -18,6 +19,7 @@ type ResolvedIdentifier = {
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
+  const authMode = getAuthMode();
   const { register, handleSubmit } = useForm<ForgotFormValues>();
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,10 +53,14 @@ export default function ForgotPasswordPage() {
       const phone = payload.phone?.trim() ?? "";
       const email = payload.email?.trim().toLowerCase() ?? "";
 
-      if (!phone) {
+      if (authMode !== "phone" || !phone) {
         // Legacy accounts may not have a phone yet; fall back to email reset.
         if (!email) {
-          setErrorMessage("This account does not have a phone number for recovery.");
+          setErrorMessage(
+            authMode === "phone"
+              ? "This account does not have a phone number for recovery."
+              : "No account matches that identifier."
+          );
           return;
         }
 

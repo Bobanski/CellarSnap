@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthMode } from "@/lib/auth/mode";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MIN_LENGTH,
@@ -12,30 +13,31 @@ import {
   isUsernameFormatValid,
 } from "@/lib/validation/username";
 import {
-  formatPhoneForInput,
   normalizePhone,
   PHONE_FORMAT_MESSAGE,
 } from "@/lib/validation/phone";
 
 type SignupFormValues = {
   username: string;
-  phone: string;
   email: string;
   password: string;
+  phone?: string;
 };
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { control, register, handleSubmit } = useForm<SignupFormValues>();
+  const authMode = getAuthMode();
+  const { register, handleSubmit } = useForm<SignupFormValues>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const onSubmit = handleSubmit(async (values) => {
     const username = values.username.trim();
-    const normalizedPhone = normalizePhone(values.phone);
     const email = values.email.trim().toLowerCase();
+    const normalizedPhone =
+      authMode === "phone" ? normalizePhone(values.phone ?? "") : null;
 
     if (username.length < USERNAME_MIN_LENGTH) {
       setErrorMessage(USERNAME_MIN_LENGTH_MESSAGE);
@@ -47,7 +49,7 @@ export default function SignupPage() {
       return;
     }
 
-    if (!normalizedPhone) {
+    if (authMode === "phone" && !normalizedPhone) {
       setErrorMessage(PHONE_FORMAT_MESSAGE);
       return;
     }
@@ -84,28 +86,36 @@ export default function SignupPage() {
         return;
       }
 
-      const phoneCheckResponse = await fetch("/api/phone-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: normalizedPhone }),
-      });
+      if (authMode === "phone") {
+        const phoneCheckResponse = await fetch("/api/phone-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: normalizedPhone }),
+        });
 
-      if (!phoneCheckResponse.ok) {
-        const payload = await phoneCheckResponse.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "Unable to check phone number.");
-        return;
+        if (!phoneCheckResponse.ok) {
+          const payload = await phoneCheckResponse.json().catch(() => ({}));
+          setErrorMessage(payload.error ?? "Unable to check phone number.");
+          return;
+        }
+
+        const phoneCheckData = await phoneCheckResponse.json();
+        if (!phoneCheckData.available) {
+          setErrorMessage("That phone number is already in use.");
+          return;
+        }
       }
 
-      const phoneCheckData = await phoneCheckResponse.json();
-      if (!phoneCheckData.available) {
-        setErrorMessage("That phone number is already in use.");
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        phone: normalizedPhone,
-        password: values.password,
-      });
+      const { data, error } =
+        authMode === "phone"
+          ? await supabase.auth.signUp({
+              phone: normalizedPhone!,
+              password: values.password,
+            })
+          : await supabase.auth.signUp({
+              email,
+              password: values.password,
+            });
 
       if (error) {
         setErrorMessage(error.message);
@@ -116,7 +126,9 @@ export default function SignupPage() {
         try {
           window.sessionStorage.setItem("pendingSignupUsername", username);
           window.sessionStorage.setItem("pendingSignupEmail", email);
-          window.sessionStorage.setItem("pendingSignupPhone", normalizedPhone);
+          if (authMode === "phone" && normalizedPhone) {
+            window.sessionStorage.setItem("pendingSignupPhone", normalizedPhone);
+          }
         } catch {
           // Ignore client storage failures.
         }
@@ -129,7 +141,9 @@ export default function SignupPage() {
           body: JSON.stringify({
             display_name: username,
             email,
-            phone: normalizedPhone,
+            ...(authMode === "phone" && normalizedPhone
+              ? { phone: normalizedPhone }
+              : {}),
           }),
         });
 
@@ -143,7 +157,14 @@ export default function SignupPage() {
         return;
       }
 
-      router.push(`/verify-phone?phone=${encodeURIComponent(normalizedPhone)}`);
+      if (authMode === "phone" && normalizedPhone) {
+        router.push(`/verify-phone?phone=${encodeURIComponent(normalizedPhone)}`);
+        return;
+      }
+
+      setErrorMessage(
+        "Check your email to confirm your account, then sign in to finish setup."
+      );
     } catch {
       setErrorMessage("Unable to create account. Check your connection and try again.");
     } finally {
@@ -164,7 +185,9 @@ export default function SignupPage() {
           </span>
           <h1 className="text-2xl font-semibold text-zinc-50">Join CellarSnap</h1>
           <p className="text-sm text-zinc-300">
-            Create your account with username, phone, email, and password.
+            {authMode === "phone"
+              ? "Create your account with username, phone, email, and password."
+              : "Create your account with username, email, and password."}
           </p>
         </div>
 
@@ -183,30 +206,21 @@ export default function SignupPage() {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
-              Phone number
-            </label>
-            <Controller
-              name="phone"
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  id="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  placeholder="(555) 123-4567"
-                  value={field.value ?? ""}
-                  onChange={(event) => {
-                    field.onChange(formatPhoneForInput(event.target.value));
-                  }}
-                />
-              )}
-            />
-          </div>
+          {authMode === "phone" ? (
+            <div>
+              <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
+                Phone number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                placeholder="(555) 123-4567"
+                {...register("phone", { required: true })}
+              />
+            </div>
+          ) : null}
 
           <div>
             <label className="text-sm font-medium text-zinc-200" htmlFor="email">

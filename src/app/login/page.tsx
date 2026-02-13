@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthMode } from "@/lib/auth/mode";
 
 type LoginFormValues = {
   identifier: string;
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit } = useForm<LoginFormValues>();
+  const authMode = getAuthMode();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +35,11 @@ export default function LoginPage() {
     try {
       const identifier = values.identifier.trim();
       if (!identifier) {
-        setErrorMessage("Username or phone number is required.");
+        setErrorMessage(
+          authMode === "phone"
+            ? "Username or phone number is required."
+            : "Email or username is required."
+        );
         return;
       }
 
@@ -59,7 +65,7 @@ export default function LoginPage() {
       }
 
       const { error } = await supabase.auth.signInWithPassword(
-        resolvedPhone
+        authMode === "phone" && resolvedPhone
           ? { phone: resolvedPhone, password: values.password }
           : { email: resolvedEmail!, password: values.password }
       );
@@ -99,18 +105,24 @@ export default function LoginPage() {
         <form className="mt-5 space-y-4 sm:mt-6" onSubmit={onSubmit}>
           <div>
             <label className="text-sm font-medium text-zinc-200" htmlFor="identifier">
-              Username or phone number
+              {authMode === "phone" ? "Username or phone number" : "Email or username"}
             </label>
             <input
               id="identifier"
               type="text"
-              autoComplete="username"
+              autoComplete={authMode === "phone" ? "username" : "email"}
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="username or (555) 123-4567"
+              placeholder={
+                authMode === "phone"
+                  ? "username or (555) 123-4567"
+                  : "you@example.com or username"
+              }
               {...register("identifier", { required: true })}
             />
             <p className="mt-1 text-xs text-zinc-500">
-              You can also paste your email address.
+              {authMode === "phone"
+                ? "You can also paste your email address."
+                : "You can sign in with email or username."}
             </p>
           </div>
 
