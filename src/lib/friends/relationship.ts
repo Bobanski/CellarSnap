@@ -17,6 +17,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type FriendRequestRow = {
   id: string;
   status: "pending" | "accepted" | "declined";
+  created_at?: string;
 };
 
 function relationshipFromRows(
@@ -52,6 +53,20 @@ function relationshipFromRows(
   };
 }
 
+function pickRelevantRow(rows: FriendRequestRow[] | null): FriendRequestRow | null {
+  if (!rows || rows.length === 0) return null;
+
+  // Prefer an accepted relationship over pending/declined, and pending over declined.
+  const accepted = rows.find((row) => row.status === "accepted");
+  if (accepted) return accepted;
+
+  const pending = rows.find((row) => row.status === "pending");
+  if (pending) return pending;
+
+  const declined = rows.find((row) => row.status === "declined");
+  return declined ?? null;
+}
+
 export async function getFriendRelationship(
   supabase: SupabaseClient,
   currentUserId: string,
@@ -60,16 +75,18 @@ export async function getFriendRelationship(
   const [outgoingRes, incomingRes] = await Promise.all([
     supabase
       .from("friend_requests")
-      .select("id, status")
+      .select("id, status, created_at")
       .eq("requester_id", currentUserId)
       .eq("recipient_id", targetUserId)
-      .maybeSingle(),
+      .order("created_at", { ascending: false })
+      .limit(10),
     supabase
       .from("friend_requests")
-      .select("id, status")
+      .select("id, status, created_at")
       .eq("requester_id", targetUserId)
       .eq("recipient_id", currentUserId)
-      .maybeSingle(),
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   if (outgoingRes.error) {
@@ -79,7 +96,7 @@ export async function getFriendRelationship(
     throw new Error(incomingRes.error.message);
   }
 
-  const outgoing = outgoingRes.data as FriendRequestRow | null;
-  const incoming = incomingRes.data as FriendRequestRow | null;
+  const outgoing = pickRelevantRow(outgoingRes.data as FriendRequestRow[] | null);
+  const incoming = pickRelevantRow(incomingRes.data as FriendRequestRow[] | null);
   return relationshipFromRows(outgoing, incoming);
 }

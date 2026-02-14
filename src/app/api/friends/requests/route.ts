@@ -97,16 +97,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cannot friend yourself." }, { status: 400 });
   }
 
-  const { data: reverse, error: reverseError } = await supabase
+  const { data: reverseRows, error: reverseError } = await supabase
     .from("friend_requests")
-    .select("id, status")
+    .select("id, status, created_at")
     .eq("requester_id", recipientId)
     .eq("recipient_id", user.id)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(10);
 
   if (reverseError) {
     return NextResponse.json({ error: reverseError.message }, { status: 500 });
   }
+
+  const reverseAccepted = (reverseRows ?? []).find((row) => row.status === "accepted");
+  const reversePending = (reverseRows ?? []).find((row) => row.status === "pending");
+  const reverse = reverseAccepted ?? reversePending ?? null;
 
   if (reverse && (reverse.status === "pending" || reverse.status === "accepted")) {
     if (reverse.status === "pending") {
@@ -143,12 +148,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "accepted", request_id: reverse.id });
   }
 
-  const { data: existing } = await supabase
+  const { data: existingRows, error: existingError } = await supabase
     .from("friend_requests")
-    .select("id, status")
+    .select("id, status, created_at")
     .eq("requester_id", user.id)
     .eq("recipient_id", recipientId)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+
+  const existingAccepted = (existingRows ?? []).find((row) => row.status === "accepted");
+  const existingPending = (existingRows ?? []).find((row) => row.status === "pending");
+  const existingDeclined = (existingRows ?? []).find((row) => row.status === "declined");
+  const existing = existingAccepted ?? existingPending ?? existingDeclined ?? null;
 
   if (existing) {
     if (existing.status === "declined") {

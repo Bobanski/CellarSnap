@@ -102,16 +102,21 @@ export async function POST(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { data: reverse, error: reverseError } = await supabase
+  const { data: reverseRows, error: reverseError } = await supabase
     .from("friend_requests")
-    .select("id, status")
+    .select("id, status, created_at")
     .eq("requester_id", targetUserId)
     .eq("recipient_id", user.id)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(10);
 
   if (reverseError) {
     return NextResponse.json({ error: reverseError.message }, { status: 500 });
   }
+
+  const reverseAccepted = (reverseRows ?? []).find((row) => row.status === "accepted");
+  const reversePending = (reverseRows ?? []).find((row) => row.status === "pending");
+  const reverse = reverseAccepted ?? reversePending ?? null;
 
   if (reverse && (reverse.status === "pending" || reverse.status === "accepted")) {
     if (reverse.status === "pending") {
@@ -145,16 +150,22 @@ export async function POST(
       );
     }
   } else {
-    const { data: existing, error: existingError } = await supabase
+    const { data: existingRows, error: existingError } = await supabase
       .from("friend_requests")
-      .select("id")
+      .select("id, status, created_at")
       .eq("requester_id", user.id)
       .eq("recipient_id", targetUserId)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(10);
 
     if (existingError) {
       return NextResponse.json({ error: existingError.message }, { status: 500 });
     }
+
+    const existingAccepted = (existingRows ?? []).find((row) => row.status === "accepted");
+    const existingPending = (existingRows ?? []).find((row) => row.status === "pending");
+    const existingDeclined = (existingRows ?? []).find((row) => row.status === "declined");
+    const existing = existingAccepted ?? existingPending ?? existingDeclined ?? null;
 
     if (!existing) {
       const { error: insertError } = await supabase.from("friend_requests").insert({
@@ -166,7 +177,7 @@ export async function POST(
       if (insertError) {
         return NextResponse.json({ error: insertError.message }, { status: 500 });
       }
-    } else {
+    } else if (existing.status === "declined") {
       const { error: reviveError } = await supabase
         .from("friend_requests")
         .update({
