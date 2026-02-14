@@ -28,10 +28,14 @@ export default function FriendsPage() {
   const [outgoingRequests, setOutgoingRequests] = useState<
     { id: string; recipient: Profile }[]
   >([]);
-  const [allUsers, setAllUsers] = useState<Profile[]>([]);
+  const [searchResults, setSearchResults] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
   const [friendError, setFriendError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -50,10 +54,9 @@ export default function FriendsPage() {
   const loadFriends = async () => {
     setFriendError(null);
 
-    const [friendsRes, requestsRes, usersRes, suggestionsRes] = await Promise.all([
+    const [friendsRes, requestsRes, suggestionsRes] = await Promise.all([
       fetch("/api/friends", { cache: "no-store" }),
       fetch("/api/friends/requests", { cache: "no-store" }),
-      fetch("/api/users", { cache: "no-store" }),
       fetch("/api/friends/suggestions", { cache: "no-store" }),
     ]);
 
@@ -66,11 +69,6 @@ export default function FriendsPage() {
       const data = await requestsRes.json();
       setIncomingRequests(data.incoming ?? []);
       setOutgoingRequests(data.outgoing ?? []);
-    }
-
-    if (usersRes.ok) {
-      const data = await usersRes.json();
-      setAllUsers(data.users ?? []);
     }
 
     if (suggestionsRes.ok) {
@@ -93,12 +91,61 @@ export default function FriendsPage() {
     incomingRequests.map((request) => request.requester.id)
   );
 
-  const filteredUsers = allUsers.filter((user) => {
-    if (!friendSearch.trim()) return false;
-    const query = friendSearch.trim().toLowerCase();
-    const name = displayName(user).toLowerCase();
-    return name.includes(query);
-  });
+  useEffect(() => {
+    let isMounted = true;
+    const query = friendSearch.trim();
+
+    if (!query) {
+      setSearchResults([]);
+      setSearchError(null);
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/users?search=${encodeURIComponent(query)}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) {
+          if (isMounted) {
+            setSearchResults([]);
+            setSearchError("Unable to search right now.");
+            setSearchLoading(false);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (isMounted) {
+          setSearchResults(data.users ?? []);
+          setSearchLoading(false);
+        }
+      } catch {
+        if (controller.signal.aborted) return;
+        if (isMounted) {
+          setSearchResults([]);
+          setSearchError("Unable to search right now.");
+          setSearchLoading(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [friendSearch]);
 
   const sendRequest = async (userId: string) => {
     setIsMutating(true);
@@ -391,21 +438,27 @@ export default function FriendsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-zinc-200">Find friends</h2>
             <p className="mt-1 text-xs text-zinc-400">
-              Search by username to send a request.
+              Search by username, name, or email. Results show usernames only.
             </p>
             <input
               value={friendSearch}
               onChange={(event) => setFriendSearch(event.target.value)}
-              placeholder="Search by username"
+              placeholder="Search by username, name, or email"
               className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
             />
             {friendError ? (
               <p className="mt-2 text-sm text-rose-200">{friendError}</p>
             ) : null}
-            {filteredUsers.length > 0 ? (
+            {searchError ? (
+              <p className="mt-2 text-sm text-rose-200">{searchError}</p>
+            ) : null}
+            {searchLoading ? (
+              <p className="mt-2 text-sm text-zinc-400">Searching...</p>
+            ) : null}
+            {searchResults.length > 0 ? (
               <div className="mt-3 space-y-2">
-                {filteredUsers.slice(0, 5).map((user) => {
-                  const label = displayName(user);
+                {searchResults.slice(0, 5).map((user) => {
+                  const label = user.display_name ?? "Unknown";
                   const isFriend = friendIds.has(user.id);
                   const isOutgoing = outgoingIds.has(user.id);
                   const isIncoming = incomingIds.has(user.id);
@@ -444,7 +497,7 @@ export default function FriendsPage() {
                   );
                 })}
               </div>
-            ) : friendSearch.trim() ? (
+            ) : friendSearch.trim() && !searchLoading && !searchError ? (
               <p className="mt-2 text-sm text-zinc-400">No matches.</p>
             ) : null}
           </div>

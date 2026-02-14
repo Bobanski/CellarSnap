@@ -30,6 +30,8 @@ export default function AlertsMenu() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [addToCellarId, setAddToCellarId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
@@ -96,6 +98,12 @@ export default function AlertsMenu() {
 
   // Clear badge when menu opens (derived from open state, avoids setState in effect body)
   const displayCount = open ? 0 : count;
+
+  useEffect(() => {
+    if (!open) {
+      setConfirmDeleteId(null);
+    }
+  }, [open]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
@@ -184,14 +192,72 @@ export default function AlertsMenu() {
                     className="border-b border-white/5 last:border-none"
                   >
                     <div className="px-4 py-3 text-sm text-zinc-200">
-                      <div className="text-sm text-zinc-200">
-                        <span className="accent-text font-semibold">
-                          {item.actor_name}
-                        </span>{" "}
-                        tagged you in{" "}
-                        <span className="text-zinc-100">
-                          {item.wine_name || "a wine"}
-                        </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 text-sm text-zinc-200">
+                          <span className="accent-text font-semibold">
+                            {item.actor_name}
+                          </span>{" "}
+                          tagged you in{" "}
+                          <span className="text-zinc-100">
+                            {item.wine_name || "a wine"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={deletingId === item.id}
+                          onClick={async () => {
+                            if (deletingId) return;
+
+                            if (confirmDeleteId !== item.id) {
+                              setConfirmDeleteId(item.id);
+                              return;
+                            }
+
+                            setActionError(null);
+                            setDeletingId(item.id);
+                            try {
+                              const response = await fetch(
+                                `/api/notifications/${item.id}`,
+                                { method: "DELETE" }
+                              );
+                              const payload = await response
+                                .json()
+                                .catch(() => ({}));
+                              if (!response.ok) {
+                                setActionError(
+                                  payload.error ?? "Unable to delete this alert."
+                                );
+                                return;
+                              }
+
+                              setItems((prev) =>
+                                prev.filter((row) => row.id !== item.id)
+                              );
+                              setCount((prev) => Math.max(0, prev - 1));
+                              setConfirmDeleteId(null);
+                            } catch {
+                              setActionError("Unable to delete this alert.");
+                            } finally {
+                              setDeletingId(null);
+                            }
+                          }}
+                          aria-label={
+                            confirmDeleteId === item.id
+                              ? "Confirm delete alert"
+                              : "Delete alert"
+                          }
+                          className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                            confirmDeleteId === item.id
+                              ? "border-rose-400/40 text-rose-200 hover:border-rose-300"
+                              : "border-white/10 text-zinc-300 hover:border-white/30"
+                          }`}
+                        >
+                          {deletingId === item.id
+                            ? "..."
+                            : confirmDeleteId === item.id
+                              ? "DELETE"
+                              : "x"}
+                        </button>
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <Link

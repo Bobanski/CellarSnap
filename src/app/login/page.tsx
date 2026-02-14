@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
@@ -18,7 +17,6 @@ type ResolvedIdentifier = {
 };
 
 export default function LoginPage() {
-  const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit } = useForm<LoginFormValues>();
   const authMode = getAuthMode();
@@ -30,7 +28,7 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
     setErrorMessage(null);
-    setInfoMessage(null);
+    setInfoMessage("Signing in...");
 
     try {
       const identifier = values.identifier.trim();
@@ -40,6 +38,7 @@ export default function LoginPage() {
             ? "Username or phone number is required."
             : "Email or username is required."
         );
+        setInfoMessage(null);
         return;
       }
 
@@ -52,6 +51,7 @@ export default function LoginPage() {
       if (!resolveResponse.ok) {
         const payload = await resolveResponse.json().catch(() => ({}));
         setErrorMessage(payload.error ?? "No account matches that sign-in identifier.");
+        setInfoMessage(null);
         return;
       }
 
@@ -61,6 +61,7 @@ export default function LoginPage() {
 
       if (!resolvedPhone && !resolvedEmail) {
         setErrorMessage("No account matches that sign-in identifier.");
+        setInfoMessage(null);
         return;
       }
 
@@ -72,6 +73,7 @@ export default function LoginPage() {
 
       if (error) {
         setErrorMessage(error.message);
+        setInfoMessage(null);
         return;
       }
 
@@ -84,7 +86,9 @@ export default function LoginPage() {
               ? payload.profile.display_name.trim()
               : "";
           if (!displayName) {
-            router.push("/profile?setup=username");
+            setInfoMessage("Signed in. Redirecting...");
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            window.location.assign("/profile?setup=username");
             return;
           }
         }
@@ -92,9 +96,12 @@ export default function LoginPage() {
         // Ignore profile lookup failures and fall back to home.
       }
 
-      router.push("/");
+      setInfoMessage("Signed in. Redirecting...");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      window.location.assign("/");
     } catch {
       setErrorMessage("Unable to sign in. Check your connection and try again.");
+      setInfoMessage(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,6 +135,7 @@ export default function LoginPage() {
               id="identifier"
               type="text"
               autoComplete={authMode === "phone" ? "username" : "email"}
+              disabled={isSubmitting}
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder={
                 authMode === "phone"
@@ -152,6 +160,7 @@ export default function LoginPage() {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
+                disabled={isSubmitting}
                 className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 placeholder="********"
                 {...register("password", { required: true })}
@@ -178,7 +187,7 @@ export default function LoginPage() {
             className="w-full rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
-            Sign In
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
 
           <Link

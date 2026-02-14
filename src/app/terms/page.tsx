@@ -7,9 +7,17 @@ export default function TermsPage() {
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">
-            Legal
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">
+              Legal
+            </p>
+            <Link
+              href="/"
+              className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-white/30 hover:text-amber-200"
+            >
+              Home
+            </Link>
+          </div>
           <h1 className="text-3xl font-semibold text-zinc-50">Terms of Use</h1>
           <p className="text-sm text-zinc-400">Last updated: {LAST_UPDATED}</p>
         </header>

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function sanitizeUserSearch(search: string) {
+  // Prevent PostgREST `.or()` filter syntax issues.
+  return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
+}
+
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -12,7 +17,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search")?.trim();
+  const search = sanitizeUserSearch(searchParams.get("search")?.trim() ?? "");
 
   let query = supabase
     .from("profiles")
@@ -21,10 +26,38 @@ export async function GET(request: Request) {
     .order("display_name", { ascending: true });
 
   if (search) {
-    query = query.ilike("display_name", `%${search}%`);
+    const pattern = `%${search}%`;
+    query = query
+      .or(
+        `display_name.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern}`
+      )
+      .limit(25);
   }
 
-  const { data, error } = await query;
+  let data: { id: string; display_name: string | null }[] | null = null;
+  let error: { message: string } | null = null;
+
+  const firstAttempt = await query;
+  data = firstAttempt.data;
+  error = firstAttempt.error;
+
+  // Backwards-compatible fallback if profile name columns aren't present yet.
+  if (
+    error &&
+    search &&
+    (error.message.includes("first_name") || error.message.includes("last_name"))
+  ) {
+    const pattern = `%${search}%`;
+    const fallback = await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .neq("id", user.id)
+      .or(`display_name.ilike.${pattern},email.ilike.${pattern}`)
+      .order("display_name", { ascending: true })
+      .limit(25);
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
