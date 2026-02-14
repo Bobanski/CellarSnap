@@ -17,6 +17,7 @@ type FriendStatus = "none" | "request_sent" | "request_received" | "friends";
 type RelationshipPayload = {
   friend_status?: FriendStatus;
   incoming_request_id?: string | null;
+  outgoing_request_id?: string | null;
   friend_request_id?: string | null;
   error?: string;
 };
@@ -35,6 +36,8 @@ export default function FriendProfilePage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>("none");
   const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
+  const [outgoingRequestId, setOutgoingRequestId] = useState<string | null>(null);
+  const [friendRequestId, setFriendRequestId] = useState<string | null>(null);
   const [confirmingUnfriend, setConfirmingUnfriend] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [friendActionError, setFriendActionError] = useState<string | null>(null);
@@ -53,6 +56,8 @@ export default function FriendProfilePage() {
 
     setFriendStatus(nextStatus);
     setIncomingRequestId(payload.incoming_request_id ?? null);
+    setOutgoingRequestId(payload.outgoing_request_id ?? null);
+    setFriendRequestId(payload.friend_request_id ?? null);
     setConfirmingUnfriend(false);
     return true;
   };
@@ -108,6 +113,8 @@ export default function FriendProfilePage() {
         setTaggedEntries(taggedData.entries ?? []);
         setFriendStatus(profileData.profile?.friend_status ?? "none");
         setIncomingRequestId(profileData.profile?.incoming_request_id ?? null);
+        setOutgoingRequestId(profileData.profile?.outgoing_request_id ?? null);
+        setFriendRequestId(profileData.profile?.friend_request_id ?? null);
 
         setLoading(false);
       }
@@ -185,22 +192,71 @@ export default function FriendProfilePage() {
     setFriendActionLoading(true);
     setFriendActionError(null);
     try {
-      const response = await fetch(`/api/users/${userId}/follow`, {
-        method: "DELETE",
-      });
-      const payload = (await response.json().catch(() => ({}))) as RelationshipPayload;
+      // Prefer deleting the specific accepted friend request when we have its ID.
+      if (friendRequestId) {
+        const response = await fetch(`/api/friends/requests/${friendRequestId}`, {
+          method: "DELETE",
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          success?: boolean;
+          error?: string;
+        };
+        if (!response.ok) {
+          setFriendActionError(payload.error ?? "Unable to remove friend.");
+          return;
+        }
+        setFriendStatus("none");
+        setIncomingRequestId(null);
+        setOutgoingRequestId(null);
+        setFriendRequestId(null);
+        setConfirmingUnfriend(false);
+        return;
+      }
 
+      // Fallback: delete relationship by user id.
+      const response = await fetch(`/api/users/${userId}/follow`, { method: "DELETE" });
+      const payload = (await response.json().catch(() => ({}))) as RelationshipPayload;
       if (!response.ok) {
         setFriendActionError(payload.error ?? "Unable to remove friend.");
         return;
       }
-
       const applied = applyRelationshipPayload(payload);
       if (!applied || payload.friend_status !== "none") {
         setFriendActionError("Friend status did not update as expected.");
       }
     } catch {
       setFriendActionError("Unable to remove friend.");
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  const cancelOutgoingRequest = async () => {
+    if (friendActionLoading || !outgoingRequestId) {
+      return;
+    }
+
+    setFriendActionLoading(true);
+    setFriendActionError(null);
+    try {
+      const response = await fetch(`/api/friends/requests/${outgoingRequestId}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!response.ok) {
+        setFriendActionError(payload.error ?? "Unable to cancel friend request.");
+        return;
+      }
+      setFriendStatus("none");
+      setIncomingRequestId(null);
+      setOutgoingRequestId(null);
+      setFriendRequestId(null);
+      setConfirmingUnfriend(false);
+    } catch {
+      setFriendActionError("Unable to cancel friend request.");
     } finally {
       setFriendActionLoading(false);
     }
@@ -352,9 +408,19 @@ export default function FriendProfilePage() {
                     </div>
                   )
                 ) : friendStatus === "request_sent" ? (
-                  <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
-                    Request sent
-                  </span>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
+                      Request sent
+                    </span>
+                    <button
+                      type="button"
+                      disabled={friendActionLoading || !outgoingRequestId}
+                      onClick={cancelOutgoingRequest}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                    >
+                      {friendActionLoading ? "Cancelling..." : "Cancel"}
+                    </button>
+                  </div>
                 ) : friendStatus === "request_received" ? (
                   <button
                     type="button"
