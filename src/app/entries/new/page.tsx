@@ -1157,7 +1157,12 @@ export default function NewEntryPage() {
                 wine.label_anchor,
                 i
               );
-              await uploadPhotos(entryId, "label", [{ file: thumbnail }]);
+              const uploads: { file: File }[] = [{ file: thumbnail }];
+              // Also include the full lineup photo so each entry has the context shot.
+              if (thumbnail !== sourcePhoto.file) {
+                uploads.push({ file: sourcePhoto.file });
+              }
+              await uploadPhotos(entryId, "label", uploads);
             } catch {
               const rolledBack = await rollbackCreatedEntry(entryId);
               return { entryId: null, rollbackFailed: !rolledBack };
@@ -1803,7 +1808,172 @@ export default function NewEntryPage() {
           {/* Hide single-bottle form fields when lineup mode is active */}
           {lineupWines.length === 0 && !lineupCreating ? (
           <>
-          {/* Wine details is intentionally first in the form flow */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">
+                    Place photo (optional)
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    Add a photo of where you enjoyed this wine.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60"
+                  onClick={() => placeInputRef.current?.click()}
+                  disabled={placePhotos.length >= MAX_PHOTOS}
+                >
+                  Upload
+                </button>
+              </div>
+              <input
+                ref={placeInputRef}
+                id="place-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  if (!event.target.files) return;
+                  addPhotos("place", event.target.files);
+                  event.target.value = "";
+                }}
+              />
+              {placePhotos.length > 0 ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {placePhotos.map((photo, index) => (
+                    <div
+                      key={photo.preview}
+                      className="group relative overflow-hidden rounded-xl border border-white/10"
+                    >
+                      <img
+                        src={photo.preview}
+                        alt={`Place preview ${index + 1}`}
+                        className="h-24 w-full object-cover"
+                      />
+                      {placePhotos.length > 1 ? (
+                        <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            disabled={index === 0}
+                            onClick={() => movePhoto("place", index, "up")}
+                            aria-label="Move place photo up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            disabled={index === placePhotos.length - 1}
+                            onClick={() => movePhoto("place", index, "down")}
+                            aria-label="Move place photo down"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                        aria-label="Remove place photo"
+                        onClick={() => removePhoto("place", index)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-zinc-500">No place photo yet.</p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">
+                    Pairing photo (optional)
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    Capture the dish or pairing you enjoyed.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60"
+                  onClick={() => pairingInputRef.current?.click()}
+                  disabled={pairingPhotos.length >= MAX_PHOTOS}
+                >
+                  Upload
+                </button>
+              </div>
+              <input
+                ref={pairingInputRef}
+                id="pairing-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  if (!event.target.files) return;
+                  addPhotos("pairing", event.target.files);
+                  event.target.value = "";
+                }}
+              />
+              {pairingPhotos.length > 0 ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {pairingPhotos.map((photo, index) => (
+                    <div
+                      key={photo.preview}
+                      className="group relative overflow-hidden rounded-xl border border-white/10"
+                    >
+                      <img
+                        src={photo.preview}
+                        alt={`Pairing preview ${index + 1}`}
+                        className="h-24 w-full object-cover"
+                      />
+                      {pairingPhotos.length > 1 ? (
+                        <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            disabled={index === 0}
+                            onClick={() => movePhoto("pairing", index, "up")}
+                            aria-label="Move pairing photo up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            disabled={index === pairingPhotos.length - 1}
+                            onClick={() => movePhoto("pairing", index, "down")}
+                            aria-label="Move pairing photo down"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                        aria-label="Remove pairing photo"
+                        onClick={() => removePhoto("pairing", index)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-zinc-500">No pairing photo yet.</p>
+              )}
+            </div>
+          </div>
+
           <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
             <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
               Wine details
@@ -2133,163 +2303,6 @@ export default function NewEntryPage() {
                   />
                 )}
               />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <label className="text-sm font-medium text-zinc-200">
-                Place photo (optional)
-              </label>
-              <p className="text-xs text-zinc-400">
-                Add a photo of the place you enjoyed this wine.
-              </p>
-              <input
-                ref={placeInputRef}
-                id="place-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  if (!event.target.files) return;
-                  addPhotos("place", event.target.files);
-                  event.target.value = "";
-                }}
-              />
-              {placePhotos.length > 0 ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {placePhotos.map((photo, index) => (
-                    <div
-                      key={photo.preview}
-                      className="group relative overflow-hidden rounded-2xl border border-white/10"
-                    >
-                      <img
-                        src={photo.preview}
-                        alt={`Place preview ${index + 1}`}
-                        className="h-32 w-full object-cover"
-                      />
-                    {placePhotos.length > 1 ? (
-                      <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                        <button
-                          type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                          disabled={index === 0}
-                          onClick={() => movePhoto("place", index, "up")}
-                          aria-label="Move place photo up"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                          disabled={index === placePhotos.length - 1}
-                          onClick={() => movePhoto("place", index, "down")}
-                          aria-label="Move place photo down"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    ) : null}
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
-                        aria-label="Remove place photo"
-                        onClick={() => removePhoto("place", index)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                onClick={() => placeInputRef.current?.click()}
-                disabled={placePhotos.length >= MAX_PHOTOS}
-              >
-                {placePhotos.length >= MAX_PHOTOS
-                  ? "Max photos reached"
-                  : "Upload image"}
-              </button>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <label className="text-sm font-medium text-zinc-200">
-                Pairing photo (optional)
-              </label>
-              <p className="text-xs text-zinc-400">
-                Capture the dish or pairing you enjoyed.
-              </p>
-              <input
-                ref={pairingInputRef}
-                id="pairing-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  if (!event.target.files) return;
-                  addPhotos("pairing", event.target.files);
-                  event.target.value = "";
-                }}
-              />
-              {pairingPhotos.length > 0 ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {pairingPhotos.map((photo, index) => (
-                    <div
-                      key={photo.preview}
-                      className="group relative overflow-hidden rounded-2xl border border-white/10"
-                    >
-                      <img
-                        src={photo.preview}
-                        alt={`Pairing preview ${index + 1}`}
-                        className="h-32 w-full object-cover"
-                      />
-                    {pairingPhotos.length > 1 ? (
-                      <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                        <button
-                          type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                          disabled={index === 0}
-                          onClick={() => movePhoto("pairing", index, "up")}
-                          aria-label="Move pairing photo up"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                          disabled={index === pairingPhotos.length - 1}
-                          onClick={() => movePhoto("pairing", index, "down")}
-                          aria-label="Move pairing photo down"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    ) : null}
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
-                        aria-label="Remove pairing photo"
-                        onClick={() => removePhoto("pairing", index)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                onClick={() => pairingInputRef.current?.click()}
-                disabled={pairingPhotos.length >= MAX_PHOTOS}
-              >
-                {pairingPhotos.length >= MAX_PHOTOS
-                  ? "Max photos reached"
-                  : "Upload image"}
-              </button>
             </div>
           </div>
 

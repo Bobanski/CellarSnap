@@ -145,9 +145,10 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Shared tastings are not available yet. Run supabase/sql/025_shared_tastings.sql and try again.",
+            "Shared tastings are temporarily unavailable. Please try again later. (SHARED_TASTINGS_UNAVAILABLE)",
+          code: "SHARED_TASTINGS_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     return NextResponse.json({ error: existing.error.message }, { status: 500 });
@@ -268,9 +269,10 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Shared tastings are not available yet. Run supabase/sql/025_shared_tastings.sql and try again.",
+            "Shared tastings are temporarily unavailable. Please try again later. (SHARED_TASTINGS_UNAVAILABLE)",
+          code: "SHARED_TASTINGS_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 

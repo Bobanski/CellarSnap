@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isMissingDbTableError } from "@/lib/supabase/errors";
 
 type GrapeOption = {
   id: string;
@@ -77,13 +78,14 @@ export async function GET(request: Request) {
     .limit(limit);
 
   if (byNameError) {
-    if (byNameError.message.includes("grape_varieties")) {
+    if (isMissingDbTableError(byNameError, "grape_varieties")) {
       return NextResponse.json(
         {
           error:
-            "Primary grape metadata is not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
+            "Primary grape metadata is temporarily unavailable. Please try again later. (PRIMARY_GRAPES_UNAVAILABLE)",
+          code: "PRIMARY_GRAPES_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 
@@ -97,13 +99,14 @@ export async function GET(request: Request) {
     .limit(limit);
 
   if (aliasError) {
-    if (aliasError.message.includes("grape_aliases")) {
+    if (isMissingDbTableError(aliasError, "grape_aliases")) {
       return NextResponse.json(
         {
           error:
-            "Primary grape metadata is not available yet. Run supabase/sql/019_entry_classification_and_primary_grapes.sql and try again.",
+            "Primary grape metadata is temporarily unavailable. Please try again later. (PRIMARY_GRAPES_UNAVAILABLE)",
+          code: "PRIMARY_GRAPES_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 

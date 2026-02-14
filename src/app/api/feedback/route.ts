@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
+import { isMissingDbTableError } from "@/lib/supabase/errors";
 
 const feedbackSchema = z.object({
   category: z.enum(["bug", "idea", "ux", "other"]),
@@ -90,16 +91,30 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    if (error.message.includes("launch_feedback")) {
+    if (isMissingDbTableError(error, "launch_feedback")) {
       return NextResponse.json(
         {
           error:
-            "Feedback table is not available yet. Run supabase/sql/021_feedback.sql and try again.",
+            "Feedback is temporarily unavailable. Please try again later. (FEEDBACK_UNAVAILABLE)",
+          code: "FEEDBACK_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Feedback submission failed.", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Unable to submit feedback right now. Please try again. (FEEDBACK_SUBMIT_FAILED)",
+        code: "FEEDBACK_SUBMIT_FAILED",
+      },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import {
   ACIDITY_LEVELS,
   ALCOHOL_LEVELS,
@@ -482,7 +483,7 @@ export async function POST(request: Request) {
 
   const insertPayloadToApply: Record<string, unknown> = { ...insertPayload };
   let data: ({ id: string } & Record<string, unknown>) | null = null;
-  let error: { message: string } | null = null;
+  let error: { message: string; code?: string | null } | null = null;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const insertAttempt = await supabase
@@ -512,13 +513,14 @@ export async function POST(request: Request) {
   }
 
   if (error) {
-    if (error.message.includes("advanced_notes")) {
+    if (isMissingDbColumnError(error, "advanced_notes")) {
       return NextResponse.json(
         {
           error:
-            "Advanced notes are not available yet. Run supabase/sql/013_advanced_notes.sql and try again.",
+            "Advanced notes are temporarily unavailable. Please try again later. (ADVANCED_NOTES_UNAVAILABLE)",
+          code: "ADVANCED_NOTES_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     if (error.message.includes("wine_entries_price_source_requires_price_check")) {
@@ -531,17 +533,18 @@ export async function POST(request: Request) {
       );
     }
     if (
-      error.message.includes("price_paid") ||
-      error.message.includes("price_paid_currency") ||
-      error.message.includes("price_paid_source") ||
-      error.message.includes("qpr_level")
+      isMissingDbColumnError(error, "price_paid") ||
+      isMissingDbColumnError(error, "price_paid_currency") ||
+      isMissingDbColumnError(error, "price_paid_source") ||
+      isMissingDbColumnError(error, "qpr_level")
     ) {
       return NextResponse.json(
         {
           error:
-            "Entry pricing and QPR fields are not available yet. Run supabase/sql/016_entry_pricing_qpr.sql and supabase/sql/017_entry_price_currency.sql and try again.",
+            "Entry pricing and QPR are temporarily unavailable. Please try again later. (ENTRY_PRICING_UNAVAILABLE)",
+          code: "ENTRY_PRICING_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     return NextResponse.json({ error: error.message }, { status: 500 });

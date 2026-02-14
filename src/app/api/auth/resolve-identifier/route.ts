@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/validation/phone";
+import { isMissingDbFunctionError } from "@/lib/supabase/errors";
 
 const schema = z.object({
   identifier: z.string().trim().min(1),
@@ -71,13 +72,14 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      if (error.message.includes("get_email_for_phone")) {
+      if (isMissingDbFunctionError(error, "get_email_for_phone")) {
         return NextResponse.json(
           {
             error:
-              "Phone login is not available yet. Run supabase/sql/023_phone_login.sql and supabase/sql/024_auth_identifier_helpers.sql and try again.",
+              "Phone login is temporarily unavailable. Please try again later. (PHONE_LOGIN_UNAVAILABLE)",
+            code: "PHONE_LOGIN_UNAVAILABLE",
           },
-          { status: 500 }
+          { status: 503 }
         );
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -103,13 +105,14 @@ export async function POST(request: Request) {
     );
 
     if (phoneError) {
-      if (phoneError.message.includes("get_phone_for_email")) {
+      if (isMissingDbFunctionError(phoneError, "get_phone_for_email")) {
         return NextResponse.json(
           {
             error:
-              "Identifier resolution is not available yet. Run supabase/sql/024_auth_identifier_helpers.sql and try again.",
+              "Identifier resolution is temporarily unavailable. Please try again later. (IDENTIFIER_RESOLUTION_UNAVAILABLE)",
+            code: "IDENTIFIER_RESOLUTION_UNAVAILABLE",
           },
-          { status: 500 }
+          { status: 503 }
         );
       }
       return NextResponse.json({ error: phoneError.message }, { status: 500 });
@@ -129,13 +132,14 @@ export async function POST(request: Request) {
   );
 
   if (phoneError) {
-    if (phoneError.message.includes("get_phone_for_username")) {
+    if (isMissingDbFunctionError(phoneError, "get_phone_for_username")) {
       return NextResponse.json(
         {
           error:
-            "Identifier resolution is not available yet. Run supabase/sql/024_auth_identifier_helpers.sql and try again.",
+            "Identifier resolution is temporarily unavailable. Please try again later. (IDENTIFIER_RESOLUTION_UNAVAILABLE)",
+          code: "IDENTIFIER_RESOLUTION_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     return NextResponse.json({ error: phoneError.message }, { status: 500 });
@@ -149,13 +153,14 @@ export async function POST(request: Request) {
   );
 
   if (emailError) {
-    if (emailError.message.includes("get_email_for_username")) {
+    if (isMissingDbFunctionError(emailError, "get_email_for_username")) {
       return NextResponse.json(
         {
           error:
-            "Username login is not available yet. Run supabase/sql/008_username_login.sql and try again.",
+            "Username login is temporarily unavailable. Please try again later. (USERNAME_LOGIN_UNAVAILABLE)",
+          code: "USERNAME_LOGIN_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     return NextResponse.json({ error: emailError.message }, { status: 500 });

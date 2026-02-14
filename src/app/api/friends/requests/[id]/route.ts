@@ -85,9 +85,10 @@ export async function DELETE(
       return NextResponse.json(
         {
           error:
-            "Friend removal/cancel requires delete permissions on friend_requests. Run the Supabase migration `supabase/sql/010_friend_cancel_unfriend.sql` to add the delete policy, then retry.",
+            "Friend removal is temporarily unavailable. Please try again later. (FRIEND_REQUEST_DELETE_UNAVAILABLE)",
+          code: "FRIEND_REQUEST_DELETE_UNAVAILABLE",
         },
-        { status: 403 }
+        { status: 503 }
       );
     }
     return NextResponse.json({ error: deleteError.message }, { status: 500 });

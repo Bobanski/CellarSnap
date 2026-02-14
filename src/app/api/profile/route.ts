@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MAX_LENGTH,
@@ -455,13 +456,14 @@ export async function PATCH(request: Request) {
         .maybeSingle();
 
       if (phoneLookup.error) {
-        if (hasMissingPhoneColumn(phoneLookup.error.message)) {
+        if (isMissingDbColumnError(phoneLookup.error, "phone")) {
           return NextResponse.json(
             {
               error:
-                "Phone profile support is not available yet. Run supabase/sql/023_phone_login.sql and try again.",
+                "Phone profile support is temporarily unavailable. Please try again later. (PHONE_PROFILE_UNAVAILABLE)",
+              code: "PHONE_PROFILE_UNAVAILABLE",
             },
-            { status: 500 }
+            { status: 503 }
           );
         }
         return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isMissingDbTableError } from "@/lib/supabase/errors";
 
 const responseSchema = z.enum(["more", "less", "same_or_not_sure"]);
 
@@ -93,15 +94,18 @@ export async function POST(
 
   if (error || !data) {
     if (
-      error?.message.includes("entry_comparison_feedback") ||
-      error?.message.includes("entry_comparison_response")
+      (error && isMissingDbTableError(error, "entry_comparison_feedback")) ||
+      (typeof error?.message === "string" &&
+        error.message.toLowerCase().includes("entry_comparison_response") &&
+        error.message.toLowerCase().includes("does not exist"))
     ) {
       return NextResponse.json(
         {
           error:
-            "Entry comparison feedback is not available yet. Run supabase/sql/018_entry_comparison_feedback.sql and try again.",
+            "Entry comparison feedback is temporarily unavailable. Please try again later. (ENTRY_COMPARISON_UNAVAILABLE)",
+          code: "ENTRY_COMPARISON_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     if (error?.code === "23505") {

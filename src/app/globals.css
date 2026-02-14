@@ -62,9 +62,17 @@ body {
   color: var(--accent-soft-text);
 }
 
-/* Sort dropdown options - black text */
-select option {
-  color: rgb(24 24 27);
+/* Native <select> dropdown menus are rendered by the OS and can look wildly
+   different (especially on Windows). Keep the option list readable and aligned
+   with the app's dark UI. */
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: rgb(9 9 11);
+  color: rgb(244 244 245);
 }
 
 /* Custom select arrow to adjust right padding */

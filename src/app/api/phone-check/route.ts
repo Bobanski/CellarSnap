@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import { normalizePhone } from "@/lib/validation/phone";
+import { isMissingDbFunctionError } from "@/lib/supabase/errors";
 
 const schema = z.object({
   phone: z.string().trim().min(1),
@@ -49,13 +50,14 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    if (error.message.includes("is_phone_available")) {
+    if (isMissingDbFunctionError(error, "is_phone_available")) {
       return NextResponse.json(
         {
           error:
-            "Phone checks are not available yet. Run supabase/sql/023_phone_login.sql and try again.",
+            "Phone checks are temporarily unavailable. Please try again later. (PHONE_CHECK_UNAVAILABLE)",
+          code: "PHONE_CHECK_UNAVAILABLE",
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
