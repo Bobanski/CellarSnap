@@ -701,7 +701,7 @@ export default function EntryDetailPage() {
                     href={`/entries/${addToLogEntryId}/edit`}
                     className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-white/30"
                   >
-                    Add my notes
+                    Edit in my cellar
                   </Link>
                 </div>
               </div>
@@ -747,6 +747,7 @@ export default function EntryDetailPage() {
 
                         if (typeof payload.entry_id === "string") {
                           setAddToLogEntryId(payload.entry_id);
+                          router.push(`/entries/${payload.entry_id}/edit`);
                         }
                         setAddToLogMessage(
                           payload.already_exists

@@ -36,6 +36,7 @@ export async function GET(request: Request) {
     .from("wine_notifications")
     .select("id, entry_id, actor_id, created_at, seen_at")
     .eq("user_id", user.id)
+    .is("seen_at", null)
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
     .select("id, requester_id, created_at, seen_at, status")
     .eq("recipient_id", user.id)
     .eq("status", "pending")
+    .is("seen_at", null)
     .order("created_at", { ascending: false })
     .limit(10);
 

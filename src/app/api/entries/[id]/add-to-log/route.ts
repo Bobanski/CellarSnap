@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
 
@@ -39,6 +40,10 @@ function isMissingTastingColumns(error: string) {
     error.includes("column") ||
     error.includes("schema")
   );
+}
+
+function isLegacyPendingPath(path: string | null | undefined) {
+  return !path || path === "pending";
 }
 
 export async function POST(
@@ -149,14 +154,26 @@ export async function POST(
   }
 
   if (existing.data?.id) {
+    // Best-effort: mark the tag notification as handled so it doesn't keep showing.
+    try {
+      await supabase
+        .from("wine_notifications")
+        .update({ seen_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("entry_id", rootEntry.id)
+        .eq("type", "tagged")
+        .is("seen_at", null);
+    } catch {
+      // Ignore notification update failures.
+    }
     return NextResponse.json({ entry_id: existing.data.id, already_exists: true });
   }
 
-  // Create a private (non-feed) copy for the tagged user.
+  // Create a friends-visible copy for the tagged user.
   const insertPayload: Record<string, unknown> = {
     user_id: user.id,
     root_entry_id: rootEntry.id,
-    is_feed_visible: false,
+    is_feed_visible: true,
     wine_name: rootEntry.wine_name ?? null,
     producer: rootEntry.producer ?? null,
     vintage: rootEntry.vintage ?? null,
@@ -176,10 +193,12 @@ export async function POST(
     location_text: rootEntry.location_text ?? null,
     consumed_at: rootEntry.consumed_at ?? null,
     tasted_with_user_ids: [],
-    label_image_path: rootEntry.label_image_path ?? null,
-    place_image_path: rootEntry.place_image_path ?? null,
-    pairing_image_path: rootEntry.pairing_image_path ?? null,
-    entry_privacy: "private",
+    // We'll copy photos into this user's storage namespace after insert.
+    label_image_path: null,
+    place_image_path: null,
+    pairing_image_path: null,
+    // Friends by default so the tagged user's circle can see their version.
+    entry_privacy: "friends",
     label_photo_privacy: null,
     place_photo_privacy: null,
   };
@@ -246,8 +265,26 @@ export async function POST(
     );
   }
 
-  // Copy entry photos (if the schema exists).
+  // Mark the tag notification as handled for this user (best-effort).
   try {
+    await supabase
+      .from("wine_notifications")
+      .update({ seen_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .eq("entry_id", rootEntry.id)
+      .eq("type", "tagged")
+      .is("seen_at", null);
+  } catch {
+    // Ignore notification update failures.
+  }
+
+  // Copy entry photos into the new entry's namespace so the user's friends can view them.
+  try {
+    type PhotoType = "label" | "place" | "pairing";
+    type SourcePhoto = { type: PhotoType; path: string; position: number };
+    const sourcePhotos: SourcePhoto[] = [];
+
+    // Prefer the modern entry_photos table, but fall back to legacy photo paths if needed.
     const { data: photoRows } = await supabase
       .from("entry_photos")
       .select("type, path, position")
@@ -255,18 +292,98 @@ export async function POST(
       .order("position", { ascending: true })
       .order("created_at", { ascending: true });
 
-    const photosToInsert = (photoRows ?? [])
-      .filter((row) => row.type && row.path)
-      .map((row) => ({
-        entry_id: insertedId,
+    (photoRows ?? []).forEach((row) => {
+      if (row.type !== "label" && row.type !== "place" && row.type !== "pairing") {
+        return;
+      }
+      const path = row.path;
+      if (isLegacyPendingPath(path)) return;
+      sourcePhotos.push({
         type: row.type,
-        path: row.path,
+        path,
         position: row.position ?? 0,
-      }));
+      });
+    });
 
-    if (photosToInsert.length > 0) {
-      await supabase.from("entry_photos").insert(photosToInsert);
+    const hasType = (type: PhotoType) =>
+      sourcePhotos.some((photo) => photo.type === type);
+
+    if (!hasType("label") && !isLegacyPendingPath(rootEntry.label_image_path)) {
+      sourcePhotos.push({
+        type: "label",
+        path: rootEntry.label_image_path as string,
+        position: 0,
+      });
     }
+    if (!hasType("place") && !isLegacyPendingPath(rootEntry.place_image_path)) {
+      sourcePhotos.push({
+        type: "place",
+        path: rootEntry.place_image_path as string,
+        position: 0,
+      });
+    }
+    if (!hasType("pairing") && !isLegacyPendingPath(rootEntry.pairing_image_path)) {
+      sourcePhotos.push({
+        type: "pairing",
+        path: rootEntry.pairing_image_path as string,
+        position: 0,
+      });
+    }
+
+    const copiedPhotos: { id: string; type: PhotoType; path: string; position: number }[] = [];
+
+    for (const sourcePhoto of sourcePhotos) {
+      const newPhotoId = randomUUID();
+      const newPath = `${user.id}/${insertedId}/${sourcePhoto.type}/${newPhotoId}.jpg`;
+
+      const { error: copyError } = await supabase.storage
+        .from("wine-photos")
+        .copy(sourcePhoto.path, newPath);
+
+      if (copyError) {
+        // Skip photos we can't copy (e.g., missing object).
+        continue;
+      }
+
+      copiedPhotos.push({
+        id: newPhotoId,
+        type: sourcePhoto.type,
+        path: newPath,
+        position: sourcePhoto.position ?? 0,
+      });
+    }
+
+    if (copiedPhotos.length > 0) {
+      await supabase.from("entry_photos").insert(
+        copiedPhotos.map((photo) => ({
+          id: photo.id,
+          entry_id: insertedId,
+          type: photo.type,
+          path: photo.path,
+          position: photo.position,
+        }))
+      );
+
+      // Best-effort legacy field hydration for pages that still rely on *_image_path.
+      const firstByType = (type: PhotoType) =>
+        copiedPhotos
+          .filter((photo) => photo.type === type)
+          .sort((a, b) => a.position - b.position)[0]?.path ?? null;
+
+      const labelPath = firstByType("label");
+      const placePath = firstByType("place");
+      const pairingPath = firstByType("pairing");
+
+      const legacyUpdates: Record<string, string | null> = {};
+      if (labelPath) legacyUpdates.label_image_path = labelPath;
+      if (placePath) legacyUpdates.place_image_path = placePath;
+      if (pairingPath) legacyUpdates.pairing_image_path = pairingPath;
+
+      if (Object.keys(legacyUpdates).length > 0) {
+        await supabase.from("wine_entries").update(legacyUpdates).eq("id", insertedId);
+      }
+    }
+
   } catch {
     // Ignore photo copy failures (non-critical for log ownership).
   }

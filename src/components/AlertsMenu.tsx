@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type TagNotification = {
   id: string;
@@ -24,18 +24,19 @@ type FriendRequestNotification = {
 type NotificationItem = TagNotification | FriendRequestNotification;
 
 export default function AlertsMenu() {
+  const router = useRouter();
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasFetchedItems, setHasFetchedItems] = useState(false);
+  const [addToCellarId, setAddToCellarId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const open = openPathname === pathname;
   const toggleOpen = () => {
     const nextOpen = !open;
     if (nextOpen) {
-      setCount(0);
       setOpenPathname(pathname);
       return;
     }
@@ -67,23 +68,11 @@ export default function AlertsMenu() {
   useEffect(() => {
     if (!open) return;
 
-    // Mark seen in background whenever the menu opens
-    const markSeen = () => {
-      fetch("/api/notifications/mark-seen", { method: "POST" }).catch(
-        () => null
-      );
-    };
-
-    if (hasFetchedItems) {
-      // Already loaded; just mark as seen
-      markSeen();
-      return;
-    }
-
     let isMounted = true;
 
     const loadItems = async () => {
       setLoading(true);
+      setActionError(null);
       const response = await fetch("/api/notifications", {
         cache: "no-store",
       });
@@ -94,18 +83,16 @@ export default function AlertsMenu() {
       const data = await response.json();
       if (isMounted) {
         setItems(data.notifications ?? []);
+        setCount(data.unseen_count ?? 0);
         setLoading(false);
-        setHasFetchedItems(true);
       }
-
-      markSeen();
     };
 
     loadItems();
     return () => {
       isMounted = false;
     };
-  }, [open, hasFetchedItems]);
+  }, [open]);
 
   // Clear badge when menu opens (derived from open state, avoids setState in effect body)
   const displayCount = open ? 0 : count;
@@ -196,24 +183,88 @@ export default function AlertsMenu() {
                     key={item.id}
                     className="border-b border-white/5 last:border-none"
                   >
-                    <Link
-                      href={`/entries/${item.entry_id}`}
-                      className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
-                      onClick={() => setOpenPathname(null)}
-                    >
-                      <span className="accent-text font-semibold">
-                        {item.actor_name}
-                      </span>{" "}
-                      tagged you in{" "}
-                      <span className="text-zinc-100">
-                        {item.wine_name || "a wine"}
-                      </span>
-                    </Link>
+                    <div className="px-4 py-3 text-sm text-zinc-200">
+                      <div className="text-sm text-zinc-200">
+                        <span className="accent-text font-semibold">
+                          {item.actor_name}
+                        </span>{" "}
+                        tagged you in{" "}
+                        <span className="text-zinc-100">
+                          {item.wine_name || "a wine"}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/entries/${item.entry_id}`}
+                          className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-zinc-200 transition hover:border-white/30"
+                          onClick={() => setOpenPathname(null)}
+                        >
+                          View
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={addToCellarId === item.id}
+                          onClick={async () => {
+                            setActionError(null);
+                            setAddToCellarId(item.id);
+                            try {
+                              const response = await fetch(
+                                `/api/entries/${item.entry_id}/add-to-log`,
+                                { method: "POST" }
+                              );
+                              const payload = await response
+                                .json()
+                                .catch(() => ({}));
+                              if (!response.ok) {
+                                setActionError(
+                                  payload.error ??
+                                    "Unable to add this tasting right now."
+                                );
+                                return;
+                              }
+                              const nextEntryId =
+                                typeof payload.entry_id === "string"
+                                  ? payload.entry_id
+                                  : null;
+                              if (!nextEntryId) {
+                                setActionError(
+                                  "Unable to add this tasting right now."
+                                );
+                                return;
+                              }
+
+                              setItems((prev) =>
+                                prev.filter((row) => row.id !== item.id)
+                              );
+                              setCount((prev) => Math.max(0, prev - 1));
+                              setOpenPathname(null);
+                              router.push(`/entries/${nextEntryId}/edit`);
+                            } catch {
+                              setActionError(
+                                "Unable to add this tasting right now."
+                              );
+                            } finally {
+                              setAddToCellarId(null);
+                            }
+                          }}
+                          className="rounded-full bg-amber-400 px-3 py-1 text-[11px] font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {addToCellarId === item.id
+                            ? "Adding..."
+                            : "Add to my cellar"}
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 );
               })}
             </ul>
           )}
+          {actionError ? (
+            <div className="border-t border-white/10 px-4 py-3 text-xs text-rose-200">
+              {actionError}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -76,6 +76,29 @@ export async function GET(request: Request) {
     "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
 
+  const dedupeEntries = (rows: FeedEntryRow[]) => {
+    const byKey = new Map<string, FeedEntryRow>();
+
+    rows.forEach((entry) => {
+      const key = entry.root_entry_id ?? entry.id;
+      const existing = byKey.get(key);
+      if (!existing) {
+        byKey.set(key, entry);
+        return;
+      }
+
+      const existingIsCanonical = !existing.root_entry_id;
+      const nextIsCanonical = !entry.root_entry_id;
+      if (nextIsCanonical && !existingIsCanonical) {
+        byKey.set(key, entry);
+      }
+    });
+
+    return Array.from(byKey.values()).sort((a, b) =>
+      b.created_at.localeCompare(a.created_at)
+    );
+  };
+
   const buildEntriesQuery = ({
     fields,
     withTastingSupport,
@@ -86,12 +109,9 @@ export async function GET(request: Request) {
     let query = supabase.from("wine_entries").select(fields);
 
     if (scope === "friends") {
-      const friendSet = friendIds.join(",");
-      // Include entries from friends, plus public entries where friends were tagged.
       query = query
-        .or(
-          `and(user_id.in.(${friendSet}),entry_privacy.in.(public,friends)),and(entry_privacy.eq.public,tasted_with_user_ids.ov.{${friendSet}})`
-        )
+        .in("user_id", friendIds)
+        .in("entry_privacy", ["public", "friends"])
         .neq("user_id", user.id);
     } else {
       query = query
@@ -115,17 +135,21 @@ export async function GET(request: Request) {
   }
 
   let entries: FeedEntryRow[] = [];
+  let hasTastingSupport = false;
 
   {
+    const fetchLimit =
+      scope === "friends" ? Math.min(150, limit * 4 + 1) : limit + 1;
     const attempt = await buildEntriesQuery({
       fields: extendedSelectFields,
       withTastingSupport: true,
     })
       .order("created_at", { ascending: false })
-      .limit(limit + 1);
+      .limit(fetchLimit);
 
     if (!attempt.error) {
       entries = (attempt.data ?? []) as unknown as FeedEntryRow[];
+      hasTastingSupport = true;
     } else if (
       attempt.error.message.includes("is_feed_visible") ||
       attempt.error.message.includes("root_entry_id") ||
@@ -137,7 +161,7 @@ export async function GET(request: Request) {
         withTastingSupport: false,
       })
         .order("created_at", { ascending: false })
-        .limit(limit + 1);
+        .limit(fetchLimit);
 
       if (fallback.error) {
         return NextResponse.json({ error: fallback.error.message }, { status: 500 });
@@ -148,8 +172,10 @@ export async function GET(request: Request) {
     }
   }
 
-  const pageEntries = entries && entries.length > limit ? entries.slice(0, limit) : (entries ?? []);
-  const has_more = (entries?.length ?? 0) > limit;
+  const deduped = hasTastingSupport ? dedupeEntries(entries) : entries;
+  const pageEntries =
+    deduped && deduped.length > limit ? deduped.slice(0, limit) : (deduped ?? []);
+  const has_more = (deduped?.length ?? 0) > limit;
   const next_cursor = has_more ? pageEntries[pageEntries.length - 1]?.created_at ?? null : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);

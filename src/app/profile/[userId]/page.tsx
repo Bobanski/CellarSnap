@@ -42,6 +42,8 @@ export default function FriendProfilePage() {
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showAllTaggedEntries, setShowAllTaggedEntries] = useState(false);
 
   const applyRelationshipPayload = (payload: RelationshipPayload) => {
     const nextStatus = payload.friend_status;
@@ -69,6 +71,8 @@ export default function FriendProfilePage() {
       setErrorMessage(null);
       setFriendActionError(null);
       setConfirmingUnfriend(false);
+      setShowAllEntries(false);
+      setShowAllTaggedEntries(false);
 
       const [profileRes, entriesRes, taggedRes, myProfileRes] =
         await Promise.all([
@@ -210,6 +214,12 @@ export default function FriendProfilePage() {
           .filter((value) => value.length > 0)
           .join(" ")
       : "";
+  const displayedTheirEntries = showAllEntries
+    ? theirEntries
+    : theirEntries.slice(0, 10);
+  const displayedTaggedEntries = showAllTaggedEntries
+    ? taggedEntries
+    : taggedEntries.slice(0, 10);
 
   if (loading) {
     return (
@@ -382,7 +392,7 @@ export default function FriendProfilePage() {
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
-              {theirEntries.map((entry) => (
+              {displayedTheirEntries.map((entry) => (
                 <Link
                   key={entry.id}
                   href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
@@ -447,6 +457,17 @@ export default function FriendProfilePage() {
               ))}
             </div>
           )}
+          {theirEntries.length > 10 ? (
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllEntries((prev) => !prev)}
+                className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
+              >
+                {showAllEntries ? "Show fewer entries" : "See all entries"}
+              </button>
+            </div>
+          ) : null}
         </section>
 
         <section className="space-y-4">
@@ -461,7 +482,7 @@ export default function FriendProfilePage() {
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
-              {taggedEntries.map((entry) => (
+              {displayedTaggedEntries.map((entry) => (
                 <Link
                   key={entry.id}
                   href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
@@ -529,6 +550,19 @@ export default function FriendProfilePage() {
               ))}
             </div>
           )}
+          {taggedEntries.length > 10 ? (
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllTaggedEntries((prev) => !prev)}
+                className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
+              >
+                {showAllTaggedEntries
+                  ? "Show fewer tagged entries"
+                  : "See all entries tagged in"}
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
     </div>
