@@ -1599,7 +1599,7 @@ export default function NewEntryPage() {
               }`}
             >
               <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2">
                   <div className="min-w-0">
                     <label
                       className="block text-sm font-medium text-zinc-200"
@@ -1607,23 +1607,50 @@ export default function NewEntryPage() {
                     >
                       Label photo
                     </label>
-                    <span className="mt-1 inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">
+                    <span className="mt-1 inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90 md:hidden">
                       Recommended
                     </span>
                   </div>
-                  {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
+                  <div className="flex items-start justify-end gap-2">
+                    {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/20 text-sm text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 md:hidden"
+                          onClick={() => {
+                            if (labelPhotos.length > 0) {
+                              runAnalysis(labelPhotos.map((p) => p.file));
+                            }
+                          }}
+                          aria-label="Try analyzing label photo again"
+                        >
+                          ↻
+                        </button>
+                        <button
+                          type="button"
+                          className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60 md:inline-flex"
+                          onClick={() => {
+                            if (labelPhotos.length > 0) {
+                              runAnalysis(labelPhotos.map((p) => p.file));
+                            }
+                          }}
+                        >
+                          Try again
+                        </button>
+                      </>
+                    ) : null}
                     <button
                       type="button"
-                      className="self-start rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60"
-                      onClick={() => {
-                        if (labelPhotos.length > 0) {
-                          runAnalysis(labelPhotos.map((p) => p.file));
-                        }
-                      }}
+                      className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
+                      onClick={() => labelInputRef.current?.click()}
+                      disabled={!canAddLabelPhoto}
                     >
-                      Try again
+                      Upload
                     </button>
-                  ) : null}
+                    <span className="hidden rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90 md:inline-flex">
+                      Recommended
+                    </span>
+                  </div>
                   <p className="col-span-2 text-xs text-zinc-400">
                     Bottle photo for auto-fill.
                   </p>
@@ -1642,9 +1669,9 @@ export default function NewEntryPage() {
                   }}
                 />
                 <div
-                  className={`mt-3 grid gap-2 ${
-                    labelTileCount > 1 ? "grid-cols-2" : "grid-cols-1"
-                  }`}
+                  className={`${labelPhotos.length > 0 ? "mt-3" : "mt-0 md:mt-3"} grid gap-2 ${
+                    labelPhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                  } ${labelTileCount > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
                 >
                   {labelPhotos.map((photo, index) => (
                     <div
@@ -1699,7 +1726,7 @@ export default function NewEntryPage() {
                   {canAddLabelPhoto ? (
                     <button
                       type="button"
-                      className="flex h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20"
+                      className="hidden h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20 md:flex"
                       onClick={() => labelInputRef.current?.click()}
                       disabled={!canAddLabelPhoto}
                       aria-label="Upload label photo"
@@ -1860,7 +1887,7 @@ export default function NewEntryPage() {
               {showSingleBottleFields ? (
                 <>
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                    <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2">
                       <div className="min-w-0">
                         <label
                           className="block text-sm font-medium text-zinc-200"
@@ -1868,7 +1895,20 @@ export default function NewEntryPage() {
                         >
                           Place photo
                         </label>
-                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
+                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:hidden">
+                          Optional
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-end gap-2">
+                        <button
+                          type="button"
+                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
+                          onClick={() => placeInputRef.current?.click()}
+                          disabled={!canAddPlacePhoto}
+                        >
+                          Upload
+                        </button>
+                        <span className="hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:inline-flex">
                           Optional
                         </span>
                       </div>
@@ -1890,9 +1930,9 @@ export default function NewEntryPage() {
                       }}
                     />
                     <div
-                      className={`mt-3 grid gap-2 ${
-                        placeTileCount > 1 ? "grid-cols-2" : "grid-cols-1"
-                      }`}
+                      className={`${placePhotos.length > 0 ? "mt-3" : "mt-0 md:mt-3"} grid gap-2 ${
+                        placePhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                      } ${placeTileCount > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
                     >
                       {placePhotos.map((photo, index) => (
                         <div
@@ -1939,7 +1979,7 @@ export default function NewEntryPage() {
                       {canAddPlacePhoto ? (
                         <button
                           type="button"
-                          className="flex h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20"
+                          className="hidden h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20 md:flex"
                           onClick={() => placeInputRef.current?.click()}
                           disabled={!canAddPlacePhoto}
                           aria-label="Upload place photo"
@@ -1964,7 +2004,7 @@ export default function NewEntryPage() {
                   </div>
 
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                    <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2">
                       <div className="min-w-0">
                         <label
                           className="block text-sm font-medium text-zinc-200"
@@ -1972,7 +2012,20 @@ export default function NewEntryPage() {
                         >
                           Pairing photo
                         </label>
-                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
+                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:hidden">
+                          Optional
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-end gap-2">
+                        <button
+                          type="button"
+                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
+                          onClick={() => pairingInputRef.current?.click()}
+                          disabled={!canAddPairingPhoto}
+                        >
+                          Upload
+                        </button>
+                        <span className="hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:inline-flex">
                           Optional
                         </span>
                       </div>
@@ -1994,9 +2047,9 @@ export default function NewEntryPage() {
                       }}
                     />
                     <div
-                      className={`mt-3 grid gap-2 ${
-                        pairingTileCount > 1 ? "grid-cols-2" : "grid-cols-1"
-                      }`}
+                      className={`${pairingPhotos.length > 0 ? "mt-3" : "mt-0 md:mt-3"} grid gap-2 ${
+                        pairingPhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                      } ${pairingTileCount > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
                     >
                       {pairingPhotos.map((photo, index) => (
                         <div
@@ -2047,7 +2100,7 @@ export default function NewEntryPage() {
                       {canAddPairingPhoto ? (
                         <button
                           type="button"
-                          className="flex h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20"
+                          className="hidden h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20 md:flex"
                           onClick={() => pairingInputRef.current?.click()}
                           disabled={!canAddPairingPhoto}
                           aria-label="Upload pairing photo"
