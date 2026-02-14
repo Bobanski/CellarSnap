@@ -1652,7 +1652,7 @@ export default function NewEntryPage() {
                     </span>
                   </div>
                   <p className="col-span-2 text-xs text-zinc-400">
-                    bottle / lineup photo for auto-fill
+                    Bottle / Lineup photo for auto-fill
                   </p>
                 </div>
                 <input
