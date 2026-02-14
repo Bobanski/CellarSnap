@@ -59,11 +59,21 @@ test.describe("Core happy paths", () => {
     await signOut(page);
 
     await login(page, userBIdentifier, userBPassword);
-    await page.goto(`/profile/${userAId}`);
+    await page.getByRole("button", { name: "Alerts" }).click();
     await expect(
       page.getByRole("button", { name: "Accept friend request" })
     ).toBeVisible();
+    const acceptResponsePromise = page.waitForResponse((response) => {
+      if (response.request().method() !== "POST") return false;
+      const url = response.url();
+      return url.includes("/api/friends/requests/") && url.endsWith("/accept");
+    });
     await page.getByRole("button", { name: "Accept friend request" }).click();
+    const acceptResponse = await acceptResponsePromise;
+    expect(acceptResponse.ok()).toBeTruthy();
+    await page.getByRole("button", { name: "Close alerts" }).click();
+
+    await page.goto(`/profile/${userAId}`);
     await expect(page.getByRole("button", { name: /^Remove$/ })).toBeVisible();
     await signOut(page);
 

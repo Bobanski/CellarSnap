@@ -52,38 +52,10 @@ export default function NavBar({
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [mobileOpenPathname, setMobileOpenPathname] = useState<string | null>(null);
-  const [pendingIncomingCount, setPendingIncomingCount] = useState(0);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const mobileOpen = mobileOpenPathname === pathname;
   const isNewEntryActive = pathname === "/entries/new";
-  const pendingLabel =
-    pendingIncomingCount > 99 ? "99+" : String(pendingIncomingCount);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadPendingIncomingCount = async () => {
-      const response = await fetch("/api/friends/requests/count", {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = await response.json().catch(() => ({}));
-      if (isMounted) {
-        setPendingIncomingCount(data.pending_incoming_count ?? 0);
-      }
-    };
-
-    loadPendingIncomingCount().catch(() => null);
-    const intervalId = window.setInterval(() => {
-      loadPendingIncomingCount().catch(() => null);
-    }, 30000);
-
-    return () => {
-      isMounted = false;
-      window.clearInterval(intervalId);
-    };
-  }, []);
 
   // Close mobile menu on click outside
   useEffect(() => {
@@ -116,21 +88,6 @@ export default function NavBar({
     router.push("/login");
   };
 
-  const renderNavLabel = (label: string, href: string) => {
-    if (href !== "/friends" || pendingIncomingCount <= 0) {
-      return label;
-    }
-
-    return (
-      <span className="inline-flex items-center gap-2">
-        {label}
-        <span className="accent-count-badge inline-flex min-w-[20px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold">
-          {pendingLabel}
-        </span>
-      </span>
-    );
-  };
-
   return (
     <nav ref={menuRef} className="relative border-b border-white/5 pb-6">
       {/* ── Top bar (always visible) ── */}
@@ -151,7 +108,7 @@ export default function NavBar({
                 key={href}
                 className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold"
               >
-                {renderNavLabel(label, href)}
+                {label}
               </span>
             ) : (
               <Link
@@ -159,7 +116,7 @@ export default function NavBar({
                 href={href}
                 className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
               >
-                {renderNavLabel(label, href)}
+                {label}
               </Link>
             );
           })}
@@ -243,11 +200,6 @@ export default function NavBar({
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             )}
-            {pendingIncomingCount > 0 ? (
-              <span className="accent-count-badge absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full px-1 py-0.5 text-[10px] font-bold">
-                {pendingLabel}
-              </span>
-            ) : null}
           </button>
         </div>
       </div>
@@ -268,7 +220,7 @@ export default function NavBar({
                       : "text-zinc-200 hover:bg-white/5"
                   }`}
                 >
-                  {renderNavLabel(label, href)}
+                  {label}
                 </Link>
               );
             })}

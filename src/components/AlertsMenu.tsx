@@ -22,7 +22,18 @@ type FriendRequestNotification = {
   created_at: string;
 };
 
-type NotificationItem = TagNotification | FriendRequestNotification;
+type FriendRequestAcceptedNotification = {
+  id: string;
+  type: "friend_request_accepted";
+  actor_id: string;
+  actor_name: string;
+  created_at: string;
+};
+
+type NotificationItem =
+  | TagNotification
+  | FriendRequestNotification
+  | FriendRequestAcceptedNotification;
 
 export default function AlertsMenu() {
   const router = useRouter();
@@ -37,6 +48,13 @@ export default function AlertsMenu() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const [respondingRequestId, setRespondingRequestId] = useState<string | null>(
+    null
+  );
+  const [respondingRequestAction, setRespondingRequestAction] = useState<
+    "accept" | "decline" | null
+  >(null);
+  const respondingRequestRef = useRef(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const open = openPathname === pathname;
@@ -126,6 +144,8 @@ export default function AlertsMenu() {
         cache: "no-store",
       });
       if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setActionError(payload.error ?? "Unable to load alerts.");
         if (!silent) setLoading(false);
         return;
       }
@@ -247,6 +267,16 @@ export default function AlertsMenu() {
         },
         scheduleRefresh
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "friend_notifications",
+          filter: `user_id=eq.${viewerUserId}`,
+        },
+        scheduleRefresh
+      )
       .subscribe();
 
     return () => {
@@ -268,6 +298,100 @@ export default function AlertsMenu() {
 
     refreshItems().catch(() => null);
   }, [open, refreshItems]);
+
+  const deleteNotification = useCallback(
+    async (notificationId: string) => {
+      if (deletingId) return;
+
+      setActionError(null);
+      setDeletingId(notificationId);
+      try {
+        const response = await fetch(`/api/notifications/${notificationId}`, {
+          method: "DELETE",
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setActionError(payload.error ?? "Unable to delete this alert.");
+          return;
+        }
+
+        setItems((prev) => prev.filter((row) => row.id !== notificationId));
+        setCount((prev) => {
+          const next = Math.max(0, prev - 1);
+          setBadgeBaseline((baselinePrev) => {
+            const nextBaseline = Math.min(baselinePrev, next);
+            if (nextBaseline !== baselinePrev) {
+              persistBadgeBaseline(nextBaseline);
+            }
+            return nextBaseline;
+          });
+          return next;
+        });
+        setConfirmDeleteId(null);
+      } catch {
+        setActionError("Unable to delete this alert.");
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [deletingId, persistBadgeBaseline]
+  );
+
+  const respondToFriendRequest = useCallback(
+    async (requestId: string, action: "accept" | "decline") => {
+      if (respondingRequestRef.current) return;
+
+      respondingRequestRef.current = true;
+      setActionError(null);
+      setRespondingRequestId(requestId);
+      setRespondingRequestAction(action);
+
+      try {
+        const response = await fetch(
+          `/api/friends/requests/${requestId}/${action}`,
+          { method: "POST" }
+        );
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          setActionError(payload.error ?? "Unable to update friend request.");
+          return;
+        }
+
+        const expectedStatus = action === "accept" ? "accepted" : "declined";
+        if (
+          payload.success !== true ||
+          payload.request_id !== requestId ||
+          payload.status !== expectedStatus
+        ) {
+          setActionError("Request state changed unexpectedly. Please refresh.");
+          return;
+        }
+
+        setItems((prev) =>
+          prev.filter((row) => !(row.type === "friend_request" && row.id === requestId))
+        );
+        setCount((prev) => {
+          const next = Math.max(0, prev - 1);
+          setBadgeBaseline((baselinePrev) => {
+            const nextBaseline = Math.min(baselinePrev, next);
+            if (nextBaseline !== baselinePrev) {
+              persistBadgeBaseline(nextBaseline);
+            }
+            return nextBaseline;
+          });
+          return next;
+        });
+      } catch {
+        setActionError("Unable to update friend request.");
+      } finally {
+        respondingRequestRef.current = false;
+        setRespondingRequestId(null);
+        setRespondingRequestAction(null);
+      }
+    },
+    [persistBadgeBaseline]
+  );
 
   const displayCount = open ? 0 : Math.max(0, count - badgeBaseline);
 
@@ -339,21 +463,96 @@ export default function AlertsMenu() {
             <ul className="max-h-72 overflow-y-auto">
               {items.map((item) => {
                 if (item.type === "friend_request") {
+                  const accepting =
+                    respondingRequestId === item.id &&
+                    respondingRequestAction === "accept";
+                  const declining =
+                    respondingRequestId === item.id &&
+                    respondingRequestAction === "decline";
                   return (
                     <li
                       key={item.id}
                       className="border-b border-white/5 last:border-none"
                     >
-                      <Link
-                        href="/friends"
-                        className="block px-4 py-3 text-sm text-zinc-200 hover:bg-white/5"
-                        onClick={() => setOpenPathname(null)}
-                      >
-                        <span className="accent-text font-semibold">
-                          {item.requester_name}
-                        </span>{" "}
-                        sent you a friend request
-                      </Link>
+                      <div className="px-4 py-3 text-sm text-zinc-200 hover:bg-white/5">
+                        <div className="min-w-0">
+                          <Link
+                            href={`/profile/${item.requester_id}`}
+                            className="underline-offset-2 hover:underline hover:text-amber-200"
+                            onClick={() => setOpenPathname(null)}
+                          >
+                            <span className="accent-text font-semibold">
+                              {item.requester_name}
+                            </span>
+                          </Link>{" "}
+                          sent you a friend request
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={respondingRequestId !== null}
+                            onClick={() =>
+                              respondToFriendRequest(item.id, "accept")
+                            }
+                            aria-label="Accept friend request"
+                            className="accent-solid-button rounded-full px-3 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {accepting ? "Accepting..." : "Accept"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={respondingRequestId !== null}
+                            onClick={() =>
+                              respondToFriendRequest(item.id, "decline")
+                            }
+                            aria-label="Decline friend request"
+                            className="rounded-full border border-rose-400/40 px-3 py-1 text-[11px] font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {declining ? "Declining..." : "Decline"}
+                          </button>
+                          <Link
+                            href="/friends"
+                            className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-zinc-200 transition hover:border-white/30"
+                            onClick={() => setOpenPathname(null)}
+                          >
+                            Open
+                          </Link>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                }
+
+                if (item.type === "friend_request_accepted") {
+                  return (
+                    <li
+                      key={item.id}
+                      className="border-b border-white/5 last:border-none"
+                    >
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-zinc-200 hover:bg-white/5">
+                        <Link
+                          href={`/profile/${item.actor_id}`}
+                          className="min-w-0 flex-1 truncate"
+                          onClick={() => {
+                            setOpenPathname(null);
+                            deleteNotification(item.id).catch(() => null);
+                          }}
+                        >
+                          <span className="accent-text font-semibold">
+                            {item.actor_name}
+                          </span>{" "}
+                          accepted your friend request
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={deletingId === item.id}
+                          onClick={() => deleteNotification(item.id)}
+                          aria-label="Dismiss alert"
+                          className="shrink-0 rounded-full border border-white/10 px-2 py-1 text-[10px] font-semibold text-zinc-300 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {deletingId === item.id ? "..." : "x"}
+                        </button>
+                      </div>
                     </li>
                   );
                 }
@@ -378,50 +577,11 @@ export default function AlertsMenu() {
                           type="button"
                           disabled={deletingId === item.id}
                           onClick={async () => {
-                            if (deletingId) return;
-
                             if (confirmDeleteId !== item.id) {
                               setConfirmDeleteId(item.id);
                               return;
                             }
-
-                            setActionError(null);
-                            setDeletingId(item.id);
-                            try {
-                              const response = await fetch(
-                                `/api/notifications/${item.id}`,
-                                { method: "DELETE" }
-                              );
-                              const payload = await response
-                                .json()
-                                .catch(() => ({}));
-                              if (!response.ok) {
-                                setActionError(
-                                  payload.error ?? "Unable to delete this alert."
-                                );
-                                return;
-                              }
-
-                              setItems((prev) =>
-                                prev.filter((row) => row.id !== item.id)
-                              );
-                              setCount((prev) => {
-                                const next = Math.max(0, prev - 1);
-                                setBadgeBaseline((baselinePrev) => {
-                                  const nextBaseline = Math.min(baselinePrev, next);
-                                  if (nextBaseline !== baselinePrev) {
-                                    persistBadgeBaseline(nextBaseline);
-                                  }
-                                  return nextBaseline;
-                                });
-                                return next;
-                              });
-                              setConfirmDeleteId(null);
-                            } catch {
-                              setActionError("Unable to delete this alert.");
-                            } finally {
-                              setDeletingId(null);
-                            }
+                            deleteNotification(item.id).catch(() => null);
                           }}
                           aria-label={
                             confirmDeleteId === item.id
