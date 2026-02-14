@@ -192,7 +192,10 @@ export async function POST(
     advanced_notes: null,
     location_text: rootEntry.location_text ?? null,
     consumed_at: rootEntry.consumed_at ?? null,
-    tasted_with_user_ids: [],
+    // Pre-check the friend who tagged the user (the original author).
+    // The tagged user can remove/add people when editing their copy.
+    tasted_with_user_ids:
+      rootEntry.user_id && rootEntry.user_id !== user.id ? [rootEntry.user_id] : [],
     // We'll copy photos into this user's storage namespace after insert.
     label_image_path: null,
     place_image_path: null,

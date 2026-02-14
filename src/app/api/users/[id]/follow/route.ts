@@ -3,6 +3,15 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFriendRelationship } from "@/lib/friends/relationship";
 
+function looksLikeRlsDeleteError(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("row-level security") ||
+    lower.includes("rls") ||
+    lower.includes("permission denied")
+  );
+}
+
 async function getTargetUserId(paramsPromise: Promise<{ id: string }>) {
   const { id } = await paramsPromise;
   const parsed = z.string().uuid().safeParse(id);
@@ -218,8 +227,19 @@ export async function DELETE(
   ]);
 
   if (outgoingError || incomingError) {
+    const message =
+      outgoingError?.message ?? incomingError?.message ?? "Unable to remove relationship.";
+    if (looksLikeRlsDeleteError(message)) {
+      return NextResponse.json(
+        {
+          error:
+            "Friend removal/cancel requires delete permissions on friend_requests. Run the Supabase migration `supabase/sql/010_friend_cancel_unfriend.sql` to add the delete policy, then retry.",
+        },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
-      { error: outgoingError?.message ?? incomingError?.message ?? "Unable to remove relationship." },
+      { error: message },
       { status: 500 }
     );
   }
