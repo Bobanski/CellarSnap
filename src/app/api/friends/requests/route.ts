@@ -167,47 +167,61 @@ export async function POST(request: Request) {
 
   if (existing) {
     if (existing.status === "declined") {
-      const { data: revived, error: reviveError } = await supabase
+      // Requesters can't update declined rows under our default RLS policy.
+      // Delete any declined request(s) for this pair and recreate a fresh pending one.
+      const { error: deleteDeclinedError } = await supabase
         .from("friend_requests")
-        .update({
-          status: "pending",
-          responded_at: null,
-          seen_at: null,
-        })
-        .eq("id", existing.id)
+        .delete()
         .eq("requester_id", user.id)
-        .select("id, status")
-        .single();
+        .eq("recipient_id", recipientId)
+        .eq("status", "declined");
 
-      if (reviveError) {
-        return NextResponse.json({ error: reviveError.message }, { status: 500 });
+      if (deleteDeclinedError) {
+        return NextResponse.json(
+          { error: deleteDeclinedError.message },
+          { status: 500 }
+        );
+      }
+
+      const recreatedId = crypto.randomUUID();
+      const { error: recreateError } = await supabase
+        .from("friend_requests")
+        .insert({
+          id: recreatedId,
+          requester_id: user.id,
+          recipient_id: recipientId,
+          status: "pending",
+        });
+
+      if (recreateError) {
+        return NextResponse.json({ error: recreateError.message }, { status: 500 });
       }
 
       return NextResponse.json({
-        status: revived.status,
-        request_id: revived.id,
+        status: "pending",
+        request_id: recreatedId,
       });
     }
 
     return NextResponse.json({ status: existing.status, request_id: existing.id });
   }
 
-  const { data: created, error: insertError } = await supabase
+  const createdId = crypto.randomUUID();
+  const { error: insertError } = await supabase
     .from("friend_requests")
     .insert({
+      id: createdId,
       requester_id: user.id,
       recipient_id: recipientId,
       status: "pending",
-    })
-    .select("id, status")
-    .single();
+    });
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
   return NextResponse.json({
-    status: created.status,
-    request_id: created.id,
+    status: "pending",
+    request_id: createdId,
   });
 }

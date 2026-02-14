@@ -178,19 +178,30 @@ export async function POST(
         return NextResponse.json({ error: insertError.message }, { status: 500 });
       }
     } else if (existing.status === "declined") {
-      const { error: reviveError } = await supabase
+      // Requesters can't update declined rows under our default RLS policy.
+      // Delete any declined request(s) for this pair and recreate a fresh pending one.
+      const { error: deleteDeclinedError } = await supabase
         .from("friend_requests")
-        .update({
-          status: "pending",
-          responded_at: null,
-          seen_at: null,
-        })
-        .eq("id", existing.id)
+        .delete()
         .eq("requester_id", user.id)
+        .eq("recipient_id", targetUserId)
         .eq("status", "declined");
 
-      if (reviveError) {
-        return NextResponse.json({ error: reviveError.message }, { status: 500 });
+      if (deleteDeclinedError) {
+        return NextResponse.json(
+          { error: deleteDeclinedError.message },
+          { status: 500 }
+        );
+      }
+
+      const { error: insertError } = await supabase.from("friend_requests").insert({
+        requester_id: user.id,
+        recipient_id: targetUserId,
+        status: "pending",
+      });
+
+      if (insertError) {
+        return NextResponse.json({ error: insertError.message }, { status: 500 });
       }
     }
   }
