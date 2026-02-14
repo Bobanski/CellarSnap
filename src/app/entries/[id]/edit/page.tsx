@@ -38,8 +38,8 @@ type EditEntryForm = {
   region: string;
   appellation: string;
   classification: string;
-  rating?: number;
-  price_paid?: number;
+  rating?: string;
+  price_paid?: string;
   price_paid_currency: PricePaidCurrency;
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
@@ -86,7 +86,16 @@ export default function EditEntryPage() {
   const bulkProgressLabel =
     currentBulkIndex >= 0 ? `${currentBulkIndex + 1}/${bulkQueue.length}` : null;
   const supabase = createSupabaseBrowserClient();
-  const { control, register, handleSubmit, reset, setValue } = useForm<EditEntryForm>({
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: getTodayLocalYmd(),
       entry_privacy: "public",
@@ -183,8 +192,15 @@ export default function EditEntryPage() {
           region: data.entry.region ?? "",
           appellation: data.entry.appellation ?? "",
           classification: data.entry.classification ?? "",
-          rating: data.entry.rating ?? undefined,
-          price_paid: data.entry.price_paid ?? undefined,
+          rating:
+            typeof data.entry.rating === "number" && Number.isFinite(data.entry.rating)
+              ? String(data.entry.rating)
+              : "",
+          price_paid:
+            typeof data.entry.price_paid === "number" &&
+            Number.isFinite(data.entry.price_paid)
+              ? String(data.entry.price_paid)
+              : "",
           price_paid_currency: data.entry.price_paid_currency ?? "usd",
           price_paid_source: data.entry.price_paid_source ?? "",
           qpr_level: data.entry.qpr_level ?? "",
@@ -436,26 +452,30 @@ export default function EditEntryPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const rating =
-      typeof values.rating === "number" && !Number.isNaN(values.rating)
-        ? Number(values.rating)
-        : undefined;
-    const pricePaid =
-      typeof values.price_paid === "number" && !Number.isNaN(values.price_paid)
-        ? Number(values.price_paid.toFixed(2))
-        : undefined;
+    clearErrors(["rating", "price_paid", "price_paid_source"]);
+
+    const ratingRaw = values.rating?.trim() ?? "";
+    const pricePaidRaw = values.price_paid?.trim() ?? "";
+    const rating = ratingRaw ? Number(ratingRaw) : undefined;
+    const pricePaid = pricePaidRaw ? Number(Number(pricePaidRaw).toFixed(2)) : undefined;
     const pricePaidCurrency = values.price_paid_currency || "usd";
     const pricePaidSource = values.price_paid_source || undefined;
 
     if (pricePaid !== undefined && !pricePaidSource) {
       setIsSubmitting(false);
-      setErrorMessage("Select retail or restaurant when entering price paid.");
+      setError("price_paid_source", {
+        type: "manual",
+        message: "Select retail or restaurant when entering price paid.",
+      });
       return;
     }
 
     if (pricePaid === undefined && pricePaidSource) {
       setIsSubmitting(false);
-      setErrorMessage("Enter a price paid amount when selecting retail or restaurant.");
+      setError("price_paid", {
+        type: "manual",
+        message: "Enter a price paid amount when selecting retail or restaurant.",
+      });
       return;
     }
 
@@ -489,12 +509,40 @@ export default function EditEntryPage() {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
+      const flattened =
+        payload?.error && typeof payload.error === "object" ? payload.error : null;
+      const fieldErrors =
+        flattened && typeof flattened.fieldErrors === "object"
+          ? (flattened.fieldErrors as Record<string, string[] | undefined>)
+          : null;
+      const setFieldError = (
+        field: keyof EditEntryForm,
+        message: string | undefined
+      ) => {
+        if (!message) return false;
+        setError(field, { type: "server", message });
+        return true;
+      };
+
+      const hadFieldErrors = Boolean(
+        setFieldError("rating", fieldErrors?.rating?.[0]) ||
+          setFieldError("price_paid", fieldErrors?.price_paid?.[0]) ||
+          setFieldError(
+            "price_paid_source",
+            fieldErrors?.price_paid_source?.[0]
+          ) ||
+          setFieldError(
+            "price_paid_currency",
+            fieldErrors?.price_paid_currency?.[0]
+          ) ||
+          setFieldError("wine_name", fieldErrors?.wine_name?.[0])
+      );
+
       const apiError =
         typeof payload?.error === "string"
           ? payload.error
-          : payload?.error?.fieldErrors?.rating?.[0] ??
-            payload?.error?.formErrors?.[0] ??
-            "Unable to update entry.";
+          : flattened?.formErrors?.[0] ??
+            (hadFieldErrors ? null : "Unable to update entry.");
       setIsSubmitting(false);
       setErrorMessage(apiError);
       return;
@@ -631,6 +679,7 @@ export default function EditEntryPage() {
 
         <form
           id="entry-edit-form"
+          noValidate
           className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
           onSubmit={onSubmit}
         >
@@ -770,18 +819,33 @@ export default function EditEntryPage() {
                       <input
                         type="text"
                         inputMode="decimal"
-                        pattern="[0-9]*[.]?[0-9]*"
-                        className="h-10 w-full rounded-r-xl border border-white/10 border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className={`h-10 w-full rounded-r-xl border border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                          errors.price_paid
+                            ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                            : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                        }`}
                         placeholder="Optional (e.g. 28.50)"
                         {...register("price_paid", {
-                          setValueAs: (value) => {
-                            if (value === "") return undefined;
-                            const parsed = Number(value);
-                            return Number.isFinite(parsed) ? parsed : undefined;
+                          validate: (value) => {
+                            const trimmed = value?.trim() ?? "";
+                            if (!trimmed) return true;
+                            if (!/^[0-9]+(\.[0-9]+)?$/.test(trimmed)) {
+                              return "Price paid must be numbers only (no $ or symbols).";
+                            }
+                            const parsed = Number(trimmed);
+                            if (!Number.isFinite(parsed) || parsed < 0) {
+                              return "Price paid must be a valid number.";
+                            }
+                            return true;
                           },
                         })}
                       />
                     </div>
+                    {errors.price_paid?.message ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-400">
+                        {errors.price_paid.message}
+                      </p>
+                    ) : null}
                   </div>
                   <div>
                     <div className="flex items-center justify-between gap-2">
@@ -811,7 +875,9 @@ export default function EditEntryPage() {
                             className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
                               selected
                                 ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
-                                : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
+                                : errors.price_paid_source
+                                  ? "border-rose-400/50 bg-black/30 text-zinc-300 hover:border-rose-300/60"
+                                  : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
                             }`}
                             onClick={() =>
                               setValue("price_paid_source", source, {
@@ -833,6 +899,11 @@ export default function EditEntryPage() {
                         );
                       })}
                     </div>
+                    {errors.price_paid_source?.message ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-400">
+                        {errors.price_paid_source.message}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -845,12 +916,31 @@ export default function EditEntryPage() {
               <input
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
+                  errors.rating
+                    ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                    : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                }`}
                 {...register("rating", {
-                  setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                  validate: (value) => {
+                    const trimmed = value?.trim() ?? "";
+                    if (!trimmed) return true;
+                    if (!/^[0-9]+$/.test(trimmed)) {
+                      return "Rating must be a whole number (integer).";
+                    }
+                    const parsed = Number(trimmed);
+                    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
+                      return "Rating must be between 1 and 100.";
+                    }
+                    return true;
+                  },
                 })}
               />
+              {errors.rating?.message ? (
+                <p className="mt-1 text-xs font-semibold text-rose-400">
+                  {errors.rating.message}
+                </p>
+              ) : null}
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">

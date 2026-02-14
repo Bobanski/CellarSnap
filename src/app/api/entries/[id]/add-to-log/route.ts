@@ -135,7 +135,7 @@ export async function POST(
   // If this entry was already added to the user's log, return it.
   const existing = await supabase
     .from("wine_entries")
-    .select("id")
+    .select("id, location_text")
     .eq("user_id", user.id)
     .eq("root_entry_id", rootEntry.id)
     .maybeSingle();
@@ -154,6 +154,28 @@ export async function POST(
   }
 
   if (existing.data?.id) {
+    // Backfill location if this copy was created before we started copying it over.
+    try {
+      const existingLocation =
+        typeof (existing.data as { location_text?: unknown }).location_text ===
+        "string"
+          ? ((existing.data as { location_text: string }).location_text ?? "")
+          : "";
+      const rootLocation =
+        typeof rootEntry.location_text === "string"
+          ? rootEntry.location_text.trim()
+          : "";
+
+      if (!existingLocation && rootLocation) {
+        await supabase
+          .from("wine_entries")
+          .update({ location_text: rootLocation })
+          .eq("id", existing.data.id);
+      }
+    } catch {
+      // Ignore copy backfill failures.
+    }
+
     // Best-effort: mark the tag notification as handled so it doesn't keep showing.
     try {
       await supabase

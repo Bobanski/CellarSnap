@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type TagNotification = {
   id: string;
@@ -25,6 +26,7 @@ type NotificationItem = TagNotification | FriendRequestNotification;
 
 export default function AlertsMenu() {
   const router = useRouter();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -33,9 +35,58 @@ export default function AlertsMenu() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const open = openPathname === pathname;
+  const openRef = useRef(open);
+  const pendingRefreshRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  const refreshCount = useCallback(async () => {
+    const response = await fetch("/api/notifications?count_only=true", {
+      cache: "no-store",
+    });
+    if (!response.ok) return;
+    const data = await response.json().catch(() => ({}));
+    setCount(data.unseen_count ?? 0);
+  }, []);
+
+  const refreshItems = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!silent) {
+        setLoading(true);
+      }
+      setActionError(null);
+      const response = await fetch("/api/notifications", {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        if (!silent) setLoading(false);
+        return;
+      }
+      const data = await response.json().catch(() => ({}));
+      setItems(data.notifications ?? []);
+      setCount(data.unseen_count ?? 0);
+      if (!silent) setLoading(false);
+    },
+    []
+  );
+
+  const scheduleRefresh = useCallback(() => {
+    if (pendingRefreshRef.current !== null) return;
+    pendingRefreshRef.current = window.setTimeout(() => {
+      pendingRefreshRef.current = null;
+      refreshCount().catch(() => null);
+      if (openRef.current) {
+        refreshItems({ silent: true }).catch(() => null);
+      }
+    }, 250);
+  }, [refreshCount, refreshItems]);
+
   const toggleOpen = () => {
     const nextOpen = !open;
     if (nextOpen) {
@@ -45,24 +96,86 @@ export default function AlertsMenu() {
     setOpenPathname(null);
   };
 
-  // On mount: fetch only the unseen count (lightweight)
+  // Load current user id (used for realtime subscriptions)
   useEffect(() => {
     let isMounted = true;
 
-    const loadCount = async () => {
-      const response = await fetch("/api/notifications?count_only=true", {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const data = await response.json();
-      if (isMounted) {
-        setCount(data.unseen_count ?? 0);
-      }
+    const loadViewer = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      setViewerUserId(user?.id ?? null);
     };
 
-    loadCount();
+    loadViewer().catch(() => null);
     return () => {
       isMounted = false;
+    };
+  }, [supabase]);
+
+  // Keep badge count fresh even if the user doesn't navigate.
+  // Realtime is best-effort; polling/focus are the fallback.
+  useEffect(() => {
+    refreshCount().catch(() => null);
+
+    const intervalId = window.setInterval(() => {
+      refreshCount().catch(() => null);
+    }, 25000);
+
+    const onFocus = () => refreshCount().catch(() => null);
+    const onVisibility = () => {
+      if (!document.hidden) refreshCount().catch(() => null);
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [refreshCount]);
+
+  // Best-effort realtime: refresh count/items when notifications change.
+  useEffect(() => {
+    if (!viewerUserId) return;
+
+    const channel = supabase
+      .channel(`alerts:${viewerUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wine_notifications",
+          filter: `user_id=eq.${viewerUserId}`,
+        },
+        scheduleRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "friend_requests",
+          filter: `recipient_id=eq.${viewerUserId}`,
+        },
+        scheduleRefresh
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, scheduleRefresh, viewerUserId]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingRefreshRef.current !== null) {
+        window.clearTimeout(pendingRefreshRef.current);
+      }
     };
   }, []);
 
@@ -70,31 +183,8 @@ export default function AlertsMenu() {
   useEffect(() => {
     if (!open) return;
 
-    let isMounted = true;
-
-    const loadItems = async () => {
-      setLoading(true);
-      setActionError(null);
-      const response = await fetch("/api/notifications", {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        if (isMounted) setLoading(false);
-        return;
-      }
-      const data = await response.json();
-      if (isMounted) {
-        setItems(data.notifications ?? []);
-        setCount(data.unseen_count ?? 0);
-        setLoading(false);
-      }
-    };
-
-    loadItems();
-    return () => {
-      isMounted = false;
-    };
-  }, [open]);
+    refreshItems().catch(() => null);
+  }, [open, refreshItems]);
 
   // Clear badge when menu opens (derived from open state, avoids setState in effect body)
   const displayCount = open ? 0 : count;

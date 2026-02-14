@@ -55,7 +55,11 @@ const optionalPricePaidSchema = z.preprocess(
     }
     return value;
   },
-  z.number().min(0).max(100000).optional()
+  z
+    .number({ error: "Price paid must be numbers only (no $ or symbols)." })
+    .min(0, "Price paid must be a valid number.")
+    .max(100000, "Price paid must be a valid number.")
+    .optional()
 );
 
 const primaryGrapeIdsSchema = z.preprocess(
@@ -88,7 +92,12 @@ const createEntrySchema = z.object({
   appellation: nullableString,
   classification: nullableString,
   primary_grape_ids: primaryGrapeIdsSchema,
-  rating: z.number().int().min(1).max(100).optional(),
+  rating: z
+    .number()
+    .int("Rating must be a whole number (integer).")
+    .min(1, "Rating must be between 1 and 100.")
+    .max(100, "Rating must be between 1 and 100.")
+    .optional(),
   price_paid: optionalPricePaidSchema,
   price_paid_currency: z.preprocess(
     (value) => (value === "" ? null : value),

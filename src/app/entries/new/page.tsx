@@ -38,8 +38,8 @@ type NewEntryForm = {
   region: string;
   appellation: string;
   classification: string;
-  rating?: number;
-  price_paid?: number;
+  rating?: string;
+  price_paid?: string;
   price_paid_currency: PricePaidCurrency;
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
@@ -73,7 +73,16 @@ type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 export default function NewEntryPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
-  const { control, register, handleSubmit, getValues, setValue, formState: { errors } } = useForm<NewEntryForm>({
+  const {
+    control,
+    register,
+    handleSubmit,
+    getValues,
+    setValue,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<NewEntryForm>({
     defaultValues: {
       consumed_at: getTodayLocalYmd(),
       entry_privacy: "public",
@@ -655,26 +664,30 @@ export default function NewEntryPage() {
     setPendingComparison(null);
     setComparisonErrorMessage(null);
 
-    const rating =
-      typeof values.rating === "number" && !Number.isNaN(values.rating)
-        ? Number(values.rating)
-        : undefined;
-    const pricePaid =
-      typeof values.price_paid === "number" && !Number.isNaN(values.price_paid)
-        ? Number(values.price_paid.toFixed(2))
-        : undefined;
+    clearErrors(["rating", "price_paid", "price_paid_source"]);
+
+    const ratingRaw = values.rating?.trim() ?? "";
+    const pricePaidRaw = values.price_paid?.trim() ?? "";
+    const rating = ratingRaw ? Number(ratingRaw) : undefined;
+    const pricePaid = pricePaidRaw ? Number(Number(pricePaidRaw).toFixed(2)) : undefined;
     const pricePaidCurrency = values.price_paid_currency || "usd";
     const pricePaidSource = values.price_paid_source || undefined;
 
     if (pricePaid !== undefined && !pricePaidSource) {
       setIsSubmitting(false);
-      setErrorMessage("Select retail or restaurant when entering price paid.");
+      setError("price_paid_source", {
+        type: "manual",
+        message: "Select retail or restaurant when entering price paid.",
+      });
       return;
     }
 
     if (pricePaid === undefined && pricePaidSource) {
       setIsSubmitting(false);
-      setErrorMessage("Enter a price paid amount when selecting retail or restaurant.");
+      setError("price_paid", {
+        type: "manual",
+        message: "Enter a price paid amount when selecting retail or restaurant.",
+      });
       return;
     }
 
@@ -714,12 +727,40 @@ export default function NewEntryPage() {
 
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
+      const flattened =
+        payload?.error && typeof payload.error === "object" ? payload.error : null;
+      const fieldErrors =
+        flattened && typeof flattened.fieldErrors === "object"
+          ? (flattened.fieldErrors as Record<string, string[] | undefined>)
+          : null;
+      const setFieldError = (
+        field: keyof NewEntryForm,
+        message: string | undefined
+      ) => {
+        if (!message) return false;
+        setError(field, { type: "server", message });
+        return true;
+      };
+
+      const hadFieldErrors = Boolean(
+        setFieldError("rating", fieldErrors?.rating?.[0]) ||
+          setFieldError("price_paid", fieldErrors?.price_paid?.[0]) ||
+          setFieldError(
+            "price_paid_source",
+            fieldErrors?.price_paid_source?.[0]
+          ) ||
+          setFieldError(
+            "price_paid_currency",
+            fieldErrors?.price_paid_currency?.[0]
+          ) ||
+          setFieldError("wine_name", fieldErrors?.wine_name?.[0])
+      );
+
       const apiError =
         typeof payload?.error === "string"
           ? payload.error
-          : payload?.error?.fieldErrors?.rating?.[0] ??
-            payload?.error?.formErrors?.[0] ??
-            "Unable to create entry.";
+          : flattened?.formErrors?.[0] ??
+            (hadFieldErrors ? null : "Unable to create entry.");
       setIsSubmitting(false);
       setErrorMessage(apiError);
       return;
@@ -1534,7 +1575,11 @@ export default function NewEntryPage() {
           </p>
         </header>
 
-        <form className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur" onSubmit={onSubmit}>
+        <form
+          noValidate
+          className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
+          onSubmit={onSubmit}
+        >
           <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -1836,11 +1881,11 @@ export default function NewEntryPage() {
               </div>
               <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium text-zinc-200">Price paid</label>
-                    <div className="mt-1 flex">
-                      <input type="hidden" {...register("price_paid_currency")} />
-                      <PriceCurrencySelect
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Price paid</label>
+                      <div className="mt-1 flex">
+                        <input type="hidden" {...register("price_paid_currency")} />
+                        <PriceCurrencySelect
                         value={selectedPricePaidCurrency}
                         onChange={(currency) =>
                           setValue("price_paid_currency", currency, {
@@ -1851,20 +1896,35 @@ export default function NewEntryPage() {
                       <input
                         type="text"
                         inputMode="decimal"
-                        pattern="[0-9]*[.]?[0-9]*"
-                        className="h-10 w-full rounded-r-xl border border-white/10 border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                        placeholder="Optional (e.g. 28.50)"
-                        {...register("price_paid", {
-                          setValueAs: (value) => {
-                            if (value === "") return undefined;
-                            const parsed = Number(value);
-                            return Number.isFinite(parsed) ? parsed : undefined;
+                        className={`h-10 w-full rounded-r-xl border border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                          errors.price_paid
+                            ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                            : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                        }`}
+                          placeholder="Optional (e.g. 28.50)"
+                          {...register("price_paid", {
+                            validate: (value) => {
+                              const trimmed = value?.trim() ?? "";
+                              if (!trimmed) return true;
+                              if (!/^[0-9]+(\.[0-9]+)?$/.test(trimmed)) {
+                                return "Price paid must be numbers only (no $ or symbols).";
+                              }
+                              const parsed = Number(trimmed);
+                              if (!Number.isFinite(parsed) || parsed < 0) {
+                                return "Price paid must be a valid number.";
+                              }
+                            return true;
                           },
                         })}
                       />
                     </div>
-                  </div>
-                  <div>
+                      {errors.price_paid?.message ? (
+                        <p className="mt-1 text-xs font-semibold text-rose-400">
+                          {errors.price_paid.message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div>
                     <div className="flex items-center justify-between gap-2">
                       <label className="text-sm font-medium text-zinc-200">Price source</label>
                       {selectedPricePaidSource ? (
@@ -1883,27 +1943,29 @@ export default function NewEntryPage() {
                     </div>
                     <input type="hidden" {...register("price_paid_source")} />
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {PRICE_PAID_SOURCE_VALUES.map((source) => {
-                        const selected = selectedPricePaidSource === source;
-                        return (
-                          <button
-                            key={source}
-                            type="button"
-                            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
-                              selected
-                                ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
-                                : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
-                            }`}
-                            onClick={() =>
-                              setValue("price_paid_source", source, {
-                                shouldDirty: true,
-                              })
-                            }
-                          >
-                            <span
-                              className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                        {PRICE_PAID_SOURCE_VALUES.map((source) => {
+                          const selected = selectedPricePaidSource === source;
+                          return (
+                            <button
+                              key={source}
+                              type="button"
+                              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
                                 selected
-                                  ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
+                                  ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
+                                  : errors.price_paid_source
+                                    ? "border-rose-400/50 bg-black/30 text-zinc-300 hover:border-rose-300/60"
+                                    : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
+                              }`}
+                              onClick={() =>
+                                setValue("price_paid_source", source, {
+                                  shouldDirty: true,
+                                })
+                              }
+                            >
+                              <span
+                                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
+                                  selected
+                                    ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
                                   : "border-white/20 text-transparent"
                               }`}
                             >
@@ -1911,12 +1973,17 @@ export default function NewEntryPage() {
                             </span>
                             {PRICE_PAID_SOURCE_LABELS[source]}
                           </button>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                      {errors.price_paid_source?.message ? (
+                        <p className="mt-1 text-xs font-semibold text-rose-400">
+                          {errors.price_paid_source.message}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
           </details>
 
@@ -1926,13 +1993,32 @@ export default function NewEntryPage() {
               <input
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("rating", {
-                  setValueAs: (value) => (value === "" ? undefined : Number(value)),
+                className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
+                  errors.rating
+                    ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                    : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                }`}
+                  {...register("rating", {
+                    validate: (value) => {
+                      const trimmed = value?.trim() ?? "";
+                      if (!trimmed) return true;
+                      if (!/^[0-9]+$/.test(trimmed)) {
+                        return "Rating must be a whole number (integer).";
+                      }
+                      const parsed = Number(trimmed);
+                      if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
+                        return "Rating must be between 1 and 100.";
+                      }
+                    return true;
+                  },
                 })}
-              />
-            </div>
+                />
+                {errors.rating?.message ? (
+                  <p className="mt-1 text-xs font-semibold text-rose-400">
+                    {errors.rating.message}
+                  </p>
+                ) : null}
+              </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">
                 QPR (Quality : Price Ratio)
@@ -2248,63 +2334,29 @@ export default function NewEntryPage() {
         </form>
       </div>
 
-      {pendingComparison ? (
-        <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
-          <div className="fixed inset-0 bg-black/75" aria-hidden />
-          <div className="relative flex min-h-full items-start justify-center sm:items-center">
-            <div className="relative h-[calc(100dvh-0.75rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:p-8">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-2xl font-semibold text-zinc-50">
-                  How did this wine compare?
-                </h2>
-                <button
-                  type="button"
-                  className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
-                  onClick={() => submitComparison("same_or_not_sure")}
-                  disabled={isSubmittingComparison}
-                >
-                  Skip
-                </button>
-              </div>
-
-              <div className="mt-5 flex flex-col items-start gap-3 sm:mt-6">
-                <p className="text-lg leading-snug text-zinc-300 sm:text-xl">
-                  <span className="font-semibold text-zinc-100">
-                    Compared to the previous wine
-                  </span>
-                  , I like this wine...
-                </p>
-
-                <div className="grid w-full max-w-[640px] grid-cols-3 gap-2 sm:gap-3">
+        {pendingComparison ? (
+          <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+            <div className="fixed inset-0 bg-black/75" aria-hidden />
+            <div className="relative flex min-h-full items-start justify-center sm:items-center">
+              <div className="relative h-[calc(100dvh-0.75rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:p-8">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-2xl font-semibold text-zinc-50">
+                    Which of these wines did you enjoy more?
+                  </h2>
                   <button
                     type="button"
-                    className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
-                    onClick={() => submitComparison("more")}
-                    disabled={isSubmittingComparison}
-                  >
-                    More
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
+                    className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
                     onClick={() => submitComparison("same_or_not_sure")}
                     disabled={isSubmittingComparison}
                   >
-                    Not sure / The same
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-white/10 px-3 py-2 text-sm font-semibold leading-tight text-zinc-200 transition hover:border-white/30 disabled:opacity-60 sm:px-5 sm:py-2.5 sm:text-base"
-                    onClick={() => submitComparison("less")}
-                    disabled={isSubmittingComparison}
-                  >
-                    Less
+                    Not sure
                   </button>
                 </div>
 
-                {comparisonErrorMessage ? (
-                  <p className="text-sm text-rose-300">{comparisonErrorMessage}</p>
-                ) : null}
+                <div className="mt-5 flex flex-col items-start gap-3 sm:mt-6">
+                  {comparisonErrorMessage ? (
+                    <p className="text-sm text-rose-300">{comparisonErrorMessage}</p>
+                  ) : null}
 
                 {comparisonErrorMessage ? (
                   <button
@@ -2316,41 +2368,53 @@ export default function NewEntryPage() {
                     Continue without saving
                   </button>
                 ) : null}
-              </div>
+                </div>
 
-              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                  <div className="h-32 w-full bg-black/40 sm:h-40">
-                    {newlyLoggedWinePreviewUrl ? (
-                      <img
-                        src={newlyLoggedWinePreviewUrl}
+                <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => submitComparison("more")}
+                    disabled={isSubmittingComparison}
+                    className="group overflow-hidden rounded-2xl border border-white/10 bg-black/30 text-left transition hover:border-amber-300/60 disabled:cursor-not-allowed disabled:opacity-70"
+                    aria-label="Select the wine you just logged"
+                  >
+                    <div className="h-32 w-full bg-black/40 sm:h-40">
+                      {newlyLoggedWinePreviewUrl ? (
+                        <img
+                          src={newlyLoggedWinePreviewUrl}
                         alt="Wine you just logged"
                         className="h-full w-full object-cover"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-zinc-500">
                         No photo
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
-                      Wine you just logged
-                    </p>
-                    <p className="text-sm font-semibold text-zinc-50">
-                      {formatWineTitle(pendingComparison.entry)}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {formatWineMeta(pendingComparison.entry)}
-                    </p>
-                  </div>
-                </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                        Wine you just logged
+                      </p>
+                      <p className="text-sm font-semibold text-zinc-50">
+                        {formatWineTitle(pendingComparison.entry)}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {formatWineMeta(pendingComparison.entry)}
+                      </p>
+                    </div>
+                  </button>
 
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                  <div className="h-32 w-full bg-black/40 sm:h-40">
-                    {pendingComparison.candidate.label_image_url ? (
-                      <img
-                        src={pendingComparison.candidate.label_image_url}
+                  <button
+                    type="button"
+                    onClick={() => submitComparison("less")}
+                    disabled={isSubmittingComparison}
+                    className="group overflow-hidden rounded-2xl border border-white/10 bg-black/30 text-left transition hover:border-amber-300/60 disabled:cursor-not-allowed disabled:opacity-70"
+                    aria-label="Select the previous wine"
+                  >
+                    <div className="h-32 w-full bg-black/40 sm:h-40">
+                      {pendingComparison.candidate.label_image_url ? (
+                        <img
+                          src={pendingComparison.candidate.label_image_url}
                         alt="Previous wine for comparison"
                         className="h-full w-full object-cover"
                       />
@@ -2370,15 +2434,15 @@ export default function NewEntryPage() {
                     <p className="text-xs text-zinc-400">
                       {formatWineMeta(pendingComparison.candidate)}
                     </p>
-                    <p className="text-xs text-zinc-500">
-                      Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
-                    </p>
-                  </div>
+                      <p className="text-xs text-zinc-500">
+                        Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
+                      </p>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
       ) : null}
     </div>
   );
