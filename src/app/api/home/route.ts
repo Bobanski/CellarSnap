@@ -32,7 +32,7 @@ export async function GET() {
   // ── Fetch user profile ──
   const { data: profileWithPrivacy, error: profileError } = await supabase
     .from("profiles")
-    .select("display_name, default_entry_privacy, privacy_confirmed_at")
+    .select("display_name, first_name, default_entry_privacy, privacy_confirmed_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -44,7 +44,7 @@ export async function GET() {
   ) {
     const fallback = await supabase
       .from("profiles")
-      .select("display_name, created_at")
+      .select("display_name, first_name, created_at")
       .eq("id", user.id)
       .maybeSingle();
     profile = fallback.data
@@ -202,6 +202,7 @@ export async function GET() {
   );
 
   return NextResponse.json({
+    firstName: profile?.first_name ?? null,
     displayName: profile?.display_name ?? null,
     defaultEntryPrivacy: profile?.default_entry_privacy ?? "public",
     privacyConfirmedAt: profile?.privacy_confirmed_at ?? null,

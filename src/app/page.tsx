@@ -31,7 +31,7 @@ type CircleEntry = RecentEntry & {
 
 export default function HomePage() {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
   const [privacyConfirmedAt, setPrivacyConfirmedAt] = useState<string | null>(null);
   const [privacyOnboardingError, setPrivacyOnboardingError] = useState<string | null>(null);
@@ -64,7 +64,11 @@ export default function HomePage() {
 
         const data = await response.json();
         if (isMounted) {
-          setDisplayName(data.displayName ?? null);
+          const firstName =
+            typeof data.firstName === "string" ? data.firstName.trim() : "";
+          const username =
+            typeof data.displayName === "string" ? data.displayName.trim() : "";
+          setWelcomeName(firstName || username || null);
           setDefaultEntryPrivacy(data.defaultEntryPrivacy ?? "public");
           setPrivacyConfirmedAt(data.privacyConfirmedAt ?? null);
           setTotalEntryCount(data.totalEntryCount ?? 0);
@@ -139,11 +143,11 @@ export default function HomePage() {
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
             {isFirstTime
-              ? displayName
-                ? `Welcome to CellarSnap, ${displayName}.`
+              ? welcomeName
+                ? `Welcome to CellarSnap, ${welcomeName}.`
                 : "Welcome to CellarSnap."
-              : displayName
-                ? `Welcome back, ${displayName}.`
+              : welcomeName
+                ? `Welcome back, ${welcomeName}.`
                 : "Welcome back."}
           </h1>
           <p className="text-sm text-zinc-300">
