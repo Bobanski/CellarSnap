@@ -763,22 +763,30 @@ export default function ProfilePage() {
                     key={badge.id}
                     className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-4 text-center transition ${
                       badge.earned
-                        ? "border-amber-300/40 bg-amber-400/10"
+                        ? "border-amber-300/55 bg-amber-400/10 ring-1 ring-amber-300/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
                         : badge.count > 0
-                          ? "border-amber-300/20 bg-white/5"
-                          : "border-white/5 bg-black/20 opacity-40"
+                          ? "border-white/10 bg-black/20 opacity-80 saturate-50"
+                          : "border-white/5 bg-black/20 opacity-45 grayscale"
                     }`}
                   >
-                    <span className={`text-2xl ${badge.earned ? "" : badge.count > 0 ? "text-zinc-100" : ""}`}>
+                    <span
+                      className={`text-2xl ${
+                        badge.earned
+                          ? "drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]"
+                          : badge.count > 0
+                            ? "text-zinc-100"
+                            : "text-zinc-500"
+                      }`}
+                    >
                       {badge.symbol}
                     </span>
                     <span
                       className={`text-xs font-semibold leading-tight ${
                         badge.earned
                           ? "text-amber-200"
-                          : badge.count > 0
-                            ? "text-zinc-200"
-                            : "text-zinc-400"
+                        : badge.count > 0
+                          ? "text-zinc-200"
+                          : "text-zinc-400"
                       }`}
                     >
                       {badge.name}
@@ -787,9 +795,9 @@ export default function ProfilePage() {
                       className={`text-[10px] tabular-nums ${
                         badge.earned
                           ? "font-medium text-amber-300/70"
-                          : badge.count > 0
-                            ? "font-medium text-amber-200/80"
-                            : "text-zinc-500"
+                        : badge.count > 0
+                          ? "font-medium text-amber-200/80"
+                          : "text-zinc-500"
                       }`}
                     >
                       {badge.count}/{badge.threshold}
