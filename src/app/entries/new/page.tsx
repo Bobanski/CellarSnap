@@ -1605,7 +1605,7 @@ export default function NewEntryPage() {
                       className="block text-sm font-medium text-zinc-200"
                       htmlFor="label-upload"
                     >
-                      Label photo
+                      Label
                     </label>
                     <span className="mt-1 inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90 md:hidden">
                       Recommended
@@ -1893,7 +1893,7 @@ export default function NewEntryPage() {
                           className="block text-sm font-medium text-zinc-200"
                           htmlFor="place-upload"
                         >
-                          Place photo
+                          Place
                         </label>
                         <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:hidden">
                           Optional
@@ -2010,7 +2010,7 @@ export default function NewEntryPage() {
                           className="block text-sm font-medium text-zinc-200"
                           htmlFor="pairing-upload"
                         >
-                          Pairing photo
+                          Pairing
                         </label>
                         <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:hidden">
                           Optional
