@@ -6,6 +6,18 @@ function sanitizeUserSearch(search: string) {
   return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function buildTokenAndFilter(tokens: string[], fields: string[]) {
+  const cleaned = tokens.map((token) => token.trim()).filter(Boolean).slice(0, 4);
+  if (cleaned.length <= 1) return null;
+
+  const tokenOr = (token: string) => {
+    const pattern = `%${token}%`;
+    return `or(${fields.map((field) => `${field}.ilike.${pattern}`).join(",")})`;
+  };
+
+  return `and(${cleaned.map(tokenOr).join(",")})`;
+}
+
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -27,9 +39,24 @@ export async function GET(request: Request) {
 
   if (search) {
     const pattern = `%${search}%`;
+    const tokens = search.split(" ").filter(Boolean);
+    const tokenAndFilter = buildTokenAndFilter(tokens, [
+      "display_name",
+      "email",
+      "first_name",
+      "last_name",
+    ]);
     query = query
       .or(
-        `display_name.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern}`
+        [
+          `display_name.ilike.${pattern}`,
+          `email.ilike.${pattern}`,
+          `first_name.ilike.${pattern}`,
+          `last_name.ilike.${pattern}`,
+          tokenAndFilter,
+        ]
+          .filter(Boolean)
+          .join(",")
       )
       .limit(25);
   }
@@ -48,11 +75,21 @@ export async function GET(request: Request) {
     (error.message.includes("first_name") || error.message.includes("last_name"))
   ) {
     const pattern = `%${search}%`;
+    const tokens = search.split(" ").filter(Boolean);
+    const tokenAndFilter = buildTokenAndFilter(tokens, ["display_name", "email"]);
     const fallback = await supabase
       .from("profiles")
       .select("id, display_name")
       .neq("id", user.id)
-      .or(`display_name.ilike.${pattern},email.ilike.${pattern}`)
+      .or(
+        [
+          `display_name.ilike.${pattern}`,
+          `email.ilike.${pattern}`,
+          tokenAndFilter,
+        ]
+          .filter(Boolean)
+          .join(",")
+      )
       .order("display_name", { ascending: true })
       .limit(25);
     data = fallback.data;
