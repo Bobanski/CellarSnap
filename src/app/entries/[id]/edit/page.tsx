@@ -146,6 +146,10 @@ export default function EditEntryPage() {
   >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeletingEntry, setIsDeletingEntry] = useState(false);
+  const [removingCurrentPhotoType, setRemovingCurrentPhotoType] = useState<
+    "label" | "place" | "pairing" | null
+  >(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -373,6 +377,79 @@ export default function EditEntryPage() {
     await loadPhotos();
   };
 
+  const removeCurrentPhoto = async (
+    type: "label" | "place" | "pairing",
+    photo: EntryPhoto
+  ) => {
+    if (!entryId || !entry) {
+      return;
+    }
+    if (removingCurrentPhotoType) {
+      return;
+    }
+
+    const label =
+      type === "label" ? "label" : type === "place" ? "place" : "pairing";
+    const confirmed = window.confirm(`Remove this ${label} photo?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setPhotoError(null);
+    setRemovingCurrentPhotoType(type);
+
+    try {
+      if (photo.id.startsWith("legacy-")) {
+        const legacyField =
+          type === "label"
+            ? "label_image_path"
+            : type === "place"
+            ? "place_image_path"
+            : "pairing_image_path";
+
+        const response = await fetch(`/api/entries/${entry.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [legacyField]: null }),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          setPhotoError(payload.error ?? "Unable to delete photo.");
+          return;
+        }
+
+        const payload = await response.json().catch(() => null);
+        if (payload?.entry) {
+          setEntry(payload.entry);
+        } else {
+          // Fallback: clear it locally if the response didn't include the entry.
+          setEntry((prev) => {
+            if (!prev) return prev;
+            if (type === "label") {
+              return { ...prev, label_image_path: null, label_image_url: null };
+            }
+            if (type === "place") {
+              return { ...prev, place_image_path: null, place_image_url: null };
+            }
+            return { ...prev, pairing_image_path: null, pairing_image_url: null };
+          });
+        }
+
+        if (photo.path && photo.path !== "pending") {
+          await supabase.storage.from("wine-photos").remove([photo.path]);
+        }
+        return;
+      }
+
+      await deletePhoto(photo.id);
+    } catch {
+      setPhotoError("Unable to delete photo.");
+    } finally {
+      setRemovingCurrentPhotoType(null);
+    }
+  };
+
   const movePhoto = async (
     type: "label" | "place" | "pairing",
     index: number,
@@ -435,6 +512,59 @@ export default function EditEntryPage() {
   const buildBulkEditHref = (targetEntryId: string, targetIndex: number) => {
     const queue = encodeURIComponent(bulkQueue.join(","));
     return `/entries/${targetEntryId}/edit?bulk=1&queue=${queue}&index=${targetIndex}`;
+  };
+
+  const cancelBulkEntry = async () => {
+    if (!entry || !entryId || !isBulkReview) {
+      return;
+    }
+    if (isSubmitting || isDeletingEntry) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Cancel this wine from bulk review? This will delete the entry and its photos."
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingEntry(true);
+    setErrorMessage(null);
+    setPhotoError(null);
+
+    try {
+      const response = await fetch(`/api/entries/${entry.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to delete entry.");
+        return;
+      }
+
+      const nextQueue = bulkQueue.filter((id) => id !== entry.id);
+      if (nextQueue.length === 0) {
+        router.push("/entries");
+        return;
+      }
+
+      if (nextBulkEntryId && nextQueue.includes(nextBulkEntryId)) {
+        const queueParam = encodeURIComponent(nextQueue.join(","));
+        const nextIndex = Math.max(0, nextQueue.indexOf(nextBulkEntryId));
+        router.push(
+          `/entries/${nextBulkEntryId}/edit?bulk=1&queue=${queueParam}&index=${nextIndex}`
+        );
+        return;
+      }
+
+      router.push("/entries");
+    } catch {
+      setErrorMessage("Unable to delete entry.");
+    } finally {
+      setIsDeletingEntry(false);
+    }
   };
 
   const onSubmit = handleSubmit(async (values, event) => {
@@ -690,7 +820,7 @@ export default function EditEntryPage() {
                 form="entry-edit-form"
                 data-submit-intent="next"
                 className="rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeletingEntry}
               >
                 {nextBulkEntryId ? "Next wine" : "Finish review"}
               </button>
@@ -699,7 +829,7 @@ export default function EditEntryPage() {
                 form="entry-edit-form"
                 data-submit-intent="exit"
                 className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDeletingEntry}
               >
                 Skip all and save
               </button>
@@ -727,28 +857,42 @@ export default function EditEntryPage() {
             {hasCurrentPhotos ? (
               <div className="mt-2 grid gap-4 md:grid-cols-3">
                 {currentPhotoCards.map((card) => {
-                  if (!card.photo) return null;
+                  const photo = card.photo;
+                  if (!photo) return null;
                   return (
                     <div
                       key={card.key}
                       className="overflow-hidden rounded-2xl border border-white/10 bg-black/30"
                     >
-                      {card.photo.signed_url ? (
-                        <img
-                          src={card.photo.signed_url}
-                          alt={`Current ${card.label.toLowerCase()} photo`}
-                          className="h-36 w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-36 items-center justify-center text-xs text-zinc-400">
-                          Photo unavailable
-                        </div>
-                      )}
+                      <div className="relative">
+                        {photo.signed_url ? (
+                          <img
+                            src={photo.signed_url}
+                            alt={`Current ${card.label.toLowerCase()} photo`}
+                            className="h-28 w-full object-cover sm:h-36"
+                          />
+                        ) : (
+                          <div className="flex h-28 items-center justify-center text-xs text-zinc-400 sm:h-36">
+                            Photo unavailable
+                          </div>
+                        )}
+                        {currentUserId === entry.user_id ? (
+                          <button
+                            type="button"
+                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label={`Remove ${card.label.toLowerCase()} photo`}
+                            disabled={removingCurrentPhotoType === card.key}
+                            onClick={() => removeCurrentPhoto(card.key, photo)}
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </div>
                       <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
                         <span>{card.label}</span>
-                        {currentUserId === entry.user_id && card.photo.signed_url ? (
+                        {currentUserId === entry.user_id && photo.signed_url ? (
                           <a
-                            href={card.photo.signed_url}
+                            href={photo.signed_url}
                             download
                             className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                           >
@@ -1249,16 +1393,27 @@ export default function EditEntryPage() {
             <button
               type="submit"
               className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isDeletingEntry}
             >
               Save changes
             </button>
-            <Link
-              className="text-sm font-medium text-zinc-300"
-              href={isBulkReview ? "/entries" : `/entries/${entry.id}`}
-            >
-              Cancel
-            </Link>
+            {isBulkReview ? (
+              <button
+                type="button"
+                className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={cancelBulkEntry}
+                disabled={isSubmitting || isDeletingEntry}
+              >
+                Cancel
+              </button>
+            ) : (
+              <Link
+                className="text-sm font-medium text-zinc-300"
+                href={`/entries/${entry.id}`}
+              >
+                Cancel
+              </Link>
+            )}
           </div>
         </form>
       </div>

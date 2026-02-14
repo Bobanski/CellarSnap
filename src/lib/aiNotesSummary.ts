@@ -82,7 +82,7 @@ export async function generateAiNotesSummary({
   try {
     const response = await openai.responses.create(
       {
-        model: "gpt-5-nano",
+        model: "gpt-5-mini",
         reasoning: { effort: "minimal" },
         max_output_tokens: 70,
         input: [

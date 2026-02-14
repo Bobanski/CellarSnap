@@ -20,6 +20,7 @@ export default function FeedbackPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const trimmedMessageLength = message.trim().length;
   const remainingChars = useMemo(() => 2000 - message.length, [message.length]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -27,33 +28,37 @@ export default function FeedbackPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    if (message.trim().length < 10) {
+    if (trimmedMessageLength < 10) {
       setErrorMessage("Please include a little more detail (at least 10 characters).");
       return;
     }
 
     setIsSubmitting(true);
-    const response = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        category,
-        email: email.trim() || undefined,
-        message: message.trim(),
-        page_path: "/feedback",
-      }),
-    });
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category,
+          email: email.trim() || undefined,
+          message: message.trim(),
+          page_path: "/feedback",
+        }),
+      });
 
-    setIsSubmitting(false);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setErrorMessage(payload.error ?? "Unable to submit feedback.");
+        return;
+      }
 
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      setErrorMessage(payload.error ?? "Unable to submit feedback.");
-      return;
+      setMessage("");
+      setSuccessMessage("Thanks. Feedback received.");
+    } catch {
+      setErrorMessage("Unable to submit feedback. Check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setMessage("");
-    setSuccessMessage("Thanks. Feedback received.");
   };
 
   return (
@@ -100,13 +105,25 @@ export default function FeedbackPage() {
             <textarea
               id="message"
               value={message}
-              onChange={(event) => setMessage(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setMessage(next);
+                if (successMessage) {
+                  setSuccessMessage(null);
+                }
+                if (errorMessage && next.trim().length >= 10) {
+                  setErrorMessage(null);
+                }
+              }}
               rows={7}
               maxLength={2000}
               className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="Steps, what you expected, what actually happened."
             />
             <p className="mt-1 text-xs text-zinc-500">{remainingChars} characters left</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Minimum: 10 characters.
+            </p>
           </div>
 
           <div>

@@ -1623,7 +1623,11 @@ export default function NewEntryPage() {
               }}
             />
             {labelPhotos.length > 0 ? (
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div
+                className={`mt-3 grid gap-2 ${
+                  labelPhotos.length > 1 ? "grid-cols-2" : ""
+                } sm:grid-cols-3`}
+              >
                 {labelPhotos.map((photo, index) => (
                   <div
                     key={photo.preview}
@@ -1632,7 +1636,7 @@ export default function NewEntryPage() {
                     <img
                       src={photo.preview}
                       alt={`Label preview ${index + 1}`}
-                      className="h-32 w-full object-cover"
+                      className="h-24 w-full object-cover sm:h-32"
                     />
                     {labelPhotos.length > 1 ? (
                       <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
@@ -1658,7 +1662,7 @@ export default function NewEntryPage() {
                     ) : null}
                     <button
                       type="button"
-                      className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                      className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
                       aria-label="Remove label photo"
                       onClick={() => {
                         removePhoto("label", index);
@@ -1859,7 +1863,11 @@ export default function NewEntryPage() {
                 }}
               />
               {placePhotos.length > 0 ? (
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div
+                  className={`mt-2 grid gap-2 ${
+                    placePhotos.length > 1 ? "grid-cols-2" : ""
+                  } sm:grid-cols-3`}
+                >
                   {placePhotos.map((photo, index) => (
                     <div
                       key={photo.preview}
@@ -1868,7 +1876,7 @@ export default function NewEntryPage() {
                       <img
                         src={photo.preview}
                         alt={`Place preview ${index + 1}`}
-                        className="h-24 w-full object-cover"
+                        className="h-20 w-full object-cover sm:h-24"
                       />
                       {placePhotos.length > 1 ? (
                         <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
@@ -1894,7 +1902,7 @@ export default function NewEntryPage() {
                       ) : null}
                       <button
                         type="button"
-                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
                         aria-label="Remove place photo"
                         onClick={() => removePhoto("place", index)}
                       >
@@ -1941,7 +1949,11 @@ export default function NewEntryPage() {
                 }}
               />
               {pairingPhotos.length > 0 ? (
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div
+                  className={`mt-2 grid gap-2 ${
+                    pairingPhotos.length > 1 ? "grid-cols-2" : ""
+                  } sm:grid-cols-3`}
+                >
                   {pairingPhotos.map((photo, index) => (
                     <div
                       key={photo.preview}
@@ -1950,7 +1962,7 @@ export default function NewEntryPage() {
                       <img
                         src={photo.preview}
                         alt={`Pairing preview ${index + 1}`}
-                        className="h-24 w-full object-cover"
+                        className="h-20 w-full object-cover sm:h-24"
                       />
                       {pairingPhotos.length > 1 ? (
                         <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
@@ -1976,7 +1988,7 @@ export default function NewEntryPage() {
                       ) : null}
                       <button
                         type="button"
-                        className="absolute right-2 top-2 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 group-hover:flex"
+                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
                         aria-label="Remove pairing photo"
                         onClick={() => removePhoto("pairing", index)}
                       >
