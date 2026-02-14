@@ -1652,7 +1652,7 @@ export default function NewEntryPage() {
                     </span>
                   </div>
                   <p className="col-span-2 text-xs text-zinc-400">
-                    Bottle photo for auto-fill.
+                    bottle / lineup photo for auto-fill
                   </p>
                 </div>
                 <input
@@ -1913,7 +1913,7 @@ export default function NewEntryPage() {
                         </span>
                       </div>
                       <p className="col-span-2 text-xs text-zinc-400">
-                        Photo of where you enjoyed it.
+                        Photo of where you enjoyed it
                       </p>
                     </div>
                     <input
@@ -2030,7 +2030,7 @@ export default function NewEntryPage() {
                         </span>
                       </div>
                       <p className="col-span-2 text-xs text-zinc-400">
-                        Photo of what you paired it with.
+                        Photo of what you paired it with
                       </p>
                     </div>
                     <input
