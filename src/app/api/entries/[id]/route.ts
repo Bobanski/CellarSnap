@@ -290,6 +290,29 @@ export async function GET(
     }));
   }
 
+  // If the viewer was tagged, check if they've already added this tasting to their cellar.
+  let viewer_log_entry_id: string | null = null;
+  const rootEntryIdFromRow =
+    typeof (data as { root_entry_id?: unknown }).root_entry_id === "string"
+      ? (data as { root_entry_id: string }).root_entry_id
+      : null;
+  const canonicalEntryId = rootEntryIdFromRow ?? data.id;
+  const viewerIsTagged =
+    data.user_id !== user.id && tastedWithIds.includes(user.id);
+
+  if (viewerIsTagged && canonicalEntryId) {
+    const { data: existingCopy, error: existingError } = await supabase
+      .from("wine_entries")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("root_entry_id", canonicalEntryId)
+      .maybeSingle();
+
+    if (!existingError && existingCopy?.id) {
+      viewer_log_entry_id = existingCopy.id;
+    }
+  }
+
   const entry = {
     ...data,
     primary_grapes:
@@ -298,6 +321,7 @@ export async function GET(
     place_image_url: await createSignedUrl(data.place_image_path, supabase),
     pairing_image_url: await createSignedUrl(data.pairing_image_path, supabase),
     tasted_with_users: tastedWithUsers,
+    viewer_log_entry_id,
   };
 
   return NextResponse.json({ entry });

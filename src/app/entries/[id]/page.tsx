@@ -23,6 +23,7 @@ import {
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
+  viewer_log_entry_id?: string | null;
 };
 
 type AdvancedNoteField = (typeof ADVANCED_NOTE_FIELDS)[number];
@@ -97,7 +98,15 @@ export default function EntryDetailPage() {
 
       const data = await response.json();
       if (isMounted) {
-        setEntry(data.entry);
+        const nextEntry = data.entry as EntryDetail;
+        setEntry(nextEntry);
+        setAddToLogEntryId(
+          typeof nextEntry.viewer_log_entry_id === "string"
+            ? nextEntry.viewer_log_entry_id
+            : null
+        );
+        setAddToLogError(null);
+        setAddToLogMessage(null);
         setLoading(false);
       }
     };
@@ -676,76 +685,93 @@ export default function EntryDetailPage() {
         ) : null}
 
         {isTagged ? (
-          <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-amber-100">
-                  You were tagged in this tasting
-                </h2>
-                <p className="mt-1 text-xs text-amber-100/70">
-                  Add it to your cellar without creating a duplicate post in the feed.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
-                  disabled={addingToLog}
-                  onClick={async () => {
-                    if (!entryId) return;
-                    setAddToLogError(null);
-                    setAddToLogMessage(null);
-                    setAddingToLog(true);
-
-                    try {
-                      const response = await fetch(
-                        `/api/entries/${entryId}/add-to-log`,
-                        { method: "POST" }
-                      );
-
-                      const payload = await response.json().catch(() => ({}));
-                      if (!response.ok) {
-                        setAddToLogError(
-                          payload.error ?? "Unable to add this tasting right now."
-                        );
-                        return;
-                      }
-
-                      if (typeof payload.entry_id === "string") {
-                        setAddToLogEntryId(payload.entry_id);
-                      }
-                      setAddToLogMessage(
-                        payload.already_exists
-                          ? "Already in your cellar."
-                          : "Added to your cellar."
-                      );
-                    } catch {
-                      setAddToLogError("Unable to add this tasting right now.");
-                    } finally {
-                      setAddingToLog(false);
-                    }
-                  }}
-                >
-                  {addingToLog ? "Adding..." : "Add to my cellar"}
-                </button>
-
-                {addToLogEntryId ? (
+          addToLogEntryId ? (
+            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-emerald-100">
+                    In your cellar
+                  </h2>
+                  <p className="mt-1 text-xs text-emerald-100/70">
+                    This tasting has already been added to your cellar.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
                   <Link
                     href={`/entries/${addToLogEntryId}/edit`}
                     className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-white/30"
                   >
                     Add my notes
                   </Link>
-                ) : null}
+                </div>
               </div>
+              {addToLogMessage ? (
+                <p className="mt-3 text-sm text-emerald-300">{addToLogMessage}</p>
+              ) : null}
             </div>
-            {addToLogError ? (
-              <p className="mt-3 text-sm text-rose-300">{addToLogError}</p>
-            ) : null}
-            {addToLogMessage ? (
-              <p className="mt-3 text-sm text-emerald-300">{addToLogMessage}</p>
-            ) : null}
-          </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-amber-100">
+                    You were tagged in this tasting
+                  </h2>
+                  <p className="mt-1 text-xs text-amber-100/70">
+                    Add it to your cellar without creating a duplicate post in the feed.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={addingToLog}
+                    onClick={async () => {
+                      if (!entryId) return;
+                      setAddToLogError(null);
+                      setAddToLogMessage(null);
+                      setAddingToLog(true);
+
+                      try {
+                        const response = await fetch(
+                          `/api/entries/${entryId}/add-to-log`,
+                          { method: "POST" }
+                        );
+
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                          setAddToLogError(
+                            payload.error ?? "Unable to add this tasting right now."
+                          );
+                          return;
+                        }
+
+                        if (typeof payload.entry_id === "string") {
+                          setAddToLogEntryId(payload.entry_id);
+                        }
+                        setAddToLogMessage(
+                          payload.already_exists
+                            ? "Already in your cellar."
+                            : "Added to your cellar."
+                        );
+                      } catch {
+                        setAddToLogError("Unable to add this tasting right now.");
+                      } finally {
+                        setAddingToLog(false);
+                      }
+                    }}
+                  >
+                    {addingToLog ? "Adding..." : "Add to my cellar"}
+                  </button>
+                </div>
+              </div>
+              {addToLogError ? (
+                <p className="mt-3 text-sm text-rose-300">{addToLogError}</p>
+              ) : null}
+              {addToLogMessage ? (
+                <p className="mt-3 text-sm text-emerald-300">{addToLogMessage}</p>
+              ) : null}
+            </div>
+          )
         ) : null}
 
         {isOwner ? (
