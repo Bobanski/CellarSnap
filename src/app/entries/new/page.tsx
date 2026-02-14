@@ -1562,6 +1562,13 @@ export default function NewEntryPage() {
 
   const newlyLoggedWinePreviewUrl = labelPhotos[0]?.preview ?? null;
   const showSingleBottleFields = lineupWines.length === 0 && !lineupCreating;
+  const canAddLabelPhoto = labelPhotos.length < MAX_PHOTOS;
+  const canAddPlacePhoto = placePhotos.length < MAX_PHOTOS;
+  const canAddPairingPhoto = pairingPhotos.length < MAX_PHOTOS;
+  const labelTileCount = labelPhotos.length + (canAddLabelPhoto ? 1 : 0);
+  const placeTileCount = placePhotos.length + (canAddPlacePhoto ? 1 : 0);
+  const pairingTileCount =
+    pairingPhotos.length + (canAddPairingPhoto ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -1591,43 +1598,36 @@ export default function NewEntryPage() {
                 showSingleBottleFields ? "md:grid-cols-3" : ""
               }`}
             >
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <label className="text-sm font-medium text-zinc-200">
-                        Label photo{" "}
-                      <span className="ml-2 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">
-                        Recommended
-                      </span>
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                  <div className="min-w-0">
+                    <label
+                      className="block text-sm font-medium text-zinc-200"
+                      htmlFor="label-upload"
+                    >
+                      Label photo
                     </label>
-                    <p className="text-xs text-zinc-400">
-                        Auto-fill wine details from a bottle photo.
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
-                        <button
-                          type="button"
-                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60"
-                          onClick={() => {
-                            if (labelPhotos.length > 0) {
-                              runAnalysis(labelPhotos.map((p) => p.file));
-                            }
-                          }}
-                        >
-                          Try again
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => labelInputRef.current?.click()}
-                        disabled={labelPhotos.length >= MAX_PHOTOS}
-                      >
-                        Upload
-                      </button>
-                    </div>
+                    <span className="mt-1 inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">
+                      Recommended
+                    </span>
                   </div>
+                  {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
+                    <button
+                      type="button"
+                      className="self-start rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60"
+                      onClick={() => {
+                        if (labelPhotos.length > 0) {
+                          runAnalysis(labelPhotos.map((p) => p.file));
+                        }
+                      }}
+                    >
+                      Try again
+                    </button>
+                  ) : null}
+                  <p className="col-span-2 text-xs text-zinc-400">
+                    Bottle photo for auto-fill.
+                  </p>
+                </div>
                 <input
                   ref={labelInputRef}
                   id="label-upload"
@@ -1641,87 +1641,86 @@ export default function NewEntryPage() {
                     event.target.value = "";
                   }}
                 />
-                {labelPhotos.length > 0 ? (
-                  <div
-                    className={`mt-3 grid gap-2 ${
-                      labelPhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                    }`}
-                  >
-                    {labelPhotos.map((photo, index) => (
-                      <div
-                        key={photo.preview}
-                        className="group relative overflow-hidden rounded-2xl border border-white/10"
-                      >
-                        <img
-                          src={photo.preview}
-                          alt={`Label preview ${index + 1}`}
-                          className="h-20 w-full object-cover sm:h-24"
-                        />
-                        {labelPhotos.length > 1 ? (
-                          <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                            <button
-                              type="button"
-                              className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                              disabled={index === 0}
-                              onClick={() => movePhoto("label", index, "up")}
-                              aria-label="Move label photo up"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                              disabled={index === labelPhotos.length - 1}
-                              onClick={() => movePhoto("label", index, "down")}
-                              aria-label="Move label photo down"
-                            >
-                              ↓
-                            </button>
-                          </div>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
-                          aria-label="Remove label photo"
-                          onClick={() => {
-                            removePhoto("label", index);
-                            if (index === 0) {
-                              setAutofillStatus("idle");
-                              setAutofillMessage(null);
-                              setLineupWines([]);
-                              setLineupCreatedCount(0);
-                            }
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="mt-3 flex h-20 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-24"
-                    onClick={() => labelInputRef.current?.click()}
-                    disabled={labelPhotos.length >= MAX_PHOTOS}
-                    aria-label="Upload label photo"
-                  >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="h-6 w-6"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
+                <div
+                  className={`mt-3 grid gap-2 ${
+                    labelTileCount > 1 ? "grid-cols-2" : "grid-cols-1"
+                  }`}
+                >
+                  {labelPhotos.map((photo, index) => (
+                    <div
+                      key={photo.preview}
+                      className="group relative overflow-hidden rounded-2xl border border-white/10"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 4.5v15m7.5-7.5h-15"
+                      <img
+                        src={photo.preview}
+                        alt={`Label preview ${index + 1}`}
+                        className="h-16 w-full object-cover sm:h-20"
                       />
+                      {labelPhotos.length > 1 ? (
+                        <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            disabled={index === 0}
+                            onClick={() => movePhoto("label", index, "up")}
+                            aria-label="Move label photo up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            disabled={index === labelPhotos.length - 1}
+                            onClick={() => movePhoto("label", index, "down")}
+                            aria-label="Move label photo down"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
+                        aria-label="Remove label photo"
+                        onClick={() => {
+                          removePhoto("label", index);
+                          if (index === 0) {
+                            setAutofillStatus("idle");
+                            setAutofillMessage(null);
+                            setLineupWines([]);
+                            setLineupCreatedCount(0);
+                          }
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {canAddLabelPhoto ? (
+                    <button
+                      type="button"
+                      className="flex h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20"
+                      onClick={() => labelInputRef.current?.click()}
+                      disabled={!canAddLabelPhoto}
+                      aria-label="Upload label photo"
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="h-5 w-5"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 4.5v15m7.5-7.5h-15"
+                        />
                       </svg>
                     </button>
-                  )}
+                  ) : null}
+                </div>
                   {autofillMessage ? (
                     autofillStatus === "loading" ? (
                       <div
@@ -1860,27 +1859,22 @@ export default function NewEntryPage() {
 
               {showSingleBottleFields ? (
                 <>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                          <label className="text-sm font-medium text-zinc-200">
-                            Place photo{" "}
-                            <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
-                              Optional
-                            </span>
-                          </label>
-                        <p className="text-xs text-zinc-400">
-                          Where you enjoyed this wine.
-                        </p>
-                      </div>
-                        <button
-                          type="button"
-                          className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
-                          onClick={() => placeInputRef.current?.click()}
-                          disabled={placePhotos.length >= MAX_PHOTOS}
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                      <div className="min-w-0">
+                        <label
+                          className="block text-sm font-medium text-zinc-200"
+                          htmlFor="place-upload"
                         >
-                          Upload
-                        </button>
+                          Place photo
+                        </label>
+                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
+                          Optional
+                        </span>
+                      </div>
+                      <p className="col-span-2 text-xs text-zinc-400">
+                        Photo of where you enjoyed it.
+                      </p>
                     </div>
                     <input
                       ref={placeInputRef}
@@ -1895,104 +1889,96 @@ export default function NewEntryPage() {
                         event.target.value = "";
                       }}
                     />
-                    {placePhotos.length > 0 ? (
-                      <div
-                        className={`mt-3 grid gap-2 ${
-                          placePhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                        }`}
-                      >
-                        {placePhotos.map((photo, index) => (
-                          <div
-                            key={photo.preview}
-                            className="group relative overflow-hidden rounded-2xl border border-white/10"
-                          >
-                            <img
-                              src={photo.preview}
-                              alt={`Place preview ${index + 1}`}
-                              className="h-20 w-full object-cover sm:h-24"
-                            />
-                            {placePhotos.length > 1 ? (
-                              <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                                <button
-                                  type="button"
-                                  className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                  disabled={index === 0}
-                                  onClick={() => movePhoto("place", index, "up")}
-                                  aria-label="Move place photo up"
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                  disabled={index === placePhotos.length - 1}
-                                  onClick={() =>
-                                    movePhoto("place", index, "down")
-                                  }
-                                  aria-label="Move place photo down"
-                                >
-                                  ↓
-                                </button>
-                              </div>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
-                              aria-label="Remove place photo"
-                              onClick={() => removePhoto("place", index)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="mt-3 flex h-20 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-24"
-                        onClick={() => placeInputRef.current?.click()}
-                        disabled={placePhotos.length >= MAX_PHOTOS}
-                        aria-label="Upload place photo"
-                      >
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          className="h-6 w-6"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
+                    <div
+                      className={`mt-3 grid gap-2 ${
+                        placeTileCount > 1 ? "grid-cols-2" : "grid-cols-1"
+                      }`}
+                    >
+                      {placePhotos.map((photo, index) => (
+                        <div
+                          key={photo.preview}
+                          className="group relative overflow-hidden rounded-2xl border border-white/10"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M12 4.5v15m7.5-7.5h-15"
+                          <img
+                            src={photo.preview}
+                            alt={`Place preview ${index + 1}`}
+                            className="h-16 w-full object-cover sm:h-20"
                           />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                          <label className="text-sm font-medium text-zinc-200">
-                            Pairing photo{" "}
-                            <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
-                              Optional
-                            </span>
-                          </label>
-                        <p className="text-xs text-zinc-400">
-                          What you paired it with.
-                        </p>
-                      </div>
+                          {placePhotos.length > 1 ? (
+                            <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                              <button
+                                type="button"
+                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                                disabled={index === 0}
+                                onClick={() => movePhoto("place", index, "up")}
+                                aria-label="Move place photo up"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                                disabled={index === placePhotos.length - 1}
+                                onClick={() => movePhoto("place", index, "down")}
+                                aria-label="Move place photo down"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
+                            aria-label="Remove place photo"
+                            onClick={() => removePhoto("place", index)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      {canAddPlacePhoto ? (
                         <button
                           type="button"
-                          className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
-                          onClick={() => pairingInputRef.current?.click()}
-                          disabled={pairingPhotos.length >= MAX_PHOTOS}
+                          className="flex h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20"
+                          onClick={() => placeInputRef.current?.click()}
+                          disabled={!canAddPlacePhoto}
+                          aria-label="Upload place photo"
                         >
-                          Upload
-                      </button>
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="h-5 w-5"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4.5v15m7.5-7.5h-15"
+                            />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                      <div className="min-w-0">
+                        <label
+                          className="block text-sm font-medium text-zinc-200"
+                          htmlFor="pairing-upload"
+                        >
+                          Pairing photo
+                        </label>
+                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
+                          Optional
+                        </span>
+                      </div>
+                      <p className="col-span-2 text-xs text-zinc-400">
+                        Photo of what you paired it with.
+                      </p>
                     </div>
                     <input
                       ref={pairingInputRef}
@@ -2007,87 +1993,82 @@ export default function NewEntryPage() {
                         event.target.value = "";
                       }}
                     />
-                    {pairingPhotos.length > 0 ? (
-                      <div
-                        className={`mt-3 grid gap-2 ${
-                          pairingPhotos.length > 1
-                            ? "grid-cols-2"
-                            : "grid-cols-1"
-                        }`}
-                      >
-                        {pairingPhotos.map((photo, index) => (
-                          <div
-                            key={photo.preview}
-                            className="group relative overflow-hidden rounded-2xl border border-white/10"
-                          >
-                            <img
-                              src={photo.preview}
-                              alt={`Pairing preview ${index + 1}`}
-                              className="h-20 w-full object-cover sm:h-24"
-                            />
-                            {pairingPhotos.length > 1 ? (
-                              <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                                <button
-                                  type="button"
-                                  className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                  disabled={index === 0}
-                                  onClick={() =>
-                                    movePhoto("pairing", index, "up")
-                                  }
-                                  aria-label="Move pairing photo up"
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                  disabled={
-                                    index === pairingPhotos.length - 1
-                                  }
-                                  onClick={() =>
-                                    movePhoto("pairing", index, "down")
-                                  }
-                                  aria-label="Move pairing photo down"
-                                >
-                                  ↓
-                                </button>
-                              </div>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
-                              aria-label="Remove pairing photo"
-                              onClick={() => removePhoto("pairing", index)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="mt-3 flex h-20 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-24"
-                        onClick={() => pairingInputRef.current?.click()}
-                        disabled={pairingPhotos.length >= MAX_PHOTOS}
-                        aria-label="Upload pairing photo"
-                      >
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          className="h-6 w-6"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
+                    <div
+                      className={`mt-3 grid gap-2 ${
+                        pairingTileCount > 1 ? "grid-cols-2" : "grid-cols-1"
+                      }`}
+                    >
+                      {pairingPhotos.map((photo, index) => (
+                        <div
+                          key={photo.preview}
+                          className="group relative overflow-hidden rounded-2xl border border-white/10"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M12 4.5v15m7.5-7.5h-15"
+                          <img
+                            src={photo.preview}
+                            alt={`Pairing preview ${index + 1}`}
+                            className="h-16 w-full object-cover sm:h-20"
                           />
-                        </svg>
-                      </button>
-                    )}
+                          {pairingPhotos.length > 1 ? (
+                            <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
+                              <button
+                                type="button"
+                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                                disabled={index === 0}
+                                onClick={() =>
+                                  movePhoto("pairing", index, "up")
+                                }
+                                aria-label="Move pairing photo up"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                                disabled={index === pairingPhotos.length - 1}
+                                onClick={() =>
+                                  movePhoto("pairing", index, "down")
+                                }
+                                aria-label="Move pairing photo down"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
+                            aria-label="Remove pairing photo"
+                            onClick={() => removePhoto("pairing", index)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      {canAddPairingPhoto ? (
+                        <button
+                          type="button"
+                          className="flex h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20"
+                          onClick={() => pairingInputRef.current?.click()}
+                          disabled={!canAddPairingPhoto}
+                          aria-label="Upload pairing photo"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="h-5 w-5"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4.5v15m7.5-7.5h-15"
+                            />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </>
               ) : null}
