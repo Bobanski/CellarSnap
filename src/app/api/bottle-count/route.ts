@@ -115,8 +115,9 @@ export async function POST(request: Request) {
               {
                 type: "input_text",
                 text:
-                  "Count every distinct wine bottle visible in this photo, including partially occluded bottles. " +
-                  "Ignore reflections, wine glasses, people, and background objects. " +
+                  "Count distinct wine bottles that have at least some readable or recognizable label/branding. " +
+                  "Ignore tiny/blurred background bottles, reflections, wine glasses, people, and bottle-like background objects. " +
+                  "If you are unsure something is a wine bottle, exclude it. " +
                   "Return only total_bottles_detected as a non-negative integer.",
               },
               { type: "input_image", image_url: dataUrl, detail: "high" },

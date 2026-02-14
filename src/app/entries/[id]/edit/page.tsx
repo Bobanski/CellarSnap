@@ -501,6 +501,25 @@ export default function EditEntryPage() {
       advanced_notes: toAdvancedNotesPayload(values.advanced_notes),
     };
 
+    const entryIsFeedVisibleRaw = (entry as unknown as { is_feed_visible?: unknown })
+      .is_feed_visible;
+    const entryRootIdRaw = (entry as unknown as { root_entry_id?: unknown })
+      .root_entry_id;
+    const entryIsFeedVisible =
+      typeof entryIsFeedVisibleRaw === "boolean" ? entryIsFeedVisibleRaw : true;
+    const entryRootId =
+      typeof entryRootIdRaw === "string" && entryRootIdRaw.length > 0
+        ? entryRootIdRaw
+        : null;
+
+    // Bulk review entries are created as "not yet posted" (is_feed_visible=false).
+    // Also publish if the user is saving a hidden canonical entry outside bulk review.
+    const shouldPublishOnSave =
+      isBulkReview || (entryIsFeedVisible === false && !entryRootId);
+    if (shouldPublishOnSave) {
+      updatePayload.is_feed_visible = true;
+    }
+
     const response = await fetch(`/api/entries/${entry.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -548,17 +567,28 @@ export default function EditEntryPage() {
       return;
     }
 
-    if (
-      isBulkReview &&
-      submitIntent !== "exit" &&
-      nextBulkEntryId &&
-      currentBulkIndex >= 0
-    ) {
-      router.push(buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1));
-      return;
-    }
-
     if (isBulkReview) {
+      if (submitIntent === "exit") {
+        // If the user exits bulk review early, publish the remaining queue as-is.
+        // (They can still edit individual entries later.)
+        try {
+          await fetch("/api/entries/bulk-publish", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ entry_ids: bulkQueue }),
+          });
+        } catch {
+          // Best-effort: if this fails, the queue stays unposted until saved later.
+        }
+        router.push("/entries");
+        return;
+      }
+
+      if (nextBulkEntryId && currentBulkIndex >= 0) {
+        router.push(buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1));
+        return;
+      }
+
       router.push("/entries");
       return;
     }
@@ -845,7 +875,11 @@ export default function EditEntryPage() {
                       <p className="mt-1 text-xs font-semibold text-rose-400">
                         {errors.price_paid.message}
                       </p>
-                    ) : null}
+                    ) : (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Numbers only (no $ or symbols). Example: 28.50
+                      </p>
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between gap-2">
@@ -903,7 +937,11 @@ export default function EditEntryPage() {
                       <p className="mt-1 text-xs font-semibold text-rose-400">
                         {errors.price_paid_source.message}
                       </p>
-                    ) : null}
+                    ) : (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Required if you enter a price paid amount.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -940,7 +978,11 @@ export default function EditEntryPage() {
                 <p className="mt-1 text-xs font-semibold text-rose-400">
                   {errors.rating.message}
                 </p>
-              ) : null}
+              ) : (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Whole number between 1 and 100.
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">
@@ -1211,7 +1253,10 @@ export default function EditEntryPage() {
             >
               Save changes
             </button>
-            <Link className="text-sm font-medium text-zinc-300" href={`/entries/${entry.id}`}>
+            <Link
+              className="text-sm font-medium text-zinc-300"
+              href={isBulkReview ? "/entries" : `/entries/${entry.id}`}
+            >
               Cancel
             </Link>
           </div>

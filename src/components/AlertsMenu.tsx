@@ -29,6 +29,7 @@ export default function AlertsMenu() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [count, setCount] = useState(0);
+  const [badgeBaseline, setBadgeBaseline] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [addToCellarId, setAddToCellarId] = useState<string | null>(null);
@@ -40,11 +41,59 @@ export default function AlertsMenu() {
   const pathname = usePathname();
   const open = openPathname === pathname;
   const openRef = useRef(open);
+  const lastViewerUserIdRef = useRef<string | null>(null);
   const pendingRefreshRef = useRef<number | null>(null);
 
   useEffect(() => {
     openRef.current = open;
   }, [open]);
+
+  useEffect(() => {
+    if (
+      lastViewerUserIdRef.current &&
+      viewerUserId &&
+      lastViewerUserIdRef.current !== viewerUserId
+    ) {
+      setBadgeBaseline(0);
+    }
+    lastViewerUserIdRef.current = viewerUserId;
+  }, [viewerUserId]);
+
+  const persistBadgeBaseline = useCallback(
+    (value: number) => {
+      if (!viewerUserId) return;
+      try {
+        localStorage.setItem(
+          `cellarsnap:alerts_badge_baseline:${viewerUserId}`,
+          String(value)
+        );
+      } catch {
+        // Ignore storage failures (private mode, etc).
+      }
+    },
+    [viewerUserId]
+  );
+
+  useEffect(() => {
+    if (!viewerUserId) return;
+    try {
+      const raw = localStorage.getItem(
+        `cellarsnap:alerts_badge_baseline:${viewerUserId}`
+      );
+      const parsed = raw ? Number(raw) : 0;
+      if (Number.isFinite(parsed) && parsed >= 0) {
+        const next = Math.floor(parsed);
+        setBadgeBaseline((prev) => (prev > 0 ? prev : next));
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [viewerUserId]);
+
+  useEffect(() => {
+    if (!viewerUserId) return;
+    persistBadgeBaseline(badgeBaseline);
+  }, [badgeBaseline, persistBadgeBaseline, viewerUserId]);
 
   const refreshCount = useCallback(async () => {
     const response = await fetch("/api/notifications?count_only=true", {
@@ -52,8 +101,20 @@ export default function AlertsMenu() {
     });
     if (!response.ok) return;
     const data = await response.json().catch(() => ({}));
-    setCount(data.unseen_count ?? 0);
-  }, []);
+    const unseen =
+      typeof data.unseen_count === "number" && Number.isFinite(data.unseen_count)
+        ? Math.max(0, Math.round(data.unseen_count))
+        : 0;
+
+    setCount(unseen);
+    setBadgeBaseline((prev) => {
+      const next = Math.min(prev, unseen);
+      if (next !== prev) {
+        persistBadgeBaseline(next);
+      }
+      return next;
+    });
+  }, [persistBadgeBaseline]);
 
   const refreshItems = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -70,10 +131,30 @@ export default function AlertsMenu() {
       }
       const data = await response.json().catch(() => ({}));
       setItems(data.notifications ?? []);
-      setCount(data.unseen_count ?? 0);
+      const unseen =
+        typeof data.unseen_count === "number" && Number.isFinite(data.unseen_count)
+          ? Math.max(0, Math.round(data.unseen_count))
+          : 0;
+      setCount(unseen);
+
+      // The badge represents "new since you last opened the menu", not
+      // "pending until deletion". When the menu is open, acknowledge everything
+      // currently present by updating the baseline to the current unseen count.
+      if (openRef.current) {
+        setBadgeBaseline(unseen);
+        persistBadgeBaseline(unseen);
+      } else {
+        setBadgeBaseline((prev) => {
+          const next = Math.min(prev, unseen);
+          if (next !== prev) {
+            persistBadgeBaseline(next);
+          }
+          return next;
+        });
+      }
       if (!silent) setLoading(false);
     },
-    []
+    [persistBadgeBaseline]
   );
 
   const scheduleRefresh = useCallback(() => {
@@ -91,6 +172,8 @@ export default function AlertsMenu() {
     const nextOpen = !open;
     if (nextOpen) {
       setOpenPathname(pathname);
+      setBadgeBaseline(count);
+      persistBadgeBaseline(count);
       return;
     }
     setOpenPathname(null);
@@ -186,8 +269,7 @@ export default function AlertsMenu() {
     refreshItems().catch(() => null);
   }, [open, refreshItems]);
 
-  // Clear badge when menu opens (derived from open state, avoids setState in effect body)
-  const displayCount = open ? 0 : count;
+  const displayCount = open ? 0 : Math.max(0, count - badgeBaseline);
 
   useEffect(() => {
     if (!open) {
@@ -323,7 +405,17 @@ export default function AlertsMenu() {
                               setItems((prev) =>
                                 prev.filter((row) => row.id !== item.id)
                               );
-                              setCount((prev) => Math.max(0, prev - 1));
+                              setCount((prev) => {
+                                const next = Math.max(0, prev - 1);
+                                setBadgeBaseline((baselinePrev) => {
+                                  const nextBaseline = Math.min(baselinePrev, next);
+                                  if (nextBaseline !== baselinePrev) {
+                                    persistBadgeBaseline(nextBaseline);
+                                  }
+                                  return nextBaseline;
+                                });
+                                return next;
+                              });
                               setConfirmDeleteId(null);
                             } catch {
                               setActionError("Unable to delete this alert.");
@@ -392,7 +484,17 @@ export default function AlertsMenu() {
                               setItems((prev) =>
                                 prev.filter((row) => row.id !== item.id)
                               );
-                              setCount((prev) => Math.max(0, prev - 1));
+                              setCount((prev) => {
+                                const next = Math.max(0, prev - 1);
+                                setBadgeBaseline((baselinePrev) => {
+                                  const nextBaseline = Math.min(baselinePrev, next);
+                                  if (nextBaseline !== baselinePrev) {
+                                    persistBadgeBaseline(nextBaseline);
+                                  }
+                                  return nextBaseline;
+                                });
+                                return next;
+                              });
                               setOpenPathname(null);
                               router.push(`/entries/${nextEntryId}/edit`);
                             } catch {

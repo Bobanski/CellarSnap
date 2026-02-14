@@ -129,6 +129,7 @@ const updateEntrySchema = z.object({
   entry_privacy: privacyLevelSchema.optional(),
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
+  is_feed_visible: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   const providedPrice = data.price_paid !== undefined;
   const providedPriceCurrency = data.price_paid_currency !== undefined;
@@ -217,6 +218,10 @@ function isPrimaryGrapeSchemaMissing(message: string) {
 
 function isClassificationColumnMissing(message: string) {
   return message.includes("classification");
+}
+
+function isFeedVisibleColumnMissing(message: string) {
+  return message.includes("is_feed_visible");
 }
 
 async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
@@ -450,6 +455,13 @@ export async function PUT(
         "classification" in updatesToApply
       ) {
         delete updatesToApply.classification;
+        removedUnsupportedColumn = true;
+      }
+      if (
+        isFeedVisibleColumnMissing(error.message) &&
+        "is_feed_visible" in updatesToApply
+      ) {
+        delete updatesToApply.is_feed_visible;
         removedUnsupportedColumn = true;
       }
 

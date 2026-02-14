@@ -596,8 +596,7 @@ export default function NewEntryPage() {
         wine.country ||
         wine.region ||
         wine.appellation ||
-        wine.classification ||
-        (wine.primary_grape_suggestions?.length ?? 0) > 0
+        wine.classification
     );
   };
 
@@ -1131,6 +1130,7 @@ export default function NewEntryPage() {
               primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
               consumed_at: consumedAt,
               entry_privacy: privacy,
+              is_feed_visible: false,
               tasted_with_user_ids: [],
             }),
           });
@@ -1324,12 +1324,12 @@ export default function NewEntryPage() {
 
             return {
               ...normalizedWine,
-              included: hasDetectedWineDetails(normalizedWine),
+              included: true,
               photoIndex: pi,
             };
           });
 
-          allWines.push(...wines);
+          allWines.push(...wines.filter((wine) => hasDetectedWineDetails(wine)));
         }
       }
 
@@ -1712,6 +1712,23 @@ export default function NewEntryPage() {
             {/* Lineup review: shown when multiple bottles detected */}
             {lineupWines.length > 0 && !lineupCreating && lineupCreatedCount === 0 ? (
               <div className="mt-4 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    Lineup preview
+                  </p>
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-white/30"
+                    onClick={() => {
+                      setLineupWines([]);
+                      setLineupCreatedCount(0);
+                      setAutofillStatus("idle");
+                      setAutofillMessage(null);
+                    }}
+                  >
+                    ← Back
+                  </button>
+                </div>
                 {lineupWines.map((wine, index) => (
                   <div
                     key={index}
@@ -2092,7 +2109,11 @@ export default function NewEntryPage() {
                         <p className="mt-1 text-xs font-semibold text-rose-400">
                           {errors.price_paid.message}
                         </p>
-                      ) : null}
+                      ) : (
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Numbers only (no $ or symbols). Example: 28.50
+                        </p>
+                      )}
                     </div>
                     <div>
                     <div className="flex items-center justify-between gap-2">
@@ -2150,7 +2171,11 @@ export default function NewEntryPage() {
                         <p className="mt-1 text-xs font-semibold text-rose-400">
                           {errors.price_paid_source.message}
                         </p>
-                      ) : null}
+                      ) : (
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Required if you enter a price paid amount.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2187,7 +2212,11 @@ export default function NewEntryPage() {
                   <p className="mt-1 text-xs font-semibold text-rose-400">
                     {errors.rating.message}
                   </p>
-                ) : null}
+                ) : (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Whole number between 1 and 100.
+                  </p>
+                )}
               </div>
             <div>
               <label className="text-sm font-medium text-zinc-200">

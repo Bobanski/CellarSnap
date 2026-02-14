@@ -118,6 +118,7 @@ const createEntrySchema = z.object({
   entry_privacy: privacyLevelSchema.optional(),
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
+  is_feed_visible: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   const hasPrice = data.price_paid !== undefined;
   const hasPriceCurrency =
@@ -216,6 +217,10 @@ function isPrimaryGrapeSchemaMissing(message: string) {
 
 function isClassificationColumnMissing(message: string) {
   return message.includes("classification");
+}
+
+function isFeedVisibleColumnMissing(message: string) {
+  return message.includes("is_feed_visible");
 }
 
 async function getRandomComparisonCandidate({
@@ -454,7 +459,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const insertPayload = {
+  const insertPayload: Record<string, unknown> = {
     user_id: user.id,
     wine_name: payload.data.wine_name ?? null,
     producer: payload.data.producer ?? null,
@@ -481,6 +486,10 @@ export async function POST(request: Request) {
     place_photo_privacy: placePhotoPrivacy,
   };
 
+  if (payload.data.is_feed_visible !== undefined) {
+    insertPayload.is_feed_visible = payload.data.is_feed_visible;
+  }
+
   const insertPayloadToApply: Record<string, unknown> = { ...insertPayload };
   let data: ({ id: string } & Record<string, unknown>) | null = null;
   let error: { message: string; code?: string | null } | null = null;
@@ -504,6 +513,13 @@ export async function POST(request: Request) {
       "classification" in insertPayloadToApply
     ) {
       delete insertPayloadToApply.classification;
+      removedUnsupportedColumn = true;
+    }
+    if (
+      isFeedVisibleColumnMissing(error.message) &&
+      "is_feed_visible" in insertPayloadToApply
+    ) {
+      delete insertPayloadToApply.is_feed_visible;
       removedUnsupportedColumn = true;
     }
 

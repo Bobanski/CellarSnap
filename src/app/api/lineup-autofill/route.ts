@@ -316,11 +316,14 @@ export async function POST(request: Request) {
               {
                 type: "input_text",
                 text:
-                  "This photo shows one or more wine bottles. First, count every distinct bottle visible in the image. " +
-                  "Then, for each bottle, extract as much label information as you can read. " +
-                  "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per bottle, left-to-right order). " +
-                  "CRITICAL: wines array length MUST equal total_bottles_detected. Do not omit bottles because labels are unreadable or partially occluded. " +
-                  "If text is unreadable, still include that bottle object with null fields, empty grape array, and low confidence. " +
+                  "This photo shows one or more wine bottles. Identify the bottles that are relevant for creating entries: " +
+                  "focus on the main lineup / foreground bottles that have at least some readable or recognizable label/branding. " +
+                  "Ignore tiny/blurred background bottles, reflections, posters, glassware, bottle-like shapes, and anything without identifying label info. " +
+                  "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per included bottle, left-to-right order). " +
+                  "CRITICAL: ONLY include a bottle in the wines array if you can identify at least one meaningful detail for that same bottle: " +
+                  "wine_name OR producer OR vintage OR country/region/appellation OR classification OR any readable label text. " +
+                  "If a bottle has no readable identifying info, do NOT include it. If you are unsure something is a wine bottle, exclude it. " +
+                  "wines array length MUST equal total_bottles_detected. total_bottles_detected should equal wines.length. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
                   "The box should include the whole bottle from top to bottom with a little padding and must align to the same bottle represented by that wine object. " +
@@ -384,9 +387,21 @@ export async function POST(request: Request) {
       label_anchor: normalizeAnchor(wine.label_anchor),
     }));
 
+    const filteredWines = wines.filter((wine) => {
+      return Boolean(
+        wine.wine_name ||
+          wine.producer ||
+          wine.vintage ||
+          wine.country ||
+          wine.region ||
+          wine.appellation ||
+          wine.classification
+      );
+    });
+
     return NextResponse.json({
-      wines,
-      total_bottles_detected: parsed.data.total_bottles_detected ?? wines.length,
+      wines: filteredWines,
+      total_bottles_detected: filteredWines.length,
     }, {
       headers: rateLimitHeaders(rateLimit),
     });
