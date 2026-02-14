@@ -73,6 +73,49 @@ export default function ProfilePage() {
     earned: boolean;
   };
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [flippedBadgeIds, setFlippedBadgeIds] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  const toggleBadgeFlip = useCallback((badgeId: string) => {
+    setFlippedBadgeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(badgeId)) {
+        next.delete(badgeId);
+      } else {
+        next.add(badgeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const badgeRequirementText = (badge: Badge) => {
+    const n = badge.threshold;
+    switch (badge.id) {
+      case "burgundy_bitch":
+        return `Log ${n} wines from Burgundy (Bourgogne counts).`;
+      case "california_king":
+        return `Log ${n} wines from California.`;
+      case "bordeaux_hoe":
+        return `Log ${n} wines from Bordeaux.`;
+      case "rioja_renegade":
+        return `Log ${n} wines from Rioja.`;
+      case "sangiovese_savage":
+        return `Log ${n} wines from Chianti.`;
+      case "rhone_rider":
+        return `Log ${n} wines from the Rhône.`;
+      case "margaux_monarch":
+        return `Log ${n} wines from Margaux.`;
+      case "chianti_connoisseur":
+        return `Log ${n} wines from Chianti.`;
+      case "mosel_maniac":
+        return `Log ${n} wines from the Mosel.`;
+      case "champagne_champion":
+        return `Log ${n} wines from Champagne.`;
+      default:
+        return `Log ${n} qualifying wines to earn this badge.`;
+    }
+  };
 
   // Privacy state
   const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("public");
@@ -758,52 +801,83 @@ export default function ProfilePage() {
               </p>
 
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-                {badges.map((badge) => (
-                  <div
-                    key={badge.id}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-4 text-center transition ${
-                      badge.earned
-                        ? "border-amber-300/55 bg-amber-400/10 ring-1 ring-amber-300/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
-                        : badge.count > 0
-                          ? "border-white/10 bg-black/20 opacity-80 saturate-50"
-                          : "border-white/5 bg-black/20 opacity-45 grayscale"
-                    }`}
-                  >
-                    <span
-                      className={`text-2xl ${
-                        badge.earned
-                          ? "drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]"
-                          : badge.count > 0
-                            ? "text-zinc-100"
+                {badges.map((badge) => {
+                  const flipped = flippedBadgeIds.has(badge.id);
+                  const baseClass =
+                    "rounded-xl border px-3 py-4 text-center transition";
+                  const visualClass = badge.earned
+                    ? "border-amber-300/55 bg-amber-400/10 ring-1 ring-amber-300/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
+                    : badge.count > 0
+                      ? "border-white/10 bg-black/20 opacity-80 saturate-50"
+                      : "border-white/5 bg-black/20 opacity-45 grayscale";
+
+                  if (badge.earned) {
+                    const requirement = badgeRequirementText(badge);
+                    return (
+                      <button
+                        key={badge.id}
+                        type="button"
+                        className={`${baseClass} ${visualClass} cursor-pointer [perspective:900px] focus:outline-none focus:ring-2 focus:ring-amber-300/30`}
+                        onClick={() => toggleBadgeFlip(badge.id)}
+                        aria-pressed={flipped}
+                        aria-label={`${
+                          flipped ? "Hide" : "Show"
+                        } how you earned the ${badge.name} badge`}
+                      >
+                        <div
+                          className={`relative h-full w-full transition-transform duration-500 motion-reduce:transition-none [transform-style:preserve-3d] ${
+                            flipped ? "[transform:rotateY(180deg)]" : ""
+                          }`}
+                        >
+                          <div className="flex h-full flex-col items-center justify-center gap-1.5 [backface-visibility:hidden]">
+                            <span className="text-2xl drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]">
+                              {badge.symbol}
+                            </span>
+                            <span className="text-xs font-semibold leading-tight text-amber-200">
+                              {badge.name}
+                            </span>
+                          </div>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
+                            <p className="text-xs font-semibold leading-snug text-amber-100">
+                              {requirement}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={badge.id}
+                      className={`${baseClass} ${visualClass} flex flex-col items-center justify-center gap-1.5`}
+                    >
+                      <span
+                        className={`text-2xl ${
+                          badge.count > 0 ? "text-zinc-100" : "text-zinc-500"
+                        }`}
+                      >
+                        {badge.symbol}
+                      </span>
+                      <span
+                        className={`text-xs font-semibold leading-tight ${
+                          badge.count > 0 ? "text-zinc-200" : "text-zinc-400"
+                        }`}
+                      >
+                        {badge.name}
+                      </span>
+                      <span
+                        className={`text-[10px] tabular-nums ${
+                          badge.count > 0
+                            ? "font-medium text-amber-200/80"
                             : "text-zinc-500"
-                      }`}
-                    >
-                      {badge.symbol}
-                    </span>
-                    <span
-                      className={`text-xs font-semibold leading-tight ${
-                        badge.earned
-                          ? "text-amber-200"
-                        : badge.count > 0
-                          ? "text-zinc-200"
-                          : "text-zinc-400"
-                      }`}
-                    >
-                      {badge.name}
-                    </span>
-                    <span
-                      className={`text-[10px] tabular-nums ${
-                        badge.earned
-                          ? "font-medium text-amber-300/70"
-                        : badge.count > 0
-                          ? "font-medium text-amber-200/80"
-                          : "text-zinc-500"
-                      }`}
-                    >
-                      {badge.count}/{badge.threshold}
-                    </span>
-                  </div>
-                ))}
+                        }`}
+                      >
+                        {badge.count}/{badge.threshold}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}
