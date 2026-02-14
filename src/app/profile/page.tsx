@@ -764,13 +764,21 @@ export default function ProfilePage() {
                     className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-4 text-center transition ${
                       badge.earned
                         ? "border-amber-300/40 bg-amber-400/10"
-                        : "border-white/5 bg-black/20 opacity-40"
+                        : badge.count > 0
+                          ? "border-amber-300/20 bg-white/5"
+                          : "border-white/5 bg-black/20 opacity-40"
                     }`}
                   >
-                    <span className="text-2xl">{badge.symbol}</span>
+                    <span className={`text-2xl ${badge.earned ? "" : badge.count > 0 ? "text-zinc-100" : ""}`}>
+                      {badge.symbol}
+                    </span>
                     <span
                       className={`text-xs font-semibold leading-tight ${
-                        badge.earned ? "text-amber-200" : "text-zinc-400"
+                        badge.earned
+                          ? "text-amber-200"
+                          : badge.count > 0
+                            ? "text-zinc-200"
+                            : "text-zinc-400"
                       }`}
                     >
                       {badge.name}
@@ -779,7 +787,9 @@ export default function ProfilePage() {
                       className={`text-[10px] tabular-nums ${
                         badge.earned
                           ? "font-medium text-amber-300/70"
-                          : "text-zinc-500"
+                          : badge.count > 0
+                            ? "font-medium text-amber-200/80"
+                            : "text-zinc-500"
                       }`}
                     >
                       {badge.count}/{badge.threshold}
