@@ -11,10 +11,10 @@ import {
   normalizeAdvancedNotes,
   type AdvancedNotes,
 } from "@/lib/advancedNotes";
-import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
+import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
 import {
   PRICE_PAID_SOURCE_LABELS,
@@ -349,6 +349,24 @@ export default function EntryDetailPage() {
           .map((grape) => grape.name)
           .join(", ")
       : null;
+  const labelItems = labelGallery.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `Wine label photo ${idx + 1}`,
+    badge: "Label",
+  }));
+  const placeItems = placeGallery.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `Place photo ${idx + 1}`,
+    badge: "Place",
+  }));
+  const pairingItems = pairingGallery.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `Pairing photo ${idx + 1}`,
+    badge: "Pairing",
+  }));
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -384,154 +402,61 @@ export default function EntryDetailPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-5">
-            <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
-              {labelGallery.length > 0 ? (
-                <div>
-                  <Photo
-                    src={labelGallery[0].signed_url ?? ""}
-                    alt="Wine label"
-                    containerClassName="h-80 w-full"
-                    className="h-80 w-full object-cover"
-                    loading="eager"
-                  />
-                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
-                    <span>Label photos</span>
-                    {isOwner && labelGallery[0].signed_url ? (
-                      <a
-                        href={labelGallery[0].signed_url}
-                        download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                      >
-                        Download
-                      </a>
-                    ) : null}
-                  </div>
-                  {labelGallery.length > 1 ? (
-                    <div className="grid gap-2 border-t border-white/10 bg-black/30 p-3 sm:grid-cols-3">
-                      {labelGallery.slice(1).map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="overflow-hidden rounded-xl border border-white/10"
-                        >
-                          {photo.signed_url ? (
-                            <img
-                              src={photo.signed_url}
-                              alt="Label alternate"
-                              className="h-24 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-24 items-center justify-center text-xs text-zinc-400">
-                              Photo unavailable
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+            <SwipePhotoGallery
+              items={labelItems}
+              empty={photosLoading ? "Loading photos..." : "No label photo uploaded."}
+              footer={(active) => (
+                <>
+                  <span>Label photos</span>
+                  {isOwner && active.url ? (
+                    <a
+                      href={active.url}
+                      download
+                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                    >
+                      Download
+                    </a>
                   ) : null}
-                </div>
-              ) : photosLoading ? (
-                <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
-                  Loading photos...
-                </div>
-              ) : (
-                <div className="flex h-80 items-center justify-center text-sm text-zinc-400">
-                  No label photo uploaded.
-                </div>
+                </>
               )}
-            </div>
+            />
             {placeGallery.length > 0 ? (
-              <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
-                <div>
-                  <Photo
-                    src={placeGallery[0].signed_url ?? ""}
-                    alt="Place"
-                    containerClassName="h-80 w-full"
-                    className="h-80 w-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+              <SwipePhotoGallery
+                items={placeItems}
+                footer={(active) => (
+                  <>
                     <span>Place photos</span>
-                    {isOwner && placeGallery[0].signed_url ? (
+                    {isOwner && active.url ? (
                       <a
-                        href={placeGallery[0].signed_url}
+                        href={active.url}
                         download
                         className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                       >
                         Download
                       </a>
                     ) : null}
-                  </div>
-                  {placeGallery.length > 1 ? (
-                    <div className="grid gap-2 border-t border-white/10 bg-black/30 p-3 sm:grid-cols-3">
-                      {placeGallery.slice(1).map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="overflow-hidden rounded-xl border border-white/10"
-                        >
-                          {photo.signed_url ? (
-                            <img
-                              src={photo.signed_url}
-                              alt="Place alternate"
-                              className="h-24 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-24 items-center justify-center text-xs text-zinc-400">
-                              Photo unavailable
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+                  </>
+                )}
+              />
             ) : null}
             {pairingGallery.length > 0 ? (
-              <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/40">
-                <div>
-                  <Photo
-                    src={pairingGallery[0].signed_url ?? ""}
-                    alt="Pairing"
-                    containerClassName="h-80 w-full"
-                    className="h-80 w-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+              <SwipePhotoGallery
+                items={pairingItems}
+                footer={(active) => (
+                  <>
                     <span>Pairing photos</span>
-                    {isOwner && pairingGallery[0].signed_url ? (
+                    {isOwner && active.url ? (
                       <a
-                        href={pairingGallery[0].signed_url}
+                        href={active.url}
                         download
                         className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                       >
                         Download
                       </a>
                     ) : null}
-                  </div>
-                  {pairingGallery.length > 1 ? (
-                    <div className="grid gap-2 border-t border-white/10 bg-black/30 p-3 sm:grid-cols-3">
-                      {pairingGallery.slice(1).map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="overflow-hidden rounded-xl border border-white/10"
-                        >
-                          {photo.signed_url ? (
-                            <img
-                              src={photo.signed_url}
-                              alt="Pairing alternate"
-                              className="h-24 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-24 items-center justify-center text-xs text-zinc-400">
-                              Photo unavailable
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+                  </>
+                )}
+              />
             ) : null}
           </div>
 
