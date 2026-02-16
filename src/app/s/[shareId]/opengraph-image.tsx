@@ -159,7 +159,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  fontSize: 30,
+                  fontSize: 34,
                   color: "#fde68a",
                 }}
               >
@@ -170,10 +170,10 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
             <div
               style={{
                 color: "#e4e4e7",
-                fontSize: 33,
-                lineHeight: 1.25,
+                fontSize: 37,
+                lineHeight: 1.22,
                 display: "flex",
-                maxHeight: "170px",
+                maxHeight: "190px",
                 overflow: "hidden",
               }}
             >

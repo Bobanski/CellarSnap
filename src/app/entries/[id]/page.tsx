@@ -59,21 +59,8 @@ async function copyTextToClipboard(value: string) {
   return copied;
 }
 
-function buildShareTitle(entry: EntryDetail) {
-  const name = entry.wine_name?.trim() || "Untitled wine";
-  const vintage = entry.vintage?.trim();
-  return vintage ? `${name} (${vintage})` : name;
-}
-
-function buildShareText(entry: EntryDetail) {
-  const normalizedNotes = entry.notes?.replace(/\s+/g, " ").trim();
-  if (normalizedNotes) {
-    if (normalizedNotes.length <= 120) {
-      return normalizedNotes;
-    }
-    return `${normalizedNotes.slice(0, 117).trimEnd()}...`;
-  }
-  return "Take a look at this wine post from my CellarSnap.";
+function buildShareText() {
+  return "Check out this wine post from my CellarSnap.";
 }
 
 export default function EntryDetailPage() {
@@ -307,13 +294,11 @@ export default function EntryDetailPage() {
       }
 
       const shareUrl = payload.url;
-      const shareTitle = buildShareTitle(entry);
-      const shareText = buildShareText(entry);
+      const shareText = buildShareText();
 
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         try {
           await navigator.share({
-            title: shareTitle,
             text: shareText,
             url: shareUrl,
           });
