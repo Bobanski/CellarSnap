@@ -150,7 +150,42 @@ export default function EditEntryPage() {
   const [removingCurrentPhotoType, setRemovingCurrentPhotoType] = useState<
     "label" | "place" | "pairing" | null
   >(null);
+  const [cropEditorPhoto, setCropEditorPhoto] = useState<EntryPhoto | null>(null);
+  const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [cropCenterX, setCropCenterX] = useState(50);
+  const [cropCenterY, setCropCenterY] = useState(50);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [savingCrop, setSavingCrop] = useState(false);
+  const [photoRenderVersion, setPhotoRenderVersion] = useState(0);
+  const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
+  const [cropSourcePath, setCropSourcePath] = useState<string | null>(null);
+  const cropFrameRef = useRef<HTMLDivElement | null>(null);
+  const cropDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startCenterX: number;
+    startCenterY: number;
+  } | null>(null);
+  const cropOpenRequestRef = useRef(0);
   const [loading, setLoading] = useState(true);
+
+  const withCacheBust = (url: string | null | undefined) => {
+    if (!url) return null;
+    return `${url}${url.includes("?") ? "&" : "?"}v=${photoRenderVersion}`;
+  };
+
+  const buildOriginalPath = (path: string) => {
+    const extensionMatch = path.match(/(\.[a-z0-9]+)$/i);
+    if (!extensionMatch) {
+      return `${path}__original`;
+    }
+    return path.replace(/(\.[a-z0-9]+)$/i, "__original$1");
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -487,6 +522,329 @@ export default function EditEntryPage() {
         body: JSON.stringify({ position: current.position }),
       }),
     ]);
+  };
+
+  const openCropEditor = async (photo: EntryPhoto) => {
+    if (photo.id.startsWith("legacy-")) {
+      setPhotoError(
+        "Crop editing is only available for photos in the new photo gallery format."
+      );
+      return;
+    }
+    const requestId = cropOpenRequestRef.current + 1;
+    cropOpenRequestRef.current = requestId;
+    const isCurrentRequest = () => cropOpenRequestRef.current === requestId;
+
+    setCropImageNaturalSize(null);
+    setCropCenterX(50);
+    setCropCenterY(50);
+    setCropZoom(1);
+    setIsDraggingCrop(false);
+    cropDragRef.current = null;
+    setPhotoError(null);
+    setCropEditorPhoto(photo);
+    setCropSourceUrl(withCacheBust(photo.signed_url) ?? photo.signed_url ?? null);
+    setCropSourcePath(photo.path);
+
+    if (!photo.path) {
+      return;
+    }
+
+    const originalPath = buildOriginalPath(photo.path);
+    const { data: originalSigned, error: originalError } = await supabase.storage
+      .from("wine-photos")
+      .createSignedUrl(originalPath, 60 * 60);
+
+    if (!isCurrentRequest()) {
+      return;
+    }
+
+    if (!originalError && originalSigned?.signedUrl) {
+      setCropSourceUrl(originalSigned.signedUrl);
+      setCropSourcePath(originalPath);
+      return;
+    }
+
+    if (photo.type !== "label" || !photo.signed_url) {
+      return;
+    }
+
+    const labelPhotos = photosByType("label").filter(
+      (candidate) =>
+        !candidate.id.startsWith("legacy-") && Boolean(candidate.signed_url)
+    );
+    const primaryLabel = labelPhotos[0] ?? null;
+    const secondaryLabel = labelPhotos[1] ?? null;
+
+    if (
+      primaryLabel?.id !== photo.id ||
+      !secondaryLabel?.signed_url ||
+      !secondaryLabel.path
+    ) {
+      return;
+    }
+
+    const primarySourceUrl = withCacheBust(photo.signed_url) ?? photo.signed_url;
+    const secondarySourceUrl =
+      withCacheBust(secondaryLabel.signed_url) ?? secondaryLabel.signed_url;
+    if (!primarySourceUrl || !secondarySourceUrl) {
+      return;
+    }
+
+    try {
+      const [primaryImage, secondaryImage] = await Promise.all([
+        loadImageElement(primarySourceUrl),
+        loadImageElement(secondarySourceUrl),
+      ]);
+      if (!isCurrentRequest()) {
+        return;
+      }
+
+      const primaryAspect = primaryImage.naturalWidth / primaryImage.naturalHeight;
+      const secondaryAspect =
+        secondaryImage.naturalWidth / secondaryImage.naturalHeight;
+      const primaryNearSquare = primaryAspect > 0.85 && primaryAspect < 1.15;
+      const secondaryClearlyNotSquare =
+        secondaryAspect < 0.8 || secondaryAspect > 1.25;
+      const secondaryMeaningfullyLarger =
+        secondaryImage.naturalHeight > primaryImage.naturalHeight * 1.15 ||
+        secondaryImage.naturalWidth > primaryImage.naturalWidth * 1.15;
+
+      if (
+        primaryNearSquare &&
+        (secondaryClearlyNotSquare || secondaryMeaningfullyLarger)
+      ) {
+        setCropSourceUrl(secondaryLabel.signed_url);
+        setCropSourcePath(secondaryLabel.path);
+      }
+    } catch {
+      // Fall back to the current photo source.
+    }
+  };
+
+  const closeCropEditor = () => {
+    if (savingCrop) {
+      return;
+    }
+    cropOpenRequestRef.current += 1;
+    setCropEditorPhoto(null);
+    setCropSourceUrl(null);
+    setCropSourcePath(null);
+    setIsDraggingCrop(false);
+    cropDragRef.current = null;
+  };
+
+  const getCropGeometry = (
+    natural = cropImageNaturalSize,
+    zoom = cropZoom
+  ) => {
+    const frameSize = cropFrameRef.current?.clientWidth ?? 0;
+    if (!natural || frameSize <= 0) {
+      return null;
+    }
+
+    const baseScale = Math.min(
+      frameSize / natural.width,
+      frameSize / natural.height
+    );
+    const scale = baseScale * zoom;
+    const displayWidth = natural.width * scale;
+    const displayHeight = natural.height * scale;
+
+    return {
+      frameSize,
+      baseScale,
+      scale,
+      displayWidth,
+      displayHeight,
+      overflowX: Math.max(0, displayWidth - frameSize),
+      overflowY: Math.max(0, displayHeight - frameSize),
+    };
+  };
+
+  const clampCenter = (
+    centerX: number,
+    centerY: number,
+    zoom = cropZoom
+  ) => {
+    const geometry = getCropGeometry(cropImageNaturalSize, zoom);
+    const hasXPan = (geometry?.overflowX ?? 0) > 0;
+    const hasYPan = (geometry?.overflowY ?? 0) > 0;
+    return {
+      x: hasXPan ? Math.max(0, Math.min(100, centerX)) : 50,
+      y: hasYPan ? Math.max(0, Math.min(100, centerY)) : 50,
+    };
+  };
+
+  const onCropPointerDown = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (!cropSourceUrl || savingCrop) {
+      return;
+    }
+    cropDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startCenterX: cropCenterX,
+      startCenterY: cropCenterY,
+    };
+    setIsDraggingCrop(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onCropPointerMove = (event: React.PointerEvent<HTMLImageElement>) => {
+    const drag = cropDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const geometry = getCropGeometry();
+    if (!geometry) {
+      return;
+    }
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    const nextCenterX =
+      geometry.overflowX > 0
+        ? drag.startCenterX - (dx / geometry.overflowX) * 100
+        : 50;
+    const nextCenterY =
+      geometry.overflowY > 0
+        ? drag.startCenterY - (dy / geometry.overflowY) * 100
+        : 50;
+    const clamped = clampCenter(nextCenterX, nextCenterY);
+    setCropCenterX(clamped.x);
+    setCropCenterY(clamped.y);
+  };
+
+  const onCropPointerUp = (event: React.PointerEvent<HTMLImageElement>) => {
+    const drag = cropDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    cropDragRef.current = null;
+    setIsDraggingCrop(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const loadImageElement = async (sourceUrl: string) => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Unable to load image."));
+      image.src = sourceUrl;
+    });
+  };
+
+  const saveCrop = async () => {
+    if (
+      !cropEditorPhoto ||
+      cropEditorPhoto.id.startsWith("legacy-") ||
+      !cropEditorPhoto.path ||
+      !(cropSourceUrl || cropEditorPhoto.signed_url)
+    ) {
+      return;
+    }
+    setSavingCrop(true);
+    setPhotoError(null);
+
+    try {
+      const sourcePath = cropSourcePath ?? cropEditorPhoto.path;
+      const originalPath = buildOriginalPath(cropEditorPhoto.path);
+
+      if (sourcePath && originalPath !== sourcePath) {
+        const { error: copyError } = await supabase.storage
+          .from("wine-photos")
+          .copy(sourcePath, originalPath);
+        if (copyError) {
+          const message = copyError.message.toLowerCase();
+          const alreadyExists =
+            message.includes("already exists") || message.includes("exists");
+          if (!alreadyExists) {
+            throw new Error(copyError.message);
+          }
+        }
+      }
+
+      const sourceFetchUrl =
+        withCacheBust(cropSourceUrl ?? cropEditorPhoto.signed_url) ??
+        cropSourceUrl ??
+        cropEditorPhoto.signed_url;
+      if (!sourceFetchUrl) {
+        throw new Error("Unable to read source photo.");
+      }
+
+      const sourceResponse = await fetch(sourceFetchUrl, {
+        cache: "no-store",
+      });
+      if (!sourceResponse.ok) {
+        throw new Error("Unable to read source photo.");
+      }
+      const sourceBlob = await sourceResponse.blob();
+      const sourceUrl = URL.createObjectURL(sourceBlob);
+
+      try {
+        const sourceImage = await loadImageElement(sourceUrl);
+        const outputSize = 1200;
+        const canvas = document.createElement("canvas");
+        canvas.width = outputSize;
+        canvas.height = outputSize;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Unable to create crop canvas.");
+        }
+
+        const baseScale = Math.min(
+          outputSize / sourceImage.width,
+          outputSize / sourceImage.height
+        );
+        const effectiveScale = baseScale * cropZoom;
+        const displayWidth = sourceImage.width * effectiveScale;
+        const displayHeight = sourceImage.height * effectiveScale;
+        const overflowX = Math.max(0, displayWidth - outputSize);
+        const overflowY = Math.max(0, displayHeight - outputSize);
+        const centerPadX = Math.max(0, (outputSize - displayWidth) / 2);
+        const centerPadY = Math.max(0, (outputSize - displayHeight) / 2);
+        const drawX = centerPadX - overflowX * (cropCenterX / 100);
+        const drawY = centerPadY - overflowY * (cropCenterY / 100);
+
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, outputSize, outputSize);
+        ctx.drawImage(
+          sourceImage,
+          drawX,
+          drawY,
+          displayWidth,
+          displayHeight
+        );
+
+        const croppedBlob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/jpeg", 0.9)
+        );
+        if (!croppedBlob) {
+          throw new Error("Unable to render cropped image.");
+        }
+
+        const { error } = await supabase.storage
+          .from("wine-photos")
+          .upload(cropEditorPhoto.path, croppedBlob, {
+            upsert: true,
+            contentType: "image/jpeg",
+          });
+        if (error) {
+          throw new Error(error.message);
+        }
+      } finally {
+        URL.revokeObjectURL(sourceUrl);
+      }
+
+      setPhotoRenderVersion((current) => current + 1);
+      await loadPhotos();
+      cropOpenRequestRef.current += 1;
+      setCropEditorPhoto(null);
+    } catch {
+      setPhotoError("Unable to save crop thumbnail.");
+    } finally {
+      setSavingCrop(false);
+    }
   };
 
   useEffect(() => {
@@ -866,11 +1224,32 @@ export default function EditEntryPage() {
                     >
                       <div className="relative">
                         {photo.signed_url ? (
-                          <img
-                            src={photo.signed_url}
-                            alt={`Current ${card.label.toLowerCase()} photo`}
-                            className="h-28 w-full object-cover sm:h-36"
-                          />
+                          card.key === "label" &&
+                          !photo.id.startsWith("legacy-") ? (
+                            <button
+                              type="button"
+                              className="block aspect-square w-full cursor-zoom-in overflow-hidden"
+                              onClick={() => openCropEditor(photo)}
+                              aria-label="Adjust label crop"
+                              title="Click to adjust crop"
+                            >
+                              <img
+                                src={withCacheBust(photo.signed_url) ?? photo.signed_url}
+                                alt={`Current ${card.label.toLowerCase()} photo`}
+                                className="h-full w-full object-cover"
+                              />
+                            </button>
+                          ) : (
+                            <img
+                              src={withCacheBust(photo.signed_url) ?? photo.signed_url}
+                              alt={`Current ${card.label.toLowerCase()} photo`}
+                              className={
+                                card.key === "label"
+                                  ? "aspect-square w-full object-cover"
+                                  : "h-28 w-full object-cover sm:h-36"
+                              }
+                            />
+                          )
                         ) : (
                           <div className="flex h-28 items-center justify-center text-xs text-zinc-400 sm:h-36">
                             Photo unavailable
@@ -1296,11 +1675,33 @@ export default function EditEntryPage() {
                           className="rounded-xl border border-white/10 bg-black/40 p-2"
                         >
                           {photo.signed_url ? (
-                            <img
-                              src={photo.signed_url}
-                              alt={`${type} photo ${index + 1}`}
-                              className="h-28 w-full rounded-lg object-cover"
-                            />
+                            type === "label" &&
+                            index === 0 &&
+                            !photo.id.startsWith("legacy-") ? (
+                              <button
+                                type="button"
+                                className="block aspect-square w-full cursor-zoom-in overflow-hidden rounded-lg"
+                                onClick={() => openCropEditor(photo)}
+                                aria-label="Adjust label crop"
+                                title="Click to adjust crop"
+                              >
+                                <img
+                                  src={withCacheBust(photo.signed_url) ?? photo.signed_url}
+                                  alt={`${type} photo ${index + 1}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
+                            ) : (
+                              <img
+                                src={withCacheBust(photo.signed_url) ?? photo.signed_url}
+                                alt={`${type} photo ${index + 1}`}
+                                className={
+                                  type === "label" && index === 0
+                                    ? "aspect-square w-full rounded-lg object-cover"
+                                    : "h-28 w-full rounded-lg object-cover"
+                                }
+                              />
+                            )
                           ) : (
                             <div className="flex h-28 items-center justify-center text-xs text-zinc-400">
                               Photo unavailable
@@ -1330,13 +1731,15 @@ export default function EditEntryPage() {
                                 Saved from earlier entry
                               </span>
                             ) : (
-                              <button
-                                type="button"
-                                className="rounded-full border border-rose-500/40 px-2 py-1 text-rose-200 transition hover:border-rose-300"
-                                onClick={() => deletePhoto(photo.id)}
-                              >
-                                Delete
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="rounded-full border border-rose-500/40 px-2 py-1 text-rose-200 transition hover:border-rose-300"
+                                  onClick={() => deletePhoto(photo.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1381,6 +1784,171 @@ export default function EditEntryPage() {
               );
             })}
           </div>
+
+          {cropEditorPhoto ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <button
+                type="button"
+                aria-label="Close crop editor"
+                className="absolute inset-0 bg-black/70"
+                onClick={closeCropEditor}
+                disabled={savingCrop}
+              />
+              <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-white/15 bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
+                      Label crop
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold text-zinc-50">
+                      Adjust thumbnail framing
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      This rewrites the displayed thumbnail image. Drag to frame it, then save.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeCropEditor}
+                    disabled={savingCrop}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                  <div
+                    ref={cropFrameRef}
+                    className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
+                  >
+                    {cropSourceUrl ? (
+                      <img
+                        src={
+                          withCacheBust(cropSourceUrl) ?? cropSourceUrl
+                        }
+                        alt="Label crop preview"
+                        draggable={false}
+                        onLoad={(event) => {
+                          const target = event.currentTarget;
+                          setCropImageNaturalSize({
+                            width: target.naturalWidth,
+                            height: target.naturalHeight,
+                          });
+                          const centered = clampCenter(cropCenterX, cropCenterY);
+                          setCropCenterX(centered.x);
+                          setCropCenterY(centered.y);
+                        }}
+                        onPointerDown={onCropPointerDown}
+                        onPointerMove={onCropPointerMove}
+                        onPointerUp={onCropPointerUp}
+                        onPointerCancel={onCropPointerUp}
+                        style={(() => {
+                          const geometry = getCropGeometry();
+                          if (!geometry) {
+                            return {
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "contain" as const,
+                              touchAction: "none" as const,
+                            };
+                          }
+                          const offsetX = geometry.overflowX * (cropCenterX / 100);
+                          const offsetY = geometry.overflowY * (cropCenterY / 100);
+                          const centerPadX = Math.max(
+                            0,
+                            (geometry.frameSize - geometry.displayWidth) / 2
+                          );
+                          const centerPadY = Math.max(
+                            0,
+                            (geometry.frameSize - geometry.displayHeight) / 2
+                          );
+                          return {
+                            width: `${geometry.displayWidth}px`,
+                            height: `${geometry.displayHeight}px`,
+                            maxWidth: "none",
+                            transform: `translate(${centerPadX - offsetX}px, ${
+                              centerPadY - offsetY
+                            }px)`,
+                            touchAction: "none" as const,
+                          };
+                        })()}
+                        className={`absolute left-0 top-0 select-none ${
+                          isDraggingCrop ? "cursor-grabbing" : "cursor-grab"
+                        }`}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
+                        Photo unavailable
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
+                      <span>Zoom</span>
+                      <span>{cropZoom.toFixed(2)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={6}
+                      step={0.01}
+                      value={cropZoom}
+                      onChange={(event) => {
+                        const nextZoom = Number(event.target.value);
+                        setCropZoom(nextZoom);
+                        const centered = clampCenter(cropCenterX, cropCenterY, nextZoom);
+                        setCropCenterX(centered.x);
+                        setCropCenterY(centered.y);
+                      }}
+                      className="w-full accent-amber-300"
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    At 1.00x the full image fits. Zoom in and drag to frame the thumbnail.
+                  </p>
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCropCenterX(50);
+                      setCropCenterY(50);
+                      setCropZoom(1);
+                      setIsDraggingCrop(false);
+                      cropDragRef.current = null;
+                    }}
+                    disabled={savingCrop}
+                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                  >
+                    Reset
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={closeCropEditor}
+                      disabled={savingCrop}
+                      className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveCrop}
+                      disabled={savingCrop}
+                      className="rounded-full bg-amber-400 px-4 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60"
+                    >
+                      {savingCrop ? "Saving..." : "Save crop"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {errorMessage ? (
             <p className="text-sm text-rose-300">{errorMessage}</p>
