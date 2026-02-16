@@ -1,5 +1,10 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
+import {
+  QPR_LEVEL_LABELS,
+  QPR_LEVEL_VALUES,
+  type QprLevel,
+} from "@/lib/entryMeta";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type ShareRow = {
@@ -20,12 +25,24 @@ type EntryRow = {
   country: string | null;
   region: string | null;
   appellation: string | null;
-  classification: string | null;
+  qpr_level: string | null;
   label_image_path: string | null;
 };
 
 type LabelPhotoRow = {
   path: string;
+};
+
+type PrimaryGrapeRow = {
+  position: number;
+  grape_varieties:
+    | {
+        name: string | null;
+      }
+    | {
+        name: string | null;
+      }[]
+    | null;
 };
 
 export type PublicSharedPost = {
@@ -43,7 +60,8 @@ export type PublicSharedPost = {
   country: string | null;
   region: string | null;
   appellation: string | null;
-  classification: string | null;
+  primaryGrapes: string[];
+  qprLabel: string | null;
   labelImageUrl: string | null;
   metadataTitle: string;
   metadataDescription: string;
@@ -79,6 +97,31 @@ function normalizeStoragePath(path: string | null | undefined) {
     return null;
   }
   return normalized;
+}
+
+function normalizePrimaryGrape(
+  variety: PrimaryGrapeRow["grape_varieties"]
+): string | null {
+  if (!variety) {
+    return null;
+  }
+
+  if (Array.isArray(variety)) {
+    return normalizeText(variety[0]?.name);
+  }
+
+  return normalizeText(variety.name);
+}
+
+function normalizeQprLabel(level: string | null | undefined) {
+  if (
+    level &&
+    (QPR_LEVEL_VALUES as readonly string[]).includes(level)
+  ) {
+    return QPR_LEVEL_LABELS[level as QprLevel];
+  }
+
+  return null;
 }
 
 function buildMetadataTitle(entry: EntryRow) {
@@ -152,7 +195,7 @@ async function resolvePublicPostShareUncached(
   const { data: rawEntry, error: entryError } = await supabase
     .from("wine_entries")
     .select(
-      "id, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, classification, label_image_path"
+      "id, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, qpr_level, label_image_path"
     )
     .eq("id", share.post_id)
     .maybeSingle();
@@ -180,6 +223,24 @@ async function resolvePublicPostShareUncached(
     labelPath = normalizeStoragePath(labelPhoto.path) ?? labelPath;
   }
 
+  let primaryGrapes: string[] = [];
+  const { data: rawPrimaryGrapes, error: primaryGrapesError } = await supabase
+    .from("entry_primary_grapes")
+    .select("position, grape_varieties(name)")
+    .eq("entry_id", entry.id)
+    .order("position", { ascending: true });
+
+  if (!primaryGrapesError && rawPrimaryGrapes) {
+    const deduped = new Set<string>();
+    (rawPrimaryGrapes as PrimaryGrapeRow[]).forEach((row) => {
+      const name = normalizePrimaryGrape(row.grape_varieties);
+      if (name) {
+        deduped.add(name);
+      }
+    });
+    primaryGrapes = Array.from(deduped);
+  }
+
   let labelImageUrl: string | null = null;
   if (labelPath) {
     const { data: signedData } = await supabase.storage
@@ -205,7 +266,8 @@ async function resolvePublicPostShareUncached(
     country: entry.country,
     region: entry.region,
     appellation: entry.appellation,
-    classification: entry.classification,
+    primaryGrapes,
+    qprLabel: normalizeQprLabel(entry.qpr_level),
     labelImageUrl,
     metadataTitle: buildMetadataTitle(entry),
     metadataDescription: buildMetadataDescription(entry),

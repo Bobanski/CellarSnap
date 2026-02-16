@@ -8,6 +8,15 @@ type SharePageProps = {
   params: Promise<{ shareId: string }>;
 };
 
+function normalizeFieldValue(value: string | null | undefined) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 export async function generateMetadata({ params }: SharePageProps): Promise<Metadata> {
   const { shareId } = await params;
   const share = await resolvePublicPostShare(shareId);
@@ -126,6 +135,23 @@ export default async function SharePage({ params }: SharePageProps) {
   const wineName = share.wineName?.trim() || "Untitled wine";
   const vintage = share.vintage?.trim();
   const displayTitle = vintage ? `${wineName} (${vintage})` : wineName;
+  const detailFields = [
+    { label: "Country", value: normalizeFieldValue(share.country) },
+    { label: "Region", value: normalizeFieldValue(share.region) },
+    { label: "Appellation", value: normalizeFieldValue(share.appellation) },
+    {
+      label: "Grapes",
+      value:
+        share.primaryGrapes.length > 0
+          ? share.primaryGrapes.join(", ")
+          : null,
+    },
+    { label: "QPR", value: normalizeFieldValue(share.qprLabel) },
+  ]
+    .filter(
+      (field): field is { label: string; value: string } => field.value !== null
+    )
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -180,24 +206,16 @@ export default async function SharePage({ params }: SharePageProps) {
               </div>
             ) : null}
 
-            <div className="grid gap-3 text-sm text-zinc-300 sm:grid-cols-2">
-              <p>
-                <span className="text-zinc-500">Region:</span>{" "}
-                {share.region || "Not set"}
-              </p>
-              <p>
-                <span className="text-zinc-500">Country:</span>{" "}
-                {share.country || "Not set"}
-              </p>
-              <p>
-                <span className="text-zinc-500">Appellation:</span>{" "}
-                {share.appellation || "Not set"}
-              </p>
-              <p>
-                <span className="text-zinc-500">Classification:</span>{" "}
-                {share.classification || "Not set"}
-              </p>
-            </div>
+            {detailFields.length > 0 ? (
+              <div className="grid gap-3 text-sm text-zinc-300 sm:grid-cols-2">
+                {detailFields.map((field) => (
+                  <p key={field.label}>
+                    <span className="text-zinc-500">{field.label}:</span>{" "}
+                    {field.value}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
         </article>
 
