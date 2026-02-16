@@ -6,6 +6,8 @@ Required environment variables (in `.env.local`):
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (required for public share page resolver and OG image generation)
+- `PUBLIC_SITE_URL` (absolute site URL used in generated share links/metadata)
 - `OPENAI_API_KEY` (for AI-assisted bottle count and autofill)
 
 Supabase SQL steps:
@@ -36,7 +38,12 @@ Supabase SQL steps:
   - `supabase/sql/020_ai_notes_summary.sql`
   - `supabase/sql/021_feedback.sql`
   - `supabase/sql/022_add_grape_varieties.sql`
+  - `supabase/sql/022_profile_names.sql`
   - `supabase/sql/023_phone_login.sql`
+  - `supabase/sql/024_auth_identifier_helpers.sql`
+  - `supabase/sql/025_shared_tastings.sql`
+  - `supabase/sql/026_suppress_shared_copy_tag_notifications.sql`
+  - `supabase/sql/027_post_shares.sql`
 
 Notes:
 - Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.

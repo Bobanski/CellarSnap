@@ -31,6 +31,51 @@ type PopulatedAdvancedNote = AdvancedNoteField & {
   value: NonNullable<AdvancedNotes[AdvancedNoteField["key"]]>;
 };
 
+type ShareToast = {
+  kind: "success" | "error";
+  message: string;
+};
+
+async function copyTextToClipboard(value: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "absolute";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+  textArea.setSelectionRange(0, value.length);
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textArea);
+  return copied;
+}
+
+function buildShareTitle(entry: EntryDetail) {
+  const name = entry.wine_name?.trim() || "Untitled wine";
+  const vintage = entry.vintage?.trim();
+  return vintage ? `${name} (${vintage})` : name;
+}
+
+function buildShareText(entry: EntryDetail) {
+  const normalizedNotes = entry.notes?.replace(/\s+/g, " ").trim();
+  if (normalizedNotes) {
+    if (normalizedNotes.length <= 120) {
+      return normalizedNotes;
+    }
+    return `${normalizedNotes.slice(0, 117).trimEnd()}...`;
+  }
+  return "Take a look at this wine post from my CellarSnap.";
+}
+
 export default function EntryDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,6 +101,8 @@ export default function EntryDetailPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareToast, setShareToast] = useState<ShareToast | null>(null);
 
   const userMap = useMemo(() => {
     const map = new Map(
@@ -195,6 +242,18 @@ export default function EntryDetailPage() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    if (!shareToast) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShareToast(null);
+    }, 2600);
+
+    return () => window.clearTimeout(timer);
+  }, [shareToast]);
+
   const onDelete = async () => {
     if (!entryId) {
       setErrorMessage("Entry not found.");
@@ -211,6 +270,93 @@ export default function EntryDetailPage() {
     }
 
     router.push("/entries");
+  };
+
+  const onShare = async () => {
+    if (!entryId || !entry) {
+      setShareToast({
+        kind: "error",
+        message: "Entry unavailable.",
+      });
+      return;
+    }
+
+    setSharing(true);
+    setShareToast(null);
+
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId: entryId }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+
+      if (!response.ok || typeof payload.url !== "string") {
+        setShareToast({
+          kind: "error",
+          message: payload.error ?? "Unable to create share link.",
+        });
+        return;
+      }
+
+      const shareUrl = payload.url;
+      const shareTitle = buildShareTitle(entry);
+      const shareText = buildShareText(entry);
+
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: shareText,
+            url: shareUrl,
+          });
+          setShareToast({
+            kind: "success",
+            message: "Share link ready.",
+          });
+          return;
+        } catch (shareError) {
+          if (shareError instanceof Error && shareError.name === "AbortError") {
+            return;
+          }
+        }
+      }
+
+      const copied = await copyTextToClipboard(shareUrl);
+      if (copied) {
+        setShareToast({
+          kind: "success",
+          message: "Share link copied to clipboard.",
+        });
+      } else {
+        if (typeof window !== "undefined" && typeof window.prompt === "function") {
+          window.prompt("Copy share link", shareUrl);
+          setShareToast({
+            kind: "success",
+            message: "Share link ready. Copy it from the prompt.",
+          });
+        } else {
+          setShareToast({
+            kind: "error",
+            message: "Unable to copy link automatically.",
+          });
+        }
+      }
+    } catch {
+      setShareToast({
+        kind: "error",
+        message: "Unable to create share link.",
+      });
+    } finally {
+      setSharing(false);
+    }
   };
 
   if (loading) {
@@ -390,14 +536,24 @@ export default function EntryDetailPage() {
               {entry.producer || "Unknown producer"}
             </p>
           </div>
-          {isOwner ? (
-            <Link
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              href={`/entries/${entry.id}/edit`}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:border-amber-300/60 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={sharing}
+              onClick={onShare}
             >
-              Edit entry
-            </Link>
-          ) : null}
+              {sharing ? "Sharing..." : "Share"}
+            </button>
+            {isOwner ? (
+              <Link
+                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                href={`/entries/${entry.id}/edit`}
+              >
+                Edit entry
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -773,6 +929,20 @@ export default function EntryDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {shareToast ? (
+        <div
+          className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
+            shareToast.kind === "success"
+              ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
+              : "border-rose-400/50 bg-rose-500/15 text-rose-100"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {shareToast.message}
         </div>
       ) : null}
     </div>
