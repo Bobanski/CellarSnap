@@ -81,6 +81,9 @@ export async function proxy(request: NextRequest) {
     request.headers.has("next-router-prefetch") ||
     request.headers.get("x-middleware-prefetch") === "1";
   const isEntriesRoute = pathname.startsWith("/entries");
+  const isEntryDetailRoute = /^\/entries\/[0-9a-f-]{36}$/i.test(pathname);
+  const isSharedEntryDeepLink =
+    isEntryDetailRoute && request.nextUrl.searchParams.get("from") === "share";
   const isProfileRoute = pathname.startsWith("/profile");
   const isFeedRoute = pathname.startsWith("/feed");
   const isFriendsRoute = pathname.startsWith("/friends");
@@ -104,7 +107,10 @@ export async function proxy(request: NextRequest) {
 
   if (user) {
     const shouldEnforceUsername =
-      isHomeRoute || isEntriesRoute || isFeedRoute || isFriendsRoute;
+      isHomeRoute ||
+      isFeedRoute ||
+      isFriendsRoute ||
+      (isEntriesRoute && !isSharedEntryDeepLink);
 
     if (shouldEnforceUsername && !isProfileRoute) {
       const { data: profile, error: profileError } = await supabase

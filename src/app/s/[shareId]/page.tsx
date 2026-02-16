@@ -147,7 +147,7 @@ export default async function SharePage({ params }: SharePageProps) {
       .maybeSingle();
 
     if (!allowedEntryError && allowedEntry?.id) {
-      redirect(`/entries/${allowedEntry.id}`);
+      redirect(`/entries/${allowedEntry.id}?from=share`);
     }
   }
 
