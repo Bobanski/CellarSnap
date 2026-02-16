@@ -114,11 +114,18 @@ export async function POST(
     }
   }
 
-  const taggedIds = Array.isArray(rootEntry.tasted_with_user_ids)
+  const taggedIdsOnViewedEntry = Array.isArray(baseEntry.tasted_with_user_ids)
+    ? baseEntry.tasted_with_user_ids
+    : [];
+  const taggedIdsOnRootEntry = Array.isArray(rootEntry.tasted_with_user_ids)
     ? rootEntry.tasted_with_user_ids
     : [];
+  const isTaggedOnViewedEntry = taggedIdsOnViewedEntry.includes(user.id);
+  const isTaggedOnRootEntry = taggedIdsOnRootEntry.includes(user.id);
 
-  if (!taggedIds.includes(user.id)) {
+  // Shared tasting copies can introduce tags that do not exist on the canonical root
+  // entry. Accept either path so tagged users can still add the tasting to their log.
+  if (!isTaggedOnViewedEntry && !isTaggedOnRootEntry) {
     return NextResponse.json(
       { error: "You can only add entries where you were tagged." },
       { status: 403 }
