@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { resolvePublicPostShare } from "@/lib/shares";
 import { getConfiguredPublicSiteUrl } from "@/lib/siteUrl";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type SharePageProps = {
   params: Promise<{ shareId: string }>;
@@ -130,6 +132,23 @@ export default async function SharePage({ params }: SharePageProps) {
         </div>
       </div>
     );
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: allowedEntry, error: allowedEntryError } = await supabase
+      .from("wine_entries")
+      .select("id")
+      .eq("id", share.postId)
+      .maybeSingle();
+
+    if (!allowedEntryError && allowedEntry?.id) {
+      redirect(`/entries/${allowedEntry.id}`);
+    }
   }
 
   const wineName = share.wineName?.trim() || "Untitled wine";
