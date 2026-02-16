@@ -163,6 +163,8 @@ export default function EditEntryPage() {
   const [photoRenderVersion, setPhotoRenderVersion] = useState(0);
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
   const [cropSourcePath, setCropSourcePath] = useState<string | null>(null);
+  const MIN_CROP_ZOOM = 1;
+  const MAX_CROP_ZOOM = 6;
   const cropFrameRef = useRef<HTMLDivElement | null>(null);
   const cropDragRef = useRef<{
     pointerId: number;
@@ -171,6 +173,21 @@ export default function EditEntryPage() {
     startCenterX: number;
     startCenterY: number;
   } | null>(null);
+  const cropTouchRef = useRef<
+    | {
+        mode: "drag";
+        startX: number;
+        startY: number;
+        startCenterX: number;
+        startCenterY: number;
+      }
+    | {
+        mode: "pinch";
+        startDistance: number;
+        startZoom: number;
+      }
+    | null
+  >(null);
   const cropOpenRequestRef = useRef(0);
   const [loading, setLoading] = useState(true);
 
@@ -538,9 +555,10 @@ export default function EditEntryPage() {
     setCropImageNaturalSize(null);
     setCropCenterX(50);
     setCropCenterY(50);
-    setCropZoom(1);
+    setCropZoom(MIN_CROP_ZOOM);
     setIsDraggingCrop(false);
     cropDragRef.current = null;
+    cropTouchRef.current = null;
     setPhotoError(null);
     setCropEditorPhoto(photo);
     setCropSourceUrl(withCacheBust(photo.signed_url) ?? photo.signed_url ?? null);
@@ -632,6 +650,7 @@ export default function EditEntryPage() {
     setCropSourcePath(null);
     setIsDraggingCrop(false);
     cropDragRef.current = null;
+    cropTouchRef.current = null;
   };
 
   const getCropGeometry = (
@@ -676,8 +695,17 @@ export default function EditEntryPage() {
     };
   };
 
+  const clampZoom = (zoom: number) =>
+    Math.max(MIN_CROP_ZOOM, Math.min(MAX_CROP_ZOOM, zoom));
+
+  const getTouchDistance = (
+    a: { clientX: number; clientY: number },
+    b: { clientX: number; clientY: number }
+  ) =>
+    Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
   const onCropPointerDown = (event: React.PointerEvent<HTMLImageElement>) => {
-    if (!cropSourceUrl || savingCrop) {
+    if (!cropSourceUrl || savingCrop || event.pointerType === "touch") {
       return;
     }
     cropDragRef.current = {
@@ -692,6 +720,9 @@ export default function EditEntryPage() {
   };
 
   const onCropPointerMove = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
     const drag = cropDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
@@ -716,6 +747,9 @@ export default function EditEntryPage() {
   };
 
   const onCropPointerUp = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (event.pointerType === "touch") {
+      return;
+    }
     const drag = cropDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
@@ -723,6 +757,139 @@ export default function EditEntryPage() {
     cropDragRef.current = null;
     setIsDraggingCrop(false);
     event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const onCropTouchStart = (event: React.TouchEvent<HTMLImageElement>) => {
+    if (!cropSourceUrl || savingCrop) {
+      return;
+    }
+
+    if (event.touches.length >= 2) {
+      const [first, second] = [event.touches[0], event.touches[1]];
+      if (!first || !second) {
+        return;
+      }
+      const distance = getTouchDistance(first, second);
+      if (distance <= 0) {
+        return;
+      }
+      cropTouchRef.current = {
+        mode: "pinch",
+        startDistance: distance,
+        startZoom: cropZoom,
+      };
+      cropDragRef.current = null;
+      setIsDraggingCrop(false);
+      event.preventDefault();
+      return;
+    }
+
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+      cropTouchRef.current = {
+        mode: "drag",
+        startX: touch.clientX,
+        startY: touch.clientY,
+        startCenterX: cropCenterX,
+        startCenterY: cropCenterY,
+      };
+      setIsDraggingCrop(true);
+      event.preventDefault();
+    }
+  };
+
+  const onCropTouchMove = (event: React.TouchEvent<HTMLImageElement>) => {
+    const touchState = cropTouchRef.current;
+    if (!touchState) {
+      return;
+    }
+
+    if (touchState.mode === "pinch") {
+      if (event.touches.length < 2) {
+        return;
+      }
+      const [first, second] = [event.touches[0], event.touches[1]];
+      if (!first || !second || touchState.startDistance <= 0) {
+        return;
+      }
+      const distance = getTouchDistance(first, second);
+      const nextZoom = clampZoom(
+        touchState.startZoom * (distance / touchState.startDistance)
+      );
+      setCropZoom(nextZoom);
+      const centered = clampCenter(cropCenterX, cropCenterY, nextZoom);
+      setCropCenterX(centered.x);
+      setCropCenterY(centered.y);
+      event.preventDefault();
+      return;
+    }
+
+    if (event.touches.length !== 1) {
+      return;
+    }
+
+    const geometry = getCropGeometry();
+    const touch = event.touches[0];
+    if (!geometry || !touch) {
+      return;
+    }
+
+    const dx = touch.clientX - touchState.startX;
+    const dy = touch.clientY - touchState.startY;
+    const nextCenterX =
+      geometry.overflowX > 0
+        ? touchState.startCenterX - (dx / geometry.overflowX) * 100
+        : 50;
+    const nextCenterY =
+      geometry.overflowY > 0
+        ? touchState.startCenterY - (dy / geometry.overflowY) * 100
+        : 50;
+    const clamped = clampCenter(nextCenterX, nextCenterY);
+    setCropCenterX(clamped.x);
+    setCropCenterY(clamped.y);
+    event.preventDefault();
+  };
+
+  const onCropTouchEnd = (event: React.TouchEvent<HTMLImageElement>) => {
+    if (event.touches.length >= 2) {
+      const [first, second] = [event.touches[0], event.touches[1]];
+      if (!first || !second) {
+        return;
+      }
+      const distance = getTouchDistance(first, second);
+      if (distance <= 0) {
+        return;
+      }
+      cropTouchRef.current = {
+        mode: "pinch",
+        startDistance: distance,
+        startZoom: cropZoom,
+      };
+      setIsDraggingCrop(false);
+      return;
+    }
+
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+      cropTouchRef.current = {
+        mode: "drag",
+        startX: touch.clientX,
+        startY: touch.clientY,
+        startCenterX: cropCenterX,
+        startCenterY: cropCenterY,
+      };
+      setIsDraggingCrop(true);
+      return;
+    }
+
+    cropTouchRef.current = null;
+    setIsDraggingCrop(false);
   };
 
   const loadImageElement = async (sourceUrl: string) => {
@@ -839,6 +1006,7 @@ export default function EditEntryPage() {
       setPhotoRenderVersion((current) => current + 1);
       await loadPhotos();
       cropOpenRequestRef.current += 1;
+      cropTouchRef.current = null;
       setCropEditorPhoto(null);
     } catch {
       setPhotoError("Unable to save crop thumbnail.");
@@ -866,6 +1034,18 @@ export default function EditEntryPage() {
       isMounted = false;
     };
   }, [supabase]);
+
+  useEffect(() => {
+    if (!cropEditorPhoto) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [cropEditorPhoto]);
 
   const buildBulkEditHref = (targetEntryId: string, targetIndex: number) => {
     const queue = encodeURIComponent(bulkQueue.join(","));
@@ -1786,7 +1966,7 @@ export default function EditEntryPage() {
           </div>
 
           {cropEditorPhoto ? (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-50">
               <button
                 type="button"
                 aria-label="Close crop editor"
@@ -1794,7 +1974,8 @@ export default function EditEntryPage() {
                 onClick={closeCropEditor}
                 disabled={savingCrop}
               />
-              <div className="relative z-10 w-full max-w-2xl rounded-2xl border border-white/15 bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+              <div className="relative h-full overflow-y-auto p-3 pt-4 sm:flex sm:items-center sm:justify-center sm:p-4">
+                <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/15 bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
@@ -1843,6 +2024,10 @@ export default function EditEntryPage() {
                         onPointerMove={onCropPointerMove}
                         onPointerUp={onCropPointerUp}
                         onPointerCancel={onCropPointerUp}
+                        onTouchStart={onCropTouchStart}
+                        onTouchMove={onCropTouchMove}
+                        onTouchEnd={onCropTouchEnd}
+                        onTouchCancel={onCropTouchEnd}
                         style={(() => {
                           const geometry = getCropGeometry();
                           if (!geometry) {
@@ -1886,19 +2071,19 @@ export default function EditEntryPage() {
                 </div>
 
                 <div className="mt-4 space-y-3">
-                  <div>
+                  <div className="hidden sm:block">
                     <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
                       <span>Zoom</span>
                       <span>{cropZoom.toFixed(2)}x</span>
                     </div>
                     <input
                       type="range"
-                      min={1}
-                      max={6}
+                      min={MIN_CROP_ZOOM}
+                      max={MAX_CROP_ZOOM}
                       step={0.01}
                       value={cropZoom}
                       onChange={(event) => {
-                        const nextZoom = Number(event.target.value);
+                        const nextZoom = clampZoom(Number(event.target.value));
                         setCropZoom(nextZoom);
                         const centered = clampCenter(cropCenterX, cropCenterY, nextZoom);
                         setCropCenterX(centered.x);
@@ -1907,8 +2092,11 @@ export default function EditEntryPage() {
                       className="w-full accent-amber-300"
                     />
                   </div>
-                  <p className="text-xs text-zinc-400">
+                  <p className="hidden text-xs text-zinc-400 sm:block">
                     At 1.00x the full image fits. Zoom in and drag to frame the thumbnail.
+                  </p>
+                  <p className="text-xs text-zinc-400 sm:hidden">
+                    Pinch to zoom, then drag to frame the thumbnail.
                   </p>
                 </div>
 
@@ -1918,9 +2106,10 @@ export default function EditEntryPage() {
                     onClick={() => {
                       setCropCenterX(50);
                       setCropCenterY(50);
-                      setCropZoom(1);
+                      setCropZoom(MIN_CROP_ZOOM);
                       setIsDraggingCrop(false);
                       cropDragRef.current = null;
+                      cropTouchRef.current = null;
                     }}
                     disabled={savingCrop}
                     className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
@@ -1946,6 +2135,7 @@ export default function EditEntryPage() {
                     </button>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           ) : null}
