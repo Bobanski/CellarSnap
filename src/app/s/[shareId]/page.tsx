@@ -115,16 +115,16 @@ export default async function SharePage({ params }: SharePageProps) {
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/"
+              href="/login"
               className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
             >
-              Open CellarSnap
+              Sign in for more posts
             </Link>
             <Link
-              href="/login"
+              href="/signup"
               className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/40"
             >
-              Sign in to save
+              Create account
             </Link>
           </div>
         </div>
@@ -221,20 +221,20 @@ export default async function SharePage({ params }: SharePageProps) {
 
         <section className="rounded-2xl border border-white/10 bg-black/25 p-5 text-center">
           <p className="text-sm text-zinc-300">
-            Want to save this post to your own cellar?
+            Want to see more tasting details and posts on CellarSnap?
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/"
+              href="/login"
               className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
             >
-              Open CellarSnap
+              Sign in for more posts
             </Link>
             <Link
-              href="/login"
+              href="/signup"
               className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/40"
             >
-              Sign in to save
+              Create account
             </Link>
           </div>
         </section>
