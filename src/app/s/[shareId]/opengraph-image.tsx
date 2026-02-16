@@ -54,6 +54,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
   const ratingText =
     typeof share.rating === "number" ? `Rating ${share.rating}/100` : "No rating";
   const noteText = share.notePreview ?? "Shared from CellarSnap";
+  const labelImageUrl = share.labelImageOgUrl ?? share.labelImageUrl;
 
   return new ImageResponse(
     (
@@ -90,9 +91,9 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
               background: "rgba(255,255,255,0.04)",
             }}
           >
-            {share.labelImageUrl ? (
+            {labelImageUrl ? (
               <img
-                src={share.labelImageUrl}
+                src={labelImageUrl}
                 alt="Wine label"
                 width={320}
                 height={320}

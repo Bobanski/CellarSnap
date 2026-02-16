@@ -63,6 +63,7 @@ export type PublicSharedPost = {
   primaryGrapes: string[];
   qprLabel: string | null;
   labelImageUrl: string | null;
+  labelImageOgUrl: string | null;
   metadataTitle: string;
   metadataDescription: string;
 };
@@ -242,11 +243,27 @@ async function resolvePublicPostShareUncached(
   }
 
   let labelImageUrl: string | null = null;
+  let labelImageOgUrl: string | null = null;
   if (labelPath) {
-    const { data: signedData } = await supabase.storage
-      .from("wine-photos")
-      .createSignedUrl(labelPath, 60 * 60 * 24 * 7);
-    labelImageUrl = signedData?.signedUrl ?? null;
+    const [defaultSigned, ogSigned] = await Promise.all([
+      supabase.storage
+        .from("wine-photos")
+        .createSignedUrl(labelPath, 60 * 60 * 24 * 7),
+      supabase.storage
+        .from("wine-photos")
+        .createSignedUrl(labelPath, 60 * 60 * 24 * 7, {
+          transform: {
+            width: 640,
+            height: 640,
+            resize: "contain",
+            format: "origin",
+            quality: 90,
+          },
+        }),
+    ]);
+
+    labelImageUrl = defaultSigned.data?.signedUrl ?? null;
+    labelImageOgUrl = ogSigned.data?.signedUrl ?? labelImageUrl;
   }
 
   const normalizedNotes = normalizeText(entry.notes);
@@ -269,6 +286,7 @@ async function resolvePublicPostShareUncached(
     primaryGrapes,
     qprLabel: normalizeQprLabel(entry.qpr_level),
     labelImageUrl,
+    labelImageOgUrl,
     metadataTitle: buildMetadataTitle(entry),
     metadataDescription: buildMetadataDescription(entry),
   };
