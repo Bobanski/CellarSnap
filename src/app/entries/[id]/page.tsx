@@ -741,21 +741,28 @@ export default function EntryDetailPage() {
                     {hasExpandedLocation ? (
                       <details className="text-sm text-zinc-200">
                         <summary className="cursor-pointer list-none hover:text-amber-200">
-                          {locationDisplayLabel}
+                          <a
+                            href={locationMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {locationDisplayLabel}
+                          </a>
                         </summary>
                         <p className="mt-1 text-zinc-300">{locationText}</p>
                       </details>
                     ) : (
-                      <p className="text-sm text-zinc-200">{locationDisplayLabel}</p>
+                      <a
+                        href={locationMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
+                      >
+                        {locationDisplayLabel}
+                      </a>
                     )}
-                    <a
-                      href={locationMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex text-xs font-medium text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
-                    >
-                      Open in Google Maps
-                    </a>
                   </div>
                 ) : (
                   <p className="text-sm text-zinc-200">Not set</p>

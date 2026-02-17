@@ -45,12 +45,31 @@ export async function GET() {
     (profiles ?? []).map((profile) => [profile.id, profile])
   );
 
+  // Count how often each friend appears in tasted_with_user_ids
+  const frequencyMap = new Map<string, number>();
+  if (friendIds.length > 0) {
+    const { data: entries } = await supabase
+      .from("wine_entries")
+      .select("tasted_with_user_ids")
+      .eq("user_id", user.id)
+      .neq("tasted_with_user_ids", "{}");
+
+    for (const entry of entries ?? []) {
+      for (const id of entry.tasted_with_user_ids ?? []) {
+        if (friendMap.has(id)) {
+          frequencyMap.set(id, (frequencyMap.get(id) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
   return NextResponse.json({
     friends: friendIds.map((id) => ({
       id,
       request_id: friendMap.get(id) ?? null,
       display_name: profileMap.get(id)?.display_name ?? null,
       email: profileMap.get(id)?.email ?? null,
+      tasting_count: frequencyMap.get(id) ?? 0,
     })),
   });
 }
