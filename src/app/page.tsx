@@ -323,7 +323,7 @@ export default function HomePage() {
                 href="/entries"
                 className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
               >
-                View all my entries &rarr;
+                View my library &rarr;
               </Link>
             </div>
           </section>

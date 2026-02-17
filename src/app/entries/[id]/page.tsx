@@ -418,7 +418,7 @@ export default function EntryDetailPage() {
       ? "← Back to Social Feed"
       : openedFromProfile
         ? "← Back to Profile"
-      : "← Back to My entries";
+      : "← Back to My library";
   const sortByPosition = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => a.position - b.position);
   const labelPhotos = sortByPosition(
