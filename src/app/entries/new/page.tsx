@@ -11,6 +11,8 @@ import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PriceCurrencySelect from "@/components/PriceCurrencySelect";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
+import { extractGpsFromFile } from "@/lib/exifGps";
 import {
   ADVANCED_NOTE_FIELDS,
   ADVANCED_NOTE_OPTIONS,
@@ -138,6 +140,7 @@ export default function NewEntryPage() {
     string | null
   >(null);
   const [isSubmittingComparison, setIsSubmittingComparison] = useState(false);
+  const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
@@ -262,6 +265,19 @@ export default function NewEntryPage() {
   const addPhotos = (type: "label" | "place" | "pairing", files: FileList) => {
     const list = Array.from(files);
     if (list.length === 0) return;
+
+    // Fire-and-forget GPS extraction — first valid GPS wins
+    if (!photoGps) {
+      (async () => {
+        for (const file of list) {
+          const coords = await extractGpsFromFile(file);
+          if (coords) {
+            setPhotoGps(coords);
+            break;
+          }
+        }
+      })();
+    }
 
     if (type === "label") {
       const current = labelPhotosRef.current;
@@ -2449,10 +2465,18 @@ export default function NewEntryPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Location</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                placeholder="Optional location"
-                {...register("location_text")}
+              <Controller
+                control={control}
+                name="location_text"
+                render={({ field }) => (
+                  <LocationAutocomplete
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Optional location"
+                    biasCoords={photoGps}
+                  />
+                )}
               />
             </div>
             <div>

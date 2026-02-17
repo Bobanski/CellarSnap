@@ -10,6 +10,8 @@ import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PriceCurrencySelect from "@/components/PriceCurrencySelect";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
+import { extractGpsFromFile } from "@/lib/exifGps";
 import type { EntryPhoto, PrimaryGrape, WineEntryWithUrls } from "@/types/wine";
 import {
   ADVANCED_NOTE_FIELDS,
@@ -147,6 +149,7 @@ export default function EditEntryPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingEntry, setIsDeletingEntry] = useState(false);
+  const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const [removingCurrentPhotoType, setRemovingCurrentPhotoType] = useState<
     "label" | "place" | "pairing" | null
   >(null);
@@ -383,6 +386,20 @@ export default function EditEntryPage() {
     const current = photosByType(type);
     const remaining = MAX_PHOTOS - current.length;
     const list = Array.from(files).slice(0, remaining);
+
+    // Fire-and-forget GPS extraction — first valid GPS wins
+    if (!photoGps) {
+      (async () => {
+        for (const file of list) {
+          const coords = await extractGpsFromFile(file);
+          if (coords) {
+            setPhotoGps(coords);
+            break;
+          }
+        }
+      })();
+    }
+
     try {
       for (const file of list) {
         const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
@@ -1798,9 +1815,17 @@ export default function EditEntryPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Location</label>
-              <input
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("location_text")}
+              <Controller
+                control={control}
+                name="location_text"
+                render={({ field }) => (
+                  <LocationAutocomplete
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    biasCoords={photoGps}
+                  />
+                )}
               />
             </div>
             <div>
