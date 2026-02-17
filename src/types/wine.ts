@@ -13,7 +13,13 @@ export type UserSummary = {
   email: string | null;
 };
 
-export type EntryPhotoType = "label" | "place" | "pairing";
+export type EntryPhotoType =
+  | "label"
+  | "place"
+  | "people"
+  | "pairing"
+  | "lineup"
+  | "other_bottles";
 
 export type EntryPhoto = {
   id: string;

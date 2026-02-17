@@ -293,7 +293,14 @@ export async function GET(request: Request) {
       ? await supabase
           .from("entry_photos")
           .select("entry_id, type, path, position, created_at")
-          .in("type", ["label", "place", "pairing"])
+          .in("type", [
+            "label",
+            "place",
+            "people",
+            "pairing",
+            "lineup",
+            "other_bottles",
+          ])
           .in("entry_id", entryIds)
           .order("position", { ascending: true })
           .order("created_at", { ascending: true })
@@ -389,7 +396,13 @@ export async function GET(request: Request) {
     }
   }
 
-  type GalleryPhotoType = "label" | "place" | "pairing";
+  type GalleryPhotoType =
+    | "label"
+    | "place"
+    | "people"
+    | "pairing"
+    | "lineup"
+    | "other_bottles";
   type GalleryPhotoRow = {
     type: GalleryPhotoType;
     path: string;
@@ -398,13 +411,23 @@ export async function GET(request: Request) {
   };
   const typeOrder: Record<GalleryPhotoType, number> = {
     place: 0,
-    label: 1,
-    pairing: 2,
+    people: 1,
+    label: 2,
+    lineup: 3,
+    other_bottles: 4,
+    pairing: 5,
   };
 
   const galleryRowsByEntryId = new Map<string, GalleryPhotoRow[]>();
   (entryPhotos ?? []).forEach((photo) => {
-    if (photo.type !== "label" && photo.type !== "place" && photo.type !== "pairing") {
+    if (
+      photo.type !== "label" &&
+      photo.type !== "place" &&
+      photo.type !== "people" &&
+      photo.type !== "pairing" &&
+      photo.type !== "lineup" &&
+      photo.type !== "other_bottles"
+    ) {
       return;
     }
     const current = galleryRowsByEntryId.get(photo.entry_id) ?? [];

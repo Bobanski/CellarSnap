@@ -5,13 +5,34 @@ import { canUserViewEntry } from "@/lib/access/entryVisibility";
 import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
 
 const MAX_PER_TYPE = MAX_ENTRY_PHOTOS_PER_TYPE;
-const typeSchema = z.enum(["label", "place", "pairing"]);
+const typeSchema = z.enum([
+  "label",
+  "place",
+  "people",
+  "pairing",
+  "lineup",
+  "other_bottles",
+]);
 
 const createSchema = z.object({
   type: typeSchema,
 });
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+function isEntryPhotoTypeConstraintError(
+  error: { message?: string | null; code?: string | null } | null | undefined
+) {
+  if (!error) {
+    return false;
+  }
+  const message = (error.message ?? "").toLowerCase();
+  return (
+    error.code === "23514" ||
+    message.includes("entry_photos_type_check") ||
+    message.includes("violates check constraint")
+  );
+}
 
 async function createSignedUrl(path: string, supabase: SupabaseClient) {
   const { data, error } = await supabase.storage
@@ -155,6 +176,16 @@ export async function POST(
     .single();
 
   if (error || !created) {
+    if (isEntryPhotoTypeConstraintError(error)) {
+      return NextResponse.json(
+        {
+          error:
+            "Database photo types are out of date. Apply migration `028_entry_photo_context_types.sql` and retry.",
+          code: "ENTRY_PHOTO_TYPES_UNAVAILABLE",
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: error?.message ?? "Create failed" }, { status: 500 });
   }
 

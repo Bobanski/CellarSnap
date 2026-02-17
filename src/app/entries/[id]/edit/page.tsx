@@ -8,12 +8,13 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
-import PriceCurrencySelect from "@/components/PriceCurrencySelect";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
+import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import { extractGpsFromFile } from "@/lib/exifGps";
 import type {
   EntryPhoto,
+  EntryPhotoType,
   PrimaryGrape,
   PrivacyLevel,
   WineEntryWithUrls,
@@ -28,8 +29,6 @@ import {
 } from "@/lib/advancedNotes";
 import {
   type PricePaidCurrency,
-  PRICE_PAID_SOURCE_LABELS,
-  PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_LABELS,
   type PricePaidSource,
   type QprLevel,
@@ -68,6 +67,39 @@ const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
 ];
 
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
+type LegacyPhotoType = "label" | "place" | "pairing";
+type ContextPhotoTag =
+  | "place"
+  | "pairing"
+  | "people"
+  | "other_bottles"
+  | "unknown";
+
+const PHOTO_TYPE_LABELS: Record<EntryPhotoType, string> = {
+  label: "Label",
+  place: "Place",
+  people: "People",
+  pairing: "Pairing",
+  lineup: "Lineup",
+  other_bottles: "Other bottles",
+};
+
+const PHOTO_TYPE_OPTIONS: { value: EntryPhotoType; label: string }[] = [
+  { value: "label", label: "Label" },
+  { value: "place", label: "Place" },
+  { value: "people", label: "People" },
+  { value: "pairing", label: "Pairing" },
+  { value: "lineup", label: "Lineup" },
+  { value: "other_bottles", label: "Other bottles" },
+];
+
+const CONTEXT_TAG_TO_PHOTO_TYPE: Record<ContextPhotoTag, EntryPhotoType> = {
+  place: "place",
+  pairing: "pairing",
+  people: "people",
+  other_bottles: "other_bottles",
+  unknown: "other_bottles",
+};
 
 export default function EditEntryPage() {
   const router = useRouter();
@@ -141,16 +173,6 @@ export default function EditEntryPage() {
       control,
       name: "comments_privacy",
     }) ?? "public";
-  const selectedPricePaidSource =
-    useWatch({
-      control,
-      name: "price_paid_source",
-    }) ?? "";
-  const selectedPricePaidCurrency =
-    useWatch({
-      control,
-      name: "price_paid_currency",
-    }) || "usd";
   const currentWineName =
     useWatch({
       control,
@@ -159,12 +181,9 @@ export default function EditEntryPage() {
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [uploadingType, setUploadingType] = useState<
-    "label" | "place" | "pairing" | null
-  >(null);
-  const labelInputRef = useRef<HTMLInputElement | null>(null);
-  const placeInputRef = useRef<HTMLInputElement | null>(null);
-  const pairingInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingType, setUploadingType] = useState<EntryPhotoType | null>(null);
+  const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
+  const addPhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null; email: string | null; tasting_count: number }[]
   >([]);
@@ -178,10 +197,8 @@ export default function EditEntryPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingEntry, setIsDeletingEntry] = useState(false);
+  const [isDeletingBulkQueue, setIsDeletingBulkQueue] = useState(false);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
-  const [removingCurrentPhotoType, setRemovingCurrentPhotoType] = useState<
-    "label" | "place" | "pairing" | null
-  >(null);
   const [cropEditorPhoto, setCropEditorPhoto] = useState<EntryPhoto | null>(null);
   const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
     width: number;
@@ -362,14 +379,22 @@ export default function EditEntryPage() {
     loadPhotos().catch(() => null);
   }, [loadPhotos]);
 
-  const photosByType = (type: "label" | "place" | "pairing"): EntryPhoto[] =>
-    photos
-      .filter((photo) => photo.type === type)
-      .sort((a, b) => a.position - b.position);
+  const sortPhotos = (list: EntryPhoto[]) =>
+    [...list].sort((a, b) => {
+      if (a.position !== b.position) {
+        return a.position - b.position;
+      }
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
 
-  const displayPhotosByType = (
-    type: "label" | "place" | "pairing"
-  ): EntryPhoto[] => {
+  const isLegacyPhoto = (photo: EntryPhoto) => photo.id.startsWith("legacy-");
+  const isLegacyFieldType = (type: EntryPhotoType): type is LegacyPhotoType =>
+    type === "label" || type === "place" || type === "pairing";
+
+  const photosByType = (type: EntryPhotoType): EntryPhoto[] =>
+    sortPhotos(photos.filter((photo) => photo.type === type));
+
+  const displayPhotosByType = (type: EntryPhotoType): EntryPhoto[] => {
     const list = photosByType(type);
     if (list.length > 0 || !entry) {
       return list;
@@ -416,20 +441,162 @@ export default function EditEntryPage() {
     return list;
   };
 
-  const uploadPhotos = async (
-    type: "label" | "place" | "pairing",
-    files: FileList
-  ) => {
-    if (!entryId) return;
-    setUploadingType(type);
-    setPhotoError(null);
-    const current = photosByType(type);
-    const remaining = MAX_PHOTOS - current.length;
-    const list = Array.from(files).slice(0, remaining);
+  const uploadSinglePhoto = async (type: EntryPhotoType, file: File) => {
+    if (!entryId) {
+      throw new Error("Entry not found.");
+    }
+    const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type }),
+    });
+    if (!createResponse.ok) {
+      const payload = await createResponse.json().catch(() => ({}));
+      throw new Error(payload.error ?? "Unable to create photo.");
+    }
+    const { photo } = await createResponse.json();
+    const { error } = await supabase.storage
+      .from("wine-photos")
+      .upload(photo.path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
 
-    // Fire-and-forget GPS extraction — first valid GPS wins
+  const createContextImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      return file;
+    }
+    let imageUrl: string | null = null;
+    try {
+      imageUrl = URL.createObjectURL(file);
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const next = new Image();
+        next.onload = () => resolve(next);
+        next.onerror = reject;
+        next.src = imageUrl ?? "";
+      });
+      const maxDim = 2200;
+      const largest = Math.max(image.width, image.height);
+      const scale = largest > maxDim ? maxDim / largest : 1;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return file;
+      }
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.82)
+      );
+      if (!blob) {
+        return file;
+      }
+      return new File([blob], "photo-context.jpg", { type: "image/jpeg" });
+    } catch {
+      return file;
+    } finally {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    }
+  };
+
+  const classifyPhotoType = async (file: File): Promise<EntryPhotoType> => {
+    const contextFile = await createContextImage(file);
+    try {
+      const lineupFd = new FormData();
+      lineupFd.append("photo", contextFile);
+      const lineupResponse = await fetch("/api/lineup-autofill", {
+        method: "POST",
+        body: lineupFd,
+      });
+      if (lineupResponse.ok) {
+        const lineupPayload = (await lineupResponse.json()) as {
+          total_bottles_detected?: number;
+          wines?: Array<{
+            wine_name?: string | null;
+            producer?: string | null;
+            vintage?: string | null;
+            country?: string | null;
+            region?: string | null;
+            appellation?: string | null;
+            classification?: string | null;
+          }>;
+        };
+        const detectedCount =
+          typeof lineupPayload.total_bottles_detected === "number" &&
+          Number.isFinite(lineupPayload.total_bottles_detected)
+            ? Math.max(0, Math.round(lineupPayload.total_bottles_detected))
+            : 0;
+        const identifiedCount = Array.isArray(lineupPayload.wines)
+          ? lineupPayload.wines.filter((wine) =>
+              Boolean(
+                wine.wine_name ||
+                  wine.producer ||
+                  wine.vintage ||
+                  wine.country ||
+                  wine.region ||
+                  wine.appellation ||
+                  wine.classification
+              )
+            ).length
+          : 0;
+
+        if (detectedCount >= 2 || identifiedCount >= 2) {
+          return "lineup";
+        }
+        if (detectedCount === 1 || identifiedCount === 1) {
+          return "label";
+        }
+      }
+    } catch {
+      // Fall through to lightweight context categorization.
+    }
+
+    try {
+      const contextFd = new FormData();
+      contextFd.append("photo", contextFile);
+      const contextResponse = await fetch("/api/photo-context", {
+        method: "POST",
+        body: contextFd,
+      });
+      if (contextResponse.ok) {
+        const payload = (await contextResponse.json()) as {
+          tag?: ContextPhotoTag;
+        };
+        const tag: ContextPhotoTag =
+          payload.tag === "place" ||
+          payload.tag === "pairing" ||
+          payload.tag === "people" ||
+          payload.tag === "other_bottles" ||
+          payload.tag === "unknown"
+            ? payload.tag
+            : "unknown";
+        return CONTEXT_TAG_TO_PHOTO_TYPE[tag];
+      }
+    } catch {
+      // Final fallback below.
+    }
+
+    return "other_bottles";
+  };
+
+  const addPhotosWithAiCategorization = async (files: FileList) => {
+    if (!entryId) {
+      return;
+    }
+    const list = Array.from(files).slice(0, MAX_PHOTOS);
+    if (list.length === 0) {
+      return;
+    }
+
+    setUploadingType("other_bottles");
+    setPhotoError(null);
+
     if (!photoGps) {
-      (async () => {
+      void (async () => {
         for (const file of list) {
           const coords = await extractGpsFromFile(file);
           if (coords) {
@@ -442,28 +609,13 @@ export default function EditEntryPage() {
 
     try {
       for (const file of list) {
-        const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type }),
-        });
-        if (!createResponse.ok) {
-          const payload = await createResponse.json().catch(() => ({}));
-          throw new Error(payload.error ?? "Unable to create photo.");
-        }
-        const { photo } = await createResponse.json();
-        const { error } = await supabase.storage
-          .from("wine-photos")
-          .upload(photo.path, file, { upsert: true, contentType: file.type });
-        if (error) {
-          throw new Error(error.message);
-        }
+        const nextType = await classifyPhotoType(file);
+        setUploadingType(nextType);
+        await uploadSinglePhoto(nextType, file);
       }
       await loadPhotos();
     } catch (error) {
-      setPhotoError(
-        error instanceof Error ? error.message : "Photo upload failed."
-      );
+      setPhotoError(error instanceof Error ? error.message : "Photo upload failed.");
     } finally {
       setUploadingType(null);
     }
@@ -486,116 +638,169 @@ export default function EditEntryPage() {
     await loadPhotos();
   };
 
-  const removeCurrentPhoto = async (
-    type: "label" | "place" | "pairing",
-    photo: EntryPhoto
-  ) => {
+  const deleteLegacyPhoto = async (photo: EntryPhoto) => {
     if (!entryId || !entry) {
       return;
     }
-    if (removingCurrentPhotoType) {
+    if (!isLegacyFieldType(photo.type)) {
+      setPhotoError("Legacy deletion is only supported for label/place/pairing.");
       return;
     }
-
-    const label =
-      type === "label" ? "label" : type === "place" ? "place" : "pairing";
-    const confirmed = window.confirm(`Remove this ${label} photo?`);
-    if (!confirmed) {
-      return;
-    }
+    const type = photo.type;
 
     setPhotoError(null);
-    setRemovingCurrentPhotoType(type);
 
     try {
-      if (photo.id.startsWith("legacy-")) {
-        const legacyField =
-          type === "label"
-            ? "label_image_path"
-            : type === "place"
-            ? "place_image_path"
-            : "pairing_image_path";
+      const legacyField =
+        type === "label"
+          ? "label_image_path"
+          : type === "place"
+          ? "place_image_path"
+          : "pairing_image_path";
 
-        const response = await fetch(`/api/entries/${entry.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [legacyField]: null }),
-        });
+      const response = await fetch(`/api/entries/${entry.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [legacyField]: null }),
+      });
 
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          setPhotoError(payload.error ?? "Unable to delete photo.");
-          return;
-        }
-
-        const payload = await response.json().catch(() => null);
-        if (payload?.entry) {
-          setEntry(payload.entry);
-        } else {
-          // Fallback: clear it locally if the response didn't include the entry.
-          setEntry((prev) => {
-            if (!prev) return prev;
-            if (type === "label") {
-              return { ...prev, label_image_path: null, label_image_url: null };
-            }
-            if (type === "place") {
-              return { ...prev, place_image_path: null, place_image_url: null };
-            }
-            return { ...prev, pairing_image_path: null, pairing_image_url: null };
-          });
-        }
-
-        if (photo.path && photo.path !== "pending") {
-          await supabase.storage.from("wine-photos").remove([photo.path]);
-        }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setPhotoError(payload.error ?? "Unable to delete photo.");
         return;
       }
 
-      await deletePhoto(photo.id);
+      const payload = await response.json().catch(() => null);
+      if (payload?.entry) {
+        setEntry(payload.entry);
+      } else {
+        setEntry((prev) => {
+          if (!prev) return prev;
+          if (type === "label") {
+            return { ...prev, label_image_path: null, label_image_url: null };
+          }
+          if (type === "place") {
+            return { ...prev, place_image_path: null, place_image_url: null };
+          }
+          return { ...prev, pairing_image_path: null, pairing_image_url: null };
+        });
+      }
+
+      if (photo.path && photo.path !== "pending") {
+        await supabase.storage.from("wine-photos").remove([photo.path]);
+      }
     } catch {
       setPhotoError("Unable to delete photo.");
-    } finally {
-      setRemovingCurrentPhotoType(null);
     }
   };
 
-  const movePhoto = async (
-    type: "label" | "place" | "pairing",
+  const deletePhotoItem = async (photo: EntryPhoto) => {
+    const confirmed = window.confirm(
+      `Delete this ${PHOTO_TYPE_LABELS[photo.type].toLowerCase()} photo?`
+    );
+    if (!confirmed) {
+      return;
+    }
+    if (isLegacyPhoto(photo)) {
+      await deleteLegacyPhoto(photo);
+      return;
+    }
+    await deletePhoto(photo.id);
+  };
+
+  const movePhotoInList = async (
+    list: EntryPhoto[],
     index: number,
     direction: "up" | "down"
   ) => {
     if (!entryId) return;
-    const list = photosByType(type);
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= list.length) return;
     const current = list[index];
     const swap = list[targetIndex];
     if (!current || !swap) return;
+    if (isLegacyPhoto(current) || isLegacyPhoto(swap)) return;
 
-    setPhotos((prev) =>
-      prev.map((photo) => {
-        if (photo.id === current.id) {
-          return { ...photo, position: swap.position };
-        }
-        if (photo.id === swap.id) {
-          return { ...photo, position: current.position };
-        }
-        return photo;
-      })
-    );
+    setSavingPhotoId(current.id);
+    setPhotoError(null);
+    try {
+      const reordered = [...list];
+      reordered[index] = swap;
+      reordered[targetIndex] = current;
 
-    await Promise.all([
-      fetch(`/api/entries/${entryId}/photos/${current.id}`, {
+      const updates = reordered
+        .filter((photo) => !isLegacyPhoto(photo))
+        .map((photo, nextPosition) => ({
+          photoId: photo.id,
+          nextPosition,
+        }))
+        .filter((item) => {
+          const existing = reordered.find((photo) => photo.id === item.photoId);
+          return existing ? existing.position !== item.nextPosition : false;
+        });
+
+      if (updates.length === 0) {
+        return;
+      }
+
+      const responses = await Promise.all(
+        updates.map((item) =>
+          fetch(`/api/entries/${entryId}/photos/${item.photoId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ position: item.nextPosition }),
+          })
+        )
+      );
+      const failedResponse = responses.find((response) => !response.ok);
+      if (failedResponse) {
+        const payload = await failedResponse.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Unable to reorder photos.");
+      }
+
+      await loadPhotos();
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error ? error.message : "Unable to reorder photos."
+      );
+    } finally {
+      setSavingPhotoId(null);
+    }
+  };
+
+  const updatePhotoType = async (
+    photo: EntryPhoto,
+    nextType: EntryPhotoType
+  ) => {
+    if (!entryId) return;
+    if (photo.type === nextType) return;
+    if (isLegacyPhoto(photo)) {
+      setPhotoError(
+        "Legacy photos cannot be recategorized. Add a new photo to use category editing."
+      );
+      return;
+    }
+
+    setSavingPhotoId(photo.id);
+    setPhotoError(null);
+    try {
+      const response = await fetch(`/api/entries/${entryId}/photos/${photo.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ position: swap.position }),
-      }),
-      fetch(`/api/entries/${entryId}/photos/${swap.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ position: current.position }),
-      }),
-    ]);
+        body: JSON.stringify({ type: nextType }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Unable to update photo category.");
+      }
+      await loadPhotos();
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error ? error.message : "Unable to update photo category."
+      );
+    } finally {
+      setSavingPhotoId(null);
+    }
   };
 
   const openCropEditor = async (photo: EntryPhoto) => {
@@ -641,6 +846,18 @@ export default function EditEntryPage() {
     }
 
     if (photo.type !== "label" || !photo.signed_url) {
+      return;
+    }
+
+    const lineupSource = photosByType("lineup").find(
+      (candidate) =>
+        !candidate.id.startsWith("legacy-") &&
+        Boolean(candidate.signed_url) &&
+        Boolean(candidate.path)
+    );
+    if (lineupSource?.signed_url && lineupSource.path) {
+      setCropSourceUrl(lineupSource.signed_url);
+      setCropSourcePath(lineupSource.path);
       return;
     }
 
@@ -1066,7 +1283,7 @@ export default function EditEntryPage() {
       cropTouchRef.current = null;
       setCropEditorPhoto(null);
     } catch {
-      setPhotoError("Unable to save crop thumbnail.");
+      setPhotoError("Unable to save photo crop.");
     } finally {
       setSavingCrop(false);
     }
@@ -1113,7 +1330,7 @@ export default function EditEntryPage() {
     if (!entry || !entryId || !isBulkReview) {
       return;
     }
-    if (isSubmitting || isDeletingEntry) {
+    if (isSubmitting || isDeletingEntry || isDeletingBulkQueue) {
       return;
     }
 
@@ -1159,6 +1376,70 @@ export default function EditEntryPage() {
       setErrorMessage("Unable to delete entry.");
     } finally {
       setIsDeletingEntry(false);
+    }
+  };
+
+  const cancelEntireBulkQueue = async () => {
+    if (!isBulkReview || bulkQueue.length === 0) {
+      return;
+    }
+    if (isSubmitting || isDeletingEntry || isDeletingBulkQueue) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Cancel bulk review and delete all ${bulkQueue.length} queued entr${
+        bulkQueue.length === 1 ? "y" : "ies"
+      }? This cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingBulkQueue(true);
+    setErrorMessage(null);
+    setPhotoError(null);
+
+    try {
+      const uniqueEntryIds = Array.from(new Set(bulkQueue));
+      const results = await Promise.all(
+        uniqueEntryIds.map(async (targetEntryId) => {
+          try {
+            const response = await fetch(`/api/entries/${targetEntryId}`, {
+              method: "DELETE",
+            });
+            if (response.ok || response.status === 404) {
+              return { id: targetEntryId, ok: true as const, error: null };
+            }
+            const payload = await response.json().catch(() => ({}));
+            const message =
+              typeof payload?.error === "string"
+                ? payload.error
+                : `Delete failed (${response.status}).`;
+            return { id: targetEntryId, ok: false as const, error: message };
+          } catch {
+            return {
+              id: targetEntryId,
+              ok: false as const,
+              error: "Network error while deleting entry.",
+            };
+          }
+        })
+      );
+
+      const failed = results.filter((result) => !result.ok);
+      if (failed.length > 0) {
+        const firstError = failed[0]?.error ?? "Delete failed.";
+        window.alert(
+          `Deleted ${uniqueEntryIds.length - failed.length}/${
+            uniqueEntryIds.length
+          } entries. ${failed.length} failed. First error: ${firstError}`
+        );
+      }
+
+      router.push("/entries");
+    } finally {
+      setIsDeletingBulkQueue(false);
     }
   };
 
@@ -1375,19 +1656,23 @@ export default function EditEntryPage() {
     );
   }
 
-  const currentLabelPhoto = displayPhotosByType("label")[0] ?? null;
-  const currentPlacePhoto = displayPhotosByType("place")[0] ?? null;
-  const currentPairingPhoto = displayPhotosByType("pairing")[0] ?? null;
-  const currentPhotoCards: Array<{
-    key: "label" | "place" | "pairing";
-    label: string;
-    photo: EntryPhoto | null;
-  }> = [
-    { key: "label", label: "Label", photo: currentLabelPhoto },
-    { key: "place", label: "Place", photo: currentPlacePhoto },
-    { key: "pairing", label: "Pairing", photo: currentPairingPhoto },
-  ];
-  const hasCurrentPhotos = currentPhotoCards.some((card) => card.photo);
+  const allDisplayPhotos = sortPhotos(
+    ([
+      ...displayPhotosByType("label"),
+      ...displayPhotosByType("place"),
+      ...displayPhotosByType("people"),
+      ...displayPhotosByType("pairing"),
+      ...displayPhotosByType("lineup"),
+      ...displayPhotosByType("other_bottles"),
+    ] as EntryPhoto[]).filter(
+      (photo, index, list) => list.findIndex((item) => item.id === photo.id) === index
+    )
+  );
+  const collapsibleSectionClassName =
+    "group rounded-2xl border border-white/10 bg-black/30 p-4";
+  const collapsibleSummaryClassName =
+    "cursor-pointer list-none select-none text-sm font-medium text-zinc-200 [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
+  const showEditPhotosSection = false;
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -1418,7 +1703,7 @@ export default function EditEntryPage() {
                 form="entry-edit-form"
                 data-submit-intent="next"
                 className="rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
-                disabled={isSubmitting || isDeletingEntry}
+                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
               >
                 {nextBulkEntryId ? "Next wine" : "Finish review"}
               </button>
@@ -1427,9 +1712,17 @@ export default function EditEntryPage() {
                 form="entry-edit-form"
                 data-submit-intent="exit"
                 className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                disabled={isSubmitting || isDeletingEntry}
+                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
               >
                 Skip all and save
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
+                onClick={cancelEntireBulkQueue}
+              >
+                {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
               </button>
             </div>
           ) : null}
@@ -1452,89 +1745,150 @@ export default function EditEntryPage() {
 
           <div>
             <p className="text-sm font-medium text-zinc-200">Current photos</p>
-            {hasCurrentPhotos ? (
-              <div className="mt-2 grid gap-4 md:grid-cols-3">
-                {currentPhotoCards.map((card) => {
-                  const photo = card.photo;
-                  if (!photo) return null;
+            <div className="mt-2">
+              <SwipePhotoGallery
+                items={allDisplayPhotos.map((photo, index) => ({
+                  id: photo.id,
+                  url: withCacheBust(photo.signed_url) ?? photo.signed_url ?? null,
+                  alt: `Current ${PHOTO_TYPE_LABELS[photo.type].toLowerCase()} photo ${index + 1}`,
+                  badge: (
+                    <label className="relative block">
+                      <select
+                        value={photo.type}
+                        className="max-w-[9rem] appearance-none rounded-full border border-white/10 bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-zinc-300 outline-none transition hover:border-white/20 focus:border-amber-300/50 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isLegacyPhoto(photo) || savingPhotoId === photo.id}
+                        onClick={(event) => event.stopPropagation()}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onTouchStart={(event) => event.stopPropagation()}
+                        onChange={(event) => {
+                          void updatePhotoType(photo, event.target.value as EntryPhotoType);
+                        }}
+                      >
+                        {PHOTO_TYPE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+                        ▾
+                      </span>
+                    </label>
+                  ),
+                }))}
+                heightClassName="h-72 sm:h-[26rem]"
+                empty="No photos uploaded yet."
+                footer={(active, activeIndex) => {
+                  const activePhoto =
+                    allDisplayPhotos.find((photo) => photo.id === active.id) ?? null;
+                  const canCrop = Boolean(
+                    activePhoto && activePhoto.signed_url && !isLegacyPhoto(activePhoto)
+                  );
                   return (
-                    <div
-                      key={card.key}
-                      className="overflow-hidden rounded-2xl border border-white/10 bg-black/30"
-                    >
-                      <div className="relative">
-                        {photo.signed_url ? (
-                          card.key === "label" &&
-                          !photo.id.startsWith("legacy-") ? (
-                            <button
-                              type="button"
-                              className="block aspect-square w-full cursor-zoom-in overflow-hidden"
-                              onClick={() => openCropEditor(photo)}
-                              aria-label="Adjust label crop"
-                              title="Click to adjust crop"
-                            >
-                              <img
-                                src={withCacheBust(photo.signed_url) ?? photo.signed_url}
-                                alt={`Current ${card.label.toLowerCase()} photo`}
-                                className="h-full w-full object-cover"
-                              />
-                            </button>
-                          ) : (
-                            <img
-                              src={withCacheBust(photo.signed_url) ?? photo.signed_url}
-                              alt={`Current ${card.label.toLowerCase()} photo`}
-                              className={
-                                card.key === "label"
-                                  ? "aspect-square w-full object-cover"
-                                  : "h-28 w-full object-cover sm:h-36"
-                              }
-                            />
-                          )
-                        ) : (
-                          <div className="flex h-28 items-center justify-center text-xs text-zinc-400 sm:h-36">
-                            Photo unavailable
-                          </div>
-                        )}
-                        {currentUserId === entry.user_id ? (
+                    <>
+                      <span>
+                        {activeIndex + 1} of {allDisplayPhotos.length}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {activePhoto?.signed_url ? (
                           <button
                             type="button"
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
-                            aria-label={`Remove ${card.label.toLowerCase()} photo`}
-                            disabled={removingCurrentPhotoType === card.key}
-                            onClick={() => removeCurrentPhoto(card.key, photo)}
+                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => openCropEditor(activePhoto)}
+                            disabled={!canCrop || savingPhotoId === activePhoto.id}
                           >
-                            ×
+                            Crop
                           </button>
                         ) : null}
-                      </div>
-                      <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
-                        <span>{card.label}</span>
-                        {currentUserId === entry.user_id && photo.signed_url ? (
+                        {activePhoto?.signed_url ? (
                           <a
-                            href={photo.signed_url}
+                            href={activePhoto.signed_url}
                             download
-                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
                           >
                             Download
                           </a>
                         ) : null}
                       </div>
-                    </div>
+                    </>
                   );
-                })}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-zinc-400">No photos uploaded yet.</p>
-            )}
+                }}
+              />
+            </div>
           </div>
 
-          {/* Wine details is intentionally first in the form flow */}
-          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+          <div>
+            <label className="text-sm font-medium text-zinc-200">Notes</label>
+            <textarea
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              {...register("notes")}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
+                  errors.rating
+                    ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                    : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                }`}
+                {...register("rating", {
+                  validate: (value) => {
+                    const trimmed = value?.trim() ?? "";
+                    if (!trimmed) return true;
+                    if (!/^[0-9]+$/.test(trimmed)) {
+                      return "Rating must be a whole number (integer).";
+                    }
+                    const parsed = Number(trimmed);
+                    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
+                      return "Rating must be between 1 and 100.";
+                    }
+                    return true;
+                  },
+                })}
+              />
+              {errors.rating?.message ? (
+                <p className="mt-1 text-xs font-semibold text-rose-400">
+                  {errors.rating.message}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Whole number between 1 and 100.
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium text-zinc-200">
+                QPR (Quality : Price Ratio)
+              </label>
+              <select
+                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("qpr_level")}
+              >
+                <option value="">Not set</option>
+                {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Price is temporarily hidden but kept registered to preserve existing values. */}
+            <input type="hidden" {...register("price_paid")} />
+            <input type="hidden" {...register("price_paid_currency")} />
+            <input type="hidden" {...register("price_paid_source")} />
+          </div>
+
+          <details className={collapsibleSectionClassName}>
+            <summary className={collapsibleSummaryClassName}>
               Wine details
             </summary>
             <p className="mt-2 text-xs text-zinc-400">
-              Optional identity and purchase details for this bottle.
+              Optional identity details for this bottle.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
@@ -1595,190 +1949,67 @@ export default function EditEntryPage() {
                   onChange={setSelectedPrimaryGrapes}
                 />
               </div>
-              <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium text-zinc-200">Price paid</label>
-                    <div className="mt-1 flex">
-                      <input type="hidden" {...register("price_paid_currency")} />
-                      <PriceCurrencySelect
-                        value={selectedPricePaidCurrency}
-                        onChange={(currency) =>
-                          setValue("price_paid_currency", currency, {
-                            shouldDirty: true,
-                          })
-                        }
-                      />
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        className={`h-10 w-full rounded-r-xl border border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
-                          errors.price_paid
-                            ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                            : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
-                        }`}
-                        placeholder="Optional (e.g. 28.50)"
-                        {...register("price_paid", {
-                          validate: (value) => {
-                            const trimmed = value?.trim() ?? "";
-                            if (!trimmed) return true;
-                            if (!/^[0-9]+(\.[0-9]+)?$/.test(trimmed)) {
-                              return "Price paid must be numbers only (no $ or symbols).";
-                            }
-                            const parsed = Number(trimmed);
-                            if (!Number.isFinite(parsed) || parsed < 0) {
-                              return "Price paid must be a valid number.";
-                            }
-                            return true;
-                          },
-                        })}
-                      />
-                    </div>
-                    {errors.price_paid?.message ? (
-                      <p className="mt-1 text-xs font-semibold text-rose-400">
-                        {errors.price_paid.message}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-zinc-500">
-                        Numbers only (no $ or symbols). Example: 28.50
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="text-sm font-medium text-zinc-200">Price source</label>
-                      {selectedPricePaidSource ? (
-                        <button
-                          type="button"
-                          className="text-xs text-zinc-400 transition hover:text-zinc-200"
-                          onClick={() =>
-                            setValue("price_paid_source", "", {
-                              shouldDirty: true,
-                            })
-                          }
-                        >
-                          Clear
-                        </button>
-                      ) : null}
-                    </div>
-                    <input type="hidden" {...register("price_paid_source")} />
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {PRICE_PAID_SOURCE_VALUES.map((source) => {
-                        const selected = selectedPricePaidSource === source;
-                        return (
-                          <button
-                            key={source}
-                            type="button"
-                            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
-                              selected
-                                ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
-                                : errors.price_paid_source
-                                  ? "border-rose-400/50 bg-black/30 text-zinc-300 hover:border-rose-300/60"
-                                  : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
-                            }`}
-                            onClick={() =>
-                              setValue("price_paid_source", source, {
-                                shouldDirty: true,
-                              })
-                            }
-                          >
-                            <span
-                              className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                                selected
-                                  ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
-                                  : "border-white/20 text-transparent"
-                              }`}
-                            >
-                              ✓
-                            </span>
-                            {PRICE_PAID_SOURCE_LABELS[source]}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {errors.price_paid_source?.message ? (
-                      <p className="mt-1 text-xs font-semibold text-rose-400">
-                        {errors.price_paid_source.message}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-zinc-500">
-                        Required if you enter a price paid amount.
-                      </p>
-                    )}
-                  </div>
-                </div>
+            </div>
+          </details>
+
+          <details className={collapsibleSectionClassName}>
+            <summary className={collapsibleSummaryClassName}>
+              Location & date
+            </summary>
+            <p className="mt-2 text-xs text-zinc-400">
+              Where and when this bottle was consumed.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-zinc-200">Location</label>
+                <input type="hidden" {...register("location_place_id")} />
+                <Controller
+                  control={control}
+                  name="location_text"
+                  render={({ field }) => (
+                    <LocationAutocomplete
+                      value={field.value}
+                      onChange={field.onChange}
+                      onSelectPlaceId={(placeId) =>
+                        setValue("location_place_id", placeId ?? "", {
+                          shouldDirty: true,
+                        })
+                      }
+                      onBlur={field.onBlur}
+                      biasCoords={photoGps}
+                    />
+                  )}
+                />
+              </div>
+              <div className="md:justify-self-start">
+                <label className="text-sm font-medium text-zinc-200">Consumed date</label>
+                <Controller
+                  control={control}
+                  name="consumed_at"
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <DatePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      required
+                    />
+                  )}
+                />
               </div>
             </div>
           </details>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
-                  errors.rating
-                    ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                    : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
-                }`}
-                {...register("rating", {
-                  validate: (value) => {
-                    const trimmed = value?.trim() ?? "";
-                    if (!trimmed) return true;
-                    if (!/^[0-9]+$/.test(trimmed)) {
-                      return "Rating must be a whole number (integer).";
-                    }
-                    const parsed = Number(trimmed);
-                    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
-                      return "Rating must be between 1 and 100.";
-                    }
-                    return true;
-                  },
-                })}
-              />
-              {errors.rating?.message ? (
-                <p className="mt-1 text-xs font-semibold text-rose-400">
-                  {errors.rating.message}
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-zinc-500">
-                  Whole number between 1 and 100.
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">
-                QPR (Quality : Price Ratio)
-              </label>
-              <select
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("qpr_level")}
-              >
-                <option value="">Not set</option>
-                {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
-            <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              {...register("notes")}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">
+          <details className={collapsibleSectionClassName}>
+            <summary className={collapsibleSummaryClassName}>
               Tasted with
-            </label>
+            </summary>
+            <p className="mt-2 text-xs text-zinc-400">
+              Tag friends who were with you.
+            </p>
             {users.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-400">No other users yet.</p>
+              <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
             ) : (() => {
               const topFriends = users.slice(0, 5);
               const topFriendIds = new Set(topFriends.map((u) => u.id));
@@ -1820,7 +2051,7 @@ export default function EditEntryPage() {
               };
 
               return (
-                <div className="mt-2 space-y-2">
+                <div className="mt-3 space-y-2">
                   <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
                     {topFriends.map(renderCheckbox)}
                     {extraSelected.map(renderCheckbox)}
@@ -1855,10 +2086,10 @@ export default function EditEntryPage() {
                 </div>
               );
             })()}
-          </div>
+          </details>
 
-          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+          <details className={collapsibleSectionClassName}>
+            <summary className={collapsibleSummaryClassName}>
               Advanced notes
             </summary>
             <p className="mt-2 text-xs text-zinc-400">
@@ -1886,21 +2117,24 @@ export default function EditEntryPage() {
             </div>
           </details>
 
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Visibility & interaction</label>
-            <p className="mt-1 text-xs text-zinc-400">
-              Set who can view the post, view/react to reactions, and view/comment on comments.
+          <details className={collapsibleSectionClassName}>
+            <summary className={collapsibleSummaryClassName}>
+              Visibility & interaction
+            </summary>
+            <p className="mt-2 text-xs text-zinc-400">
+              Set who can view the post, view/react to reactions, and view/comment on
+              comments.
             </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
+                  <label className="text-sm font-medium text-zinc-200">
                     Post visibility
-                  </p>
+                  </label>
                   <PrivacyBadge level={selectedEntryPrivacy} compact />
                 </div>
                 <select
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("entry_privacy")}
                 >
                   {PRIVACY_OPTIONS.map((option) => (
@@ -1910,15 +2144,13 @@ export default function EditEntryPage() {
                   ))}
                 </select>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                    Reactions
-                  </p>
+                  <label className="text-sm font-medium text-zinc-200">Reactions</label>
                   <PrivacyBadge level={selectedReactionPrivacy} compact />
                 </div>
                 <select
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("reaction_privacy")}
                 >
                   {PRIVACY_OPTIONS.map((option) => (
@@ -1928,15 +2160,13 @@ export default function EditEntryPage() {
                   ))}
                 </select>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                    Comments
-                  </p>
+                  <label className="text-sm font-medium text-zinc-200">Comments</label>
                   <PrivacyBadge level={selectedCommentsPrivacy} compact />
                 </div>
                 <select
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("comments_privacy")}
                 >
                   {PRIVACY_OPTIONS.map((option) => (
@@ -1950,191 +2180,178 @@ export default function EditEntryPage() {
             <p className="mt-2 text-xs text-zinc-500">
               Privacy on reactions/comments controls both visibility and participation.
             </p>
-          </div>
+          </details>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Location</label>
-              <input type="hidden" {...register("location_place_id")} />
-              <Controller
-                control={control}
-                name="location_text"
-                render={({ field }) => (
-                  <LocationAutocomplete
-                    value={field.value}
-                    onChange={field.onChange}
-                    onSelectPlaceId={(placeId) =>
-                      setValue("location_place_id", placeId ?? "", {
-                        shouldDirty: true,
-                      })
-                    }
-                    onBlur={field.onBlur}
-                    biasCoords={photoGps}
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Consumed date</label>
-              <Controller
-                control={control}
-                name="consumed_at"
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    required
-                  />
-                )}
-              />
-            </div>
-          </div>
+          {showEditPhotosSection ? (
+            <details className={collapsibleSectionClassName}>
+              <summary className={collapsibleSummaryClassName}>
+                Edit photos
+              </summary>
+              <p className="mt-2 text-xs text-zinc-400">
+                Edit category and order, delete photos, and tap any image to crop.
+              </p>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {(["label", "place", "pairing"] as const).map((type) => {
-              const list = displayPhotosByType(type);
-              const isUploading = uploadingType === type;
-              return (
-                <div
-                  key={type}
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4"
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <input
+                  ref={addPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="sr-only"
+                  onChange={(event) => {
+                    if (!event.target.files) return;
+                    addPhotosWithAiCategorization(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => addPhotoInputRef.current?.click()}
+                  disabled={uploadingType !== null}
                 >
-                  <label className="text-sm font-medium text-zinc-200">
-                    {type === "label"
-                      ? "Label photos"
-                      : type === "place"
-                      ? "Place photos"
-                      : "Pairing photos"}
-                  </label>
-                  <p className="text-xs text-zinc-400">
-                    {list.length === 0
-                      ? "Add a photo."
-                      : "Add more or reorder them."}
-                  </p>
-                  {list.length === 0 ? (
-                    <p className="mt-2 text-xs text-zinc-500">
-                      No photos yet.
-                    </p>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {list.map((photo, index) => (
-                        <div
-                          key={photo.id}
-                          className="rounded-xl border border-white/10 bg-black/40 p-2"
-                        >
-                          {photo.signed_url ? (
-                            type === "label" &&
-                            index === 0 &&
-                            !photo.id.startsWith("legacy-") ? (
-                              <button
-                                type="button"
-                                className="block aspect-square w-full cursor-zoom-in overflow-hidden rounded-lg"
-                                onClick={() => openCropEditor(photo)}
-                                aria-label="Adjust label crop"
-                                title="Click to adjust crop"
-                              >
+                  {uploadingType === null
+                    ? "Add photos"
+                    : `Categorizing ${PHOTO_TYPE_LABELS[uploadingType]}...`}
+                </button>
+              </div>
+
+              {allDisplayPhotos.length === 0 ? (
+                <p className="mt-3 text-sm text-zinc-500">No photos yet.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {allDisplayPhotos.map((photo, index) => {
+                    const legacy = isLegacyPhoto(photo);
+                    const saving = savingPhotoId === photo.id;
+                    return (
+                      <div
+                        key={photo.id}
+                        className="rounded-xl border border-white/10 bg-black/40 p-3"
+                      >
+                        <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
+                          <button
+                            type="button"
+                            className="relative block h-28 overflow-hidden rounded-lg border border-white/10 bg-black/50 text-left disabled:cursor-not-allowed disabled:opacity-70"
+                            onClick={() => openCropEditor(photo)}
+                            disabled={!photo.signed_url || saving}
+                            aria-label={`Crop ${PHOTO_TYPE_LABELS[photo.type].toLowerCase()} photo`}
+                            title="Tap to crop"
+                          >
+                            {photo.signed_url ? (
+                              <>
                                 <img
                                   src={withCacheBust(photo.signed_url) ?? photo.signed_url}
-                                  alt={`${type} photo ${index + 1}`}
+                                  alt={`${PHOTO_TYPE_LABELS[photo.type]} photo ${index + 1}`}
                                   className="h-full w-full object-cover"
                                 />
-                              </button>
+                                <span className="absolute bottom-1 left-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-zinc-200">
+                                  Crop
+                                </span>
+                              </>
                             ) : (
-                              <img
-                                src={withCacheBust(photo.signed_url) ?? photo.signed_url}
-                                alt={`${type} photo ${index + 1}`}
-                                className={
-                                  type === "label" && index === 0
-                                    ? "aspect-square w-full rounded-lg object-cover"
-                                    : "h-28 w-full rounded-lg object-cover"
-                                }
-                              />
-                            )
-                          ) : (
-                            <div className="flex h-28 items-center justify-center text-xs text-zinc-400">
-                              Photo unavailable
-                            </div>
-                          )}
-                          <div className="mt-2 flex items-center justify-between text-xs text-zinc-300">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                className="rounded-full border border-white/10 px-2 py-1 transition hover:border-white/30"
-                                disabled={list.length <= 1 || index === 0}
-                                onClick={() => movePhoto(type, index, "up")}
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-full border border-white/10 px-2 py-1 transition hover:border-white/30"
-                                disabled={list.length <= 1 || index === list.length - 1}
-                                onClick={() => movePhoto(type, index, "down")}
-                              >
-                                ↓
-                              </button>
-                            </div>
-                            {photo.id.startsWith("legacy-") ? (
-                              <span className="text-[11px] text-zinc-500">
-                                Saved from earlier entry
+                              <span className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
+                                Photo unavailable
                               </span>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  className="rounded-full border border-rose-500/40 px-2 py-1 text-rose-200 transition hover:border-rose-300"
-                                  onClick={() => deletePhoto(photo.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
                             )}
+                          </button>
+
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.12em] text-zinc-400">
+                                  Photo {index + 1}
+                                </p>
+                                <p className="text-sm text-zinc-200">
+                                  {PHOTO_TYPE_LABELS[photo.type]}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                className="rounded-full border border-rose-500/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={saving}
+                                onClick={() => deletePhotoItem(photo)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className="text-xs text-zinc-300">
+                                Category
+                                <select
+                                  className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-70"
+                                  value={photo.type}
+                                  disabled={legacy || saving}
+                                  onChange={(event) =>
+                                    updatePhotoType(
+                                      photo,
+                                      event.target.value as EntryPhotoType
+                                    )
+                                  }
+                                >
+                                  {PHOTO_TYPE_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              <div className="text-xs text-zinc-300">
+                                Order
+                                <div className="mt-1 flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2 py-2">
+                                  <span className="w-8 text-center text-sm text-zinc-100">
+                                    {index + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="rounded-full border border-white/10 px-2 py-1 text-xs transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={
+                                      legacy ||
+                                      saving ||
+                                      index === 0 ||
+                                      allDisplayPhotos.length <= 1
+                                    }
+                                    onClick={() =>
+                                      movePhotoInList(allDisplayPhotos, index, "up")
+                                    }
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-full border border-white/10 px-2 py-1 text-xs transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={
+                                      legacy ||
+                                      saving ||
+                                      index === allDisplayPhotos.length - 1 ||
+                                      allDisplayPhotos.length <= 1
+                                    }
+                                    onClick={() =>
+                                      movePhotoInList(allDisplayPhotos, index, "down")
+                                    }
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {legacy ? (
+                              <p className="text-[11px] text-zinc-500">
+                                Saved from an older entry format. Category/order edits and crop
+                                are unavailable for this photo.
+                              </p>
+                            ) : null}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <input
-                    ref={
-                      type === "label"
-                        ? labelInputRef
-                        : type === "place"
-                        ? placeInputRef
-                        : pairingInputRef
-                    }
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="sr-only"
-                    onChange={(event) => {
-                      if (!event.target.files) return;
-                      uploadPhotos(type, event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      if (type === "label") labelInputRef.current?.click();
-                      if (type === "place") placeInputRef.current?.click();
-                      if (type === "pairing") pairingInputRef.current?.click();
-                    }}
-                    disabled={list.length >= MAX_PHOTOS || isUploading}
-                  >
-                    {list.length >= MAX_PHOTOS
-                      ? "Max photos reached"
-                      : isUploading
-                      ? "Uploading..."
-                      : "Add photo"}
-                  </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </details>
+          ) : null}
 
           {cropEditorPhoto ? (
             <div className="fixed inset-0 z-50">
@@ -2150,13 +2367,13 @@ export default function EditEntryPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
-                      Label crop
+                      Photo crop
                     </p>
                     <h3 className="mt-1 text-lg font-semibold text-zinc-50">
-                      Adjust thumbnail framing
+                      Adjust photo framing
                     </h3>
                     <p className="mt-1 text-sm text-zinc-400">
-                      This rewrites the displayed thumbnail image. Drag to frame it, then save.
+                      This rewrites the displayed image. Drag to frame it, then save.
                     </p>
                   </div>
                   <button
@@ -2179,7 +2396,7 @@ export default function EditEntryPage() {
                         src={
                           withCacheBust(cropSourceUrl) ?? cropSourceUrl
                         }
-                        alt="Label crop preview"
+                        alt="Photo crop preview"
                         draggable={false}
                         onLoad={(event) => {
                           const target = event.currentTarget;
@@ -2264,10 +2481,10 @@ export default function EditEntryPage() {
                     />
                   </div>
                   <p className="hidden text-xs text-zinc-400 sm:block">
-                    At 1.00x the full image fits. Zoom in and drag to frame the thumbnail.
+                    At 1.00x the full image fits. Zoom in and drag to frame the crop.
                   </p>
                   <p className="text-xs text-zinc-400 sm:hidden">
-                    Pinch to zoom, then drag to frame the thumbnail.
+                    Pinch to zoom, then drag to frame the crop.
                   </p>
                 </div>
 
@@ -2322,7 +2539,7 @@ export default function EditEntryPage() {
             <button
               type="submit"
               className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isSubmitting || isDeletingEntry}
+              disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
             >
               Save changes
             </button>
@@ -2331,7 +2548,7 @@ export default function EditEntryPage() {
                 type="button"
                 className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={cancelBulkEntry}
-                disabled={isSubmitting || isDeletingEntry}
+                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
               >
                 Cancel
               </button>

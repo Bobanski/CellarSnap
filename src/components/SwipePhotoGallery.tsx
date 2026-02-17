@@ -7,7 +7,7 @@ export type SwipePhotoGalleryItem = {
   id?: string;
   url: string | null;
   alt: string;
-  badge?: string;
+  badge?: ReactNode;
 };
 
 export default function SwipePhotoGallery({
@@ -70,7 +70,7 @@ export default function SwipePhotoGallery({
             <div
               key={
                 item.id ??
-                `${item.badge ?? "photo"}-${item.url ?? "missing"}-${itemIndex}`
+                `${item.url ?? "missing"}-${itemIndex}`
               }
               className="relative min-w-full"
             >
@@ -87,11 +87,17 @@ export default function SwipePhotoGallery({
                   Photo unavailable
                 </div>
               )}
-              {item.badge ? (
-                <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
-                  {item.badge}
-                </span>
-              ) : null}
+              {item.badge
+                ? typeof item.badge === "string"
+                  ? (
+                      <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
+                        {item.badge}
+                      </span>
+                    )
+                  : (
+                      <div className="absolute left-2 top-2">{item.badge}</div>
+                    )
+                : null}
             </div>
           ))}
         </div>

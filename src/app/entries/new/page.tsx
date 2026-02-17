@@ -30,7 +30,7 @@ import {
 } from "@/lib/entryMeta";
 import { getTodayLocalYmd } from "@/lib/dateYmd";
 import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
-import type { PrimaryGrape, PrivacyLevel } from "@/types/wine";
+import type { EntryPhotoType, PrimaryGrape, PrivacyLevel } from "@/types/wine";
 
 type NewEntryForm = {
   wine_name: string;
@@ -81,6 +81,14 @@ type CreateEntryResponse = {
 
 type ComparisonResponse = "more" | "less" | "same_or_not_sure";
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
+type UploadPhotoType = EntryPhotoType;
+type ManualUploadPhotoType = "label" | "place" | "pairing";
+type ContextPhotoTag =
+  | "place"
+  | "pairing"
+  | "people"
+  | "other_bottles"
+  | "unknown";
 
 export default function NewEntryPage() {
   const router = useRouter();
@@ -166,8 +174,6 @@ export default function NewEntryPage() {
   const [isSubmittingComparison, setIsSubmittingComparison] = useState(false);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
-  const placeInputRef = useRef<HTMLInputElement | null>(null);
-  const pairingInputRef = useRef<HTMLInputElement | null>(null);
   const labelPhotosRef = useRef<{ file: File; preview: string }[]>([]);
 
   // Lineup detection state
@@ -235,9 +241,24 @@ export default function NewEntryPage() {
     included: boolean;
     photoIndex: number;
   };
+  type SourcePhotoRole = "individual" | "lineup" | "unknown";
+  type SourcePhotoAnalysis = {
+    photoIndex: number;
+    role: SourcePhotoRole;
+    detectedBottleCount: number;
+    identifiedBottleCount: number;
+    analysisFailed: boolean;
+    contextTag: ContextPhotoTag;
+    contextConfidence: number | null;
+  };
   const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
   const [lineupCreating, setLineupCreating] = useState(false);
+  const [lineupStartedCount, setLineupStartedCount] = useState(0);
   const [lineupCreatedCount, setLineupCreatedCount] = useState(0);
+  const [lineupSourceFiles, setLineupSourceFiles] = useState<File[]>([]);
+  const [lineupSourceAnalysis, setLineupSourceAnalysis] = useState<
+    SourcePhotoAnalysis[]
+  >([]);
 
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
@@ -316,8 +337,14 @@ export default function NewEntryPage() {
   }, [labelPhotos]);
 
   const MAX_PHOTOS = MAX_ENTRY_PHOTOS_PER_TYPE;
+  const MAX_UPLOAD_RETRIES = 3;
+  const BULK_CREATE_CONCURRENCY = 4;
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
 
-  const addPhotos = (type: "label" | "place" | "pairing", files: FileList) => {
+  const addPhotos = (type: ManualUploadPhotoType, files: FileList) => {
     const list = Array.from(files);
     if (list.length === 0) return;
 
@@ -375,7 +402,7 @@ export default function NewEntryPage() {
   };
 
   const removePhoto = (
-    type: "label" | "place" | "pairing",
+    type: ManualUploadPhotoType,
     index: number
   ) => {
     if (type === "label") {
@@ -402,7 +429,7 @@ export default function NewEntryPage() {
   };
 
   const movePhoto = (
-    type: "label" | "place" | "pairing",
+    type: ManualUploadPhotoType,
     index: number,
     direction: "up" | "down"
   ) => {
@@ -426,35 +453,236 @@ export default function NewEntryPage() {
     setPairingPhotos((prev) => swap(prev));
   };
 
+  type UploadPhotoOptions = {
+    copyByFile?: WeakMap<File, string>;
+    originalCopyByFile?: WeakMap<File, string>;
+  };
+
+  const isEntryPhotoTypeConstraintMessage = (message: string) => {
+    const lower = message.toLowerCase();
+    return (
+      lower.includes("entry_photos_type_check") ||
+      lower.includes("entry photo types are out of date") ||
+      lower.includes("028_entry_photo_context_types.sql")
+    );
+  };
+
   const uploadPhotos = async (
     entryId: string,
-    type: "label" | "place" | "pairing",
-    photos: { file: File }[]
+    type: UploadPhotoType,
+    photos: { file: File; originalFile?: File }[],
+    options?: UploadPhotoOptions
   ) => {
-    for (const photo of photos) {
-      const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
+    const isRetryableStatus = (status: number) =>
+      status === 408 ||
+      status === 425 ||
+      status === 429 ||
+      (status >= 500 && status <= 599);
 
-      if (!createResponse.ok) {
-        const payload = await createResponse.json().catch(() => ({}));
-        throw new Error(payload.error ?? "Unable to create photo record.");
-      }
-
-      const { photo: created } = await createResponse.json();
+    const copyStorageObject = async (sourcePath: string, targetPath: string) => {
       const { error } = await supabase.storage
         .from("wine-photos")
-        .upload(created.path, photo.file, {
-          upsert: true,
-          contentType: photo.file.type,
-        });
+        .copy(sourcePath, targetPath);
+      return !error;
+    };
 
-      if (error) {
-        throw new Error(error.message);
+    for (const photo of photos) {
+      let createdPath: string | null = null;
+      let lastCreateMessage = "Unable to create photo record.";
+      for (let attempt = 0; attempt < MAX_UPLOAD_RETRIES; attempt += 1) {
+        try {
+          const createResponse = await fetch(`/api/entries/${entryId}/photos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type }),
+          });
+
+          const payload = (await createResponse.json().catch(() => ({}))) as {
+            error?: string;
+            code?: string;
+            photo?: { path?: string | null };
+          };
+
+          if (!createResponse.ok) {
+            const message =
+              typeof payload.error === "string"
+                ? payload.error
+                : "Unable to create photo record.";
+            const code = typeof payload.code === "string" ? payload.code : null;
+            lastCreateMessage = message;
+            const isPhotoTypeConstraintError =
+              code === "ENTRY_PHOTO_TYPES_UNAVAILABLE" ||
+              isEntryPhotoTypeConstraintMessage(message);
+            if (
+              attempt < MAX_UPLOAD_RETRIES - 1 &&
+              isRetryableStatus(createResponse.status) &&
+              !isPhotoTypeConstraintError
+            ) {
+              await sleep(250 * (attempt + 1));
+              continue;
+            }
+            if (isPhotoTypeConstraintError) {
+              throw new Error(
+                "Database photo types are out of date. Run `supabase/sql/028_entry_photo_context_types.sql` and retry."
+              );
+            }
+            throw new Error(
+              `${type} photo record failed (${createResponse.status}): ${message}`
+            );
+          }
+
+          const created = payload.photo;
+          createdPath = created?.path ?? null;
+          if (!createdPath) {
+            throw new Error(`${type} photo record was created without a path.`);
+          }
+          break;
+        } catch (error) {
+          if (attempt >= MAX_UPLOAD_RETRIES - 1) {
+            if (error instanceof Error) {
+              throw error;
+            }
+            throw new Error(`${type} photo record failed: ${lastCreateMessage}`);
+          }
+          await sleep(250 * (attempt + 1));
+        }
+      }
+      if (!createdPath) {
+        throw new Error(`${type} photo record failed: ${lastCreateMessage}`);
+      }
+
+      const uploadToStorage = async (
+        path: string,
+        fileToUpload: File,
+        label: "photo" | "original"
+      ) => {
+        for (let attempt = 0; attempt < MAX_UPLOAD_RETRIES; attempt += 1) {
+          const { error } = await supabase.storage
+            .from("wine-photos")
+            .upload(path, fileToUpload, {
+              upsert: true,
+              contentType: fileToUpload.type || "image/jpeg",
+            });
+          if (!error) {
+            return;
+          }
+          if (attempt >= MAX_UPLOAD_RETRIES - 1) {
+            throw new Error(`${type} ${label} upload failed: ${error.message}`);
+          }
+          await sleep(300 * (attempt + 1));
+        }
+      };
+
+      let uploadedFromCache = false;
+      const cachedPath = options?.copyByFile?.get(photo.file) ?? null;
+      if (cachedPath && cachedPath !== createdPath) {
+        uploadedFromCache = await copyStorageObject(cachedPath, createdPath);
+      }
+      if (!uploadedFromCache) {
+        await uploadToStorage(createdPath, photo.file, "photo");
+      }
+      options?.copyByFile?.set(photo.file, createdPath);
+
+      if (type === "label") {
+        const originalPath = buildOriginalPath(createdPath);
+        const originalFile = photo.originalFile ?? photo.file;
+        let copiedOriginalFromCache = false;
+        const cachedOriginalPath =
+          options?.originalCopyByFile?.get(originalFile) ?? null;
+        if (cachedOriginalPath && cachedOriginalPath !== originalPath) {
+          copiedOriginalFromCache = await copyStorageObject(
+            cachedOriginalPath,
+            originalPath
+          );
+        }
+        if (!copiedOriginalFromCache) {
+          await uploadToStorage(originalPath, originalFile, "original");
+        }
+        options?.originalCopyByFile?.set(originalFile, originalPath);
       }
     }
+  };
+
+  const createEntryRecord = async (
+    body: Record<string, unknown>
+  ): Promise<{ entryId: string }> => {
+    let lastStatus: number | null = null;
+    let lastMessage = "Unable to create entry.";
+    for (let attempt = 0; attempt < MAX_UPLOAD_RETRIES; attempt += 1) {
+      try {
+        const response = await fetch("/api/entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          const message =
+            typeof payload?.error === "string"
+              ? payload.error
+              : "Unable to create entry.";
+          lastStatus = response.status;
+          lastMessage = message;
+          const retryable =
+            response.status === 408 ||
+            response.status === 425 ||
+            response.status === 429 ||
+            (response.status >= 500 && response.status <= 599);
+          if (attempt < MAX_UPLOAD_RETRIES - 1 && retryable) {
+            await sleep(300 * (attempt + 1));
+            continue;
+          }
+          throw new Error(`Entry create failed (${response.status}): ${message}`);
+        }
+
+        const payload = (await response.json()) as {
+          entry?: { id?: string | null };
+        };
+        const entryId = payload.entry?.id;
+        if (!entryId) {
+          throw new Error("Entry created but missing entry ID.");
+        }
+        return { entryId };
+      } catch (error) {
+        if (attempt >= MAX_UPLOAD_RETRIES - 1) {
+          if (error instanceof Error) {
+            throw error;
+          }
+          const statusPrefix = lastStatus ? `(${lastStatus}) ` : "";
+          throw new Error(`Entry create failed ${statusPrefix}${lastMessage}`);
+        }
+        await sleep(300 * (attempt + 1));
+      }
+    }
+
+    throw new Error("Entry create failed.");
+  };
+
+  const runWithConcurrency = async <T,>(
+    tasks: Array<() => Promise<T>>,
+    concurrency: number
+  ) => {
+    if (tasks.length === 0) {
+      return [] as T[];
+    }
+
+    const safeConcurrency = Math.max(1, Math.min(concurrency, tasks.length));
+    const results = new Array<T>(tasks.length);
+    let nextIndex = 0;
+
+    const workers = Array.from({ length: safeConcurrency }, async () => {
+      while (true) {
+        const taskIndex = nextIndex;
+        nextIndex += 1;
+        if (taskIndex >= tasks.length) {
+          return;
+        }
+        results[taskIndex] = await tasks[taskIndex]();
+      }
+    });
+
+    await Promise.all(workers);
+    return results;
   };
 
   const rollbackCreatedEntry = async (entryId: string) => {
@@ -500,7 +728,7 @@ export default function NewEntryPage() {
         return;
       }
 
-      router.push(`/entries/${pendingComparison.entry.id}`);
+      router.push(`/entries/${pendingComparison.entry.id}/edit`);
     } catch {
       setComparisonErrorMessage(
         "Unable to save comparison response. Check your connection and try again."
@@ -513,7 +741,7 @@ export default function NewEntryPage() {
     if (!pendingComparison) {
       return;
     }
-    router.push(`/entries/${pendingComparison.entry.id}`);
+    router.push(`/entries/${pendingComparison.entry.id}/edit`);
   };
 
   const formatWineTitle = (wine: {
@@ -669,6 +897,59 @@ export default function NewEntryPage() {
         wine.appellation ||
         wine.classification
     );
+  };
+
+  const resolveSourcePhotoRole = ({
+    detectedBottleCount,
+    identifiedBottleCount,
+  }: {
+    detectedBottleCount: number;
+    identifiedBottleCount: number;
+  }): SourcePhotoRole => {
+    if (detectedBottleCount >= 2 || identifiedBottleCount >= 2) {
+      return "lineup";
+    }
+    if (detectedBottleCount === 1 || identifiedBottleCount === 1) {
+      return "individual";
+    }
+    return "unknown";
+  };
+
+  const clearLineupReviewState = () => {
+    setLineupWines([]);
+    setLineupCreatedCount(0);
+  };
+
+  const resetAutotagState = () => {
+    clearLineupReviewState();
+    setLineupSourceFiles([]);
+    setLineupSourceAnalysis([]);
+  };
+
+  const isPeoplePlaceOrPairingTag = (tag: ContextPhotoTag) =>
+    tag === "people" || tag === "place" || tag === "pairing";
+
+  const shouldTreatAsOtherBottles = (
+    analysis: SourcePhotoAnalysis | null
+  ) => {
+    if (!analysis || analysis.role === "lineup") {
+      return false;
+    }
+    if (isPeoplePlaceOrPairingTag(analysis.contextTag)) {
+      return false;
+    }
+    if (analysis.contextTag === "other_bottles") {
+      return true;
+    }
+    return analysis.role === "individual";
+  };
+
+  const buildOriginalPath = (path: string) => {
+    const extensionMatch = path.match(/(\.[a-z0-9]+)$/i);
+    if (!extensionMatch) {
+      return `${path}__original`;
+    }
+    return path.replace(/(\.[a-z0-9]+)$/i, "__original$1");
   };
 
   const shouldForceLineupForSinglePhoto = (wine: LineupWine | null) => {
@@ -858,15 +1139,95 @@ export default function NewEntryPage() {
     }
 
     try {
-      if (labelPhotos.length > 0) {
-        await uploadPhotos(entry.id, "label", labelPhotos);
+      const sourceFiles = labelPhotos.map((photo) => photo.file);
+      const sourceAnalysisByIndex = new Map(
+        lineupSourceAnalysis.map((analysis) => [analysis.photoIndex, analysis])
+      );
+      const getSourceAnalysis = (photoIndex: number): SourcePhotoAnalysis | null =>
+        sourceAnalysisByIndex.get(photoIndex) ?? null;
+      const dedupeFiles = (files: File[]) => {
+        const seen = new Set<File>();
+        return files.filter((file) => {
+          if (seen.has(file)) {
+            return false;
+          }
+          seen.add(file);
+          return true;
+        });
+      };
+      const toUploads = (files: File[]) =>
+        dedupeFiles(files)
+          .slice(0, MAX_PHOTOS)
+          .map((file) => ({ file }));
+
+      const primaryLabelIndex =
+        sourceFiles.findIndex(
+          (_file, index) => getSourceAnalysis(index)?.role === "individual"
+        ) >= 0
+          ? sourceFiles.findIndex(
+              (_file, index) => getSourceAnalysis(index)?.role === "individual"
+            )
+          : sourceFiles.findIndex(
+              (_file, index) => getSourceAnalysis(index)?.role === "lineup"
+            ) >= 0
+          ? sourceFiles.findIndex(
+              (_file, index) => getSourceAnalysis(index)?.role === "lineup"
+            )
+          : sourceFiles.length > 0
+          ? 0
+          : -1;
+
+      const labelUploads =
+        primaryLabelIndex >= 0 && sourceFiles[primaryLabelIndex]
+          ? [{ file: sourceFiles[primaryLabelIndex], originalFile: sourceFiles[primaryLabelIndex] }]
+          : [];
+      const lineupUploads = sourceFiles.filter(
+        (_file, index) => getSourceAnalysis(index)?.role === "lineup"
+      );
+      const otherBottleUploads = sourceFiles.filter((_file, index) => {
+        if (index === primaryLabelIndex) {
+          return false;
+        }
+        return shouldTreatAsOtherBottles(getSourceAnalysis(index));
+      });
+      const placeUploads = [
+        ...placePhotos.map((photo) => photo.file),
+        ...sourceFiles.filter(
+          (_file, index) => getSourceAnalysis(index)?.contextTag === "place"
+        ),
+      ];
+      const peopleUploads = sourceFiles.filter(
+        (_file, index) => getSourceAnalysis(index)?.contextTag === "people"
+      );
+      const pairingUploads = [
+        ...pairingPhotos.map((photo) => photo.file),
+        ...sourceFiles.filter(
+          (_file, index) => getSourceAnalysis(index)?.contextTag === "pairing"
+        ),
+      ];
+
+      const uploadJobs: Promise<void>[] = [];
+      if (labelUploads.length > 0) {
+        uploadJobs.push(uploadPhotos(entry.id, "label", labelUploads));
       }
-      if (placePhotos.length > 0) {
-        await uploadPhotos(entry.id, "place", placePhotos);
+      if (lineupUploads.length > 0) {
+        uploadJobs.push(uploadPhotos(entry.id, "lineup", toUploads(lineupUploads)));
       }
-      if (pairingPhotos.length > 0) {
-        await uploadPhotos(entry.id, "pairing", pairingPhotos);
+      if (otherBottleUploads.length > 0) {
+        uploadJobs.push(
+          uploadPhotos(entry.id, "other_bottles", toUploads(otherBottleUploads))
+        );
       }
+      if (placeUploads.length > 0) {
+        uploadJobs.push(uploadPhotos(entry.id, "place", toUploads(placeUploads)));
+      }
+      if (peopleUploads.length > 0) {
+        uploadJobs.push(uploadPhotos(entry.id, "people", toUploads(peopleUploads)));
+      }
+      if (pairingUploads.length > 0) {
+        uploadJobs.push(uploadPhotos(entry.id, "pairing", toUploads(pairingUploads)));
+      }
+      await Promise.all(uploadJobs);
     } catch (error) {
       const rolledBack = await rollbackCreatedEntry(entry.id);
       setIsSubmitting(false);
@@ -890,7 +1251,7 @@ export default function NewEntryPage() {
       return;
     }
 
-    router.push(`/entries/${entry.id}`);
+    router.push(`/entries/${entry.id}/edit`);
   });
 
   const applyAutofill = async (data: {
@@ -1008,6 +1369,39 @@ export default function NewEntryPage() {
     } catch {
       return file;
     }
+  };
+
+  const classifyContextPhoto = async (
+    file: File,
+    signal: AbortSignal
+  ): Promise<{ tag: ContextPhotoTag; confidence: number | null }> => {
+    const formData = new FormData();
+    formData.append("photo", file);
+    const response = await fetch("/api/photo-context", {
+      method: "POST",
+      body: formData,
+      signal,
+    });
+    if (!response.ok) {
+      return { tag: "unknown", confidence: null };
+    }
+    const payload = (await response.json()) as {
+      tag?: string;
+      confidence?: number | null;
+    };
+    const tag =
+      payload.tag === "place" ||
+      payload.tag === "pairing" ||
+      payload.tag === "people" ||
+      payload.tag === "other_bottles" ||
+      payload.tag === "unknown"
+        ? payload.tag
+        : "unknown";
+    const confidence =
+      typeof payload.confidence === "number" && Number.isFinite(payload.confidence)
+        ? Math.min(1, Math.max(0, payload.confidence))
+        : null;
+    return { tag, confidence };
   };
 
   const createLineupBottleThumbnail = async (
@@ -1155,8 +1549,81 @@ export default function NewEntryPage() {
     }
 
     setLineupCreating(true);
+    setLineupStartedCount(0);
     setLineupCreatedCount(0);
     setAutofillMessage("Resolving grape varieties...");
+
+    const sourceFiles =
+      lineupSourceFiles.length > 0
+        ? lineupSourceFiles
+        : labelPhotos.map((photo) => photo.file);
+    const sourceAnalysisByIndex = new Map(
+      lineupSourceAnalysis.map((analysis) => [analysis.photoIndex, analysis])
+    );
+    const getSourceRole = (photoIndex: number): SourcePhotoRole =>
+      sourceAnalysisByIndex.get(photoIndex)?.role ?? "unknown";
+    const getSourceAnalysis = (photoIndex: number): SourcePhotoAnalysis | null =>
+      sourceAnalysisByIndex.get(photoIndex) ?? null;
+
+    const dedupeFiles = (files: File[]) => {
+      const seen = new Set<File>();
+      return files.filter((file) => {
+        if (seen.has(file)) {
+          return false;
+        }
+        seen.add(file);
+        return true;
+      });
+    };
+    const toUploads = (files: File[]) =>
+      dedupeFiles(files)
+        .slice(0, MAX_PHOTOS)
+        .map((file) => ({ file }));
+
+    const lineupContextFiles = sourceFiles.filter(
+      (_file, photoIndex) => getSourceRole(photoIndex) === "lineup"
+    );
+    const placeContextFiles = dedupeFiles([
+      ...placePhotos.map((photo) => photo.file),
+      ...sourceFiles.filter((_file, photoIndex) => {
+        const tag = getSourceAnalysis(photoIndex)?.contextTag ?? "unknown";
+        return tag === "place";
+      }),
+    ]);
+    const peopleContextFiles = dedupeFiles(
+      sourceFiles.filter((_file, photoIndex) => {
+        const tag = getSourceAnalysis(photoIndex)?.contextTag ?? "unknown";
+        return tag === "people";
+      })
+    );
+    const pairingContextFiles = dedupeFiles([
+      ...pairingPhotos.map((photo) => photo.file),
+      ...sourceFiles.filter((_file, photoIndex) => {
+        const tag = getSourceAnalysis(photoIndex)?.contextTag ?? "unknown";
+        return tag === "pairing";
+      }),
+    ]);
+
+    // Resolve grape suggestions to IDs for all wines in parallel, with
+    // memoization to avoid duplicate lookups across similar bottles.
+    const grapeLookupCache = new Map<string, PrimaryGrapeSelection[]>();
+    const resolveSuggestedGrapesCached = async (suggestions: string[]) => {
+      const normalizedKey = suggestions
+        .map((value) => normalizeGrapeLookupValue(value))
+        .filter((value) => value.length > 0)
+        .slice(0, 2)
+        .join("|");
+      if (!normalizedKey) {
+        return [] as PrimaryGrapeSelection[];
+      }
+      const cached = grapeLookupCache.get(normalizedKey);
+      if (cached) {
+        return cached;
+      }
+      const resolved = await resolveSuggestedGrapes(suggestions.slice(0, 2));
+      grapeLookupCache.set(normalizedKey, resolved);
+      return resolved;
+    };
 
     // Resolve grape suggestions to IDs for all wines in parallel
     const grapeIdsByIndex: Map<number, string[]> = new Map();
@@ -1164,9 +1631,7 @@ export default function NewEntryPage() {
       included.map(async (wine, i) => {
         const suggestions = wine.primary_grape_suggestions ?? [];
         if (suggestions.length > 0) {
-          const resolved = await resolveSuggestedGrapes(
-            suggestions.slice(0, 2)
-          );
+          const resolved = await resolveSuggestedGrapesCached(suggestions);
           if (resolved.length > 0) {
             grapeIdsByIndex.set(i, resolved.map((g) => g.id));
           }
@@ -1181,15 +1646,38 @@ export default function NewEntryPage() {
     const commentsPrivacy = getValues("comments_privacy") || privacy;
     const consumedAt = getValues("consumed_at") || getTodayLocalYmd();
     let created = 0;
+    let started = 0;
+    const contextCopyCaches = new Map<UploadPhotoType, WeakMap<File, string>>();
+    const getCopyCache = (photoType: UploadPhotoType) => {
+      const existing = contextCopyCaches.get(photoType);
+      if (existing) {
+        return existing;
+      }
+      const next = new WeakMap<File, string>();
+      contextCopyCaches.set(photoType, next);
+      return next;
+    };
+    const labelOriginalCopyCache = new WeakMap<File, string>();
+    let fatalCreationError: string | null = null;
 
-    // Create all entries + upload thumbnails in parallel
-    const creationResults = await Promise.all(
-      included.map(async (wine, i) => {
-        try {
-          const response = await fetch("/api/entries", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+    type LineupCreationResult = {
+      entryId: string | null;
+      rollbackFailed: boolean;
+      errorMessage: string | null;
+    };
+
+    const creationTasks = included.map(
+      (wine, i) =>
+        async (): Promise<LineupCreationResult> => {
+          if (fatalCreationError) {
+            return {
+              entryId: null,
+              rollbackFailed: false,
+              errorMessage: fatalCreationError,
+            };
+          }
+          try {
+            const { entryId } = await createEntryRecord({
               wine_name:
                 wine.wine_name ??
                 wine.producer ??
@@ -1210,54 +1698,127 @@ export default function NewEntryPage() {
               comments_privacy: commentsPrivacy,
               is_feed_visible: false,
               tasted_with_user_ids: [],
-            }),
-          });
+              skip_comparison_candidate: true,
+            });
+            started += 1;
+            setLineupStartedCount(started);
+            setAutofillMessage(
+              `Creating entries... (${created}/${included.length} done • ${started}/${included.length} started)`
+            );
 
-          if (!response.ok) {
-            return { entryId: null, rollbackFailed: false };
-          }
-
-          const payload = await response.json();
-          const entry = payload.entry;
-          const entryId = typeof entry?.id === "string" ? entry.id : null;
-          if (!entryId) {
-            return { entryId: null, rollbackFailed: false };
-          }
-
-          // Upload a per-bottle thumbnail (fallback to original source photo)
-          const sourcePhoto = labelPhotos[wine.photoIndex];
-          if (sourcePhoto) {
+            // Upload a per-bottle thumbnail (fallback to original source photo)
+            const sourceFile = sourceFiles[wine.photoIndex];
             try {
-              const thumbnail = await createLineupBottleThumbnail(
-                sourcePhoto.file,
-                wine.bottle_bbox,
-                wine.label_bbox,
-                wine.label_anchor,
-                i
+              const otherBottleContextFiles = sourceFiles.filter(
+                (_file, photoIndex) =>
+                  photoIndex !== wine.photoIndex &&
+                  shouldTreatAsOtherBottles(getSourceAnalysis(photoIndex))
               );
-              const uploads: { file: File }[] = [{ file: thumbnail }];
-              // Also include the full lineup photo so each entry has the context shot.
-              if (thumbnail !== sourcePhoto.file) {
-                uploads.push({ file: sourcePhoto.file });
-              }
-              await uploadPhotos(entryId, "label", uploads);
-            } catch {
-              const rolledBack = await rollbackCreatedEntry(entryId);
-              return { entryId: null, rollbackFailed: !rolledBack };
-            }
-          }
 
-          created++;
-          setLineupCreatedCount(created);
-          setAutofillMessage(
-            `Creating entries... (${created}/${included.length})`
-          );
-          return { entryId, rollbackFailed: false };
-        } catch {
-          // Skip failed entries, continue with rest
-          return { entryId: null, rollbackFailed: false };
+              const uploadJobs: Promise<void>[] = [];
+              if (sourceFile) {
+                uploadJobs.push(
+                  (async () => {
+                    const thumbnail = await createLineupBottleThumbnail(
+                      sourceFile,
+                      wine.bottle_bbox,
+                      wine.label_bbox,
+                      wine.label_anchor,
+                      i
+                    );
+                    await uploadPhotos(
+                      entryId,
+                      "label",
+                      [{ file: thumbnail, originalFile: sourceFile }],
+                      {
+                        originalCopyByFile: labelOriginalCopyCache,
+                      }
+                    );
+                  })()
+                );
+              }
+              if (lineupContextFiles.length > 0) {
+                uploadJobs.push(
+                  uploadPhotos(entryId, "lineup", toUploads(lineupContextFiles), {
+                    copyByFile: getCopyCache("lineup"),
+                  })
+                );
+              }
+              if (otherBottleContextFiles.length > 0) {
+                uploadJobs.push(
+                  uploadPhotos(
+                    entryId,
+                    "other_bottles",
+                    toUploads(otherBottleContextFiles),
+                    {
+                      copyByFile: getCopyCache("other_bottles"),
+                    }
+                  )
+                );
+              }
+              if (placeContextFiles.length > 0) {
+                uploadJobs.push(
+                  uploadPhotos(entryId, "place", toUploads(placeContextFiles), {
+                    copyByFile: getCopyCache("place"),
+                  })
+                );
+              }
+              if (pairingContextFiles.length > 0) {
+                uploadJobs.push(
+                  uploadPhotos(entryId, "pairing", toUploads(pairingContextFiles), {
+                    copyByFile: getCopyCache("pairing"),
+                  })
+                );
+              }
+              if (peopleContextFiles.length > 0) {
+                uploadJobs.push(
+                  uploadPhotos(entryId, "people", toUploads(peopleContextFiles), {
+                    copyByFile: getCopyCache("people"),
+                  })
+                );
+              }
+
+              await Promise.all(uploadJobs);
+            } catch (uploadError) {
+              const rolledBack = await rollbackCreatedEntry(entryId);
+              const uploadMessage =
+                uploadError instanceof Error
+                  ? uploadError.message
+                  : "Photo upload failed.";
+              if (isEntryPhotoTypeConstraintMessage(uploadMessage)) {
+                fatalCreationError = uploadMessage;
+              }
+              return {
+                entryId: null,
+                rollbackFailed: !rolledBack,
+                errorMessage: uploadMessage,
+              };
+            }
+
+            created += 1;
+            setLineupCreatedCount(created);
+            setAutofillMessage(
+              `Creating entries... (${created}/${included.length} done • ${started}/${included.length} started)`
+            );
+            return { entryId, rollbackFailed: false, errorMessage: null };
+          } catch (error) {
+            const createMessage =
+              error instanceof Error ? error.message : "Entry creation failed.";
+            if (isEntryPhotoTypeConstraintMessage(createMessage)) {
+              fatalCreationError = createMessage;
+            }
+            return {
+              entryId: null,
+              rollbackFailed: false,
+              errorMessage: createMessage,
+            };
+          }
         }
-      })
+    );
+
+    const creationResults = await runWithConcurrency(
+      creationTasks,
+      BULK_CREATE_CONCURRENCY
     );
 
     setLineupCreating(false);
@@ -1268,6 +1829,46 @@ export default function NewEntryPage() {
     const rollbackFailureCount = creationResults.filter(
       (result) => result.rollbackFailed
     ).length;
+    const failedCount = creationResults.length - createdEntryIds.length;
+    const firstFailureMessage =
+      creationResults.find(
+        (result) => result.entryId === null && Boolean(result.errorMessage)
+      )?.errorMessage ?? null;
+    const lowConfidenceCount = included.filter(
+      (wine) =>
+        typeof wine.confidence === "number" &&
+        Number.isFinite(wine.confidence) &&
+        wine.confidence < 0.72
+    ).length;
+    const uncertainSourceCount = sourceFiles.filter((_file, photoIndex) => {
+      const analysis = getSourceAnalysis(photoIndex);
+      if (!analysis) {
+        return true;
+      }
+      return (
+        analysis.analysisFailed ||
+        analysis.contextTag === "unknown" ||
+        (isPeoplePlaceOrPairingTag(analysis.contextTag) &&
+          (analysis.contextConfidence === null || analysis.contextConfidence < 0.6))
+      );
+    }).length;
+    const uncertaintyNotes: string[] = [];
+    if (lowConfidenceCount > 0) {
+      uncertaintyNotes.push(
+        `${lowConfidenceCount} bottle${
+          lowConfidenceCount === 1 ? "" : "s"
+        } had low confidence`
+      );
+    }
+    if (uncertainSourceCount > 0) {
+      uncertaintyNotes.push(
+        `${uncertainSourceCount} source photo${
+          uncertainSourceCount === 1 ? "" : "s"
+        } had uncertain auto-tagging`
+      );
+    }
+    const uncertaintySuffix =
+      uncertaintyNotes.length > 0 ? ` Flagged uncertainty: ${uncertaintyNotes.join(" • ")}.` : "";
     if (createdEntryIds.length > 0) {
       setAutofillStatus("success");
       setAutofillMessage(
@@ -1276,10 +1877,16 @@ export default function NewEntryPage() {
               createdEntryIds.length === 1 ? "y" : "ies"
             }. ${rollbackFailureCount} failed upload${
               rollbackFailureCount === 1 ? "" : "s"
-            } could not be rolled back; review your entries list for partial records. Opening guided review...`
+            } could not be rolled back; review your entries list for partial records.${uncertaintySuffix} Opening guided review...`
+          : failedCount > 0
+          ? `Created ${createdEntryIds.length} entr${
+              createdEntryIds.length === 1 ? "y" : "ies"
+            }. ${failedCount} could not be created.${
+              firstFailureMessage ? ` First issue: ${firstFailureMessage}` : ""
+            }${uncertaintySuffix} Opening guided review...`
           : `Created ${createdEntryIds.length} entr${
               createdEntryIds.length === 1 ? "y" : "ies"
-            }! Opening guided review...`
+            }!${uncertaintySuffix} Opening guided review...`
       );
       const queue = encodeURIComponent(createdEntryIds.join(","));
       setTimeout(() => {
@@ -1292,6 +1899,8 @@ export default function NewEntryPage() {
       setAutofillMessage(
         rollbackFailureCount > 0
           ? "Failed to create entries cleanly. Some failed uploads could not be rolled back; review your entries list and delete partial entries if needed."
+          : firstFailureMessage
+          ? `Failed to create entries. ${firstFailureMessage}`
           : "Failed to create entries. Try again."
       );
     }
@@ -1306,8 +1915,8 @@ export default function NewEntryPage() {
         ? "Extracting wine details. Please allow more time for larger lineups."
         : `Extracting wine details from ${files.length} photos. Please allow more time for larger lineups.`
     );
-    setLineupWines([]);
-    setLineupCreatedCount(0);
+    resetAutotagState();
+    setLineupSourceFiles(files);
 
     const resized = await Promise.all(
       files.map((f) => createAutofillImage(f))
@@ -1357,59 +1966,158 @@ export default function NewEntryPage() {
 
       clearTimeout(timeoutId);
 
-      // Collect all wines from all lineup results, tracking source photo
+      // Collect all wines from all lineup results, tracking source photo.
       const allWines: LineupWine[] = [];
+      const detectedBottleCountByPhoto = files.map(() => 0);
+      const identifiedBottleCountByPhoto = files.map(() => 0);
+      const analysisFailedByPhoto = files.map(() => true);
       let detectedBottleCount = 0;
       for (let pi = 0; pi < lineupResults.length; pi++) {
         const result = lineupResults[pi];
-        if (result.status === "fulfilled" && result.value.ok) {
-          const data = await result.value.json();
-          const detectedForPhoto =
-            typeof data.total_bottles_detected === "number" &&
-            Number.isFinite(data.total_bottles_detected)
-              ? Math.max(0, Math.round(data.total_bottles_detected))
-              : 0;
-          detectedBottleCount += detectedForPhoto;
-          const wines: LineupWine[] = (Array.isArray(data.wines)
-            ? data.wines
-            : []
-          ).map((wine: LineupApiWine) => {
-            const normalizedWine = {
-              wine_name: normalizeTextField(wine.wine_name),
-              producer: normalizeTextField(wine.producer),
-              vintage: normalizeTextField(wine.vintage),
-              country: normalizeTextField(wine.country),
-              region: normalizeTextField(wine.region),
-              appellation: normalizeTextField(wine.appellation),
-              classification: normalizeTextField(wine.classification),
-              primary_grape_suggestions: Array.isArray(
-                wine.primary_grape_suggestions
-              )
-                ? wine.primary_grape_suggestions
-                    .map((value) => value.trim())
-                    .filter((value) => value.length > 0)
-                    .slice(0, 3)
-                : [],
-              confidence:
-                typeof wine.confidence === "number" &&
-                Number.isFinite(wine.confidence)
-                  ? Math.min(1, Math.max(0, wine.confidence))
-                  : null,
-              bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
-              label_bbox: normalizeLabelBbox(wine.label_bbox),
-              label_anchor: normalizeLabelAnchor(wine.label_anchor),
-            } satisfies Omit<LineupWine, "included" | "photoIndex">;
-
-            return {
-              ...normalizedWine,
-              included: true,
-              photoIndex: pi,
-            };
-          });
-
-          allWines.push(...wines.filter((wine) => hasDetectedWineDetails(wine)));
+        if (result.status !== "fulfilled" || !result.value.ok) {
+          continue;
         }
+
+        analysisFailedByPhoto[pi] = false;
+        const data = await result.value.json();
+        const detectedForPhoto =
+          typeof data.total_bottles_detected === "number" &&
+          Number.isFinite(data.total_bottles_detected)
+            ? Math.max(0, Math.round(data.total_bottles_detected))
+            : 0;
+        detectedBottleCountByPhoto[pi] = detectedForPhoto;
+        detectedBottleCount += detectedForPhoto;
+        const wines: LineupWine[] = (Array.isArray(data.wines)
+          ? data.wines
+          : []
+        ).map((wine: LineupApiWine) => {
+          const normalizedWine = {
+            wine_name: normalizeTextField(wine.wine_name),
+            producer: normalizeTextField(wine.producer),
+            vintage: normalizeTextField(wine.vintage),
+            country: normalizeTextField(wine.country),
+            region: normalizeTextField(wine.region),
+            appellation: normalizeTextField(wine.appellation),
+            classification: normalizeTextField(wine.classification),
+            primary_grape_suggestions: Array.isArray(
+              wine.primary_grape_suggestions
+            )
+              ? wine.primary_grape_suggestions
+                  .map((value) => value.trim())
+                  .filter((value) => value.length > 0)
+                  .slice(0, 3)
+              : [],
+            confidence:
+              typeof wine.confidence === "number" &&
+              Number.isFinite(wine.confidence)
+                ? Math.min(1, Math.max(0, wine.confidence))
+                : null,
+            bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+            label_bbox: normalizeLabelBbox(wine.label_bbox),
+            label_anchor: normalizeLabelAnchor(wine.label_anchor),
+          } satisfies Omit<LineupWine, "included" | "photoIndex">;
+
+          return {
+            ...normalizedWine,
+            included: true,
+            photoIndex: pi,
+          };
+        });
+
+        const winesWithDetails = wines.filter((wine) => hasDetectedWineDetails(wine));
+        identifiedBottleCountByPhoto[pi] = winesWithDetails.length;
+        allWines.push(...winesWithDetails);
       }
+
+      const baseSourcePhotoAnalysis = files.map((_file, photoIndex) => {
+        const detectedForPhoto = detectedBottleCountByPhoto[photoIndex] ?? 0;
+        const identifiedForPhoto = identifiedBottleCountByPhoto[photoIndex] ?? 0;
+        const role = resolveSourcePhotoRole({
+          detectedBottleCount: detectedForPhoto,
+          identifiedBottleCount: identifiedForPhoto,
+        });
+        return {
+          photoIndex,
+          role,
+          detectedBottleCount: detectedForPhoto,
+          identifiedBottleCount: identifiedForPhoto,
+          analysisFailed: analysisFailedByPhoto[photoIndex] ?? true,
+          contextTag: role === "individual" ? "other_bottles" : "unknown",
+          contextConfidence: null,
+        } satisfies SourcePhotoAnalysis;
+      });
+
+      const contextPhotoIndexes = baseSourcePhotoAnalysis
+        .filter((analysis) => analysis.role !== "lineup")
+        .map((analysis) => analysis.photoIndex);
+      const contextTagByPhotoIndex = new Map<
+        number,
+        { tag: ContextPhotoTag; confidence: number | null }
+      >();
+
+      if (contextPhotoIndexes.length > 0) {
+        const contextResults = await Promise.all(
+          contextPhotoIndexes.map(async (photoIndex) => {
+            const resizedFile = resized[photoIndex];
+            if (!resizedFile) {
+              return {
+                photoIndex,
+                tag: "unknown" as ContextPhotoTag,
+                confidence: null,
+              };
+            }
+            try {
+              const classified = await classifyContextPhoto(
+                resizedFile,
+                controller.signal
+              );
+              return { photoIndex, ...classified };
+            } catch {
+              return {
+                photoIndex,
+                tag: "unknown" as ContextPhotoTag,
+                confidence: null,
+              };
+            }
+          })
+        );
+
+        contextResults.forEach((result) => {
+          contextTagByPhotoIndex.set(result.photoIndex, {
+            tag: result.tag,
+            confidence: result.confidence,
+          });
+        });
+      }
+
+      const sourcePhotoAnalysis: SourcePhotoAnalysis[] =
+        baseSourcePhotoAnalysis.map((analysis) => {
+          const classifiedContext = contextTagByPhotoIndex.get(analysis.photoIndex);
+          if (!classifiedContext) {
+            return analysis;
+          }
+
+          let nextRole = analysis.role;
+          if (isPeoplePlaceOrPairingTag(classifiedContext.tag)) {
+            nextRole = "unknown";
+          }
+
+          let nextContextTag = classifiedContext.tag;
+          if (
+            nextRole === "individual" &&
+            !isPeoplePlaceOrPairingTag(classifiedContext.tag)
+          ) {
+            nextContextTag = "other_bottles";
+          }
+
+          return {
+            ...analysis,
+            role: nextRole,
+            contextTag: nextContextTag,
+            contextConfidence: classifiedContext.confidence,
+          };
+        });
+      setLineupSourceAnalysis(sourcePhotoAnalysis);
 
       const inferredBottleCount =
         detectedBottleCount > 0 ? detectedBottleCount : allWines.length;
@@ -1451,14 +2159,11 @@ export default function NewEntryPage() {
         allWines.length <= 1 &&
         shouldForceLineupForSinglePhoto(singleWine);
       const likelyLineup =
-        files.length > 1 ||
-        allWines.length > 1 ||
-        effectiveBottleCount > 1 ||
-        forceLineupFromGeometry;
-      const isSingleBottle =
-        files.length === 1 && !likelyLineup && allWines.length <= 1;
+        allWines.length > 1 || effectiveBottleCount > 1 || forceLineupFromGeometry;
+      const isSingleBottle = !likelyLineup && allWines.length <= 1;
 
       if (isSingleBottle) {
+        clearLineupReviewState();
         let labelResult: Response | null = null;
         if (labelFetch) {
           try {
@@ -1603,26 +2308,56 @@ export default function NewEntryPage() {
         const identifiedCount = allWines.filter((wine) =>
           hasDetectedWineDetails(wine)
         ).length;
+        const lowConfidenceCount = allWines.filter(
+          (wine) =>
+            typeof wine.confidence === "number" && Number.isFinite(wine.confidence) && wine.confidence < 0.72
+        ).length;
+        const uncertainSourcePhotoCount = sourcePhotoAnalysis.filter(
+          (analysis) =>
+            analysis.analysisFailed ||
+            analysis.contextTag === "unknown" ||
+            (isPeoplePlaceOrPairingTag(analysis.contextTag) &&
+              (analysis.contextConfidence === null || analysis.contextConfidence < 0.6))
+        ).length;
         const unresolvedCount = Math.max(0, effectiveBottleCount - identifiedCount);
+        const uncertaintyNotes: string[] = [];
+        if (lowConfidenceCount > 0) {
+          uncertaintyNotes.push(
+            `${lowConfidenceCount} bottle${
+              lowConfidenceCount === 1 ? "" : "s"
+            } have low confidence`
+          );
+        }
+        if (uncertainSourcePhotoCount > 0) {
+          uncertaintyNotes.push(
+            `${uncertainSourcePhotoCount} source photo${
+              uncertainSourcePhotoCount === 1 ? "" : "s"
+            } had uncertain auto-tagging`
+          );
+        }
+        const uncertaintySuffix =
+          uncertaintyNotes.length > 0
+            ? ` ${uncertaintyNotes.join(" • ")}.`
+            : "";
         if (
           typeof guardrailCount === "number" &&
           guardrailCount > inferredBottleCount &&
           guardrailCount > 1
         ) {
           setAutofillMessage(
-            `Detected ${guardrailCount} bottles in quick count${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; add a clearer shot for missing bottles.`
+            `Detected ${guardrailCount} bottles in quick count${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; add a clearer shot for missing bottles.${uncertaintySuffix}`
           );
         } else if (forceLineupFromGeometry) {
           setAutofillMessage(
-            "Detected lineup-style framing in this photo. Switched to lineup review to avoid incorrect single-bottle autofill."
+            `Detected lineup-style framing in this photo. Switched to lineup review to avoid incorrect single-bottle autofill.${uncertaintySuffix}`
           );
         } else if (unresolvedCount > 0) {
           setAutofillMessage(
-            `Detected ${effectiveBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.`
+            `Detected ${effectiveBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.${uncertaintySuffix}`
           );
         } else {
           setAutofillMessage(
-            `Detected ${allWines.length} bottle${allWines.length === 1 ? "" : "s"}${photoLabel}. Review and create entries below.`
+            `Detected ${allWines.length} bottle${allWines.length === 1 ? "" : "s"}${photoLabel}. Review and create entries below.${uncertaintySuffix}`
           );
         }
       }
@@ -1641,12 +2376,7 @@ export default function NewEntryPage() {
   const newlyLoggedWinePreviewUrl = labelPhotos[0]?.preview ?? null;
   const showSingleBottleFields = lineupWines.length === 0 && !lineupCreating;
   const canAddLabelPhoto = labelPhotos.length < MAX_PHOTOS;
-  const canAddPlacePhoto = placePhotos.length < MAX_PHOTOS;
-  const canAddPairingPhoto = pairingPhotos.length < MAX_PHOTOS;
   const labelTileCount = labelPhotos.length + (canAddLabelPhoto ? 1 : 0);
-  const placeTileCount = placePhotos.length + (canAddPlacePhoto ? 1 : 0);
-  const pairingTileCount =
-    pairingPhotos.length + (canAddPairingPhoto ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -1683,7 +2413,7 @@ export default function NewEntryPage() {
                       className="block text-sm font-medium text-zinc-200"
                       htmlFor="label-upload"
                     >
-                      Label
+                      Photos
                     </label>
                     <span className="mt-1 inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90 md:hidden">
                       Recommended
@@ -1730,7 +2460,7 @@ export default function NewEntryPage() {
                     </span>
                   </div>
                   <p className="col-span-2 text-xs text-zinc-400">
-                    Bottle / Lineup photo for auto-fill
+                    Upload bottle, lineup, place, pairing, and people photos. AI auto-tags them.
                   </p>
                 </div>
                 <input
@@ -1756,11 +2486,11 @@ export default function NewEntryPage() {
                       key={photo.preview}
                       className="group relative overflow-hidden rounded-2xl border border-white/10"
                     >
-                      <img
-                        src={photo.preview}
-                        alt={`Label preview ${index + 1}`}
-                        className="h-16 w-full object-cover sm:h-20"
-                      />
+                              <img
+                                src={photo.preview}
+                                alt={`Photo preview ${index + 1}`}
+                                className="h-16 w-full object-cover sm:h-20"
+                              />
                       {labelPhotos.length > 1 ? (
                         <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
                           <button
@@ -1792,8 +2522,7 @@ export default function NewEntryPage() {
                           if (index === 0) {
                             setAutofillStatus("idle");
                             setAutofillMessage(null);
-                            setLineupWines([]);
-                            setLineupCreatedCount(0);
+                            resetAutotagState();
                           }
                         }}
                       >
@@ -1860,8 +2589,7 @@ export default function NewEntryPage() {
                     type="button"
                     className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-white/30"
                     onClick={() => {
-                      setLineupWines([]);
-                      setLineupCreatedCount(0);
+                      resetAutotagState();
                       setAutofillStatus("idle");
                       setAutofillMessage(null);
                     }}
@@ -1956,253 +2684,18 @@ export default function NewEntryPage() {
                       (w) => w.included && hasDetectedWineDetails(w)
                     ).length
                   }
-                  )
+                  {" "}ready • {lineupStartedCount}/
+                  {
+                    lineupWines.filter(
+                      (w) => w.included && hasDetectedWineDetails(w)
+                    ).length
+                  }
+                  {" "}created)
                   </span>
                 </div>
               ) : null}
               </div>
 
-              {showSingleBottleFields ? (
-                <>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2">
-                      <div className="min-w-0">
-                        <label
-                          className="block text-sm font-medium text-zinc-200"
-                          htmlFor="place-upload"
-                        >
-                          People/Place
-                        </label>
-                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:hidden">
-                          Optional
-                        </span>
-                      </div>
-                      <div className="flex items-start justify-end gap-2">
-                        <button
-                          type="button"
-                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
-                          onClick={() => placeInputRef.current?.click()}
-                          disabled={!canAddPlacePhoto}
-                        >
-                          Upload
-                        </button>
-                        <span className="hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:inline-flex">
-                          Optional
-                        </span>
-                      </div>
-                      <p className="col-span-2 text-xs text-zinc-400">
-                        Photo of where you enjoyed it
-                      </p>
-                    </div>
-                    <input
-                      ref={placeInputRef}
-                      id="place-upload"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(event) => {
-                        if (!event.target.files) return;
-                        addPhotos("place", event.target.files);
-                        event.target.value = "";
-                      }}
-                    />
-                    <div
-                      className={`${placePhotos.length > 0 ? "mt-3" : "mt-0 md:mt-3"} grid gap-2 ${
-                        placePhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                      } ${placeTileCount > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
-                    >
-                      {placePhotos.map((photo, index) => (
-                        <div
-                          key={photo.preview}
-                          className="group relative overflow-hidden rounded-2xl border border-white/10"
-                        >
-                          <img
-                            src={photo.preview}
-                            alt={`Place preview ${index + 1}`}
-                            className="h-16 w-full object-cover sm:h-20"
-                          />
-                          {placePhotos.length > 1 ? (
-                            <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                              <button
-                                type="button"
-                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                disabled={index === 0}
-                                onClick={() => movePhoto("place", index, "up")}
-                                aria-label="Move place photo up"
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                disabled={index === placePhotos.length - 1}
-                                onClick={() => movePhoto("place", index, "down")}
-                                aria-label="Move place photo down"
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
-                            aria-label="Remove place photo"
-                            onClick={() => removePhoto("place", index)}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      {canAddPlacePhoto ? (
-                        <button
-                          type="button"
-                          className="hidden h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20 md:flex"
-                          onClick={() => placeInputRef.current?.click()}
-                          disabled={!canAddPlacePhoto}
-                          aria-label="Upload place photo"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            className="h-5 w-5"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 4.5v15m7.5-7.5h-15"
-                            />
-                          </svg>
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2">
-                      <div className="min-w-0">
-                        <label
-                          className="block text-sm font-medium text-zinc-200"
-                          htmlFor="pairing-upload"
-                        >
-                          Pairing
-                        </label>
-                        <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:hidden">
-                          Optional
-                        </span>
-                      </div>
-                      <div className="flex items-start justify-end gap-2">
-                        <button
-                          type="button"
-                          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
-                          onClick={() => pairingInputRef.current?.click()}
-                          disabled={!canAddPairingPhoto}
-                        >
-                          Upload
-                        </button>
-                        <span className="hidden rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80 md:inline-flex">
-                          Optional
-                        </span>
-                      </div>
-                      <p className="col-span-2 text-xs text-zinc-400">
-                        Photo of what you paired it with
-                      </p>
-                    </div>
-                    <input
-                      ref={pairingInputRef}
-                      id="pairing-upload"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(event) => {
-                        if (!event.target.files) return;
-                        addPhotos("pairing", event.target.files);
-                        event.target.value = "";
-                      }}
-                    />
-                    <div
-                      className={`${pairingPhotos.length > 0 ? "mt-3" : "mt-0 md:mt-3"} grid gap-2 ${
-                        pairingPhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                      } ${pairingTileCount > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
-                    >
-                      {pairingPhotos.map((photo, index) => (
-                        <div
-                          key={photo.preview}
-                          className="group relative overflow-hidden rounded-2xl border border-white/10"
-                        >
-                          <img
-                            src={photo.preview}
-                            alt={`Pairing preview ${index + 1}`}
-                            className="h-16 w-full object-cover sm:h-20"
-                          />
-                          {pairingPhotos.length > 1 ? (
-                            <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                              <button
-                                type="button"
-                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                disabled={index === 0}
-                                onClick={() =>
-                                  movePhoto("pairing", index, "up")
-                                }
-                                aria-label="Move pairing photo up"
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                                disabled={index === pairingPhotos.length - 1}
-                                onClick={() =>
-                                  movePhoto("pairing", index, "down")
-                                }
-                                aria-label="Move pairing photo down"
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
-                            aria-label="Remove pairing photo"
-                            onClick={() => removePhoto("pairing", index)}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      {canAddPairingPhoto ? (
-                        <button
-                          type="button"
-                          className="hidden h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20 md:flex"
-                          onClick={() => pairingInputRef.current?.click()}
-                          disabled={!canAddPairingPhoto}
-                          aria-label="Upload pairing photo"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            className="h-5 w-5"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 4.5v15m7.5-7.5h-15"
-                            />
-                          </svg>
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </>
-              ) : null}
             </div>
 
             {/* Hide single-bottle form fields when lineup mode is active */}

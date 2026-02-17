@@ -15,7 +15,10 @@ const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
 const PHOTO_TYPE_LABELS = {
   label: "Label",
   place: "Place",
+  people: "People",
   pairing: "Pairing",
+  lineup: "Lineup",
+  other_bottles: "Other bottle",
 } as const;
 const COLLAPSED_NOTES_STYLE: CSSProperties = {
   display: "-webkit-box",

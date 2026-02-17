@@ -124,6 +124,7 @@ const createEntrySchema = z.object({
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
   is_feed_visible: z.boolean().optional(),
+  skip_comparison_candidate: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   const hasPrice = data.price_paid !== undefined;
   const hasPriceCurrency =
@@ -715,14 +716,16 @@ export async function POST(request: Request) {
   };
 
   let comparisonCandidate: ComparisonCandidate | null = null;
-  try {
-    comparisonCandidate = await getRandomComparisonCandidate({
-      userId: user.id,
-      newEntryId: data.id,
-      supabase,
-    });
-  } catch {
-    comparisonCandidate = null;
+  if (!payload.data.skip_comparison_candidate) {
+    try {
+      comparisonCandidate = await getRandomComparisonCandidate({
+        userId: user.id,
+        newEntryId: data.id,
+        supabase,
+      });
+    } catch {
+      comparisonCandidate = null;
+    }
   }
 
   return NextResponse.json({

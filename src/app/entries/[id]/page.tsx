@@ -427,8 +427,17 @@ export default function EntryDetailPage() {
   const placePhotos = sortByPosition(
     photos.filter((photo) => photo.type === "place")
   );
+  const peoplePhotos = sortByPosition(
+    photos.filter((photo) => photo.type === "people")
+  );
   const pairingPhotos = sortByPosition(
     photos.filter((photo) => photo.type === "pairing")
+  );
+  const lineupPhotos = sortByPosition(
+    photos.filter((photo) => photo.type === "lineup")
+  );
+  const otherBottlePhotos = sortByPosition(
+    photos.filter((photo) => photo.type === "other_bottles")
   );
   const labelGallery =
     labelPhotos.length > 0
@@ -478,6 +487,9 @@ export default function EntryDetailPage() {
           },
         ]
       : [];
+  const peopleGallery = peoplePhotos;
+  const lineupGallery = lineupPhotos;
+  const otherBottleGallery = otherBottlePhotos;
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
   const formattedPricePaid = formatPricePaidAmount(
     entry.price_paid,
@@ -521,6 +533,24 @@ export default function EntryDetailPage() {
     url: photo.signed_url ?? null,
     alt: `Pairing photo ${idx + 1}`,
     badge: "Pairing",
+  }));
+  const peopleItems = peopleGallery.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `People photo ${idx + 1}`,
+    badge: "People",
+  }));
+  const lineupItems = lineupGallery.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `Lineup photo ${idx + 1}`,
+    badge: "Lineup",
+  }));
+  const otherBottleItems = otherBottleGallery.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `Other bottle photo ${idx + 1}`,
+    badge: "Other bottle",
   }));
   const locationText = entry.location_text?.trim() ?? "";
   const hasLocation = locationText.length > 0;
@@ -623,6 +653,63 @@ export default function EntryDetailPage() {
                 footer={(active) => (
                   <>
                     <span>Pairing photos</span>
+                    {isOwner && active.url ? (
+                      <a
+                        href={active.url}
+                        download
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Download
+                      </a>
+                    ) : null}
+                  </>
+                )}
+              />
+            ) : null}
+            {peopleGallery.length > 0 ? (
+              <SwipePhotoGallery
+                items={peopleItems}
+                footer={(active) => (
+                  <>
+                    <span>People photos</span>
+                    {isOwner && active.url ? (
+                      <a
+                        href={active.url}
+                        download
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Download
+                      </a>
+                    ) : null}
+                  </>
+                )}
+              />
+            ) : null}
+            {lineupGallery.length > 0 ? (
+              <SwipePhotoGallery
+                items={lineupItems}
+                footer={(active) => (
+                  <>
+                    <span>Lineup photos</span>
+                    {isOwner && active.url ? (
+                      <a
+                        href={active.url}
+                        download
+                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Download
+                      </a>
+                    ) : null}
+                  </>
+                )}
+              />
+            ) : null}
+            {otherBottleGallery.length > 0 ? (
+              <SwipePhotoGallery
+                items={otherBottleItems}
+                footer={(active) => (
+                  <>
+                    <span>Other bottle photos</span>
                     {isOwner && active.url ? (
                       <a
                         href={active.url}

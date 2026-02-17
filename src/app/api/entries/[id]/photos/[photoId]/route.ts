@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
 
 const updateSchema = z.object({
-  position: z.number().int().min(0),
+  position: z.number().int().min(0).optional(),
+  type: z
+    .enum(["label", "place", "people", "pairing", "lineup", "other_bottles"])
+    .optional(),
+}).superRefine((value, ctx) => {
+  if (value.position === undefined && value.type === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide at least one field to update.",
+      path: ["position"],
+    });
+  }
 });
 
 export async function PUT(
@@ -52,9 +64,55 @@ export async function PUT(
     );
   }
 
+  const { data: existingPhoto, error: existingPhotoError } = await supabase
+    .from("entry_photos")
+    .select("id, type, position")
+    .eq("id", photoId)
+    .eq("entry_id", id)
+    .maybeSingle();
+
+  if (existingPhotoError || !existingPhoto) {
+    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+  }
+
+  let nextType = existingPhoto.type;
+  let nextTypeCount: number | null = null;
+  if (payload.data.type) {
+    nextType = payload.data.type;
+  }
+
+  if (nextType !== existingPhoto.type) {
+    const { count, error: countError } = await supabase
+      .from("entry_photos")
+      .select("id", { count: "exact", head: true })
+      .eq("entry_id", id)
+      .eq("type", nextType);
+    if (countError) {
+      return NextResponse.json({ error: countError.message }, { status: 500 });
+    }
+    nextTypeCount = count ?? 0;
+    if ((count ?? 0) >= MAX_ENTRY_PHOTOS_PER_TYPE) {
+      return NextResponse.json(
+        {
+          error: `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${nextType}.`,
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  const nextPosition =
+    payload.data.position ??
+    (nextType !== existingPhoto.type
+      ? (nextTypeCount ?? 0)
+      : existingPhoto.position);
+
   const { data: updated, error } = await supabase
     .from("entry_photos")
-    .update({ position: payload.data.position })
+    .update({
+      position: nextPosition,
+      type: nextType,
+    })
     .eq("id", photoId)
     .eq("entry_id", id)
     .select("id")

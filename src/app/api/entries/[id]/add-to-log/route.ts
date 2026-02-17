@@ -327,7 +327,13 @@ export async function POST(
 
   // Copy entry photos into the new entry's namespace so the user's friends can view them.
   try {
-    type PhotoType = "label" | "place" | "pairing";
+    type PhotoType =
+      | "label"
+      | "place"
+      | "people"
+      | "pairing"
+      | "lineup"
+      | "other_bottles";
     type SourcePhoto = { type: PhotoType; path: string; position: number };
     const sourcePhotos: SourcePhoto[] = [];
 
@@ -340,7 +346,14 @@ export async function POST(
       .order("created_at", { ascending: true });
 
     (photoRows ?? []).forEach((row) => {
-      if (row.type !== "label" && row.type !== "place" && row.type !== "pairing") {
+      if (
+        row.type !== "label" &&
+        row.type !== "place" &&
+        row.type !== "people" &&
+        row.type !== "pairing" &&
+        row.type !== "lineup" &&
+        row.type !== "other_bottles"
+      ) {
         return;
       }
       const path = row.path;

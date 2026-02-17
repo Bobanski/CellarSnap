@@ -44,6 +44,7 @@ Supabase SQL steps:
   - `supabase/sql/025_shared_tastings.sql`
   - `supabase/sql/026_suppress_shared_copy_tag_notifications.sql`
   - `supabase/sql/027_post_shares.sql`
+  - `supabase/sql/028_entry_photo_context_types.sql`
 
 Notes:
 - Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.
@@ -75,6 +76,7 @@ API rate limiting:
 - Launch-sensitive endpoints have generous per-user/IP limits to prevent abuse while allowing friends-and-family testing:
   - `/api/lineup-autofill`
   - `/api/label-autofill`
+  - `/api/photo-context`
   - `/api/bottle-count`
   - `/api/username-check`
   - `/api/phone-check`
