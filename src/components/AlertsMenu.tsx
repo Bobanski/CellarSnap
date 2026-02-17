@@ -40,7 +40,7 @@ export default function AlertsMenu() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [openPathname, setOpenPathname] = useState<string | null>(null);
   const [count, setCount] = useState(0);
-  const [badgeBaseline, setBadgeBaseline] = useState(0);
+  const [badgeBaseline, setBadgeBaseline] = useState<number | null>(null);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [addToCellarId, setAddToCellarId] = useState<string | null>(null);
@@ -48,6 +48,7 @@ export default function AlertsMenu() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const [viewerLoaded, setViewerLoaded] = useState(false);
   const [respondingRequestId, setRespondingRequestId] = useState<string | null>(
     null
   );
@@ -72,7 +73,7 @@ export default function AlertsMenu() {
       viewerUserId &&
       lastViewerUserIdRef.current !== viewerUserId
     ) {
-      setBadgeBaseline(0);
+      setBadgeBaseline(null);
     }
     lastViewerUserIdRef.current = viewerUserId;
   }, [viewerUserId]);
@@ -101,7 +102,7 @@ export default function AlertsMenu() {
       const parsed = raw ? Number(raw) : 0;
       if (Number.isFinite(parsed) && parsed >= 0) {
         const next = Math.floor(parsed);
-        setBadgeBaseline((prev) => (prev > 0 ? prev : next));
+        setBadgeBaseline((prev) => (prev === null ? next : prev));
       }
     } catch {
       // Ignore storage failures.
@@ -109,7 +110,7 @@ export default function AlertsMenu() {
   }, [viewerUserId]);
 
   useEffect(() => {
-    if (!viewerUserId) return;
+    if (!viewerUserId || badgeBaseline === null) return;
     persistBadgeBaseline(badgeBaseline);
   }, [badgeBaseline, persistBadgeBaseline, viewerUserId]);
 
@@ -126,6 +127,9 @@ export default function AlertsMenu() {
 
     setCount(unseen);
     setBadgeBaseline((prev) => {
+      if (prev === null) {
+        return unseen;
+      }
       const next = Math.min(prev, unseen);
       if (next !== prev) {
         persistBadgeBaseline(next);
@@ -165,6 +169,9 @@ export default function AlertsMenu() {
         persistBadgeBaseline(unseen);
       } else {
         setBadgeBaseline((prev) => {
+          if (prev === null) {
+            return unseen;
+          }
           const next = Math.min(prev, unseen);
           if (next !== prev) {
             persistBadgeBaseline(next);
@@ -204,11 +211,17 @@ export default function AlertsMenu() {
     let isMounted = true;
 
     const loadViewer = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!isMounted) return;
-      setViewerUserId(user?.id ?? null);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!isMounted) return;
+        setViewerUserId(user?.id ?? null);
+      } finally {
+        if (isMounted) {
+          setViewerLoaded(true);
+        }
+      }
     };
 
     loadViewer().catch(() => null);
@@ -319,6 +332,9 @@ export default function AlertsMenu() {
         setCount((prev) => {
           const next = Math.max(0, prev - 1);
           setBadgeBaseline((baselinePrev) => {
+            if (baselinePrev === null) {
+              return next;
+            }
             const nextBaseline = Math.min(baselinePrev, next);
             if (nextBaseline !== baselinePrev) {
               persistBadgeBaseline(nextBaseline);
@@ -374,6 +390,9 @@ export default function AlertsMenu() {
         setCount((prev) => {
           const next = Math.max(0, prev - 1);
           setBadgeBaseline((baselinePrev) => {
+            if (baselinePrev === null) {
+              return next;
+            }
             const nextBaseline = Math.min(baselinePrev, next);
             if (nextBaseline !== baselinePrev) {
               persistBadgeBaseline(nextBaseline);
@@ -393,7 +412,12 @@ export default function AlertsMenu() {
     [persistBadgeBaseline]
   );
 
-  const displayCount = open ? 0 : Math.max(0, count - badgeBaseline);
+  const displayCount =
+    !viewerLoaded || badgeBaseline === null
+      ? 0
+      : open
+        ? 0
+        : Math.max(0, count - badgeBaseline);
 
   useEffect(() => {
     if (!open) {
@@ -647,6 +671,9 @@ export default function AlertsMenu() {
                               setCount((prev) => {
                                 const next = Math.max(0, prev - 1);
                                 setBadgeBaseline((baselinePrev) => {
+                                  if (baselinePrev === null) {
+                                    return next;
+                                  }
                                   const nextBaseline = Math.min(baselinePrev, next);
                                   if (nextBaseline !== baselinePrev) {
                                     persistBadgeBaseline(nextBaseline);
