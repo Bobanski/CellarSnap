@@ -437,26 +437,74 @@ export async function POST(request: Request) {
   const consumedAt =
     payload.data.consumed_at ?? new Date().toISOString().slice(0, 10);
 
-  const { data: profile } = await supabase
+  const profileWithInteractionDefaults = await supabase
     .from("profiles")
-    .select("default_entry_privacy")
+    .select(
+      "default_entry_privacy, default_reaction_privacy, default_comments_privacy"
+    )
     .eq("id", user.id)
     .maybeSingle();
+  const profile =
+    profileWithInteractionDefaults.error &&
+    (profileWithInteractionDefaults.error.message.includes(
+      "default_reaction_privacy"
+    ) ||
+      profileWithInteractionDefaults.error.message.includes(
+        "default_comments_privacy"
+      ))
+      ? await supabase
+          .from("profiles")
+          .select("default_entry_privacy")
+          .eq("id", user.id)
+          .maybeSingle()
+      : profileWithInteractionDefaults;
+
+  const profileEntryPrivacy = (
+    profile.data as { default_entry_privacy?: string | null } | null
+  )?.default_entry_privacy;
+  const profileReactionPrivacy = (
+    profile.data as { default_reaction_privacy?: string | null } | null
+  )?.default_reaction_privacy;
+  const profileCommentsPrivacy = (
+    profile.data as { default_comments_privacy?: string | null } | null
+  )?.default_comments_privacy;
 
   const entryPrivacy = payload.data.entry_privacy ??
-    profile?.default_entry_privacy ??
-    "public";
+    (profileEntryPrivacy === "public" ||
+    profileEntryPrivacy === "friends_of_friends" ||
+    profileEntryPrivacy === "friends" ||
+    profileEntryPrivacy === "private"
+      ? profileEntryPrivacy
+      : "public");
+  const profileReactionDefault =
+    profileReactionPrivacy === "public" ||
+    profileReactionPrivacy === "friends_of_friends" ||
+    profileReactionPrivacy === "friends" ||
+    profileReactionPrivacy === "private"
+      ? profileReactionPrivacy
+      : "public";
+  const profileCommentsDefault =
+    profileCommentsPrivacy === "public" ||
+    profileCommentsPrivacy === "friends_of_friends" ||
+    profileCommentsPrivacy === "friends" ||
+    profileCommentsPrivacy === "private"
+      ? profileCommentsPrivacy
+      : "friends_of_friends";
   const labelPhotoPrivacy =
     payload.data.label_photo_privacy ?? null;
   const placePhotoPrivacy =
     payload.data.place_photo_privacy ?? null;
   const commentsScope = payload.data.comments_scope ?? "viewers";
-  const reactionPrivacy = payload.data.reaction_privacy ?? entryPrivacy;
+  const reactionPrivacy = payload.data.reaction_privacy ?? profileReactionDefault;
   const commentsPrivacyFromScope =
     commentsScope === "friends" && entryPrivacy !== "private"
       ? "friends"
       : entryPrivacy;
-  const commentsPrivacy = payload.data.comments_privacy ?? commentsPrivacyFromScope;
+  const commentsPrivacy =
+    payload.data.comments_privacy ??
+    (payload.data.comments_scope !== undefined
+      ? commentsPrivacyFromScope
+      : profileCommentsDefault);
   const advancedNotes = normalizeAdvancedNotes(payload.data.advanced_notes);
   const primaryGrapeIds = normalizePrimaryGrapeIds(payload.data.primary_grape_ids);
   let primaryGrapeIdsToPersist = primaryGrapeIds;

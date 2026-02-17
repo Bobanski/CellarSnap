@@ -172,6 +172,10 @@ export default function HomePage() {
               {([
                 { value: "public" as const, description: "Visible to everyone" },
                 {
+                  value: "friends_of_friends" as const,
+                  description: "Visible to friends and their friends",
+                },
+                {
                   value: "friends" as const,
                   description: "Visible only to accepted friends",
                 },

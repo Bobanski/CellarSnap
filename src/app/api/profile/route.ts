@@ -16,7 +16,12 @@ import {
   PHONE_FORMAT_MESSAGE,
 } from "@/lib/validation/phone";
 
-const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+const privacyLevelSchema = z.enum([
+  "public",
+  "friends_of_friends",
+  "friends",
+  "private",
+]);
 const NAME_MAX_LENGTH = 80;
 
 const nullableNameSchema = z.preprocess(
@@ -89,6 +94,8 @@ const updateProfileSchema = z
     email: optionalEmailSchema,
     phone: nullablePhoneSchema,
     default_entry_privacy: privacyLevelSchema.optional(),
+    default_reaction_privacy: privacyLevelSchema.optional(),
+    default_comments_privacy: privacyLevelSchema.optional(),
     confirm_privacy_onboarding: z.literal(true).optional(),
   })
   .refine(
@@ -99,6 +106,8 @@ const updateProfileSchema = z
       value.email !== undefined ||
       value.phone !== undefined ||
       value.default_entry_privacy !== undefined ||
+      value.default_reaction_privacy !== undefined ||
+      value.default_comments_privacy !== undefined ||
       value.confirm_privacy_onboarding !== undefined,
     { message: "No profile updates provided." }
   );
@@ -106,6 +115,8 @@ const updateProfileSchema = z
 function hasMissingPrivacyColumns(message: string) {
   return (
     message.includes("default_entry_privacy") ||
+    message.includes("default_reaction_privacy") ||
+    message.includes("default_comments_privacy") ||
     message.includes("privacy_confirmed_at")
   );
 }
@@ -134,6 +145,7 @@ function hasMissingKnownProfileColumns(message: string) {
 type ProfileSelectAttempt = {
   select: string;
   includesPrivacy: boolean;
+  includesInteractionDefaults: boolean;
   includesNames: boolean;
   includesAvatar: boolean;
 };
@@ -141,8 +153,25 @@ type ProfileSelectAttempt = {
 const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
   {
     select:
+      "id, display_name, first_name, last_name, email, default_entry_privacy, default_reaction_privacy, default_comments_privacy, privacy_confirmed_at, created_at, avatar_path",
+    includesPrivacy: true,
+    includesInteractionDefaults: true,
+    includesNames: true,
+    includesAvatar: true,
+  },
+  {
+    select:
+      "id, display_name, first_name, last_name, email, default_entry_privacy, default_reaction_privacy, default_comments_privacy, privacy_confirmed_at, created_at",
+    includesPrivacy: true,
+    includesInteractionDefaults: true,
+    includesNames: true,
+    includesAvatar: false,
+  },
+  {
+    select:
       "id, display_name, first_name, last_name, email, default_entry_privacy, privacy_confirmed_at, created_at, avatar_path",
     includesPrivacy: true,
+    includesInteractionDefaults: false,
     includesNames: true,
     includesAvatar: true,
   },
@@ -150,6 +179,7 @@ const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
     select:
       "id, display_name, first_name, last_name, email, default_entry_privacy, privacy_confirmed_at, created_at",
     includesPrivacy: true,
+    includesInteractionDefaults: false,
     includesNames: true,
     includesAvatar: false,
   },
@@ -157,19 +187,38 @@ const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
     select:
       "id, display_name, first_name, last_name, email, created_at, avatar_path",
     includesPrivacy: false,
+    includesInteractionDefaults: false,
     includesNames: true,
     includesAvatar: true,
   },
   {
     select: "id, display_name, first_name, last_name, email, created_at",
     includesPrivacy: false,
+    includesInteractionDefaults: false,
     includesNames: true,
+    includesAvatar: false,
+  },
+  {
+    select:
+      "id, display_name, email, default_entry_privacy, default_reaction_privacy, default_comments_privacy, privacy_confirmed_at, created_at, avatar_path",
+    includesPrivacy: true,
+    includesInteractionDefaults: true,
+    includesNames: false,
+    includesAvatar: true,
+  },
+  {
+    select:
+      "id, display_name, email, default_entry_privacy, default_reaction_privacy, default_comments_privacy, privacy_confirmed_at, created_at",
+    includesPrivacy: true,
+    includesInteractionDefaults: true,
+    includesNames: false,
     includesAvatar: false,
   },
   {
     select:
       "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at, avatar_path",
     includesPrivacy: true,
+    includesInteractionDefaults: false,
     includesNames: false,
     includesAvatar: true,
   },
@@ -177,18 +226,21 @@ const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
     select:
       "id, display_name, email, default_entry_privacy, privacy_confirmed_at, created_at",
     includesPrivacy: true,
+    includesInteractionDefaults: false,
     includesNames: false,
     includesAvatar: false,
   },
   {
     select: "id, display_name, email, created_at, avatar_path",
     includesPrivacy: false,
+    includesInteractionDefaults: false,
     includesNames: false,
     includesAvatar: true,
   },
   {
     select: "id, display_name, email, created_at",
     includesPrivacy: false,
+    includesInteractionDefaults: false,
     includesNames: false,
     includesAvatar: false,
   },
@@ -288,8 +340,13 @@ function normalizeProfileRow(
   const normalized: Record<string, unknown> = { ...row };
   if (!attempt.includesPrivacy) {
     normalized.default_entry_privacy = "public";
+    normalized.default_reaction_privacy = "public";
+    normalized.default_comments_privacy = "friends_of_friends";
     normalized.privacy_confirmed_at =
       typeof row.created_at === "string" ? row.created_at : null;
+  } else if (!attempt.includesInteractionDefaults) {
+    normalized.default_reaction_privacy = "public";
+    normalized.default_comments_privacy = "friends_of_friends";
   }
   if (!attempt.includesNames) {
     normalized.first_name = null;
@@ -405,6 +462,8 @@ export async function PATCH(request: Request) {
       flattened.fieldErrors.email?.[0] ??
       flattened.fieldErrors.phone?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
+      flattened.fieldErrors.default_reaction_privacy?.[0] ??
+      flattened.fieldErrors.default_comments_privacy?.[0] ??
       flattened.fieldErrors.confirm_privacy_onboarding?.[0] ??
       "Invalid profile update.";
     return NextResponse.json({ error: message }, { status: 400 });
@@ -486,6 +545,12 @@ export async function PATCH(request: Request) {
   if (parsed.data.default_entry_privacy !== undefined) {
     updates.default_entry_privacy = parsed.data.default_entry_privacy;
   }
+  if (parsed.data.default_reaction_privacy !== undefined) {
+    updates.default_reaction_privacy = parsed.data.default_reaction_privacy;
+  }
+  if (parsed.data.default_comments_privacy !== undefined) {
+    updates.default_comments_privacy = parsed.data.default_comments_privacy;
+  }
 
   if (confirmedPrivacyAt) {
     updates.privacy_confirmed_at = confirmedPrivacyAt;
@@ -517,6 +582,14 @@ export async function PATCH(request: Request) {
     if (hasMissingPrivacyColumns(message)) {
       if ("default_entry_privacy" in updatesToApply) {
         delete updatesToApply.default_entry_privacy;
+        removedUnsupportedColumn = true;
+      }
+      if ("default_reaction_privacy" in updatesToApply) {
+        delete updatesToApply.default_reaction_privacy;
+        removedUnsupportedColumn = true;
+      }
+      if ("default_comments_privacy" in updatesToApply) {
+        delete updatesToApply.default_comments_privacy;
         removedUnsupportedColumn = true;
       }
       if ("privacy_confirmed_at" in updatesToApply) {

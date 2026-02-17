@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
+import type { PrivacyLevel } from "@/types/wine";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MIN_LENGTH,
@@ -25,10 +26,19 @@ type Profile = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
-  default_entry_privacy: "public" | "friends" | "private" | null;
+  default_entry_privacy: PrivacyLevel | null;
+  default_reaction_privacy: PrivacyLevel | null;
+  default_comments_privacy: PrivacyLevel | null;
   created_at: string | null;
   avatar_url?: string | null;
 };
+
+const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
+  { value: "public", label: "Public" },
+  { value: "friends_of_friends", label: "Friends of friends" },
+  { value: "friends", label: "Friends only" },
+  { value: "private", label: "Private" },
+];
 
 function formatMemberSince(dateString: string | null): string {
   if (!dateString) return "Unknown";
@@ -118,7 +128,10 @@ export default function ProfilePage() {
   };
 
   // Privacy state
-  const [privacyValue, setPrivacyValue] = useState<"public" | "friends" | "private">("public");
+  const [entryPrivacyValue, setEntryPrivacyValue] = useState<PrivacyLevel>("public");
+  const [reactionPrivacyValue, setReactionPrivacyValue] = useState<PrivacyLevel>("public");
+  const [commentsPrivacyValue, setCommentsPrivacyValue] =
+    useState<PrivacyLevel>("friends_of_friends");
   const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
@@ -223,7 +236,11 @@ export default function ProfilePage() {
         setEditFirstName(initialEditFirstName);
         setEditLastName(initialEditLastName);
         setEditPhone(formatPhoneForInput(initialEditPhone));
-        setPrivacyValue(data.profile.default_entry_privacy ?? "private");
+        setEntryPrivacyValue(data.profile.default_entry_privacy ?? "public");
+        setReactionPrivacyValue(data.profile.default_reaction_privacy ?? "public");
+        setCommentsPrivacyValue(
+          data.profile.default_comments_privacy ?? "friends_of_friends"
+        );
         setLoading(false);
         if (
           !profileDisplayName ||
@@ -395,8 +412,13 @@ export default function ProfilePage() {
     setPendingAvatarPreview(URL.createObjectURL(file));
   };
 
-  const savePrivacy = async (value: "public" | "friends" | "private") => {
-    setPrivacyValue(value);
+  const savePrivacyDefaults = async (
+    updates: Partial<{
+      default_entry_privacy: PrivacyLevel;
+      default_reaction_privacy: PrivacyLevel;
+      default_comments_privacy: PrivacyLevel;
+    }>
+  ) => {
     setIsSavingPrivacy(true);
     setPrivacyMessage(null);
 
@@ -404,7 +426,7 @@ export default function ProfilePage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        default_entry_privacy: value,
+        ...updates,
         confirm_privacy_onboarding: true,
       }),
     });
@@ -421,8 +443,14 @@ export default function ProfilePage() {
     if (data.profile) {
       // Merge to preserve fields the PATCH response doesn't include (e.g. avatar_url)
       setProfile((prev) => prev ? { ...prev, ...data.profile } : data.profile);
-      setPrivacyValue(data.profile.default_entry_privacy ?? value);
-      setPrivacyMessage("Default privacy updated.");
+      setEntryPrivacyValue(data.profile.default_entry_privacy ?? entryPrivacyValue);
+      setReactionPrivacyValue(
+        data.profile.default_reaction_privacy ?? reactionPrivacyValue
+      );
+      setCommentsPrivacyValue(
+        data.profile.default_comments_privacy ?? commentsPrivacyValue
+      );
+      setPrivacyMessage("Default visibility settings updated.");
       setTimeout(() => setPrivacyMessage(null), 3000);
     }
   };
@@ -889,26 +917,96 @@ export default function ProfilePage() {
                 Settings
               </h2>
               <p className="mt-1 text-xs text-zinc-500">
-                Choose the default visibility for new entries you create.
+                Choose defaults for new posts, reactions, and comments.
               </p>
 
-              <div className="mt-5">
-                <label htmlFor="privacy-select" className="sr-only">
-                  Default entry privacy
-                </label>
-                <select
-                  id="privacy-select"
-                  value={privacyValue}
-                  onChange={(e) =>
-                    savePrivacy(e.target.value as "public" | "friends" | "private")
-                  }
-                  disabled={isSavingPrivacy}
-                  className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
-                >
-                  <option value="public">Public — visible to everyone on the feed</option>
-                  <option value="friends">Friends only — only your friends can see</option>
-                  <option value="private">Private — only you can see</option>
-                </select>
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <label
+                    htmlFor="default-entry-privacy-select"
+                    className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                  >
+                    Post visibility
+                  </label>
+                  <select
+                    id="default-entry-privacy-select"
+                    value={entryPrivacyValue}
+                    onChange={(e) => {
+                      const nextValue = e.target.value as PrivacyLevel;
+                      setEntryPrivacyValue(nextValue);
+                      void savePrivacyDefaults({
+                        default_entry_privacy: nextValue,
+                      });
+                    }}
+                    disabled={isSavingPrivacy}
+                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                  >
+                    {PRIVACY_OPTIONS.map((option) => (
+                      <option key={`entry-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <label
+                    htmlFor="default-reaction-privacy-select"
+                    className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                  >
+                    Reactions
+                  </label>
+                  <select
+                    id="default-reaction-privacy-select"
+                    value={reactionPrivacyValue}
+                    onChange={(e) => {
+                      const nextValue = e.target.value as PrivacyLevel;
+                      setReactionPrivacyValue(nextValue);
+                      void savePrivacyDefaults({
+                        default_reaction_privacy: nextValue,
+                      });
+                    }}
+                    disabled={isSavingPrivacy}
+                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                  >
+                    {PRIVACY_OPTIONS.map((option) => (
+                      <option key={`reaction-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <label
+                    htmlFor="default-comments-privacy-select"
+                    className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                  >
+                    Comments
+                  </label>
+                  <select
+                    id="default-comments-privacy-select"
+                    value={commentsPrivacyValue}
+                    onChange={(e) => {
+                      const nextValue = e.target.value as PrivacyLevel;
+                      setCommentsPrivacyValue(nextValue);
+                      void savePrivacyDefaults({
+                        default_comments_privacy: nextValue,
+                      });
+                    }}
+                    disabled={isSavingPrivacy}
+                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                  >
+                    {PRIVACY_OPTIONS.map((option) => (
+                      <option key={`comments-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-1 text-[11px] text-zinc-500">
+                <p>Reactions privacy controls who can see and react.</p>
+                <p>Comments privacy controls who can see the comments UI and comment.</p>
               </div>
 
               {privacyMessage ? (

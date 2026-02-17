@@ -100,7 +100,7 @@ export default function NewEntryPage() {
       location_place_id: "",
       entry_privacy: "public",
       reaction_privacy: "public",
-      comments_privacy: "public",
+      comments_privacy: "friends_of_friends",
       price_paid_currency: "usd",
       price_paid_source: "",
       qpr_level: "",
@@ -247,17 +247,37 @@ export default function NewEntryPage() {
       const response = await fetch("/api/profile", { cache: "no-store" });
       if (!response.ok) return;
       const data = await response.json();
-      const defaultPrivacy = data.profile?.default_entry_privacy;
-      if (
-        isMounted &&
-        (defaultPrivacy === "public" ||
-          defaultPrivacy === "friends_of_friends" ||
-          defaultPrivacy === "friends" ||
-          defaultPrivacy === "private")
-      ) {
-        setValue("entry_privacy", defaultPrivacy);
-        setValue("reaction_privacy", defaultPrivacy);
-        setValue("comments_privacy", defaultPrivacy);
+      const defaultEntryPrivacy = data.profile?.default_entry_privacy;
+      const defaultReactionPrivacy = data.profile?.default_reaction_privacy;
+      const defaultCommentsPrivacy = data.profile?.default_comments_privacy;
+      if (isMounted) {
+        setValue(
+          "entry_privacy",
+          defaultEntryPrivacy === "public" ||
+            defaultEntryPrivacy === "friends_of_friends" ||
+            defaultEntryPrivacy === "friends" ||
+            defaultEntryPrivacy === "private"
+            ? defaultEntryPrivacy
+            : "public"
+        );
+        setValue(
+          "reaction_privacy",
+          defaultReactionPrivacy === "public" ||
+            defaultReactionPrivacy === "friends_of_friends" ||
+            defaultReactionPrivacy === "friends" ||
+            defaultReactionPrivacy === "private"
+            ? defaultReactionPrivacy
+            : "public"
+        );
+        setValue(
+          "comments_privacy",
+          defaultCommentsPrivacy === "public" ||
+            defaultCommentsPrivacy === "friends_of_friends" ||
+            defaultCommentsPrivacy === "friends" ||
+            defaultCommentsPrivacy === "private"
+            ? defaultCommentsPrivacy
+            : "friends_of_friends"
+        );
       }
     };
 

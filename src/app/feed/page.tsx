@@ -890,25 +890,27 @@ export default function FeedPage() {
                               >
                                 +
                               </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  toggleCommentsExpanded(entry.id);
-                                }}
-                                className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
-                                  commentsExpanded
-                                    ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
-                                    : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
-                                }`}
-                                aria-label={`Toggle comments (${getCommentCount(entry)})`}
-                              >
-                                <CommentBubbleIcon className="h-4 w-4 shrink-0" />
-                                <span>Comments</span>
-                                <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">
-                                  {getCommentCount(entry)}
-                                </span>
-                              </button>
+                              {canComment ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleCommentsExpanded(entry.id);
+                                  }}
+                                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                                    commentsExpanded
+                                      ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
+                                      : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
+                                  }`}
+                                  aria-label={`Toggle comments (${getCommentCount(entry)})`}
+                                >
+                                  <CommentBubbleIcon className="h-4 w-4 shrink-0" />
+                                  <span>Comments</span>
+                                  <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">
+                                    {getCommentCount(entry)}
+                                  </span>
+                                </button>
+                              ) : null}
                             </div>
                             {hasReactionCounts ? (
                               <div className="flex flex-wrap items-center justify-end gap-1.5">
