@@ -140,11 +140,12 @@ export default function EditEntryPage() {
   const placeInputRef = useRef<HTMLInputElement | null>(null);
   const pairingInputRef = useRef<HTMLInputElement | null>(null);
   const [users, setUsers] = useState<
-    { id: string; display_name: string | null }[]
+    { id: string; display_name: string | null; email: string | null; tasting_count: number }[]
   >([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [friendSearch, setFriendSearch] = useState("");
   const [selectedPrimaryGrapes, setSelectedPrimaryGrapes] = useState<
     PrimaryGrapeSelection[]
   >([]);
@@ -294,7 +295,9 @@ export default function EditEntryPage() {
 
       const data = await response.json();
       if (isMounted) {
-        setUsers(data.friends ?? []);
+        const friends = (data.friends ?? []) as typeof users;
+        friends.sort((a, b) => b.tasting_count - a.tasting_count);
+        setUsers(friends);
       }
     };
 
@@ -1740,31 +1743,82 @@ export default function EditEntryPage() {
             </label>
             {users.length === 0 ? (
               <p className="mt-2 text-sm text-zinc-400">No other users yet.</p>
-            ) : (
-              <div className="mt-2 grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                {users.map((user) => {
-                  const label = user.display_name ?? "Unknown";
-                  const isChecked = selectedUserIds.includes(user.id);
-                  return (
-                    <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
-                        checked={isChecked}
-                        onChange={(event) => {
-                          setSelectedUserIds((prev) =>
-                            event.target.checked
-                              ? [...prev, user.id]
-                              : prev.filter((id) => id !== user.id)
-                          );
-                        }}
-                      />
-                      {label}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
+            ) : (() => {
+              const topFriends = users.slice(0, 5);
+              const topFriendIds = new Set(topFriends.map((u) => u.id));
+              const extraSelected = users.filter(
+                (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
+              );
+              const trimmedSearch = friendSearch.trim().toLowerCase();
+              const searchResults = trimmedSearch.length >= 2
+                ? users.filter(
+                    (u) =>
+                      !topFriendIds.has(u.id) &&
+                      !selectedUserIds.includes(u.id) &&
+                      ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
+                        (u.email ?? "").toLowerCase().includes(trimmedSearch))
+                  )
+                : [];
+
+              const renderCheckbox = (user: typeof users[number]) => {
+                const label = user.display_name ?? "Unknown";
+                const isChecked = selectedUserIds.includes(user.id);
+                return (
+                  <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                      checked={isChecked}
+                      onChange={(event) => {
+                        setSelectedUserIds((prev) =>
+                          event.target.checked
+                            ? [...prev, user.id]
+                            : prev.filter((id) => id !== user.id)
+                        );
+                        if (event.target.checked) setFriendSearch("");
+                      }}
+                    />
+                    {label}
+                  </label>
+                );
+              };
+
+              return (
+                <div className="mt-2 space-y-2">
+                  <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                    {topFriends.map(renderCheckbox)}
+                    {extraSelected.map(renderCheckbox)}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={friendSearch}
+                      onChange={(e) => setFriendSearch(e.target.value)}
+                      placeholder="Search friends..."
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                    {searchResults.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
+                        {searchResults.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setSelectedUserIds((prev) => [...prev, user.id]);
+                              setFriendSearch("");
+                            }}
+                          >
+                            {user.display_name ?? "Unknown"}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
