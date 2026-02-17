@@ -101,6 +101,15 @@ const CONTEXT_TAG_TO_PHOTO_TYPE: Record<ContextPhotoTag, EntryPhotoType> = {
   unknown: "other_bottles",
 };
 
+const GALLERY_TYPE_PRIORITY: Record<EntryPhotoType, number> = {
+  label: 0,
+  pairing: 1,
+  people: 2,
+  other_bottles: 3,
+  lineup: 4,
+  place: 5,
+};
+
 export default function EditEntryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -381,6 +390,18 @@ export default function EditEntryPage() {
 
   const sortPhotos = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => {
+      if (a.position !== b.position) {
+        return a.position - b.position;
+      }
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+
+  const sortGalleryPhotos = (list: EntryPhoto[]) =>
+    [...list].sort((a, b) => {
+      const typeDiff = GALLERY_TYPE_PRIORITY[a.type] - GALLERY_TYPE_PRIORITY[b.type];
+      if (typeDiff !== 0) {
+        return typeDiff;
+      }
       if (a.position !== b.position) {
         return a.position - b.position;
       }
@@ -1656,7 +1677,7 @@ export default function EditEntryPage() {
     );
   }
 
-  const allDisplayPhotos = sortPhotos(
+  const allDisplayPhotos = sortGalleryPhotos(
     ([
       ...displayPhotosByType("label"),
       ...displayPhotosByType("place"),
@@ -2206,13 +2227,18 @@ export default function EditEntryPage() {
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => addPhotoInputRef.current?.click()}
                   disabled={uploadingType !== null}
                 >
-                  {uploadingType === null
-                    ? "Add photos"
-                    : `Categorizing ${PHOTO_TYPE_LABELS[uploadingType]}...`}
+                  {uploadingType === null ? (
+                    "Add photos"
+                  ) : (
+                    <>
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-200/80 border-t-transparent" />
+                      <span>{`Categorizing ${PHOTO_TYPE_LABELS[uploadingType]}...`}</span>
+                    </>
+                  )}
                 </button>
               </div>
 

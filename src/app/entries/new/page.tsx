@@ -253,7 +253,6 @@ export default function NewEntryPage() {
   };
   const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
   const [lineupCreating, setLineupCreating] = useState(false);
-  const [lineupStartedCount, setLineupStartedCount] = useState(0);
   const [lineupCreatedCount, setLineupCreatedCount] = useState(0);
   const [lineupSourceFiles, setLineupSourceFiles] = useState<File[]>([]);
   const [lineupSourceAnalysis, setLineupSourceAnalysis] = useState<
@@ -339,6 +338,7 @@ export default function NewEntryPage() {
   const MAX_PHOTOS = MAX_ENTRY_PHOTOS_PER_TYPE;
   const MAX_UPLOAD_RETRIES = 3;
   const BULK_CREATE_CONCURRENCY = 4;
+  const PHOTO_UPLOAD_CONCURRENCY = 2;
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => {
       window.setTimeout(resolve, ms);
@@ -486,7 +486,10 @@ export default function NewEntryPage() {
       return !error;
     };
 
-    for (const photo of photos) {
+    const uploadSinglePhoto = async (photo: {
+      file: File;
+      originalFile?: File;
+    }) => {
       let createdPath: string | null = null;
       let lastCreateMessage = "Unable to create photo record.";
       for (let attempt = 0; attempt < MAX_UPLOAD_RETRIES; attempt += 1) {
@@ -600,7 +603,14 @@ export default function NewEntryPage() {
         }
         options?.originalCopyByFile?.set(originalFile, originalPath);
       }
-    }
+    };
+
+    const photoTasks = photos.map(
+      (photo) => async () => {
+        await uploadSinglePhoto(photo);
+      }
+    );
+    await runWithConcurrency(photoTasks, PHOTO_UPLOAD_CONCURRENCY);
   };
 
   const createEntryRecord = async (
@@ -1549,8 +1559,8 @@ export default function NewEntryPage() {
     }
 
     setLineupCreating(true);
-    setLineupStartedCount(0);
     setLineupCreatedCount(0);
+    setAutofillStatus("loading");
     setAutofillMessage("Resolving grape varieties...");
 
     const sourceFiles =
@@ -1639,7 +1649,7 @@ export default function NewEntryPage() {
       })
     );
 
-    setAutofillMessage(`Creating entries... (0/${included.length})`);
+    setAutofillMessage(`Creating entries... (0/${included.length} started)`);
 
     const privacy = getValues("entry_privacy") || "public";
     const reactionPrivacy = getValues("reaction_privacy") || privacy;
@@ -1701,9 +1711,10 @@ export default function NewEntryPage() {
               skip_comparison_candidate: true,
             });
             started += 1;
-            setLineupStartedCount(started);
             setAutofillMessage(
-              `Creating entries... (${created}/${included.length} done • ${started}/${included.length} started)`
+              started < included.length
+                ? `Creating entries... (${started}/${included.length} started)`
+                : "All entries started. Finishing photo uploads..."
             );
 
             // Upload a per-bottle thumbnail (fallback to original source photo)
@@ -1797,9 +1808,11 @@ export default function NewEntryPage() {
 
             created += 1;
             setLineupCreatedCount(created);
-            setAutofillMessage(
-              `Creating entries... (${created}/${included.length} done • ${started}/${included.length} started)`
-            );
+            if (started >= included.length) {
+              setAutofillMessage(
+                "All entries started. Finishing photo uploads..."
+              );
+            }
             return { entryId, rollbackFailed: false, errorMessage: null };
           } catch (error) {
             const createMessage =
@@ -2558,25 +2571,27 @@ export default function NewEntryPage() {
                   {autofillMessage ? (
                     autofillStatus === "loading" ? (
                       <div
-                      className="mt-2 flex items-center gap-2 text-sm text-zinc-200"
-                      role="status"
-                      aria-live="polite"
-                    >
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
-                      <span>{autofillMessage}</span>
-                    </div>
-                  ) : (
-                    <p
-                      className={`mt-2 text-sm ${
-                        autofillStatus === "success"
-                          ? "text-emerald-300"
-                          : "text-rose-300"
-                      }`}
-                    >
-                      {autofillMessage}
-                    </p>
-                  )
-                ) : null}
+                        className="mt-2 flex items-center gap-2 text-sm text-emerald-300"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-300 border-t-transparent" />
+                        <span>{autofillMessage}</span>
+                      </div>
+                    ) : (
+                      <p
+                        className={`mt-2 text-sm ${
+                          autofillStatus === "error" || autofillStatus === "timeout"
+                            ? "text-rose-300"
+                            : "text-emerald-300"
+                        }`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        {autofillMessage}
+                      </p>
+                    )
+                  ) : null}
 
               {/* Lineup review: shown when multiple bottles detected */}
               {lineupWines.length > 0 && !lineupCreating && lineupCreatedCount === 0 ? (
@@ -2674,26 +2689,6 @@ export default function NewEntryPage() {
               </div>
             ) : null}
 
-            {lineupCreating ? (
-              <div className="mt-4 flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
-                <span className="text-sm text-zinc-300">
-                  Creating entries... ({lineupCreatedCount}/
-                  {
-                    lineupWines.filter(
-                      (w) => w.included && hasDetectedWineDetails(w)
-                    ).length
-                  }
-                  {" "}ready • {lineupStartedCount}/
-                  {
-                    lineupWines.filter(
-                      (w) => w.included && hasDetectedWineDetails(w)
-                    ).length
-                  }
-                  {" "}created)
-                  </span>
-                </div>
-              ) : null}
               </div>
 
             </div>
