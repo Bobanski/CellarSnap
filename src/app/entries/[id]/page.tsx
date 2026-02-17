@@ -524,12 +524,15 @@ export default function EntryDetailPage() {
   }));
   const locationText = entry.location_text?.trim() ?? "";
   const hasLocation = locationText.length > 0;
+  const locationPlaceId = entry.location_place_id?.trim() ?? "";
+  const hasGoogleMapsLocation =
+    hasLocation && locationPlaceId.length > 0;
   const locationDisplayLabel = hasLocation
     ? buildLocationDisplayLabel(locationText)
     : "";
   const hasExpandedLocation =
     hasLocation && locationDisplayLabel !== locationText;
-  const locationMapsUrl = hasLocation
+  const locationMapsUrl = hasGoogleMapsLocation
     ? buildGoogleMapsLocationUrl(locationText)
     : "";
 
@@ -740,20 +743,28 @@ export default function EntryDetailPage() {
                   <div className="space-y-1">
                     {hasExpandedLocation ? (
                       <details className="text-sm text-zinc-200">
-                        <summary className="cursor-pointer list-none hover:text-amber-200">
-                          <a
-                            href={locationMapsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {locationDisplayLabel}
-                          </a>
+                        <summary
+                          className={`cursor-pointer list-none ${
+                            hasGoogleMapsLocation ? "hover:text-amber-200" : ""
+                          }`}
+                        >
+                          {hasGoogleMapsLocation ? (
+                            <a
+                              href={locationMapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {locationDisplayLabel}
+                            </a>
+                          ) : (
+                            <span>{locationDisplayLabel}</span>
+                          )}
                         </summary>
                         <p className="mt-1 text-zinc-300">{locationText}</p>
                       </details>
-                    ) : (
+                    ) : hasGoogleMapsLocation ? (
                       <a
                         href={locationMapsUrl}
                         target="_blank"
@@ -762,6 +773,10 @@ export default function EntryDetailPage() {
                       >
                         {locationDisplayLabel}
                       </a>
+                    ) : (
+                      <p className="text-sm text-zinc-200">
+                        {locationDisplayLabel}
+                      </p>
                     )}
                   </div>
                 ) : (

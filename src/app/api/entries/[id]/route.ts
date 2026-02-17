@@ -118,6 +118,7 @@ const updateEntrySchema = z.object({
   notes: nullableString,
   advanced_notes: advancedNotesSchema,
   location_text: nullableString,
+  location_place_id: nullableString,
   consumed_at: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -222,6 +223,10 @@ function isClassificationColumnMissing(message: string) {
 
 function isFeedVisibleColumnMissing(message: string) {
   return message.includes("is_feed_visible");
+}
+
+function isLocationPlaceIdColumnMissing(message: string) {
+  return message.includes("location_place_id");
 }
 
 async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
@@ -462,6 +467,13 @@ export async function PUT(
         "is_feed_visible" in updatesToApply
       ) {
         delete updatesToApply.is_feed_visible;
+        removedUnsupportedColumn = true;
+      }
+      if (
+        isLocationPlaceIdColumnMissing(error.message) &&
+        "location_place_id" in updatesToApply
+      ) {
+        delete updatesToApply.location_place_id;
         removedUnsupportedColumn = true;
       }
 

@@ -51,6 +51,7 @@ export type WineEntry = {
   ai_notes_summary: string | null;
   advanced_notes: AdvancedNotes | null;
   location_text: string | null;
+  location_place_id: string | null;
   consumed_at: string;
   tasted_with_user_ids: string[] | null;
   label_image_path: string | null;
@@ -86,6 +87,7 @@ export type WineEntryCreatePayload = {
   notes?: string | null;
   advanced_notes?: AdvancedNotes | null;
   location_text?: string | null;
+  location_place_id?: string | null;
   consumed_at?: string;
   tasted_with_user_ids?: string[];
   entry_privacy?: PrivacyLevel;
@@ -110,6 +112,7 @@ export type WineEntryUpdatePayload = Partial<{
   notes: string | null;
   advanced_notes: AdvancedNotes | null;
   location_text: string | null;
+  location_place_id: string | null;
   consumed_at: string;
   tasted_with_user_ids: string[];
   label_image_path: string | null;

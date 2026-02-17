@@ -110,6 +110,7 @@ const createEntrySchema = z.object({
   notes: nullableString,
   advanced_notes: advancedNotesSchema,
   location_text: nullableString,
+  location_place_id: nullableString,
   consumed_at: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -221,6 +222,10 @@ function isClassificationColumnMissing(message: string) {
 
 function isFeedVisibleColumnMissing(message: string) {
   return message.includes("is_feed_visible");
+}
+
+function isLocationPlaceIdColumnMissing(message: string) {
+  return message.includes("location_place_id");
 }
 
 async function getRandomComparisonCandidate({
@@ -476,6 +481,7 @@ export async function POST(request: Request) {
     notes: payload.data.notes ?? null,
     advanced_notes: advancedNotes,
     location_text: payload.data.location_text ?? null,
+    location_place_id: payload.data.location_place_id ?? null,
     consumed_at: consumedAt,
     tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
     label_image_path: null,
@@ -520,6 +526,13 @@ export async function POST(request: Request) {
       "is_feed_visible" in insertPayloadToApply
     ) {
       delete insertPayloadToApply.is_feed_visible;
+      removedUnsupportedColumn = true;
+    }
+    if (
+      isLocationPlaceIdColumnMissing(error.message) &&
+      "location_place_id" in insertPayloadToApply
+    ) {
+      delete insertPayloadToApply.location_place_id;
       removedUnsupportedColumn = true;
     }
 

@@ -47,6 +47,7 @@ type EditEntryForm = {
   qpr_level: QprLevel | "";
   notes: string;
   location_text: string;
+  location_place_id: string;
   consumed_at: string;
   entry_privacy: "public" | "friends" | "private";
   advanced_notes: AdvancedNotesFormValues;
@@ -100,6 +101,7 @@ export default function EditEntryPage() {
   } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: getTodayLocalYmd(),
+      location_place_id: "",
       entry_privacy: "public",
       price_paid_currency: "usd",
       price_paid_source: "",
@@ -265,6 +267,7 @@ export default function EditEntryPage() {
           qpr_level: data.entry.qpr_level ?? "",
           notes: data.entry.notes ?? "",
           location_text: data.entry.location_text ?? "",
+          location_place_id: data.entry.location_place_id ?? "",
           consumed_at: data.entry.consumed_at,
           entry_privacy: data.entry.entry_privacy ?? "public",
           advanced_notes: toAdvancedNotesFormValues(data.entry.advanced_notes),
@@ -1180,6 +1183,7 @@ export default function EditEntryPage() {
       qpr_level: values.qpr_level || null,
       notes: values.notes || null,
       location_text: values.location_text || null,
+      location_place_id: values.location_place_id || null,
       consumed_at: values.consumed_at,
       tasted_with_user_ids: selectedUserIds,
       entry_privacy: values.entry_privacy,
@@ -1815,6 +1819,7 @@ export default function EditEntryPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-medium text-zinc-200">Location</label>
+              <input type="hidden" {...register("location_place_id")} />
               <Controller
                 control={control}
                 name="location_text"
@@ -1822,6 +1827,11 @@ export default function EditEntryPage() {
                   <LocationAutocomplete
                     value={field.value}
                     onChange={field.onChange}
+                    onSelectPlaceId={(placeId) =>
+                      setValue("location_place_id", placeId ?? "", {
+                        shouldDirty: true,
+                      })
+                    }
                     onBlur={field.onBlur}
                     biasCoords={photoGps}
                   />

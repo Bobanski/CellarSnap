@@ -23,6 +23,7 @@ type WineEntryRow = {
   ai_notes_summary?: string | null;
   advanced_notes?: unknown;
   location_text?: string | null;
+  location_place_id?: string | null;
   consumed_at?: string | null;
   tasted_with_user_ids?: string[] | null;
   label_image_path?: string | null;
@@ -221,6 +222,7 @@ export async function POST(
     ai_notes_summary: null,
     advanced_notes: null,
     location_text: rootEntry.location_text ?? null,
+    location_place_id: rootEntry.location_place_id ?? null,
     consumed_at: rootEntry.consumed_at ?? null,
     // Pre-check the friend who tagged the user (the original author).
     // The tagged user can remove/add people when editing their copy.
@@ -246,6 +248,7 @@ export async function POST(
     "ai_notes_summary",
     "advanced_notes",
     "location_text",
+    "location_place_id",
     "label_photo_privacy",
     "place_photo_privacy",
     "place_image_path",

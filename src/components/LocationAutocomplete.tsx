@@ -15,6 +15,7 @@ type Prediction = {
 type LocationAutocompleteProps = {
   value: string;
   onChange: (value: string) => void;
+  onSelectPlaceId?: (placeId: string | null) => void;
   onBlur?: () => void;
   placeholder?: string;
   biasCoords?: { lat: number; lng: number } | null;
@@ -33,6 +34,7 @@ function getGoogleMaps(): typeof google.maps | undefined {
 export default function LocationAutocomplete({
   value,
   onChange,
+  onSelectPlaceId,
   onBlur,
   placeholder = "Optional location",
   biasCoords,
@@ -145,6 +147,7 @@ export default function LocationAutocomplete({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     onChange(val);
+    onSelectPlaceId?.(null);
 
     if (!mapsLoaded) return;
 
@@ -154,6 +157,7 @@ export default function LocationAutocomplete({
 
   const selectSuggestion = (prediction: Prediction) => {
     onChange(prediction.description);
+    onSelectPlaceId?.(prediction.place_id);
     setSuggestions([]);
     setOpen(false);
     // Rotate session token after a selection
