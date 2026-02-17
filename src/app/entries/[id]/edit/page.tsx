@@ -12,7 +12,12 @@ import PriceCurrencySelect from "@/components/PriceCurrencySelect";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import { extractGpsFromFile } from "@/lib/exifGps";
-import type { EntryPhoto, PrimaryGrape, WineEntryWithUrls } from "@/types/wine";
+import type {
+  EntryPhoto,
+  PrimaryGrape,
+  PrivacyLevel,
+  WineEntryWithUrls,
+} from "@/types/wine";
 import {
   ADVANCED_NOTE_FIELDS,
   ADVANCED_NOTE_OPTIONS,
@@ -49,9 +54,18 @@ type EditEntryForm = {
   location_text: string;
   location_place_id: string;
   consumed_at: string;
-  entry_privacy: "public" | "friends" | "private";
+  entry_privacy: PrivacyLevel;
+  reaction_privacy: PrivacyLevel;
+  comments_privacy: PrivacyLevel;
   advanced_notes: AdvancedNotesFormValues;
 };
+
+const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
+  { value: "public", label: "Public" },
+  { value: "friends_of_friends", label: "Friends of friends" },
+  { value: "friends", label: "Friends only" },
+  { value: "private", label: "Private" },
+];
 
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 
@@ -103,6 +117,8 @@ export default function EditEntryPage() {
       consumed_at: getTodayLocalYmd(),
       location_place_id: "",
       entry_privacy: "public",
+      reaction_privacy: "public",
+      comments_privacy: "public",
       price_paid_currency: "usd",
       price_paid_source: "",
       qpr_level: "",
@@ -114,6 +130,16 @@ export default function EditEntryPage() {
     useWatch({
       control,
       name: "entry_privacy",
+    }) ?? "public";
+  const selectedReactionPrivacy =
+    useWatch({
+      control,
+      name: "reaction_privacy",
+    }) ?? "public";
+  const selectedCommentsPrivacy =
+    useWatch({
+      control,
+      name: "comments_privacy",
     }) ?? "public";
   const selectedPricePaidSource =
     useWatch({
@@ -271,6 +297,14 @@ export default function EditEntryPage() {
           location_place_id: data.entry.location_place_id ?? "",
           consumed_at: data.entry.consumed_at,
           entry_privacy: data.entry.entry_privacy ?? "public",
+          reaction_privacy:
+            data.entry.reaction_privacy ?? data.entry.entry_privacy ?? "public",
+          comments_privacy:
+            data.entry.comments_privacy ??
+            (data.entry.comments_scope === "friends" &&
+            (data.entry.entry_privacy ?? "public") !== "private"
+              ? "friends"
+              : data.entry.entry_privacy ?? "public"),
           advanced_notes: toAdvancedNotesFormValues(data.entry.advanced_notes),
         });
         setLoading(false);
@@ -1190,6 +1224,8 @@ export default function EditEntryPage() {
       consumed_at: values.consumed_at,
       tasted_with_user_ids: selectedUserIds,
       entry_privacy: values.entry_privacy,
+      reaction_privacy: values.reaction_privacy,
+      comments_privacy: values.comments_privacy,
       advanced_notes: toAdvancedNotesPayload(values.advanced_notes),
     };
 
@@ -1851,23 +1887,69 @@ export default function EditEntryPage() {
           </details>
 
           <div>
-            <label className="text-sm font-medium text-zinc-200">
-              Visibility
-            </label>
+            <label className="text-sm font-medium text-zinc-200">Visibility & interaction</label>
             <p className="mt-1 text-xs text-zinc-400">
-              This controls who can view this entry in feeds and on your profile.
+              Set who can view the post, view/react to reactions, and view/comment on comments.
             </p>
-            <div className="mt-2">
-              <PrivacyBadge level={selectedEntryPrivacy} />
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
+                    Post visibility
+                  </p>
+                  <PrivacyBadge level={selectedEntryPrivacy} compact />
+                </div>
+                <select
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("entry_privacy")}
+                >
+                  {PRIVACY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
+                    Reactions
+                  </p>
+                  <PrivacyBadge level={selectedReactionPrivacy} compact />
+                </div>
+                <select
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("reaction_privacy")}
+                >
+                  {PRIVACY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
+                    Comments
+                  </p>
+                  <PrivacyBadge level={selectedCommentsPrivacy} compact />
+                </div>
+                <select
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  {...register("comments_privacy")}
+                >
+                  {PRIVACY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <select
-              className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              {...register("entry_privacy")}
-            >
-              <option value="public">Public</option>
-              <option value="friends">Friends only</option>
-              <option value="private">Private (only me)</option>
-            </select>
+            <p className="mt-2 text-xs text-zinc-500">
+              Privacy on reactions/comments controls both visibility and participation.
+            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

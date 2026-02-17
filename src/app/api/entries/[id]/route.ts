@@ -21,7 +21,8 @@ import {
 } from "@/lib/primaryGrapes";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
 
-const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+const privacyLevelSchema = z.enum(["public", "friends_of_friends", "friends", "private"]);
+const commentScopeSchema = z.enum(["viewers", "friends"]);
 const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
 const pricePaidSourceSchema = z.enum(PRICE_PAID_SOURCE_VALUES);
 const qprLevelSchema = z.enum(QPR_LEVEL_VALUES);
@@ -128,6 +129,9 @@ const updateEntrySchema = z.object({
   place_image_path: nullableString,
   pairing_image_path: nullableString,
   entry_privacy: privacyLevelSchema.optional(),
+  reaction_privacy: privacyLevelSchema.optional(),
+  comments_privacy: privacyLevelSchema.optional(),
+  comments_scope: commentScopeSchema.optional(),
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
   is_feed_visible: z.boolean().optional(),
@@ -227,6 +231,18 @@ function isFeedVisibleColumnMissing(message: string) {
 
 function isLocationPlaceIdColumnMissing(message: string) {
   return message.includes("location_place_id");
+}
+
+function isCommentsScopeColumnMissing(message: string) {
+  return message.includes("comments_scope");
+}
+
+function isReactionPrivacyColumnMissing(message: string) {
+  return message.includes("reaction_privacy");
+}
+
+function isCommentsPrivacyColumnMissing(message: string) {
+  return message.includes("comments_privacy");
 }
 
 async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
@@ -474,6 +490,27 @@ export async function PUT(
         "location_place_id" in updatesToApply
       ) {
         delete updatesToApply.location_place_id;
+        removedUnsupportedColumn = true;
+      }
+      if (
+        isCommentsScopeColumnMissing(error.message) &&
+        "comments_scope" in updatesToApply
+      ) {
+        delete updatesToApply.comments_scope;
+        removedUnsupportedColumn = true;
+      }
+      if (
+        isReactionPrivacyColumnMissing(error.message) &&
+        "reaction_privacy" in updatesToApply
+      ) {
+        delete updatesToApply.reaction_privacy;
+        removedUnsupportedColumn = true;
+      }
+      if (
+        isCommentsPrivacyColumnMissing(error.message) &&
+        "comments_privacy" in updatesToApply
+      ) {
+        delete updatesToApply.comments_privacy;
         removedUnsupportedColumn = true;
       }
 

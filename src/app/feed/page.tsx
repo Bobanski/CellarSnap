@@ -9,7 +9,7 @@ import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
-import type { WineEntryWithUrls } from "@/types/wine";
+import type { PrivacyLevel, WineEntryWithUrls } from "@/types/wine";
 
 const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
 const PHOTO_TYPE_LABELS = {
@@ -33,9 +33,34 @@ type FeedEntry = WineEntryWithUrls & {
   author_name: string;
   author_avatar_url?: string | null;
   can_react?: boolean;
+  can_comment?: boolean;
+  comments_privacy?: PrivacyLevel;
+  comment_count?: number;
   reaction_counts?: Record<string, number>;
   my_reactions?: string[];
   photo_gallery?: FeedPhoto[];
+};
+
+type FeedReply = {
+  id: string;
+  entry_id: string;
+  user_id: string;
+  parent_comment_id: string | null;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+  is_deleted?: boolean;
+};
+
+type FeedComment = {
+  id: string;
+  entry_id: string;
+  user_id: string;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+  is_deleted?: boolean;
+  replies: FeedReply[];
 };
 
 type UserOption = {
@@ -149,6 +174,35 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   );
 }
 
+function CommentBubbleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" />
+    </svg>
+  );
+}
+
+function formatCommentDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function FeedPage() {
   const router = useRouter();
   const [entries, setEntries] = useState<FeedEntry[]>([]);
@@ -162,15 +216,48 @@ export default function FeedPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
   >({});
+  const [expandedCommentsByEntryId, setExpandedCommentsByEntryId] = useState<
+    Record<string, boolean>
+  >({});
+  const [commentCountByEntryId, setCommentCountByEntryId] = useState<Record<string, number>>({});
+  const [commentsByEntryId, setCommentsByEntryId] = useState<Record<string, FeedComment[]>>({});
+  const [commentDraftByEntryId, setCommentDraftByEntryId] = useState<Record<string, string>>({});
+  const [replyTargetByEntryId, setReplyTargetByEntryId] = useState<
+    Record<string, string | null>
+  >({});
+  const [expandedRepliesByCommentId, setExpandedRepliesByCommentId] = useState<
+    Record<string, boolean>
+  >({});
+  const [loadingCommentsByEntryId, setLoadingCommentsByEntryId] = useState<
+    Record<string, boolean>
+  >({});
+  const [postingCommentByEntryId, setPostingCommentByEntryId] = useState<
+    Record<string, boolean>
+  >({});
+  const [deletingCommentById, setDeletingCommentById] = useState<
+    Record<string, boolean>
+  >({});
+  const [commentErrorByEntryId, setCommentErrorByEntryId] = useState<Record<string, string | null>>(
+    {}
+  );
 
   const toggleNotesExpanded = (entryId: string) => {
     setExpandedNotesByEntryId((current) => ({
       ...current,
       [entryId]: !current[entryId],
     }));
+  };
+
+  const getCommentCount = (entry: FeedEntry) => {
+    const entryComments = commentsByEntryId[entry.id];
+    if (entryComments) {
+      return entryComments.reduce((total, comment) => total + 1 + comment.replies.length, 0);
+    }
+    return commentCountByEntryId[entry.id] ?? entry.comment_count ?? 0;
   };
 
   useEffect(() => {
@@ -234,6 +321,220 @@ export default function FeedPage() {
     setReactionPopupEntryId(null);
   };
 
+  const loadCommentsForEntry = async (
+    entryId: string,
+    { force = false }: { force?: boolean } = {}
+  ) => {
+    if (loadingCommentsByEntryId[entryId]) return;
+    if (!force && commentsByEntryId[entryId]) return;
+
+    setLoadingCommentsByEntryId((current) => ({
+      ...current,
+      [entryId]: true,
+    }));
+    setCommentErrorByEntryId((current) => ({
+      ...current,
+      [entryId]: null,
+    }));
+
+    try {
+      const response = await fetch(`/api/entries/${entryId}/comments`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const errorMessage =
+          typeof payload.error === "string"
+            ? payload.error
+            : "Unable to load comments right now.";
+        setCommentErrorByEntryId((current) => ({
+          ...current,
+          [entryId]: errorMessage,
+        }));
+        if (response.status === 403) {
+          setEntries((current) =>
+            current.map((entry) =>
+              entry.id === entryId ? { ...entry, can_comment: false } : entry
+            )
+          );
+        }
+        return;
+      }
+
+      const data = await response.json().catch(() => ({}));
+      const nextComments = Array.isArray(data.comments) ? (data.comments as FeedComment[]) : [];
+      const nextCount =
+        typeof data.comment_count === "number"
+          ? data.comment_count
+          : nextComments.reduce((total, comment) => total + 1 + comment.replies.length, 0);
+
+      setCommentsByEntryId((current) => ({
+        ...current,
+        [entryId]: nextComments,
+      }));
+      setCommentCountByEntryId((current) => ({
+        ...current,
+        [entryId]: nextCount,
+      }));
+      setEntries((current) =>
+        current.map((entry) =>
+          entry.id === entryId
+            ? {
+                ...entry,
+                can_comment:
+                  typeof data.can_comment === "boolean" ? data.can_comment : entry.can_comment,
+                comments_privacy:
+                  data.comments_privacy === "public" ||
+                  data.comments_privacy === "friends_of_friends" ||
+                  data.comments_privacy === "friends" ||
+                  data.comments_privacy === "private"
+                    ? data.comments_privacy
+                    : entry.comments_privacy,
+              }
+            : entry
+        )
+      );
+    } finally {
+      setLoadingCommentsByEntryId((current) => ({
+        ...current,
+        [entryId]: false,
+      }));
+    }
+  };
+
+  const toggleCommentsExpanded = (entryId: string) => {
+    setReactionPopupEntryId(null);
+    setExpandedCommentsByEntryId((current) => {
+      const nextExpanded = !current[entryId];
+      if (nextExpanded) {
+        void loadCommentsForEntry(entryId);
+      }
+      return {
+        ...current,
+        [entryId]: nextExpanded,
+      };
+    });
+  };
+
+  const submitCommentForEntry = async (entryId: string) => {
+    const nextBody = (commentDraftByEntryId[entryId] ?? "").trim();
+    if (!nextBody) return;
+    if (postingCommentByEntryId[entryId]) return;
+    const replyTargetId = replyTargetByEntryId[entryId] ?? null;
+    const canComment = entries.find((entry) => entry.id === entryId)?.can_comment ?? true;
+    if (!canComment) {
+      setCommentErrorByEntryId((current) => ({
+        ...current,
+        [entryId]: "Comments are private for this post.",
+      }));
+      return;
+    }
+
+    setPostingCommentByEntryId((current) => ({
+      ...current,
+      [entryId]: true,
+    }));
+    setCommentErrorByEntryId((current) => ({
+      ...current,
+      [entryId]: null,
+    }));
+
+    try {
+      const response = await fetch(`/api/entries/${entryId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: nextBody,
+          parent_comment_id: replyTargetId,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const errorMessage =
+          typeof payload.error === "string"
+            ? payload.error
+            : "Unable to post comment right now.";
+        setCommentErrorByEntryId((current) => ({
+          ...current,
+          [entryId]: errorMessage,
+        }));
+        return;
+      }
+
+      if (replyTargetId) {
+        setExpandedRepliesByCommentId((current) => ({
+          ...current,
+          [replyTargetId]: true,
+        }));
+      }
+
+      setCommentDraftByEntryId((current) => ({
+        ...current,
+        [entryId]: "",
+      }));
+      setReplyTargetByEntryId((current) => ({
+        ...current,
+        [entryId]: null,
+      }));
+
+      await loadCommentsForEntry(entryId, { force: true });
+    } finally {
+      setPostingCommentByEntryId((current) => ({
+        ...current,
+        [entryId]: false,
+      }));
+    }
+  };
+
+  const deleteCommentForEntry = async (entryId: string, commentId: string) => {
+    if (deletingCommentById[commentId]) return;
+
+    setDeletingCommentById((current) => ({
+      ...current,
+      [commentId]: true,
+    }));
+    setCommentErrorByEntryId((current) => ({
+      ...current,
+      [entryId]: null,
+    }));
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const errorMessage =
+          typeof payload.error === "string"
+            ? payload.error
+            : "Unable to delete comment right now.";
+        setCommentErrorByEntryId((current) => ({
+          ...current,
+          [entryId]: errorMessage,
+        }));
+        return;
+      }
+
+      setReplyTargetByEntryId((current) =>
+        current[entryId] === commentId
+          ? {
+              ...current,
+              [entryId]: null,
+            }
+          : current
+      );
+      await loadCommentsForEntry(entryId, { force: true });
+    } finally {
+      setDeletingCommentById((current) => ({
+        ...current,
+        [commentId]: false,
+      }));
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -261,7 +562,28 @@ export default function FeedPage() {
         const feedData = await feedResponse.json();
 
         if (isMounted) {
-          setEntries(feedData.entries ?? []);
+          const nextEntries = (feedData.entries ?? []) as FeedEntry[];
+          setEntries(nextEntries);
+          setViewerUserId(
+            typeof feedData.viewer_user_id === "string"
+              ? feedData.viewer_user_id
+              : null
+          );
+          setCommentCountByEntryId(
+            Object.fromEntries(
+              nextEntries.map((entry) => [entry.id, entry.comment_count ?? 0])
+            )
+          );
+          setCommentsByEntryId({});
+          setCommentDraftByEntryId({});
+          setReplyTargetByEntryId({});
+          setExpandedCommentsByEntryId({});
+          setExpandedRepliesByCommentId({});
+          setLoadingCommentsByEntryId({});
+          setPostingCommentByEntryId({});
+          setDeletingCommentById({});
+          setCommentErrorByEntryId({});
+          setReactionPopupEntryId(null);
           setNextCursor(feedData.next_cursor ?? null);
           setHasMore(Boolean(feedData.has_more));
           setLoading(false);
@@ -291,7 +613,12 @@ export default function FeedPage() {
       );
       if (!res.ok) return;
       const data = await res.json();
-      setEntries((prev) => [...prev, ...(data.entries ?? [])]);
+      const nextEntries = (data.entries ?? []) as FeedEntry[];
+      setEntries((prev) => [...prev, ...nextEntries]);
+      setCommentCountByEntryId((current) => ({
+        ...current,
+        ...Object.fromEntries(nextEntries.map((entry) => [entry.id, entry.comment_count ?? 0])),
+      }));
       setNextCursor(data.next_cursor ?? null);
       setHasMore(Boolean(data.has_more));
     } finally {
@@ -403,11 +730,12 @@ export default function FeedPage() {
             {entries.map((entry) => (
               <article
                 key={entry.id}
-                className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
                 onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     router.push(`/entries/${entry.id}?from=feed`);
@@ -481,99 +809,12 @@ export default function FeedPage() {
                   </div>
                 ) : null}
 
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {typeof entry.rating === "number" &&
-                    !Number.isNaN(entry.rating) ? (
-                      <RatingBadge rating={entry.rating} variant="text" />
-                    ) : null}
-                    {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-1.5">
-                  {Object.entries(entry.reaction_counts ?? {}).map(([emoji, count]) =>
-                    count > 0 ? (
-                      entry.can_react ? (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleReaction(entry.id, emoji);
-                          }}
-                          className={`inline-flex items-baseline gap-0.5 rounded-full border px-2 py-0.5 text-xs transition hover:border-amber-300/50 ${
-                            (entry.my_reactions ?? []).includes(emoji)
-                              ? "border-amber-300/60 bg-amber-400/20 text-amber-200"
-                              : "border-white/10 bg-black/20 text-zinc-300"
-                          }`}
-                        >
-                          <span>{emoji}</span>
-                          <span className="text-[10px] font-medium tabular-nums text-zinc-400">
-                            {count}
-                          </span>
-                        </button>
-                      ) : (
-                        <span
-                          key={emoji}
-                          className="inline-flex items-baseline gap-0.5 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-xs text-zinc-300"
-                        >
-                          <span>{emoji}</span>
-                          <span className="text-[10px] font-medium tabular-nums text-zinc-400">
-                            {count}
-                          </span>
-                        </span>
-                      )
-                    ) : null
-                  )}
-                  {entry.can_react ? (
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setReactionPopupEntryId((id) => (id === entry.id ? null : entry.id));
-                        }}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/20 text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
-                        aria-label="Add reaction"
-                      >
-                        +
-                      </button>
-                      {reactionPopupEntryId === entry.id ? (
-                        <>
-                          <div
-                            className="fixed inset-0 z-40"
-                            aria-hidden
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setReactionPopupEntryId(null);
-                            }}
-                          />
-                          <div
-                            className="absolute bottom-full right-0 z-50 mb-1 flex gap-0.5 rounded-xl border border-white/10 bg-[#1c1917] p-1.5 shadow-xl"
-                            role="menu"
-                          >
-                            {REACTION_EMOJIS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleReaction(entry.id, emoji);
-                                }}
-                                className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${
-                                  (entry.my_reactions ?? []).includes(emoji)
-                                    ? "bg-amber-400/20"
-                                    : ""
-                                }`}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {typeof entry.rating === "number" &&
+                  !Number.isNaN(entry.rating) ? (
+                    <RatingBadge rating={entry.rating} variant="text" />
                   ) : null}
-                  </div>
+                  {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                 </div>
                 {(() => {
                   const notes = (entry.notes ?? "").trim();
@@ -599,6 +840,387 @@ export default function FeedPage() {
                         {notes}
                       </span>
                     </button>
+                  );
+                })()}
+                {(() => {
+                  const entryComments = commentsByEntryId[entry.id] ?? [];
+                  const commentDraft = commentDraftByEntryId[entry.id] ?? "";
+                  const replyTargetId = replyTargetByEntryId[entry.id] ?? null;
+                  const commentsLoading = Boolean(loadingCommentsByEntryId[entry.id]);
+                  const postingComment = Boolean(postingCommentByEntryId[entry.id]);
+                  const commentError = commentErrorByEntryId[entry.id];
+                  const replyTarget =
+                    replyTargetId && entryComments.length > 0
+                      ? entryComments.find((comment) => comment.id === replyTargetId) ?? null
+                      : null;
+                  const commentsExpanded = Boolean(expandedCommentsByEntryId[entry.id]);
+                  const canReact = Boolean(entry.can_react);
+                  const canComment = entry.can_comment ?? true;
+                  const reactionSummary = REACTION_EMOJIS
+                    .map((emoji) => ({
+                      emoji,
+                      count: entry.reaction_counts?.[emoji] ?? 0,
+                    }))
+                    .filter((item) => item.count > 0);
+                  const hasReactionCounts = reactionSummary.length > 0;
+
+                  return (
+                    <>
+                      <div
+                        className="mt-auto pt-3"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <div className="border-t border-white/10 pt-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReactionPopupEntryId((id) =>
+                                    id === entry.id ? null : entry.id
+                                  );
+                                }}
+                                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border bg-black/20 text-lg font-semibold leading-none transition ${
+                                  canReact
+                                    ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
+                                    : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
+                                }`}
+                                aria-label={canReact ? "Add reaction" : "View reaction options"}
+                              >
+                                +
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleCommentsExpanded(entry.id);
+                                }}
+                                className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                                  commentsExpanded
+                                    ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
+                                    : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
+                                }`}
+                                aria-label={`Toggle comments (${getCommentCount(entry)})`}
+                              >
+                                <CommentBubbleIcon className="h-4 w-4 shrink-0" />
+                                <span>Comments</span>
+                                <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">
+                                  {getCommentCount(entry)}
+                                </span>
+                              </button>
+                            </div>
+                            {hasReactionCounts ? (
+                              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                {reactionSummary.map(({ emoji, count }) => (
+                                  <span
+                                    key={`${entry.id}-reaction-summary-${emoji}`}
+                                    className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200"
+                                  >
+                                    <span>{emoji}</span>
+                                    <span className="tabular-nums text-zinc-400">{count}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                          {reactionPopupEntryId === entry.id ? (
+                            <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {REACTION_EMOJIS.map((emoji) => {
+                                  const count = entry.reaction_counts?.[emoji] ?? 0;
+                                  if (canReact) {
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleReaction(entry.id, emoji);
+                                        }}
+                                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${
+                                          (entry.my_reactions ?? []).includes(emoji)
+                                            ? "bg-amber-400/20"
+                                            : ""
+                                        }`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  }
+                                  return (
+                                    <span
+                                      key={emoji}
+                                      className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/10 bg-black/20 px-1 text-lg text-zinc-400"
+                                    >
+                                      {emoji}
+                                      {count > 0 ? (
+                                        <span className="ml-0.5 text-[10px] font-medium text-zinc-500">
+                                          {count}
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              {!canReact ? (
+                                <p className="mt-1 text-[11px] text-zinc-500">
+                                  Reactions are not available for this post.
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                      {commentsExpanded ? (
+                        <div
+                          className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 md:mt-3"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300/70">
+                              Comments
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleCommentsExpanded(entry.id);
+                              }}
+                              className="text-[11px] text-zinc-400 transition hover:text-zinc-200"
+                            >
+                              Collapse
+                            </button>
+                          </div>
+                          {commentsLoading ? (
+                            <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">
+                              Loading comments...
+                            </div>
+                          ) : !canComment ? (
+                            <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">
+                              Comments are private for this post.
+                            </div>
+                          ) : entryComments.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">
+                              No comments yet. Start the thread.
+                            </div>
+                          ) : (
+                            <ul className="space-y-2">
+                              {entryComments.map((comment) => {
+                                const repliesExpanded = Boolean(
+                                  expandedRepliesByCommentId[comment.id]
+                                );
+                                const isCommentDeleted = Boolean(comment.is_deleted);
+                                const deletingComment = Boolean(
+                                  deletingCommentById[comment.id]
+                                );
+                                return (
+                                  <li
+                                    key={comment.id}
+                                    className="rounded-xl border border-white/10 bg-black/25 p-3"
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        {!isCommentDeleted && comment.author_name ? (
+                                          <p className="text-xs font-semibold text-zinc-200">
+                                            {comment.author_name}
+                                          </p>
+                                        ) : null}
+                                        <p
+                                          className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${
+                                            isCommentDeleted
+                                              ? "italic text-zinc-500"
+                                              : "text-zinc-100"
+                                          }`}
+                                        >
+                                          {isCommentDeleted ? "[deleted]" : comment.body}
+                                        </p>
+                                      </div>
+                                      <div className="flex shrink-0 items-center gap-2">
+                                        <span className="text-[11px] text-zinc-500">
+                                          {formatCommentDate(comment.created_at)}
+                                        </span>
+                                        {!isCommentDeleted &&
+                                        viewerUserId === comment.user_id ? (
+                                          <button
+                                            type="button"
+                                            disabled={deletingComment}
+                                            onClick={() => {
+                                              void deleteCommentForEntry(entry.id, comment.id);
+                                            }}
+                                            className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                          >
+                                            {deletingComment ? "Deleting..." : "Delete"}
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+                                      {!isCommentDeleted ? (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setReplyTargetByEntryId((current) => ({
+                                              ...current,
+                                              [entry.id]: comment.id,
+                                            }))
+                                          }
+                                          className="font-medium text-zinc-300 transition hover:text-amber-200"
+                                        >
+                                          Reply
+                                        </button>
+                                      ) : null}
+                                      {comment.replies.length > 0 ? (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setExpandedRepliesByCommentId((current) => ({
+                                              ...current,
+                                              [comment.id]: !current[comment.id],
+                                            }))
+                                          }
+                                          className="text-zinc-400 transition hover:text-zinc-200"
+                                        >
+                                          {repliesExpanded
+                                            ? "Hide replies"
+                                            : `View ${comment.replies.length} ${
+                                                comment.replies.length === 1
+                                                  ? "reply"
+                                                  : "replies"
+                                              }`}
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                    {repliesExpanded && comment.replies.length > 0 ? (
+                                      <div className="mt-2 space-y-2 border-l border-white/10 pl-3">
+                                        {comment.replies.map((reply) => {
+                                          const isReplyDeleted = Boolean(reply.is_deleted);
+                                          const deletingReply = Boolean(
+                                            deletingCommentById[reply.id]
+                                          );
+                                          return (
+                                            <div
+                                              key={reply.id}
+                                              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+                                            >
+                                              <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                  {!isReplyDeleted && reply.author_name ? (
+                                                    <p className="text-xs font-semibold text-zinc-200">
+                                                      {reply.author_name}
+                                                    </p>
+                                                  ) : null}
+                                                  <p
+                                                    className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${
+                                                      isReplyDeleted
+                                                        ? "italic text-zinc-500"
+                                                        : "text-zinc-100"
+                                                    }`}
+                                                  >
+                                                    {isReplyDeleted ? "[deleted]" : reply.body}
+                                                  </p>
+                                                </div>
+                                                <div className="flex shrink-0 items-center gap-2">
+                                                  <span className="text-[11px] text-zinc-500">
+                                                    {formatCommentDate(reply.created_at)}
+                                                  </span>
+                                                  {!isReplyDeleted &&
+                                                  viewerUserId === reply.user_id ? (
+                                                    <button
+                                                      type="button"
+                                                      disabled={deletingReply}
+                                                      onClick={() => {
+                                                        void deleteCommentForEntry(
+                                                          entry.id,
+                                                          reply.id
+                                                        );
+                                                      }}
+                                                      className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                      {deletingReply ? "Deleting..." : "Delete"}
+                                                    </button>
+                                                  ) : null}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : null}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                          {commentError ? (
+                            <p className="mt-2 text-xs text-rose-300">{commentError}</p>
+                          ) : null}
+                          <div className="mt-3 border-t border-white/10 pt-3">
+                            {replyTarget ? (
+                              <div className="mb-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-xs text-zinc-300">
+                                <span className="truncate">
+                                  Replying to {replyTarget.author_name ?? "this thread"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setReplyTargetByEntryId((current) => ({
+                                      ...current,
+                                      [entry.id]: null,
+                                    }))
+                                  }
+                                  className="shrink-0 text-zinc-400 transition hover:text-zinc-100"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : null}
+                            <textarea
+                              value={commentDraft}
+                              onChange={(event) =>
+                                setCommentDraftByEntryId((current) => ({
+                                  ...current,
+                                  [entry.id]: event.target.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                                  event.preventDefault();
+                                  void submitCommentForEntry(entry.id);
+                                }
+                              }}
+                              rows={2}
+                              placeholder={
+                                replyTarget ? "Write a reply..." : "Write a comment..."
+                              }
+                              className="w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                              disabled={!canComment || postingComment}
+                            />
+                            <div className="mt-2 flex items-center justify-between">
+                              <p className="text-[11px] text-zinc-500">
+                                {canComment
+                                  ? "Comments + replies are now live."
+                                  : "Comments are private for this post."}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void submitCommentForEntry(entry.id);
+                                }}
+                                disabled={!commentDraft.trim() || !canComment || postingComment}
+                                className="inline-flex rounded-full border border-amber-300/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {postingComment
+                                  ? "Posting..."
+                                  : replyTarget
+                                    ? "Post reply"
+                                    : "Post comment"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
                   );
                 })()}
               </article>

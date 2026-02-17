@@ -99,7 +99,7 @@ export async function GET() {
         .from("wine_entries")
         .select("*")
         .in("user_id", friendIds)
-        .in("entry_privacy", ["public", "friends"])
+        .in("entry_privacy", ["public", "friends_of_friends", "friends"])
         .order("created_at", { ascending: false })
         .limit(6);
 

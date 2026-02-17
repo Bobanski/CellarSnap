@@ -30,6 +30,9 @@ type WineEntryRow = {
   place_image_path?: string | null;
   pairing_image_path?: string | null;
   entry_privacy?: string;
+  reaction_privacy?: string | null;
+  comments_privacy?: string | null;
+  comments_scope?: string | null;
   label_photo_privacy?: string | null;
   place_photo_privacy?: string | null;
 };
@@ -80,6 +83,7 @@ export async function POST(
 
   try {
     const entryPrivacy =
+      baseEntry.entry_privacy === "friends_of_friends" ||
       baseEntry.entry_privacy === "friends" ||
       baseEntry.entry_privacy === "private" ||
       baseEntry.entry_privacy === "public"
@@ -234,6 +238,9 @@ export async function POST(
     pairing_image_path: null,
     // Friends by default so the tagged user's circle can see their version.
     entry_privacy: "friends",
+    reaction_privacy: "friends",
+    comments_privacy: "friends",
+    comments_scope: "viewers",
     label_photo_privacy: null,
     place_photo_privacy: null,
   };
@@ -249,6 +256,9 @@ export async function POST(
     "advanced_notes",
     "location_text",
     "location_place_id",
+    "reaction_privacy",
+    "comments_privacy",
+    "comments_scope",
     "label_photo_privacy",
     "place_photo_privacy",
     "place_image_path",

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getAcceptedFriendIds,
+  getFriendsOfFriendsIds,
+  type EntryPrivacy,
+} from "@/lib/access/entryVisibility";
 
 type FeedEntryRow = {
   id: string;
@@ -17,9 +22,64 @@ type FeedEntryRow = {
   label_image_path: string | null;
   place_image_path: string | null;
   pairing_image_path: string | null;
-  entry_privacy: string;
+  entry_privacy: EntryPrivacy;
   created_at: string;
 };
+
+type InteractionSettingsRow = {
+  id: string;
+  reaction_privacy?: string | null;
+  comments_privacy?: string | null;
+  comments_scope?: string | null;
+};
+
+function normalizePrivacyValue(
+  value: unknown,
+  fallback: "public" | "friends_of_friends" | "friends" | "private"
+): "public" | "friends_of_friends" | "friends" | "private" {
+  if (
+    value === "public" ||
+    value === "friends_of_friends" ||
+    value === "friends" ||
+    value === "private"
+  ) {
+    return value;
+  }
+  return fallback;
+}
+
+function canViewerAccessByPrivacy({
+  viewerUserId,
+  ownerUserId,
+  privacy,
+  acceptedFriendIds,
+  friendsOfFriendsIds,
+}: {
+  viewerUserId: string;
+  ownerUserId: string;
+  privacy: EntryPrivacy;
+  acceptedFriendIds: Set<string>;
+  friendsOfFriendsIds: Set<string>;
+}): boolean {
+  if (viewerUserId === ownerUserId) {
+    return true;
+  }
+
+  const normalized = normalizePrivacyValue(privacy, "public");
+  if (normalized === "public") {
+    return true;
+  }
+  if (normalized === "private") {
+    return false;
+  }
+  if (normalized === "friends") {
+    return acceptedFriendIds.has(ownerUserId);
+  }
+
+  return (
+    acceptedFriendIds.has(ownerUserId) || friendsOfFriendsIds.has(ownerUserId)
+  );
+}
 
 async function createSignedUrl(
   path: string | null,
@@ -54,23 +114,18 @@ export async function GET(request: Request) {
   const scope = url.searchParams.get("scope");
   const cursor = url.searchParams.get("cursor"); // created_at (ISO)
   const rawLimit = Number(url.searchParams.get("limit") ?? "");
-  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(50, Math.max(1, rawLimit)) : 30;
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(50, Math.max(1, rawLimit))
+      : 30;
 
-  // Friend set for scope + can_react (mutual friends only)
-  const { data: friendRows } = await supabase
-    .from("friend_requests")
-    .select("requester_id, recipient_id")
-    .eq("status", "accepted")
-    .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
-
-  const friendIds = Array.from(
-    new Set(
-      (friendRows ?? []).map((row) =>
-        row.requester_id === user.id ? row.recipient_id : row.requester_id
-      )
-    )
+  const acceptedFriendIdsSet = await getAcceptedFriendIds(supabase, user.id);
+  const friendIds = Array.from(acceptedFriendIdsSet);
+  const friendsOfFriendsIdsSet = await getFriendsOfFriendsIds(
+    supabase,
+    user.id,
+    acceptedFriendIdsSet
   );
-  const friendIdsSet = new Set(friendIds);
 
   const baseSelectFields =
     "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
@@ -109,14 +164,15 @@ export async function GET(request: Request) {
     let query = supabase.from("wine_entries").select(fields);
 
     if (scope === "friends") {
+      const socialAuthorIds = Array.from(
+        new Set([...friendIds, ...Array.from(friendsOfFriendsIdsSet)])
+      );
       query = query
-        .in("user_id", friendIds)
-        .in("entry_privacy", ["public", "friends"])
+        .in("user_id", socialAuthorIds)
+        .in("entry_privacy", ["public", "friends_of_friends", "friends"])
         .neq("user_id", user.id);
     } else {
-      query = query
-        .eq("entry_privacy", "public")
-        .neq("user_id", user.id);
+      query = query.eq("entry_privacy", "public").neq("user_id", user.id);
     }
 
     if (withTastingSupport) {
@@ -130,8 +186,8 @@ export async function GET(request: Request) {
     return query;
   };
 
-  if (scope === "friends" && friendIds.length === 0) {
-    return NextResponse.json({ entries: [] });
+  if (scope === "friends" && friendIds.length === 0 && friendsOfFriendsIdsSet.size === 0) {
+    return NextResponse.json({ entries: [], viewer_user_id: user.id });
   }
 
   let entries: FeedEntryRow[] = [];
@@ -155,7 +211,7 @@ export async function GET(request: Request) {
       attempt.error.message.includes("root_entry_id") ||
       attempt.error.message.includes("column")
     ) {
-      // Backwards compatible: if the tasting columns haven't been added yet, fall back.
+      // Backwards compatible: if tasting columns haven't been added, fall back.
       const fallback = await buildEntriesQuery({
         fields: baseSelectFields,
         withTastingSupport: false,
@@ -164,7 +220,10 @@ export async function GET(request: Request) {
         .limit(fetchLimit);
 
       if (fallback.error) {
-        return NextResponse.json({ error: fallback.error.message }, { status: 500 });
+        return NextResponse.json(
+          { error: fallback.error.message },
+          { status: 500 }
+        );
       }
       entries = (fallback.data ?? []) as unknown as FeedEntryRow[];
     } else {
@@ -174,9 +233,11 @@ export async function GET(request: Request) {
 
   const deduped = hasTastingSupport ? dedupeEntries(entries) : entries;
   const pageEntries =
-    deduped && deduped.length > limit ? deduped.slice(0, limit) : (deduped ?? []);
+    deduped && deduped.length > limit ? deduped.slice(0, limit) : deduped ?? [];
   const has_more = (deduped?.length ?? 0) > limit;
-  const next_cursor = has_more ? pageEntries[pageEntries.length - 1]?.created_at ?? null : null;
+  const next_cursor = has_more
+    ? pageEntries[pageEntries.length - 1]?.created_at ?? null
+    : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);
   const userIds = Array.from(
@@ -192,13 +253,24 @@ export async function GET(request: Request) {
     .select("id, display_name, email, avatar_path")
     .in("id", userIds);
 
-  let profiles: { id: string; display_name: string | null; email: string | null; avatar_path?: string | null }[] | null = null;
-  if (profilesError && (profilesError.message.includes("avatar_path") || profilesError.message.includes("column"))) {
+  let profiles:
+    | {
+        id: string;
+        display_name: string | null;
+        email: string | null;
+        avatar_path?: string | null;
+      }[]
+    | null = null;
+  if (
+    profilesError &&
+    (profilesError.message.includes("avatar_path") ||
+      profilesError.message.includes("column"))
+  ) {
     const { data: fallback } = await supabase
       .from("profiles")
       .select("id, display_name, email")
       .in("id", userIds);
-    profiles = (fallback ?? []).map((p) => ({ ...p, avatar_path: null }));
+    profiles = (fallback ?? []).map((profile) => ({ ...profile, avatar_path: null }));
   } else if (profilesError) {
     return NextResponse.json({ error: profilesError.message }, { status: 500 });
   } else {
@@ -227,7 +299,53 @@ export async function GET(request: Request) {
           .order("created_at", { ascending: true })
       : { data: [] };
 
-  // Reactions: counts per entry per emoji, and current user's reactions per entry
+  // Load optional interaction settings with safe fallback when columns are missing.
+  const interactionSettingsByEntryId = new Map<string, InteractionSettingsRow>();
+  if (entryIds.length > 0) {
+    const selectAttempts = [
+      "id, reaction_privacy, comments_privacy, comments_scope",
+      "id, comments_scope",
+      "id",
+    ];
+
+    let loaded = false;
+    for (let index = 0; index < selectAttempts.length; index += 1) {
+      const { data, error } = await supabase
+        .from("wine_entries")
+        .select(selectAttempts[index])
+        .in("id", entryIds);
+
+      if (!error) {
+        const settingsRows = (data ?? []) as unknown as InteractionSettingsRow[];
+        settingsRows.forEach((row) => {
+          interactionSettingsByEntryId.set(row.id, row);
+        });
+        loaded = true;
+        break;
+      }
+
+      const missingReactionPrivacy = error.message.includes("reaction_privacy");
+      const missingCommentsPrivacy = error.message.includes("comments_privacy");
+      const missingCommentsScope = error.message.includes("comments_scope");
+
+      if (index === 0 && (missingReactionPrivacy || missingCommentsPrivacy || missingCommentsScope)) {
+        continue;
+      }
+      if (index === 1 && missingCommentsScope) {
+        continue;
+      }
+
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!loaded) {
+      entryIds.forEach((entryId) => {
+        interactionSettingsByEntryId.set(entryId, { id: entryId });
+      });
+    }
+  }
+
+  // Reactions: counts per entry per emoji, and current user's reactions per entry.
   const reactionCountsMap = new Map<string, Record<string, number>>();
   const myReactionsMap = new Map<string, string[]>();
   if (entryIds.length > 0) {
@@ -235,16 +353,40 @@ export async function GET(request: Request) {
       .from("entry_reactions")
       .select("entry_id, user_id, emoji")
       .in("entry_id", entryIds);
-    (reactions ?? []).forEach((r: { entry_id: string; user_id: string; emoji: string }) => {
-      const counts = reactionCountsMap.get(r.entry_id) ?? {};
-      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
-      reactionCountsMap.set(r.entry_id, counts);
-      if (r.user_id === user.id) {
-        const mine = myReactionsMap.get(r.entry_id) ?? [];
-        if (!mine.includes(r.emoji)) mine.push(r.emoji);
-        myReactionsMap.set(r.entry_id, mine);
+    (reactions ?? []).forEach((reaction: { entry_id: string; user_id: string; emoji: string }) => {
+      const counts = reactionCountsMap.get(reaction.entry_id) ?? {};
+      counts[reaction.emoji] = (counts[reaction.emoji] ?? 0) + 1;
+      reactionCountsMap.set(reaction.entry_id, counts);
+      if (reaction.user_id === user.id) {
+        const mine = myReactionsMap.get(reaction.entry_id) ?? [];
+        if (!mine.includes(reaction.emoji)) mine.push(reaction.emoji);
+        myReactionsMap.set(reaction.entry_id, mine);
       }
     });
+  }
+
+  // Comments: count per entry (best effort if comments table is unavailable).
+  const commentCountsMap = new Map<string, number>();
+  if (entryIds.length > 0) {
+    const { data: comments, error: commentsError } = await supabase
+      .from("entry_comments")
+      .select("entry_id")
+      .in("entry_id", entryIds);
+
+    if (!commentsError) {
+      (comments ?? []).forEach((comment: { entry_id: string }) => {
+        commentCountsMap.set(
+          comment.entry_id,
+          (commentCountsMap.get(comment.entry_id) ?? 0) + 1
+        );
+      });
+    } else if (
+      !commentsError.message.includes("entry_comments") &&
+      !commentsError.message.includes("relation") &&
+      !commentsError.message.includes("column")
+    ) {
+      return NextResponse.json({ error: commentsError.message }, { status: 500 });
+    }
   }
 
   type GalleryPhotoType = "label" | "place" | "pairing";
@@ -316,7 +458,6 @@ export async function GET(request: Request) {
     galleryRowsByEntryId.set(entry.id, current);
   });
 
-  // Sign only the URLs that this page actually renders (author avatar + gallery photos)
   const pathsToSign = new Set<string>();
   const authorAvatarPathByUserId = new Map<string, string>();
 
@@ -345,11 +486,11 @@ export async function GET(request: Request) {
     const galleryRows = galleryRowsByEntryId.get(entry.id) ?? [];
     const photoGallery = galleryRows
       .map((photo) => {
-        const url = signedUrlByPath.get(photo.path) ?? null;
-        if (!url) return null;
+        const signedUrl = signedUrlByPath.get(photo.path) ?? null;
+        if (!signedUrl) return null;
         return {
           type: photo.type,
-          url,
+          url: signedUrl,
         };
       })
       .filter(
@@ -368,10 +509,45 @@ export async function GET(request: Request) {
       email: profileMap.get(id)?.email ?? null,
     }));
 
-    const isFriendOfAuthor = friendIdsSet.has(entry.user_id);
-    const can_react = isFriendOfAuthor && entry.user_id !== user.id;
-    const reaction_counts = reactionCountsMap.get(entry.id) ?? {};
-    const my_reactions = myReactionsMap.get(entry.id) ?? [];
+    const settings = interactionSettingsByEntryId.get(entry.id);
+    const entryPrivacy = normalizePrivacyValue(entry.entry_privacy, "public");
+    const legacyCommentsScope = settings?.comments_scope === "friends" ? "friends" : "viewers";
+    const reactionPrivacy = normalizePrivacyValue(
+      settings?.reaction_privacy,
+      entryPrivacy
+    );
+    const commentsPrivacy = normalizePrivacyValue(
+      settings?.comments_privacy ??
+        (legacyCommentsScope === "friends" && entryPrivacy !== "private"
+          ? "friends"
+          : entryPrivacy),
+      entryPrivacy
+    );
+
+    const canSeeReactions = canViewerAccessByPrivacy({
+      viewerUserId: user.id,
+      ownerUserId: entry.user_id,
+      privacy: reactionPrivacy,
+      acceptedFriendIds: acceptedFriendIdsSet,
+      friendsOfFriendsIds: friendsOfFriendsIdsSet,
+    });
+    const canSeeComments = canViewerAccessByPrivacy({
+      viewerUserId: user.id,
+      ownerUserId: entry.user_id,
+      privacy: commentsPrivacy,
+      acceptedFriendIds: acceptedFriendIdsSet,
+      friendsOfFriendsIds: friendsOfFriendsIdsSet,
+    });
+
+    const reactionCounts = canSeeReactions
+      ? reactionCountsMap.get(entry.id) ?? {}
+      : {};
+    const myReactions = canSeeReactions
+      ? myReactionsMap.get(entry.id) ?? []
+      : [];
+    const commentCount = canSeeComments
+      ? commentCountsMap.get(entry.id) ?? 0
+      : 0;
 
     return {
       ...entry,
@@ -382,11 +558,20 @@ export async function GET(request: Request) {
       pairing_image_url: pairingPhoto,
       photo_gallery: photoGallery,
       tasted_with_users: tastedWithUsers,
-      can_react,
-      reaction_counts,
-      my_reactions,
+      reaction_privacy: reactionPrivacy,
+      comments_privacy: commentsPrivacy,
+      can_react: canSeeReactions,
+      can_comment: canSeeComments,
+      comment_count: commentCount,
+      reaction_counts: reactionCounts,
+      my_reactions: myReactions,
     };
   });
 
-  return NextResponse.json({ entries: feedEntries, next_cursor, has_more });
+  return NextResponse.json({
+    entries: feedEntries,
+    next_cursor,
+    has_more,
+    viewer_user_id: user.id,
+  });
 }

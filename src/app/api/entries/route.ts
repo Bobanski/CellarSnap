@@ -20,7 +20,8 @@ import {
   normalizePrimaryGrapeIds,
 } from "@/lib/primaryGrapes";
 
-const privacyLevelSchema = z.enum(["public", "friends", "private"]);
+const privacyLevelSchema = z.enum(["public", "friends_of_friends", "friends", "private"]);
+const commentScopeSchema = z.enum(["viewers", "friends"]);
 const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
 const pricePaidSourceSchema = z.enum(PRICE_PAID_SOURCE_VALUES);
 const qprLevelSchema = z.enum(QPR_LEVEL_VALUES);
@@ -117,6 +118,9 @@ const createEntrySchema = z.object({
     .optional(),
   tasted_with_user_ids: z.array(z.string().uuid()).optional(),
   entry_privacy: privacyLevelSchema.optional(),
+  reaction_privacy: privacyLevelSchema.optional(),
+  comments_privacy: privacyLevelSchema.optional(),
+  comments_scope: commentScopeSchema.optional(),
   label_photo_privacy: privacyLevelSchema.nullable().optional(),
   place_photo_privacy: privacyLevelSchema.nullable().optional(),
   is_feed_visible: z.boolean().optional(),
@@ -226,6 +230,18 @@ function isFeedVisibleColumnMissing(message: string) {
 
 function isLocationPlaceIdColumnMissing(message: string) {
   return message.includes("location_place_id");
+}
+
+function isCommentsScopeColumnMissing(message: string) {
+  return message.includes("comments_scope");
+}
+
+function isReactionPrivacyColumnMissing(message: string) {
+  return message.includes("reaction_privacy");
+}
+
+function isCommentsPrivacyColumnMissing(message: string) {
+  return message.includes("comments_privacy");
 }
 
 async function getRandomComparisonCandidate({
@@ -434,6 +450,13 @@ export async function POST(request: Request) {
     payload.data.label_photo_privacy ?? null;
   const placePhotoPrivacy =
     payload.data.place_photo_privacy ?? null;
+  const commentsScope = payload.data.comments_scope ?? "viewers";
+  const reactionPrivacy = payload.data.reaction_privacy ?? entryPrivacy;
+  const commentsPrivacyFromScope =
+    commentsScope === "friends" && entryPrivacy !== "private"
+      ? "friends"
+      : entryPrivacy;
+  const commentsPrivacy = payload.data.comments_privacy ?? commentsPrivacyFromScope;
   const advancedNotes = normalizeAdvancedNotes(payload.data.advanced_notes);
   const primaryGrapeIds = normalizePrimaryGrapeIds(payload.data.primary_grape_ids);
   let primaryGrapeIdsToPersist = primaryGrapeIds;
@@ -488,6 +511,9 @@ export async function POST(request: Request) {
     place_image_path: null,
     pairing_image_path: null,
     entry_privacy: entryPrivacy,
+    reaction_privacy: reactionPrivacy,
+    comments_privacy: commentsPrivacy,
+    comments_scope: commentsScope,
     label_photo_privacy: labelPhotoPrivacy,
     place_photo_privacy: placePhotoPrivacy,
   };
@@ -533,6 +559,27 @@ export async function POST(request: Request) {
       "location_place_id" in insertPayloadToApply
     ) {
       delete insertPayloadToApply.location_place_id;
+      removedUnsupportedColumn = true;
+    }
+    if (
+      isCommentsScopeColumnMissing(error.message) &&
+      "comments_scope" in insertPayloadToApply
+    ) {
+      delete insertPayloadToApply.comments_scope;
+      removedUnsupportedColumn = true;
+    }
+    if (
+      isReactionPrivacyColumnMissing(error.message) &&
+      "reaction_privacy" in insertPayloadToApply
+    ) {
+      delete insertPayloadToApply.reaction_privacy;
+      removedUnsupportedColumn = true;
+    }
+    if (
+      isCommentsPrivacyColumnMissing(error.message) &&
+      "comments_privacy" in insertPayloadToApply
+    ) {
+      delete insertPayloadToApply.comments_privacy;
       removedUnsupportedColumn = true;
     }
 

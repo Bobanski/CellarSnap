@@ -5,7 +5,7 @@ import type {
   QprLevel,
 } from "@/lib/entryMeta";
 
-export type PrivacyLevel = "public" | "friends" | "private";
+export type PrivacyLevel = "public" | "friends_of_friends" | "friends" | "private";
 
 export type UserSummary = {
   id: string;
@@ -58,6 +58,8 @@ export type WineEntry = {
   place_image_path: string | null;
   pairing_image_path: string | null;
   entry_privacy: PrivacyLevel;
+  reaction_privacy: PrivacyLevel;
+  comments_privacy: PrivacyLevel;
   label_photo_privacy: PrivacyLevel | null;
   place_photo_privacy: PrivacyLevel | null;
   created_at: string;
@@ -91,6 +93,8 @@ export type WineEntryCreatePayload = {
   consumed_at?: string;
   tasted_with_user_ids?: string[];
   entry_privacy?: PrivacyLevel;
+  reaction_privacy?: PrivacyLevel;
+  comments_privacy?: PrivacyLevel;
   label_photo_privacy?: PrivacyLevel | null;
   place_photo_privacy?: PrivacyLevel | null;
 };
@@ -119,6 +123,8 @@ export type WineEntryUpdatePayload = Partial<{
   place_image_path: string | null;
   pairing_image_path: string | null;
   entry_privacy: PrivacyLevel;
+  reaction_privacy: PrivacyLevel;
+  comments_privacy: PrivacyLevel;
   label_photo_privacy: PrivacyLevel | null;
   place_photo_privacy: PrivacyLevel | null;
 }>;

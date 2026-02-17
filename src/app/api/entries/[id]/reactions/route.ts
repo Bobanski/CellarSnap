@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getAcceptedFriendIds } from "@/lib/access/entryVisibility";
+import { canUserViewEntry, type EntryPrivacy } from "@/lib/access/entryVisibility";
 
 const ALLOWED_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"];
 
@@ -34,44 +34,64 @@ export async function POST(
 
   const { data: entry, error: entryError } = await supabase
     .from("wine_entries")
-    .select("id, user_id, entry_privacy")
+    .select("id, user_id, entry_privacy, reaction_privacy")
     .eq("id", entryId)
-    .single();
+    .maybeSingle();
 
-  if (entryError || !entry) {
+  const legacyEntry =
+    entryError &&
+    (entryError.message.includes("reaction_privacy") || entryError.message.includes("column"))
+      ? await supabase
+          .from("wine_entries")
+          .select("id, user_id, entry_privacy")
+          .eq("id", entryId)
+          .maybeSingle()
+      : null;
+
+  const entryData = legacyEntry?.data ?? entry;
+  const effectiveEntryError = legacyEntry?.error ?? entryError;
+
+  if (effectiveEntryError || !entryData) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
-  if (entry.user_id === user.id) {
-    return NextResponse.json(
-      { error: "You cannot react to your own entry." },
-      { status: 403 }
-    );
-  }
+  const reactionPrivacyRaw = (
+    entryData as { reaction_privacy?: string | null; entry_privacy?: string | null }
+  ).reaction_privacy;
+  const reactionPrivacy: EntryPrivacy =
+    reactionPrivacyRaw === "public" ||
+    reactionPrivacyRaw === "friends_of_friends" ||
+    reactionPrivacyRaw === "friends" ||
+    reactionPrivacyRaw === "private"
+      ? reactionPrivacyRaw
+      : (entryData as { entry_privacy?: EntryPrivacy }).entry_privacy;
 
-  if (entry.entry_privacy === "private") {
-    return NextResponse.json(
-      { error: "Cannot react to a private entry." },
-      { status: 403 }
-    );
-  }
-
-  let friendIds: Set<string>;
   try {
-    friendIds = await getAcceptedFriendIds(supabase, user.id);
-  } catch (friendError) {
-    const message =
-      friendError instanceof Error
-        ? friendError.message
-        : "Unable to verify friendship.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+    const canViewEntry = await canUserViewEntry({
+      supabase,
+      viewerUserId: user.id,
+      ownerUserId: entryData.user_id,
+      entryPrivacy: (entryData as { entry_privacy?: EntryPrivacy }).entry_privacy,
+    });
+    if (!canViewEntry) {
+      return NextResponse.json({ error: "You cannot react to this entry." }, { status: 403 });
+    }
 
-  if (!friendIds.has(entry.user_id)) {
-    return NextResponse.json(
-      { error: "Only mutual friends can react to this entry." },
-      { status: 403 }
-    );
+    const canReact = await canUserViewEntry({
+      supabase,
+      viewerUserId: user.id,
+      ownerUserId: entryData.user_id,
+      entryPrivacy: reactionPrivacy,
+    });
+    if (!canReact) {
+      return NextResponse.json({ error: "You cannot react to this entry." }, { status: 403 });
+    }
+  } catch (visibilityError) {
+    const message =
+      visibilityError instanceof Error
+        ? visibilityError.message
+        : "Unable to verify entry visibility.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   const { error: insertError } = await supabase.from("entry_reactions").insert({

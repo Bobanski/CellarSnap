@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isAcceptedFriend } from "@/lib/access/entryVisibility";
+import {
+  getAcceptedFriendIds,
+  getFriendsOfFriendsIds,
+} from "@/lib/access/entryVisibility";
 
 async function createSignedUrl(
   path: string | null,
@@ -34,10 +37,24 @@ export async function GET(
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
   }
 
-  let canSeeFriendsEntries = false;
+  let allowedPrivacies: ("public" | "friends_of_friends" | "friends")[] = [
+    "public",
+  ];
   if (user.id !== userId) {
     try {
-      canSeeFriendsEntries = await isAcceptedFriend(supabase, user.id, userId);
+      const acceptedFriendIds = await getAcceptedFriendIds(supabase, user.id);
+      if (acceptedFriendIds.has(userId)) {
+        allowedPrivacies = ["public", "friends_of_friends", "friends"];
+      } else {
+        const friendsOfFriendsIds = await getFriendsOfFriendsIds(
+          supabase,
+          user.id,
+          acceptedFriendIds
+        );
+        if (friendsOfFriendsIds.has(userId)) {
+          allowedPrivacies = ["public", "friends_of_friends"];
+        }
+      }
     } catch (friendError) {
       const message =
         friendError instanceof Error
@@ -53,9 +70,7 @@ export async function GET(
     .eq("user_id", userId);
 
   if (user.id !== userId) {
-    entriesQuery = canSeeFriendsEntries
-      ? entriesQuery.in("entry_privacy", ["public", "friends"])
-      : entriesQuery.eq("entry_privacy", "public");
+    entriesQuery = entriesQuery.in("entry_privacy", allowedPrivacies);
   }
 
   const { data, error } = await entriesQuery.order("created_at", {
