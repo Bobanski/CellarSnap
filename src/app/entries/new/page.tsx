@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,9 +9,9 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
-import PriceCurrencySelect from "@/components/PriceCurrencySelect";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
+import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import { extractGpsFromFile } from "@/lib/exifGps";
 import {
   ADVANCED_NOTE_FIELDS,
@@ -22,8 +22,6 @@ import {
 } from "@/lib/advancedNotes";
 import {
   type PricePaidCurrency,
-  PRICE_PAID_SOURCE_LABELS,
-  PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_LABELS,
   type PricePaidSource,
   type QprLevel,
@@ -83,12 +81,26 @@ type ComparisonResponse = "more" | "less" | "same_or_not_sure";
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 type UploadPhotoType = EntryPhotoType;
 type ManualUploadPhotoType = "label" | "place" | "pairing";
+type UploadPhoto = {
+  file: File;
+  preview: string;
+  originalFile: File;
+};
 type ContextPhotoTag =
   | "place"
   | "pairing"
   | "people"
   | "other_bottles"
   | "unknown";
+
+const PHOTO_TYPE_OPTIONS: { value: UploadPhotoType; label: string }[] = [
+  { value: "label", label: "Label" },
+  { value: "pairing", label: "Pairing" },
+  { value: "people", label: "People" },
+  { value: "other_bottles", label: "Other bottles" },
+  { value: "lineup", label: "Lineup" },
+  { value: "place", label: "Place" },
+];
 
 export default function NewEntryPage() {
   const router = useRouter();
@@ -131,25 +143,12 @@ export default function NewEntryPage() {
       control,
       name: "comments_privacy",
     }) ?? "public";
-  const selectedPricePaidSource =
-    useWatch({
-      control,
-      name: "price_paid_source",
-    }) ?? "";
-  const selectedPricePaidCurrency =
-    useWatch({
-      control,
-      name: "price_paid_currency",
-    }) || "usd";
-  const [labelPhotos, setLabelPhotos] = useState<
-    { file: File; preview: string }[]
-  >([]);
-  const [placePhotos, setPlacePhotos] = useState<
-    { file: File; preview: string }[]
-  >([]);
-  const [pairingPhotos, setPairingPhotos] = useState<
-    { file: File; preview: string }[]
-  >([]);
+  const [labelPhotos, setLabelPhotos] = useState<UploadPhoto[]>([]);
+  const [placePhotos, setPlacePhotos] = useState<UploadPhoto[]>([]);
+  const [pairingPhotos, setPairingPhotos] = useState<UploadPhoto[]>([]);
+  const [photoTypeOverrides, setPhotoTypeOverrides] = useState<
+    Record<string, UploadPhotoType>
+  >({});
   const [autofillStatus, setAutofillStatus] = useState<
     "idle" | "loading" | "success" | "error" | "timeout"
   >("idle");
@@ -174,7 +173,44 @@ export default function NewEntryPage() {
   const [isSubmittingComparison, setIsSubmittingComparison] = useState(false);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
-  const labelPhotosRef = useRef<{ file: File; preview: string }[]>([]);
+  const labelPhotosRef = useRef<UploadPhoto[]>([]);
+  const [cropPhotoIndex, setCropPhotoIndex] = useState<number | null>(null);
+  const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [cropCenterX, setCropCenterX] = useState(50);
+  const [cropCenterY, setCropCenterY] = useState(50);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [savingCrop, setSavingCrop] = useState(false);
+  const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
+  const [cropSourceLoading, setCropSourceLoading] = useState(false);
+  const MIN_CROP_ZOOM = 1;
+  const MAX_CROP_ZOOM = 6;
+  const cropFrameRef = useRef<HTMLDivElement | null>(null);
+  const cropDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startCenterX: number;
+    startCenterY: number;
+  } | null>(null);
+  const cropTouchRef = useRef<
+    | {
+        mode: "drag";
+        startX: number;
+        startY: number;
+        startCenterX: number;
+        startCenterY: number;
+      }
+    | {
+        mode: "pinch";
+        startDistance: number;
+        startZoom: number;
+      }
+    | null
+  >(null);
 
   // Lineup detection state
   type BottleBbox = {
@@ -254,7 +290,6 @@ export default function NewEntryPage() {
   const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
   const [lineupCreating, setLineupCreating] = useState(false);
   const [lineupCreatedCount, setLineupCreatedCount] = useState(0);
-  const [lineupSourceFiles, setLineupSourceFiles] = useState<File[]>([]);
   const [lineupSourceAnalysis, setLineupSourceAnalysis] = useState<
     SourcePhotoAnalysis[]
   >([]);
@@ -335,6 +370,17 @@ export default function NewEntryPage() {
     labelPhotosRef.current = labelPhotos;
   }, [labelPhotos]);
 
+  useEffect(() => {
+    if (cropPhotoIndex === null) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [cropPhotoIndex]);
+
   const MAX_PHOTOS = MAX_ENTRY_PHOTOS_PER_TYPE;
   const MAX_UPLOAD_RETRIES = 3;
   const BULK_CREATE_CONCURRENCY = 4;
@@ -368,6 +414,7 @@ export default function NewEntryPage() {
       const next = list.slice(0, remaining).map((file) => ({
         file,
         preview: URL.createObjectURL(file),
+        originalFile: file,
       }));
       if (next.length === 0) return;
       const combined = [...current, ...next];
@@ -384,6 +431,7 @@ export default function NewEntryPage() {
         const next = list.slice(0, remaining).map((file) => ({
           file,
           preview: URL.createObjectURL(file),
+          originalFile: file,
         }));
         return [...prev, ...next];
       });
@@ -396,61 +444,410 @@ export default function NewEntryPage() {
       const next = list.slice(0, remaining).map((file) => ({
         file,
         preview: URL.createObjectURL(file),
+        originalFile: file,
       }));
       return [...prev, ...next];
     });
   };
 
-  const removePhoto = (
-    type: ManualUploadPhotoType,
-    index: number
-  ) => {
-    if (type === "label") {
-      setLabelPhotos((prev) => {
-        const target = prev[index];
-        if (target) URL.revokeObjectURL(target.preview);
-        return prev.filter((_, i) => i !== index);
-      });
+  const removeLabelPhotoAtIndex = (index: number) => {
+    const current = labelPhotosRef.current;
+    const target = current[index];
+    if (!target) {
       return;
     }
-    if (type === "place") {
-      setPlacePhotos((prev) => {
-        const target = prev[index];
-        if (target) URL.revokeObjectURL(target.preview);
-        return prev.filter((_, i) => i !== index);
-      });
-      return;
+    URL.revokeObjectURL(target.preview);
+    const nextPhotos = current.filter((_, photoIndex) => photoIndex !== index);
+    labelPhotosRef.current = nextPhotos;
+    setLabelPhotos(nextPhotos);
+    setPhotoTypeOverrides((existing) => {
+      if (!existing[target.preview]) {
+        return existing;
+      }
+      const next = { ...existing };
+      delete next[target.preview];
+      return next;
+    });
+    if (nextPhotos.length > 0) {
+      runAnalysis(nextPhotos.map((photo) => photo.file));
+    } else {
+      setAutofillStatus("idle");
+      setAutofillMessage(null);
+      resetAutotagState();
     }
-    setPairingPhotos((prev) => {
-      const target = prev[index];
-      if (target) URL.revokeObjectURL(target.preview);
-      return prev.filter((_, i) => i !== index);
+  };
+
+  const loadImageElement = async (sourceUrl: string) => {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Unable to load image."));
+      image.src = sourceUrl;
     });
   };
 
-  const movePhoto = (
-    type: ManualUploadPhotoType,
-    index: number,
-    direction: "up" | "down"
+  const closeCropEditor = () => {
+    if (savingCrop) {
+      return;
+    }
+    setCropPhotoIndex(null);
+    setCropSourceUrl(null);
+    setCropSourceLoading(false);
+    setIsDraggingCrop(false);
+    cropDragRef.current = null;
+    cropTouchRef.current = null;
+  };
+
+  const openCropEditor = (photoIndex: number) => {
+    const target = labelPhotos[photoIndex];
+    if (!target) {
+      return;
+    }
+    setCropPhotoIndex(photoIndex);
+    setCropSourceLoading(true);
+    setCropSourceUrl(null);
+    setCropImageNaturalSize(null);
+    setCropCenterX(50);
+    setCropCenterY(50);
+    setCropZoom(MIN_CROP_ZOOM);
+    setIsDraggingCrop(false);
+    cropDragRef.current = null;
+    cropTouchRef.current = null;
+    setErrorMessage(null);
+    // For unsaved uploads, the current in-memory file is the source.
+    setCropSourceUrl(target.preview);
+    setCropSourceLoading(false);
+  };
+
+  const getCropGeometry = (
+    natural = cropImageNaturalSize,
+    zoom = cropZoom
   ) => {
-    const swap = (list: { file: File; preview: string }[]) => {
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= list.length) return list;
-      const copy = [...list];
-      const temp = copy[index];
-      copy[index] = copy[targetIndex];
-      copy[targetIndex] = temp;
-      return copy;
+    const frameSize = cropFrameRef.current?.clientWidth ?? 0;
+    if (!natural || frameSize <= 0) {
+      return null;
+    }
+
+    const baseScale = Math.min(frameSize / natural.width, frameSize / natural.height);
+    const effectiveScale = baseScale * zoom;
+    const displayWidth = natural.width * effectiveScale;
+    const displayHeight = natural.height * effectiveScale;
+    const overflowX = Math.max(0, displayWidth - frameSize);
+    const overflowY = Math.max(0, displayHeight - frameSize);
+
+    return {
+      frameSize,
+      displayWidth,
+      displayHeight,
+      overflowX,
+      overflowY,
     };
-    if (type === "label") {
-      setLabelPhotos((prev) => swap(prev));
+  };
+
+  const clampZoom = (zoom: number) =>
+    Math.min(MAX_CROP_ZOOM, Math.max(MIN_CROP_ZOOM, zoom));
+
+  const clampCenter = (
+    nextCenterX: number,
+    nextCenterY: number,
+    zoom = cropZoom
+  ) => {
+    const geometry = getCropGeometry(cropImageNaturalSize, zoom);
+    if (!geometry) {
+      return { x: nextCenterX, y: nextCenterY };
+    }
+
+    const clampValue = (value: number, overflow: number) => {
+      if (overflow <= 0) {
+        return 50;
+      }
+      return Math.max(0, Math.min(100, value));
+    };
+
+    return {
+      x: clampValue(nextCenterX, geometry.overflowX),
+      y: clampValue(nextCenterY, geometry.overflowY),
+    };
+  };
+
+  const onCropPointerDown = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (!cropSourceUrl || savingCrop || event.pointerType === "touch") {
       return;
     }
-    if (type === "place") {
-      setPlacePhotos((prev) => swap(prev));
+    event.preventDefault();
+    cropDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startCenterX: cropCenterX,
+      startCenterY: cropCenterY,
+    };
+    setIsDraggingCrop(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onCropPointerMove = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (savingCrop || event.pointerType === "touch") {
       return;
     }
-    setPairingPhotos((prev) => swap(prev));
+    const drag = cropDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    const geometry = getCropGeometry();
+    if (!geometry) {
+      return;
+    }
+
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    const percentX =
+      geometry.overflowX > 0 ? (deltaX / geometry.overflowX) * 100 : 0;
+    const percentY =
+      geometry.overflowY > 0 ? (deltaY / geometry.overflowY) * 100 : 0;
+    const clamped = clampCenter(
+      drag.startCenterX - percentX,
+      drag.startCenterY - percentY
+    );
+    setCropCenterX(clamped.x);
+    setCropCenterY(clamped.y);
+  };
+
+  const onCropPointerUp = (event: React.PointerEvent<HTMLImageElement>) => {
+    if (savingCrop || event.pointerType === "touch") {
+      return;
+    }
+    const drag = cropDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    cropDragRef.current = null;
+    setIsDraggingCrop(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const getTouchDistance = (
+    a: { clientX: number; clientY: number },
+    b: { clientX: number; clientY: number }
+  ) =>
+    Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+  const onCropTouchStart = (event: React.TouchEvent<HTMLImageElement>) => {
+    if (!cropSourceUrl || savingCrop) {
+      return;
+    }
+    if (event.touches.length >= 2) {
+      const first = event.touches[0];
+      const second = event.touches[1];
+      if (!first || !second) {
+        return;
+      }
+      event.preventDefault();
+      cropTouchRef.current = {
+        mode: "pinch",
+        startDistance: getTouchDistance(first, second),
+        startZoom: cropZoom,
+      };
+      cropDragRef.current = null;
+      setIsDraggingCrop(false);
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+    event.preventDefault();
+    cropTouchRef.current = {
+      mode: "drag",
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startCenterX: cropCenterX,
+      startCenterY: cropCenterY,
+    };
+    setIsDraggingCrop(true);
+  };
+
+  const onCropTouchMove = (event: React.TouchEvent<HTMLImageElement>) => {
+    const touchState = cropTouchRef.current;
+    if (!touchState || savingCrop) {
+      return;
+    }
+
+    if (touchState.mode === "pinch") {
+      if (event.touches.length < 2) {
+        return;
+      }
+      const first = event.touches[0];
+      const second = event.touches[1];
+      if (!first || !second) {
+        return;
+      }
+      event.preventDefault();
+      const distance = getTouchDistance(first, second);
+      if (!Number.isFinite(distance) || distance <= 0) {
+        return;
+      }
+      const scale = distance / Math.max(1, touchState.startDistance);
+      const nextZoom = clampZoom(touchState.startZoom * scale);
+      setCropZoom(nextZoom);
+      const centered = clampCenter(cropCenterX, cropCenterY, nextZoom);
+      setCropCenterX(centered.x);
+      setCropCenterY(centered.y);
+      return;
+    }
+
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+    event.preventDefault();
+    const geometry = getCropGeometry();
+    if (!geometry) {
+      return;
+    }
+    const deltaX = touch.clientX - touchState.startX;
+    const deltaY = touch.clientY - touchState.startY;
+    const percentX =
+      geometry.overflowX > 0 ? (deltaX / geometry.overflowX) * 100 : 0;
+    const percentY =
+      geometry.overflowY > 0 ? (deltaY / geometry.overflowY) * 100 : 0;
+    const clamped = clampCenter(
+      touchState.startCenterX - percentX,
+      touchState.startCenterY - percentY
+    );
+    setCropCenterX(clamped.x);
+    setCropCenterY(clamped.y);
+  };
+
+  const onCropTouchEnd = (event: React.TouchEvent<HTMLImageElement>) => {
+    if (savingCrop) {
+      return;
+    }
+    if (event.touches.length >= 2) {
+      const first = event.touches[0];
+      const second = event.touches[1];
+      if (!first || !second) {
+        return;
+      }
+      cropTouchRef.current = {
+        mode: "pinch",
+        startDistance: getTouchDistance(first, second),
+        startZoom: cropZoom,
+      };
+      setIsDraggingCrop(false);
+      return;
+    }
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      if (!touch) {
+        return;
+      }
+      cropTouchRef.current = {
+        mode: "drag",
+        startX: touch.clientX,
+        startY: touch.clientY,
+        startCenterX: cropCenterX,
+        startCenterY: cropCenterY,
+      };
+      setIsDraggingCrop(true);
+      return;
+    }
+    cropTouchRef.current = null;
+    setIsDraggingCrop(false);
+  };
+
+  const saveCrop = async () => {
+    if (cropPhotoIndex === null || !cropSourceUrl) {
+      return;
+    }
+    const targetPhoto = labelPhotos[cropPhotoIndex];
+    if (!targetPhoto) {
+      return;
+    }
+
+    setSavingCrop(true);
+    setErrorMessage(null);
+
+    try {
+      const sourceImage = await loadImageElement(cropSourceUrl);
+      const outputSize = 1200;
+      const canvas = document.createElement("canvas");
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Unable to create crop canvas.");
+      }
+
+      const baseScale = Math.min(
+        outputSize / sourceImage.width,
+        outputSize / sourceImage.height
+      );
+      const effectiveScale = baseScale * cropZoom;
+      const displayWidth = sourceImage.width * effectiveScale;
+      const displayHeight = sourceImage.height * effectiveScale;
+      const overflowX = Math.max(0, displayWidth - outputSize);
+      const overflowY = Math.max(0, displayHeight - outputSize);
+      const centerPadX = Math.max(0, (outputSize - displayWidth) / 2);
+      const centerPadY = Math.max(0, (outputSize - displayHeight) / 2);
+      const drawX = centerPadX - overflowX * (cropCenterX / 100);
+      const drawY = centerPadY - overflowY * (cropCenterY / 100);
+
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, outputSize, outputSize);
+      ctx.drawImage(sourceImage, drawX, drawY, displayWidth, displayHeight);
+
+      const croppedBlob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.9)
+      );
+      if (!croppedBlob) {
+        throw new Error("Unable to render cropped image.");
+      }
+
+      const nextFileName = targetPhoto.file.name.replace(/\.[a-z0-9]+$/i, "") || "photo";
+      const croppedFile = new File([croppedBlob], `${nextFileName}-crop.jpg`, {
+        type: "image/jpeg",
+      });
+      const nextPreview = URL.createObjectURL(croppedFile);
+
+      setLabelPhotos((prev) =>
+        prev.map((photo, index) => {
+          if (index !== cropPhotoIndex) {
+            return photo;
+          }
+          URL.revokeObjectURL(photo.preview);
+          return {
+            ...photo,
+            file: croppedFile,
+            preview: nextPreview,
+          };
+        })
+      );
+      setPhotoTypeOverrides((current) => {
+        const currentOverride = current[targetPhoto.preview];
+        if (!currentOverride) {
+          return current;
+        }
+        const next = { ...current };
+        delete next[targetPhoto.preview];
+        next[nextPreview] = currentOverride;
+        return next;
+      });
+      setCropPhotoIndex(null);
+      setCropSourceUrl(null);
+      setCropSourceLoading(false);
+      setIsDraggingCrop(false);
+      cropDragRef.current = null;
+      cropTouchRef.current = null;
+    } catch {
+      setErrorMessage("Unable to save photo crop.");
+    } finally {
+      setSavingCrop(false);
+    }
   };
 
   type UploadPhotoOptions = {
@@ -932,26 +1329,98 @@ export default function NewEntryPage() {
 
   const resetAutotagState = () => {
     clearLineupReviewState();
-    setLineupSourceFiles([]);
     setLineupSourceAnalysis([]);
   };
 
   const isPeoplePlaceOrPairingTag = (tag: ContextPhotoTag) =>
     tag === "people" || tag === "place" || tag === "pairing";
 
-  const shouldTreatAsOtherBottles = (
-    analysis: SourcePhotoAnalysis | null
+  const resolvePrimaryLabelPhotoIndex = (
+    photos: UploadPhoto[],
+    sourceAnalysisByIndex: Map<number, SourcePhotoAnalysis>
   ) => {
-    if (!analysis || analysis.role === "lineup") {
-      return false;
+    if (photos.length === 0) {
+      return -1;
     }
-    if (isPeoplePlaceOrPairingTag(analysis.contextTag)) {
-      return false;
+    const manualLabelIndex = photos.findIndex(
+      (photo) => photoTypeOverrides[photo.preview] === "label"
+    );
+    if (manualLabelIndex >= 0) {
+      return manualLabelIndex;
     }
-    if (analysis.contextTag === "other_bottles") {
-      return true;
+    const firstIndividual = photos.findIndex(
+      (_photo, index) => sourceAnalysisByIndex.get(index)?.role === "individual"
+    );
+    if (firstIndividual >= 0) {
+      return firstIndividual;
     }
-    return analysis.role === "individual";
+    const firstLineup = photos.findIndex(
+      (_photo, index) => sourceAnalysisByIndex.get(index)?.role === "lineup"
+    );
+    if (firstLineup >= 0) {
+      return firstLineup;
+    }
+    return 0;
+  };
+
+  const resolvePhotoTypeAtIndex = ({
+    photoIndex,
+    photos,
+    sourceAnalysisByIndex,
+    primaryLabelIndex,
+  }: {
+    photoIndex: number;
+    photos: UploadPhoto[];
+    sourceAnalysisByIndex: Map<number, SourcePhotoAnalysis>;
+    primaryLabelIndex: number;
+  }): UploadPhotoType => {
+    const photo = photos[photoIndex];
+    if (!photo) {
+      return "other_bottles";
+    }
+    const manualType = photoTypeOverrides[photo.preview];
+    if (manualType) {
+      return manualType;
+    }
+
+    const analysis = sourceAnalysisByIndex.get(photoIndex) ?? null;
+    if (analysis?.role === "lineup") {
+      return "lineup";
+    }
+    if (analysis?.contextTag === "place") {
+      return "place";
+    }
+    if (analysis?.contextTag === "pairing") {
+      return "pairing";
+    }
+    if (analysis?.contextTag === "people") {
+      return "people";
+    }
+    if (photoIndex === primaryLabelIndex) {
+      return "label";
+    }
+    return "other_bottles";
+  };
+
+  const buildResolvedPhotoTypeMap = (
+    photos: UploadPhoto[],
+    sourceAnalysisByIndex: Map<number, SourcePhotoAnalysis>
+  ) => {
+    const primaryLabelIndex = resolvePrimaryLabelPhotoIndex(
+      photos,
+      sourceAnalysisByIndex
+    );
+    return new Map(
+      photos.map((_, photoIndex) => [
+        photoIndex,
+        resolvePhotoTypeAtIndex({
+          photoIndex,
+          photos,
+          sourceAnalysisByIndex,
+          primaryLabelIndex,
+        }),
+      ])
+    );
   };
 
   const buildOriginalPath = (path: string) => {
@@ -1149,12 +1618,15 @@ export default function NewEntryPage() {
     }
 
     try {
-      const sourceFiles = labelPhotos.map((photo) => photo.file);
+      const sourcePhotos = labelPhotos;
+      const sourceFiles = sourcePhotos.map((photo) => photo.file);
       const sourceAnalysisByIndex = new Map(
         lineupSourceAnalysis.map((analysis) => [analysis.photoIndex, analysis])
       );
-      const getSourceAnalysis = (photoIndex: number): SourcePhotoAnalysis | null =>
-        sourceAnalysisByIndex.get(photoIndex) ?? null;
+      const resolvedPhotoTypeByIndex = buildResolvedPhotoTypeMap(
+        sourcePhotos,
+        sourceAnalysisByIndex
+      );
       const dedupeFiles = (files: File[]) => {
         const seen = new Set<File>();
         return files.filter((file) => {
@@ -1170,49 +1642,53 @@ export default function NewEntryPage() {
           .slice(0, MAX_PHOTOS)
           .map((file) => ({ file }));
 
-      const primaryLabelIndex =
-        sourceFiles.findIndex(
-          (_file, index) => getSourceAnalysis(index)?.role === "individual"
-        ) >= 0
-          ? sourceFiles.findIndex(
-              (_file, index) => getSourceAnalysis(index)?.role === "individual"
-            )
-          : sourceFiles.findIndex(
-              (_file, index) => getSourceAnalysis(index)?.role === "lineup"
-            ) >= 0
-          ? sourceFiles.findIndex(
-              (_file, index) => getSourceAnalysis(index)?.role === "lineup"
-            )
-          : sourceFiles.length > 0
-          ? 0
-          : -1;
+      const labelIndexes = sourcePhotos
+        .map((photo, index) => ({ photo, index }))
+        .filter(
+          ({ index }) => resolvedPhotoTypeByIndex.get(index) === "label"
+        );
+      const fallbackLabelIndex =
+        labelIndexes.length === 0 && sourcePhotos.length > 0 ? 0 : -1;
+      const labelUploads = (
+        labelIndexes.length > 0
+          ? labelIndexes.map(({ photo }) => ({
+              file: photo.file,
+              originalFile: photo.originalFile ?? photo.file,
+            }))
+          : fallbackLabelIndex >= 0 && sourcePhotos[fallbackLabelIndex]
+          ? [
+              {
+                file: sourcePhotos[fallbackLabelIndex].file,
+                originalFile:
+                  sourcePhotos[fallbackLabelIndex].originalFile ??
+                  sourcePhotos[fallbackLabelIndex].file,
+              },
+            ]
+          : []
+      ).slice(0, MAX_PHOTOS);
 
-      const labelUploads =
-        primaryLabelIndex >= 0 && sourceFiles[primaryLabelIndex]
-          ? [{ file: sourceFiles[primaryLabelIndex], originalFile: sourceFiles[primaryLabelIndex] }]
-          : [];
       const lineupUploads = sourceFiles.filter(
-        (_file, index) => getSourceAnalysis(index)?.role === "lineup"
+        (_file, index) => resolvedPhotoTypeByIndex.get(index) === "lineup"
       );
       const otherBottleUploads = sourceFiles.filter((_file, index) => {
-        if (index === primaryLabelIndex) {
+        if (index === fallbackLabelIndex) {
           return false;
         }
-        return shouldTreatAsOtherBottles(getSourceAnalysis(index));
+        return resolvedPhotoTypeByIndex.get(index) === "other_bottles";
       });
       const placeUploads = [
         ...placePhotos.map((photo) => photo.file),
         ...sourceFiles.filter(
-          (_file, index) => getSourceAnalysis(index)?.contextTag === "place"
+          (_file, index) => resolvedPhotoTypeByIndex.get(index) === "place"
         ),
       ];
       const peopleUploads = sourceFiles.filter(
-        (_file, index) => getSourceAnalysis(index)?.contextTag === "people"
+        (_file, index) => resolvedPhotoTypeByIndex.get(index) === "people"
       );
       const pairingUploads = [
         ...pairingPhotos.map((photo) => photo.file),
         ...sourceFiles.filter(
-          (_file, index) => getSourceAnalysis(index)?.contextTag === "pairing"
+          (_file, index) => resolvedPhotoTypeByIndex.get(index) === "pairing"
         ),
       ];
 
@@ -1563,17 +2039,17 @@ export default function NewEntryPage() {
     setAutofillStatus("loading");
     setAutofillMessage("Resolving grape varieties...");
 
-    const sourceFiles =
-      lineupSourceFiles.length > 0
-        ? lineupSourceFiles
-        : labelPhotos.map((photo) => photo.file);
+    const sourcePhotos = labelPhotos;
+    const sourceFiles = sourcePhotos.map((photo) => photo.file);
     const sourceAnalysisByIndex = new Map(
       lineupSourceAnalysis.map((analysis) => [analysis.photoIndex, analysis])
     );
-    const getSourceRole = (photoIndex: number): SourcePhotoRole =>
-      sourceAnalysisByIndex.get(photoIndex)?.role ?? "unknown";
     const getSourceAnalysis = (photoIndex: number): SourcePhotoAnalysis | null =>
       sourceAnalysisByIndex.get(photoIndex) ?? null;
+    const resolvedPhotoTypeByIndex = buildResolvedPhotoTypeMap(
+      sourcePhotos,
+      sourceAnalysisByIndex
+    );
 
     const dedupeFiles = (files: File[]) => {
       const seen = new Set<File>();
@@ -1591,26 +2067,23 @@ export default function NewEntryPage() {
         .map((file) => ({ file }));
 
     const lineupContextFiles = sourceFiles.filter(
-      (_file, photoIndex) => getSourceRole(photoIndex) === "lineup"
+      (_file, photoIndex) => resolvedPhotoTypeByIndex.get(photoIndex) === "lineup"
     );
     const placeContextFiles = dedupeFiles([
       ...placePhotos.map((photo) => photo.file),
       ...sourceFiles.filter((_file, photoIndex) => {
-        const tag = getSourceAnalysis(photoIndex)?.contextTag ?? "unknown";
-        return tag === "place";
+        return resolvedPhotoTypeByIndex.get(photoIndex) === "place";
       }),
     ]);
     const peopleContextFiles = dedupeFiles(
       sourceFiles.filter((_file, photoIndex) => {
-        const tag = getSourceAnalysis(photoIndex)?.contextTag ?? "unknown";
-        return tag === "people";
+        return resolvedPhotoTypeByIndex.get(photoIndex) === "people";
       })
     );
     const pairingContextFiles = dedupeFiles([
       ...pairingPhotos.map((photo) => photo.file),
       ...sourceFiles.filter((_file, photoIndex) => {
-        const tag = getSourceAnalysis(photoIndex)?.contextTag ?? "unknown";
-        return tag === "pairing";
+        return resolvedPhotoTypeByIndex.get(photoIndex) === "pairing";
       }),
     ]);
 
@@ -1723,7 +2196,7 @@ export default function NewEntryPage() {
               const otherBottleContextFiles = sourceFiles.filter(
                 (_file, photoIndex) =>
                   photoIndex !== wine.photoIndex &&
-                  shouldTreatAsOtherBottles(getSourceAnalysis(photoIndex))
+                  resolvedPhotoTypeByIndex.get(photoIndex) === "other_bottles"
               );
 
               const uploadJobs: Promise<void>[] = [];
@@ -1929,7 +2402,6 @@ export default function NewEntryPage() {
         : `Extracting wine details from ${files.length} photos. Please allow more time for larger lineups.`
     );
     resetAutotagState();
-    setLineupSourceFiles(files);
 
     const resized = await Promise.all(
       files.map((f) => createAutofillImage(f))
@@ -2389,7 +2861,53 @@ export default function NewEntryPage() {
   const newlyLoggedWinePreviewUrl = labelPhotos[0]?.preview ?? null;
   const showSingleBottleFields = lineupWines.length === 0 && !lineupCreating;
   const canAddLabelPhoto = labelPhotos.length < MAX_PHOTOS;
-  const labelTileCount = labelPhotos.length + (canAddLabelPhoto ? 1 : 0);
+  const sourceAnalysisByPhotoIndex = useMemo(
+    () =>
+      new Map(lineupSourceAnalysis.map((analysis) => [analysis.photoIndex, analysis])),
+    [lineupSourceAnalysis]
+  );
+  const resolvedPhotoTypeByIndex = buildResolvedPhotoTypeMap(
+    labelPhotos,
+    sourceAnalysisByPhotoIndex
+  );
+  const collapsibleSectionClassName =
+    "group rounded-2xl border border-white/10 bg-black/30 p-4";
+  const collapsibleSummaryClassName =
+    "cursor-pointer list-none select-none text-sm font-medium text-zinc-200 [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
+  const uploadGalleryItems = labelPhotos.map((photo, index) => ({
+    id: String(index),
+    url: photo.preview,
+    alt: `Upload preview ${index + 1}`,
+    badge: (
+      <label className="relative block">
+        <select
+          value={resolvedPhotoTypeByIndex.get(index) ?? "other_bottles"}
+          className="max-w-[9rem] appearance-none rounded-full border border-white/10 bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-zinc-300 outline-none transition hover:border-white/20 focus:border-amber-300/50"
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const nextType = event.target.value as UploadPhotoType;
+            setPhotoTypeOverrides((current) => ({
+              ...current,
+              [photo.preview]: nextType,
+            }));
+          }}
+        >
+          {PHOTO_TYPE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+          ▾
+        </span>
+      </label>
+    ),
+  }));
+  const showProcessedGallery =
+    uploadGalleryItems.length > 0 && autofillStatus !== "loading";
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -2414,184 +2932,136 @@ export default function NewEntryPage() {
             className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
             onSubmit={onSubmit}
           >
-            <div
-              className={`grid gap-4 ${
-                showSingleBottleFields ? "md:grid-cols-3" : ""
-              }`}
-            >
-              <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
-                <div className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2">
-                  <div className="min-w-0">
-                    <label
-                      className="block text-sm font-medium text-zinc-200"
-                      htmlFor="label-upload"
-                    >
-                      Photos
-                    </label>
-                    <span className="mt-1 inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90 md:hidden">
-                      Recommended
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-end gap-2">
-                    {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
-                      <>
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/20 text-sm text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 md:hidden"
-                          onClick={() => {
-                            if (labelPhotos.length > 0) {
-                              runAnalysis(labelPhotos.map((p) => p.file));
-                            }
-                          }}
-                          aria-label="Try analyzing label photo again"
-                        >
-                          ↻
-                        </button>
-                        <button
-                          type="button"
-                          className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-60 md:inline-flex"
-                          onClick={() => {
-                            if (labelPhotos.length > 0) {
-                              runAnalysis(labelPhotos.map((p) => p.file));
-                            }
-                          }}
-                        >
-                          Try again
-                        </button>
-                      </>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
-                      onClick={() => labelInputRef.current?.click()}
-                      disabled={!canAddLabelPhoto}
-                    >
-                      Upload
-                    </button>
-                    <span className="hidden rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/90 md:inline-flex">
-                      Recommended
-                    </span>
-                  </div>
-                  <p className="col-span-2 text-xs text-zinc-400">
-                    Upload bottle, lineup, place, pairing, and people photos. AI auto-tags them.
+            <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 space-y-1">
+                  <label
+                    className="block text-sm font-medium text-zinc-200"
+                    htmlFor="label-upload"
+                  >
+                    Upload images
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    Upload the wine you drank plus anything else you want to include
+                    (pairing, place, people), and we&apos;ll organize it.
                   </p>
                 </div>
-                <input
-                  ref={labelInputRef}
-                  id="label-upload"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => {
-                    if (!event.target.files) return;
-                    addPhotos("label", event.target.files);
-                    event.target.value = "";
-                  }}
-                />
-                <div
-                  className={`${labelPhotos.length > 0 ? "mt-3" : "mt-0 md:mt-3"} grid gap-2 ${
-                    labelPhotos.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                  } ${labelTileCount > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}
-                >
-                  {labelPhotos.map((photo, index) => (
-                    <div
-                      key={photo.preview}
-                      className="group relative overflow-hidden rounded-2xl border border-white/10"
-                    >
-                              <img
-                                src={photo.preview}
-                                alt={`Photo preview ${index + 1}`}
-                                className="h-16 w-full object-cover sm:h-20"
-                              />
-                      {labelPhotos.length > 1 ? (
-                        <div className="absolute left-2 top-2 hidden items-center gap-1 group-hover:flex">
-                          <button
-                            type="button"
-                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                            disabled={index === 0}
-                            onClick={() => movePhoto("label", index, "up")}
-                            aria-label="Move label photo up"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            className="h-7 w-7 rounded-full border border-white/20 bg-black/60 text-xs text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                            disabled={index === labelPhotos.length - 1}
-                            onClick={() => movePhoto("label", index, "down")}
-                            aria-label="Move label photo down"
-                          >
-                            ↓
-                          </button>
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-sm text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
-                        aria-label="Remove label photo"
-                        onClick={() => {
-                          removePhoto("label", index);
-                          if (index === 0) {
-                            setAutofillStatus("idle");
-                            setAutofillMessage(null);
-                            resetAutotagState();
-                          }
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {canAddLabelPhoto ? (
+                <div className="flex items-center gap-2">
+                  {labelPhotos.length > 0 && autofillStatus !== "loading" ? (
                     <button
                       type="button"
-                      className="hidden h-16 w-full items-center justify-center rounded-2xl border border-dashed border-white/15 bg-black/10 text-zinc-500 transition hover:border-amber-300/50 hover:text-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-40 sm:h-20 md:flex"
-                      onClick={() => labelInputRef.current?.click()}
-                      disabled={!canAddLabelPhoto}
-                      aria-label="Upload label photo"
+                      className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      onClick={() => {
+                        if (labelPhotos.length > 0) {
+                          runAnalysis(labelPhotos.map((photo) => photo.file));
+                        }
+                      }}
                     >
-                      <svg
-                        aria-hidden="true"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="h-5 w-5"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 4.5v15m7.5-7.5h-15"
-                        />
-                      </svg>
+                      Re-scan
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => labelInputRef.current?.click()}
+                    disabled={!canAddLabelPhoto || autofillStatus === "loading"}
+                  >
+                    {labelPhotos.length > 0 ? "Add images" : "Upload images"}
+                  </button>
                 </div>
-                  {autofillMessage ? (
-                    autofillStatus === "loading" ? (
-                      <div
-                        className="mt-2 flex items-center gap-2 text-sm text-emerald-300"
-                        role="status"
-                        aria-live="polite"
-                      >
-                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-300 border-t-transparent" />
-                        <span>{autofillMessage}</span>
-                      </div>
-                    ) : (
-                      <p
-                        className={`mt-2 text-sm ${
-                          autofillStatus === "error" || autofillStatus === "timeout"
-                            ? "text-rose-300"
-                            : "text-emerald-300"
-                        }`}
-                        role="status"
-                        aria-live="polite"
-                      >
-                        {autofillMessage}
-                      </p>
-                    )
-                  ) : null}
+              </div>
+
+              <input
+                ref={labelInputRef}
+                id="label-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  if (!event.target.files) return;
+                  addPhotos("label", event.target.files);
+                  event.target.value = "";
+                }}
+              />
+
+              {showProcessedGallery ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium text-zinc-200">Current photos</p>
+                  <SwipePhotoGallery
+                    items={uploadGalleryItems}
+                    heightClassName="h-64 sm:h-80"
+                    empty="No photos uploaded yet."
+                    footer={(active, activeIndex) => {
+                      const activePhotoIndex =
+                        typeof active.id === "string" ? Number(active.id) : -1;
+                      const activePhoto =
+                        Number.isFinite(activePhotoIndex) && activePhotoIndex >= 0
+                          ? labelPhotos[activePhotoIndex] ?? null
+                          : null;
+                      return (
+                        <>
+                          <span className="text-xs text-zinc-300">
+                            {activeIndex + 1} of {uploadGalleryItems.length}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {activePhoto ? (
+                              <button
+                                type="button"
+                                className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => openCropEditor(activePhotoIndex)}
+                                disabled={savingCrop || cropSourceLoading}
+                              >
+                                Crop
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
+                              onClick={() => {
+                                if (activePhotoIndex >= 0) {
+                                  removeLabelPhotoAtIndex(activePhotoIndex);
+                                }
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </>
+                      );
+                    }}
+                  />
+                </div>
+              ) : labelPhotos.length > 0 ? (
+                <p className="mt-3 text-xs text-zinc-500">
+                  Photos uploaded. Waiting for AI processing to complete...
+                </p>
+              ) : null}
+
+              {autofillMessage ? (
+                autofillStatus === "loading" ? (
+                  <div
+                    className="mt-3 flex items-center gap-2 text-sm text-amber-300"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
+                    <span>{autofillMessage}</span>
+                  </div>
+                ) : (
+                  <p
+                    className={`mt-3 text-sm ${
+                      autofillStatus === "error" || autofillStatus === "timeout"
+                        ? "text-rose-300"
+                        : "text-emerald-300"
+                    }`}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {autofillMessage}
+                  </p>
+                )
+              ) : null}
 
               {/* Lineup review: shown when multiple bottles detected */}
               {lineupWines.length > 0 && !lineupCreating && lineupCreatedCount === 0 ? (
@@ -2691,506 +3161,581 @@ export default function NewEntryPage() {
 
               </div>
 
-            </div>
-
             {/* Hide single-bottle form fields when lineup mode is active */}
             {showSingleBottleFields ? (
               <>
-            <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-              <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
-                Wine details
-              </summary>
-              <p className="mt-2 text-xs text-zinc-400">
-                Optional identity and purchase details for this bottle.
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Wine name <span className="text-amber-400">*</span></label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  placeholder="Required"
-                  {...register("wine_name", { required: "Wine name is required" })}
-                />
-                {errors.wine_name ? (
-                  <p className="mt-1 text-xs text-rose-300">{errors.wine_name.message}</p>
-                ) : null}
-              </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Producer</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  placeholder="Optional"
-                  {...register("producer")}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Vintage</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  placeholder="Optional"
-                  {...register("vintage")}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Country</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  placeholder="Optional"
-                  {...register("country")}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Region</label>
-                  <input
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    placeholder="Optional"
-                    {...register("region")}
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">Notes</label>
+                  <textarea
+                    className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    {...register("notes")}
                   />
                 </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Appellation</label>
-                <input
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    placeholder="Optional"
-                    {...register("appellation")}
-                  />
-                </div>
-              <div>
-                <label className="text-sm font-medium text-zinc-200">
-                  Classification
-                </label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  placeholder="Optional (e.g. Premier Cru, DOCG)"
-                  {...register("classification")}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <PrimaryGrapeSelector
-                  selected={selectedPrimaryGrapes}
-                  onChange={setSelectedPrimaryGrapes}
-                />
-              </div>
-              <div className="md:col-span-2 rounded-2xl border border-white/10 bg-black/30 p-4">
+
                 <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="text-sm font-medium text-zinc-200">Price paid</label>
-                      <div className="mt-1 flex">
-                        <input type="hidden" {...register("price_paid_currency")} />
-                        <PriceCurrencySelect
-                        value={selectedPricePaidCurrency}
-                        onChange={(currency) =>
-                          setValue("price_paid_currency", currency, {
-                            shouldDirty: true,
-                          })
-                        }
-                      />
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        className={`h-10 w-full rounded-r-xl border border-l-0 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
-                          errors.price_paid
-                            ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                            : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
-                        }`}
-                          placeholder="Optional (e.g. 28.50)"
-                          {...register("price_paid", {
-                            validate: (value) => {
-                              const trimmed = value?.trim() ?? "";
-                              if (!trimmed) return true;
-                              if (!/^[0-9]+(\.[0-9]+)?$/.test(trimmed)) {
-                                return "Price paid must be numbers only (no $ or symbols).";
-                              }
-                              const parsed = Number(trimmed);
-                              if (!Number.isFinite(parsed) || parsed < 0) {
-                                return "Price paid must be a valid number.";
-                              }
-                            return true;
-                          },
-                        })}
-                      />
-                    </div>
-                      {errors.price_paid?.message ? (
-                        <p className="mt-1 text-xs font-semibold text-rose-400">
-                          {errors.price_paid.message}
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Numbers only (no $ or symbols). Example: 28.50
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <label className="text-sm font-medium text-zinc-200">Price source</label>
-                      {selectedPricePaidSource ? (
-                        <button
-                          type="button"
-                          className="text-xs text-zinc-400 transition hover:text-zinc-200"
-                          onClick={() =>
-                            setValue("price_paid_source", "", {
-                              shouldDirty: true,
-                            })
-                          }
-                        >
-                          Clear
-                        </button>
-                      ) : null}
-                    </div>
-                    <input type="hidden" {...register("price_paid_source")} />
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        {PRICE_PAID_SOURCE_VALUES.map((source) => {
-                          const selected = selectedPricePaidSource === source;
-                          return (
-                            <button
-                              key={source}
-                              type="button"
-                              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
-                                selected
-                                  ? "border-amber-300/60 bg-amber-400/10 text-amber-200"
-                                  : errors.price_paid_source
-                                    ? "border-rose-400/50 bg-black/30 text-zinc-300 hover:border-rose-300/60"
-                                    : "border-white/10 bg-black/30 text-zinc-300 hover:border-white/30"
-                              }`}
-                              onClick={() =>
-                                setValue("price_paid_source", source, {
-                                  shouldDirty: true,
-                                })
-                              }
-                            >
-                              <span
-                                className={`inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] ${
-                                  selected
-                                    ? "border-amber-300/60 bg-amber-300/20 text-amber-200"
-                                  : "border-white/20 text-transparent"
-                              }`}
-                            >
-                              ✓
-                            </span>
-                            {PRICE_PAID_SOURCE_LABELS[source]}
-                          </button>
-                          );
-                        })}
-                      </div>
-                      {errors.price_paid_source?.message ? (
-                        <p className="mt-1 text-xs font-semibold text-rose-400">
-                          {errors.price_paid_source.message}
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Required if you enter a price paid amount.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-            </div>
-          </details>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Rating (1-100)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
-                  errors.rating
-                    ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                    : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
-                }`}
-                  {...register("rating", {
-                    validate: (value) => {
-                      const trimmed = value?.trim() ?? "";
-                      if (!trimmed) return true;
-                      if (!/^[0-9]+$/.test(trimmed)) {
-                        return "Rating must be a whole number (integer).";
-                      }
-                      const parsed = Number(trimmed);
-                      if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
-                        return "Rating must be between 1 and 100.";
-                      }
-                    return true;
-                  },
-                })}
-                />
-                {errors.rating?.message ? (
-                  <p className="mt-1 text-xs font-semibold text-rose-400">
-                    {errors.rating.message}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Whole number between 1 and 100.
-                  </p>
-                )}
-              </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">
-                QPR (Quality : Price Ratio)
-              </label>
-              <select
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                {...register("qpr_level")}
-              >
-                <option value="">Not set</option>
-                {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
-            <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-              placeholder="Optional tasting notes"
-              {...register("notes")}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">
-              Tasted with
-            </label>
-            {users.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-400">No other users yet.</p>
-            ) : (() => {
-              const topFriends = users.slice(0, 5);
-              const topFriendIds = new Set(topFriends.map((u) => u.id));
-              const extraSelected = users.filter(
-                (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
-              );
-              const trimmedSearch = friendSearch.trim().toLowerCase();
-              const searchResults = trimmedSearch.length >= 2
-                ? users.filter(
-                    (u) =>
-                      !topFriendIds.has(u.id) &&
-                      !selectedUserIds.includes(u.id) &&
-                      ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
-                        (u.email ?? "").toLowerCase().includes(trimmedSearch))
-                  )
-                : [];
-
-              const renderCheckbox = (user: typeof users[number]) => {
-                const label = user.display_name ?? "Unknown";
-                const isChecked = selectedUserIds.includes(user.id);
-                return (
-                  <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
-                      checked={isChecked}
-                      onChange={(event) => {
-                        setSelectedUserIds((prev) =>
-                          event.target.checked
-                            ? [...prev, user.id]
-                            : prev.filter((id) => id !== user.id)
-                        );
-                        if (event.target.checked) setFriendSearch("");
-                      }}
-                    />
-                    {label}
-                  </label>
-                );
-              };
-
-              return (
-                <div className="mt-2 space-y-2">
-                  <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                    {topFriends.map(renderCheckbox)}
-                    {extraSelected.map(renderCheckbox)}
-                  </div>
-                  <div className="relative">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-200">
+                      Rating (1-100)
+                    </label>
                     <input
                       type="text"
-                      value={friendSearch}
-                      onChange={(e) => setFriendSearch(e.target.value)}
-                      placeholder="Search friends..."
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      inputMode="numeric"
+                      className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
+                        errors.rating
+                          ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                          : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                      }`}
+                      {...register("rating", {
+                        validate: (value) => {
+                          const trimmed = value?.trim() ?? "";
+                          if (!trimmed) return true;
+                          if (!/^[0-9]+$/.test(trimmed)) {
+                            return "Rating must be a whole number (integer).";
+                          }
+                          const parsed = Number(trimmed);
+                          if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
+                            return "Rating must be between 1 and 100.";
+                          }
+                          return true;
+                        },
+                      })}
                     />
-                    {searchResults.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
-                        {searchResults.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setSelectedUserIds((prev) => [...prev, user.id]);
-                              setFriendSearch("");
-                            }}
-                          >
-                            {user.display_name ?? "Unknown"}
-                          </button>
-                        ))}
-                      </div>
+                    {errors.rating?.message ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-400">
+                        {errors.rating.message}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Whole number between 1 and 100.
+                      </p>
                     )}
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-zinc-200">
+                      QPR (Quality : Price Ratio)
+                    </label>
+                    <select
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      {...register("qpr_level")}
+                    >
+                      <option value="">Not set</option>
+                      {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <input type="hidden" {...register("price_paid")} />
+                  <input type="hidden" {...register("price_paid_currency")} />
+                  <input type="hidden" {...register("price_paid_source")} />
                 </div>
-              );
-            })()}
-          </div>
 
-          <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-            <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
-              Advanced notes
-            </summary>
-            <p className="mt-2 text-xs text-zinc-400">
-              Optional structure for deeper tasting notes.
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {ADVANCED_NOTE_FIELDS.map((field) => (
-                <div key={field.key}>
-                  <label className="text-sm font-medium text-zinc-200">
-                    {field.label}
-                  </label>
-                  <select
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    {...register(`advanced_notes.${field.key}` as const)}
-                  >
-                    <option value="">Not set</option>
-                    {ADVANCED_NOTE_OPTIONS[field.key].map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
+                <details className={collapsibleSectionClassName}>
+                  <summary className={collapsibleSummaryClassName}>
+                    Wine details
+                  </summary>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    Optional identity details for this bottle.
+                  </p>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Wine name</label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("wine_name")}
+                      />
+                      {errors.wine_name ? (
+                        <p className="mt-1 text-xs text-rose-300">{errors.wine_name.message}</p>
+                      ) : null}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Producer</label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("producer")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Vintage</label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("vintage")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Country</label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("country")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Region</label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("region")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">
+                        Appellation
+                      </label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("appellation")}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">
+                        Classification
+                      </label>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        placeholder="Optional (e.g. Premier Cru, DOCG)"
+                        {...register("classification")}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <PrimaryGrapeSelector
+                        selected={selectedPrimaryGrapes}
+                        onChange={setSelectedPrimaryGrapes}
+                      />
+                    </div>
+                  </div>
+                </details>
+
+                <details className={collapsibleSectionClassName}>
+                  <summary className={collapsibleSummaryClassName}>
+                    Location & date
+                  </summary>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    Where and when this bottle was consumed.
+                  </p>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-zinc-200">Location</label>
+                      <input type="hidden" {...register("location_place_id")} />
+                      <Controller
+                        control={control}
+                        name="location_text"
+                        render={({ field }) => (
+                          <LocationAutocomplete
+                            value={field.value}
+                            onChange={field.onChange}
+                            onSelectPlaceId={(placeId) =>
+                              setValue("location_place_id", placeId ?? "", {
+                                shouldDirty: true,
+                              })
+                            }
+                            onBlur={field.onBlur}
+                            biasCoords={photoGps}
+                          />
+                        )}
+                      />
+                    </div>
+                    <div className="md:justify-self-start">
+                      <label className="text-sm font-medium text-zinc-200">
+                        Consumed date
+                      </label>
+                      <Controller
+                        control={control}
+                        name="consumed_at"
+                        rules={{ required: true }}
+                        render={({ field }) => (
+                          <DatePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                            required
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+                </details>
+
+                <details className={collapsibleSectionClassName}>
+                  <summary className={collapsibleSummaryClassName}>
+                    Tasted with
+                  </summary>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    Tag friends who were with you.
+                  </p>
+                  {users.length === 0 ? (
+                    <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
+                  ) : (() => {
+                    const topFriends = users.slice(0, 5);
+                    const topFriendIds = new Set(topFriends.map((u) => u.id));
+                    const extraSelected = users.filter(
+                      (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
+                    );
+                    const trimmedSearch = friendSearch.trim().toLowerCase();
+                    const searchResults =
+                      trimmedSearch.length >= 2
+                        ? users.filter(
+                            (u) =>
+                              !topFriendIds.has(u.id) &&
+                              !selectedUserIds.includes(u.id) &&
+                              ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
+                                (u.email ?? "").toLowerCase().includes(trimmedSearch))
+                          )
+                        : [];
+
+                    const renderCheckbox = (user: typeof users[number]) => {
+                      const label = user.display_name ?? "Unknown";
+                      const isChecked = selectedUserIds.includes(user.id);
+                      return (
+                        <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                            checked={isChecked}
+                            onChange={(event) => {
+                              setSelectedUserIds((prev) =>
+                                event.target.checked
+                                  ? [...prev, user.id]
+                                  : prev.filter((id) => id !== user.id)
+                              );
+                              if (event.target.checked) setFriendSearch("");
+                            }}
+                          />
+                          {label}
+                        </label>
+                      );
+                    };
+
+                    return (
+                      <div className="mt-3 space-y-2">
+                        <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                          {topFriends.map(renderCheckbox)}
+                          {extraSelected.map(renderCheckbox)}
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={friendSearch}
+                            onChange={(e) => setFriendSearch(e.target.value)}
+                            placeholder="Search friends..."
+                            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          />
+                          {searchResults.length > 0 && (
+                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
+                              {searchResults.map((user) => (
+                                <button
+                                  key={user.id}
+                                  type="button"
+                                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setSelectedUserIds((prev) => [...prev, user.id]);
+                                    setFriendSearch("");
+                                  }}
+                                >
+                                  {user.display_name ?? "Unknown"}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </details>
+
+                <details className={collapsibleSectionClassName}>
+                  <summary className={collapsibleSummaryClassName}>
+                    Advanced notes
+                  </summary>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    Optional structure for deeper tasting notes.
+                  </p>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    {ADVANCED_NOTE_FIELDS.map((field) => (
+                      <div key={field.key}>
+                        <label className="text-sm font-medium text-zinc-200">
+                          {field.label}
+                        </label>
+                        <select
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          {...register(`advanced_notes.${field.key}` as const)}
+                        >
+                          <option value="">Not set</option>
+                          {ADVANCED_NOTE_OPTIONS[field.key].map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </details>
+                  </div>
+                </details>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Location</label>
-              <input type="hidden" {...register("location_place_id")} />
-              <Controller
-                control={control}
-                name="location_text"
-                render={({ field }) => (
-                  <LocationAutocomplete
-                    value={field.value}
-                    onChange={field.onChange}
-                    onSelectPlaceId={(placeId) =>
-                      setValue("location_place_id", placeId ?? "", {
-                        shouldDirty: true,
-                      })
-                    }
-                    onBlur={field.onBlur}
-                    placeholder="Optional location"
-                    biasCoords={photoGps}
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-zinc-200">Consumed date</label>
-              <Controller
-                control={control}
-                name="consumed_at"
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <DatePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    required
-                  />
-                )}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-zinc-200">Visibility & interaction</label>
-            <p className="mt-1 text-xs text-zinc-400">
-              Set who can view the post, view/react to reactions, and view/comment on comments.
-            </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                    Post visibility
+                <details className={collapsibleSectionClassName}>
+                  <summary className={collapsibleSummaryClassName}>
+                    Visibility & interaction
+                  </summary>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    Set who can view the post, view/react to reactions, and view/comment
+                    on comments.
                   </p>
-                  <PrivacyBadge level={selectedEntryPrivacy} compact />
-                </div>
-                <select
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  {...register("entry_privacy")}
-                >
-                  {PRIVACY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                    Reactions
+                  <div className="mt-4 grid gap-4 md:grid-cols-3">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-sm font-medium text-zinc-200">
+                          Post visibility
+                        </label>
+                        <PrivacyBadge level={selectedEntryPrivacy} compact />
+                      </div>
+                      <select
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("entry_privacy")}
+                      >
+                        {PRIVACY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-sm font-medium text-zinc-200">Reactions</label>
+                        <PrivacyBadge level={selectedReactionPrivacy} compact />
+                      </div>
+                      <select
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("reaction_privacy")}
+                      >
+                        {PRIVACY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-sm font-medium text-zinc-200">Comments</label>
+                        <PrivacyBadge level={selectedCommentsPrivacy} compact />
+                      </div>
+                      <select
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        {...register("comments_privacy")}
+                      >
+                        {PRIVACY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Privacy on reactions/comments controls both visibility and participation.
                   </p>
-                  <PrivacyBadge level={selectedReactionPrivacy} compact />
-                </div>
-                <select
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  {...register("reaction_privacy")}
-                >
-                  {PRIVACY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-                    Comments
-                  </p>
-                  <PrivacyBadge level={selectedCommentsPrivacy} compact />
-                </div>
-                <select
-                  className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  {...register("comments_privacy")}
-                >
-                  {PRIVACY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-zinc-500">
-              Privacy on reactions/comments controls both visibility and participation.
-            </p>
-          </div>
+                </details>
 
-          {errorMessage ? (
-            <p className="text-sm text-rose-300">{errorMessage}</p>
-          ) : null}
+                {errorMessage ? (
+                  <p className="text-sm text-rose-300">{errorMessage}</p>
+                ) : null}
 
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isSubmitting}
-            >
-              Save entry
-            </button>
-            <Link className="text-sm font-medium text-zinc-300" href="/entries">
-              Cancel
-            </Link>
-          </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="submit"
+                    className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={isSubmitting}
+                  >
+                    Save entry
+                  </button>
+                  <Link className="text-sm font-medium text-zinc-300" href="/entries">
+                    Cancel
+                  </Link>
+                </div>
           </>
           ) : null}
         </form>
       </div>
+
+      {cropPhotoIndex !== null ? (
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            aria-label="Close crop editor"
+            className="absolute inset-0 bg-black/70"
+            onClick={closeCropEditor}
+            disabled={savingCrop}
+          />
+          <div className="relative h-full overflow-y-auto p-3 pt-4 sm:flex sm:items-center sm:justify-center sm:p-4">
+            <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/15 bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
+                    Photo crop
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold text-zinc-50">
+                    Adjust photo framing
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-400">
+                    This rewrites the uploaded image. Drag to frame it, then save.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeCropEditor}
+                  disabled={savingCrop}
+                  className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <div
+                  ref={cropFrameRef}
+                  className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
+                >
+                  {cropSourceLoading ? (
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-amber-200">
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+                      <span>Loading photo...</span>
+                    </div>
+                  ) : cropSourceUrl ? (
+                    <img
+                      src={cropSourceUrl}
+                      alt="Photo crop preview"
+                      draggable={false}
+                      onLoad={(event) => {
+                        const target = event.currentTarget;
+                        setCropImageNaturalSize({
+                          width: target.naturalWidth,
+                          height: target.naturalHeight,
+                        });
+                        const centered = clampCenter(cropCenterX, cropCenterY);
+                        setCropCenterX(centered.x);
+                        setCropCenterY(centered.y);
+                      }}
+                      onPointerDown={onCropPointerDown}
+                      onPointerMove={onCropPointerMove}
+                      onPointerUp={onCropPointerUp}
+                      onPointerCancel={onCropPointerUp}
+                      onTouchStart={onCropTouchStart}
+                      onTouchMove={onCropTouchMove}
+                      onTouchEnd={onCropTouchEnd}
+                      onTouchCancel={onCropTouchEnd}
+                      style={(() => {
+                        const geometry = getCropGeometry();
+                        if (!geometry) {
+                          return {
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain" as const,
+                            touchAction: "none" as const,
+                          };
+                        }
+                        const offsetX = geometry.overflowX * (cropCenterX / 100);
+                        const offsetY = geometry.overflowY * (cropCenterY / 100);
+                        const centerPadX = Math.max(
+                          0,
+                          (geometry.frameSize - geometry.displayWidth) / 2
+                        );
+                        const centerPadY = Math.max(
+                          0,
+                          (geometry.frameSize - geometry.displayHeight) / 2
+                        );
+                        return {
+                          width: `${geometry.displayWidth}px`,
+                          height: `${geometry.displayHeight}px`,
+                          maxWidth: "none",
+                          transform: `translate(${centerPadX - offsetX}px, ${
+                            centerPadY - offsetY
+                          }px)`,
+                          touchAction: "none" as const,
+                        };
+                      })()}
+                      className={`absolute left-0 top-0 select-none ${
+                        isDraggingCrop ? "cursor-grabbing" : "cursor-grab"
+                      }`}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
+                      Photo unavailable
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="hidden sm:block">
+                  <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
+                    <span>Zoom</span>
+                    <span>{cropZoom.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={MIN_CROP_ZOOM}
+                    max={MAX_CROP_ZOOM}
+                    step={0.01}
+                    value={cropZoom}
+                    onChange={(event) => {
+                      const nextZoom = clampZoom(Number(event.target.value));
+                      setCropZoom(nextZoom);
+                      const centered = clampCenter(cropCenterX, cropCenterY, nextZoom);
+                      setCropCenterX(centered.x);
+                      setCropCenterY(centered.y);
+                    }}
+                    className="w-full accent-amber-300"
+                  />
+                </div>
+                <p className="hidden text-xs text-zinc-400 sm:block">
+                  At 1.00x the full image fits. Zoom in and drag to frame the crop.
+                </p>
+                <p className="text-xs text-zinc-400 sm:hidden">
+                  Pinch to zoom, then drag to frame the crop.
+                </p>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCropCenterX(50);
+                    setCropCenterY(50);
+                    setCropZoom(MIN_CROP_ZOOM);
+                    setIsDraggingCrop(false);
+                    cropDragRef.current = null;
+                    cropTouchRef.current = null;
+                  }}
+                  disabled={savingCrop}
+                  className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                >
+                  Reset
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={closeCropEditor}
+                    disabled={savingCrop}
+                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveCrop}
+                    disabled={savingCrop || cropSourceLoading || !cropSourceUrl}
+                    className="rounded-full bg-amber-400 px-4 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60"
+                  >
+                    {savingCrop ? "Saving..." : "Save crop"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
         {pendingComparison ? (
           <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">

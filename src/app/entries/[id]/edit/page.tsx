@@ -221,6 +221,7 @@ export default function EditEntryPage() {
   const [photoRenderVersion, setPhotoRenderVersion] = useState(0);
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
   const [cropSourcePath, setCropSourcePath] = useState<string | null>(null);
+  const [cropSourceLoading, setCropSourceLoading] = useState(false);
   const MIN_CROP_ZOOM = 1;
   const MAX_CROP_ZOOM = 6;
   const cropFrameRef = useRef<HTMLDivElement | null>(null);
@@ -844,10 +845,20 @@ export default function EditEntryPage() {
     cropTouchRef.current = null;
     setPhotoError(null);
     setCropEditorPhoto(photo);
-    setCropSourceUrl(withCacheBust(photo.signed_url) ?? photo.signed_url ?? null);
-    setCropSourcePath(photo.path);
+    setCropSourceLoading(true);
+    setCropSourceUrl(null);
+    setCropSourcePath(null);
+
+    const fallbackSourceUrl = photo.signed_url ?? null;
+    const fallbackSourcePath = photo.path ?? null;
 
     if (!photo.path) {
+      if (!isCurrentRequest()) {
+        return;
+      }
+      setCropSourceUrl(fallbackSourceUrl);
+      setCropSourcePath(fallbackSourcePath);
+      setCropSourceLoading(false);
       return;
     }
 
@@ -863,10 +874,14 @@ export default function EditEntryPage() {
     if (!originalError && originalSigned?.signedUrl) {
       setCropSourceUrl(originalSigned.signedUrl);
       setCropSourcePath(originalPath);
+      setCropSourceLoading(false);
       return;
     }
 
     if (photo.type !== "label" || !photo.signed_url) {
+      setCropSourceUrl(fallbackSourceUrl);
+      setCropSourcePath(fallbackSourcePath);
+      setCropSourceLoading(false);
       return;
     }
 
@@ -879,6 +894,7 @@ export default function EditEntryPage() {
     if (lineupSource?.signed_url && lineupSource.path) {
       setCropSourceUrl(lineupSource.signed_url);
       setCropSourcePath(lineupSource.path);
+      setCropSourceLoading(false);
       return;
     }
 
@@ -894,6 +910,9 @@ export default function EditEntryPage() {
       !secondaryLabel?.signed_url ||
       !secondaryLabel.path
     ) {
+      setCropSourceUrl(fallbackSourceUrl);
+      setCropSourcePath(fallbackSourcePath);
+      setCropSourceLoading(false);
       return;
     }
 
@@ -901,6 +920,9 @@ export default function EditEntryPage() {
     const secondarySourceUrl =
       withCacheBust(secondaryLabel.signed_url) ?? secondaryLabel.signed_url;
     if (!primarySourceUrl || !secondarySourceUrl) {
+      setCropSourceUrl(fallbackSourceUrl);
+      setCropSourcePath(fallbackSourcePath);
+      setCropSourceLoading(false);
       return;
     }
 
@@ -929,10 +951,19 @@ export default function EditEntryPage() {
       ) {
         setCropSourceUrl(secondaryLabel.signed_url);
         setCropSourcePath(secondaryLabel.path);
+        setCropSourceLoading(false);
+        return;
       }
     } catch {
       // Fall back to the current photo source.
     }
+
+    if (!isCurrentRequest()) {
+      return;
+    }
+    setCropSourceUrl(fallbackSourceUrl);
+    setCropSourcePath(fallbackSourcePath);
+    setCropSourceLoading(false);
   };
 
   const closeCropEditor = () => {
@@ -943,6 +974,7 @@ export default function EditEntryPage() {
     setCropEditorPhoto(null);
     setCropSourceUrl(null);
     setCropSourcePath(null);
+    setCropSourceLoading(false);
     setIsDraggingCrop(false);
     cropDragRef.current = null;
     cropTouchRef.current = null;
@@ -1298,11 +1330,16 @@ export default function EditEntryPage() {
         URL.revokeObjectURL(sourceUrl);
       }
 
-      setPhotoRenderVersion((current) => current + 1);
-      await loadPhotos();
       cropOpenRequestRef.current += 1;
       cropTouchRef.current = null;
       setCropEditorPhoto(null);
+      setCropSourceUrl(null);
+      setCropSourcePath(null);
+      setCropSourceLoading(false);
+      setIsDraggingCrop(false);
+      cropDragRef.current = null;
+      setPhotoRenderVersion((current) => current + 1);
+      await loadPhotos();
     } catch {
       setPhotoError("Unable to save photo crop.");
     } finally {
@@ -2417,7 +2454,12 @@ export default function EditEntryPage() {
                     ref={cropFrameRef}
                     className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
                   >
-                    {cropSourceUrl ? (
+                    {cropSourceLoading ? (
+                      <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-amber-200">
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+                        <span>Loading original photo...</span>
+                      </div>
+                    ) : cropSourceUrl ? (
                       <img
                         src={
                           withCacheBust(cropSourceUrl) ?? cropSourceUrl
@@ -2542,7 +2584,7 @@ export default function EditEntryPage() {
                     <button
                       type="button"
                       onClick={saveCrop}
-                      disabled={savingCrop}
+                      disabled={savingCrop || cropSourceLoading || !cropSourceUrl}
                       className="rounded-full bg-amber-400 px-4 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60"
                     >
                       {savingCrop ? "Saving..." : "Save crop"}
