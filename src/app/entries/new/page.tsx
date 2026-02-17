@@ -2942,8 +2942,7 @@ export default function NewEntryPage() {
                     Upload images
                   </label>
                   <p className="text-xs text-zinc-400">
-                    Upload the wine you drank plus anything else you want to include
-                    (pairing, place, people), and we&apos;ll organize it.
+                    upload photos of the wine and anything else from the night - pairing, people, place. we&apos;ll tag them
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
