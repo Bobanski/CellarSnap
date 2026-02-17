@@ -55,6 +55,7 @@ export default function LocationAutocomplete({
     loadGoogleMapsScript()
       .then(() => {
         const maps = getGoogleMaps();
+        if (!maps?.places) return;
         serviceRef.current = new maps.places.AutocompleteService();
         sessionTokenRef.current = new maps.places.AutocompleteSessionToken();
         setMapsLoaded(true);
@@ -100,6 +101,11 @@ export default function LocationAutocomplete({
       }
 
       const maps = getGoogleMaps();
+      if (!maps?.places) {
+        setSuggestions([]);
+        setOpen(false);
+        return;
+      }
       const coords = biasCoords ?? browserCoordsRef.current;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const request: any = {
@@ -152,7 +158,7 @@ export default function LocationAutocomplete({
     setOpen(false);
     // Rotate session token after a selection
     const maps = getGoogleMaps();
-    if (maps) {
+    if (maps?.places) {
       sessionTokenRef.current = new maps.places.AutocompleteSessionToken();
     }
   };
