@@ -2421,7 +2421,8 @@ export default function NewEntryPage() {
                     (u) =>
                       !topFriendIds.has(u.id) &&
                       !selectedUserIds.includes(u.id) &&
-                      (u.display_name ?? "").toLowerCase().includes(trimmedSearch)
+                      ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
+                        (u.email ?? "").toLowerCase().includes(trimmedSearch))
                   )
                 : [];
 
