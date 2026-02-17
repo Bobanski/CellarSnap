@@ -24,9 +24,10 @@ const DEBOUNCE_MS = 200;
 const MIN_CHARS = 2;
 const BIAS_RADIUS_M = 50_000;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getGoogleMaps(): any {
-  return (window as any).google?.maps;
+type WindowWithGoogleMaps = Window & { google?: { maps?: typeof google.maps } };
+
+function getGoogleMaps(): typeof google.maps | undefined {
+  return (window as WindowWithGoogleMaps).google?.maps;
 }
 
 export default function LocationAutocomplete({

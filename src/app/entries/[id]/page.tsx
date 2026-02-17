@@ -63,6 +63,30 @@ function buildShareText() {
   return "Check out this wine post from my CellarSnap.";
 }
 
+function buildLocationDisplayLabel(locationText: string): string {
+  const normalized = locationText.trim();
+  if (!normalized) return normalized;
+
+  const parts = normalized
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) return normalized;
+
+  const name = parts[0];
+  const city = parts.length >= 4 ? parts[parts.length - 3] : parts[1];
+  if (!city || city.toLowerCase() === name.toLowerCase()) return name;
+
+  return `${name}, ${city}`;
+}
+
+function buildGoogleMapsLocationUrl(locationText: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    locationText
+  )}`;
+}
+
 export default function EntryDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -498,6 +522,16 @@ export default function EntryDetailPage() {
     alt: `Pairing photo ${idx + 1}`,
     badge: "Pairing",
   }));
+  const locationText = entry.location_text?.trim() ?? "";
+  const hasLocation = locationText.length > 0;
+  const locationDisplayLabel = hasLocation
+    ? buildLocationDisplayLabel(locationText)
+    : "";
+  const hasExpandedLocation =
+    hasLocation && locationDisplayLabel !== locationText;
+  const locationMapsUrl = hasLocation
+    ? buildGoogleMapsLocationUrl(locationText)
+    : "";
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -697,14 +731,35 @@ export default function EntryDetailPage() {
               ) : null}
             </div>
 
-            {isOwner || entry.location_text ? (
+            {isOwner || hasLocation ? (
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                   Location
                 </p>
-                <p className="text-sm text-zinc-200">
-                  {entry.location_text || "Not set"}
-                </p>
+                {hasLocation ? (
+                  <div className="space-y-1">
+                    {hasExpandedLocation ? (
+                      <details className="text-sm text-zinc-200">
+                        <summary className="cursor-pointer list-none hover:text-amber-200">
+                          {locationDisplayLabel}
+                        </summary>
+                        <p className="mt-1 text-zinc-300">{locationText}</p>
+                      </details>
+                    ) : (
+                      <p className="text-sm text-zinc-200">{locationDisplayLabel}</p>
+                    )}
+                    <a
+                      href={locationMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex text-xs font-medium text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
+                    >
+                      Open in Google Maps
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-sm text-zinc-200">Not set</p>
+                )}
               </div>
             ) : null}
             {isOwner || entry.notes ? (
