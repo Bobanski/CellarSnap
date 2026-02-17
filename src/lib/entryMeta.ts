@@ -46,7 +46,7 @@ export const PRICE_PAID_CURRENCY_SYMBOLS: Record<PricePaidCurrency, string> = {
 export const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   extortion: "Extortion",
   pricey: "Pricey",
-  mid: "Mid",
+  mid: "Spot on",
   good_value: "Good Value",
   absolute_steal: "Absolute Steal",
 };

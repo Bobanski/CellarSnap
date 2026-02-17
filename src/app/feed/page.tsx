@@ -47,6 +47,7 @@ type FeedReply = {
   user_id: string;
   parent_comment_id: string | null;
   author_name: string | null;
+  author_avatar_url?: string | null;
   body: string;
   created_at: string;
   is_deleted?: boolean;
@@ -57,6 +58,7 @@ type FeedComment = {
   entry_id: string;
   user_id: string;
   author_name: string | null;
+  author_avatar_url?: string | null;
   body: string;
   created_at: string;
   is_deleted?: boolean;
@@ -188,6 +190,35 @@ function CommentBubbleIcon({ className }: { className?: string }) {
     >
       <path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" />
     </svg>
+  );
+}
+
+function CommentAuthorAvatar({
+  authorName,
+  authorAvatarUrl,
+}: {
+  authorName: string;
+  authorAvatarUrl?: string | null;
+}) {
+  const fallbackInitial = (authorName.trim()[0] ?? "?").toUpperCase();
+
+  if (authorAvatarUrl) {
+    return (
+      <span
+        className="h-5 w-5 shrink-0 rounded-full border border-white/15 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${authorAvatarUrl})` }}
+        aria-hidden
+      />
+    );
+  }
+
+  return (
+    <span
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 text-[10px] font-semibold text-zinc-300"
+      aria-hidden
+    >
+      {fallbackInitial}
+    </span>
   );
 }
 
@@ -872,7 +903,39 @@ export default function FeedPage() {
                       >
                         <div className="border-t border-white/10 pt-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
+                            {canComment ? (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleCommentsExpanded(entry.id);
+                                }}
+                                className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                                  commentsExpanded
+                                    ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
+                                    : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
+                                }`}
+                                aria-label={`Toggle comments (${getCommentCount(entry)})`}
+                              >
+                                <CommentBubbleIcon className="h-4 w-4 shrink-0" />
+                                <span>Comments</span>
+                                <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">
+                                  {getCommentCount(entry)}
+                                </span>
+                              </button>
+                            ) : null}
+                            <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                              {hasReactionCounts
+                                ? reactionSummary.map(({ emoji, count }) => (
+                                    <span
+                                      key={`${entry.id}-reaction-summary-${emoji}`}
+                                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200"
+                                    >
+                                      <span>{emoji}</span>
+                                      <span className="tabular-nums text-zinc-400">{count}</span>
+                                    </span>
+                                  ))
+                                : null}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -881,7 +944,7 @@ export default function FeedPage() {
                                     id === entry.id ? null : entry.id
                                   );
                                 }}
-                                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border bg-black/20 text-lg font-semibold leading-none transition ${
+                                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-black/20 text-sm font-semibold leading-none transition ${
                                   canReact
                                     ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
                                     : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
@@ -890,41 +953,7 @@ export default function FeedPage() {
                               >
                                 +
                               </button>
-                              {canComment ? (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    toggleCommentsExpanded(entry.id);
-                                  }}
-                                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
-                                    commentsExpanded
-                                      ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
-                                      : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
-                                  }`}
-                                  aria-label={`Toggle comments (${getCommentCount(entry)})`}
-                                >
-                                  <CommentBubbleIcon className="h-4 w-4 shrink-0" />
-                                  <span>Comments</span>
-                                  <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">
-                                    {getCommentCount(entry)}
-                                  </span>
-                                </button>
-                              ) : null}
                             </div>
-                            {hasReactionCounts ? (
-                              <div className="flex flex-wrap items-center justify-end gap-1.5">
-                                {reactionSummary.map(({ emoji, count }) => (
-                                  <span
-                                    key={`${entry.id}-reaction-summary-${emoji}`}
-                                    className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200"
-                                  >
-                                    <span>{emoji}</span>
-                                    <span className="tabular-nums text-zinc-400">{count}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
                           </div>
                           {reactionPopupEntryId === entry.id ? (
                             <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-1.5">
@@ -1024,9 +1053,15 @@ export default function FeedPage() {
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="min-w-0">
                                         {!isCommentDeleted && comment.author_name ? (
-                                          <p className="text-xs font-semibold text-zinc-200">
-                                            {comment.author_name}
-                                          </p>
+                                          <div className="flex items-center gap-2">
+                                            <CommentAuthorAvatar
+                                              authorName={comment.author_name}
+                                              authorAvatarUrl={comment.author_avatar_url}
+                                            />
+                                            <p className="text-xs font-semibold text-zinc-200">
+                                              {comment.author_name}
+                                            </p>
+                                          </div>
                                         ) : null}
                                         <p
                                           className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${
@@ -1108,9 +1143,15 @@ export default function FeedPage() {
                                               <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                   {!isReplyDeleted && reply.author_name ? (
-                                                    <p className="text-xs font-semibold text-zinc-200">
-                                                      {reply.author_name}
-                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                      <CommentAuthorAvatar
+                                                        authorName={reply.author_name}
+                                                        authorAvatarUrl={reply.author_avatar_url}
+                                                      />
+                                                      <p className="text-xs font-semibold text-zinc-200">
+                                                        {reply.author_name}
+                                                      </p>
+                                                    </div>
                                                   ) : null}
                                                   <p
                                                     className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${

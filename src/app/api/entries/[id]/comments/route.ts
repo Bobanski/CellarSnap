@@ -21,6 +21,13 @@ type CommentRow = {
   deleted_at?: string | null;
 };
 
+type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  avatar_path?: string | null;
+};
+
 const createCommentSchema = z.object({
   body: z
     .string()
@@ -167,6 +174,25 @@ async function fetchCommentsForEntry(
   throw new Error(withDeletedAt.error.message);
 }
 
+async function createAvatarSignedUrl(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  path: string | null | undefined
+) {
+  if (!path) {
+    return null;
+  }
+
+  const { data, error } = await supabase.storage
+    .from("wine-photos")
+    .createSignedUrl(path, 60 * 60);
+
+  if (error) {
+    return null;
+  }
+
+  return data.signedUrl;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -225,25 +251,49 @@ export async function GET(
   }
 
   const authorIds = Array.from(new Set(rows.map((row) => row.user_id)));
-  const { data: profiles } =
-    authorIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("id, display_name, email")
-          .in("id", authorIds)
-      : {
-          data: [] as {
-            id: string;
-            display_name: string | null;
-            email: string | null;
-          }[],
-        };
+  let profiles: ProfileRow[] = [];
+  if (authorIds.length > 0) {
+    const { data: profilesWithAvatar, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, display_name, email, avatar_path")
+      .in("id", authorIds);
+
+    if (
+      profilesError &&
+      (profilesError.message.includes("avatar_path") ||
+        profilesError.message.includes("column"))
+    ) {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .in("id", authorIds);
+      if (fallbackError) {
+        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+      }
+      profiles = (fallback ?? []).map((profile) => ({ ...profile, avatar_path: null }));
+    } else if (profilesError) {
+      return NextResponse.json({ error: profilesError.message }, { status: 500 });
+    } else {
+      profiles = (profilesWithAvatar ?? []) as ProfileRow[];
+    }
+  }
 
   const authorNameById = new Map(
     (profiles ?? []).map((profile) => [
       profile.id,
       profile.display_name ?? profile.email ?? "Unknown",
     ])
+  );
+  const authorAvatarPathById = new Map(
+    profiles
+      .filter((profile) => profile.avatar_path)
+      .map((profile) => [profile.id, profile.avatar_path as string])
+  );
+  const signedAvatarUrlByPath = new Map<string, string | null>();
+  await Promise.all(
+    Array.from(new Set(authorAvatarPathById.values())).map(async (path) => {
+      signedAvatarUrlByPath.set(path, await createAvatarSignedUrl(supabase, path));
+    })
   );
 
   const topLevel = rows.filter((row) => row.parent_comment_id === null);
@@ -267,6 +317,12 @@ export async function GET(
       body: isDeleted ? "[deleted]" : row.body,
       created_at: row.created_at,
       author_name: isDeleted ? null : authorNameById.get(row.user_id) ?? "Unknown",
+      author_avatar_url: isDeleted
+        ? null
+        : (() => {
+            const avatarPath = authorAvatarPathById.get(row.user_id);
+            return avatarPath ? signedAvatarUrlByPath.get(avatarPath) ?? null : null;
+          })(),
       is_deleted: isDeleted,
       parent_comment_id: row.parent_comment_id,
     };
@@ -385,16 +441,51 @@ export async function POST(
     );
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, email")
-    .eq("id", user.id)
-    .maybeSingle();
+  let profile:
+    | {
+        display_name: string | null;
+        email: string | null;
+        avatar_path?: string | null;
+      }
+    | null = null;
+  {
+    const { data: withAvatar, error: withAvatarError } = await supabase
+      .from("profiles")
+      .select("display_name, email, avatar_path")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (
+      withAvatarError &&
+      (withAvatarError.message.includes("avatar_path") ||
+        withAvatarError.message.includes("column"))
+    ) {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("profiles")
+        .select("display_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (fallbackError) {
+        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+      }
+      profile = fallback ? { ...fallback, avatar_path: null } : null;
+    } else if (withAvatarError) {
+      return NextResponse.json({ error: withAvatarError.message }, { status: 500 });
+    } else {
+      profile = withAvatar;
+    }
+  }
+
+  const authorAvatarUrl = await createAvatarSignedUrl(
+    supabase,
+    profile?.avatar_path ?? null
+  );
 
   return NextResponse.json({
     comment: {
       ...created,
       author_name: profile?.display_name ?? profile?.email ?? "You",
+      author_avatar_url: authorAvatarUrl,
       is_deleted: false,
     },
   });
