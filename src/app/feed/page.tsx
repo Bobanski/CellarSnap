@@ -82,7 +82,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
 
   if (photos.length === 0) {
     return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-zinc-400 md:h-64">
+      <div className="flex h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-zinc-400 md:h-80 lg:h-96">
         No photo
       </div>
     );
@@ -96,7 +96,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
       <div
-        className="flex h-56 transition-transform duration-300 md:h-64"
+        className="flex h-56 transition-transform duration-300 md:h-80 lg:h-96"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}
         onTouchStart={(event) => {
           touchStartXRef.current = event.touches[0]?.clientX ?? null;
