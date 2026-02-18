@@ -84,11 +84,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   const touchStartXRef = useRef<number | null>(null);
 
   if (photos.length === 0) {
-    return (
-      <div className="flex h-56 items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-zinc-400 md:h-80 lg:h-96">
-        No photo
-      </div>
-    );
+    return null;
   }
 
   const total = photos.length;
@@ -760,11 +756,11 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-          <div className="grid min-w-0 gap-5 md:grid-cols-2">
+          <div className="grid min-w-0 items-start gap-5 md:grid-cols-2">
             {entries.map((entry) => (
               <article
                 key={entry.id}
-                className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className="group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
