@@ -342,7 +342,21 @@ export default function EntriesPage() {
       groups.set(id, { id, label, entries: [entry] });
     });
 
-    return Array.from(groups.values());
+    const sorted = Array.from(groups.values());
+    sorted.sort((a, b) => {
+      if (groupScheme === "vintage") {
+        // Reverse chronological: most recent first, "Unknown" last
+        if (a.label === "Unknown vintage") return 1;
+        if (b.label === "Unknown vintage") return -1;
+        return b.label.localeCompare(a.label, undefined, { numeric: true });
+      }
+      // A-Z for region and varietal, "Unknown" last
+      const aUnknown = a.label.startsWith("Unknown ");
+      const bUnknown = b.label.startsWith("Unknown ");
+      if (aUnknown !== bUnknown) return aUnknown ? 1 : -1;
+      return a.label.localeCompare(b.label);
+    });
+    return sorted;
   }, [groupScheme, libraryViewMode, sortedEntries]);
 
   useEffect(() => {
