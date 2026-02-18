@@ -312,9 +312,10 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const cursor = url.searchParams.get("cursor"); // created_at (ISO)
+  const cursor = url.searchParams.get("cursor"); // created_at or consumed_at (ISO)
   const rawLimit = Number(url.searchParams.get("limit") ?? "");
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 50;
+  const sortBy = url.searchParams.get("sort") === "consumed_at" ? "consumed_at" : "created_at";
 
   const selectFields =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
@@ -325,10 +326,10 @@ export async function GET(request: Request) {
       .from("wine_entries")
       .select(fields)
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order(sortBy, { ascending: false });
 
     if (cursor) {
-      query = query.lt("created_at", cursor);
+      query = query.lt(sortBy, cursor);
     }
 
     return query;
@@ -354,7 +355,10 @@ export async function GET(request: Request) {
 
   const pageRows = rows.length > limit ? rows.slice(0, limit) : rows;
   const has_more = rows.length > limit;
-  const next_cursor = has_more ? pageRows[pageRows.length - 1]?.created_at ?? null : null;
+  const lastRow = pageRows[pageRows.length - 1];
+  const next_cursor = has_more
+    ? (sortBy === "consumed_at" ? lastRow?.consumed_at : lastRow?.created_at) ?? null
+    : null;
 
   const entryIds = pageRows.map((entry) => entry.id);
   const primaryGrapeMap = await fetchPrimaryGrapesByEntryId(supabase, entryIds);

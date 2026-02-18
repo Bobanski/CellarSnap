@@ -287,8 +287,8 @@ export default function ProfilePage() {
     setEntriesLoading(true);
     try {
       const url = cursor
-        ? `/api/entries?limit=50&cursor=${encodeURIComponent(cursor)}`
-        : `/api/entries?limit=50`;
+        ? `/api/entries?limit=50&sort=consumed_at&cursor=${encodeURIComponent(cursor)}`
+        : `/api/entries?limit=50&sort=consumed_at`;
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
         setEntriesLoading(false);
