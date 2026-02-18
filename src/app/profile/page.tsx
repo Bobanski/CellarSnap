@@ -896,7 +896,7 @@ export default function ProfilePage() {
         <div className="mx-auto max-w-2xl space-y-6">
           {/* ── Identity Card ── */}
           <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="absolute right-4 top-4 flex items-center gap-2">
+            <div className="absolute right-4 top-2 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
