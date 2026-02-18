@@ -951,7 +951,7 @@ export default function ProfilePage() {
                   {fullName || "\u00A0"}
                 </p>
                 {profile.bio ? (
-                  <p className="mt-2 text-sm text-zinc-300">{profile.bio}</p>
+                  <p className="mt-2 text-sm italic text-zinc-300">{profile.bio}</p>
                 ) : null}
                 <div className="mt-3 flex items-center gap-6">
                   <div>
