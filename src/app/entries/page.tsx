@@ -122,7 +122,8 @@ function entryMatchesSearch(entry: WineEntryWithUrls, query: string): boolean {
   );
 }
 
-function EntryCard({ entry }: { entry: WineEntryWithUrls }) {
+function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: number } }) {
+  const commentCount = (entry as Record<string, unknown>).comment_count as number | undefined;
   return (
     <Link
       href={`/entries/${entry.id}`}
@@ -186,7 +187,15 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls }) {
           ) : (
             <span />
           )}
-          <span>{formatConsumedDate(entry.consumed_at)}</span>
+          <span className="inline-flex items-center gap-3">
+            {commentCount != null && commentCount > 0 ? (
+              <span className="inline-flex items-center gap-1 text-zinc-500">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true"><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
+                <span className="text-[11px] tabular-nums">{commentCount}</span>
+              </span>
+            ) : null}
+            {formatConsumedDate(entry.consumed_at)}
+          </span>
         </div>
       </div>
     </Link>

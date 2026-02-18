@@ -393,6 +393,18 @@ export async function GET(request: Request) {
     })
   );
 
+  // Comment counts per entry (batch query).
+  const commentCountMap = new Map<string, number>();
+  if (entryIds.length > 0) {
+    const { data: commentRows } = await supabase
+      .from("entry_comments")
+      .select("entry_id")
+      .in("entry_id", entryIds);
+    (commentRows ?? []).forEach((row: { entry_id: string }) => {
+      commentCountMap.set(row.entry_id, (commentCountMap.get(row.entry_id) ?? 0) + 1);
+    });
+  }
+
   const entries = pageRows.map((entry) => {
     const labelPath = labelPathByEntryId.get(entry.id) ?? null;
     return {
@@ -402,6 +414,7 @@ export async function GET(request: Request) {
       // Not used by /entries list UI; avoid extra signing work
       place_image_url: null,
       pairing_image_url: null,
+      comment_count: commentCountMap.get(entry.id) ?? 0,
     };
   });
 
