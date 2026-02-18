@@ -101,8 +101,7 @@ const updateEntrySchema = z.object({
     .number()
     .int("Rating must be a whole number (integer).")
     .min(1, "Rating must be between 1 and 100.")
-    .max(100, "Rating must be between 1 and 100.")
-    .optional(),
+    .max(100, "Rating must be between 1 and 100."),
   price_paid: nullablePricePaidSchema,
   price_paid_currency: z.preprocess(
     (value) => (value === "" ? null : value),

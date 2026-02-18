@@ -1498,7 +1498,7 @@ export default function NewEntryPage() {
 
     const ratingRaw = values.rating?.trim() ?? "";
     const pricePaidRaw = values.price_paid?.trim() ?? "";
-    const rating = ratingRaw ? Number(ratingRaw) : undefined;
+    const rating = Number(ratingRaw);
     const pricePaid = pricePaidRaw ? Number(Number(pricePaidRaw).toFixed(2)) : undefined;
     const pricePaidCurrency = values.price_paid_currency || "usd";
     const pricePaidSource = values.price_paid_source || undefined;
@@ -3174,7 +3174,7 @@ export default function NewEntryPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium text-zinc-200">
-                      Rating (1-100)
+                      Rating (1-100) <span className="text-rose-400">*</span>
                     </label>
                     <input
                       type="text"
@@ -3187,7 +3187,7 @@ export default function NewEntryPage() {
                       {...register("rating", {
                         validate: (value) => {
                           const trimmed = value?.trim() ?? "";
-                          if (!trimmed) return true;
+                          if (!trimmed) return "Rating is required.";
                           if (!/^[0-9]+$/.test(trimmed)) {
                             return "Rating must be a whole number (integer).";
                           }
