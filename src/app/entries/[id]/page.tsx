@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -115,6 +115,47 @@ export default function EntryDetailPage() {
   const [sharing, setSharing] = useState(false);
   const [shareToast, setShareToast] = useState<ShareToast | null>(null);
 
+  // Reactions & comments state
+  const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
+  const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
+  const [myReactions, setMyReactions] = useState<string[]>([]);
+  const [reactionUsers, setReactionUsers] = useState<Record<string, string[]>>({});
+  const [canReact, setCanReact] = useState(false);
+  const [canComment, setCanComment] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [reactionPopupOpen, setReactionPopupOpen] = useState(false);
+  const [reactionUsersPopup, setReactionUsersPopup] = useState<string | null>(null);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [comments, setComments] = useState<{
+    id: string;
+    entry_id: string;
+    user_id: string;
+    author_name: string | null;
+    author_avatar_url?: string | null;
+    body: string;
+    created_at: string;
+    is_deleted?: boolean;
+    replies: {
+      id: string;
+      entry_id: string;
+      user_id: string;
+      parent_comment_id: string | null;
+      author_name: string | null;
+      author_avatar_url?: string | null;
+      body: string;
+      created_at: string;
+      is_deleted?: boolean;
+    }[];
+  }[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const reactionMenuRef = useRef<HTMLDivElement | null>(null);
+
   const userMap = useMemo(() => {
     const map = new Map(
       users.map((user) => [
@@ -166,6 +207,23 @@ export default function EntryDetailPage() {
         setAddToLogError(null);
         setAddToLogMessage(null);
         setLoading(false);
+
+        // Populate reactions/comments state from API response.
+        const e = nextEntry as Record<string, unknown>;
+        setReactionCounts(
+          (e.reaction_counts as Record<string, number>) ?? {}
+        );
+        setMyReactions(
+          (e.my_reactions as string[]) ?? []
+        );
+        setReactionUsers(
+          (e.reaction_users as Record<string, string[]>) ?? {}
+        );
+        setCanReact(Boolean(e.can_react));
+        setCanComment(Boolean(e.can_comment));
+        setCommentCount(
+          typeof e.comment_count === "number" ? e.comment_count : 0
+        );
       }
     };
 
@@ -419,77 +477,45 @@ export default function EntryDetailPage() {
       : openedFromProfile
         ? "← Back to Profile"
       : "← Back to My library";
+  const PHOTO_TYPE_LABELS: Record<string, string> = {
+    label: "Label",
+    place: "Place",
+    people: "People",
+    pairing: "Pairing",
+    lineup: "Lineup",
+    other_bottles: "Other bottle",
+  };
   const sortByPosition = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => a.position - b.position);
-  const labelPhotos = sortByPosition(
-    photos.filter((photo) => photo.type === "label")
-  );
-  const placePhotos = sortByPosition(
-    photos.filter((photo) => photo.type === "place")
-  );
-  const peoplePhotos = sortByPosition(
-    photos.filter((photo) => photo.type === "people")
-  );
-  const pairingPhotos = sortByPosition(
-    photos.filter((photo) => photo.type === "pairing")
-  );
-  const lineupPhotos = sortByPosition(
-    photos.filter((photo) => photo.type === "lineup")
-  );
-  const otherBottlePhotos = sortByPosition(
-    photos.filter((photo) => photo.type === "other_bottles")
-  );
-  const labelGallery =
-    labelPhotos.length > 0
-      ? labelPhotos
-      : entry.label_image_url
-      ? [
-          {
-            id: "legacy-label",
-            entry_id: entry.id,
-            type: "label" as const,
-            path: "",
-            position: 0,
-            created_at: entry.created_at,
-            signed_url: entry.label_image_url,
-          },
-        ]
-      : [];
-  const placeGallery =
-    placePhotos.length > 0
-      ? placePhotos
-      : entry.place_image_url
-      ? [
-          {
-            id: "legacy-place",
-            entry_id: entry.id,
-            type: "place" as const,
-            path: "",
-            position: 0,
-            created_at: entry.created_at,
-            signed_url: entry.place_image_url,
-          },
-        ]
-      : [];
-  const pairingGallery =
-    pairingPhotos.length > 0
-      ? pairingPhotos
-      : entry.pairing_image_url
-      ? [
-          {
-            id: "legacy-pairing",
-            entry_id: entry.id,
-            type: "pairing" as const,
-            path: "",
-            position: 0,
-            created_at: entry.created_at,
-            signed_url: entry.pairing_image_url,
-          },
-        ]
-      : [];
-  const peopleGallery = peoplePhotos;
-  const lineupGallery = lineupPhotos;
-  const otherBottleGallery = otherBottlePhotos;
+
+  // Build a unified list of all photos for a single gallery.
+  const allEntryPhotos = (() => {
+    const sorted = sortByPosition(photos);
+
+    // If the entry_photos table has photos, use those.
+    if (sorted.length > 0) return sorted;
+
+    // Fall back to legacy single-image fields.
+    const legacy: EntryPhoto[] = [];
+    if (entry.label_image_url) {
+      legacy.push({ id: "legacy-label", entry_id: entry.id, type: "label", path: "", position: 0, created_at: entry.created_at, signed_url: entry.label_image_url });
+    }
+    if (entry.place_image_url) {
+      legacy.push({ id: "legacy-place", entry_id: entry.id, type: "place", path: "", position: 1, created_at: entry.created_at, signed_url: entry.place_image_url });
+    }
+    if (entry.pairing_image_url) {
+      legacy.push({ id: "legacy-pairing", entry_id: entry.id, type: "pairing", path: "", position: 2, created_at: entry.created_at, signed_url: entry.pairing_image_url });
+    }
+    return legacy;
+  })();
+
+  const allGalleryItems = allEntryPhotos.map((photo, idx) => ({
+    id: photo.id,
+    url: photo.signed_url ?? null,
+    alt: `${PHOTO_TYPE_LABELS[photo.type] ?? "Wine"} photo ${idx + 1}`,
+    badge: PHOTO_TYPE_LABELS[photo.type] ?? photo.type,
+    _type: photo.type,
+  }));
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
   const formattedPricePaid = formatPricePaidAmount(
     entry.price_paid,
@@ -516,42 +542,117 @@ export default function EntryDetailPage() {
           .map((grape) => grape.name)
           .join(", ")
       : null;
-  const labelItems = labelGallery.map((photo, idx) => ({
-    id: photo.id,
-    url: photo.signed_url ?? null,
-    alt: `Wine label photo ${idx + 1}`,
-    badge: "Label",
-  }));
-  const placeItems = placeGallery.map((photo, idx) => ({
-    id: photo.id,
-    url: photo.signed_url ?? null,
-    alt: `Place photo ${idx + 1}`,
-    badge: "Place",
-  }));
-  const pairingItems = pairingGallery.map((photo, idx) => ({
-    id: photo.id,
-    url: photo.signed_url ?? null,
-    alt: `Pairing photo ${idx + 1}`,
-    badge: "Pairing",
-  }));
-  const peopleItems = peopleGallery.map((photo, idx) => ({
-    id: photo.id,
-    url: photo.signed_url ?? null,
-    alt: `People photo ${idx + 1}`,
-    badge: "People",
-  }));
-  const lineupItems = lineupGallery.map((photo, idx) => ({
-    id: photo.id,
-    url: photo.signed_url ?? null,
-    alt: `Lineup photo ${idx + 1}`,
-    badge: "Lineup",
-  }));
-  const otherBottleItems = otherBottleGallery.map((photo, idx) => ({
-    id: photo.id,
-    url: photo.signed_url ?? null,
-    alt: `Other bottle photo ${idx + 1}`,
-    badge: "Other bottle",
-  }));
+  // --- Reactions/comments handlers ---
+  const toggleReaction = async (emoji: string) => {
+    if (!entryId) return;
+    const hasMine = myReactions.includes(emoji);
+    if (hasMine) {
+      const res = await fetch(`/api/entries/${entryId}/reactions?emoji=${encodeURIComponent(emoji)}`, { method: "DELETE" });
+      if (!res.ok) return;
+      const nextCount = Math.max(0, (reactionCounts[emoji] ?? 1) - 1);
+      const nextCounts = { ...reactionCounts };
+      if (nextCount === 0) delete nextCounts[emoji];
+      else nextCounts[emoji] = nextCount;
+      setReactionCounts(nextCounts);
+      setMyReactions(myReactions.filter((e) => e !== emoji));
+      const nextUsers = { ...reactionUsers };
+      // Remove current user from display (we don't know exact name, so refetch)
+      delete nextUsers[emoji]; // simplification; will refetch on page reload
+      setReactionUsers(nextUsers);
+    } else {
+      const res = await fetch(`/api/entries/${entryId}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+      if (!res.ok) return;
+      setReactionCounts({ ...reactionCounts, [emoji]: (reactionCounts[emoji] ?? 0) + 1 });
+      setMyReactions([...myReactions, emoji]);
+    }
+    setReactionPopupOpen(false);
+  };
+
+  const loadComments = async ({ force = false }: { force?: boolean } = {}) => {
+    if (!entryId) return;
+    if (loadingComments) return;
+    if (!force && comments.length > 0) return;
+    setLoadingComments(true);
+    setCommentError(null);
+    try {
+      const res = await fetch(`/api/entries/${entryId}/comments`, { cache: "no-store" });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setCommentError(typeof payload.error === "string" ? payload.error : "Unable to load comments.");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setComments(Array.isArray(data.comments) ? data.comments : []);
+      const total = typeof data.comment_count === "number"
+        ? data.comment_count
+        : (data.comments ?? []).reduce((t: number, c: { replies: unknown[] }) => t + 1 + c.replies.length, 0);
+      setCommentCount(total);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!entryId) return;
+    const body = commentDraft.trim();
+    if (!body || postingComment) return;
+    setPostingComment(true);
+    setCommentError(null);
+    try {
+      const res = await fetch(`/api/entries/${entryId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body, parent_comment_id: replyTargetId }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setCommentError(typeof payload.error === "string" ? payload.error : "Unable to post comment.");
+        return;
+      }
+      if (replyTargetId) {
+        setExpandedReplies((prev) => ({ ...prev, [replyTargetId]: true }));
+      }
+      setCommentDraft("");
+      setReplyTargetId(null);
+      await loadComments({ force: true });
+    } finally {
+      setPostingComment(false);
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    if (deletingCommentId) return;
+    setDeletingCommentId(commentId);
+    setCommentError(null);
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setCommentError(typeof payload.error === "string" ? payload.error : "Unable to delete comment.");
+        return;
+      }
+      if (replyTargetId === commentId) setReplyTargetId(null);
+      await loadComments({ force: true });
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
+  const formatCommentDate = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const replyTarget = replyTargetId ? comments.find((c) => c.id === replyTargetId) ?? null : null;
+  const reactionSummary = REACTION_EMOJIS
+    .map((emoji) => ({ emoji, count: reactionCounts[emoji] ?? 0 }))
+    .filter((item) => item.count > 0);
+
   const locationText = entry.location_text?.trim() ?? "";
   const hasLocation = locationText.length > 0;
   const locationPlaceId = entry.location_place_id?.trim() ?? "";
@@ -609,120 +710,210 @@ export default function EntryDetailPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-5">
+          <div className="space-y-0">
             <SwipePhotoGallery
-              items={labelItems}
-              empty={photosLoading ? "Loading photos..." : "No label photo uploaded."}
-              footer={(active) => (
-                <>
-                  <span>Label photos</span>
-                  {isOwner && active.url ? (
-                    <a
-                      href={active.url}
-                      download
-                      className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                    >
-                      Download
-                    </a>
-                  ) : null}
-                </>
-              )}
+              items={allGalleryItems}
+              empty={photosLoading ? "Loading photos..." : "No photos uploaded."}
+              wrapperClassName="rounded-b-none"
             />
-            {placeGallery.length > 0 ? (
-              <SwipePhotoGallery
-                items={placeItems}
-                footer={(active) => (
-                  <>
-                    <span>Place photos</span>
-                    {isOwner && active.url ? (
-                      <a
-                        href={active.url}
-                        download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                      >
-                        Download
-                      </a>
+            <div className="rounded-b-3xl border border-t-0 border-white/10 bg-white/5 p-4" ref={reactionMenuRef}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {canComment ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReactionPopupOpen(false);
+                      const next = !commentsExpanded;
+                      setCommentsExpanded(next);
+                      if (next) void loadComments();
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                      commentsExpanded
+                        ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
+                        : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
+                    <span>Comments</span>
+                    <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">{commentCount}</span>
+                  </button>
+                ) : null}
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                  {reactionSummary.map(({ emoji, count }) => {
+                    const names = reactionUsers[emoji] ?? [];
+                    const popupKey = emoji;
+                    const showNames = reactionUsersPopup === popupKey;
+                    return (
+                      <span key={`reaction-summary-${emoji}`} className="group/reaction relative">
+                        <button
+                          type="button"
+                          onClick={() => setReactionUsersPopup((prev) => prev === popupKey ? null : popupKey)}
+                          className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200 transition hover:border-amber-300/40"
+                        >
+                          <span>{emoji}</span>
+                          <span className="tabular-nums text-zinc-400">{count}</span>
+                        </button>
+                        {names.length > 0 ? (
+                          <span className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#1a1412] px-2.5 py-1.5 text-[11px] text-zinc-200 shadow-lg transition-opacity ${showNames ? "pointer-events-auto opacity-100" : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"}`}>
+                            {names.join(", ")}
+                          </span>
+                        ) : null}
+                      </span>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setReactionPopupOpen((prev) => !prev)}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-black/20 text-sm font-semibold leading-none transition ${
+                      canReact
+                        ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
+                        : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
+                    }`}
+                    aria-label={canReact ? "Add reaction" : "View reaction options"}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              {reactionPopupOpen ? (
+                <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {REACTION_EMOJIS.map((emoji) => {
+                      if (canReact) {
+                        return (
+                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${myReactions.includes(emoji) ? "bg-amber-400/20" : ""}`}>
+                            {emoji}
+                          </button>
+                        );
+                      }
+                      const count = reactionCounts[emoji] ?? 0;
+                      return (
+                        <span key={emoji} className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/10 bg-black/20 px-1 text-lg text-zinc-400">
+                          {emoji}
+                          {count > 0 ? <span className="ml-0.5 text-[10px] font-medium text-zinc-500">{count}</span> : null}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {!canReact ? <p className="mt-1 text-[11px] text-zinc-500">Reactions are not available for this post.</p> : null}
+                </div>
+              ) : null}
+
+              {commentsExpanded ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300/70">Comments</p>
+                    <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-zinc-400 transition hover:text-zinc-200">Collapse</button>
+                  </div>
+                  {loadingComments ? (
+                    <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">Loading comments...</div>
+                  ) : !canComment ? (
+                    <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">Comments are private for this post.</div>
+                  ) : comments.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">No comments yet. Start the thread.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {comments.map((comment) => {
+                        const repliesOpen = Boolean(expandedReplies[comment.id]);
+                        const isDeleted = Boolean(comment.is_deleted);
+                        const deleting = deletingCommentId === comment.id;
+                        return (
+                          <li key={comment.id} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                {!isDeleted && comment.author_name ? (
+                                  <p className="text-xs font-semibold text-zinc-200">{comment.author_name}</p>
+                                ) : null}
+                                <p className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${isDeleted ? "italic text-zinc-500" : "text-zinc-100"}`}>
+                                  {isDeleted ? "[deleted]" : comment.body}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <span className="text-[11px] text-zinc-500">{formatCommentDate(comment.created_at)}</span>
+                                {!isDeleted && currentUserId === comment.user_id ? (
+                                  <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                    {deleting ? "Deleting..." : "Delete"}
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+                              {!isDeleted ? (
+                                <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-zinc-300 transition hover:text-amber-200">Reply</button>
+                              ) : null}
+                              {comment.replies.length > 0 ? (
+                                <button type="button" onClick={() => setExpandedReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))} className="text-zinc-400 transition hover:text-zinc-200">
+                                  {repliesOpen ? "Hide replies" : `View ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`}
+                                </button>
+                              ) : null}
+                            </div>
+                            {repliesOpen && comment.replies.length > 0 ? (
+                              <div className="mt-2 space-y-2 border-l border-white/10 pl-3">
+                                {comment.replies.map((reply) => {
+                                  const replyDeleted = Boolean(reply.is_deleted);
+                                  const deletingReply = deletingCommentId === reply.id;
+                                  return (
+                                    <div key={reply.id} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                          {!replyDeleted && reply.author_name ? <p className="text-xs font-semibold text-zinc-200">{reply.author_name}</p> : null}
+                                          <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${replyDeleted ? "italic text-zinc-500" : "text-zinc-100"}`}>{replyDeleted ? "[deleted]" : reply.body}</p>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-2">
+                                          <span className="text-[11px] text-zinc-500">{formatCommentDate(reply.created_at)}</span>
+                                          {!replyDeleted && currentUserId === reply.user_id ? (
+                                            <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                              {deletingReply ? "Deleting..." : "Delete"}
+                                            </button>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {commentError ? <p className="mt-2 text-xs text-rose-300">{commentError}</p> : null}
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    {replyTarget ? (
+                      <div className="mb-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-xs text-zinc-300">
+                        <span className="truncate">Replying to {replyTarget.author_name ?? "this thread"}</span>
+                        <button type="button" onClick={() => setReplyTargetId(null)} className="shrink-0 text-zinc-400 transition hover:text-zinc-100">Cancel</button>
+                      </div>
                     ) : null}
-                  </>
-                )}
-              />
-            ) : null}
-            {pairingGallery.length > 0 ? (
-              <SwipePhotoGallery
-                items={pairingItems}
-                footer={(active) => (
-                  <>
-                    <span>Pairing photos</span>
-                    {isOwner && active.url ? (
-                      <a
-                        href={active.url}
-                        download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                    <textarea
+                      value={commentDraft}
+                      onChange={(e) => setCommentDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                          e.preventDefault();
+                          void submitComment();
+                        }
+                      }}
+                      rows={2}
+                      placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
+                      className="w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      disabled={!canComment || postingComment}
+                    />
+                    <div className="mt-2 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => void submitComment()}
+                        disabled={!commentDraft.trim() || !canComment || postingComment}
+                        className="inline-flex rounded-full border border-amber-300/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Download
-                      </a>
-                    ) : null}
-                  </>
-                )}
-              />
-            ) : null}
-            {peopleGallery.length > 0 ? (
-              <SwipePhotoGallery
-                items={peopleItems}
-                footer={(active) => (
-                  <>
-                    <span>People photos</span>
-                    {isOwner && active.url ? (
-                      <a
-                        href={active.url}
-                        download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                      >
-                        Download
-                      </a>
-                    ) : null}
-                  </>
-                )}
-              />
-            ) : null}
-            {lineupGallery.length > 0 ? (
-              <SwipePhotoGallery
-                items={lineupItems}
-                footer={(active) => (
-                  <>
-                    <span>Lineup photos</span>
-                    {isOwner && active.url ? (
-                      <a
-                        href={active.url}
-                        download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                      >
-                        Download
-                      </a>
-                    ) : null}
-                  </>
-                )}
-              />
-            ) : null}
-            {otherBottleGallery.length > 0 ? (
-              <SwipePhotoGallery
-                items={otherBottleItems}
-                footer={(active) => (
-                  <>
-                    <span>Other bottle photos</span>
-                    {isOwner && active.url ? (
-                      <a
-                        href={active.url}
-                        download
-                        className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                      >
-                        Download
-                      </a>
-                    ) : null}
-                  </>
-                )}
-              />
-            ) : null}
+                        {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">

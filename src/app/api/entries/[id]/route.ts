@@ -349,6 +349,77 @@ export async function GET(
     }
   }
 
+  // Reactions: counts, current user's reactions, and reactor display names.
+  const reactionCounts: Record<string, number> = {};
+  const myReactions: string[] = [];
+  const reactionUsers: Record<string, string[]> = {};
+  const reactorUserIds = new Set<string>();
+
+  const { data: reactions } = await supabase
+    .from("entry_reactions")
+    .select("user_id, emoji")
+    .eq("entry_id", id);
+
+  (reactions ?? []).forEach((r: { user_id: string; emoji: string }) => {
+    reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
+    reactorUserIds.add(r.user_id);
+    if (r.user_id === user.id && !myReactions.includes(r.emoji)) {
+      myReactions.push(r.emoji);
+    }
+    const list = reactionUsers[r.emoji] ?? [];
+    if (!list.includes(r.user_id)) list.push(r.user_id);
+    reactionUsers[r.emoji] = list;
+  });
+
+  // Resolve reactor user IDs to display names.
+  const reactorIds = Array.from(reactorUserIds);
+  if (reactorIds.length > 0) {
+    const { data: reactorProfiles } = await supabase
+      .from("profiles")
+      .select("id, display_name, email")
+      .in("id", reactorIds);
+    const reactorNameMap = new Map(
+      (reactorProfiles ?? []).map((p) => [
+        p.id as string,
+        (p.display_name ?? p.email ?? "Unknown") as string,
+      ])
+    );
+    for (const emoji of Object.keys(reactionUsers)) {
+      reactionUsers[emoji] = reactionUsers[emoji].map(
+        (uid) => reactorNameMap.get(uid) ?? "Unknown"
+      );
+    }
+  }
+
+  // Comment count (best-effort).
+  let commentCount = 0;
+  const { count: commentCountResult, error: commentCountError } = await supabase
+    .from("entry_comments")
+    .select("id", { count: "exact", head: true })
+    .eq("entry_id", id);
+  if (!commentCountError && typeof commentCountResult === "number") {
+    commentCount = commentCountResult;
+  }
+
+  // Access flags — owner can always react/comment.
+  const isEntryOwner = user.id === data.user_id;
+  const canReact = isEntryOwner
+    ? true
+    : await canUserViewEntry({
+        supabase,
+        viewerUserId: user.id,
+        ownerUserId: data.user_id,
+        entryPrivacy: data.reaction_privacy ?? data.entry_privacy,
+      });
+  const canComment = isEntryOwner
+    ? true
+    : await canUserViewEntry({
+        supabase,
+        viewerUserId: user.id,
+        ownerUserId: data.user_id,
+        entryPrivacy: data.comments_privacy ?? data.entry_privacy,
+      });
+
   const entry = {
     ...data,
     primary_grapes:
@@ -358,6 +429,12 @@ export async function GET(
     pairing_image_url: await createSignedUrl(data.pairing_image_path, supabase),
     tasted_with_users: tastedWithUsers,
     viewer_log_entry_id,
+    reaction_counts: reactionCounts,
+    my_reactions: myReactions,
+    reaction_users: reactionUsers,
+    comment_count: commentCount,
+    can_react: canReact,
+    can_comment: canComment,
   };
 
   return NextResponse.json({ entry });
