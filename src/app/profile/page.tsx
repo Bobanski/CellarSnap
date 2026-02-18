@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
@@ -26,11 +27,18 @@ type Profile = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  bio: string | null;
   default_entry_privacy: PrivacyLevel | null;
   default_reaction_privacy: PrivacyLevel | null;
   default_comments_privacy: PrivacyLevel | null;
   created_at: string | null;
   avatar_url?: string | null;
+};
+
+type Entry = {
+  id: string;
+  wine_name: string | null;
+  label_image_url: string | null;
 };
 
 const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
@@ -63,6 +71,8 @@ export default function ProfilePage() {
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [usernameSuccess, setUsernameSuccess] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
@@ -113,7 +123,7 @@ export default function ProfilePage() {
       case "sangiovese_savage":
         return `Log ${n} wines from Chianti.`;
       case "rhone_rider":
-        return `Log ${n} wines from the Rhône.`;
+        return `Log ${n} wines from the Rh\u00f4ne.`;
       case "margaux_monarch":
         return `Log ${n} wines from Margaux.`;
       case "chianti_connoisseur":
@@ -147,6 +157,15 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Settings modal state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Entry gallery state
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
+  const [entriesCursor, setEntriesCursor] = useState<string | null>(null);
+  const [entriesHasMore, setEntriesHasMore] = useState(false);
+
   // Username setup flow
   const requiresUsernameSetup =
     typeof window !== "undefined" &&
@@ -176,10 +195,13 @@ export default function ProfilePage() {
         const profileFirstName = data.profile.first_name?.trim() ?? "";
         const profileLastName = data.profile.last_name?.trim() ?? "";
         const profilePhone = data.profile.phone?.trim() ?? "";
+        const profileBio = data.profile.bio?.trim() ?? "";
+        const profileEmail = data.profile.email?.trim() ?? "";
         let initialEditUsername = profileDisplayName;
         let initialEditFirstName = profileFirstName;
         let initialEditLastName = profileLastName;
         let initialEditPhone = profilePhone;
+        let initialEditBio = profileBio;
         if (!profileDisplayName && typeof window !== "undefined") {
           try {
             const pendingUsername =
@@ -236,6 +258,8 @@ export default function ProfilePage() {
         setEditFirstName(initialEditFirstName);
         setEditLastName(initialEditLastName);
         setEditPhone(formatPhoneForInput(initialEditPhone));
+        setEditBio(initialEditBio);
+        setEditEmail(profileEmail);
         setEntryPrivacyValue(data.profile.default_entry_privacy ?? "public");
         setReactionPrivacyValue(data.profile.default_reaction_privacy ?? "public");
         setCommentsPrivacyValue(
@@ -247,6 +271,7 @@ export default function ProfilePage() {
           new URLSearchParams(window.location.search).get("setup") === "username"
         ) {
           setIsEditing(true);
+          setSettingsOpen(true);
         }
       } else {
         setLoadErrorMessage("Unable to load profile right now.");
@@ -258,8 +283,31 @@ export default function ProfilePage() {
     }
   }, [router]);
 
+  const loadEntries = useCallback(async (cursor?: string) => {
+    setEntriesLoading(true);
+    try {
+      const url = cursor
+        ? `/api/entries?limit=50&cursor=${encodeURIComponent(cursor)}`
+        : `/api/entries?limit=50`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        setEntriesLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setEntries((prev) => (cursor ? [...prev, ...data.entries] : data.entries));
+      setEntriesHasMore(data.has_more ?? false);
+      setEntriesCursor(data.next_cursor ?? null);
+    } catch {
+      // ignore
+    } finally {
+      setEntriesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadProfile();
+    loadEntries();
 
     // Load badges in parallel (independent of profile)
     fetch("/api/profile/badges", { cache: "no-store" })
@@ -268,13 +316,14 @@ export default function ProfilePage() {
         if (data?.badges) setBadges(data.badges);
       })
       .catch(() => null);
-  }, [loadProfile]);
+  }, [loadProfile, loadEntries]);
 
   const saveProfile = async () => {
     const trimmed = editUsername.trim();
     const trimmedFirstName = editFirstName.trim();
     const trimmedLastName = editLastName.trim();
     const trimmedPhone = editPhone.trim();
+    const trimmedBio = editBio.trim();
     const normalizedPhone = trimmedPhone ? normalizePhone(trimmedPhone) : null;
     if (trimmed.length < USERNAME_MIN_LENGTH) {
       setUsernameError(USERNAME_MIN_LENGTH_MESSAGE);
@@ -299,6 +348,9 @@ export default function ProfilePage() {
     const firstNameChanged = trimmedFirstName !== (profile?.first_name ?? "").trim();
     const lastNameChanged = trimmedLastName !== (profile?.last_name ?? "").trim();
     const phoneChanged = (normalizedPhone ?? null) !== (profile?.phone ?? null);
+    const bioChanged = (trimmedBio || null) !== (profile?.bio ?? null);
+    const trimmedEmail = editEmail.trim().toLowerCase();
+    const emailChanged = trimmedEmail !== (profile?.email ?? "").trim().toLowerCase();
 
     let uploadedAvatarUrl: string | null = null;
 
@@ -327,7 +379,7 @@ export default function ProfilePage() {
       }
 
       // 2. Save profile fields if changed
-      if (usernameChanged || firstNameChanged || lastNameChanged || phoneChanged) {
+      if (usernameChanged || firstNameChanged || lastNameChanged || phoneChanged || bioChanged || emailChanged) {
         const response = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -336,6 +388,8 @@ export default function ProfilePage() {
             first_name: trimmedFirstName || null,
             last_name: trimmedLastName || null,
             phone: normalizedPhone,
+            bio: trimmedBio || null,
+            ...(emailChanged ? { email: trimmedEmail } : {}),
           }),
         });
         if (!response.ok) {
@@ -360,12 +414,14 @@ export default function ProfilePage() {
           setEditFirstName(nextProfile.first_name ?? "");
           setEditLastName(nextProfile.last_name ?? "");
           setEditPhone(formatPhoneForInput(nextProfile.phone ?? ""));
+          setEditBio(nextProfile.bio ?? "");
+          setEditEmail(nextProfile.email ?? "");
         }
       } else if (uploadedAvatarUrl && profile) {
         setProfile({ ...profile, avatar_url: uploadedAvatarUrl });
       }
       setUsernameSuccess(
-        hadPendingAvatar || usernameChanged || firstNameChanged || lastNameChanged || phoneChanged
+        hadPendingAvatar || usernameChanged || firstNameChanged || lastNameChanged || phoneChanged || bioChanged || emailChanged
           ? "Profile saved."
           : "No changes to save."
       );
@@ -391,6 +447,8 @@ export default function ProfilePage() {
     setEditFirstName(profile?.first_name ?? "");
     setEditLastName(profile?.last_name ?? "");
     setEditPhone(formatPhoneForInput(profile?.phone ?? ""));
+    setEditBio(profile?.bio ?? "");
+    setEditEmail(profile?.email ?? "");
     setUsernameError(null);
     setUsernameSuccess(null);
     setAvatarError(null);
@@ -529,6 +587,13 @@ export default function ProfilePage() {
     setIsPasswordOpen(false);
   };
 
+  const closeSettings = () => {
+    if (requiresUsernameSetup && isEditing) return;
+    cancelEdit();
+    cancelPasswordChange();
+    setSettingsOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -555,197 +620,169 @@ export default function ProfilePage() {
     );
   }
 
+  const fullName = [
+    profile.first_name?.trim() || null,
+    profile.last_name?.trim() || null,
+  ]
+    .filter((v): v is string => Boolean(v))
+    .join(" ");
+
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
-        <div className="mx-auto max-w-2xl space-y-8">
-          <header className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-              My profile
-            </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
-              Your cellar identity
-            </h1>
-            <p className="text-sm text-zinc-300">
-              Manage how you appear, your preferences, and your account.
-            </p>
-          </header>
+        <div className="mx-auto max-w-2xl space-y-6">
+          {/* ── Identity Card ── */}
+          <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            <button
+              type="button"
+              onClick={() => {
+                setUsernameSuccess(null);
+                setSettingsOpen(true);
+              }}
+              className="absolute right-4 top-4 rounded-full border border-white/10 p-2 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+              aria-label="Settings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
 
-          {/* ── Section 1: Identity Card ── */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            {requiresUsernameSetup && isEditing ? (
-              <p className="mb-5 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                Set a username to continue using CellarSnap.
-              </p>
+            <div className="flex items-center gap-4">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <span className="text-xs">No photo</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl font-semibold text-zinc-50">
+                  {profile.display_name || "Not set"}
+                </p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {fullName || "\u00A0"}
+                </p>
+                {profile.bio ? (
+                  <p className="mt-2 text-sm text-zinc-300">{profile.bio}</p>
+                ) : null}
+              </div>
+            </div>
+
+            {usernameSuccess ? (
+              <p className="mt-4 text-sm text-emerald-200">{usernameSuccess}</p>
             ) : null}
+          </div>
 
-            {isEditing ? (
-              /* ── Edit mode ── */
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                    Edit profile
-                  </h2>
-                </div>
-
-                {/* Avatar + Choose picture (only in edit mode) */}
-                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
-                    {pendingAvatarPreview ? (
+          {/* ── Entry Photo Gallery ── */}
+          <div>
+            {entries.length > 0 ? (
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
+                {entries.map((entry) => (
+                  <Link
+                    key={entry.id}
+                    href={`/entries/${entry.id}`}
+                    className="aspect-square overflow-hidden rounded-lg bg-white/5"
+                  >
+                    {entry.label_image_url ? (
                       <img
-                        src={pendingAvatarPreview}
-                        alt="New profile"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt="Profile"
-                        className="h-full w-full object-cover"
+                        src={entry.label_image_url}
+                        alt={entry.wine_name || "Wine entry"}
+                        className="h-full w-full object-cover transition hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <span className="text-xs">No photo</span>
+                      <div className="flex h-full w-full items-center justify-center text-zinc-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="m21 15-5-5L5 21" />
+                        </svg>
                       </div>
                     )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => avatarInputRef.current?.click()}
-                      className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
-                    >
-                      Choose picture
-                    </button>
-                    {avatarError ? (
-                      <p className="text-sm text-rose-200">{avatarError}</p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-zinc-300">
-                    Full name
-                  </label>
-                  <p className="mb-2 text-xs text-zinc-500">
-                    Your first and last name are shown to friends in CellarSnap.
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <input
-                      id="edit-first-name"
-                      type="text"
-                      placeholder="First name"
-                      maxLength={80}
-                      value={editFirstName}
-                      onChange={(e) => setEditFirstName(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                    <input
-                      id="edit-last-name"
-                      type="text"
-                      placeholder="Last name"
-                      maxLength={80}
-                      value={editLastName}
-                      onChange={(e) => setEditLastName(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    className="mb-1 block text-sm font-medium text-zinc-300"
-                    htmlFor="edit-phone"
-                  >
-                    Phone (only you)
-                  </label>
-                  <p className="mb-2 text-xs text-zinc-500">
-                    Used for sign in. US 10-digit and +E.164 formats are accepted.
-                  </p>
-                  <input
-                    id="edit-phone"
-                    type="tel"
-                    placeholder="(555) 123-4567"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(formatPhoneForInput(e.target.value))}
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="mb-1 block text-sm font-medium text-zinc-300"
-                    htmlFor="edit-username"
-                  >
-                    Username
-                  </label>
-                  <p className="mb-2 text-xs text-zinc-500">
-                    Minimum 3 characters. No spaces or the @ sign.
-                  </p>
-                  <input
-                    id="edit-username"
-                    type="text"
-                    placeholder="e.g. wine_lover"
-                    maxLength={100}
-                    value={editUsername}
-                    onChange={(e) => setEditUsername(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  />
-                </div>
-
-                {usernameError ? (
-                  <p className="text-sm text-rose-200">{usernameError}</p>
-                ) : null}
-                {usernameSuccess ? (
-                  <p className="text-sm text-emerald-200">{usernameSuccess}</p>
-                ) : null}
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={isSavingUsername}
-                    onClick={saveProfile}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
-                  >
-                    {isSavingUsername ? "Saving…" : "Save profile"}
-                  </button>
-                  {!requiresUsernameSetup ? (
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      className="text-sm font-medium text-zinc-400 transition hover:text-zinc-200"
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
-                </div>
+                  </Link>
+                ))}
               </div>
-            ) : (
-              /* ── Read mode ── */
-              <div className="space-y-5">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUsernameSuccess(null);
-                      setIsEditing(true);
-                    }}
-                    className="absolute right-0 top-0 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                  >
-                    Edit profile
-                  </button>
+            ) : !entriesLoading ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-500">
+                No entries yet.
+              </div>
+            ) : null}
 
-                  <div className="flex flex-col gap-4 pr-28 sm:flex-row sm:items-start sm:pr-28">
+            {entriesLoading ? (
+              <p className="mt-4 text-center text-sm text-zinc-500">Loading entries...</p>
+            ) : null}
+
+            {entriesHasMore && !entriesLoading ? (
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (entriesCursor) loadEntries(entriesCursor);
+                  }}
+                  className="rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                >
+                  Load more
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Settings Modal ── */}
+      {settingsOpen ? (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-start justify-center px-4 py-10">
+            <div
+              className="fixed inset-0 bg-black/70"
+              onClick={closeSettings}
+            />
+            <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#14100f] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+              {/* Header */}
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-zinc-50">Settings</h2>
+                <button
+                  type="button"
+                  onClick={closeSettings}
+                  className="rounded-full border border-white/10 p-2 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                  aria-label="Close settings"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {/* ── Edit Profile ── */}
+                <div className="space-y-5">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    Edit profile
+                  </h3>
+
+                  {requiresUsernameSetup && isEditing ? (
+                    <p className="rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                      Set a username to continue using CellarSnap.
+                    </p>
+                  ) : null}
+
+                  {/* Avatar + Choose picture */}
+                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                     <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
-                      {profile?.avatar_url ? (
+                      {pendingAvatarPreview ? (
+                        <img
+                          src={pendingAvatarPreview}
+                          alt="New profile"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : profile.avatar_url ? (
                         <img
                           src={profile.avatar_url}
                           alt="Profile"
@@ -757,409 +794,517 @@ export default function ProfilePage() {
                         </div>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1 space-y-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Username
-                        </p>
-                        <p className="mt-1 text-xl font-semibold text-zinc-50">
-                          {profile?.display_name || "Not set"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Full name (friends only)
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-300">
-                          {[
-                            profile?.first_name?.trim() || null,
-                            profile?.last_name?.trim() || null,
-                          ]
-                            .filter((value): value is string => Boolean(value))
-                            .join(" ") || "Not set"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Email (only you)
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-300">
-                          {profile?.email ?? "—"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Phone (only you)
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-300">
-                          {formatPhoneForDisplay(profile?.phone)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                          Member since
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-300">
-                          {formatMemberSince(profile?.created_at ?? null)}
-                        </p>
-                      </div>
+                    <div className="flex flex-col gap-1">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      >
+                        Choose picture
+                      </button>
+                      {avatarError ? (
+                        <p className="text-sm text-rose-200">{avatarError}</p>
+                      ) : null}
                     </div>
+                  </div>
+
+                  {/* Full name */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-zinc-300">
+                      Full name
+                    </label>
+                    <p className="mb-2 text-xs text-zinc-500">
+                      Your first and last name are shown to friends in CellarSnap.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input
+                        id="edit-first-name"
+                        type="text"
+                        placeholder="First name"
+                        maxLength={80}
+                        value={editFirstName}
+                        onChange={(e) => setEditFirstName(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      />
+                      <input
+                        id="edit-last-name"
+                        type="text"
+                        placeholder="Last name"
+                        maxLength={80}
+                        value={editLastName}
+                        onChange={(e) => setEditLastName(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  <div>
+                    <label
+                      className="mb-1 block text-sm font-medium text-zinc-300"
+                      htmlFor="edit-bio"
+                    >
+                      Bio
+                    </label>
+                    <p className="mb-2 text-xs text-zinc-500">
+                      A short description shown on your profile. 100 characters max.
+                    </p>
+                    <textarea
+                      id="edit-bio"
+                      placeholder="Wine enthusiast, cheese lover..."
+                      maxLength={100}
+                      rows={2}
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      className="w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                    <p className="mt-1 text-right text-xs tabular-nums text-zinc-500">
+                      {editBio.length}/100
+                    </p>
+                  </div>
+
+                  {/* Username */}
+                  <div>
+                    <label
+                      className="mb-1 block text-sm font-medium text-zinc-300"
+                      htmlFor="edit-username"
+                    >
+                      Username
+                    </label>
+                    <p className="mb-2 text-xs text-zinc-500">
+                      Minimum 3 characters. No spaces or the @ sign.
+                    </p>
+                    <input
+                      id="edit-username"
+                      type="text"
+                      placeholder="e.g. wine_lover"
+                      maxLength={100}
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label
+                      className="mb-1 block text-sm font-medium text-zinc-300"
+                      htmlFor="edit-email"
+                    >
+                      Email (only you)
+                    </label>
+                    <input
+                      id="edit-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label
+                      className="mb-1 block text-sm font-medium text-zinc-300"
+                      htmlFor="edit-phone"
+                    >
+                      Phone (only you)
+                    </label>
+                    <p className="mb-2 text-xs text-zinc-500">
+                      Used for sign in. US 10-digit and +E.164 formats are accepted.
+                    </p>
+                    <input
+                      id="edit-phone"
+                      type="tel"
+                      placeholder="(555) 123-4567"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(formatPhoneForInput(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    />
+                  </div>
+
+                  {/* Member since (read-only) */}
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Member since
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      {formatMemberSince(profile.created_at ?? null)}
+                    </p>
+                  </div>
+
+                  {usernameError ? (
+                    <p className="text-sm text-rose-200">{usernameError}</p>
+                  ) : null}
+                  {usernameSuccess ? (
+                    <p className="text-sm text-emerald-200">{usernameSuccess}</p>
+                  ) : null}
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={isSavingUsername}
+                      onClick={saveProfile}
+                      className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                    >
+                      {isSavingUsername ? "Saving\u2026" : "Save profile"}
+                    </button>
                   </div>
                 </div>
 
-                {usernameSuccess ? (
-                  <p className="text-sm text-emerald-200">{usernameSuccess}</p>
-                ) : null}
-              </div>
-            )}
-          </div>
+                {/* ── Badges ── */}
+                {badges.length > 0 ? (
+                  <div className="space-y-3 border-t border-white/10 pt-6">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      Badges
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Earn badges by logging 10 wines from a specific region or style.
+                    </p>
 
-          {/* ── Section 2: Badges ── */}
-          {badges.length > 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                Badges
-              </h2>
-              <p className="mt-1 text-xs text-zinc-500">
-                Earn badges by logging 10 wines from a specific region or style.
-              </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                      {badges.map((badge) => {
+                        const flipped = flippedBadgeIds.has(badge.id);
+                        const baseClass =
+                          "rounded-xl border px-3 py-4 text-center transition";
+                        const visualClass = badge.earned
+                          ? "border-amber-300/55 bg-amber-400/10 ring-1 ring-amber-300/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
+                          : badge.count > 0
+                            ? "border-white/10 bg-black/20 opacity-80 saturate-50"
+                            : "border-white/5 bg-black/20 opacity-45 grayscale";
 
-              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-                {badges.map((badge) => {
-                  const flipped = flippedBadgeIds.has(badge.id);
-                  const baseClass =
-                    "rounded-xl border px-3 py-4 text-center transition";
-                  const visualClass = badge.earned
-                    ? "border-amber-300/55 bg-amber-400/10 ring-1 ring-amber-300/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
-                    : badge.count > 0
-                      ? "border-white/10 bg-black/20 opacity-80 saturate-50"
-                      : "border-white/5 bg-black/20 opacity-45 grayscale";
+                        if (badge.earned) {
+                          const requirement = badgeRequirementText(badge);
+                          return (
+                            <button
+                              key={badge.id}
+                              type="button"
+                              className={`${baseClass} ${visualClass} cursor-pointer [perspective:900px] focus:outline-none focus:ring-2 focus:ring-amber-300/30`}
+                              onClick={() => toggleBadgeFlip(badge.id)}
+                              aria-pressed={flipped}
+                              aria-label={`${
+                                flipped ? "Hide" : "Show"
+                              } how you earned the ${badge.name} badge`}
+                            >
+                              <div
+                                className={`relative h-full w-full transition-transform duration-500 motion-reduce:transition-none [transform-style:preserve-3d] ${
+                                  flipped ? "[transform:rotateY(180deg)]" : ""
+                                }`}
+                              >
+                                <div className="flex h-full flex-col items-center justify-center gap-1.5 [backface-visibility:hidden]">
+                                  <span className="text-2xl drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]">
+                                    {badge.symbol}
+                                  </span>
+                                  <span className="text-xs font-semibold leading-tight text-amber-200">
+                                    {badge.name}
+                                  </span>
+                                </div>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
+                                  <p className="text-xs font-semibold leading-snug text-amber-100">
+                                    {requirement}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        }
 
-                  if (badge.earned) {
-                    const requirement = badgeRequirementText(badge);
-                    return (
-                      <button
-                        key={badge.id}
-                        type="button"
-                        className={`${baseClass} ${visualClass} cursor-pointer [perspective:900px] focus:outline-none focus:ring-2 focus:ring-amber-300/30`}
-                        onClick={() => toggleBadgeFlip(badge.id)}
-                        aria-pressed={flipped}
-                        aria-label={`${
-                          flipped ? "Hide" : "Show"
-                        } how you earned the ${badge.name} badge`}
-                      >
-                        <div
-                          className={`relative h-full w-full transition-transform duration-500 motion-reduce:transition-none [transform-style:preserve-3d] ${
-                            flipped ? "[transform:rotateY(180deg)]" : ""
-                          }`}
-                        >
-                          <div className="flex h-full flex-col items-center justify-center gap-1.5 [backface-visibility:hidden]">
-                            <span className="text-2xl drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]">
+                        return (
+                          <div
+                            key={badge.id}
+                            className={`${baseClass} ${visualClass} flex flex-col items-center justify-center gap-1.5`}
+                          >
+                            <span
+                              className={`text-2xl ${
+                                badge.count > 0 ? "text-zinc-100" : "text-zinc-500"
+                              }`}
+                            >
                               {badge.symbol}
                             </span>
-                            <span className="text-xs font-semibold leading-tight text-amber-200">
+                            <span
+                              className={`text-xs font-semibold leading-tight ${
+                                badge.count > 0 ? "text-zinc-200" : "text-zinc-400"
+                              }`}
+                            >
                               {badge.name}
                             </span>
+                            <span
+                              className={`text-[10px] tabular-nums ${
+                                badge.count > 0
+                                  ? "font-medium text-amber-200/80"
+                                  : "text-zinc-500"
+                              }`}
+                            >
+                              {badge.count}/{badge.threshold}
+                            </span>
                           </div>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
-                            <p className="text-xs font-semibold leading-snug text-amber-100">
-                              {requirement}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={badge.id}
-                      className={`${baseClass} ${visualClass} flex flex-col items-center justify-center gap-1.5`}
-                    >
-                      <span
-                        className={`text-2xl ${
-                          badge.count > 0 ? "text-zinc-100" : "text-zinc-500"
-                        }`}
-                      >
-                        {badge.symbol}
-                      </span>
-                      <span
-                        className={`text-xs font-semibold leading-tight ${
-                          badge.count > 0 ? "text-zinc-200" : "text-zinc-400"
-                        }`}
-                      >
-                        {badge.name}
-                      </span>
-                      <span
-                        className={`text-[10px] tabular-nums ${
-                          badge.count > 0
-                            ? "font-medium text-amber-200/80"
-                            : "text-zinc-500"
-                        }`}
-                      >
-                        {badge.count}/{badge.threshold}
-                      </span>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          {/* ── Section 3: Settings (only if privacy column exists) ── */}
-          {profile?.default_entry_privacy !== null && profile?.default_entry_privacy !== undefined ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                Settings
-              </h2>
-              <p className="mt-1 text-xs text-zinc-500">
-                Choose defaults for new posts, reactions, and comments.
-              </p>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <label
-                    htmlFor="default-entry-privacy-select"
-                    className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
-                  >
-                    Post visibility
-                  </label>
-                  <select
-                    id="default-entry-privacy-select"
-                    value={entryPrivacyValue}
-                    onChange={(e) => {
-                      const nextValue = e.target.value as PrivacyLevel;
-                      setEntryPrivacyValue(nextValue);
-                      void savePrivacyDefaults({
-                        default_entry_privacy: nextValue,
-                      });
-                    }}
-                    disabled={isSavingPrivacy}
-                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
-                  >
-                    {PRIVACY_OPTIONS.map((option) => (
-                      <option key={`entry-${option.value}`} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <label
-                    htmlFor="default-reaction-privacy-select"
-                    className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
-                  >
-                    Reactions
-                  </label>
-                  <select
-                    id="default-reaction-privacy-select"
-                    value={reactionPrivacyValue}
-                    onChange={(e) => {
-                      const nextValue = e.target.value as PrivacyLevel;
-                      setReactionPrivacyValue(nextValue);
-                      void savePrivacyDefaults({
-                        default_reaction_privacy: nextValue,
-                      });
-                    }}
-                    disabled={isSavingPrivacy}
-                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
-                  >
-                    {PRIVACY_OPTIONS.map((option) => (
-                      <option key={`reaction-${option.value}`} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <label
-                    htmlFor="default-comments-privacy-select"
-                    className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
-                  >
-                    Comments
-                  </label>
-                  <select
-                    id="default-comments-privacy-select"
-                    value={commentsPrivacyValue}
-                    onChange={(e) => {
-                      const nextValue = e.target.value as PrivacyLevel;
-                      setCommentsPrivacyValue(nextValue);
-                      void savePrivacyDefaults({
-                        default_comments_privacy: nextValue,
-                      });
-                    }}
-                    disabled={isSavingPrivacy}
-                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
-                  >
-                    {PRIVACY_OPTIONS.map((option) => (
-                      <option key={`comments-${option.value}`} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-3 space-y-1 text-[11px] text-zinc-500">
-                <p>Reactions privacy controls who can see and react.</p>
-                <p>Comments privacy controls who can see the comments UI and comment.</p>
-              </div>
-
-              {privacyMessage ? (
-                <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* ── Section 3: Change Password ── */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                  Password
-                </h2>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Update your account password.
-                </p>
-              </div>
-
-              {!isPasswordOpen ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPasswordSuccess(null);
-                    setIsPasswordOpen(true);
-                  }}
-                  className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                >
-                  Change password
-                </button>
-              ) : null}
-            </div>
-
-            {passwordSuccess && !isPasswordOpen ? (
-              <p className="mt-3 text-sm text-emerald-200">{passwordSuccess}</p>
-            ) : null}
-
-            {isPasswordOpen ? (
-              <div className="mt-5 space-y-4">
-                {/* Current password */}
-                <div>
-                  <label
-                    className="mb-1 block text-sm font-medium text-zinc-300"
-                    htmlFor="current-password"
-                  >
-                    Current password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="current-password"
-                      type={showCurrentPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter your current password"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword((p) => !p)}
-                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
-                      aria-label={showCurrentPassword ? "Hide password" : "Show password"}
-                    >
-                      {showCurrentPassword ? "Hide" : "Show"}
-                    </button>
                   </div>
-                </div>
-
-                {/* New password */}
-                <div>
-                  <label
-                    className="mb-1 block text-sm font-medium text-zinc-300"
-                    htmlFor="new-password"
-                  >
-                    New password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="new-password"
-                      type={showNewPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Minimum 8 characters"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword((p) => !p)}
-                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
-                      aria-label={showNewPassword ? "Hide password" : "Show password"}
-                    >
-                      {showNewPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirm new password */}
-                <div>
-                  <label
-                    className="mb-1 block text-sm font-medium text-zinc-300"
-                    htmlFor="confirm-password"
-                  >
-                    Confirm new password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="confirm-password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter new password"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((p) => !p)}
-                      className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
-                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                    >
-                      {showConfirmPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </div>
-
-                {passwordError ? (
-                  <p className="text-sm text-rose-200">{passwordError}</p>
                 ) : null}
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
-                    onClick={savePassword}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSavingPassword ? "Updating..." : "Update password"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelPasswordChange}
-                    className="text-sm font-medium text-zinc-400 transition hover:text-zinc-200"
-                  >
-                    Cancel
-                  </button>
+                {/* ── Privacy Settings ── */}
+                {profile.default_entry_privacy !== null && profile.default_entry_privacy !== undefined ? (
+                  <div className="space-y-3 border-t border-white/10 pt-6">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      Privacy settings
+                    </h3>
+                    <p className="text-xs text-zinc-500">
+                      Choose defaults for new posts, reactions, and comments.
+                    </p>
+
+                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                        <label
+                          htmlFor="default-entry-privacy-select"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                        >
+                          Post visibility
+                        </label>
+                        <select
+                          id="default-entry-privacy-select"
+                          value={entryPrivacyValue}
+                          onChange={(e) => {
+                            const nextValue = e.target.value as PrivacyLevel;
+                            setEntryPrivacyValue(nextValue);
+                            void savePrivacyDefaults({
+                              default_entry_privacy: nextValue,
+                            });
+                          }}
+                          disabled={isSavingPrivacy}
+                          className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                        >
+                          {PRIVACY_OPTIONS.map((option) => (
+                            <option key={`entry-${option.value}`} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                        <label
+                          htmlFor="default-reaction-privacy-select"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                        >
+                          Reactions
+                        </label>
+                        <select
+                          id="default-reaction-privacy-select"
+                          value={reactionPrivacyValue}
+                          onChange={(e) => {
+                            const nextValue = e.target.value as PrivacyLevel;
+                            setReactionPrivacyValue(nextValue);
+                            void savePrivacyDefaults({
+                              default_reaction_privacy: nextValue,
+                            });
+                          }}
+                          disabled={isSavingPrivacy}
+                          className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                        >
+                          {PRIVACY_OPTIONS.map((option) => (
+                            <option key={`reaction-${option.value}`} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                        <label
+                          htmlFor="default-comments-privacy-select"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                        >
+                          Comments
+                        </label>
+                        <select
+                          id="default-comments-privacy-select"
+                          value={commentsPrivacyValue}
+                          onChange={(e) => {
+                            const nextValue = e.target.value as PrivacyLevel;
+                            setCommentsPrivacyValue(nextValue);
+                            void savePrivacyDefaults({
+                              default_comments_privacy: nextValue,
+                            });
+                          }}
+                          disabled={isSavingPrivacy}
+                          className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                        >
+                          {PRIVACY_OPTIONS.map((option) => (
+                            <option key={`comments-${option.value}`} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-[11px] text-zinc-500">
+                      <p>Reactions privacy controls who can see and react.</p>
+                      <p>Comments privacy controls who can see the comments UI and comment.</p>
+                    </div>
+
+                    {privacyMessage ? (
+                      <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {/* ── Change Password ── */}
+                <div className="space-y-3 border-t border-white/10 pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                        Password
+                      </h3>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Update your account password.
+                      </p>
+                    </div>
+
+                    {!isPasswordOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPasswordSuccess(null);
+                          setIsPasswordOpen(true);
+                        }}
+                        className="shrink-0 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                      >
+                        Change password
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {passwordSuccess && !isPasswordOpen ? (
+                    <p className="text-sm text-emerald-200">{passwordSuccess}</p>
+                  ) : null}
+
+                  {isPasswordOpen ? (
+                    <div className="mt-3 space-y-4">
+                      {/* Current password */}
+                      <div>
+                        <label
+                          className="mb-1 block text-sm font-medium text-zinc-300"
+                          htmlFor="current-password"
+                        >
+                          Current password
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="current-password"
+                            type={showCurrentPassword ? "text" : "password"}
+                            autoComplete="current-password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Enter your current password"
+                            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPassword((p) => !p)}
+                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                            aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                          >
+                            {showCurrentPassword ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* New password */}
+                      <div>
+                        <label
+                          className="mb-1 block text-sm font-medium text-zinc-300"
+                          htmlFor="new-password"
+                        >
+                          New password
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="new-password"
+                            type={showNewPassword ? "text" : "password"}
+                            autoComplete="new-password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Minimum 8 characters"
+                            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword((p) => !p)}
+                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                            aria-label={showNewPassword ? "Hide password" : "Show password"}
+                          >
+                            {showNewPassword ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm new password */}
+                      <div>
+                        <label
+                          className="mb-1 block text-sm font-medium text-zinc-300"
+                          htmlFor="confirm-password"
+                        >
+                          Confirm new password
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="confirm-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            autoComplete="new-password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Re-enter new password"
+                            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((p) => !p)}
+                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                          >
+                            {showConfirmPassword ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {passwordError ? (
+                        <p className="text-sm text-rose-200">{passwordError}</p>
+                      ) : null}
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
+                          onClick={savePassword}
+                          className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isSavingPassword ? "Updating..." : "Update password"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelPasswordChange}
+                          className="text-sm font-medium text-zinc-400 transition hover:text-zinc-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
-            ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

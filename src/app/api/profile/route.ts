@@ -23,6 +23,7 @@ const privacyLevelSchema = z.enum([
   "private",
 ]);
 const NAME_MAX_LENGTH = 80;
+const BIO_MAX_LENGTH = 100;
 
 const nullableNameSchema = z.preprocess(
   (value) => {
@@ -93,6 +94,11 @@ const updateProfileSchema = z
     last_name: nullableNameSchema,
     email: optionalEmailSchema,
     phone: nullablePhoneSchema,
+    bio: z
+      .string()
+      .max(BIO_MAX_LENGTH, `Bio must be ${BIO_MAX_LENGTH} characters or fewer.`)
+      .nullable()
+      .optional(),
     default_entry_privacy: privacyLevelSchema.optional(),
     default_reaction_privacy: privacyLevelSchema.optional(),
     default_comments_privacy: privacyLevelSchema.optional(),
@@ -105,6 +111,7 @@ const updateProfileSchema = z
       value.last_name !== undefined ||
       value.email !== undefined ||
       value.phone !== undefined ||
+      value.bio !== undefined ||
       value.default_entry_privacy !== undefined ||
       value.default_reaction_privacy !== undefined ||
       value.default_comments_privacy !== undefined ||
@@ -133,12 +140,17 @@ function hasMissingPhoneColumn(message: string) {
   return message.includes("phone");
 }
 
+function hasMissingBioColumn(message: string) {
+  return message.includes("bio");
+}
+
 function hasMissingKnownProfileColumns(message: string) {
   return (
     hasMissingPrivacyColumns(message) ||
     hasMissingNameColumns(message) ||
     hasMissingAvatarColumn(message) ||
-    hasMissingPhoneColumn(message)
+    hasMissingPhoneColumn(message) ||
+    hasMissingBioColumn(message)
   );
 }
 
@@ -418,8 +430,20 @@ export async function GET() {
 
   const phone = typeof phoneRow?.phone === "string" ? phoneRow.phone : null;
 
+  const { data: bioRow, error: bioError } = await supabase
+    .from("profiles")
+    .select("bio")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (bioError && !hasMissingBioColumn(bioError.message)) {
+    return NextResponse.json({ error: bioError.message }, { status: 500 });
+  }
+
+  const bio = typeof bioRow?.bio === "string" ? bioRow.bio : null;
+
   return NextResponse.json(
-    { profile: { ...profile, phone, avatar_path: avatarPath, avatar_url } },
+    { profile: { ...profile, phone, bio, avatar_path: avatarPath, avatar_url } },
     {
       headers: {
         "Cache-Control": "private, no-store, max-age=0",
@@ -461,6 +485,7 @@ export async function PATCH(request: Request) {
       flattened.fieldErrors.last_name?.[0] ??
       flattened.fieldErrors.email?.[0] ??
       flattened.fieldErrors.phone?.[0] ??
+      flattened.fieldErrors.bio?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
       flattened.fieldErrors.default_reaction_privacy?.[0] ??
       flattened.fieldErrors.default_comments_privacy?.[0] ??
@@ -503,6 +528,10 @@ export async function PATCH(request: Request) {
 
   if (parsed.data.email !== undefined) {
     updates.email = parsed.data.email;
+  }
+
+  if (parsed.data.bio !== undefined) {
+    updates.bio = parsed.data.bio?.trim() || null;
   }
 
   if (parsed.data.phone !== undefined) {
@@ -616,6 +645,13 @@ export async function PATCH(request: Request) {
       }
     }
 
+    if (hasMissingBioColumn(message)) {
+      if ("bio" in updatesToApply) {
+        delete updatesToApply.bio;
+        removedUnsupportedColumn = true;
+      }
+    }
+
     if (!removedUnsupportedColumn) {
       return NextResponse.json({ error: message }, { status: 500 });
     }
@@ -641,5 +677,17 @@ export async function PATCH(request: Request) {
   }
 
   const phone = typeof phoneRow?.phone === "string" ? phoneRow.phone : null;
-  return NextResponse.json({ profile: { ...profile, phone } });
+
+  const { data: bioRowPatch, error: bioErrorPatch } = await supabase
+    .from("profiles")
+    .select("bio")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (bioErrorPatch && !hasMissingBioColumn(bioErrorPatch.message)) {
+    return NextResponse.json({ error: bioErrorPatch.message }, { status: 500 });
+  }
+
+  const bio = typeof bioRowPatch?.bio === "string" ? bioRowPatch.bio : null;
+  return NextResponse.json({ profile: { ...profile, phone, bio } });
 }
