@@ -183,6 +183,12 @@ export default function ProfilePage() {
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entriesCursor, setEntriesCursor] = useState<string | null>(null);
   const [entriesHasMore, setEntriesHasMore] = useState(false);
+  const [wineCount, setWineCount] = useState<number | null>(null);
+  const [friendCount, setFriendCount] = useState<number | null>(null);
+  const [galleryTab, setGalleryTab] = useState<"mine" | "tagged">("mine");
+  const [taggedEntries, setTaggedEntries] = useState<Entry[]>([]);
+  const [taggedLoading, setTaggedLoading] = useState(false);
+  const [taggedLoaded, setTaggedLoaded] = useState(false);
 
   // Friends modal state
   const [friendsOpen, setFriendsOpen] = useState(false);
@@ -338,10 +344,33 @@ export default function ProfilePage() {
       setEntries((prev) => (cursor ? [...prev, ...data.entries] : data.entries));
       setEntriesHasMore(data.has_more ?? false);
       setEntriesCursor(data.next_cursor ?? null);
+      if (data.total_count !== undefined) setWineCount(data.total_count);
     } catch {
       // ignore
     } finally {
       setEntriesLoading(false);
+    }
+  }, []);
+
+  const loadTaggedEntries = useCallback(async (userId: string) => {
+    setTaggedLoading(true);
+    try {
+      const res = await fetch(`/api/users/${userId}/tagged`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setTaggedEntries(
+          (data.entries ?? []).map((e: { id: string; wine_name?: string | null; label_image_url?: string | null }) => ({
+            id: e.id,
+            wine_name: e.wine_name ?? null,
+            label_image_url: e.label_image_url ?? null,
+          }))
+        );
+      }
+    } catch {
+      // ignore
+    } finally {
+      setTaggedLoading(false);
+      setTaggedLoaded(true);
     }
   }, []);
 
@@ -470,6 +499,14 @@ export default function ProfilePage() {
   useEffect(() => {
     loadProfile();
     loadEntries();
+
+    // Load friend count
+    fetch("/api/friends", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.friends) setFriendCount(data.friends.length);
+      })
+      .catch(() => null);
 
     // Load badges in parallel (independent of profile)
     fetch("/api/profile/badges", { cache: "no-store" })
@@ -916,7 +953,50 @@ export default function ProfilePage() {
                 {profile.bio ? (
                   <p className="mt-2 text-sm text-zinc-300">{profile.bio}</p>
                 ) : null}
+                <div className="mt-3 flex items-center gap-6">
+                  <div>
+                    <span className="text-sm font-semibold tabular-nums text-zinc-50">
+                      {wineCount ?? "\u2014"}
+                    </span>{" "}
+                    <span className="text-xs text-zinc-400">wines</span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold tabular-nums text-zinc-50">
+                      {friendCount ?? "\u2014"}
+                    </span>{" "}
+                    <span className="text-xs text-zinc-400">friends</span>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Gallery toggle */}
+            <div className="mt-5 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setGalleryTab("mine")}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  galleryTab === "mine"
+                    ? "bg-white/10 text-zinc-50"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                My wines
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGalleryTab("tagged");
+                  if (!taggedLoaded && profile) loadTaggedEntries(profile.id);
+                }}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  galleryTab === "tagged"
+                    ? "bg-white/10 text-zinc-50"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Tagged
+              </button>
             </div>
 
             {usernameSuccess ? (
@@ -926,55 +1006,97 @@ export default function ProfilePage() {
 
           {/* ── Entry Photo Gallery ── */}
           <div>
-            {entries.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
-                {entries.map((entry) => (
-                  <Link
-                    key={entry.id}
-                    href={`/entries/${entry.id}`}
-                    className="aspect-square overflow-hidden rounded-lg bg-white/5"
-                  >
-                    {entry.label_image_url ? (
-                      <img
-                        src={entry.label_image_url}
-                        alt={entry.wine_name || "Wine entry"}
-                        className="h-full w-full object-cover transition hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-zinc-700">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <path d="m21 15-5-5L5 21" />
-                        </svg>
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            ) : !entriesLoading ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-500">
-                No entries yet.
-              </div>
-            ) : null}
+            {galleryTab === "mine" ? (
+              <>
+                {entries.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
+                    {entries.map((entry) => (
+                      <Link
+                        key={entry.id}
+                        href={`/entries/${entry.id}`}
+                        className="aspect-square overflow-hidden rounded-lg bg-white/5"
+                      >
+                        {entry.label_image_url ? (
+                          <img
+                            src={entry.label_image_url}
+                            alt={entry.wine_name || "Wine entry"}
+                            className="h-full w-full object-cover transition hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-zinc-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <path d="m21 15-5-5L5 21" />
+                            </svg>
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                ) : !entriesLoading ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-500">
+                    No entries yet.
+                  </div>
+                ) : null}
 
-            {entriesLoading ? (
-              <p className="mt-4 text-center text-sm text-zinc-500">Loading entries...</p>
-            ) : null}
+                {entriesLoading ? (
+                  <p className="mt-4 text-center text-sm text-zinc-500">Loading entries...</p>
+                ) : null}
 
-            {entriesHasMore && !entriesLoading ? (
-              <div className="mt-4 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (entriesCursor) loadEntries(entriesCursor);
-                  }}
-                  className="rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                >
-                  Load more
-                </button>
-              </div>
-            ) : null}
+                {entriesHasMore && !entriesLoading ? (
+                  <div className="mt-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (entriesCursor) loadEntries(entriesCursor);
+                      }}
+                      className="rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                    >
+                      Load more
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {taggedEntries.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
+                    {taggedEntries.map((entry) => (
+                      <Link
+                        key={entry.id}
+                        href={`/entries/${entry.id}`}
+                        className="aspect-square overflow-hidden rounded-lg bg-white/5"
+                      >
+                        {entry.label_image_url ? (
+                          <img
+                            src={entry.label_image_url}
+                            alt={entry.wine_name || "Wine entry"}
+                            className="h-full w-full object-cover transition hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-zinc-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <path d="m21 15-5-5L5 21" />
+                            </svg>
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                ) : !taggedLoading ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-zinc-500">
+                    No tagged entries yet.
+                  </div>
+                ) : null}
+
+                {taggedLoading ? (
+                  <p className="mt-4 text-center text-sm text-zinc-500">Loading tagged entries...</p>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </div>

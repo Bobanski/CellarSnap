@@ -422,7 +422,13 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ entries, next_cursor, has_more });
+  // Lightweight total count (uses index on user_id)
+  const { count: totalCount } = await supabase
+    .from("wine_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  return NextResponse.json({ entries, next_cursor, has_more, total_count: totalCount ?? 0 });
 }
 
 export async function POST(request: Request) {
