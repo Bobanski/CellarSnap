@@ -218,7 +218,13 @@ export default function EntriesPage() {
   const [filterMax, setFilterMax] = useState<string>("");
   const [libraryViewMode, setLibraryViewMode] =
     useState<LibraryViewMode>("grouped");
-  const [groupScheme, setGroupScheme] = useState<GroupScheme>("region");
+  const [groupScheme, setGroupScheme] = useState<GroupScheme>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("libraryGroupScheme");
+      if (saved === "region" || saved === "vintage" || saved === "varietal") return saved;
+    }
+    return "region";
+  });
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeControlPanel, setActiveControlPanel] = useState<ControlPanel>(null);
 
@@ -763,7 +769,10 @@ export default function EntriesPage() {
                           <button
                             key={option.value}
                             type="button"
-                            onClick={() => setGroupScheme(option.value)}
+                            onClick={() => {
+                              setGroupScheme(option.value);
+                              try { localStorage.setItem("libraryGroupScheme", option.value); } catch {}
+                            }}
                             className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                               groupScheme === option.value
                                 ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
