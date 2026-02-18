@@ -90,7 +90,7 @@ export async function GET() {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select("id, display_name, email, avatar_path")
     .in("id", suggestionIds);
 
   const profileMap = new Map(
@@ -98,10 +98,24 @@ export async function GET() {
   );
   const countMap = new Map(sorted);
 
+  // Sign avatar URLs in parallel
+  const avatarUrlMap = new Map<string, string | null>();
+  await Promise.all(
+    (profiles ?? []).map(async (p) => {
+      if (p.avatar_path) {
+        const { data: urlData } = await supabase.storage
+          .from("wine-photos")
+          .createSignedUrl(p.avatar_path, 60 * 60);
+        avatarUrlMap.set(p.id, urlData?.signedUrl ?? null);
+      }
+    })
+  );
+
   const suggestions = suggestionIds.map((id) => ({
     id,
     display_name: profileMap.get(id)?.display_name ?? null,
     email: profileMap.get(id)?.email ?? null,
+    avatar_url: avatarUrlMap.get(id) ?? null,
     mutual_count: countMap.get(id) ?? 0,
   }));
 

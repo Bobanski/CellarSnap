@@ -39,12 +39,25 @@ export async function GET() {
     userIds.length > 0
       ? await supabase
           .from("profiles")
-          .select("id, display_name, email")
+          .select("id, display_name, email, avatar_path")
           .in("id", userIds)
       : { data: [] };
 
   const profileMap = new Map(
     (profiles ?? []).map((profile) => [profile.id, profile])
+  );
+
+  // Sign avatar URLs in parallel
+  const avatarUrlMap = new Map<string, string | null>();
+  await Promise.all(
+    (profiles ?? []).map(async (profile) => {
+      if (profile.avatar_path) {
+        const { data: urlData } = await supabase.storage
+          .from("wine-photos")
+          .createSignedUrl(profile.avatar_path, 60 * 60);
+        avatarUrlMap.set(profile.id, urlData?.signedUrl ?? null);
+      }
+    })
   );
 
   const incoming = (requests ?? [])
@@ -55,6 +68,7 @@ export async function GET() {
         id: request.requester_id,
         display_name: profileMap.get(request.requester_id)?.display_name ?? null,
         email: profileMap.get(request.requester_id)?.email ?? null,
+        avatar_url: avatarUrlMap.get(request.requester_id) ?? null,
       },
       created_at: request.created_at,
       seen_at: request.seen_at,
@@ -68,6 +82,7 @@ export async function GET() {
         id: request.recipient_id,
         display_name: profileMap.get(request.recipient_id)?.display_name ?? null,
         email: profileMap.get(request.recipient_id)?.email ?? null,
+        avatar_url: avatarUrlMap.get(request.recipient_id) ?? null,
       },
       created_at: request.created_at,
     }));

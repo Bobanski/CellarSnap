@@ -37,12 +37,25 @@ export async function GET() {
     friendIds.length > 0
       ? await supabase
           .from("profiles")
-          .select("id, display_name, email")
+          .select("id, display_name, email, avatar_path")
           .in("id", friendIds)
       : { data: [] };
 
   const profileMap = new Map(
     (profiles ?? []).map((profile) => [profile.id, profile])
+  );
+
+  // Sign avatar URLs in parallel
+  const avatarUrlMap = new Map<string, string | null>();
+  await Promise.all(
+    (profiles ?? []).map(async (profile) => {
+      if (profile.avatar_path) {
+        const { data: urlData } = await supabase.storage
+          .from("wine-photos")
+          .createSignedUrl(profile.avatar_path, 60 * 60);
+        avatarUrlMap.set(profile.id, urlData?.signedUrl ?? null);
+      }
+    })
   );
 
   // Count how often each friend appears in tasted_with_user_ids
@@ -69,6 +82,7 @@ export async function GET() {
       request_id: friendMap.get(id) ?? null,
       display_name: profileMap.get(id)?.display_name ?? null,
       email: profileMap.get(id)?.email ?? null,
+      avatar_url: avatarUrlMap.get(id) ?? null,
       tasting_count: frequencyMap.get(id) ?? 0,
     })),
   });
