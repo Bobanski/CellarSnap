@@ -82,6 +82,46 @@ function createGroupId(scheme: GroupScheme, label: string): string {
   return `${scheme}:${label.toLowerCase()}`;
 }
 
+function includesSearchValue(
+  value: string | number | null | undefined,
+  query: string
+): boolean {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  return String(value).toLowerCase().includes(query);
+}
+
+function entryMatchesSearch(entry: WineEntryWithUrls, query: string): boolean {
+  if (!query) {
+    return true;
+  }
+
+  const directFields: Array<string | number | null | undefined> = [
+    entry.wine_name,
+    entry.producer,
+    entry.vintage,
+    entry.country,
+    entry.region,
+    entry.appellation,
+    entry.classification,
+    entry.notes,
+    entry.ai_notes_summary,
+    entry.location_text,
+    entry.rating,
+    entry.qpr_level,
+  ];
+
+  if (directFields.some((field) => includesSearchValue(field, query))) {
+    return true;
+  }
+
+  return Boolean(
+    entry.primary_grapes?.some((grape) => includesSearchValue(grape.name, query))
+  );
+}
+
 function EntryCard({ entry }: { entry: WineEntryWithUrls }) {
   return (
     <Link
@@ -160,6 +200,7 @@ export default function EntriesPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("consumed_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [filterType, setFilterType] = useState<FilterType>("");
@@ -177,6 +218,8 @@ export default function EntriesPage() {
     (filterMin !== "" || filterMax !== "");
   const isFilterActive =
     filterType === "country" ? filterValue !== "" : isRangeFilterActive;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const isSearchActive = normalizedSearchQuery.length > 0;
 
   const uniqueValues = useMemo(() => {
     const vintages = new Set<number>();
@@ -233,8 +276,18 @@ export default function EntriesPage() {
     return entries;
   }, [entries, filterType, filterValue, filterMin, filterMax]);
 
+  const searchedEntries = useMemo(() => {
+    if (!isSearchActive) {
+      return filteredEntries;
+    }
+
+    return filteredEntries.filter((entry) =>
+      entryMatchesSearch(entry, normalizedSearchQuery)
+    );
+  }, [filteredEntries, isSearchActive, normalizedSearchQuery]);
+
   const sortedEntries = useMemo(() => {
-    const copy = [...filteredEntries];
+    const copy = [...searchedEntries];
     const mult = sortOrder === "asc" ? 1 : -1;
 
     if (sortBy === "rating") {
@@ -254,7 +307,7 @@ export default function EntriesPage() {
     }
 
     return copy.sort((a, b) => mult * a.consumed_at.localeCompare(b.consumed_at));
-  }, [filteredEntries, sortBy, sortOrder]);
+  }, [searchedEntries, sortBy, sortOrder]);
 
   const groupedEntries = useMemo<EntryGroup[]>(() => {
     if (libraryViewMode !== "grouped") {
@@ -501,6 +554,29 @@ export default function EntriesPage() {
               </button>
             </div>
 
+            <div className="flex w-full max-w-md items-center gap-2">
+              <label htmlFor="library-search" className="sr-only">
+                Search your library
+              </label>
+              <input
+                id="library-search"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search wine, producer, region, or varietal"
+                className="w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none"
+              />
+              {isSearchActive ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="shrink-0 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 hover:text-zinc-100"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
             <span className="text-xs text-zinc-400">
               {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
             </span>
@@ -708,13 +784,17 @@ export default function EntriesPage() {
         ) : sortedEntries.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
             <p>
-              {isRangeFilterActive
-                ? "There are no wines found in this range."
-                : isFilterActive
-                  ? hasMore
-                    ? "No entries match this filter yet. Try loading more."
-                    : "No entries match this filter."
-                  : "Your library is empty. Add your first bottle!"}
+              {isSearchActive
+                ? hasMore
+                  ? "No entries match this search yet. Try loading more."
+                  : "No entries match this search."
+                : isRangeFilterActive
+                  ? "There are no wines found in this range."
+                  : isFilterActive
+                    ? hasMore
+                      ? "No entries match this filter yet. Try loading more."
+                      : "No entries match this filter."
+                    : "Your library is empty. Add your first bottle!"}
             </p>
             {hasMore ? (
               <button
