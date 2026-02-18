@@ -3187,7 +3187,7 @@ export default function NewEntryPage() {
                       {...register("rating", {
                         validate: (value) => {
                           const trimmed = value?.trim() ?? "";
-                          if (!trimmed) return "Rating is required.";
+                          if (!trimmed) return "Rating required.";
                           if (!/^[0-9]+$/.test(trimmed)) {
                             return "Rating must be a whole number (integer).";
                           }

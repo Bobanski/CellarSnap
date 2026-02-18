@@ -95,7 +95,7 @@ const createEntrySchema = z.object({
   classification: nullableString,
   primary_grape_ids: primaryGrapeIdsSchema,
   rating: z
-    .number()
+    .number({ required_error: "Rating required.", invalid_type_error: "Rating required." })
     .int("Rating must be a whole number (integer).")
     .min(1, "Rating must be between 1 and 100.")
     .max(100, "Rating must be between 1 and 100."),
