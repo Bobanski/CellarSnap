@@ -128,7 +128,7 @@ export default function AlertsMenu() {
     setCount(unseen);
     setBadgeBaseline((prev) => {
       if (prev === null) {
-        return unseen;
+        return null;
       }
       const next = Math.min(prev, unseen);
       if (next !== prev) {
@@ -170,7 +170,7 @@ export default function AlertsMenu() {
       } else {
         setBadgeBaseline((prev) => {
           if (prev === null) {
-            return unseen;
+            return null;
           }
           const next = Math.min(prev, unseen);
           if (next !== prev) {

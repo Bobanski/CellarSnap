@@ -352,9 +352,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // Reactions: counts per entry per emoji, and current user's reactions per entry.
+  // Reactions: counts per entry per emoji, current user's reactions, and reactor user IDs.
   const reactionCountsMap = new Map<string, Record<string, number>>();
   const myReactionsMap = new Map<string, string[]>();
+  const reactionUserIdsMap = new Map<string, Record<string, string[]>>();
+  const allReactorUserIds = new Set<string>();
   if (entryIds.length > 0) {
     const { data: reactions } = await supabase
       .from("entry_reactions")
@@ -364,11 +366,35 @@ export async function GET(request: Request) {
       const counts = reactionCountsMap.get(reaction.entry_id) ?? {};
       counts[reaction.emoji] = (counts[reaction.emoji] ?? 0) + 1;
       reactionCountsMap.set(reaction.entry_id, counts);
+      const emojiUsers = reactionUserIdsMap.get(reaction.entry_id) ?? {};
+      const list = emojiUsers[reaction.emoji] ?? [];
+      if (!list.includes(reaction.user_id)) list.push(reaction.user_id);
+      emojiUsers[reaction.emoji] = list;
+      reactionUserIdsMap.set(reaction.entry_id, emojiUsers);
+      allReactorUserIds.add(reaction.user_id);
       if (reaction.user_id === user.id) {
         const mine = myReactionsMap.get(reaction.entry_id) ?? [];
         if (!mine.includes(reaction.emoji)) mine.push(reaction.emoji);
         myReactionsMap.set(reaction.entry_id, mine);
       }
+    });
+  }
+
+  // Fetch display names for reactor user IDs not already in profileMap.
+  const missingReactorIds = Array.from(allReactorUserIds).filter(
+    (id) => !profileMap.has(id)
+  );
+  if (missingReactorIds.length > 0) {
+    const { data: reactorProfiles } = await supabase
+      .from("profiles")
+      .select("id, display_name, email")
+      .in("id", missingReactorIds);
+    (reactorProfiles ?? []).forEach((profile) => {
+      profileMap.set(profile.id, {
+        display_name: profile.display_name ?? null,
+        email: profile.email ?? null,
+        avatar_path: null,
+      });
     });
   }
 
@@ -568,6 +594,16 @@ export async function GET(request: Request) {
     const myReactions = canSeeReactions
       ? myReactionsMap.get(entry.id) ?? []
       : [];
+    const rawReactionUserIds = canSeeReactions
+      ? reactionUserIdsMap.get(entry.id) ?? {}
+      : {};
+    const reactionUsers: Record<string, string[]> = {};
+    for (const [emoji, ids] of Object.entries(rawReactionUserIds)) {
+      reactionUsers[emoji] = ids.map((id) => {
+        const profile = profileMap.get(id);
+        return profile?.display_name ?? profile?.email ?? "Unknown";
+      });
+    }
     const commentCount = canSeeComments
       ? commentCountsMap.get(entry.id) ?? 0
       : 0;
@@ -588,6 +624,7 @@ export async function GET(request: Request) {
       comment_count: commentCount,
       reaction_counts: reactionCounts,
       my_reactions: myReactions,
+      reaction_users: reactionUsers,
     };
   });
 

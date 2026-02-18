@@ -41,6 +41,7 @@ type FeedEntry = WineEntryWithUrls & {
   comment_count?: number;
   reaction_counts?: Record<string, number>;
   my_reactions?: string[];
+  reaction_users?: Record<string, string[]>;
   photo_gallery?: FeedPhoto[];
 };
 
@@ -243,6 +244,7 @@ export default function FeedPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedScope, setFeedScope] = useState<"public" | "friends">("public");
   const [reactionPopupEntryId, setReactionPopupEntryId] = useState<string | null>(null);
+  const [reactionUsersPopup, setReactionUsersPopup] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -925,15 +927,42 @@ export default function FeedPage() {
                             ) : null}
                             <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
                               {hasReactionCounts
-                                ? reactionSummary.map(({ emoji, count }) => (
-                                    <span
-                                      key={`${entry.id}-reaction-summary-${emoji}`}
-                                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200"
-                                    >
-                                      <span>{emoji}</span>
-                                      <span className="tabular-nums text-zinc-400">{count}</span>
-                                    </span>
-                                  ))
+                                ? reactionSummary.map(({ emoji, count }) => {
+                                    const names = entry.reaction_users?.[emoji] ?? [];
+                                    const popupKey = `${entry.id}-${emoji}`;
+                                    const showNames = reactionUsersPopup === popupKey;
+                                    return (
+                                      <span
+                                        key={`${entry.id}-reaction-summary-${emoji}`}
+                                        className="group/reaction relative"
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setReactionUsersPopup((prev) =>
+                                              prev === popupKey ? null : popupKey
+                                            );
+                                          }}
+                                          className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200 transition hover:border-amber-300/40"
+                                        >
+                                          <span>{emoji}</span>
+                                          <span className="tabular-nums text-zinc-400">{count}</span>
+                                        </button>
+                                        {names.length > 0 ? (
+                                          <span
+                                            className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#1a1412] px-2.5 py-1.5 text-[11px] text-zinc-200 shadow-lg transition-opacity ${
+                                              showNames
+                                                ? "pointer-events-auto opacity-100"
+                                                : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"
+                                            }`}
+                                          >
+                                            {names.join(", ")}
+                                          </span>
+                                        ) : null}
+                                      </span>
+                                    );
+                                  })
                                 : null}
                               <button
                                 type="button"
