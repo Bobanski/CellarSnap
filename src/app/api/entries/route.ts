@@ -64,6 +64,29 @@ const optionalPricePaidSchema = z.preprocess(
     .optional()
 );
 
+const optionalRatingSchema = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed === "") {
+        return null;
+      }
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : value;
+    }
+    return value;
+  },
+  z
+    .number({ error: "Rating required." })
+    .int("Rating must be a whole number (integer).")
+    .min(1, "Rating must be between 1 and 100.")
+    .max(100, "Rating must be between 1 and 100.")
+    .nullable()
+);
+
 const primaryGrapeIdsSchema = z.preprocess(
   (value) => {
     if (!Array.isArray(value)) {
@@ -94,11 +117,7 @@ const createEntrySchema = z.object({
   appellation: nullableString,
   classification: nullableString,
   primary_grape_ids: primaryGrapeIdsSchema,
-  rating: z
-    .number({ error: "Rating required." })
-    .int("Rating must be a whole number (integer).")
-    .min(1, "Rating must be between 1 and 100.")
-    .max(100, "Rating must be between 1 and 100."),
+  rating: optionalRatingSchema,
   price_paid: optionalPricePaidSchema,
   price_paid_currency: z.preprocess(
     (value) => (value === "" ? null : value),
