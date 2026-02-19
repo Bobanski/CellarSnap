@@ -357,27 +357,6 @@ export default function SignupPage() {
                 <p className="mt-1 text-xs text-zinc-500">Must be at least 8 characters.</p>
               </div>
 
-              <p className="text-xs leading-5 text-zinc-400">
-                By creating an account with a phone number, you agree to receive
-                transactional SMS verification codes for login and account security.
-                Message frequency varies. Message and data rates may apply. Reply STOP to
-                opt out and HELP for help. See{" "}
-                <Link href="/privacy/more" className="text-amber-200 transition hover:text-amber-100">
-                  Privacy
-                </Link>{" "}
-                and{" "}
-                <Link href="/terms" className="text-amber-200 transition hover:text-amber-100">
-                  Terms
-                </Link>
-                . Compliance details:{" "}
-                <Link
-                  href="/sms-compliance"
-                  className="text-amber-200 transition hover:text-amber-100"
-                >
-                  SMS Compliance
-                </Link>
-                .
-              </p>
             </>
           ) : (
             <div>
@@ -403,8 +382,52 @@ export default function SignupPage() {
             className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting || emailCooldownSeconds > 0}
           >
-            {isPhoneMode ? "Create account" : "Send confirmation code"}
+            Send confirmation code
           </button>
+
+          {isPhoneMode ? (
+            <p className="text-xs leading-5 text-zinc-400">
+              By entering your phone number and selecting Send confirmation code, you
+              consent to receive transactional SMS verification codes for login and
+              account security. Message frequency varies. Message and data rates may
+              apply. Reply STOP to opt out and HELP for help. See{" "}
+              <Link
+                href="/privacy/more"
+                className="text-amber-200 transition hover:text-amber-100"
+              >
+                Privacy
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/terms"
+                className="text-amber-200 transition hover:text-amber-100"
+              >
+                Terms
+              </Link>
+              .
+            </p>
+          ) : (
+            <p className="text-xs leading-5 text-zinc-400">
+              This button sends an email confirmation code. For phone-based signup, users
+              opt in to transactional SMS by entering a phone number and selecting Send
+              confirmation code. Reply STOP to opt out and HELP for help. See{" "}
+              <Link
+                href="/privacy/more"
+                className="text-amber-200 transition hover:text-amber-100"
+              >
+                Privacy
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/terms"
+                className="text-amber-200 transition hover:text-amber-100"
+              >
+                Terms
+              </Link>
+              .
+            </p>
+          )}
+
           {!isPhoneMode && emailCooldownSeconds > 0 ? (
             <p className="text-center text-xs text-zinc-500">
               You can request another email in {emailCooldownSeconds}s.
