@@ -13,6 +13,7 @@ const HOME_REDIRECT_EXEMPT_PREFIXES = [
   "/reset-password",
   "/privacy",
   "/terms",
+  "/sms-compliance",
 ];
 
 function isStandaloneDisplayMode() {

@@ -356,6 +356,28 @@ export default function SignupPage() {
                 </div>
                 <p className="mt-1 text-xs text-zinc-500">Must be at least 8 characters.</p>
               </div>
+
+              <p className="text-xs leading-5 text-zinc-400">
+                By creating an account with a phone number, you agree to receive
+                transactional SMS verification codes for login and account security.
+                Message frequency varies. Message and data rates may apply. Reply STOP to
+                opt out and HELP for help. See{" "}
+                <Link href="/privacy/more" className="text-amber-200 transition hover:text-amber-100">
+                  Privacy
+                </Link>{" "}
+                and{" "}
+                <Link href="/terms" className="text-amber-200 transition hover:text-amber-100">
+                  Terms
+                </Link>
+                . Compliance details:{" "}
+                <Link
+                  href="/sms-compliance"
+                  className="text-amber-200 transition hover:text-amber-100"
+                >
+                  SMS Compliance
+                </Link>
+                .
+              </p>
             </>
           ) : (
             <div>

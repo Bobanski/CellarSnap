@@ -214,6 +214,10 @@ export default function LoginPage() {
             <Link href="/terms" className="transition hover:text-amber-200">
               Terms
             </Link>
+            {" · "}
+            <Link href="/sms-compliance" className="transition hover:text-amber-200">
+              SMS
+            </Link>
           </div>
         </form>
       </div>
