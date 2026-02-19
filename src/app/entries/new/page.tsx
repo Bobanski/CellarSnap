@@ -102,6 +102,28 @@ const PHOTO_TYPE_OPTIONS: { value: UploadPhotoType; label: string }[] = [
   { value: "place", label: "Place" },
 ];
 
+const GALLERY_TYPE_PRIORITY: Record<UploadPhotoType, number> = {
+  pairing: 0,
+  label: 1,
+  people: 2,
+  other_bottles: 3,
+  lineup: 4,
+  place: 5,
+};
+
+function toOrdinal(value: number) {
+  const abs = Math.abs(value);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${value}th`;
+  }
+  const mod10 = abs % 10;
+  if (mod10 === 1) return `${value}st`;
+  if (mod10 === 2) return `${value}nd`;
+  if (mod10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
+
 export default function NewEntryPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -148,6 +170,9 @@ export default function NewEntryPage() {
   const [pairingPhotos, setPairingPhotos] = useState<UploadPhoto[]>([]);
   const [photoTypeOverrides, setPhotoTypeOverrides] = useState<
     Record<string, UploadPhotoType>
+  >({});
+  const [uploadOrderOverrides, setUploadOrderOverrides] = useState<
+    Record<string, number>
   >({});
   const [autofillStatus, setAutofillStatus] = useState<
     "idle" | "loading" | "success" | "error" | "timeout"
@@ -371,6 +396,22 @@ export default function NewEntryPage() {
   }, [labelPhotos]);
 
   useEffect(() => {
+    setUploadOrderOverrides((current) => {
+      const validPreviews = new Set(labelPhotos.map((photo) => photo.preview));
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [preview, order] of Object.entries(current)) {
+        if (!validPreviews.has(preview)) {
+          changed = true;
+          continue;
+        }
+        next[preview] = order;
+      }
+      return changed ? next : current;
+    });
+  }, [labelPhotos]);
+
+  useEffect(() => {
     if (cropPhotoIndex === null) {
       return;
     }
@@ -462,6 +503,14 @@ export default function NewEntryPage() {
     setLabelPhotos(nextPhotos);
     setPhotoTypeOverrides((existing) => {
       if (!existing[target.preview]) {
+        return existing;
+      }
+      const next = { ...existing };
+      delete next[target.preview];
+      return next;
+    });
+    setUploadOrderOverrides((existing) => {
+      if (existing[target.preview] === undefined) {
         return existing;
       }
       const next = { ...existing };
@@ -835,6 +884,16 @@ export default function NewEntryPage() {
         const next = { ...current };
         delete next[targetPhoto.preview];
         next[nextPreview] = currentOverride;
+        return next;
+      });
+      setUploadOrderOverrides((current) => {
+        const currentOrder = current[targetPhoto.preview];
+        if (currentOrder === undefined) {
+          return current;
+        }
+        const next = { ...current };
+        delete next[targetPhoto.preview];
+        next[nextPreview] = currentOrder;
         return next;
       });
       setCropPhotoIndex(null);
@@ -1649,6 +1708,10 @@ export default function NewEntryPage() {
         );
       const fallbackLabelIndex =
         labelIndexes.length === 0 && sourcePhotos.length > 0 ? 0 : -1;
+      const shouldSkipFallbackContextIndex: (index: number) => boolean =
+        fallbackLabelIndex >= 0 && labelIndexes.length === 0
+          ? (index: number) => index === fallbackLabelIndex
+          : () => false;
       const labelUploads = (
         labelIndexes.length > 0
           ? labelIndexes.map(({ photo }) => ({
@@ -1668,10 +1731,12 @@ export default function NewEntryPage() {
       ).slice(0, MAX_PHOTOS);
 
       const lineupUploads = sourceFiles.filter(
-        (_file, index) => resolvedPhotoTypeByIndex.get(index) === "lineup"
+        (_file, index) =>
+          !shouldSkipFallbackContextIndex(index) &&
+          resolvedPhotoTypeByIndex.get(index) === "lineup"
       );
       const otherBottleUploads = sourceFiles.filter((_file, index) => {
-        if (index === fallbackLabelIndex) {
+        if (shouldSkipFallbackContextIndex(index)) {
           return false;
         }
         return resolvedPhotoTypeByIndex.get(index) === "other_bottles";
@@ -1679,16 +1744,22 @@ export default function NewEntryPage() {
       const placeUploads = [
         ...placePhotos.map((photo) => photo.file),
         ...sourceFiles.filter(
-          (_file, index) => resolvedPhotoTypeByIndex.get(index) === "place"
+          (_file, index) =>
+            !shouldSkipFallbackContextIndex(index) &&
+            resolvedPhotoTypeByIndex.get(index) === "place"
         ),
       ];
       const peopleUploads = sourceFiles.filter(
-        (_file, index) => resolvedPhotoTypeByIndex.get(index) === "people"
+        (_file, index) =>
+          !shouldSkipFallbackContextIndex(index) &&
+          resolvedPhotoTypeByIndex.get(index) === "people"
       );
       const pairingUploads = [
         ...pairingPhotos.map((photo) => photo.file),
         ...sourceFiles.filter(
-          (_file, index) => resolvedPhotoTypeByIndex.get(index) === "pairing"
+          (_file, index) =>
+            !shouldSkipFallbackContextIndex(index) &&
+            resolvedPhotoTypeByIndex.get(index) === "pairing"
         ),
       ];
 
@@ -2874,37 +2945,125 @@ export default function NewEntryPage() {
     "group rounded-2xl border border-white/10 bg-black/30 p-4";
   const collapsibleSummaryClassName =
     "cursor-pointer list-none select-none text-sm font-medium text-zinc-200 [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
-  const uploadGalleryItems = labelPhotos.map((photo, index) => ({
-    id: String(index),
-    url: photo.preview,
-    alt: `Upload preview ${index + 1}`,
-    badge: (
-      <label className="relative block">
-        <select
-          value={resolvedPhotoTypeByIndex.get(index) ?? "other_bottles"}
-          className="max-w-[9rem] appearance-none rounded-full border border-white/10 bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-zinc-300 outline-none transition hover:border-white/20 focus:border-amber-300/50"
-          onClick={(event) => event.stopPropagation()}
-          onMouseDown={(event) => event.stopPropagation()}
-          onTouchStart={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            const nextType = event.target.value as UploadPhotoType;
-            setPhotoTypeOverrides((current) => ({
-              ...current,
-              [photo.preview]: nextType,
-            }));
-          }}
-        >
-          {PHOTO_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
-          ▾
-        </span>
-      </label>
-    ),
+  const baseUploadGalleryItems = labelPhotos
+    .map((photo, sourceIndex) => {
+      const resolvedType =
+        resolvedPhotoTypeByIndex.get(sourceIndex) ?? "other_bottles";
+      return {
+        id: photo.preview,
+        sourceIndex,
+        resolvedType,
+        url: photo.preview,
+        alt: `Upload preview ${sourceIndex + 1}`,
+        badge: (
+          <label className="relative block">
+            <select
+              value={resolvedType}
+              className="max-w-[9rem] appearance-none rounded-full border border-white/10 bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-zinc-300 outline-none transition hover:border-white/20 focus:border-amber-300/50"
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+              onTouchStart={(event) => event.stopPropagation()}
+              onChange={(event) => {
+                const nextType = event.target.value as UploadPhotoType;
+                setPhotoTypeOverrides((current) => ({
+                  ...current,
+                  [photo.preview]: nextType,
+                }));
+              }}
+            >
+              {PHOTO_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+              ▾
+            </span>
+          </label>
+        ),
+      };
+    })
+    .sort((a, b) => {
+      const typeDiff =
+        GALLERY_TYPE_PRIORITY[a.resolvedType] - GALLERY_TYPE_PRIORITY[b.resolvedType];
+      if (typeDiff !== 0) {
+        return typeDiff;
+      }
+      return a.sourceIndex - b.sourceIndex;
+    });
+  const uploadGalleryItems = baseUploadGalleryItems
+    .map((item, defaultIndex) => ({
+      ...item,
+      defaultIndex,
+      manualOrder: uploadOrderOverrides[item.id],
+    }))
+    .sort((a, b) => {
+      const aManual = a.manualOrder;
+      const bManual = b.manualOrder;
+      const aHasManual = typeof aManual === "number";
+      const bHasManual = typeof bManual === "number";
+      if (aHasManual && bHasManual) {
+        return aManual - bManual;
+      }
+      if (aHasManual) {
+        return -1;
+      }
+      if (bHasManual) {
+        return 1;
+      }
+      return a.defaultIndex - b.defaultIndex;
+    });
+  const moveUploadGalleryItemToIndex = (itemId: string, targetIndex: number) => {
+    if (targetIndex < 0 || targetIndex >= uploadGalleryItems.length) {
+      return;
+    }
+    const fromIndex = uploadGalleryItems.findIndex((item) => item.id === itemId);
+    if (fromIndex < 0 || fromIndex === targetIndex) {
+      return;
+    }
+    const reordered = [...uploadGalleryItems];
+    const moved = reordered[fromIndex];
+    if (!moved) {
+      return;
+    }
+    reordered.splice(fromIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    const nextOverrides: Record<string, number> = {};
+    reordered.forEach((item, index) => {
+      nextOverrides[item.id] = index;
+    });
+    setUploadOrderOverrides(nextOverrides);
+  };
+  const uploadGalleryItemsWithOrderControl = uploadGalleryItems.map((item, index) => ({
+    ...item,
+    topRightBadge:
+      uploadGalleryItems.length > 1 ? (
+        <label className="relative block">
+          <select
+            value={index}
+            className="max-w-[4.5rem] appearance-none rounded-full border border-white/15 bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-zinc-200 outline-none transition hover:border-white/30 focus:border-amber-300/50"
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              moveUploadGalleryItemToIndex(item.id, Number(event.target.value));
+            }}
+            aria-label={`Set photo order for ${item.alt}`}
+          >
+            {uploadGalleryItems.map((_photo, optionIndex) => (
+              <option key={optionIndex} value={optionIndex}>
+                {toOrdinal(optionIndex + 1)}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+            ▾
+          </span>
+        </label>
+      ) : (
+        toOrdinal(index + 1)
+      ),
   }));
   const showProcessedGallery =
     uploadGalleryItems.length > 0 && autofillStatus !== "loading";
@@ -2988,12 +3147,16 @@ export default function NewEntryPage() {
                 <div className="mt-4 space-y-2">
                   <p className="text-sm font-medium text-zinc-200">Current photos</p>
                   <SwipePhotoGallery
-                    items={uploadGalleryItems}
+                    items={uploadGalleryItemsWithOrderControl}
                     heightClassName="h-64 sm:h-80"
                     empty="No photos uploaded yet."
                     footer={(active, activeIndex) => {
                       const activePhotoIndex =
-                        typeof active.id === "string" ? Number(active.id) : -1;
+                        typeof active.id === "string"
+                          ? labelPhotos.findIndex(
+                              (photo) => photo.preview === active.id
+                            )
+                          : -1;
                       const activePhoto =
                         Number.isFinite(activePhotoIndex) && activePhotoIndex >= 0
                           ? labelPhotos[activePhotoIndex] ?? null

@@ -74,6 +74,70 @@ type UserOption = {
   display_name: string | null;
 };
 
+function normalizeMetaValue(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function getPrimaryVarietal(entry: FeedEntry) {
+  const grapes = Array.isArray(entry.primary_grapes) ? entry.primary_grapes : [];
+  if (grapes.length === 0) {
+    return null;
+  }
+  const sorted = [...grapes].sort((a, b) => a.position - b.position);
+  for (const grape of sorted) {
+    const value = normalizeMetaValue(grape.name);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function buildEntryMetaFields(entry: FeedEntry) {
+  const wineName = normalizeMetaValue(entry.wine_name) ?? "";
+  const producer = normalizeMetaValue(entry.producer);
+  const vintage = normalizeMetaValue(entry.vintage);
+  const region = normalizeMetaValue(entry.region);
+  const country = normalizeMetaValue(entry.country);
+  const appellation = normalizeMetaValue(entry.appellation);
+  const varietal = getPrimaryVarietal(entry);
+
+  const hideProducer = shouldHideProducerInEntryTile(wineName, producer);
+  const nonVintagePriority = [
+    hideProducer ? null : producer,
+    region,
+    country,
+    appellation,
+    varietal,
+  ];
+
+  const fields: string[] = [];
+  const firstField = nonVintagePriority.find((value): value is string => Boolean(value));
+  if (firstField) {
+    fields.push(firstField);
+  }
+
+  // Vintage can only appear in the second slot.
+  if (vintage && fields.length > 0) {
+    fields.push(vintage);
+  }
+
+  if (fields.length < 2) {
+    for (const value of nonVintagePriority) {
+      if (!value || fields.includes(value)) {
+        continue;
+      }
+      fields.push(value);
+      if (fields.length >= 2) {
+        break;
+      }
+    }
+  }
+
+  return fields.slice(0, 2);
+}
+
 function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   const fallbackPhotos: FeedPhoto[] = entry.place_image_url
     ? [{ type: "place", url: entry.place_image_url }]
@@ -815,16 +879,7 @@ export default function FeedPage() {
                       </h2>
                     ) : null}
                     {(() => {
-                      const wineName = entry.wine_name?.trim() ?? "";
-                      const producer = entry.producer?.trim() ?? "";
-                      const vintage = entry.vintage?.trim() ?? "";
-                      const hideProducer = shouldHideProducerInEntryTile(
-                        wineName,
-                        producer
-                      );
-                      const meta = [hideProducer ? null : producer || null, vintage || null]
-                        .filter(Boolean)
-                        .join(" · ");
+                      const meta = buildEntryMetaFields(entry).join(" · ");
 
                       return meta ? (
                         <p className="text-sm text-zinc-400 break-words">{meta}</p>

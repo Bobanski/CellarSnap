@@ -101,14 +101,18 @@ const CONTEXT_TAG_TO_PHOTO_TYPE: Record<ContextPhotoTag, EntryPhotoType> = {
   unknown: "other_bottles",
 };
 
-const GALLERY_TYPE_PRIORITY: Record<EntryPhotoType, number> = {
-  label: 0,
-  pairing: 1,
-  people: 2,
-  other_bottles: 3,
-  lineup: 4,
-  place: 5,
-};
+function toOrdinal(value: number) {
+  const abs = Math.abs(value);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${value}th`;
+  }
+  const mod10 = abs % 10;
+  if (mod10 === 1) return `${value}st`;
+  if (mod10 === 2) return `${value}nd`;
+  if (mod10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
 
 export default function EditEntryPage() {
   const router = useRouter();
@@ -399,10 +403,6 @@ export default function EditEntryPage() {
 
   const sortGalleryPhotos = (list: EntryPhoto[]) =>
     [...list].sort((a, b) => {
-      const typeDiff = GALLERY_TYPE_PRIORITY[a.type] - GALLERY_TYPE_PRIORITY[b.type];
-      if (typeDiff !== 0) {
-        return typeDiff;
-      }
       if (a.position !== b.position) {
         return a.position - b.position;
       }
@@ -735,20 +735,34 @@ export default function EditEntryPage() {
     index: number,
     direction: "up" | "down"
   ) => {
-    if (!entryId) return;
     const targetIndex = direction === "up" ? index - 1 : index + 1;
+    await movePhotoToIndex(list, index, targetIndex);
+  };
+
+  const movePhotoToIndex = async (
+    list: EntryPhoto[],
+    index: number,
+    targetIndex: number
+  ) => {
+    if (!entryId) return;
     if (targetIndex < 0 || targetIndex >= list.length) return;
     const current = list[index];
-    const swap = list[targetIndex];
-    if (!current || !swap) return;
-    if (isLegacyPhoto(current) || isLegacyPhoto(swap)) return;
+    const target = list[targetIndex];
+    if (!current || !target) return;
+    if (index === targetIndex) return;
+    if (isLegacyPhoto(current) || isLegacyPhoto(target)) return;
 
     setSavingPhotoId(current.id);
     setPhotoError(null);
     try {
       const reordered = [...list];
-      reordered[index] = swap;
-      reordered[targetIndex] = current;
+      reordered.splice(index, 1);
+      reordered.splice(targetIndex, 0, current);
+      const existingPositionById = new Map(
+        list
+          .filter((photo) => !isLegacyPhoto(photo))
+          .map((photo) => [photo.id, photo.position] as const)
+      );
 
       const updates = reordered
         .filter((photo) => !isLegacyPhoto(photo))
@@ -757,8 +771,7 @@ export default function EditEntryPage() {
           nextPosition,
         }))
         .filter((item) => {
-          const existing = reordered.find((photo) => photo.id === item.photoId);
-          return existing ? existing.position !== item.nextPosition : false;
+          return existingPositionById.get(item.photoId) !== item.nextPosition;
         });
 
       if (updates.length === 0) {
@@ -1726,6 +1739,7 @@ export default function EditEntryPage() {
       (photo, index, list) => list.findIndex((item) => item.id === photo.id) === index
     )
   );
+  const hasLegacyGalleryPhoto = allDisplayPhotos.some((photo) => isLegacyPhoto(photo));
   const collapsibleSectionClassName =
     "group rounded-2xl border border-white/10 bg-black/30 p-4";
   const collapsibleSummaryClassName =
@@ -1833,6 +1847,42 @@ export default function EditEntryPage() {
                       </span>
                     </label>
                   ),
+                  topRightBadge:
+                    allDisplayPhotos.length > 1 ? (
+                      <label className="relative block">
+                        <select
+                          value={index}
+                          className="max-w-[4.5rem] appearance-none rounded-full border border-white/15 bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-zinc-200 outline-none transition hover:border-white/30 focus:border-amber-300/50 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={
+                            hasLegacyGalleryPhoto ||
+                            isLegacyPhoto(photo) ||
+                            savingPhotoId === photo.id
+                          }
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onTouchStart={(event) => event.stopPropagation()}
+                          onChange={(event) => {
+                            void movePhotoToIndex(
+                              allDisplayPhotos,
+                              index,
+                              Number(event.target.value)
+                            );
+                          }}
+                          aria-label={`Set order for ${PHOTO_TYPE_LABELS[photo.type]} photo ${index + 1}`}
+                        >
+                          {allDisplayPhotos.map((_entry, optionIndex) => (
+                            <option key={optionIndex} value={optionIndex}>
+                              {toOrdinal(optionIndex + 1)}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+                          ▾
+                        </span>
+                      </label>
+                    ) : (
+                      toOrdinal(index + 1)
+                    ),
                 }))}
                 heightClassName="h-72 sm:h-[26rem]"
                 empty="No photos uploaded yet."
@@ -1866,6 +1916,18 @@ export default function EditEntryPage() {
                           >
                             Download
                           </a>
+                        ) : null}
+                        {activePhoto ? (
+                          <button
+                            type="button"
+                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => {
+                              void deletePhotoItem(activePhoto);
+                            }}
+                            disabled={savingPhotoId === activePhoto.id}
+                          >
+                            Delete
+                          </button>
                         ) : null}
                       </div>
                     </>

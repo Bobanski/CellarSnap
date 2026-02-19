@@ -8,7 +8,25 @@ export type SwipePhotoGalleryItem = {
   url: string | null;
   alt: string;
   badge?: ReactNode;
+  topRightBadge?: ReactNode;
 };
+
+function resolveItemKey(item: SwipePhotoGalleryItem, itemIndex: number) {
+  return item.id ?? `${item.url ?? "missing"}-${itemIndex}`;
+}
+
+function toOrdinal(value: number) {
+  const abs = Math.abs(value);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${value}th`;
+  }
+  const mod10 = abs % 10;
+  if (mod10 === 1) return `${value}st`;
+  if (mod10 === 2) return `${value}nd`;
+  if (mod10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
 
 export default function SwipePhotoGallery({
   items,
@@ -16,14 +34,24 @@ export default function SwipePhotoGallery({
   wrapperClassName = "",
   footer,
   empty,
+  showOrderBadge = false,
+  orderBadgeFormatter,
 }: {
   items: SwipePhotoGalleryItem[];
   heightClassName?: string;
   wrapperClassName?: string;
   footer?: (active: SwipePhotoGalleryItem, activeIndex: number) => ReactNode;
   empty?: ReactNode;
+  showOrderBadge?: boolean;
+  orderBadgeFormatter?: (order: number, total: number) => ReactNode;
 }) {
-  const [index, setIndex] = useState(0);
+  const [activeItemState, setActiveItemState] = useState<{
+    index: number;
+    key: string | null;
+  }>(() => ({
+    index: 0,
+    key: items[0] ? resolveItemKey(items[0], 0) : null,
+  }));
   const touchStartXRef = useRef<number | null>(null);
 
   if (items.length === 0) {
@@ -37,10 +65,27 @@ export default function SwipePhotoGallery({
   }
 
   const total = items.length;
-  const activeIndex = Math.min(index, total - 1);
+  const boundedIndex = Math.min(activeItemState.index, total - 1);
+  const persistedActiveIndex = activeItemState.key
+    ? items.findIndex(
+        (item, itemIndex) =>
+          resolveItemKey(item, itemIndex) === activeItemState.key
+      )
+    : -1;
+  const activeIndex = persistedActiveIndex >= 0 ? persistedActiveIndex : boundedIndex;
   const active = items[activeIndex]!;
-  const goPrev = () => setIndex((current) => (current - 1 + total) % total);
-  const goNext = () => setIndex((current) => (current + 1) % total);
+  const setActiveByIndex = (nextIndex: number) => {
+    const nextItem = items[nextIndex];
+    if (!nextItem) {
+      return;
+    }
+    setActiveItemState({
+      index: nextIndex,
+      key: resolveItemKey(nextItem, nextIndex),
+    });
+  };
+  const goPrev = () => setActiveByIndex((activeIndex - 1 + total) % total);
+  const goNext = () => setActiveByIndex((activeIndex + 1) % total);
 
   return (
     <div
@@ -66,40 +111,55 @@ export default function SwipePhotoGallery({
             else goPrev();
           }}
         >
-          {items.map((item, itemIndex) => (
-            <div
-              key={
-                item.id ??
-                `${item.url ?? "missing"}-${itemIndex}`
-              }
-              className="relative min-w-full"
-            >
-              {item.url ? (
-                <Photo
-                  src={item.url}
-                  alt={item.alt}
-                  containerClassName="h-full w-full"
-                  className="h-full w-full object-cover"
-                  loading={itemIndex === 0 ? "eager" : "lazy"}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
-                  Photo unavailable
-                </div>
-              )}
-              {item.badge
-                ? typeof item.badge === "string"
-                  ? (
-                      <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
-                        {item.badge}
-                      </span>
-                    )
-                  : (
-                      <div className="absolute left-2 top-2">{item.badge}</div>
-                    )
-                : null}
-            </div>
-          ))}
+          {items.map((item, itemIndex) => {
+            const itemKey = resolveItemKey(item, itemIndex);
+            const topRightBadge =
+              item.topRightBadge ??
+              (showOrderBadge
+                ? (orderBadgeFormatter?.(itemIndex + 1, total) ??
+                  toOrdinal(itemIndex + 1))
+                : null);
+
+            return (
+              <div key={itemKey} className="relative min-w-full">
+                {item.url ? (
+                  <Photo
+                    src={item.url}
+                    alt={item.alt}
+                    containerClassName="h-full w-full"
+                    className="h-full w-full object-cover"
+                    loading={itemIndex === 0 ? "eager" : "lazy"}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
+                    Photo unavailable
+                  </div>
+                )}
+                {item.badge
+                  ? typeof item.badge === "string"
+                    ? (
+                        <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
+                          {item.badge}
+                        </span>
+                      )
+                    : (
+                        <div className="absolute left-2 top-2">{item.badge}</div>
+                      )
+                  : null}
+                {topRightBadge
+                  ? typeof topRightBadge === "string"
+                    ? (
+                        <span className="absolute right-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold text-zinc-200">
+                          {topRightBadge}
+                        </span>
+                      )
+                    : (
+                        <div className="absolute right-2 top-2">{topRightBadge}</div>
+                      )
+                  : null}
+              </div>
+            );
+          })}
         </div>
 
         {items.length > 1 ? (
@@ -129,7 +189,7 @@ export default function SwipePhotoGallery({
                   className={`h-1.5 w-1.5 rounded-full transition ${
                     dotIndex === activeIndex ? "bg-amber-300" : "bg-zinc-400/70"
                   }`}
-                  onClick={() => setIndex(dotIndex)}
+                  onClick={() => setActiveByIndex(dotIndex)}
                 />
               ))}
             </div>

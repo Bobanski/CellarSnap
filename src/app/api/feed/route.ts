@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import {
   getAcceptedFriendIds,
   getFriendsOfFriendsIds,
@@ -14,6 +15,9 @@ type FeedEntryRow = {
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
   consumed_at: string;
   rating: number | null;
   qpr_level: string | null;
@@ -128,7 +132,7 @@ export async function GET(request: Request) {
   );
 
   const baseSelectFields =
-    "id, user_id, wine_name, producer, vintage, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
 
   const dedupeEntries = (rows: FeedEntryRow[]) => {
@@ -240,6 +244,7 @@ export async function GET(request: Request) {
     : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);
+  const primaryGrapeMap = await fetchPrimaryGrapesByEntryId(supabase, entryIds);
   const userIds = Array.from(
     new Set(
       pageEntries.flatMap((entry) => [
@@ -610,6 +615,7 @@ export async function GET(request: Request) {
 
     return {
       ...entry,
+      primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
       author_name: authorProfile?.display_name ?? authorProfile?.email ?? "Unknown",
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
       label_image_url: labelPhoto,
