@@ -1394,6 +1394,9 @@ export default function NewEntryPage() {
   const isPeoplePlaceOrPairingTag = (tag: ContextPhotoTag) =>
     tag === "people" || tag === "place" || tag === "pairing";
 
+  const hasIdentifiedBottleDetails = (analysis: SourcePhotoAnalysis | null) =>
+    (analysis?.identifiedBottleCount ?? 0) > 0;
+
   const resolvePrimaryLabelPhotoIndex = (
     photos: UploadPhoto[],
     sourceAnalysisByIndex: Map<number, SourcePhotoAnalysis>
@@ -1446,6 +1449,14 @@ export default function NewEntryPage() {
     if (analysis?.role === "lineup") {
       return "lineup";
     }
+    // If label details were extracted, keep this as a label even when
+    // context tagging also sees people/place/pairing in frame.
+    if (
+      photoIndex === primaryLabelIndex ||
+      hasIdentifiedBottleDetails(analysis)
+    ) {
+      return "label";
+    }
     if (analysis?.contextTag === "place") {
       return "place";
     }
@@ -1454,9 +1465,6 @@ export default function NewEntryPage() {
     }
     if (analysis?.contextTag === "people") {
       return "people";
-    }
-    if (photoIndex === primaryLabelIndex) {
-      return "label";
     }
     return "other_bottles";
   };
