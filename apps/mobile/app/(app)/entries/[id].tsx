@@ -535,8 +535,8 @@ export default function EntryDetailScreen() {
             <View
               style={styles.photoFrame}
               onLayout={(event) => {
-                const width = Math.ceil(event.nativeEvent.layout.width);
-                if (width > 0 && width !== photoFrameWidth) {
+                const width = event.nativeEvent.layout.width;
+                if (width > 0 && Math.abs(width - photoFrameWidth) > 0.5) {
                   setPhotoFrameWidth(width);
                   if (galleryScrollRef.current && hasMultiplePhotos) {
                     galleryScrollRef.current.scrollTo({
@@ -566,7 +566,15 @@ export default function EntryDetailScreen() {
                         const offsetX = event.nativeEvent.contentOffset.x;
                         const nextIndex = Math.round(offsetX / photoFrameWidth);
                         const maxIndex = Math.max(0, photos.length - 1);
-                        setActivePhotoIndex(Math.max(0, Math.min(maxIndex, nextIndex)));
+                        const clampedIndex = Math.max(0, Math.min(maxIndex, nextIndex));
+                        setActivePhotoIndex(clampedIndex);
+                        const snappedX = clampedIndex * photoFrameWidth;
+                        if (Math.abs(offsetX - snappedX) > 0.5 && galleryScrollRef.current) {
+                          galleryScrollRef.current.scrollTo({
+                            x: snappedX,
+                            animated: false,
+                          });
+                        }
                       }}
                     >
                       {photos.map((photo, index) => (

@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   },
   profileIdentity: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     flex: 1,
   },
@@ -629,7 +629,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
-    marginTop: 2,
   },
   blockedChip: {
     borderRadius: 999,

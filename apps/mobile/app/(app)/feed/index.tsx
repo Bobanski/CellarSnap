@@ -1045,6 +1045,13 @@ function FeedCard({
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const swipeActiveRef = useRef(false);
   const pendingSwipeEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blockCardOpenUntilRef = useRef(0);
+  const photoTapStartRef = useRef<{
+    x: number;
+    y: number;
+    timestamp: number;
+    moved: boolean;
+  } | null>(null);
   const reactions = useMemo(
     () =>
       Object.entries(item.reaction_counts)
@@ -1072,6 +1079,7 @@ function FeedCard({
       return;
     }
     swipeActiveRef.current = true;
+    blockCardOpenUntilRef.current = Date.now() + 450;
     onGallerySwipeStart();
   }, [onGallerySwipeStart]);
 
@@ -1171,10 +1179,24 @@ function FeedCard({
     scrollToPhotoIndex(nextIndex);
   }, [activePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
 
+  const handleCardPress = useCallback(() => {
+    if (Date.now() < blockCardOpenUntilRef.current) {
+      return;
+    }
+    blockCardOpenUntilRef.current = Date.now() + 320;
+    onOpenEntry();
+  }, [onOpenEntry]);
+
   return (
     <View style={styles.feedCard}>
       <View style={styles.feedAuthorRow}>
-        <Pressable style={styles.feedAuthorStack} onPress={onOpenAuthorProfile}>
+        <Pressable
+          style={styles.feedAuthorStack}
+          onPress={(event) => {
+            event.stopPropagation();
+            onOpenAuthorProfile();
+          }}
+        >
           <View style={styles.feedAvatar}>
             {item.author_avatar_url ? (
               <Image
@@ -1195,7 +1217,13 @@ function FeedCard({
             <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
             {viewerUserId && viewerUserId !== item.user_id ? (
               <View style={styles.feedMenuWrap}>
-                <Pressable style={styles.feedMenuButton} onPress={onToggleReportMenu}>
+                <Pressable
+                  style={styles.feedMenuButton}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    onToggleReportMenu();
+                  }}
+                >
                   <View style={styles.feedMenuDotsRow}>
                     <View style={styles.feedMenuDot} />
                     <View style={styles.feedMenuDot} />
@@ -1203,8 +1231,17 @@ function FeedCard({
                   </View>
                 </Pressable>
                 {reportMenuOpen ? (
-                  <View style={styles.feedMenuPanel}>
-                    <Pressable disabled={reportBusy} onPress={onReportPost}>
+                  <View
+                    style={styles.feedMenuPanel}
+                    onStartShouldSetResponder={() => true}
+                  >
+                    <Pressable
+                      disabled={reportBusy}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        onReportPost();
+                      }}
+                    >
                       <AppText style={styles.feedMenuItemText}>
                         {reportBusy ? "Reporting..." : "Report post"}
                       </AppText>
@@ -1220,8 +1257,8 @@ function FeedCard({
       <View
         style={styles.feedPhotoFrame}
         onLayout={(event) => {
-          const nextWidth = Math.ceil(event.nativeEvent.layout.width);
-          if (nextWidth > 0 && nextWidth !== photoFrameWidth) {
+          const nextWidth = event.nativeEvent.layout.width;
+          if (nextWidth > 0 && Math.abs(nextWidth - photoFrameWidth) > 0.5) {
             setPhotoFrameWidth(nextWidth);
             if (galleryScrollRef.current && hasMultiplePhotos) {
               galleryScrollRef.current.scrollTo({
@@ -1249,7 +1286,55 @@ function FeedCard({
                 decelerationRate="fast"
                 scrollEventThrottle={16}
                 contentContainerStyle={styles.feedPhotoTrack}
+                onTouchStart={(event) => {
+                  const touch = event.nativeEvent.touches[0];
+                  if (!touch) {
+                    photoTapStartRef.current = null;
+                    return;
+                  }
+                  clearPendingSwipeEnd();
+                  photoTapStartRef.current = {
+                    x: touch.pageX,
+                    y: touch.pageY,
+                    timestamp: Date.now(),
+                    moved: false,
+                  };
+                }}
+                onTouchMove={(event) => {
+                  const touch = event.nativeEvent.touches[0];
+                  const start = photoTapStartRef.current;
+                  if (!touch || !start) {
+                    return;
+                  }
+                  const deltaX = Math.abs(touch.pageX - start.x);
+                  const deltaY = Math.abs(touch.pageY - start.y);
+                  if (deltaX > 10 && deltaX > deltaY + 2) {
+                    beginGallerySwipe();
+                  }
+                  if (deltaX > 8 || deltaY > 8) {
+                    photoTapStartRef.current = { ...start, moved: true };
+                  }
+                }}
+                onTouchEnd={() => {
+                  const start = photoTapStartRef.current;
+                  photoTapStartRef.current = null;
+                  if (!start || start.moved || swipeActiveRef.current) {
+                    if (swipeActiveRef.current) {
+                      scheduleGallerySwipeEnd(40);
+                    }
+                    return;
+                  }
+                  if (Date.now() - start.timestamp > 260) {
+                    return;
+                  }
+                  handleCardPress();
+                }}
+                onTouchCancel={() => {
+                  photoTapStartRef.current = null;
+                  scheduleGallerySwipeEnd(0);
+                }}
                 onScrollBeginDrag={() => {
+                  photoTapStartRef.current = null;
                   beginGallerySwipe();
                   clearPendingSwipeEnd();
                 }}
@@ -1266,7 +1351,15 @@ function FeedCard({
                     if (clampedIndex !== activePhotoIndex) {
                       setActivePhotoIndex(clampedIndex);
                     }
+                    const snappedX = clampedIndex * photoFrameWidth;
+                    if (Math.abs(offsetX - snappedX) > 0.5 && galleryScrollRef.current) {
+                      galleryScrollRef.current.scrollTo({
+                        x: snappedX,
+                        animated: false,
+                      });
+                    }
                   }
+                  blockCardOpenUntilRef.current = Date.now() + 200;
                   endGallerySwipe();
                 }}
               >
@@ -1367,8 +1460,7 @@ function FeedCard({
       {notes ? (
         <Pressable
           style={styles.notesWrap}
-          onPress={onToggleNotes}
-          disabled={!canToggleNotes}
+          onPress={onOpenEntry}
         >
           <AppText
             style={styles.notesText}
@@ -1393,22 +1485,30 @@ function FeedCard({
         </Pressable>
       ) : null}
 
-      <View style={styles.feedValueRow}>
+      <Pressable style={styles.feedValueRow} onPress={onOpenEntry}>
         {displayRating ? <AppText style={styles.feedRating}>{displayRating}</AppText> : null}
         {item.qpr_level ? (
           <AppText style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
             {QPR_LEVEL_LABELS[item.qpr_level]}
           </AppText>
         ) : null}
-      </View>
+      </Pressable>
 
       <View style={styles.feedDivider} />
 
-      <View style={styles.feedInteractionRow}>
+      <Pressable
+        style={styles.feedInteractionRow}
+        onPress={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <View>
           {showCommentsControl ? (
             <Pressable
-              onPress={onToggleComments}
+              onPress={(event) => {
+                event.stopPropagation();
+                onToggleComments();
+              }}
               style={[
                 styles.commentsButton,
                 commentsExpanded ? styles.commentsButtonActive : null,
@@ -1443,7 +1543,10 @@ function FeedCard({
             ) : null}
           </View>
           <Pressable
-            onPress={onToggleReactionPicker}
+            onPress={(event) => {
+              event.stopPropagation();
+              onToggleReactionPicker();
+            }}
             style={[
               styles.reactionAddButton,
               item.can_react ? null : styles.reactionAddButtonDisabled,
@@ -1465,10 +1568,15 @@ function FeedCard({
             </View>
           </Pressable>
         </View>
-      </View>
+      </Pressable>
 
       {reactionPickerOpen ? (
-        <View style={styles.reactionPickerCard}>
+        <Pressable
+          style={styles.reactionPickerCard}
+          onPress={(event) => {
+            event.stopPropagation();
+          }}
+        >
           <View style={styles.reactionPickerRow}>
             {REACTION_EMOJIS.map((emoji) => {
               const selected = item.my_reactions.includes(emoji);
@@ -1476,7 +1584,10 @@ function FeedCard({
                 <Pressable
                   key={`${item.id}-${emoji}`}
                   disabled={!item.can_react}
-                  onPress={() => onToggleReaction(emoji)}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    onToggleReaction(emoji);
+                  }}
                   style={[
                     styles.reactionEmojiBtn,
                     selected ? styles.reactionEmojiBtnActive : null,
@@ -1493,11 +1604,16 @@ function FeedCard({
               Reactions are not available for this post.
             </AppText>
           ) : null}
-        </View>
+        </Pressable>
       ) : null}
 
       {commentsExpanded ? (
-        <View style={styles.commentsPanel}>
+        <Pressable
+          style={styles.commentsPanel}
+          onPress={(event) => {
+            event.stopPropagation();
+          }}
+        >
           {commentsLoading ? (
             <AppText style={styles.commentsEmptyText}>Loading comments...</AppText>
           ) : comments.length === 0 ? (
@@ -1520,7 +1636,10 @@ function FeedCard({
                         <View style={styles.commentMenuWrap}>
                           <Pressable
                             style={styles.commentMenuButton}
-                            onPress={() => onToggleCommentMenu(comment.id)}
+                            onPress={(event) => {
+                              event.stopPropagation();
+                              onToggleCommentMenu(comment.id);
+                            }}
                           >
                             <View style={styles.commentMenuDotsRow}>
                               <View style={styles.commentMenuDot} />
@@ -1532,7 +1651,10 @@ function FeedCard({
                             <View style={styles.commentMenuPanel}>
                               <Pressable
                                 disabled={reportingCommentId === comment.id}
-                                onPress={() => onReportComment(comment.id, comment.user_id)}
+                                onPress={(event) => {
+                                  event.stopPropagation();
+                                  onReportComment(comment.id, comment.user_id);
+                                }}
                               >
                                 <AppText style={styles.commentMenuItemText}>
                                   {reportingCommentId === comment.id
@@ -1556,7 +1678,10 @@ function FeedCard({
                   </AppText>
                   {!comment.is_deleted && showCommentsControl ? (
                     <Pressable
-                      onPress={() => onSetReplyTarget(comment.id)}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        onSetReplyTarget(comment.id);
+                      }}
                       style={styles.replyActionButton}
                     >
                       <AppText style={styles.replyActionText}>Reply</AppText>
@@ -1580,7 +1705,10 @@ function FeedCard({
                                 <View style={styles.commentMenuWrap}>
                                   <Pressable
                                     style={styles.commentMenuButton}
-                                    onPress={() => onToggleCommentMenu(reply.id)}
+                                    onPress={(event) => {
+                                      event.stopPropagation();
+                                      onToggleCommentMenu(reply.id);
+                                    }}
                                   >
                                     <View style={styles.commentMenuDotsRow}>
                                       <View style={styles.commentMenuDot} />
@@ -1592,7 +1720,10 @@ function FeedCard({
                                     <View style={styles.commentMenuPanel}>
                                       <Pressable
                                         disabled={reportingCommentId === reply.id}
-                                        onPress={() => onReportComment(reply.id, reply.user_id)}
+                                        onPress={(event) => {
+                                          event.stopPropagation();
+                                          onReportComment(reply.id, reply.user_id);
+                                        }}
                                       >
                                         <AppText style={styles.commentMenuItemText}>
                                           {reportingCommentId === reply.id
@@ -1627,7 +1758,12 @@ function FeedCard({
               {replyTargetName ? (
                 <View style={styles.replyTargetRow}>
                   <AppText style={styles.replyTargetText}>Replying to {replyTargetName}</AppText>
-                  <Pressable onPress={onClearReplyTarget}>
+                  <Pressable
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      onClearReplyTarget();
+                    }}
+                  >
                     <AppText style={styles.replyTargetCancel}>Cancel</AppText>
                   </Pressable>
                 </View>
@@ -1641,7 +1777,10 @@ function FeedCard({
                 multiline
               />
               <Pressable
-                onPress={onSubmitComment}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onSubmitComment();
+                }}
                 disabled={!commentDraft.trim() || postingComment}
                 style={[
                   styles.commentSubmitButton,
@@ -1657,7 +1796,7 @@ function FeedCard({
             </View>
           ) : null}
           {commentError ? <AppText style={styles.commentErrorText}>{commentError}</AppText> : null}
-        </View>
+        </Pressable>
       ) : null}
     </View>
   );
