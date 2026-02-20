@@ -105,6 +105,43 @@ type LocationSuggestion = {
   place_id: string;
 };
 
+type ComparisonResponse = "more" | "less" | "same_or_not_sure";
+type SurveyHowWasItResponse =
+  | "awful"
+  | "bad"
+  | "okay"
+  | "good"
+  | "exceptional";
+type SurveyExpectationsResponse =
+  | "below_expectations"
+  | "met_expectations"
+  | "above_expectations";
+type SurveyDrinkAgainResponse = "yes" | "no";
+
+type SurveyComparisonCandidate = {
+  id: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  consumed_at: string;
+  label_image_url: string | null;
+};
+
+type PendingPostSaveSurvey = {
+  entryId: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  new_wine_image_url: string | null;
+  candidate: SurveyComparisonCandidate | null;
+};
+
+type PostSaveSurveyAnswers = {
+  how_was_it: SurveyHowWasItResponse;
+  expectations: SurveyExpectationsResponse;
+  drink_again: SurveyDrinkAgainResponse;
+};
+
 type LabelAutofillResponse = {
   wine_name?: string | null;
   producer?: string | null;
@@ -144,6 +181,25 @@ const PRIVACY_OPTIONS: ChipOption[] = PRIVACY_LEVEL_VALUES.map((value) => ({
   value,
   label: PRIVACY_LEVEL_LABELS[value],
 }));
+
+const HOW_WAS_IT_OPTIONS: ChipOption[] = [
+  { value: "awful", label: "Awful" },
+  { value: "bad", label: "Bad" },
+  { value: "okay", label: "Okay" },
+  { value: "good", label: "Good" },
+  { value: "exceptional", label: "Exceptional" },
+];
+
+const EXPECTATIONS_OPTIONS: ChipOption[] = [
+  { value: "below_expectations", label: "Below expectations" },
+  { value: "met_expectations", label: "Met expectations" },
+  { value: "above_expectations", label: "Above expectations" },
+];
+
+const DRINK_AGAIN_OPTIONS: ChipOption[] = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
 
 const ADVANCED_NOTE_FIELDS: Array<{
   key: keyof AdvancedNotesFormValues;
@@ -313,6 +369,31 @@ function formatFriendName(user: FriendUser) {
   return user.display_name ?? user.email ?? "Unknown";
 }
 
+function formatSurveyWineTitle(wine: {
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+}) {
+  return wine.wine_name?.trim() || "Untitled wine";
+}
+
+function formatSurveyWineMeta(wine: {
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+}) {
+  if (wine.producer && wine.vintage) {
+    return `${wine.producer} · ${wine.vintage}`;
+  }
+  if (wine.producer) {
+    return wine.producer;
+  }
+  if (wine.vintage) {
+    return wine.vintage;
+  }
+  return "No producer or vintage";
+}
+
 function toAdvancedNotesPayload(values: AdvancedNotesFormValues) {
   const payload = {
     acidity: values.acidity || null,
@@ -383,6 +464,24 @@ export default function NewEntryScreen() {
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingPostSaveSurvey, setPendingPostSaveSurvey] =
+    useState<PendingPostSaveSurvey | null>(null);
+  const [surveyHowWasIt, setSurveyHowWasIt] = useState<
+    SurveyHowWasItResponse | ""
+  >("");
+  const [surveyExpectations, setSurveyExpectations] = useState<
+    SurveyExpectationsResponse | ""
+  >("");
+  const [surveyDrinkAgain, setSurveyDrinkAgain] = useState<
+    SurveyDrinkAgainResponse | ""
+  >("");
+  const [postSaveSurveyStep, setPostSaveSurveyStep] = useState<
+    "survey" | "comparison"
+  >("survey");
+  const [savedSurveyAnswers, setSavedSurveyAnswers] =
+    useState<PostSaveSurveyAnswers | null>(null);
+  const [surveyErrorMessage, setSurveyErrorMessage] = useState<string | null>(null);
+  const [isSubmittingSurvey, setIsSubmittingSurvey] = useState(false);
 
   const updateField = <K extends keyof EntryFormState>(field: K, value: EntryFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -753,6 +852,188 @@ export default function NewEntryScreen() {
     }
   };
 
+  const fetchComparisonCandidateForEntry = async (
+    currentEntryId: string,
+    ownerUserId: string
+  ): Promise<SurveyComparisonCandidate | null> => {
+    const { count, error: countError } = await supabase
+      .from("wine_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", ownerUserId)
+      .neq("id", currentEntryId);
+
+    if (countError || !count || count <= 0) {
+      return null;
+    }
+
+    const randomOffset = Math.floor(Math.random() * count);
+
+    const { data: candidate, error: candidateError } = await supabase
+      .from("wine_entries")
+      .select("id, wine_name, producer, vintage, consumed_at, label_image_path")
+      .eq("user_id", ownerUserId)
+      .neq("id", currentEntryId)
+      .order("created_at", { ascending: false })
+      .range(randomOffset, randomOffset)
+      .maybeSingle();
+
+    if (candidateError || !candidate) {
+      return null;
+    }
+
+    const { data: labelPhoto } = await supabase
+      .from("entry_photos")
+      .select("path")
+      .eq("entry_id", candidate.id)
+      .eq("type", "label")
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const labelPath = labelPhoto?.path ?? candidate.label_image_path ?? null;
+    let labelImageUrl: string | null = null;
+    if (labelPath) {
+      const { data: signedUrl, error: signedUrlError } = await supabase.storage
+        .from("wine-photos")
+        .createSignedUrl(labelPath, 60 * 60);
+      labelImageUrl = signedUrlError ? null : signedUrl.signedUrl;
+    }
+
+    return {
+      id: candidate.id,
+      wine_name: candidate.wine_name,
+      producer: candidate.producer,
+      vintage: candidate.vintage,
+      consumed_at: candidate.consumed_at,
+      label_image_url: labelImageUrl,
+    };
+  };
+
+  const completePostSaveFlow = () => {
+    setPendingPostSaveSurvey(null);
+    setSavedSurveyAnswers(null);
+    setPostSaveSurveyStep("survey");
+    router.replace("/(app)/entries");
+  };
+
+  const skipPostSaveComparison = () => {
+    if (!pendingPostSaveSurvey) {
+      return;
+    }
+    completePostSaveFlow();
+  };
+
+  const submitPostSaveSurvey = async () => {
+    if (!user || !pendingPostSaveSurvey || isSubmittingSurvey) {
+      return;
+    }
+
+    if (!surveyHowWasIt || !surveyExpectations || !surveyDrinkAgain) {
+      setSurveyErrorMessage("Please answer all 3 required questions.");
+      return;
+    }
+
+    setSurveyErrorMessage(null);
+    setIsSubmittingSurvey(true);
+
+    try {
+      const answers: PostSaveSurveyAnswers = {
+        how_was_it: surveyHowWasIt,
+        expectations: surveyExpectations,
+        drink_again: surveyDrinkAgain,
+      };
+
+      const { error: surveySaveError } = await supabase
+        .from("wine_entries")
+        .update({
+          survey_how_was_it: answers.how_was_it,
+          survey_expectation_match: answers.expectations,
+          survey_drink_again: answers.drink_again,
+        })
+        .eq("id", pendingPostSaveSurvey.entryId)
+        .eq("user_id", user.id);
+
+      if (surveySaveError) {
+        const message = surveySaveError.message ?? "Unable to save survey.";
+        if (
+          message.includes("survey_how_was_it") ||
+          message.includes("survey_expectation_match") ||
+          message.includes("survey_drink_again")
+        ) {
+          setSurveyErrorMessage(
+            "Entry survey is temporarily unavailable. Please try again later."
+          );
+        } else {
+          setSurveyErrorMessage(message);
+        }
+        setIsSubmittingSurvey(false);
+        return;
+      }
+
+      if (pendingPostSaveSurvey.candidate) {
+        setSavedSurveyAnswers(answers);
+        setPostSaveSurveyStep("comparison");
+        setIsSubmittingSurvey(false);
+        return;
+      }
+
+      setIsSubmittingSurvey(false);
+      completePostSaveFlow();
+    } catch {
+      setSurveyErrorMessage("Unable to save survey. Check your connection and try again.");
+      setIsSubmittingSurvey(false);
+    }
+  };
+
+  const submitPostSaveComparison = async (response: ComparisonResponse) => {
+    if (
+      !user ||
+      !pendingPostSaveSurvey ||
+      !pendingPostSaveSurvey.candidate ||
+      !savedSurveyAnswers ||
+      isSubmittingSurvey
+    ) {
+      return;
+    }
+
+    setSurveyErrorMessage(null);
+    setIsSubmittingSurvey(true);
+
+    try {
+      const { error: comparisonError } = await supabase
+        .from("entry_comparison_feedback")
+        .insert({
+          user_id: user.id,
+          new_entry_id: pendingPostSaveSurvey.entryId,
+          comparison_entry_id: pendingPostSaveSurvey.candidate.id,
+          response,
+        });
+
+      if (comparisonError && comparisonError.code !== "23505") {
+        const message = comparisonError.message ?? "Unable to save comparison.";
+        if (
+          message.includes("entry_comparison_feedback") ||
+          message.includes("entry_comparison_response")
+        ) {
+          setSurveyErrorMessage(
+            "Wine comparison is temporarily unavailable. Please try again later."
+          );
+        } else {
+          setSurveyErrorMessage(message);
+        }
+        setIsSubmittingSurvey(false);
+        return;
+      }
+
+      setIsSubmittingSurvey(false);
+      completePostSaveFlow();
+    } catch {
+      setSurveyErrorMessage("Unable to save comparison. Check your connection and try again.");
+      setIsSubmittingSurvey(false);
+    }
+  };
+
   const resolveSuggestedGrapes = async (suggestions: string[]) => {
     const resolved: PrimaryGrapeSelection[] = [];
     const seenIds = new Set<string>();
@@ -994,17 +1275,43 @@ export default function NewEntryScreen() {
       payload.advanced_notes = toAdvancedNotesPayload(form.advanced_notes);
 
       const { error, entryId } = await insertEntryWithFallback(payload);
-      setIsSubmitting(false);
 
       if (error) {
+        setIsSubmitting(false);
         setErrorMessage(error.message);
         return;
       }
 
-      if (entryId) {
-        await persistPrimaryGrapes(entryId);
+      if (!entryId) {
+        setIsSubmitting(false);
+        setErrorMessage("Entry created, but response was missing the entry ID.");
+        return;
       }
-      router.replace("/(app)/entries");
+
+      await persistPrimaryGrapes(entryId);
+
+      let comparisonCandidate: SurveyComparisonCandidate | null = null;
+      try {
+        comparisonCandidate = await fetchComparisonCandidateForEntry(entryId, user.id);
+      } catch {
+        comparisonCandidate = null;
+      }
+
+      setSurveyHowWasIt("");
+      setSurveyExpectations("");
+      setSurveyDrinkAgain("");
+      setSavedSurveyAnswers(null);
+      setPostSaveSurveyStep("survey");
+      setSurveyErrorMessage(null);
+      setIsSubmitting(false);
+      setPendingPostSaveSurvey({
+        entryId,
+        wine_name: parsed.data.wine_name,
+        producer: parsed.data.producer ?? null,
+        vintage: parsed.data.vintage ?? null,
+        new_wine_image_url: labelPhotoUri,
+        candidate: comparisonCandidate,
+      });
     } catch {
       setIsSubmitting(false);
       setErrorMessage("Unable to create entry. Check your connection.");
@@ -1036,6 +1343,10 @@ export default function NewEntryScreen() {
     );
     setFriendSearch("");
   };
+
+  const canSubmitPostSaveSurvey = Boolean(
+    surveyHowWasIt && surveyExpectations && surveyDrinkAgain
+  );
 
   return (
     <KeyboardAvoidingView
@@ -1440,6 +1751,153 @@ export default function NewEntryScreen() {
           </View>
         </View>
       </ScrollView>
+      <Modal
+        visible={Boolean(pendingPostSaveSurvey)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => undefined}
+      >
+        <View style={styles.surveyModalRoot}>
+          <View style={styles.surveyCard}>
+            {postSaveSurveyStep === "survey" ? (
+              <>
+                <View style={styles.surveyHeader}>
+                  <AppText style={styles.eyebrow}>Required survey</AppText>
+                  <AppText style={styles.surveyTitle}>Quick check-in</AppText>
+                </View>
+
+                <SelectField
+                  label="How was it?"
+                  value={surveyHowWasIt}
+                  options={HOW_WAS_IT_OPTIONS}
+                  onChange={(value) =>
+                    setSurveyHowWasIt(value as SurveyHowWasItResponse | "")
+                  }
+                />
+                <SelectField
+                  label="How did it compare to your expectations?"
+                  value={surveyExpectations}
+                  options={EXPECTATIONS_OPTIONS}
+                  onChange={(value) =>
+                    setSurveyExpectations(value as SurveyExpectationsResponse | "")
+                  }
+                />
+                <SelectField
+                  label="Would you drink it again?"
+                  value={surveyDrinkAgain}
+                  options={DRINK_AGAIN_OPTIONS}
+                  onChange={(value) =>
+                    setSurveyDrinkAgain(value as SurveyDrinkAgainResponse | "")
+                  }
+                />
+
+                {surveyErrorMessage ? (
+                  <AppText style={styles.error}>{surveyErrorMessage}</AppText>
+                ) : null}
+
+                <Pressable
+                  style={[
+                    styles.surveySubmitButton,
+                    !canSubmitPostSaveSurvey || isSubmittingSurvey
+                      ? styles.submitButtonDisabled
+                      : null,
+                  ]}
+                  onPress={() => void submitPostSaveSurvey()}
+                  disabled={!canSubmitPostSaveSurvey || isSubmittingSurvey}
+                >
+                  {isSubmittingSurvey ? (
+                    <ActivityIndicator color="#09090b" />
+                  ) : (
+                    <AppText style={styles.submitButtonText}>Save and continue</AppText>
+                  )}
+                </Pressable>
+              </>
+            ) : pendingPostSaveSurvey?.candidate ? (
+              <>
+                <View style={styles.surveyCompareHeader}>
+                  <AppText style={styles.surveyTitle}>Which wine did you like more?</AppText>
+                  <Pressable
+                    style={styles.surveySkipButton}
+                    onPress={skipPostSaveComparison}
+                    disabled={isSubmittingSurvey}
+                  >
+                    <AppText style={styles.surveySkipText}>Skip</AppText>
+                  </Pressable>
+                </View>
+
+                {surveyErrorMessage ? (
+                  <AppText style={styles.error}>{surveyErrorMessage}</AppText>
+                ) : null}
+
+                <View style={styles.surveyCompareSection}>
+                  <View style={styles.surveyCompareRow}>
+                    <Pressable
+                      style={styles.surveyCompareCard}
+                      onPress={() => void submitPostSaveComparison("more")}
+                      disabled={isSubmittingSurvey}
+                    >
+                      <View style={styles.surveyCompareImageWrap}>
+                        {pendingPostSaveSurvey.new_wine_image_url ? (
+                          // eslint-disable-next-line jsx-a11y/alt-text
+                          <Image
+                            source={{ uri: pendingPostSaveSurvey.new_wine_image_url }}
+                            style={styles.surveyCompareImage}
+                          />
+                        ) : (
+                          <View style={styles.surveyCompareImageFallback}>
+                            <AppText style={styles.hint}>No photo</AppText>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.surveyCompareBody}>
+                        <AppText style={styles.surveyCompareTag}>Wine you logged</AppText>
+                        <AppText style={styles.surveyCompareTitle} numberOfLines={2}>
+                          {formatSurveyWineTitle(pendingPostSaveSurvey)}
+                        </AppText>
+                        <AppText style={styles.surveyCompareMeta} numberOfLines={2}>
+                          {formatSurveyWineMeta(pendingPostSaveSurvey)}
+                        </AppText>
+                      </View>
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.surveyCompareCard}
+                      onPress={() => void submitPostSaveComparison("less")}
+                      disabled={isSubmittingSurvey}
+                    >
+                      <View style={styles.surveyCompareImageWrap}>
+                        {pendingPostSaveSurvey.candidate.label_image_url ? (
+                          // eslint-disable-next-line jsx-a11y/alt-text
+                          <Image
+                            source={{ uri: pendingPostSaveSurvey.candidate.label_image_url }}
+                            style={styles.surveyCompareImage}
+                          />
+                        ) : (
+                          <View style={styles.surveyCompareImageFallback}>
+                            <AppText style={styles.hint}>No photo</AppText>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.surveyCompareBody}>
+                        <AppText style={styles.surveyCompareTag}>Previous wine</AppText>
+                        <AppText style={styles.surveyCompareTitle} numberOfLines={2}>
+                          {formatSurveyWineTitle(pendingPostSaveSurvey.candidate)}
+                        </AppText>
+                        <AppText style={styles.surveyCompareMeta} numberOfLines={2}>
+                          {formatSurveyWineMeta(pendingPostSaveSurvey.candidate)}
+                        </AppText>
+                        <AppText style={styles.surveyCompareMeta}>
+                          Logged {formatYmdDisplay(pendingPostSaveSurvey.candidate.consumed_at)}
+                        </AppText>
+                      </View>
+                    </Pressable>
+                  </View>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -2425,6 +2883,113 @@ const styles = StyleSheet.create({
   },
   hint: { color: "#a1a1aa", fontSize: 12, lineHeight: 16 },
   error: { color: "#fda4af", fontSize: 13 },
+  surveyModalRoot: {
+    flex: 1,
+    padding: 18,
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+  },
+  surveyCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "#14100f",
+    padding: 14,
+    gap: 10,
+    maxHeight: "90%",
+  },
+  surveyHeader: {
+    gap: 6,
+  },
+  surveyTitle: {
+    color: "#fafafa",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  surveyCompareSection: {
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.08)",
+  },
+  surveyCompareHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  surveySkipButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  surveySkipText: {
+    color: "#e4e4e7",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  surveyCompareRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  surveyCompareCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    overflow: "hidden",
+  },
+  surveyCompareImageWrap: {
+    height: 74,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  surveyCompareImage: {
+    width: "100%",
+    height: "100%",
+  },
+  surveyCompareImageFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  surveyCompareBody: {
+    gap: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.08)",
+  },
+  surveyCompareTag: {
+    color: "#d4d4d8",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+  },
+  surveyCompareTitle: {
+    color: "#f4f4f5",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  surveyCompareMeta: {
+    color: "#a1a1aa",
+    fontSize: 11,
+  },
+  surveySubmitButton: {
+    borderRadius: 12,
+    backgroundColor: "#fbbf24",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    minHeight: 46,
+    marginTop: 2,
+  },
   actionRow: { flexDirection: "row", gap: 10 },
   submitButton: {
     flex: 1,
@@ -2434,6 +2999,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     minHeight: 46,
+  },
+  submitButtonDisabled: {
+    opacity: 0.55,
   },
   submitButtonText: { color: "#09090b", fontSize: 14, fontWeight: "700" },
   cancelButton: {

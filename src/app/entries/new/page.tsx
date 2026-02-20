@@ -5,13 +5,19 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { formatConsumedDate } from "@/lib/formatDate";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
+import EntryPostSaveSurveyModal, {
+  type ComparisonResponse,
+  type PostSaveSurveySubmission,
+  type SurveyComparisonCandidate,
+  type SurveyEntryCard,
+} from "@/components/EntryPostSaveSurveyModal";
+import EntryWineComparisonModal from "@/components/EntryWineComparisonModal";
 import { extractGpsFromFile } from "@/lib/exifGps";
 import {
   ADVANCED_NOTE_FIELDS,
@@ -60,24 +66,11 @@ const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
   { value: "private", label: "Private" },
 ];
 
-type EntryComparisonCard = {
-  id: string;
-  wine_name: string | null;
-  producer: string | null;
-  vintage: string | null;
-};
-
-type ComparisonCandidate = EntryComparisonCard & {
-  consumed_at: string;
-  label_image_url: string | null;
-};
-
 type CreateEntryResponse = {
-  entry: EntryComparisonCard;
-  comparison_candidate?: ComparisonCandidate | null;
+  entry: SurveyEntryCard;
+  comparison_candidate?: SurveyComparisonCandidate | null;
 };
 
-type ComparisonResponse = "more" | "less" | "same_or_not_sure";
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 type UploadPhotoType = EntryPhotoType;
 type ManualUploadPhotoType = "label" | "place" | "pairing";
@@ -188,14 +181,18 @@ export default function NewEntryPage() {
   >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingComparison, setPendingComparison] = useState<{
-    entry: EntryComparisonCard;
-    candidate: ComparisonCandidate;
+  const [pendingPostSaveSurvey, setPendingPostSaveSurvey] = useState<{
+    entry: SurveyEntryCard;
+    candidate: SurveyComparisonCandidate | null;
+    step: "survey" | "comparison";
+    surveyAnswers: PostSaveSurveySubmission | null;
   } | null>(null);
-  const [comparisonErrorMessage, setComparisonErrorMessage] = useState<
+  const [postSaveSurveyErrorMessage, setPostSaveSurveyErrorMessage] = useState<
     string | null
   >(null);
-  const [isSubmittingComparison, setIsSubmittingComparison] = useState(false);
+  const [isSubmittingPostSaveSurvey, setIsSubmittingPostSaveSurvey] = useState(
+    false
+  );
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
   const labelPhotosRef = useRef<UploadPhoto[]>([]);
@@ -1162,22 +1159,112 @@ export default function NewEntryPage() {
     }
   };
 
-  const submitComparison = async (response: ComparisonResponse) => {
-    if (!pendingComparison || isSubmittingComparison) {
+  const skipPostSaveComparison = () => {
+    if (!pendingPostSaveSurvey) {
+      return;
+    }
+    router.push(`/entries/${pendingPostSaveSurvey.entry.id}/edit`);
+  };
+
+  const getComparisonRequestHeaders = async () => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+    } catch {
+      // Fall back to cookie auth when session retrieval fails.
+    }
+
+    return headers;
+  };
+
+  const submitPostSaveSurvey = async (submission: PostSaveSurveySubmission) => {
+    if (!pendingPostSaveSurvey || isSubmittingPostSaveSurvey) {
       return;
     }
 
-    setComparisonErrorMessage(null);
-    setIsSubmittingComparison(true);
+    setPostSaveSurveyErrorMessage(null);
+    setIsSubmittingPostSaveSurvey(true);
 
     try {
       const apiResponse = await fetch(
-        `/api/entries/${pendingComparison.entry.id}/comparison`,
+        `/api/entries/${pendingPostSaveSurvey.entry.id}/comparison`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: await getComparisonRequestHeaders(),
           body: JSON.stringify({
-            comparison_entry_id: pendingComparison.candidate.id,
+            how_was_it: submission.how_was_it,
+            expectations: submission.expectations,
+            drink_again: submission.drink_again,
+          }),
+        }
+      );
+
+      if (!apiResponse.ok && apiResponse.status !== 409) {
+        const payload = await apiResponse.json().catch(() => null);
+        const apiError =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Unable to save survey response.";
+        setPostSaveSurveyErrorMessage(apiError);
+        setIsSubmittingPostSaveSurvey(false);
+        return;
+      }
+
+      if (pendingPostSaveSurvey.candidate) {
+        setPendingPostSaveSurvey((current) =>
+          current
+            ? {
+                ...current,
+                step: "comparison",
+                surveyAnswers: submission,
+              }
+            : current
+        );
+        setIsSubmittingPostSaveSurvey(false);
+        return;
+      }
+
+      setIsSubmittingPostSaveSurvey(false);
+      router.push(`/entries/${pendingPostSaveSurvey.entry.id}/edit`);
+    } catch {
+      setPostSaveSurveyErrorMessage(
+        "Unable to save survey response. Check your connection and try again."
+      );
+      setIsSubmittingPostSaveSurvey(false);
+    }
+  };
+
+  const submitPostSaveComparison = async (response: ComparisonResponse) => {
+    if (
+      !pendingPostSaveSurvey ||
+      !pendingPostSaveSurvey.candidate ||
+      !pendingPostSaveSurvey.surveyAnswers ||
+      isSubmittingPostSaveSurvey
+    ) {
+      return;
+    }
+
+    setPostSaveSurveyErrorMessage(null);
+    setIsSubmittingPostSaveSurvey(true);
+
+    try {
+      const apiResponse = await fetch(
+        `/api/entries/${pendingPostSaveSurvey.entry.id}/comparison`,
+        {
+          method: "POST",
+          headers: await getComparisonRequestHeaders(),
+          body: JSON.stringify({
+            how_was_it: pendingPostSaveSurvey.surveyAnswers.how_was_it,
+            expectations: pendingPostSaveSurvey.surveyAnswers.expectations,
+            drink_again: pendingPostSaveSurvey.surveyAnswers.drink_again,
+            comparison_entry_id: pendingPostSaveSurvey.candidate.id,
             response,
           }),
         }
@@ -1189,48 +1276,19 @@ export default function NewEntryPage() {
           typeof payload?.error === "string"
             ? payload.error
             : "Unable to save comparison response.";
-        setComparisonErrorMessage(apiError);
-        setIsSubmittingComparison(false);
+        setPostSaveSurveyErrorMessage(apiError);
+        setIsSubmittingPostSaveSurvey(false);
         return;
       }
 
-      router.push(`/entries/${pendingComparison.entry.id}/edit`);
+      setIsSubmittingPostSaveSurvey(false);
+      router.push(`/entries/${pendingPostSaveSurvey.entry.id}/edit`);
     } catch {
-      setComparisonErrorMessage(
+      setPostSaveSurveyErrorMessage(
         "Unable to save comparison response. Check your connection and try again."
       );
-      setIsSubmittingComparison(false);
+      setIsSubmittingPostSaveSurvey(false);
     }
-  };
-
-  const continueWithoutSavingComparison = () => {
-    if (!pendingComparison) {
-      return;
-    }
-    router.push(`/entries/${pendingComparison.entry.id}/edit`);
-  };
-
-  const formatWineTitle = (wine: {
-    wine_name: string | null;
-    producer: string | null;
-    vintage: string | null;
-  }) => wine.wine_name?.trim() || "Untitled wine";
-
-  const formatWineMeta = (wine: {
-    wine_name: string | null;
-    producer: string | null;
-    vintage: string | null;
-  }) => {
-    if (wine.producer && wine.vintage) {
-      return `${wine.producer} · ${wine.vintage}`;
-    }
-    if (wine.producer) {
-      return wine.producer;
-    }
-    if (wine.vintage) {
-      return wine.vintage;
-    }
-    return "No producer or vintage";
   };
 
   const normalizeGrapeLookupValue = (value: string) =>
@@ -1558,8 +1616,8 @@ export default function NewEntryPage() {
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
     setErrorMessage(null);
-    setPendingComparison(null);
-    setComparisonErrorMessage(null);
+    setPendingPostSaveSurvey(null);
+    setPostSaveSurveyErrorMessage(null);
 
     clearErrors(["rating", "price_paid", "price_paid_source"]);
 
@@ -1808,15 +1866,12 @@ export default function NewEntryPage() {
 
     setIsSubmitting(false);
 
-    if (comparisonCandidate) {
-      setPendingComparison({
-        entry,
-        candidate: comparisonCandidate,
-      });
-      return;
-    }
-
-    router.push(`/entries/${entry.id}/edit`);
+    setPendingPostSaveSurvey({
+      entry,
+      candidate: comparisonCandidate,
+      step: "survey",
+      surveyAnswers: null,
+    });
   });
 
   const applyAutofill = async (data: {
@@ -3907,113 +3962,30 @@ export default function NewEntryPage() {
         </div>
       ) : null}
 
-        {pendingComparison ? (
-          <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
-            <div className="fixed inset-0 bg-black/75" aria-hidden />
-            <div className="relative flex min-h-full items-start justify-center sm:items-center">
-              <div className="relative h-[calc(100dvh-0.75rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:p-8">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-2xl font-semibold text-zinc-50">
-                    Which of these wines did you enjoy more?
-                  </h2>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-300 transition hover:border-amber-300/60 hover:text-amber-200 disabled:opacity-50"
-                    onClick={() => submitComparison("same_or_not_sure")}
-                    disabled={isSubmittingComparison}
-                  >
-                    Not sure
-                  </button>
-                </div>
-
-                {comparisonErrorMessage ? (
-                  <div className="mt-5 flex flex-col items-start gap-3 sm:mt-6">
-                    <p className="text-sm text-rose-300">{comparisonErrorMessage}</p>
-                    <button
-                      type="button"
-                      className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 sm:text-base"
-                      onClick={continueWithoutSavingComparison}
-                      disabled={isSubmittingComparison}
-                    >
-                      Continue without saving
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => submitComparison("more")}
-                    disabled={isSubmittingComparison}
-                    className="group overflow-hidden rounded-2xl border border-white/10 bg-black/30 text-left transition hover:border-amber-300/60 disabled:cursor-not-allowed disabled:opacity-70"
-                    aria-label="Select the wine you just logged"
-                  >
-                    <div className="h-32 w-full bg-black/40 sm:h-40">
-                      {newlyLoggedWinePreviewUrl ? (
-                        <img
-                          src={newlyLoggedWinePreviewUrl}
-                        alt="Wine you just logged"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                        No photo
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
-                        Wine you just logged
-                      </p>
-                      <p className="text-sm font-semibold text-zinc-50">
-                        {formatWineTitle(pendingComparison.entry)}
-                      </p>
-                      <p className="text-xs text-zinc-400">
-                        {formatWineMeta(pendingComparison.entry)}
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => submitComparison("less")}
-                    disabled={isSubmittingComparison}
-                    className="group overflow-hidden rounded-2xl border border-white/10 bg-black/30 text-left transition hover:border-amber-300/60 disabled:cursor-not-allowed disabled:opacity-70"
-                    aria-label="Select the previous wine"
-                  >
-                    <div className="h-32 w-full bg-black/40 sm:h-40">
-                      {pendingComparison.candidate.label_image_url ? (
-                        <img
-                          src={pendingComparison.candidate.label_image_url}
-                        alt="Previous wine for comparison"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                        No photo
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 border-t border-white/10 p-3 sm:p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                      Previous wine
-                    </p>
-                    <p className="text-sm font-semibold text-zinc-50">
-                      {formatWineTitle(pendingComparison.candidate)}
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      {formatWineMeta(pendingComparison.candidate)}
-                    </p>
-                      <p className="text-xs text-zinc-500">
-                        Logged {formatConsumedDate(pendingComparison.candidate.consumed_at)}
-                      </p>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-      ) : null}
+      <EntryPostSaveSurveyModal
+        key={pendingPostSaveSurvey?.entry.id ?? "post-save-survey-closed"}
+        isOpen={Boolean(pendingPostSaveSurvey && pendingPostSaveSurvey.step === "survey")}
+        entry={pendingPostSaveSurvey?.entry ?? null}
+        errorMessage={postSaveSurveyErrorMessage}
+        isSubmitting={isSubmittingPostSaveSurvey}
+        submitLabel="Save and continue"
+        onSubmit={submitPostSaveSurvey}
+      />
+      <EntryWineComparisonModal
+        key={`${pendingPostSaveSurvey?.entry.id ?? "post-save-comparison-closed"}:${pendingPostSaveSurvey?.step ?? "survey"}`}
+        isOpen={Boolean(
+          pendingPostSaveSurvey &&
+            pendingPostSaveSurvey.step === "comparison" &&
+            pendingPostSaveSurvey.candidate
+        )}
+        entry={pendingPostSaveSurvey?.entry ?? null}
+        candidate={pendingPostSaveSurvey?.candidate ?? null}
+        newWineImageUrl={newlyLoggedWinePreviewUrl}
+        errorMessage={postSaveSurveyErrorMessage}
+        isSubmitting={isSubmittingPostSaveSurvey}
+        onSelect={submitPostSaveComparison}
+        onSkip={skipPostSaveComparison}
+      />
     </div>
   );
 }

@@ -11,6 +11,13 @@ import PrivacyBadge from "@/components/PrivacyBadge";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
+import EntryPostSaveSurveyModal, {
+  type ComparisonResponse,
+  type PostSaveSurveySubmission,
+  type SurveyComparisonCandidate,
+  type SurveyEntryCard,
+} from "@/components/EntryPostSaveSurveyModal";
+import EntryWineComparisonModal from "@/components/EntryWineComparisonModal";
 import { extractGpsFromFile } from "@/lib/exifGps";
 import type {
   EntryPhoto,
@@ -253,6 +260,19 @@ export default function EditEntryPage() {
   >(null);
   const cropOpenRequestRef = useRef(0);
   const [loading, setLoading] = useState(true);
+  const [pendingBulkSurvey, setPendingBulkSurvey] = useState<{
+    entry: SurveyEntryCard;
+    candidate: SurveyComparisonCandidate | null;
+    nextHref: string;
+    shouldPublishQueueOnContinue: boolean;
+    newWineImageUrl: string | null;
+    step: "survey" | "comparison";
+    surveyAnswers: PostSaveSurveySubmission | null;
+  } | null>(null);
+  const [bulkSurveyErrorMessage, setBulkSurveyErrorMessage] = useState<
+    string | null
+  >(null);
+  const [isSubmittingBulkSurvey, setIsSubmittingBulkSurvey] = useState(false);
 
   const withCacheBust = (url: string | null | undefined) => {
     if (!url) return null;
@@ -1514,6 +1534,225 @@ export default function EditEntryPage() {
     }
   };
 
+  const fetchComparisonCandidateForEntry = useCallback(
+    async (
+      currentEntryId: string,
+      ownerUserId: string
+    ): Promise<SurveyComparisonCandidate | null> => {
+      const { count, error: countError } = await supabase
+        .from("wine_entries")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", ownerUserId)
+        .neq("id", currentEntryId);
+
+      if (countError || !count || count <= 0) {
+        return null;
+      }
+
+      const randomOffset = Math.floor(Math.random() * count);
+
+      const { data: candidate, error: candidateError } = await supabase
+        .from("wine_entries")
+        .select("id, wine_name, producer, vintage, consumed_at, label_image_path")
+        .eq("user_id", ownerUserId)
+        .neq("id", currentEntryId)
+        .order("created_at", { ascending: false })
+        .range(randomOffset, randomOffset)
+        .maybeSingle();
+
+      if (candidateError || !candidate) {
+        return null;
+      }
+
+      const { data: labelPhoto } = await supabase
+        .from("entry_photos")
+        .select("path")
+        .eq("entry_id", candidate.id)
+        .eq("type", "label")
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      const labelPath = labelPhoto?.path ?? candidate.label_image_path ?? null;
+      if (!labelPath) {
+        return {
+          id: candidate.id,
+          wine_name: candidate.wine_name,
+          producer: candidate.producer,
+          vintage: candidate.vintage,
+          consumed_at: candidate.consumed_at,
+          label_image_url: null,
+        };
+      }
+
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from("wine-photos")
+        .createSignedUrl(labelPath, 60 * 60);
+
+      return {
+        id: candidate.id,
+        wine_name: candidate.wine_name,
+        producer: candidate.producer,
+        vintage: candidate.vintage,
+        consumed_at: candidate.consumed_at,
+        label_image_url: signedUrlError ? null : signedUrlData.signedUrl,
+      };
+    },
+    [supabase]
+  );
+
+  const continueAfterBulkSurvey = async (
+    flow: NonNullable<typeof pendingBulkSurvey>
+  ) => {
+    if (flow.shouldPublishQueueOnContinue) {
+      try {
+        await fetch("/api/entries/bulk-publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entry_ids: bulkQueue }),
+        });
+      } catch {
+        // Best-effort: if this fails, the queue stays unposted until saved later.
+      }
+    }
+
+    setPendingBulkSurvey(null);
+    router.push(flow.nextHref);
+  };
+
+  const skipBulkComparison = () => {
+    if (!pendingBulkSurvey) {
+      return;
+    }
+    void continueAfterBulkSurvey(pendingBulkSurvey);
+  };
+
+  const getComparisonRequestHeaders = async () => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+    } catch {
+      // Fall back to cookie auth when session retrieval fails.
+    }
+
+    return headers;
+  };
+
+  const submitBulkSurvey = async (submission: PostSaveSurveySubmission) => {
+    if (!pendingBulkSurvey || isSubmittingBulkSurvey) {
+      return;
+    }
+
+    setBulkSurveyErrorMessage(null);
+    setIsSubmittingBulkSurvey(true);
+
+    try {
+      const apiResponse = await fetch(
+        `/api/entries/${pendingBulkSurvey.entry.id}/comparison`,
+        {
+          method: "POST",
+          headers: await getComparisonRequestHeaders(),
+          body: JSON.stringify({
+            how_was_it: submission.how_was_it,
+            expectations: submission.expectations,
+            drink_again: submission.drink_again,
+          }),
+        }
+      );
+
+      if (!apiResponse.ok && apiResponse.status !== 409) {
+        const payload = await apiResponse.json().catch(() => null);
+        const apiError =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Unable to save survey response.";
+        setBulkSurveyErrorMessage(apiError);
+        setIsSubmittingBulkSurvey(false);
+        return;
+      }
+
+      if (pendingBulkSurvey.candidate) {
+        setPendingBulkSurvey((current) =>
+          current
+            ? {
+                ...current,
+                step: "comparison",
+                surveyAnswers: submission,
+              }
+            : current
+        );
+        setIsSubmittingBulkSurvey(false);
+        return;
+      }
+
+      setIsSubmittingBulkSurvey(false);
+      await continueAfterBulkSurvey(pendingBulkSurvey);
+    } catch {
+      setBulkSurveyErrorMessage(
+        "Unable to save survey response. Check your connection and try again."
+      );
+      setIsSubmittingBulkSurvey(false);
+    }
+  };
+
+  const submitBulkComparison = async (response: ComparisonResponse) => {
+    if (
+      !pendingBulkSurvey ||
+      !pendingBulkSurvey.candidate ||
+      !pendingBulkSurvey.surveyAnswers ||
+      isSubmittingBulkSurvey
+    ) {
+      return;
+    }
+
+    setBulkSurveyErrorMessage(null);
+    setIsSubmittingBulkSurvey(true);
+
+    try {
+      const apiResponse = await fetch(
+        `/api/entries/${pendingBulkSurvey.entry.id}/comparison`,
+        {
+          method: "POST",
+          headers: await getComparisonRequestHeaders(),
+          body: JSON.stringify({
+            how_was_it: pendingBulkSurvey.surveyAnswers.how_was_it,
+            expectations: pendingBulkSurvey.surveyAnswers.expectations,
+            drink_again: pendingBulkSurvey.surveyAnswers.drink_again,
+            comparison_entry_id: pendingBulkSurvey.candidate.id,
+            response,
+          }),
+        }
+      );
+
+      if (!apiResponse.ok && apiResponse.status !== 409) {
+        const payload = await apiResponse.json().catch(() => null);
+        const apiError =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Unable to save comparison response.";
+        setBulkSurveyErrorMessage(apiError);
+        setIsSubmittingBulkSurvey(false);
+        return;
+      }
+
+      setIsSubmittingBulkSurvey(false);
+      await continueAfterBulkSurvey(pendingBulkSurvey);
+    } catch {
+      setBulkSurveyErrorMessage(
+        "Unable to save comparison response. Check your connection and try again."
+      );
+      setIsSubmittingBulkSurvey(false);
+    }
+  };
+
   const onSubmit = handleSubmit(async (values, event) => {
     if (!entry) {
       return;
@@ -1528,6 +1767,8 @@ export default function EditEntryPage() {
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    setPendingBulkSurvey(null);
+    setBulkSurveyErrorMessage(null);
 
     clearErrors(["rating", "price_paid", "price_paid_source"]);
 
@@ -1648,28 +1889,43 @@ export default function EditEntryPage() {
     }
 
     if (isBulkReview) {
-      if (submitIntent === "exit") {
-        // If the user exits bulk review early, publish the remaining queue as-is.
-        // (They can still edit individual entries later.)
-        try {
-          await fetch("/api/entries/bulk-publish", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ entry_ids: bulkQueue }),
-          });
-        } catch {
-          // Best-effort: if this fails, the queue stays unposted until saved later.
-        }
-        router.push("/entries");
-        return;
+      const nextHref =
+        submitIntent === "exit"
+          ? "/entries"
+          : nextBulkEntryId && currentBulkIndex >= 0
+          ? buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1)
+          : "/entries";
+      const shouldPublishQueueOnContinue = submitIntent === "exit";
+      const currentLabelPhotoUrl =
+        photos.find((photo) => photo.type === "label")?.signed_url ??
+        entry.label_image_url ??
+        null;
+
+      let comparisonCandidate: SurveyComparisonCandidate | null = null;
+      try {
+        comparisonCandidate = await fetchComparisonCandidateForEntry(
+          entry.id,
+          entry.user_id
+        );
+      } catch {
+        comparisonCandidate = null;
       }
 
-      if (nextBulkEntryId && currentBulkIndex >= 0) {
-        router.push(buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1));
-        return;
-      }
-
-      router.push("/entries");
+      setIsSubmitting(false);
+      setPendingBulkSurvey({
+        entry: {
+          id: entry.id,
+          wine_name: values.wine_name || null,
+          producer: values.producer || null,
+          vintage: values.vintage || null,
+        },
+        candidate: comparisonCandidate,
+        nextHref,
+        shouldPublishQueueOnContinue,
+        newWineImageUrl: currentLabelPhotoUrl,
+        step: "survey",
+        surveyAnswers: null,
+      });
       return;
     }
 
@@ -2657,6 +2913,35 @@ export default function EditEntryPage() {
               </div>
             </div>
           ) : null}
+
+          <EntryPostSaveSurveyModal
+            key={pendingBulkSurvey?.entry.id ?? "bulk-survey-closed"}
+            isOpen={Boolean(pendingBulkSurvey && pendingBulkSurvey.step === "survey")}
+            entry={pendingBulkSurvey?.entry ?? null}
+            errorMessage={bulkSurveyErrorMessage}
+            isSubmitting={isSubmittingBulkSurvey}
+            submitLabel={
+              pendingBulkSurvey?.nextHref === "/entries"
+                ? "Save and finish"
+                : "Save and continue"
+            }
+            onSubmit={submitBulkSurvey}
+          />
+          <EntryWineComparisonModal
+            key={`${pendingBulkSurvey?.entry.id ?? "bulk-comparison-closed"}:${pendingBulkSurvey?.step ?? "survey"}`}
+            isOpen={Boolean(
+              pendingBulkSurvey &&
+                pendingBulkSurvey.step === "comparison" &&
+                pendingBulkSurvey.candidate
+            )}
+            entry={pendingBulkSurvey?.entry ?? null}
+            candidate={pendingBulkSurvey?.candidate ?? null}
+            newWineImageUrl={pendingBulkSurvey?.newWineImageUrl ?? null}
+            errorMessage={bulkSurveyErrorMessage}
+            isSubmitting={isSubmittingBulkSurvey}
+            onSelect={submitBulkComparison}
+            onSkip={skipBulkComparison}
+          />
 
           {errorMessage ? (
             <p className="text-sm text-rose-300">{errorMessage}</p>
