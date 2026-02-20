@@ -295,7 +295,7 @@ export default function ProfileScreen() {
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
-  const [galleryTab, setGalleryTab] = useState<"mine" | "tagged">("mine");
+  const [galleryTab, setGalleryTab] = useState<"mine" | "tagged" | "friends">("mine");
   const [entries, setEntries] = useState<EntryTile[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [entriesOffset, setEntriesOffset] = useState(0);
@@ -342,7 +342,6 @@ export default function ProfileScreen() {
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
-  const [friendsOpen, setFriendsOpen] = useState(false);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>([]);
@@ -1036,16 +1035,6 @@ export default function ProfileScreen() {
     }
   }, [loadProfilesByIds, user]);
 
-  const closeFriends = () => {
-    setFriendsOpen(false);
-    setFriendSearch("");
-    setSearchResults([]);
-    setSearchError(null);
-    setFriendErrorMessage(null);
-    setConfirmingCancel(null);
-    setConfirmingRemove(null);
-  };
-
   const closeSettings = () => {
     setSettingsOpen(false);
     setProfileErrorMessage(null);
@@ -1732,7 +1721,7 @@ export default function ProfileScreen() {
   }, [loadProfileScreen]);
 
   useEffect(() => {
-    if (!friendsOpen || !user) {
+    if (galleryTab !== "friends" || !user) {
       return;
     }
 
@@ -1829,7 +1818,7 @@ export default function ProfileScreen() {
       isMounted = false;
       clearTimeout(timeout);
     };
-  }, [friendSearch, friendsOpen, user]);
+  }, [friendSearch, galleryTab, user]);
 
   if (loading && !profile) {
     return (
@@ -1876,28 +1865,6 @@ export default function ProfileScreen() {
         <AppTopBar activeHref="/(app)/profile" />
 
         <View style={styles.identityCard}>
-          <View style={styles.identityActions}>
-            <Pressable
-              style={styles.iconCircle}
-              onPress={() => {
-                setFriendsOpen(true);
-                void loadFriendsData();
-              }}
-            >
-              <AppText style={styles.iconCircleText}>👥</AppText>
-            </Pressable>
-            <Pressable
-              style={styles.iconCircle}
-              onPress={() => {
-                setProfileErrorMessage(null);
-                setProfileSuccessMessage(null);
-                setSettingsOpen(true);
-              }}
-            >
-              <AppText style={styles.iconCircleText}>⚙︎</AppText>
-            </Pressable>
-          </View>
-
           <View style={styles.identityHeader}>
             <View style={styles.avatarWrap}>
               {pendingAvatarPreviewUri || profile.avatar_url ? (
@@ -1912,9 +1879,21 @@ export default function ProfileScreen() {
               )}
             </View>
             <View style={styles.identityMain}>
-              <AppText style={styles.profileName}>
-                {profile.display_name?.trim() || "Not set"}
-              </AppText>
+              <View style={styles.profileNameRow}>
+                <AppText style={styles.profileName}>
+                  {profile.display_name?.trim() || "Not set"}
+                </AppText>
+                <Pressable
+                  style={styles.settingsTopRightButton}
+                  onPress={() => {
+                    setProfileErrorMessage(null);
+                    setProfileSuccessMessage(null);
+                    setSettingsOpen(true);
+                  }}
+                >
+                  <AppText style={styles.settingsIcon}>⚙︎</AppText>
+                </Pressable>
+              </View>
               <AppText style={styles.fullName}>{fullName || " "}</AppText>
               {profile.bio?.trim() ? (
                 <AppText style={styles.bioText}>{profile.bio.trim()}</AppText>
@@ -1967,11 +1946,31 @@ export default function ProfileScreen() {
                 Tagged
               </AppText>
             </Pressable>
+            <Pressable
+              style={[
+                styles.galleryToggleBtn,
+                galleryTab === "friends" ? styles.galleryToggleBtnActive : null,
+              ]}
+              onPress={() => {
+                setGalleryTab("friends");
+                void loadFriendsData();
+              }}
+            >
+              <AppText
+                style={[
+                  styles.galleryToggleText,
+                  galleryTab === "friends" ? styles.galleryToggleTextActive : null,
+                ]}
+              >
+                Friends
+              </AppText>
+            </Pressable>
           </View>
 
           {profileSuccessMessage ? (
             <AppText style={styles.successText}>{profileSuccessMessage}</AppText>
           ) : null}
+
         </View>
 
         {galleryTab === "mine" ? (
@@ -2015,7 +2014,7 @@ export default function ProfileScreen() {
               </View>
             ) : null}
           </>
-        ) : (
+        ) : galleryTab === "tagged" ? (
           <>
             {taggedEntries.length > 0 ? (
               <View style={styles.galleryGrid}>
@@ -2048,6 +2047,259 @@ export default function ProfileScreen() {
               </View>
             ) : null}
           </>
+        ) : (
+          <View style={styles.friendsInlineCard}>
+            {friendErrorMessage ? (
+              <AppText style={styles.errorText}>{friendErrorMessage}</AppText>
+            ) : null}
+
+            {friendsLoading ? (
+              <View style={styles.loadingCardCompact}>
+                <ActivityIndicator color="#fbbf24" />
+                <AppText style={styles.loadingText}>Loading friends...</AppText>
+              </View>
+            ) : (
+              <View style={styles.friendsInlineBody}>
+                <View style={styles.sectionBlock}>
+                  <LabeledInput
+                    label="Search users"
+                    value={friendSearch}
+                    onChangeText={setFriendSearch}
+                    placeholder="Search by username, name, or email"
+                    autoCapitalize="none"
+                  />
+                  {searchError ? <AppText style={styles.errorText}>{searchError}</AppText> : null}
+                  {searchLoading ? (
+                    <AppText style={styles.hintText}>Searching...</AppText>
+                  ) : null}
+
+                  {searchResults.length > 0 ? (
+                    <View style={styles.compactList}>
+                      {searchResults.slice(0, 6).map((candidate) => {
+                        const isFriend = friendIdSet.has(candidate.id);
+                        const isOutgoing = outgoingIdSet.has(candidate.id);
+                        const isIncoming = incomingIdSet.has(candidate.id);
+                        return (
+                          <View key={candidate.id} style={styles.friendRow}>
+                            <View style={styles.friendRowMain}>
+                              <AppText style={styles.friendName}>
+                                {candidate.display_name ?? candidate.email ?? "Unknown"}
+                              </AppText>
+                              {isFriend ? (
+                                <AppText style={styles.statusGood}>Already friends</AppText>
+                              ) : isOutgoing ? (
+                                <AppText style={styles.statusWarn}>Request sent</AppText>
+                              ) : isIncoming ? (
+                                <AppText style={styles.statusWarn}>Requested you</AppText>
+                              ) : null}
+                            </View>
+                            <Pressable
+                              style={styles.ghostButton}
+                              disabled={isFriend || isOutgoing || isMutatingFriend}
+                              onPress={() => void sendFriendRequest(candidate.id)}
+                            >
+                              <AppText style={styles.ghostButtonText}>
+                                {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
+                              </AppText>
+                            </Pressable>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : friendSearch.trim() && !searchLoading && !searchError ? (
+                    <AppText style={styles.hintText}>No matches.</AppText>
+                  ) : null}
+                </View>
+
+                <View style={styles.sectionBlockTopBorder}>
+                  <View style={styles.rowBetween}>
+                    <AppText style={styles.sectionTitle}>Incoming requests</AppText>
+                    {incomingRequests.length > 0 ? (
+                      <View style={styles.countPill}>
+                        <AppText style={styles.countPillText}>
+                          {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+                  {incomingRequests.length === 0 ? (
+                    <AppText style={styles.hintText}>No new requests.</AppText>
+                  ) : (
+                    <View style={styles.compactList}>
+                      {incomingRequests.map((request) => (
+                        <View key={request.id} style={styles.cardRow}>
+                          <View style={styles.friendInline}>
+                            <FriendAvatar profile={request.requester} />
+                            <AppText style={styles.friendName}>
+                              {displayFriendName(request.requester)}
+                            </AppText>
+                          </View>
+                          <View style={styles.actionRow}>
+                            <Pressable
+                              style={styles.acceptButton}
+                              disabled={isMutatingFriend}
+                              onPress={() => void respondToRequest(request.id, "accept")}
+                            >
+                              <AppText style={styles.acceptButtonText}>Accept</AppText>
+                            </Pressable>
+                            <Pressable
+                              style={styles.declineButton}
+                              disabled={isMutatingFriend}
+                              onPress={() => void respondToRequest(request.id, "decline")}
+                            >
+                              <AppText style={styles.declineButtonText}>Decline</AppText>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {outgoingRequests.length > 0 ? (
+                  <View style={styles.sectionBlockTopBorder}>
+                    <AppText style={styles.sectionTitle}>Requests sent</AppText>
+                    <View style={styles.compactList}>
+                      {outgoingRequests.map((request) => (
+                        <View key={request.id} style={styles.friendRow}>
+                          <View style={styles.friendInline}>
+                            <FriendAvatar profile={request.recipient} />
+                            <AppText style={styles.friendName}>
+                              {displayFriendName(request.recipient)}
+                            </AppText>
+                          </View>
+                          {confirmingCancel === request.id ? (
+                            <View style={styles.actionRow}>
+                              <Pressable
+                                style={styles.declineButton}
+                                disabled={isMutatingFriend}
+                                onPress={() => void deleteRequest(request.id)}
+                              >
+                                <AppText style={styles.declineButtonText}>Yes</AppText>
+                              </Pressable>
+                              <Pressable
+                                style={styles.ghostButton}
+                                disabled={isMutatingFriend}
+                                onPress={() => setConfirmingCancel(null)}
+                              >
+                                <AppText style={styles.ghostButtonText}>No</AppText>
+                              </Pressable>
+                            </View>
+                          ) : (
+                            <Pressable
+                              style={styles.ghostButton}
+                              disabled={isMutatingFriend}
+                              onPress={() => setConfirmingCancel(request.id)}
+                            >
+                              <AppText style={styles.ghostButtonText}>Cancel</AppText>
+                            </Pressable>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                <View style={styles.sectionBlockTopBorder}>
+                  <AppText style={styles.sectionTitle}>People you may know</AppText>
+                  {suggestions.length === 0 ? (
+                    <AppText style={styles.hintText}>No suggestions right now.</AppText>
+                  ) : (
+                    <View style={styles.compactList}>
+                      {suggestions.map((person) => {
+                        const isFriend = friendIdSet.has(person.id);
+                        const isOutgoing = outgoingIdSet.has(person.id);
+                        return (
+                          <View key={person.id} style={styles.friendRow}>
+                            <View style={styles.friendRowMain}>
+                              <View style={styles.friendInline}>
+                                <FriendAvatar profile={person} />
+                                <AppText style={styles.friendName}>
+                                  {displayFriendName(person)}
+                                </AppText>
+                              </View>
+                              <AppText style={styles.statusWarn}>
+                                {person.mutual_count === 1
+                                  ? "1 mutual friend"
+                                  : `${person.mutual_count} mutual friends`}
+                              </AppText>
+                            </View>
+                            <Pressable
+                              style={styles.ghostButton}
+                              disabled={isFriend || isOutgoing || isMutatingFriend}
+                              onPress={() => void sendFriendRequest(person.id)}
+                            >
+                              <AppText style={styles.ghostButtonText}>
+                                {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
+                              </AppText>
+                            </Pressable>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.sectionBlockTopBorder}>
+                  <AppText style={styles.sectionTitle}>Your friends</AppText>
+                  {friends.length === 0 ? (
+                    <AppText style={styles.hintText}>
+                      No friends yet. Search to add someone.
+                    </AppText>
+                  ) : (
+                    <View style={styles.compactList}>
+                      {friends.map((friend) => (
+                        <View key={friend.id} style={styles.friendRow}>
+                          <View style={styles.friendInline}>
+                            <FriendAvatar profile={friend} />
+                            <View>
+                              <AppText style={styles.friendName}>
+                                {displayFriendName(friend)}
+                              </AppText>
+                              {friend.tasting_count > 0 ? (
+                                <AppText style={styles.hintTextTiny}>
+                                  {friend.tasting_count} shared tasting
+                                  {friend.tasting_count === 1 ? "" : "s"}
+                                </AppText>
+                              ) : null}
+                            </View>
+                          </View>
+                          {friend.request_id ? (
+                            confirmingRemove === friend.request_id ? (
+                              <View style={styles.actionRow}>
+                                <Pressable
+                                  style={styles.declineButton}
+                                  disabled={isMutatingFriend}
+                                  onPress={() => void deleteRequest(friend.request_id!)}
+                                >
+                                  <AppText style={styles.declineButtonText}>Yes</AppText>
+                                </Pressable>
+                                <Pressable
+                                  style={styles.ghostButton}
+                                  disabled={isMutatingFriend}
+                                  onPress={() => setConfirmingRemove(null)}
+                                >
+                                  <AppText style={styles.ghostButtonText}>No</AppText>
+                                </Pressable>
+                              </View>
+                            ) : (
+                              <Pressable
+                                style={styles.ghostButton}
+                                disabled={isMutatingFriend}
+                                onPress={() => setConfirmingRemove(friend.request_id)}
+                              >
+                                <AppText style={styles.ghostButtonText}>Remove</AppText>
+                              </Pressable>
+                            )
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+          </View>
         )}
       </ScrollView>
 
@@ -2390,279 +2642,6 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={friendsOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={closeFriends}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={closeFriends} />
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>Friends</AppText>
-              <Pressable style={styles.iconCircleSm} onPress={closeFriends}>
-                <AppText style={styles.iconCircleText}>×</AppText>
-              </Pressable>
-            </View>
-
-            {friendErrorMessage ? (
-              <AppText style={styles.errorText}>{friendErrorMessage}</AppText>
-            ) : null}
-
-            {friendsLoading ? (
-              <View style={styles.loadingCardCompact}>
-                <ActivityIndicator color="#fbbf24" />
-                <AppText style={styles.loadingText}>Loading friends...</AppText>
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.modalBody}
-                contentContainerStyle={styles.modalBodyContent}
-                keyboardShouldPersistTaps="handled"
-              >
-                <View style={styles.sectionBlock}>
-                  <LabeledInput
-                    label="Search users"
-                    value={friendSearch}
-                    onChangeText={setFriendSearch}
-                    placeholder="Search by username, name, or email"
-                    autoCapitalize="none"
-                  />
-                  {searchError ? <AppText style={styles.errorText}>{searchError}</AppText> : null}
-                  {searchLoading ? (
-                    <AppText style={styles.hintText}>Searching...</AppText>
-                  ) : null}
-
-                  {searchResults.length > 0 ? (
-                    <View style={styles.compactList}>
-                      {searchResults.slice(0, 6).map((candidate) => {
-                        const isFriend = friendIdSet.has(candidate.id);
-                        const isOutgoing = outgoingIdSet.has(candidate.id);
-                        const isIncoming = incomingIdSet.has(candidate.id);
-                        return (
-                          <View key={candidate.id} style={styles.friendRow}>
-                            <View style={styles.friendRowMain}>
-                              <AppText style={styles.friendName}>
-                                {candidate.display_name ?? candidate.email ?? "Unknown"}
-                              </AppText>
-                              {isFriend ? (
-                                <AppText style={styles.statusGood}>Already friends</AppText>
-                              ) : isOutgoing ? (
-                                <AppText style={styles.statusWarn}>Request sent</AppText>
-                              ) : isIncoming ? (
-                                <AppText style={styles.statusWarn}>Requested you</AppText>
-                              ) : null}
-                            </View>
-                            <Pressable
-                              style={styles.ghostButton}
-                              disabled={isFriend || isOutgoing || isMutatingFriend}
-                              onPress={() => void sendFriendRequest(candidate.id)}
-                            >
-                              <AppText style={styles.ghostButtonText}>
-                                {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
-                              </AppText>
-                            </Pressable>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : friendSearch.trim() && !searchLoading && !searchError ? (
-                    <AppText style={styles.hintText}>No matches.</AppText>
-                  ) : null}
-                </View>
-
-                <View style={styles.sectionBlockTopBorder}>
-                  <View style={styles.rowBetween}>
-                    <AppText style={styles.sectionTitle}>Incoming requests</AppText>
-                    {incomingRequests.length > 0 ? (
-                      <View style={styles.countPill}>
-                        <AppText style={styles.countPillText}>
-                          {incomingRequests.length > 99 ? "99+" : incomingRequests.length}
-                        </AppText>
-                      </View>
-                    ) : null}
-                  </View>
-                  {incomingRequests.length === 0 ? (
-                    <AppText style={styles.hintText}>No new requests.</AppText>
-                  ) : (
-                    <View style={styles.compactList}>
-                      {incomingRequests.map((request) => (
-                        <View key={request.id} style={styles.cardRow}>
-                          <View style={styles.friendInline}>
-                            <FriendAvatar profile={request.requester} />
-                            <AppText style={styles.friendName}>
-                              {displayFriendName(request.requester)}
-                            </AppText>
-                          </View>
-                          <View style={styles.actionRow}>
-                            <Pressable
-                              style={styles.acceptButton}
-                              disabled={isMutatingFriend}
-                              onPress={() => void respondToRequest(request.id, "accept")}
-                            >
-                              <AppText style={styles.acceptButtonText}>Accept</AppText>
-                            </Pressable>
-                            <Pressable
-                              style={styles.declineButton}
-                              disabled={isMutatingFriend}
-                              onPress={() => void respondToRequest(request.id, "decline")}
-                            >
-                              <AppText style={styles.declineButtonText}>Decline</AppText>
-                            </Pressable>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                {outgoingRequests.length > 0 ? (
-                  <View style={styles.sectionBlockTopBorder}>
-                    <AppText style={styles.sectionTitle}>Requests sent</AppText>
-                    <View style={styles.compactList}>
-                      {outgoingRequests.map((request) => (
-                        <View key={request.id} style={styles.friendRow}>
-                          <View style={styles.friendInline}>
-                            <FriendAvatar profile={request.recipient} />
-                            <AppText style={styles.friendName}>
-                              {displayFriendName(request.recipient)}
-                            </AppText>
-                          </View>
-                          {confirmingCancel === request.id ? (
-                            <View style={styles.actionRow}>
-                              <Pressable
-                                style={styles.declineButton}
-                                disabled={isMutatingFriend}
-                                onPress={() => void deleteRequest(request.id)}
-                              >
-                                <AppText style={styles.declineButtonText}>Yes</AppText>
-                              </Pressable>
-                              <Pressable
-                                style={styles.ghostButton}
-                                disabled={isMutatingFriend}
-                                onPress={() => setConfirmingCancel(null)}
-                              >
-                                <AppText style={styles.ghostButtonText}>No</AppText>
-                              </Pressable>
-                            </View>
-                          ) : (
-                            <Pressable
-                              style={styles.ghostButton}
-                              disabled={isMutatingFriend}
-                              onPress={() => setConfirmingCancel(request.id)}
-                            >
-                              <AppText style={styles.ghostButtonText}>Cancel</AppText>
-                            </Pressable>
-                          )}
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
-
-                <View style={styles.sectionBlockTopBorder}>
-                  <AppText style={styles.sectionTitle}>People you may know</AppText>
-                  {suggestions.length === 0 ? (
-                    <AppText style={styles.hintText}>No suggestions right now.</AppText>
-                  ) : (
-                    <View style={styles.compactList}>
-                      {suggestions.map((person) => {
-                        const isFriend = friendIdSet.has(person.id);
-                        const isOutgoing = outgoingIdSet.has(person.id);
-                        return (
-                          <View key={person.id} style={styles.friendRow}>
-                            <View style={styles.friendRowMain}>
-                              <View style={styles.friendInline}>
-                                <FriendAvatar profile={person} />
-                                <AppText style={styles.friendName}>
-                                  {displayFriendName(person)}
-                                </AppText>
-                              </View>
-                              <AppText style={styles.statusWarn}>
-                                {person.mutual_count === 1
-                                  ? "1 mutual friend"
-                                  : `${person.mutual_count} mutual friends`}
-                              </AppText>
-                            </View>
-                            <Pressable
-                              style={styles.ghostButton}
-                              disabled={isFriend || isOutgoing || isMutatingFriend}
-                              onPress={() => void sendFriendRequest(person.id)}
-                            >
-                              <AppText style={styles.ghostButtonText}>
-                                {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
-                              </AppText>
-                            </Pressable>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.sectionBlockTopBorder}>
-                  <AppText style={styles.sectionTitle}>Your friends</AppText>
-                  {friends.length === 0 ? (
-                    <AppText style={styles.hintText}>
-                      No friends yet. Search to add someone.
-                    </AppText>
-                  ) : (
-                    <View style={styles.compactList}>
-                      {friends.map((friend) => (
-                        <View key={friend.id} style={styles.friendRow}>
-                          <View style={styles.friendInline}>
-                            <FriendAvatar profile={friend} />
-                            <View>
-                              <AppText style={styles.friendName}>
-                                {displayFriendName(friend)}
-                              </AppText>
-                              {friend.tasting_count > 0 ? (
-                                <AppText style={styles.hintTextTiny}>
-                                  {friend.tasting_count} shared tasting
-                                  {friend.tasting_count === 1 ? "" : "s"}
-                                </AppText>
-                              ) : null}
-                            </View>
-                          </View>
-                          {friend.request_id ? (
-                            confirmingRemove === friend.request_id ? (
-                              <View style={styles.actionRow}>
-                                <Pressable
-                                  style={styles.declineButton}
-                                  disabled={isMutatingFriend}
-                                  onPress={() => void deleteRequest(friend.request_id!)}
-                                >
-                                  <AppText style={styles.declineButtonText}>Yes</AppText>
-                                </Pressable>
-                                <Pressable
-                                  style={styles.ghostButton}
-                                  disabled={isMutatingFriend}
-                                  onPress={() => setConfirmingRemove(null)}
-                                >
-                                  <AppText style={styles.ghostButtonText}>No</AppText>
-                                </Pressable>
-                              </View>
-                            ) : (
-                              <Pressable
-                                style={styles.ghostButton}
-                                disabled={isMutatingFriend}
-                                onPress={() => setConfirmingRemove(friend.request_id)}
-                              >
-                                <AppText style={styles.ghostButtonText}>Remove</AppText>
-                              </Pressable>
-                            )
-                          ) : null}
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -2758,13 +2737,16 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  identityActions: {
-    position: "absolute",
-    right: 12,
-    top: 10,
-    flexDirection: "row",
-    gap: 8,
-    zIndex: 3,
+  settingsTopRightButton: {
+    marginLeft: "auto",
+    paddingHorizontal: 2,
+    paddingVertical: 0,
+  },
+  settingsIcon: {
+    color: "#d4d4d8",
+    fontSize: 20,
+    lineHeight: 20,
+    fontWeight: "700",
   },
   iconCircle: {
     width: 34,
@@ -2796,7 +2778,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingRight: 74,
   },
   avatarWrap: {
     width: 94,
@@ -2837,9 +2818,14 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  profileNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   profileName: {
     color: "#fafafa",
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: "700",
   },
   fullName: {
@@ -2855,6 +2841,7 @@ const styles = StyleSheet.create({
   statsRow: {
     marginTop: 8,
     flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   statItem: {
@@ -2931,6 +2918,17 @@ const styles = StyleSheet.create({
   emptyText: {
     color: "#a1a1aa",
     fontSize: 13,
+  },
+  friendsInlineCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    padding: 12,
+    gap: 10,
+  },
+  friendsInlineBody: {
+    gap: 12,
   },
   inlineLoaderRow: {
     marginTop: 6,

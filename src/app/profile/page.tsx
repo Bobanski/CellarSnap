@@ -185,13 +185,12 @@ export default function ProfilePage() {
   const [entriesHasMore, setEntriesHasMore] = useState(false);
   const [wineCount, setWineCount] = useState<number | null>(null);
   const [friendCount, setFriendCount] = useState<number | null>(null);
-  const [galleryTab, setGalleryTab] = useState<"mine" | "tagged">("mine");
+  const [galleryTab, setGalleryTab] = useState<"mine" | "tagged" | "friends">("mine");
   const [taggedEntries, setTaggedEntries] = useState<Entry[]>([]);
   const [taggedLoading, setTaggedLoading] = useState(false);
   const [taggedLoaded, setTaggedLoaded] = useState(false);
 
-  // Friends modal state
-  const [friendsOpen, setFriendsOpen] = useState(false);
+  // Friends tab state
   const [friends, setFriends] = useState<Friend[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<
     { id: string; requester: FriendProfile; created_at: string; seen_at: string | null }[]
@@ -839,16 +838,6 @@ export default function ProfilePage() {
     };
   }, [friendSearch]);
 
-  const closeFriends = () => {
-    setFriendsOpen(false);
-    setFriendSearch("");
-    setSearchResults([]);
-    setSearchError(null);
-    setFriendError(null);
-    setConfirmingCancel(null);
-    setConfirmingRemove(null);
-  };
-
   const closeSettings = () => {
     if (requiresUsernameSetup && isEditing) return;
     cancelEdit();
@@ -896,38 +885,6 @@ export default function ProfilePage() {
         <div className="mx-auto max-w-2xl space-y-6">
           {/* ── Identity Card ── */}
           <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="absolute right-4 top-2 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setFriendsOpen(true);
-                  loadFriends();
-                }}
-                className="rounded-full border border-white/10 p-2 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
-                aria-label="Friends"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsernameSuccess(null);
-                  setSettingsOpen(true);
-                }}
-                className="rounded-full border border-white/10 p-2 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
-                aria-label="Settings"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
-            </div>
 
             <div className="flex items-center gap-4">
               <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
@@ -944,9 +901,25 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-xl font-semibold text-zinc-50">
-                  {profile.display_name || "Not set"}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xl font-semibold text-zinc-50">
+                    {profile.display_name || "Not set"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsernameSuccess(null);
+                      setSettingsOpen(true);
+                    }}
+                    className="ml-auto mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 p-0 text-zinc-400 leading-none transition hover:border-white/30 hover:text-zinc-200 appearance-none"
+                    aria-label="Settings"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
                 <p className="mt-1 text-sm text-zinc-400">
                   {fullName || "\u00A0"}
                 </p>
@@ -997,11 +970,26 @@ export default function ProfilePage() {
               >
                 Tagged
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGalleryTab("friends");
+                  loadFriends();
+                }}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  galleryTab === "friends"
+                    ? "bg-white/10 text-zinc-50"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Friends
+              </button>
             </div>
 
             {usernameSuccess ? (
               <p className="mt-4 text-sm text-emerald-200">{usernameSuccess}</p>
             ) : null}
+
           </div>
 
           {/* ── Entry Photo Gallery ── */}
@@ -1058,7 +1046,7 @@ export default function ProfilePage() {
                   </div>
                 ) : null}
               </>
-            ) : (
+            ) : galleryTab === "tagged" ? (
               <>
                 {taggedEntries.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
@@ -1096,6 +1084,362 @@ export default function ProfilePage() {
                   <p className="mt-4 text-center text-sm text-zinc-500">Loading tagged entries...</p>
                 ) : null}
               </>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
+                {friendError ? (
+                  <p className="mb-4 text-sm text-rose-200">{friendError}</p>
+                ) : null}
+
+                {friendsLoading ? (
+                  <p className="text-sm text-zinc-400">Loading friends...</p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* ── Search ── */}
+                    <div>
+                      <input
+                        value={friendSearch}
+                        onChange={(e) => setFriendSearch(e.target.value)}
+                        placeholder="Search by username, name, or email"
+                        className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      />
+                      {searchError ? (
+                        <p className="mt-2 text-sm text-rose-200">{searchError}</p>
+                      ) : null}
+                      {searchLoading ? (
+                        <p className="mt-2 text-sm text-zinc-400">Searching...</p>
+                      ) : null}
+                      {searchResults.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {searchResults.slice(0, 5).map((user) => {
+                            const label = user.display_name ?? "Unknown";
+                            const isFriend = friendIds.has(user.id);
+                            const isOutgoing = outgoingIds.has(user.id);
+                            const isIncoming = incomingIds.has(user.id);
+                            return (
+                              <div
+                                key={user.id}
+                                className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                              >
+                                <div>
+                                  <p className="text-sm font-medium text-zinc-100">{label}</p>
+                                  {isFriend ? (
+                                    <p className="text-xs text-emerald-200">Already friends</p>
+                                  ) : isOutgoing ? (
+                                    <p className="text-xs text-amber-200">Request sent</p>
+                                  ) : isIncoming ? (
+                                    <p className="text-xs text-amber-200">Requested you</p>
+                                  ) : null}
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={isFriend || isOutgoing || isMutating}
+                                  onClick={() => sendRequest(user.id)}
+                                  className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : friendSearch.trim() && !searchLoading && !searchError ? (
+                        <p className="mt-2 text-sm text-zinc-400">No matches.</p>
+                      ) : null}
+                    </div>
+
+                    {/* ── Top row: Requests + Suggestions ── */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Left column: Incoming + Requests sent */}
+                      <div className="space-y-4">
+                        {/* Incoming requests */}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                              Incoming requests
+                            </h3>
+                            {incomingRequests.length > 0 ? (
+                              <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-200">
+                                {incomingRequests.length > 99
+                                  ? "99+"
+                                  : incomingRequests.length}
+                              </span>
+                            ) : null}
+                          </div>
+                          {incomingRequests.length === 0 ? (
+                            <p className="mt-2 text-sm text-zinc-500">No new requests.</p>
+                          ) : (
+                            <div className="mt-2 space-y-2">
+                              {incomingRequests.map((req) => (
+                                <div
+                                  key={req.id}
+                                  className="rounded-xl border border-white/10 bg-black/20 p-3"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
+                                      {req.requester.avatar_url ? (
+                                        <img
+                                          src={req.requester.avatar_url}
+                                          alt=""
+                                          className="h-full w-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="text-[10px] text-zinc-500">
+                                          {(req.requester.display_name ?? "?")[0]}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm font-medium text-zinc-100">
+                                      {displayFriendName(req.requester)}
+                                    </p>
+                                  </div>
+                                  <div className="mt-2 flex gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isMutating}
+                                      onClick={() =>
+                                        respondToRequest(req.id, "accept")
+                                      }
+                                      className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                                    >
+                                      Accept
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isMutating}
+                                      onClick={() =>
+                                        respondToRequest(req.id, "decline")
+                                      }
+                                      className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:opacity-50"
+                                    >
+                                      Decline
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Requests sent */}
+                        {outgoingRequests.length > 0 ? (
+                          <div>
+                            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                              Requests sent
+                            </h3>
+                            <div className="mt-2 space-y-2">
+                              {outgoingRequests.map((req) => (
+                                <div
+                                  key={req.id}
+                                  className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
+                                      {req.recipient.avatar_url ? (
+                                        <img
+                                          src={req.recipient.avatar_url}
+                                          alt=""
+                                          className="h-full w-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="text-[10px] text-zinc-500">
+                                          {(req.recipient.display_name ?? "?")[0]}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-sm text-zinc-200">
+                                      {displayFriendName(req.recipient)}
+                                    </span>
+                                  </div>
+                                  {confirmingCancel === req.id ? (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-zinc-400">
+                                        Cancel?
+                                      </span>
+                                      <button
+                                        type="button"
+                                        disabled={isMutating}
+                                        onClick={() => deleteRequest(req.id)}
+                                        className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                                      >
+                                        Yes
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isMutating}
+                                        onClick={() => setConfirmingCancel(null)}
+                                        className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={isMutating}
+                                      onClick={() =>
+                                        setConfirmingCancel(req.id)
+                                      }
+                                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Right column: People you may know */}
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                          People you may know
+                        </h3>
+                        {suggestions.length === 0 ? (
+                          <p className="mt-2 text-sm text-zinc-500">
+                            No suggestions right now.
+                          </p>
+                        ) : (
+                          <div className="mt-2 space-y-2">
+                            {suggestions.map((person) => {
+                              const isFriend = friendIds.has(person.id);
+                              const isOutgoing = outgoingIds.has(person.id);
+                              const mutualLabel =
+                                person.mutual_count === 1
+                                  ? "1 mutual friend"
+                                  : `${person.mutual_count} mutual friends`;
+                              return (
+                                <div
+                                  key={person.id}
+                                  className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
+                                      {person.avatar_url ? (
+                                        <img
+                                          src={person.avatar_url}
+                                          alt=""
+                                          className="h-full w-full object-cover"
+                                        />
+                                      ) : (
+                                        <span className="text-[10px] text-zinc-500">
+                                          {(person.display_name ?? "?")[0]}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-zinc-100">
+                                        {displayFriendName(person)}
+                                      </p>
+                                      <p className="text-xs text-amber-200">
+                                        {mutualLabel}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={isFriend || isOutgoing || isMutating}
+                                    onClick={() => sendRequest(person.id)}
+                                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {isFriend
+                                      ? "Friends"
+                                      : isOutgoing
+                                        ? "Pending"
+                                        : "Add"}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ── Friends list ── */}
+                    <div className="border-t border-white/10 pt-4">
+                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                        Your friends
+                      </h3>
+                      {friends.length === 0 ? (
+                        <p className="mt-2 text-sm text-zinc-500">
+                          No friends yet. Search to add someone.
+                        </p>
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          {friends.map((friend) => (
+                            <div
+                              key={friend.id}
+                              className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
+                                  {friend.avatar_url ? (
+                                    <img
+                                      src={friend.avatar_url}
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-xs text-zinc-500">
+                                      {(friend.display_name ?? "?")[0]}
+                                    </span>
+                                  )}
+                                </div>
+                                <Link
+                                  href={`/profile/${friend.id}`}
+                                  className="text-sm font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
+                                >
+                                  {displayFriendName(friend)}
+                                </Link>
+                              </div>
+                              {friend.request_id ? (
+                                confirmingRemove === friend.request_id ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-zinc-400">
+                                      Remove?
+                                    </span>
+                                    <button
+                                      type="button"
+                                      disabled={isMutating}
+                                      onClick={() =>
+                                        deleteRequest(friend.request_id!)
+                                      }
+                                      className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isMutating}
+                                      onClick={() => setConfirmingRemove(null)}
+                                      className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={isMutating}
+                                    onClick={() =>
+                                      setConfirmingRemove(friend.request_id!)
+                                    }
+                                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                                  >
+                                    Remove
+                                  </button>
+                                )
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -1671,387 +2015,6 @@ export default function ProfilePage() {
         </div>
       ) : null}
 
-      {/* ── Friends Modal ── */}
-      {friendsOpen ? (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-start justify-center px-4 py-10">
-            <div
-              className="fixed inset-0 bg-black/70"
-              onClick={closeFriends}
-            />
-            <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#14100f] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-              {/* Header */}
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-zinc-50">Friends</h2>
-                <button
-                  type="button"
-                  onClick={closeFriends}
-                  className="rounded-full border border-white/10 p-2 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
-                  aria-label="Close friends"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                    <path d="M18 6 6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {friendError ? (
-                <p className="mb-4 text-sm text-rose-200">{friendError}</p>
-              ) : null}
-
-              {friendsLoading ? (
-                <p className="text-sm text-zinc-400">Loading friends...</p>
-              ) : (
-                <div className="space-y-6">
-                  {/* ── Search ── */}
-                  <div>
-                    <input
-                      value={friendSearch}
-                      onChange={(e) => setFriendSearch(e.target.value)}
-                      placeholder="Search by username, name, or email"
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                    {searchError ? (
-                      <p className="mt-2 text-sm text-rose-200">{searchError}</p>
-                    ) : null}
-                    {searchLoading ? (
-                      <p className="mt-2 text-sm text-zinc-400">Searching...</p>
-                    ) : null}
-                    {searchResults.length > 0 ? (
-                      <div className="mt-3 space-y-2">
-                        {searchResults.slice(0, 5).map((user) => {
-                          const label = user.display_name ?? "Unknown";
-                          const isFriend = friendIds.has(user.id);
-                          const isOutgoing = outgoingIds.has(user.id);
-                          const isIncoming = incomingIds.has(user.id);
-                          return (
-                            <div
-                              key={user.id}
-                              className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-                            >
-                              <div>
-                                <p className="text-sm font-medium text-zinc-100">{label}</p>
-                                {isFriend ? (
-                                  <p className="text-xs text-emerald-200">Already friends</p>
-                                ) : isOutgoing ? (
-                                  <p className="text-xs text-amber-200">Request sent</p>
-                                ) : isIncoming ? (
-                                  <p className="text-xs text-amber-200">Requested you</p>
-                                ) : null}
-                              </div>
-                              <button
-                                type="button"
-                                disabled={isFriend || isOutgoing || isMutating}
-                                onClick={() => sendRequest(user.id)}
-                                className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : friendSearch.trim() && !searchLoading && !searchError ? (
-                      <p className="mt-2 text-sm text-zinc-400">No matches.</p>
-                    ) : null}
-                  </div>
-
-                  {/* ── Top row: Requests + Suggestions ── */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {/* Left column: Incoming + Requests sent */}
-                    <div className="space-y-4">
-                      {/* Incoming requests */}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                            Incoming requests
-                          </h3>
-                          {incomingRequests.length > 0 ? (
-                            <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-200">
-                              {incomingRequests.length > 99
-                                ? "99+"
-                                : incomingRequests.length}
-                            </span>
-                          ) : null}
-                        </div>
-                        {incomingRequests.length === 0 ? (
-                          <p className="mt-2 text-sm text-zinc-500">No new requests.</p>
-                        ) : (
-                          <div className="mt-2 space-y-2">
-                            {incomingRequests.map((req) => (
-                              <div
-                                key={req.id}
-                                className="rounded-xl border border-white/10 bg-black/20 p-3"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
-                                    {req.requester.avatar_url ? (
-                                      <img
-                                        src={req.requester.avatar_url}
-                                        alt=""
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <span className="text-[10px] text-zinc-500">
-                                        {(req.requester.display_name ?? "?")[0]}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm font-medium text-zinc-100">
-                                    {displayFriendName(req.requester)}
-                                  </p>
-                                </div>
-                                <div className="mt-2 flex gap-2">
-                                  <button
-                                    type="button"
-                                    disabled={isMutating}
-                                    onClick={() =>
-                                      respondToRequest(req.id, "accept")
-                                    }
-                                    className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
-                                  >
-                                    Accept
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={isMutating}
-                                    onClick={() =>
-                                      respondToRequest(req.id, "decline")
-                                    }
-                                    className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:opacity-50"
-                                  >
-                                    Decline
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Requests sent */}
-                      {outgoingRequests.length > 0 ? (
-                        <div>
-                          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                            Requests sent
-                          </h3>
-                          <div className="mt-2 space-y-2">
-                            {outgoingRequests.map((req) => (
-                              <div
-                                key={req.id}
-                                className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
-                                    {req.recipient.avatar_url ? (
-                                      <img
-                                        src={req.recipient.avatar_url}
-                                        alt=""
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <span className="text-[10px] text-zinc-500">
-                                        {(req.recipient.display_name ?? "?")[0]}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-sm text-zinc-200">
-                                    {displayFriendName(req.recipient)}
-                                  </span>
-                                </div>
-                                {confirmingCancel === req.id ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-zinc-400">
-                                      Cancel?
-                                    </span>
-                                    <button
-                                      type="button"
-                                      disabled={isMutating}
-                                      onClick={() => deleteRequest(req.id)}
-                                      className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
-                                    >
-                                      Yes
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={isMutating}
-                                      onClick={() => setConfirmingCancel(null)}
-                                      className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
-                                    >
-                                      No
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    disabled={isMutating}
-                                    onClick={() =>
-                                      setConfirmingCancel(req.id)
-                                    }
-                                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {/* Right column: People you may know */}
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                        People you may know
-                      </h3>
-                      {suggestions.length === 0 ? (
-                        <p className="mt-2 text-sm text-zinc-500">
-                          No suggestions right now.
-                        </p>
-                      ) : (
-                        <div className="mt-2 space-y-2">
-                          {suggestions.map((person) => {
-                            const isFriend = friendIds.has(person.id);
-                            const isOutgoing = outgoingIds.has(person.id);
-                            const mutualLabel =
-                              person.mutual_count === 1
-                                ? "1 mutual friend"
-                                : `${person.mutual_count} mutual friends`;
-                            return (
-                              <div
-                                key={person.id}
-                                className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
-                                    {person.avatar_url ? (
-                                      <img
-                                        src={person.avatar_url}
-                                        alt=""
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <span className="text-[10px] text-zinc-500">
-                                        {(person.display_name ?? "?")[0]}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-zinc-100">
-                                      {displayFriendName(person)}
-                                    </p>
-                                    <p className="text-xs text-amber-200">
-                                      {mutualLabel}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  disabled={isFriend || isOutgoing || isMutating}
-                                  onClick={() => sendRequest(person.id)}
-                                  className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {isFriend
-                                    ? "Friends"
-                                    : isOutgoing
-                                      ? "Pending"
-                                      : "Add"}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ── Friends list ── */}
-                  <div className="border-t border-white/10 pt-4">
-                    <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                      Your friends
-                    </h3>
-                    {friends.length === 0 ? (
-                      <p className="mt-2 text-sm text-zinc-500">
-                        No friends yet. Search to add someone.
-                      </p>
-                    ) : (
-                      <div className="mt-3 space-y-2">
-                        {friends.map((friend) => (
-                          <div
-                            key={friend.id}
-                            className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
-                                {friend.avatar_url ? (
-                                  <img
-                                    src={friend.avatar_url}
-                                    alt=""
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-xs text-zinc-500">
-                                    {(friend.display_name ?? "?")[0]}
-                                  </span>
-                                )}
-                              </div>
-                              <Link
-                                href={`/profile/${friend.id}`}
-                                className="text-sm font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
-                              >
-                                {displayFriendName(friend)}
-                              </Link>
-                            </div>
-                            {friend.request_id ? (
-                              confirmingRemove === friend.request_id ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-zinc-400">
-                                    Remove?
-                                  </span>
-                                  <button
-                                    type="button"
-                                    disabled={isMutating}
-                                    onClick={() =>
-                                      deleteRequest(friend.request_id!)
-                                    }
-                                    className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
-                                  >
-                                    Yes
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={isMutating}
-                                    onClick={() => setConfirmingRemove(null)}
-                                    className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
-                                  >
-                                    No
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={isMutating}
-                                  onClick={() =>
-                                    setConfirmingRemove(friend.request_id!)
-                                  }
-                                  className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
-                                >
-                                  Remove
-                                </button>
-                              )
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
