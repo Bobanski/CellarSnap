@@ -13,7 +13,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 
-type AppRoute = "/(app)/home" | "/(app)/entries" | "/(app)/feed";
+type AppRoute = "/(app)/home" | "/(app)/entries" | "/(app)/feed" | "/(app)/profile";
 
 type NavItem = {
   label: string;
@@ -41,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/(app)/home" },
   { label: "My library", href: "/(app)/entries" },
   { label: "Feed", href: "/(app)/feed" },
+  { label: "Profile", href: "/(app)/profile" },
 ];
 
 function formatAlertDate(value: string) {
@@ -715,4 +716,3 @@ const styles = StyleSheet.create({
     color: "#fef3c7",
   },
 });
-
