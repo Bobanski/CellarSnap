@@ -1237,64 +1237,60 @@ export default function NewEntryScreen() {
             expanded={expanded.location_date}
             onToggle={() => toggleSection("location_date")}
           >
-            <View style={styles.locationDateRow}>
-              <View style={styles.locationDateLocationCol}>
-                <View style={styles.block}>
-                  <AppText style={styles.label}>Location</AppText>
-                  <View style={styles.locationInputWrap}>
-                    <DoneTextInput
-                      value={form.location_text}
-                      onChangeText={(value) => {
-                        updateField("location_text", value);
-                        if (form.location_place_id) {
-                          updateField("location_place_id", "");
-                        }
-                      }}
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      placeholder="Search places"
-                      placeholderTextColor="#71717a"
-                      style={styles.input}
-                    />
-                    {locationSuggestions.length > 0 ? (
-                      <View style={styles.suggestionOverlay}>
-                        <View style={styles.suggestionList}>
-                          {locationSuggestions.map((suggestion) => (
-                            <Pressable
-                              key={suggestion.place_id}
-                              style={styles.suggestionItem}
-                              onPress={() => {
-                                updateField("location_text", suggestion.description);
-                                updateField("location_place_id", suggestion.place_id);
-                                setLocationSuggestions([]);
-                                setLocationApiMessage(null);
-                                setLocationSessionToken(
-                                  `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-                                );
-                              }}
-                            >
-                              <AppText style={styles.suggestionText}>{suggestion.description}</AppText>
-                            </Pressable>
-                          ))}
-                        </View>
+            <View style={styles.locationDateStack}>
+              <View style={styles.block}>
+                <AppText style={styles.label}>Location</AppText>
+                <View style={styles.locationInputWrap}>
+                  <DoneTextInput
+                    value={form.location_text}
+                    onChangeText={(value) => {
+                      updateField("location_text", value);
+                      if (form.location_place_id) {
+                        updateField("location_place_id", "");
+                      }
+                    }}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    placeholder="Search places"
+                    placeholderTextColor="#71717a"
+                    style={styles.input}
+                  />
+                  {locationSuggestions.length > 0 ? (
+                    <View style={styles.suggestionOverlay}>
+                      <View style={styles.suggestionList}>
+                        {locationSuggestions.map((suggestion) => (
+                          <Pressable
+                            key={suggestion.place_id}
+                            style={styles.suggestionItem}
+                            onPress={() => {
+                              updateField("location_text", suggestion.description);
+                              updateField("location_place_id", suggestion.place_id);
+                              setLocationSuggestions([]);
+                              setLocationApiMessage(null);
+                              setLocationSessionToken(
+                                `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                              );
+                            }}
+                          >
+                            <AppText style={styles.suggestionText}>{suggestion.description}</AppText>
+                          </Pressable>
+                        ))}
                       </View>
-                    ) : null}
-                  </View>
-                  {isLocationLoading ? (
-                    <AppText style={styles.hint}>Searching Google Maps...</AppText>
-                  ) : null}
-                  {locationApiMessage ? (
-                    <AppText style={styles.hint}>{locationApiMessage}</AppText>
+                    </View>
                   ) : null}
                 </View>
+                {isLocationLoading ? (
+                  <AppText style={styles.hint}>Searching Google Maps...</AppText>
+                ) : null}
+                {locationApiMessage ? (
+                  <AppText style={styles.hint}>{locationApiMessage}</AppText>
+                ) : null}
               </View>
-              <View style={styles.locationDateDateCol}>
-                <DateField
-                  label="Consumed date"
-                  value={form.consumed_at}
-                  onChange={(value) => updateField("consumed_at", value)}
-                />
-              </View>
+              <DateField
+                label="Consumed date"
+                value={form.consumed_at}
+                onChange={(value) => updateField("consumed_at", value)}
+              />
             </View>
           </Accordion>
 
@@ -2027,18 +2023,8 @@ const styles = StyleSheet.create({
   adaptiveColFull: {
     width: "100%",
   },
-  locationDateRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+  locationDateStack: {
     gap: 10,
-  },
-  locationDateLocationCol: {
-    flex: 1.55,
-    minWidth: 0,
-  },
-  locationDateDateCol: {
-    flex: 1,
-    minWidth: 0,
   },
   twoColGrid: {
     flexDirection: "row",
