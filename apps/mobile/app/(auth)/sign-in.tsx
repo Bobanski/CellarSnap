@@ -90,7 +90,7 @@ export default function SignInScreen() {
         return;
       }
 
-      router.replace("/(app)/entries");
+      router.replace("/(app)/home");
     } catch {
       setErrorMessage("Unable to sign in. Check your connection and try again.");
       setInfoMessage(null);

@@ -87,7 +87,7 @@ export default function SignUpScreen() {
       }
 
       if (data.session) {
-        router.replace("/(app)/entries");
+        router.replace("/(app)/home");
         return;
       }
 
@@ -195,7 +195,7 @@ export default function SignUpScreen() {
       }
 
       if (data.session) {
-        router.replace("/(app)/entries");
+        router.replace("/(app)/home");
         return;
       }
 

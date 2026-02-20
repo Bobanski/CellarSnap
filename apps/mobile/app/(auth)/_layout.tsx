@@ -23,7 +23,7 @@ export default function AuthLayout() {
   }
 
   if (session && !isResetPasswordScreen) {
-    return <Redirect href="/(app)/entries" />;
+    return <Redirect href="/(app)/home" />;
   }
 
   return (

@@ -20,5 +20,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={session ? "/(app)/entries" : "/(auth)/sign-in"} />;
+  return <Redirect href={session ? "/(app)/home" : "/(auth)/sign-in"} />;
 }

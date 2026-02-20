@@ -21,7 +21,7 @@ export default function AuthCallbackScreen() {
           const result = await handleIncomingAuthUrl(currentUrl);
           isRecovery = result.isRecovery;
         }
-        router.replace(isRecovery ? "/(auth)/reset-password" : "/(app)/entries");
+        router.replace(isRecovery ? "/(auth)/reset-password" : "/(app)/home");
       } catch (callbackError) {
         setError(
           callbackError instanceof Error

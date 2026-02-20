@@ -13,7 +13,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 
-type AppRoute = "/(app)/entries" | "/(app)/feed";
+type AppRoute = "/(app)/home" | "/(app)/entries" | "/(app)/feed";
 
 type NavItem = {
   label: string;
@@ -38,6 +38,7 @@ type FriendRequestAlert = {
 type AlertItem = TagAlert | FriendRequestAlert;
 
 const NAV_ITEMS: NavItem[] = [
+  { label: "Home", href: "/(app)/home" },
   { label: "My library", href: "/(app)/entries" },
   { label: "Feed", href: "/(app)/feed" },
 ];

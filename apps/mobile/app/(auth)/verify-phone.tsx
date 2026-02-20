@@ -98,7 +98,7 @@ export default function VerifyPhoneScreen() {
         }
       }
 
-      router.replace("/(app)/entries");
+      router.replace("/(app)/home");
     } catch {
       setErrorMessage("Unable to verify code right now.");
       setInfoMessage(null);
