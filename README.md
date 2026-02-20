@@ -56,6 +56,28 @@ Local development:
 npm run dev
 ```
 
+## Mobile app (Expo)
+
+The iOS/Android client is in `apps/mobile`.
+
+Quick start:
+
+```bash
+cd apps/mobile
+npm install
+npm run start
+```
+
+Set these env vars in `apps/mobile/.env.local`:
+
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- Optional: `EXPO_PUBLIC_AUTH_MODE` (`email` or `phone`)
+
+Full mobile setup docs (including iOS/Android commands and Supabase redirect URLs):
+
+- `apps/mobile/README.md`
+
 E2E happy path tests:
 
 - Ensure Playwright is installed locally:

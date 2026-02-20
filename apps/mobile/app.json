@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "CellarSnap",
+    "slug": "cellarsnap-mobile",
+    "scheme": "cellarsnap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cellarsnap.mobile"
+    },
+    "android": {
+      "package": "com.cellarsnap.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
