@@ -1056,33 +1056,31 @@ export default function NewEntryScreen() {
 
         <View style={styles.card}>
           <View style={styles.uploadBox}>
-            <View style={styles.uploadRow}>
-              <View style={styles.uploadTextWrap}>
-                <AppText style={styles.label}>Upload images</AppText>
-                <AppText style={styles.hint}>
-                  upload photos of the wine and anything else from the night - pairing, people,
-                  place. we&apos;ll tag them
-                </AppText>
-              </View>
-              <Pressable
-                style={styles.ghostButton}
-                onPress={() => void pickLabelImage()}
-                disabled={isAutofillLoading}
-              >
-                <AppText style={styles.ghostButtonText}>
-                  {isAutofillLoading
-                    ? "Analyzing..."
-                    : labelPhotoUri
-                    ? "Change image"
-                    : "Upload images"}
-                </AppText>
-              </Pressable>
+            <View style={styles.uploadTextWrap}>
+              <AppText style={styles.label}>Upload images</AppText>
+              <AppText style={styles.hint}>
+                upload photos of the wine and anything else from the night - pairing, people,
+                place. we&apos;ll tag them
+              </AppText>
             </View>
             {labelPhotoUri ? (
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image source={{ uri: labelPhotoUri }} style={styles.uploadPreview} resizeMode="cover" />
             ) : null}
             {uploadMessage ? <AppText style={[styles.hint, styles.uploadHint]}>{uploadMessage}</AppText> : null}
+            <Pressable
+              style={[styles.ghostButton, styles.uploadActionButton]}
+              onPress={() => void pickLabelImage()}
+              disabled={isAutofillLoading}
+            >
+              <AppText style={styles.ghostButtonText}>
+                {isAutofillLoading
+                  ? "Analyzing..."
+                  : labelPhotoUri
+                  ? "Change image"
+                  : "Upload images"}
+              </AppText>
+            </Pressable>
           </View>
 
           <Field
@@ -1956,13 +1954,7 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 8,
   },
-  uploadRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  uploadTextWrap: { flex: 1, gap: 4 },
+  uploadTextWrap: { gap: 4 },
   uploadHint: { color: "#fbbf24" },
   uploadPreview: {
     width: "100%",
@@ -1978,6 +1970,10 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.16)",
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  uploadActionButton: {
+    alignSelf: "flex-start",
+    marginTop: 2,
   },
   ghostButtonText: {
     color: "#e4e4e7",
@@ -2416,4 +2412,3 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: { color: "#e4e4e7", fontSize: 14, fontWeight: "600" },
 });
-

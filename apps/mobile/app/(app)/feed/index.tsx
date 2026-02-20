@@ -13,6 +13,7 @@ import {
   StyleSheet,
   View
 } from "react-native";
+import { router } from "expo-router";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { supabase } from "@/src/lib/supabase";
@@ -970,6 +971,7 @@ function FeedCard({
   reactionPickerOpen,
   onToggleReactionPicker,
   onToggleReaction,
+  onOpenEntry,
 }: {
   item: MobileFeedEntry;
   notesExpanded: boolean;
@@ -992,6 +994,7 @@ function FeedCard({
   reactionPickerOpen: boolean;
   onToggleReactionPicker: () => void;
   onToggleReaction: (emoji: string) => void;
+  onOpenEntry: () => void;
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
   const displayRating = getDisplayRating(item.rating);
@@ -1131,7 +1134,7 @@ function FeedCard({
 
   return (
     <View style={styles.feedCard}>
-      <View style={styles.feedAuthorRow}>
+      <Pressable style={styles.feedAuthorRow} onPress={onOpenEntry}>
         <View style={styles.feedAuthorStack}>
           <View style={styles.feedAvatar}>
             {item.author_avatar_url ? (
@@ -1149,7 +1152,7 @@ function FeedCard({
           <AppText style={styles.feedAuthorName}>{item.author_name}</AppText>
         </View>
         <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
-      </View>
+      </Pressable>
 
       <View
         style={styles.feedPhotoFrame}
@@ -1272,7 +1275,7 @@ function FeedCard({
         )}
       </View>
 
-      <View style={styles.feedTextStack}>
+      <Pressable style={styles.feedTextStack} onPress={onOpenEntry}>
         {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
         {metaFields.length > 0 ? (
           <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
@@ -1285,7 +1288,8 @@ function FeedCard({
               .join(", ")}
           </AppText>
         ) : null}
-      </View>
+        <AppText style={styles.feedOpenLink}>Open post {"\u2192"}</AppText>
+      </Pressable>
 
       {notes ? (
         <Pressable
@@ -2306,6 +2310,7 @@ export default function FeedScreen() {
                     )
                   }
                   onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
+                  onOpenEntry={() => router.push(`/(app)/entries/${entry.id}`)}
                 />
               );
             })}
@@ -2669,6 +2674,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 4,
   },
+  feedOpenLink: {
+    color: "#fde68a",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 3,
+  },
   feedValueRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -3016,4 +3027,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

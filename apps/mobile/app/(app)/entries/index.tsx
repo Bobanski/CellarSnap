@@ -12,6 +12,8 @@ import {
   StyleSheet,
   View
 } from "react-native";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import type { WineEntrySummary } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -220,7 +222,10 @@ function EntryCard({ item }: { item: MobileEntry }) {
   const vintage = item.vintage?.trim() ?? null;
   const displayRating = getDisplayRating(item.rating);
   return (
-    <View style={styles.entryCard}>
+    <Pressable
+      style={styles.entryCard}
+      onPress={() => router.push(`/(app)/entries/${item.id}`)}
+    >
       <View style={styles.photoBox}>
         {item.label_image_url ? (
           <Image source={{ uri: item.label_image_url }} style={styles.photoImage} resizeMode="cover" />
@@ -254,7 +259,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
           <AppText style={styles.entryDate}>{formatConsumedDate(item.consumed_at)}</AppText>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -275,6 +280,7 @@ export default function EntriesScreen() {
   const [groupScheme, setGroupScheme] = useState<GroupScheme>("region");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeControlPanel, setActiveControlPanel] = useState<ControlPanel>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const isSearchActive = normalizedSearchQuery.length > 0;
@@ -460,6 +466,20 @@ export default function EntriesScreen() {
     setFilterMax("");
   };
 
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
+  const toggleSearch = () => {
+    setIsSearchOpen((current) => {
+      const next = !current;
+      if (!next) {
+        clearSearch();
+      }
+      return next;
+    });
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
@@ -487,11 +507,30 @@ export default function EntriesScreen() {
             <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Sort</AppText></Pressable>
             <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Filter</AppText></Pressable>
             <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Organize</AppText></Pressable>
+            <Pressable
+              style={[
+                styles.searchToggleButton,
+                isSearchOpen ? styles.searchToggleButtonActive : null,
+              ]}
+              onPress={toggleSearch}
+              accessibilityRole="button"
+              accessibilityLabel={isSearchOpen ? "Hide search" : "Show search"}
+            >
+              <Feather
+                name="search"
+                size={14}
+                color={isSearchOpen ? "#fef3c7" : "#d4d4d8"}
+              />
+            </Pressable>
           </View>
-          <View style={styles.searchRow}>
-            <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, or varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
-            {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={() => setSearchQuery("")}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
-          </View>
+          {isSearchOpen ? (
+            <View style={styles.searchPanel}>
+              <View style={styles.searchRow}>
+                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
+                {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
+              </View>
+            </View>
+          ) : null}
 
           {activeControlPanel === "sort" ? (
             <View style={styles.panel}>
@@ -567,12 +606,34 @@ const styles = StyleSheet.create({
   title: { color: "#fafafa", fontSize: 24, fontWeight: "700" },
   subtitle: { color: "#d4d4d8", fontSize: 13, lineHeight: 18 },
   controls: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 12, gap: 9 },
-  controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap", alignItems: "center" },
   controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 11, paddingVertical: 8 },
   controlBtnActive: { borderColor: "rgba(252,211,77,0.7)", backgroundColor: "rgba(251,191,36,0.15)" },
   controlBtnLabel: { color: "#e4e4e7", fontSize: 12, fontWeight: "700" },
+  searchToggleButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,0,0,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchToggleButtonActive: {
+    borderColor: "rgba(252,211,77,0.7)",
+    backgroundColor: "rgba(251,191,36,0.15)",
+  },
+  searchPanel: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    padding: 10,
+    gap: 8,
+  },
   searchRow: { flexDirection: "row", gap: 8, alignItems: "center" },
-  searchInput: { flex: 1, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.3)", color: "#f4f4f5", paddingHorizontal: 14, paddingVertical: 10, fontSize: 14 },
+  searchInput: { flex: 1, minWidth: 0, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.3)", color: "#f4f4f5", paddingHorizontal: 12, paddingVertical: 9, fontSize: 12 },
   panel: { borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(0,0,0,0.25)", padding: 10, gap: 8 },
   panelLabel: { color: "#a1a1aa", fontSize: 11, fontWeight: "700", letterSpacing: 1.3, textTransform: "uppercase" },
   pills: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
@@ -610,4 +671,3 @@ const styles = StyleSheet.create({
   ratingText: { color: "#fcd34d", fontSize: 12, fontWeight: "800" },
   entryDate: { color: "#a1a1aa", fontSize: 12, flexShrink: 0, textAlign: "right" },
 });
-

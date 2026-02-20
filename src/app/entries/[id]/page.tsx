@@ -16,10 +16,6 @@ import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
-import {
-  PRICE_PAID_SOURCE_LABELS,
-  formatPricePaidAmount,
-} from "@/lib/entryMeta";
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
@@ -517,15 +513,6 @@ export default function EntryDetailPage() {
     _type: photo.type,
   }));
   const advancedNotes = normalizeAdvancedNotes(entry.advanced_notes);
-  const formattedPricePaid = formatPricePaidAmount(
-    entry.price_paid,
-    entry.price_paid_currency
-  );
-  const pricePaidDisplay = formattedPricePaid
-    ? entry.price_paid_source
-      ? `${formattedPricePaid} (${PRICE_PAID_SOURCE_LABELS[entry.price_paid_source]})`
-      : formattedPricePaid
-    : null;
   const populatedAdvancedNotes: PopulatedAdvancedNote[] = advancedNotes
     ? ADVANCED_NOTE_FIELDS.reduce<PopulatedAdvancedNote[]>((acc, field) => {
         const value = advancedNotes[field.key];
@@ -917,99 +904,13 @@ export default function EntryDetailPage() {
           </div>
 
           <div className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                  Rating
-                </p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  <RatingBadge rating={entry.rating} />
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                  Consumed
-                </p>
-                <p className="text-lg font-semibold text-zinc-50">
-                  {formatConsumedDate(entry.consumed_at)}
-                </p>
-              </div>
-              {pricePaidDisplay ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Price paid
-                  </p>
-                  <p className="text-sm text-zinc-200">{pricePaidDisplay}</p>
-                </div>
-              ) : null}
-              {entry.qpr_level ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    QPR
-                  </p>
-                  <QprBadge level={entry.qpr_level} className="mt-1" />
-                </div>
-              ) : null}
-              {isOwner || entry.region ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Region
-                  </p>
-                  <p className="text-sm text-zinc-200">
-                    {entry.region || "Not set"}
-                  </p>
-                </div>
-              ) : null}
-              {isOwner || entry.vintage ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Vintage
-                  </p>
-                  <p className="text-sm text-zinc-200">
-                    {entry.vintage || "Not set"}
-                  </p>
-                </div>
-              ) : null}
-              {isOwner || entry.country ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Country
-                  </p>
-                  <p className="text-sm text-zinc-200">
-                    {entry.country || "Not set"}
-                  </p>
-                </div>
-              ) : null}
-              {isOwner || entry.appellation ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Appellation
-                  </p>
-                  <p className="text-sm text-zinc-200">
-                    {entry.appellation || "Not set"}
-                  </p>
-                </div>
-              ) : null}
-              {isOwner || entry.classification ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Classification
-                  </p>
-                  <p className="text-sm text-zinc-200">
-                    {entry.classification || "Not set"}
-                  </p>
-                </div>
-              ) : null}
-              {isOwner || primaryGrapeDisplay ? (
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
-                    Primary grapes
-                  </p>
-                  <p className="text-sm text-zinc-200">
-                    {primaryGrapeDisplay || "Not set"}
-                  </p>
-                </div>
-              ) : null}
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                Date consumed
+              </p>
+              <p className="mt-1 text-lg font-semibold text-zinc-50">
+                {formatConsumedDate(entry.consumed_at)}
+              </p>
             </div>
 
             {isOwner || hasLocation ? (
@@ -1062,6 +963,95 @@ export default function EntryDetailPage() {
                 )}
               </div>
             ) : null}
+
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                Rating
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                <RatingBadge rating={entry.rating} />
+              </p>
+            </div>
+
+            {isOwner || entry.qpr_level ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  QPR
+                </p>
+                {entry.qpr_level ? (
+                  <QprBadge level={entry.qpr_level} className="mt-1" />
+                ) : (
+                  <p className="text-sm text-zinc-200">Not set</p>
+                )}
+              </div>
+            ) : null}
+
+            {isOwner || entry.country ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Country
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.country || "Not set"}
+                </p>
+              </div>
+            ) : null}
+
+            {isOwner || entry.region ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Region
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.region || "Not set"}
+                </p>
+              </div>
+            ) : null}
+
+            {isOwner || entry.appellation ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Appellation
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.appellation || "Not set"}
+                </p>
+              </div>
+            ) : null}
+
+            {isOwner || entry.classification ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Classification
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.classification || "Not set"}
+                </p>
+              </div>
+            ) : null}
+
+            {isOwner || primaryGrapeDisplay ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Primary grapes
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {primaryGrapeDisplay || "Not set"}
+                </p>
+              </div>
+            ) : null}
+
+            {isOwner || entry.vintage ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                  Vintage
+                </p>
+                <p className="text-sm text-zinc-200">
+                  {entry.vintage || "Not set"}
+                </p>
+              </div>
+            ) : null}
+
             {isOwner || entry.notes ? (
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
@@ -1072,6 +1062,7 @@ export default function EntryDetailPage() {
                 </p>
               </div>
             ) : null}
+
             {isOwner ||
             (entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0) ? (
               <div>
@@ -1103,7 +1094,7 @@ export default function EntryDetailPage() {
                 <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
                   Advanced notes
                 </summary>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="mt-4 space-y-4">
                   {populatedAdvancedNotes.map((field) => (
                     <div key={field.key}>
                       <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">

@@ -19,6 +19,8 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
+import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import {
   PHONE_FORMAT_MESSAGE,
   PRIVACY_LEVEL_LABELS,
@@ -1035,6 +1037,25 @@ export default function ProfileScreen() {
     }
   }, [loadProfilesByIds, user]);
 
+  const onChooseAvatar = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setAvatarErrorMessage("Allow photo access to upload a profile picture.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]?.uri) {
+      return;
+    }
+    setAvatarErrorMessage(null);
+    setPendingAvatarAsset(result.assets[0]);
+    setPendingAvatarPreviewUri(result.assets[0].uri);
+  }, []);
+
   const closeSettings = () => {
     setSettingsOpen(false);
     setProfileErrorMessage(null);
@@ -1978,7 +1999,11 @@ export default function ProfileScreen() {
             {entries.length > 0 ? (
               <View style={styles.galleryGrid}>
                 {entries.map((entry) => (
-                  <View key={entry.id} style={styles.galleryTile}>
+                  <Pressable
+                    key={entry.id}
+                    style={styles.galleryTile}
+                    onPress={() => router.push(`/(app)/entries/${entry.id}`)}
+                  >
                     {entry.label_image_url ? (
                       <Image
                         source={{ uri: entry.label_image_url }}
@@ -1990,7 +2015,7 @@ export default function ProfileScreen() {
                         <AppText style={styles.galleryFallbackText}>No photo</AppText>
                       </View>
                     )}
-                  </View>
+                  </Pressable>
                 ))}
               </View>
             ) : entriesLoading ? null : (
@@ -2019,7 +2044,11 @@ export default function ProfileScreen() {
             {taggedEntries.length > 0 ? (
               <View style={styles.galleryGrid}>
                 {taggedEntries.map((entry) => (
-                  <View key={entry.id} style={styles.galleryTile}>
+                  <Pressable
+                    key={entry.id}
+                    style={styles.galleryTile}
+                    onPress={() => router.push(`/(app)/entries/${entry.id}`)}
+                  >
                     {entry.label_image_url ? (
                       <Image
                         source={{ uri: entry.label_image_url }}
@@ -2031,7 +2060,7 @@ export default function ProfileScreen() {
                         <AppText style={styles.galleryFallbackText}>No photo</AppText>
                       </View>
                     )}
-                  </View>
+                  </Pressable>
                 ))}
               </View>
             ) : taggedLoading ? null : (
@@ -2318,7 +2347,7 @@ export default function ProfileScreen() {
             <View style={styles.modalHeader}>
               <AppText style={styles.modalTitle}>Settings</AppText>
               <Pressable style={styles.iconCircleSm} onPress={closeSettings}>
-                <AppText style={styles.iconCircleText}>×</AppText>
+                <Feather name="x" size={15} color="#d4d4d8" />
               </Pressable>
             </View>
 
@@ -2331,49 +2360,40 @@ export default function ProfileScreen() {
                 <AppText style={styles.sectionTitle}>Edit profile</AppText>
 
                 <View style={styles.avatarEditRow}>
-                  <View style={styles.avatarWrapLg}>
-                    {pendingAvatarPreviewUri || profile.avatar_url ? (
-                      <Image
-                        source={{
-                          uri: pendingAvatarPreviewUri ?? profile.avatar_url ?? undefined,
-                        }}
-                        style={styles.avatarLg}
-                      />
-                    ) : (
-                      <AppText style={styles.avatarFallback}>
-                        {getAvatarFallbackLetter(profile.display_name, profile.email)}
-                      </AppText>
-                    )}
+                  <View style={styles.avatarPickerCol}>
+                    <Pressable
+                      style={styles.avatarWrapLg}
+                      onPress={() => void onChooseAvatar()}
+                      accessibilityRole="button"
+                      accessibilityLabel="Change profile picture"
+                    >
+                      {pendingAvatarPreviewUri || profile.avatar_url ? (
+                        <Image
+                          source={{
+                            uri: pendingAvatarPreviewUri ?? profile.avatar_url ?? undefined,
+                          }}
+                          style={styles.avatarLg}
+                        />
+                      ) : (
+                        <AppText style={styles.avatarFallback}>
+                          {getAvatarFallbackLetter(profile.display_name, profile.email)}
+                        </AppText>
+                      )}
+                    </Pressable>
+                    <AppText style={styles.avatarTapHint}>Tap photo to change</AppText>
                   </View>
                   <View style={styles.avatarActionsCol}>
-                    <Pressable
-                      style={styles.ghostButton}
-                      onPress={() => {
-                        void (async () => {
-                          const permission =
-                            await ImagePicker.requestMediaLibraryPermissionsAsync();
-                          if (!permission.granted) {
-                            setAvatarErrorMessage(
-                              "Allow photo access to upload a profile picture."
-                            );
-                            return;
-                          }
-                          const result = await ImagePicker.launchImageLibraryAsync({
-                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                            allowsMultipleSelection: false,
-                            quality: 0.85,
-                          });
-                          if (result.canceled || !result.assets[0]?.uri) {
-                            return;
-                          }
-                          setAvatarErrorMessage(null);
-                          setPendingAvatarAsset(result.assets[0]);
-                          setPendingAvatarPreviewUri(result.assets[0].uri);
-                        })();
-                      }}
-                    >
-                      <AppText style={styles.ghostButtonText}>Choose picture</AppText>
-                    </Pressable>
+                    <LabeledInput
+                      label="Username"
+                      value={editUsername}
+                      onChangeText={setEditUsername}
+                      placeholder="e.g. wine_lover"
+                      maxLength={100}
+                      autoCapitalize="none"
+                    />
+                    <AppText style={styles.hintText}>
+                      Minimum 3 characters. No spaces or @.
+                    </AppText>
                     {avatarErrorMessage ? (
                       <AppText style={styles.errorSubtleText}>{avatarErrorMessage}</AppText>
                     ) : null}
@@ -2410,18 +2430,6 @@ export default function ProfileScreen() {
                   maxLength={100}
                 />
                 <AppText style={styles.counterText}>{editBio.length}/100</AppText>
-
-                <LabeledInput
-                  label="Username"
-                  value={editUsername}
-                  onChangeText={setEditUsername}
-                  placeholder="e.g. wine_lover"
-                  maxLength={100}
-                  autoCapitalize="none"
-                />
-                <AppText style={styles.hintText}>
-                  Minimum 3 characters. No spaces or @.
-                </AppText>
 
                 <LabeledInput
                   label="Email (only you)"
@@ -2768,12 +2776,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.16)",
   },
-  iconCircleText: {
-    color: "#d4d4d8",
-    fontSize: 16,
-    fontWeight: "700",
-    lineHeight: 18,
-  },
   identityHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -3032,7 +3034,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: "100%",
-    maxHeight: "96%",
+    maxHeight: "90%",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
@@ -3076,8 +3078,16 @@ const styles = StyleSheet.create({
   },
   avatarEditRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
+  },
+  avatarPickerCol: {
+    alignItems: "center",
+    gap: 6,
+  },
+  avatarTapHint: {
+    color: "#71717a",
+    fontSize: 10,
   },
   avatarActionsCol: {
     flex: 1,

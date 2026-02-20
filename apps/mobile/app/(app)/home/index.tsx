@@ -744,7 +744,7 @@ export default function HomeScreen() {
                     key={entry.id}
                     entry={entry}
                     ownerLabel="You"
-                    onPress={() => router.push("/(app)/entries")}
+                    onPress={() => router.push(`/(app)/entries/${entry.id}`)}
                     variant="own"
                   />
                 ))
@@ -755,12 +755,18 @@ export default function HomeScreen() {
               )}
             </View>
             <Pressable onPress={() => router.push("/(app)/entries")}>
-              <AppText style={styles.inlineLink}>View my library {"\u2192"}</AppText>
+              <AppText style={[styles.inlineLink, styles.inlineLinkCompact]}>
+                View my library {"\u2192"}
+              </AppText>
             </Pressable>
           </View>
         ) : null}
 
-        {!isFirstTime ? <View style={styles.sectionDivider} /> : null}
+        {!isFirstTime ? (
+          <View
+            style={[styles.sectionDivider, styles.sectionDividerBeforeCircle]}
+          />
+        ) : null}
 
         <View style={styles.section}>
           <AppText style={styles.sectionLabel}>From your circle</AppText>
@@ -803,13 +809,15 @@ export default function HomeScreen() {
                     entry={entry}
                     ownerLabel={entry.author_name}
                     ownerOnPress={() => router.push("/(app)/feed")}
-                    onPress={() => router.push("/(app)/feed")}
+                    onPress={() => router.push(`/(app)/entries/${entry.id}`)}
                     variant="circle"
                   />
                 ))}
               </View>
               <Pressable onPress={() => router.push("/(app)/feed")}>
-                <AppText style={styles.inlineLink}>View full feed {"\u2192"}</AppText>
+                <AppText style={[styles.inlineLink, styles.inlineLinkCompact]}>
+                  View full feed {"\u2192"}
+                </AppText>
               </Pressable>
             </>
           )}
@@ -1011,6 +1019,9 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255,255,255,0.1)",
     marginVertical: 2,
   },
+  sectionDividerBeforeCircle: {
+    marginTop: 10,
+  },
   sectionLabel: {
     color: "#a1a1aa",
     fontSize: 11,
@@ -1136,6 +1147,9 @@ const styles = StyleSheet.create({
     color: "#a1a1aa",
     fontSize: 13,
     fontWeight: "600",
+  },
+  inlineLinkCompact: {
+    fontSize: 11,
   },
   inlineLinkHighlight: {
     color: "#fde68a",
