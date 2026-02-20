@@ -198,8 +198,7 @@ export async function GET(request: Request) {
   let hasTastingSupport = false;
 
   {
-    const fetchLimit =
-      scope === "friends" ? Math.min(150, limit * 4 + 1) : limit + 1;
+    const fetchLimit = Math.min(200, limit * 6 + 1);
     const attempt = await buildEntriesQuery({
       fields: extendedSelectFields,
       withTastingSupport: true,
@@ -634,8 +633,12 @@ export async function GET(request: Request) {
     };
   });
 
+  const feedEntriesWithPhotos = feedEntries.filter(
+    (entry) => (entry.photo_gallery?.length ?? 0) > 0
+  );
+
   return NextResponse.json({
-    entries: feedEntries,
+    entries: feedEntriesWithPhotos,
     next_cursor,
     has_more,
     viewer_user_id: user.id,

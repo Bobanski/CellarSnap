@@ -10,8 +10,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { router } from "expo-router";
 import type { WineEntrySummary } from "@cellarsnap/shared";
+import { AppTopBar } from "@/src/components/AppTopBar";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -255,7 +255,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
 }
 
 export default function EntriesScreen() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [entries, setEntries] = useState<MobileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -456,11 +456,6 @@ export default function EntriesScreen() {
     setFilterMax("");
   };
 
-  const onSignOut = async () => {
-    await signOut();
-    router.replace("/(auth)/sign-in");
-  };
-
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
@@ -475,13 +470,7 @@ export default function EntriesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadEntries(true)} tintColor="#fbbf24" />}
       >
-        <View style={styles.navRow}>
-          <Text style={styles.brand}>CellarSnap</Text>
-          <View style={styles.navActions}>
-            <Pressable style={styles.newBtn} onPress={() => router.push("/(app)/entries/new")}><Text style={styles.newBtnText}>+ New entry</Text></Pressable>
-            <Pressable style={styles.secondaryBtn} onPress={() => void onSignOut()}><Text style={styles.secondaryBtnText}>Sign out</Text></Pressable>
-          </View>
-        </View>
+        <AppTopBar activeHref="/(app)/entries" />
 
         <View style={styles.header}>
           <Text style={styles.eyebrow}>My library</Text>
@@ -567,11 +556,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0f0a09" },
   loadingScreen: { flex: 1, backgroundColor: "#0f0a09", alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
-  navRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", paddingBottom: 16 },
-  brand: { color: "#fafafa", fontSize: 22, fontWeight: "700" },
-  navActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-  newBtn: { borderRadius: 999, backgroundColor: "#fbbf24", paddingHorizontal: 12, paddingVertical: 8 },
-  newBtnText: { color: "#09090b", fontSize: 12, fontWeight: "700" },
   secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 7 },
   secondaryBtnText: { color: "#e4e4e7", fontSize: 12, fontWeight: "700" },
   header: { gap: 6 },
