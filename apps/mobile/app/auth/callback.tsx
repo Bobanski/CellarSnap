@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import {
+  useEffect,
+  useState } from "react";
+import { ActivityIndicator,
+  View
+} from "react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { handleIncomingAuthUrl } from "@/src/lib/authRedirect";
+import { AppText } from "@/src/components/AppText";
 
 export default function AuthCallbackScreen() {
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +43,11 @@ export default function AuthCallbackScreen() {
       }}
     >
       <ActivityIndicator color="#fbbf24" />
-      <Text style={{ color: "#f4f4f5", marginTop: 16 }}>Completing sign in...</Text>
+      <AppText style={{ color: "#f4f4f5", marginTop: 16 }}>Completing sign in...</AppText>
       {error ? (
-        <Text style={{ color: "#fda4af", marginTop: 8, textAlign: "center" }}>{error}</Text>
+        <AppText style={{ color: "#fda4af", marginTop: 8, textAlign: "center" }}>{error}</AppText>
       ) : null}
     </View>
   );
 }
+

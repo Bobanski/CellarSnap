@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -6,9 +8,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   type TextInputProps,
-  View,
+  View
 } from "react-native";
 import { Link, router } from "expo-router";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@cellarsnap/shared";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { AppText } from "@/src/components/AppText";
 
 const INPUT_SELECTION_COLOR = "#52525b";
 
@@ -233,13 +235,13 @@ export default function SignUpScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headBlock}>
-            <Text style={styles.eyebrow}>Create account</Text>
-            <Text style={styles.title}>Join CellarSnap</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.eyebrow}>Create account</AppText>
+            <AppText style={styles.title}>Join CellarSnap</AppText>
+            <AppText style={styles.subtitle}>
               {authMode === "phone"
                 ? "Create your account with username, phone, email, and password."
                 : "Create your account with email and password."}
-            </Text>
+            </AppText>
           </View>
 
           {authMode === "phone" ? (
@@ -304,7 +306,7 @@ export default function SignUpScreen() {
             placeholder="********"
           />
           <Pressable onPress={() => setShowPassword((previous) => !previous)}>
-            <Text style={styles.toggleText}>{showPassword ? "Hide password" : "Show password"}</Text>
+            <AppText style={styles.toggleText}>{showPassword ? "Hide password" : "Show password"}</AppText>
           </Pressable>
 
           <Field
@@ -318,8 +320,8 @@ export default function SignUpScreen() {
             placeholder="********"
           />
 
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-          {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+          {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+          {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
 
           <Pressable
             onPress={() => void onSubmit()}
@@ -329,22 +331,22 @@ export default function SignUpScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#09090b" />
             ) : (
-              <Text style={styles.primaryButtonText}>Create Account</Text>
+              <AppText style={styles.primaryButtonText}>Create Account</AppText>
             )}
           </Pressable>
 
-          <Text style={styles.termsText}>
+          <AppText style={styles.termsText}>
             By selecting Create Account, you agree to our privacy and terms policies.
-          </Text>
+          </AppText>
 
           <Link href="/(auth)/sign-in" style={styles.linkButtonText}>
             Back to sign in
           </Link>
 
           <View style={styles.legalRow}>
-            <Text style={styles.legalLink}>Privacy</Text>
-            <Text style={styles.legalSeparator}> - </Text>
-            <Text style={styles.legalLink}>Terms</Text>
+            <AppText style={styles.legalLink}>Privacy</AppText>
+            <AppText style={styles.legalSeparator}> - </AppText>
+            <AppText style={styles.legalLink}>Terms</AppText>
           </View>
         </View>
       </ScrollView>
@@ -380,7 +382,7 @@ function Field({
 }) {
   return (
     <View style={styles.fieldBlock}>
-      <Text style={styles.label}>{label}</Text>
+      <AppText style={styles.label}>{label}</AppText>
       <DoneTextInput
         value={value}
         onChangeText={onChange}
@@ -548,3 +550,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
 });
+

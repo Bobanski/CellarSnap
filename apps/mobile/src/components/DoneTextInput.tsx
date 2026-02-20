@@ -6,6 +6,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { IOS_KEYBOARD_DONE_ACCESSORY_ID } from "@/src/components/KeyboardDoneAccessory";
+import { APP_SANS_FONT_FAMILY } from "@/src/lib/typography";
 
 const IOS_KEYBOARDS_WITHOUT_RETURN_KEY = new Set([
   "number-pad",
@@ -23,6 +24,7 @@ export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
       keyboardType,
       multiline = false,
       onSubmitEditing,
+      style,
       ...props
     },
     ref
@@ -50,6 +52,7 @@ export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
             ? IOS_KEYBOARD_DONE_ACCESSORY_ID
             : inputAccessoryViewID
         }
+        style={[APP_SANS_FONT_FAMILY ? { fontFamily: APP_SANS_FONT_FAMILY } : null, style]}
         onSubmitEditing={(event) => {
           onSubmitEditing?.(event);
           if (!multiline || resolvedBlurOnSubmit) {

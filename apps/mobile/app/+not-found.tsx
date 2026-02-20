@@ -1,5 +1,6 @@
 import { Link } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { AppText } from "@/src/components/AppText";
 
 export default function NotFoundScreen() {
   return (
@@ -13,10 +14,10 @@ export default function NotFoundScreen() {
         gap: 12,
       }}
     >
-      <Text style={{ color: "#f9fafb", fontSize: 28, fontWeight: "700" }}>Not found</Text>
-      <Text style={{ color: "#9ca3af", textAlign: "center" }}>
+      <AppText style={{ color: "#f9fafb", fontSize: 28, fontWeight: "700" }}>Not found</AppText>
+      <AppText style={{ color: "#9ca3af", textAlign: "center" }}>
         This screen does not exist in the current build.
-      </Text>
+      </AppText>
       <Link href="/" asChild>
         <Pressable
           style={{
@@ -27,9 +28,10 @@ export default function NotFoundScreen() {
             paddingVertical: 10,
           }}
         >
-          <Text style={{ color: "#09090b", fontWeight: "700" }}>Go Home</Text>
+          <AppText style={{ color: "#09090b", fontWeight: "700" }}>Go Home</AppText>
         </Pressable>
       </Link>
     </View>
   );
 }
+

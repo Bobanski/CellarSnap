@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -6,13 +11,13 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { AppText } from "@/src/components/AppText";
 
 type FeedScope = "public" | "friends";
 type EntryPrivacy = "public" | "friends_of_friends" | "friends" | "private";
@@ -1136,14 +1141,14 @@ function FeedCard({
                 resizeMode="cover"
               />
             ) : (
-              <Text style={styles.feedAvatarFallback}>
+              <AppText style={styles.feedAvatarFallback}>
                 {(item.author_name || "?")[0]?.toUpperCase() ?? "?"}
-              </Text>
+              </AppText>
             )}
           </View>
-          <Text style={styles.feedAuthorName}>{item.author_name}</Text>
+          <AppText style={styles.feedAuthorName}>{item.author_name}</AppText>
         </View>
-        <Text style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</Text>
+        <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
       </View>
 
       <View
@@ -1218,9 +1223,9 @@ function FeedCard({
               />
             )}
             <View style={styles.photoTypeChip}>
-              <Text style={styles.photoTypeChipText}>
+              <AppText style={styles.photoTypeChipText}>
                 {PHOTO_TYPE_LABELS[activePhoto.type]}
-              </Text>
+              </AppText>
             </View>
             {hasMultiplePhotos ? (
               <View style={styles.photoDotRow}>
@@ -1246,7 +1251,7 @@ function FeedCard({
                   accessibilityRole="button"
                   accessibilityLabel="Previous photo"
                 >
-                  <Text style={styles.photoNavButtonText}>{"<"}</Text>
+                  <AppText style={styles.photoNavButtonText}>{"<"}</AppText>
                 </Pressable>
                 <Pressable
                   onPress={goToNextPhoto}
@@ -1255,30 +1260,30 @@ function FeedCard({
                   accessibilityRole="button"
                   accessibilityLabel="Next photo"
                 >
-                  <Text style={styles.photoNavButtonText}>{">"}</Text>
+                  <AppText style={styles.photoNavButtonText}>{">"}</AppText>
                 </Pressable>
               </>
             ) : null}
           </>
         ) : (
           <View style={styles.feedPhotoFallback}>
-            <Text style={styles.feedPhotoFallbackText}>No photo</Text>
+            <AppText style={styles.feedPhotoFallbackText}>No photo</AppText>
           </View>
         )}
       </View>
 
       <View style={styles.feedTextStack}>
-        {item.wine_name ? <Text style={styles.feedWineName}>{item.wine_name}</Text> : null}
+        {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
         {metaFields.length > 0 ? (
-          <Text style={styles.feedMetaText}>{metaFields.join(" · ")}</Text>
+          <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
         ) : null}
         {item.tasted_with_users.length > 0 ? (
-          <Text style={styles.feedTastedWithText}>
+          <AppText style={styles.feedTastedWithText}>
             Tasted with:{" "}
             {item.tasted_with_users
               .map((user) => user.display_name ?? user.email ?? "Unknown")
               .join(", ")}
-          </Text>
+          </AppText>
         ) : null}
       </View>
 
@@ -1288,7 +1293,7 @@ function FeedCard({
           onPress={onToggleNotes}
           disabled={!canToggleNotes}
         >
-          <Text
+          <AppText
             style={styles.notesText}
             numberOfLines={notesExpanded ? undefined : 2}
             onTextLayout={(event) => {
@@ -1302,21 +1307,21 @@ function FeedCard({
             }}
           >
             {notes}
-          </Text>
+          </AppText>
           {canToggleNotes ? (
-            <Text style={styles.notesToggleText}>
+            <AppText style={styles.notesToggleText}>
               {notesExpanded ? "Show less" : "Read more"}
-            </Text>
+            </AppText>
           ) : null}
         </Pressable>
       ) : null}
 
       <View style={styles.feedValueRow}>
-        {displayRating ? <Text style={styles.feedRating}>{displayRating}</Text> : null}
+        {displayRating ? <AppText style={styles.feedRating}>{displayRating}</AppText> : null}
         {item.qpr_level ? (
-          <Text style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
+          <AppText style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
             {QPR_LEVEL_LABELS[item.qpr_level]}
-          </Text>
+          </AppText>
         ) : null}
       </View>
 
@@ -1332,15 +1337,15 @@ function FeedCard({
                 commentsExpanded ? styles.commentsButtonActive : null,
               ]}
             >
-              <Text
+              <AppText
                 style={[
                   styles.commentsButtonText,
                   commentsExpanded ? styles.commentsButtonTextActive : null,
                 ]}
               >
                 Comments
-              </Text>
-              <Text style={styles.commentsButtonCount}>{commentCount}</Text>
+              </AppText>
+              <AppText style={styles.commentsButtonCount}>{commentCount}</AppText>
             </Pressable>
           ) : null}
         </View>
@@ -1349,14 +1354,14 @@ function FeedCard({
           <View style={styles.reactionPills}>
             {visibleReactions.map(([emoji, count]) => (
               <View key={`${item.id}-${emoji}`} style={styles.reactionPill}>
-                <Text style={styles.reactionPillText}>
+                <AppText style={styles.reactionPillText}>
                   {emoji} {count}
-                </Text>
+                </AppText>
               </View>
             ))}
             {hiddenReactionCount > 0 ? (
               <View style={styles.reactionPill}>
-                <Text style={styles.reactionPillText}>+{hiddenReactionCount}</Text>
+                <AppText style={styles.reactionPillText}>+{hiddenReactionCount}</AppText>
               </View>
             ) : null}
           </View>
@@ -1401,15 +1406,15 @@ function FeedCard({
                     !item.can_react ? styles.reactionEmojiBtnDisabled : null,
                   ]}
                 >
-                  <Text style={styles.reactionEmojiText}>{emoji}</Text>
+                  <AppText style={styles.reactionEmojiText}>{emoji}</AppText>
                 </Pressable>
               );
             })}
           </View>
           {!item.can_react ? (
-            <Text style={styles.reactionPrivateText}>
+            <AppText style={styles.reactionPrivateText}>
               Reactions are not available for this post.
-            </Text>
+            </AppText>
           ) : null}
         </View>
       ) : null}
@@ -1417,35 +1422,35 @@ function FeedCard({
       {commentsExpanded ? (
         <View style={styles.commentsPanel}>
           {commentsLoading ? (
-            <Text style={styles.commentsEmptyText}>Loading comments...</Text>
+            <AppText style={styles.commentsEmptyText}>Loading comments...</AppText>
           ) : comments.length === 0 ? (
-            <Text style={styles.commentsEmptyText}>No comments yet. Start the thread.</Text>
+            <AppText style={styles.commentsEmptyText}>No comments yet. Start the thread.</AppText>
           ) : (
             <View style={styles.commentList}>
               {comments.map((comment) => (
                 <View key={comment.id} style={styles.commentRow}>
                   <View style={styles.commentHeader}>
-                    <Text style={styles.commentAuthor}>
+                    <AppText style={styles.commentAuthor}>
                       {comment.author_name ?? "Unknown"}
-                    </Text>
-                    <Text style={styles.commentDate}>
+                    </AppText>
+                    <AppText style={styles.commentDate}>
                       {formatCommentDate(comment.created_at)}
-                    </Text>
+                    </AppText>
                   </View>
-                  <Text
+                  <AppText
                     style={[
                       styles.commentBody,
                       comment.is_deleted ? styles.commentBodyDeleted : null,
                     ]}
                   >
                     {comment.is_deleted ? "[deleted]" : comment.body}
-                  </Text>
+                  </AppText>
                   {!comment.is_deleted && showCommentsControl ? (
                     <Pressable
                       onPress={() => onSetReplyTarget(comment.id)}
                       style={styles.replyActionButton}
                     >
-                      <Text style={styles.replyActionText}>Reply</Text>
+                      <AppText style={styles.replyActionText}>Reply</AppText>
                     </Pressable>
                   ) : null}
                   {comment.replies.length > 0 ? (
@@ -1453,21 +1458,21 @@ function FeedCard({
                       {comment.replies.map((reply) => (
                         <View key={reply.id} style={styles.replyRow}>
                           <View style={styles.commentHeader}>
-                            <Text style={styles.commentAuthor}>
+                            <AppText style={styles.commentAuthor}>
                               {reply.author_name ?? "Unknown"}
-                            </Text>
-                            <Text style={styles.commentDate}>
+                            </AppText>
+                            <AppText style={styles.commentDate}>
                               {formatCommentDate(reply.created_at)}
-                            </Text>
+                            </AppText>
                           </View>
-                          <Text
+                          <AppText
                             style={[
                               styles.commentBody,
                               reply.is_deleted ? styles.commentBodyDeleted : null,
                             ]}
                           >
                             {reply.is_deleted ? "[deleted]" : reply.body}
-                          </Text>
+                          </AppText>
                         </View>
                       ))}
                     </View>
@@ -1480,9 +1485,9 @@ function FeedCard({
             <View style={styles.commentComposer}>
               {replyTargetName ? (
                 <View style={styles.replyTargetRow}>
-                  <Text style={styles.replyTargetText}>Replying to {replyTargetName}</Text>
+                  <AppText style={styles.replyTargetText}>Replying to {replyTargetName}</AppText>
                   <Pressable onPress={onClearReplyTarget}>
-                    <Text style={styles.replyTargetCancel}>Cancel</Text>
+                    <AppText style={styles.replyTargetCancel}>Cancel</AppText>
                   </Pressable>
                 </View>
               ) : null}
@@ -1504,13 +1509,13 @@ function FeedCard({
                     : null,
                 ]}
               >
-                <Text style={styles.commentSubmitButtonText}>
+                <AppText style={styles.commentSubmitButtonText}>
                   {postingComment ? "Posting..." : replyTargetName ? "Post reply" : "Post"}
-                </Text>
+                </AppText>
               </Pressable>
             </View>
           ) : null}
-          {commentError ? <Text style={styles.commentErrorText}>{commentError}</Text> : null}
+          {commentError ? <AppText style={styles.commentErrorText}>{commentError}</AppText> : null}
         </View>
       ) : null}
     </View>
@@ -2100,11 +2105,11 @@ export default function FeedScreen() {
         <AppTopBar activeHref="/(app)/feed" />
 
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>Social feed</Text>
-          <Text style={styles.title}>What the cellar is sipping.</Text>
-          <Text style={styles.subtitle}>
+          <AppText style={styles.eyebrow}>Social feed</AppText>
+          <AppText style={styles.title}>What the cellar is sipping.</AppText>
+          <AppText style={styles.subtitle}>
             Discover what others are enjoying across the app.
-          </Text>
+          </AppText>
         </View>
 
         <View style={styles.scopeRow}>
@@ -2115,14 +2120,14 @@ export default function FeedScreen() {
             ]}
             onPress={() => setFeedScope("public")}
           >
-            <Text
+            <AppText
               style={[
                 styles.scopePillText,
                 feedScope === "public" ? styles.scopePillTextActive : null,
               ]}
             >
               Public feed
-            </Text>
+            </AppText>
           </Pressable>
           <Pressable
             style={[
@@ -2131,14 +2136,14 @@ export default function FeedScreen() {
             ]}
             onPress={() => setFeedScope("friends")}
           >
-            <Text
+            <AppText
               style={[
                 styles.scopePillText,
                 feedScope === "friends" ? styles.scopePillTextActive : null,
               ]}
             >
               Friends only
-            </Text>
+            </AppText>
           </Pressable>
           <Pressable
             style={[
@@ -2149,14 +2154,14 @@ export default function FeedScreen() {
             accessibilityRole="button"
             accessibilityLabel={isFriendSearchOpen ? "Hide friend search" : "Show friend search"}
           >
-            <Text
+            <AppText
               style={[
                 styles.searchToggleIcon,
                 isFriendSearchOpen ? styles.searchToggleIconActive : null,
               ]}
             >
               ⌕
-            </Text>
+            </AppText>
           </Pressable>
         </View>
 
@@ -2184,25 +2189,25 @@ export default function FeedScreen() {
                   style={styles.friendSearchClearButton}
                   onPress={clearFriendSearch}
                 >
-                  <Text style={styles.friendSearchClearText}>Clear</Text>
+                  <AppText style={styles.friendSearchClearText}>Clear</AppText>
                 </Pressable>
               ) : null}
             </View>
 
             {selectedFriendId ? (
-              <Text style={styles.friendSearchSelectionText}>
+              <AppText style={styles.friendSearchSelectionText}>
                 Showing posts from {selectedFriendName ?? "this friend"}.
-              </Text>
+              </AppText>
             ) : null}
 
             {friendSearchQuery.trim() ? (
               <View style={styles.friendSearchResultsWrap}>
                 {isFriendSearchLoading ? (
-                  <Text style={styles.friendSearchMetaText}>Searching...</Text>
+                  <AppText style={styles.friendSearchMetaText}>Searching...</AppText>
                 ) : friendSearchResults.length === 0 ? (
-                  <Text style={styles.friendSearchMetaText}>
+                  <AppText style={styles.friendSearchMetaText}>
                     No friends match your search.
-                  </Text>
+                  </AppText>
                 ) : (
                   friendSearchResults.map((option) => {
                     const displayName = option.display_name?.trim() || "Unknown";
@@ -2212,29 +2217,29 @@ export default function FeedScreen() {
                         style={styles.friendSearchResultRow}
                         onPress={() => selectFriendFilter(option)}
                       >
-                        <Text style={styles.friendSearchResultText}>{displayName}</Text>
+                        <AppText style={styles.friendSearchResultText}>{displayName}</AppText>
                       </Pressable>
                     );
                   })
                 )}
               </View>
             ) : (
-              <Text style={styles.friendSearchMetaText}>
+              <AppText style={styles.friendSearchMetaText}>
                 Search for a friend, then tap a result to filter the feed.
-              </Text>
+              </AppText>
             )}
           </View>
         ) : null}
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
 
         {visibleEntries.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
+            <AppText style={styles.emptyText}>
               {selectedFriendId
                 ? `No posts from ${selectedFriendName ?? "this friend"} in this feed yet.`
                 : "No entries yet."}
-            </Text>
+            </AppText>
           </View>
         ) : (
           <View style={styles.feedStack}>
@@ -2316,7 +2321,7 @@ export default function FeedScreen() {
             {isLoadingMore ? (
               <ActivityIndicator color="#09090b" />
             ) : (
-              <Text style={styles.loadMoreText}>Load more</Text>
+              <AppText style={styles.loadMoreText}>Load more</AppText>
             )}
           </Pressable>
         ) : null}
@@ -3011,3 +3016,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

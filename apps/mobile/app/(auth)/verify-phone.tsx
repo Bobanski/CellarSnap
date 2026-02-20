@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -6,13 +8,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import { Link, useLocalSearchParams, router } from "expo-router";
 import { PHONE_FORMAT_MESSAGE, normalizePhone } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { AppText } from "@/src/components/AppText";
 
 type VerifyMode = "signup" | "recovery";
 
@@ -144,15 +146,15 @@ export default function VerifyPhoneScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headBlock}>
-            <Text style={styles.eyebrow}>{mode === "recovery" ? "Reset access" : "Verify phone"}</Text>
-            <Text style={styles.title}>
+            <AppText style={styles.eyebrow}>{mode === "recovery" ? "Reset access" : "Verify phone"}</AppText>
+            <AppText style={styles.title}>
               {mode === "recovery" ? "Enter your recovery code" : "Enter your confirmation code"}
-            </Text>
-            <Text style={styles.subtitle}>
+            </AppText>
+            <AppText style={styles.subtitle}>
               {mode === "recovery"
                 ? "We sent a recovery code to your phone number."
                 : "We sent a verification code to your phone number."}
-            </Text>
+            </AppText>
           </View>
 
           <Field
@@ -170,8 +172,8 @@ export default function VerifyPhoneScreen() {
             autoCapitalize="none"
           />
 
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-          {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+          {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+          {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
 
           <Pressable
             onPress={() => void verifyCode()}
@@ -181,12 +183,12 @@ export default function VerifyPhoneScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#09090b" />
             ) : (
-              <Text style={styles.primaryButtonText}>Confirm code</Text>
+              <AppText style={styles.primaryButtonText}>Confirm code</AppText>
             )}
           </Pressable>
 
           <Pressable onPress={() => void resendCode()} disabled={isSubmitting} style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Resend code</Text>
+            <AppText style={styles.secondaryButtonText}>Resend code</AppText>
           </Pressable>
 
           <LinkText mode={mode} />
@@ -211,7 +213,7 @@ function Field({
 }) {
   return (
     <View style={styles.fieldBlock}>
-      <Text style={styles.label}>{label}</Text>
+      <AppText style={styles.label}>{label}</AppText>
       <DoneTextInput
         value={value}
         onChangeText={onChange}
@@ -229,7 +231,7 @@ function LinkText({ mode }: { mode: VerifyMode }) {
   if (mode === "recovery") {
     return (
       <View style={styles.legalRow}>
-        <Text style={styles.legalMuted}>Back to </Text>
+        <AppText style={styles.legalMuted}>Back to </AppText>
         <Link href="/(auth)/sign-in" style={styles.legalLink}>
           sign in
         </Link>
@@ -239,7 +241,7 @@ function LinkText({ mode }: { mode: VerifyMode }) {
 
   return (
     <View style={styles.legalRow}>
-      <Text style={styles.legalMuted}>Back to </Text>
+      <AppText style={styles.legalMuted}>Back to </AppText>
       <Link href="/(auth)/sign-up" style={styles.legalLink}>
         create account
       </Link>
@@ -389,3 +391,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

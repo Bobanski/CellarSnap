@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { AppText } from "@/src/components/AppText";
 
 type AppRoute = "/(app)/entries" | "/(app)/feed";
 
@@ -352,13 +355,13 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
   return (
     <View style={styles.container}>
       <View style={styles.navRow}>
-        <Text style={styles.brand}>CellarSnap</Text>
+        <AppText style={styles.brand}>CellarSnap</AppText>
         <View style={styles.navActions}>
           <Pressable
             style={styles.newBtn}
             onPress={() => router.push("/(app)/entries/new")}
           >
-            <Text style={styles.newBtnText}>+ New</Text>
+            <AppText style={styles.newBtnText}>+ New</AppText>
           </Pressable>
 
           <Pressable
@@ -374,9 +377,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             </View>
             {alertCount > 0 ? (
               <View style={styles.alertBadge}>
-                <Text style={styles.alertBadgeText}>
+                <AppText style={styles.alertBadgeText}>
                   {alertCount > 99 ? "99+" : alertCount}
-                </Text>
+                </AppText>
               </View>
             ) : null}
           </Pressable>
@@ -388,7 +391,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
           >
             {menuOpen ? (
-              <Text style={styles.closeIcon}>×</Text>
+              <AppText style={styles.closeIcon}>×</AppText>
             ) : (
               <View style={styles.hamburgerWrap}>
                 <View style={styles.hamburgerLine} />
@@ -403,9 +406,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       {alertsOpen ? (
         <View style={styles.panel}>
           <View style={styles.panelHeader}>
-            <Text style={styles.panelTitle}>Alerts</Text>
+            <AppText style={styles.panelTitle}>Alerts</AppText>
             <Pressable onPress={() => void markAllSeen()}>
-              <Text style={styles.panelAction}>Mark all seen</Text>
+              <AppText style={styles.panelAction}>Mark all seen</AppText>
             </Pressable>
           </View>
           {alertsLoading ? (
@@ -413,20 +416,20 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
               <ActivityIndicator color="#fbbf24" />
             </View>
           ) : alertsError ? (
-            <Text style={styles.panelError}>{alertsError}</Text>
+            <AppText style={styles.panelError}>{alertsError}</AppText>
           ) : alerts.length === 0 ? (
-            <Text style={styles.panelEmpty}>No new alerts yet.</Text>
+            <AppText style={styles.panelEmpty}>No new alerts yet.</AppText>
           ) : (
             <View style={styles.alertList}>
               {alerts.map((alert) => (
                 <View key={`${alert.type}-${alert.id}`} style={styles.alertRow}>
                   <View style={styles.alertBody}>
-                    <Text style={styles.alertLabel}>
+                    <AppText style={styles.alertLabel}>
                       {alert.type === "friend_request"
                         ? `${alert.requester_name} sent a friend request`
                         : `${alert.actor_name} tagged you in ${alert.wine_name ?? "a post"}`}
-                    </Text>
-                    <Text style={styles.alertDate}>{formatAlertDate(alert.created_at)}</Text>
+                    </AppText>
+                    <AppText style={styles.alertDate}>{formatAlertDate(alert.created_at)}</AppText>
                   </View>
                   {alert.type === "friend_request" ? (
                     <View style={styles.alertActions}>
@@ -435,16 +438,16 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
                         disabled={respondingRequestId === alert.id}
                         onPress={() => void onRespondToFriendRequest(alert.id, "accept")}
                       >
-                        <Text style={styles.actionPillText}>
+                        <AppText style={styles.actionPillText}>
                           {respondingRequestId === alert.id ? "..." : "Accept"}
-                        </Text>
+                        </AppText>
                       </Pressable>
                       <Pressable
                         style={styles.actionGhost}
                         disabled={respondingRequestId === alert.id}
                         onPress={() => void onRespondToFriendRequest(alert.id, "decline")}
                       >
-                        <Text style={styles.actionGhostText}>Decline</Text>
+                        <AppText style={styles.actionGhostText}>Decline</AppText>
                       </Pressable>
                     </View>
                   ) : (
@@ -453,9 +456,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
                       disabled={dismissingTagId === alert.id}
                       onPress={() => void onDismissTag(alert.id)}
                     >
-                      <Text style={styles.actionGhostText}>
+                      <AppText style={styles.actionGhostText}>
                         {dismissingTagId === alert.id ? "..." : "Dismiss"}
-                      </Text>
+                      </AppText>
                     </Pressable>
                   )}
                 </View>
@@ -477,18 +480,18 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
                 ]}
                 onPress={() => router.push(item.href)}
               >
-                <Text
+                <AppText
                   style={[
                     styles.menuItemText,
                     activeHref === item.href ? styles.menuItemTextActive : null,
                   ]}
                 >
                   {item.label}
-                </Text>
+                </AppText>
               </Pressable>
             ))}
             <Pressable style={styles.menuItem} onPress={() => void onSignOut()}>
-              <Text style={styles.menuItemText}>Sign out</Text>
+              <AppText style={styles.menuItemText}>Sign out</AppText>
             </Pressable>
           </View>
         </View>
@@ -711,3 +714,4 @@ const styles = StyleSheet.create({
     color: "#fef3c7",
   },
 });
+

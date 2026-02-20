@@ -17,6 +17,8 @@ EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 # Optional: defaults to "email"
 EXPO_PUBLIC_AUTH_MODE=email
+# Optional: enables label image autofill from web API route
+EXPO_PUBLIC_WEB_API_BASE_URL=http://127.0.0.1:3000
 ```
 
 `EXPO_PUBLIC_AUTH_MODE` should match web behavior (`email` or `phone`).

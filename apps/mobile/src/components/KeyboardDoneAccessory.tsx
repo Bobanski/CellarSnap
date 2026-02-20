@@ -4,9 +4,9 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { AppText } from "@/src/components/AppText";
 
 export const IOS_KEYBOARD_DONE_ACCESSORY_ID = "cellarsnap-keyboard-done-accessory";
 
@@ -19,7 +19,7 @@ export function KeyboardDoneAccessory() {
     <InputAccessoryView nativeID={IOS_KEYBOARD_DONE_ACCESSORY_ID}>
       <View style={styles.accessory}>
         <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
-          <Text style={styles.doneText}>Done</Text>
+          <AppText style={styles.doneText}>Done</AppText>
         </Pressable>
       </View>
     </InputAccessoryView>
@@ -41,3 +41,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+

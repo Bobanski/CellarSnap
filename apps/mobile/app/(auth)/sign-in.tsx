@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import { Link, router } from "expo-router";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { AppText } from "@/src/components/AppText";
 
 const INPUT_SELECTION_COLOR = "#52525b";
 
@@ -108,18 +110,18 @@ export default function SignInScreen() {
         <View style={styles.card}>
           <View style={styles.brandRow}>
             <View style={styles.brandTextWrap}>
-              <Text style={styles.brandName}>CellarSnap</Text>
-              <Text style={styles.brandSubtitle}>
+              <AppText style={styles.brandName}>CellarSnap</AppText>
+              <AppText style={styles.brandSubtitle}>
                 A private cellar journal with a social pour.
-              </Text>
+              </AppText>
             </View>
             <View style={styles.betaChip}>
-              <Text style={styles.betaText}>BETA</Text>
+              <AppText style={styles.betaText}>BETA</AppText>
             </View>
           </View>
 
           <View style={styles.formField}>
-            <Text style={styles.label}>{getCredentialText(authMode)}</Text>
+            <AppText style={styles.label}>{getCredentialText(authMode)}</AppText>
             <DoneTextInput
               value={identifier}
               onChangeText={setIdentifier}
@@ -136,15 +138,15 @@ export default function SignInScreen() {
               placeholderTextColor="#71717a"
               style={styles.input}
             />
-            <Text style={styles.helperText}>
+            <AppText style={styles.helperText}>
               {authMode === "phone"
                 ? "You can also paste your email address."
                 : "You can sign in with email or username."}
-            </Text>
+            </AppText>
           </View>
 
           <View style={styles.formField}>
-            <Text style={styles.label}>Password</Text>
+            <AppText style={styles.label}>Password</AppText>
             <View style={styles.passwordWrap}>
               <DoneTextInput
                 value={password}
@@ -163,25 +165,25 @@ export default function SignInScreen() {
                 onPress={() => setShowPassword((previous) => !previous)}
                 style={styles.passwordToggle}
               >
-                <Text style={styles.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
+                <AppText style={styles.passwordToggleText}>{showPassword ? "Hide" : "Show"}</AppText>
               </Pressable>
             </View>
           </View>
 
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-          {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+          {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+          {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
 
           <Pressable
             onPress={() => void submitPasswordSignIn()}
             disabled={!canSubmit}
             style={[styles.primaryButton, !canSubmit ? styles.disabledButton : null]}
           >
-            <Text style={styles.primaryButtonText}>{isSubmitting ? "Signing in..." : "Sign In"}</Text>
+            <AppText style={styles.primaryButtonText}>{isSubmitting ? "Signing in..." : "Sign In"}</AppText>
           </Pressable>
 
           <Link href="/(auth)/sign-up" asChild>
             <Pressable style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Create Account</Text>
+              <AppText style={styles.secondaryButtonText}>Create Account</AppText>
             </Pressable>
           </Link>
 
@@ -192,9 +194,9 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.legalRow}>
-            <Text style={styles.legalLink}>Privacy</Text>
-            <Text style={styles.legalSeparator}> · </Text>
-            <Text style={styles.legalLink}>Terms</Text>
+            <AppText style={styles.legalLink}>Privacy</AppText>
+            <AppText style={styles.legalSeparator}> · </AppText>
+            <AppText style={styles.legalLink}>Terms</AppText>
           </View>
         </View>
       </ScrollView>
@@ -398,3 +400,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
 });
+

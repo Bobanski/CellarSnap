@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { AppText } from "@/src/components/AppText";
 
 const INPUT_SELECTION_COLOR = "#52525b";
 
@@ -129,19 +132,19 @@ export default function ResetPasswordScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headBlock}>
-            <Text style={styles.eyebrow}>Reset access</Text>
-            <Text style={styles.title}>Set a new password</Text>
-            <Text style={styles.subtitle}>Choose a new password for your account.</Text>
+            <AppText style={styles.eyebrow}>Reset access</AppText>
+            <AppText style={styles.title}>Set a new password</AppText>
+            <AppText style={styles.subtitle}>Choose a new password for your account.</AppText>
           </View>
 
           {!isReady ? (
-            <Text style={styles.loadingText}>Preparing reset form...</Text>
+            <AppText style={styles.loadingText}>Preparing reset form...</AppText>
           ) : (
             <>
               {!hasSession ? (
                 <>
                   <View style={styles.formField}>
-                    <Text style={styles.label}>Email address</Text>
+                    <AppText style={styles.label}>Email address</AppText>
                     <DoneTextInput
                       value={email}
                       onChangeText={setEmail}
@@ -158,7 +161,7 @@ export default function ResetPasswordScreen() {
                   </View>
 
                   <View style={styles.formField}>
-                    <Text style={styles.label}>Recovery code</Text>
+                    <AppText style={styles.label}>Recovery code</AppText>
                     <DoneTextInput
                       value={code}
                       onChangeText={setCode}
@@ -173,7 +176,7 @@ export default function ResetPasswordScreen() {
                       style={styles.input}
                     />
                     <View style={styles.resendRow}>
-                      <Text style={styles.resendText}>Need a new code? </Text>
+                      <AppText style={styles.resendText}>Need a new code? </AppText>
                       <Link href="/(auth)/forgot-password" style={styles.resendLink}>
                         Go back and resend.
                       </Link>
@@ -183,7 +186,7 @@ export default function ResetPasswordScreen() {
               ) : null}
 
               <View style={styles.formField}>
-                <Text style={styles.label}>New password</Text>
+                <AppText style={styles.label}>New password</AppText>
                 <View style={styles.passwordWrap}>
                   <DoneTextInput
                     value={password}
@@ -202,13 +205,13 @@ export default function ResetPasswordScreen() {
                     onPress={() => setShowPassword((previous) => !previous)}
                     style={styles.passwordToggle}
                   >
-                    <Text style={styles.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
+                    <AppText style={styles.passwordToggleText}>{showPassword ? "Hide" : "Show"}</AppText>
                   </Pressable>
                 </View>
               </View>
 
               <View style={styles.formField}>
-                <Text style={styles.label}>Confirm new password</Text>
+                <AppText style={styles.label}>Confirm new password</AppText>
                 <DoneTextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -224,17 +227,17 @@ export default function ResetPasswordScreen() {
                 />
               </View>
 
-              {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-              {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+              {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+              {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
 
               <Pressable
                 onPress={() => void updatePassword()}
                 disabled={isSubmitting}
                 style={[styles.primaryButton, isSubmitting ? styles.disabledButton : null]}
               >
-                <Text style={styles.primaryButtonText}>
+                <AppText style={styles.primaryButtonText}>
                   {isSubmitting ? "Updating..." : "Update password"}
-                </Text>
+                </AppText>
               </Pressable>
 
               <View style={styles.backRow}>
@@ -416,3 +419,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+

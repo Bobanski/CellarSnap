@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import { Link, router } from "expo-router";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@cellarsnap/shared";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { AppText } from "@/src/components/AppText";
 
 function getRecoveryHelperText(authMode: AuthMode) {
   if (authMode === "phone") {
@@ -116,13 +118,13 @@ export default function ForgotPasswordScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headBlock}>
-            <Text style={styles.eyebrow}>Reset access</Text>
-            <Text style={styles.title}>Forgot your password?</Text>
-            <Text style={styles.subtitle}>{getRecoveryHelperText(authMode)}</Text>
+            <AppText style={styles.eyebrow}>Reset access</AppText>
+            <AppText style={styles.title}>Forgot your password?</AppText>
+            <AppText style={styles.subtitle}>{getRecoveryHelperText(authMode)}</AppText>
           </View>
 
           <View style={styles.formField}>
-            <Text style={styles.label}>Username, phone, or email</Text>
+            <AppText style={styles.label}>Username, phone, or email</AppText>
             <DoneTextInput
               value={identifier}
               onChangeText={setIdentifier}
@@ -134,17 +136,17 @@ export default function ForgotPasswordScreen() {
             />
           </View>
 
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-          {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
+          {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+          {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
 
           <Pressable
             onPress={() => void submitRecovery()}
             disabled={isSubmitting}
             style={[styles.primaryButton, isSubmitting ? styles.disabledButton : null]}
           >
-            <Text style={styles.primaryButtonText}>
+            <AppText style={styles.primaryButtonText}>
               {isSubmitting ? "Sending..." : "Send recovery code"}
-            </Text>
+            </AppText>
           </Pressable>
 
           <View style={styles.backRow}>
@@ -279,3 +281,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+

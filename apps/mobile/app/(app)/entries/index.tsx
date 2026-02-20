@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -6,14 +10,14 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
+  View
 } from "react-native";
 import type { WineEntrySummary } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { AppText } from "@/src/components/AppText";
 
 type SortBy = "consumed_at" | "rating" | "vintage";
 type SortOrder = "asc" | "desc";
@@ -205,7 +209,7 @@ function Pill({
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.pill, active ? styles.pillActive : null]}>
-      <Text style={[styles.pillText, active ? styles.pillTextActive : null]}>{label}</Text>
+      <AppText style={[styles.pillText, active ? styles.pillTextActive : null]}>{label}</AppText>
     </Pressable>
   );
 }
@@ -221,33 +225,33 @@ function EntryCard({ item }: { item: MobileEntry }) {
         {item.label_image_url ? (
           <Image source={{ uri: item.label_image_url }} style={styles.photoImage} resizeMode="cover" />
         ) : (
-          <Text style={styles.photoText}>No photo</Text>
+          <AppText style={styles.photoText}>No photo</AppText>
         )}
       </View>
       <View style={styles.entryMain}>
         <View>
-          <Text style={styles.entryTitle}>{item.wine_name?.trim() || "Untitled wine"}</Text>
+          <AppText style={styles.entryTitle}>{item.wine_name?.trim() || "Untitled wine"}</AppText>
           {producer || vintage ? (
-            <Text style={styles.entrySubtitle}>
+            <AppText style={styles.entrySubtitle}>
               {producer ?? ""}
               {producer && vintage ? ` · ${vintage}` : vintage ?? ""}
-            </Text>
+            </AppText>
           ) : null}
         </View>
         <View style={styles.entryMeta}>
           <View style={styles.ratingStack}>
             {displayRating ? (
               <View style={styles.ratingWrap}>
-                <Text style={styles.ratingText}>{displayRating}</Text>
+                <AppText style={styles.ratingText}>{displayRating}</AppText>
               </View>
             ) : null}
             {item.qpr_level ? (
-              <Text style={[styles.qprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
+              <AppText style={[styles.qprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
                 {QPR_LEVEL_LABELS[item.qpr_level]}
-              </Text>
+              </AppText>
             ) : null}
           </View>
-          <Text style={styles.entryDate}>{formatConsumedDate(item.consumed_at)}</Text>
+          <AppText style={styles.entryDate}>{formatConsumedDate(item.consumed_at)}</AppText>
         </View>
       </View>
     </View>
@@ -473,34 +477,34 @@ export default function EntriesScreen() {
         <AppTopBar activeHref="/(app)/entries" />
 
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>My library</Text>
-          <Text style={styles.title}>Curate your cellar library.</Text>
-          <Text style={styles.subtitle}>Organize bottles by region, vintage, or varietal while keeping your filters.</Text>
+          <AppText style={styles.eyebrow}>My library</AppText>
+          <AppText style={styles.title}>Curate your cellar library.</AppText>
+          <AppText style={styles.subtitle}>Organize bottles by region, vintage, or varietal while keeping your filters.</AppText>
         </View>
 
         <View style={styles.controls}>
           <View style={styles.controlButtons}>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Sort</Text></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Filter</Text></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Organize</Text></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Sort</AppText></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Filter</AppText></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Organize</AppText></Pressable>
           </View>
           <View style={styles.searchRow}>
             <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, or varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
-            {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={() => setSearchQuery("")}><Text style={styles.secondaryBtnText}>Clear</Text></Pressable> : null}
+            {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={() => setSearchQuery("")}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
           </View>
 
           {activeControlPanel === "sort" ? (
             <View style={styles.panel}>
-              <Text style={styles.panelLabel}>Sort by</Text>
+              <AppText style={styles.panelLabel}>Sort by</AppText>
               <View style={styles.pills}><Pill label="Date consumed" active={sortBy === "consumed_at"} onPress={() => setSortBy("consumed_at")} /><Pill label="Rating" active={sortBy === "rating"} onPress={() => setSortBy("rating")} /><Pill label="Vintage" active={sortBy === "vintage"} onPress={() => setSortBy("vintage")} /></View>
-              <Text style={styles.panelLabel}>Order</Text>
+              <AppText style={styles.panelLabel}>Order</AppText>
               <View style={styles.pills}><Pill label={sortBy === "rating" ? "High to low" : "Newest first"} active={sortOrder === "desc"} onPress={() => setSortOrder("desc")} /><Pill label={sortBy === "rating" ? "Low to high" : "Oldest first"} active={sortOrder === "asc"} onPress={() => setSortOrder("asc")} /></View>
             </View>
           ) : null}
 
           {activeControlPanel === "filter" ? (
             <View style={styles.panel}>
-              <Text style={styles.panelLabel}>Filter by</Text>
+              <AppText style={styles.panelLabel}>Filter by</AppText>
               <View style={styles.pills}><Pill label="None" active={filterType === ""} onPress={() => updateFilterType("")} /><Pill label="Country" active={filterType === "country"} onPress={() => updateFilterType("country")} /><Pill label="Vintage range" active={filterType === "vintage"} onPress={() => updateFilterType("vintage")} /><Pill label="Rating range" active={filterType === "rating"} onPress={() => updateFilterType("rating")} /></View>
               {filterType === "country" ? <View style={styles.pills}><Pill label="All countries" active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
               {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
@@ -509,21 +513,21 @@ export default function EntriesScreen() {
 
           {activeControlPanel === "organize" ? (
             <View style={styles.panel}>
-              <Text style={styles.panelLabel}>Library view</Text>
+              <AppText style={styles.panelLabel}>Library view</AppText>
               <View style={styles.pills}><Pill label="Grouped" active={libraryViewMode === "grouped"} onPress={() => setLibraryViewMode("grouped")} /><Pill label="Full list" active={libraryViewMode === "all"} onPress={() => setLibraryViewMode("all")} /></View>
               {libraryViewMode === "grouped" ? <View style={styles.pills}><Pill label="Region" active={groupScheme === "region"} onPress={() => setGroupScheme("region")} /><Pill label="Vintage" active={groupScheme === "vintage"} onPress={() => setGroupScheme("vintage")} /><Pill label="Varietal" active={groupScheme === "varietal"} onPress={() => setGroupScheme("varietal")} /></View> : null}
             </View>
           ) : null}
-          <Text style={styles.countText}>{sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}</Text>
+          <AppText style={styles.countText}>{sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}</AppText>
         </View>
 
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
 
         {sortedEntries.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
+            <AppText style={styles.emptyText}>
               {isSearchActive ? "No entries match this search." : isRangeFilterActive ? "There are no wines found in this range." : isFilterActive ? "No entries match this filter." : "Your library is empty. Add your first bottle!"}
-            </Text>
+            </AppText>
           </View>
         ) : libraryViewMode === "grouped" ? (
           <View style={styles.stack}>
@@ -534,10 +538,10 @@ export default function EntriesScreen() {
                 <View key={group.id} style={styles.groupCard}>
                   <View style={styles.groupHeader}>
                     <View>
-                      <Text style={styles.groupTitle}>{group.label}</Text>
-                      <Text style={styles.groupCount}>{group.entries.length} {group.entries.length === 1 ? "entry" : "entries"}</Text>
+                      <AppText style={styles.groupTitle}>{group.label}</AppText>
+                      <AppText style={styles.groupCount}>{group.entries.length} {group.entries.length === 1 ? "entry" : "entries"}</AppText>
                     </View>
-                    {group.entries.length > GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><Text style={styles.secondaryBtnText}>{expanded ? "Show less" : "See all"}</Text></Pressable> : null}
+                    {group.entries.length > GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? "Show less" : "See all"}</AppText></Pressable> : null}
                   </View>
                   <View style={styles.stack}>{visible.map((item) => <EntryCard key={item.id} item={item} />)}</View>
                 </View>
@@ -606,3 +610,4 @@ const styles = StyleSheet.create({
   ratingText: { color: "#fcd34d", fontSize: 12, fontWeight: "800" },
   entryDate: { color: "#a1a1aa", fontSize: 12, flexShrink: 0, textAlign: "right" },
 });
+
