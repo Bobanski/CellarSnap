@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Image,
+  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -94,6 +96,11 @@ type MobileFeedEntry = FeedEntryRow & {
   author_avatar_url: string | null;
   primary_grapes: PrimaryGrape[];
   photo_gallery: FeedPhoto[];
+  tasted_with_users: Array<{
+    id: string;
+    display_name: string | null;
+    email: string | null;
+  }>;
   can_react: boolean;
   can_comment: boolean;
   comments_privacy: EntryPrivacy;
@@ -505,14 +512,7 @@ async function fetchFeedPage({
   cursor: string | null;
   limit: number;
 }) {
-  const socialAudience =
-    scope === "friends"
-      ? await loadSocialAudience(viewerUserId)
-      : {
-          socialAuthorIds: [] as string[],
-          acceptedFriendIds: new Set<string>(),
-          friendsOfFriendsIds: new Set<string>(),
-        };
+  const socialAudience = await loadSocialAudience(viewerUserId);
   const socialAuthorIds = socialAudience.socialAuthorIds;
 
   if (scope === "friends" && socialAuthorIds.length === 0) {
@@ -601,7 +601,14 @@ async function fetchFeedPage({
     : null;
 
   const entryIds = pageRows.map((entry) => entry.id);
-  const authorIds = Array.from(new Set(pageRows.map((entry) => entry.user_id)));
+  const userIds = Array.from(
+    new Set(
+      pageRows.flatMap((entry) => [
+        entry.user_id,
+        ...(entry.tasted_with_user_ids ?? []),
+      ])
+    )
+  );
 
   const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
   if (entryIds.length > 0) {
@@ -628,17 +635,17 @@ async function fetchFeedPage({
   }
 
   let profileRows: FeedProfileRow[] = [];
-  if (authorIds.length > 0) {
+  if (userIds.length > 0) {
     const { data, error } = await supabase
       .from("profiles")
       .select("id, display_name, email, avatar_path")
-      .in("id", authorIds);
+      .in("id", userIds);
 
     if (error && isMissingAvatarColumn(error.message ?? "")) {
       const fallback = await supabase
         .from("profiles")
         .select("id, display_name, email")
-        .in("id", authorIds);
+        .in("id", userIds);
       profileRows = (fallback.data ?? []).map((row) => ({
         ...(row as FeedProfileRow),
         avatar_path: null,
@@ -880,6 +887,11 @@ async function fetchFeedPage({
       acceptedFriendIds: socialAudience.acceptedFriendIds,
       friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
     });
+    const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id) => ({
+      id,
+      display_name: profileMap.get(id)?.display_name ?? null,
+      email: profileMap.get(id)?.email ?? null,
+    }));
 
     return {
       ...entry,
@@ -888,6 +900,7 @@ async function fetchFeedPage({
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
       photo_gallery: photoGallery,
+      tasted_with_users: tastedWithUsers,
       can_react: canSeeReactions,
       can_comment: canSeeComments,
       comments_privacy: commentsPrivacy,
@@ -915,6 +928,11 @@ function FeedCard({
   onToggleNotes,
   commentsExpanded,
   onToggleComments,
+  onGallerySwipeStart,
+  onGallerySwipeEnd,
+  replyTargetName,
+  onSetReplyTarget,
+  onClearReplyTarget,
   commentCount,
   comments,
   commentsLoading,
@@ -932,6 +950,11 @@ function FeedCard({
   onToggleNotes: () => void;
   commentsExpanded: boolean;
   onToggleComments: () => void;
+  onGallerySwipeStart: () => void;
+  onGallerySwipeEnd: () => void;
+  replyTargetName: string | null;
+  onSetReplyTarget: (commentId: string) => void;
+  onClearReplyTarget: () => void;
   commentCount: number;
   comments: FeedComment[];
   commentsLoading: boolean;
@@ -946,8 +969,13 @@ function FeedCard({
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
   const displayRating = getDisplayRating(item.rating);
-  const photo = item.photo_gallery[0] ?? null;
+  const galleryPhotos = item.photo_gallery ?? [];
   const notes = (item.notes ?? "").trim();
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
+  const [isNotesTruncated, setIsNotesTruncated] = useState(false);
+  const photoTranslateX = useRef(new Animated.Value(0)).current;
+  const swipeActiveRef = useRef(false);
   const reactions = useMemo(
     () =>
       Object.entries(item.reaction_counts)
@@ -957,6 +985,158 @@ function FeedCard({
   );
   const visibleReactions = reactions.slice(0, 3);
   const hiddenReactionCount = Math.max(0, reactions.length - visibleReactions.length);
+  const hasMultiplePhotos = galleryPhotos.length > 1;
+  const showCommentsControl = item.can_comment;
+  const activePhoto =
+    galleryPhotos[Math.max(0, Math.min(galleryPhotos.length - 1, activePhotoIndex))] ?? null;
+  const canToggleNotes = notesExpanded || isNotesTruncated;
+
+  useEffect(() => {
+    setActivePhotoIndex(0);
+    photoTranslateX.stopAnimation();
+    photoTranslateX.setValue(0);
+  }, [item.id, photoTranslateX]);
+
+  const beginGallerySwipe = useCallback(() => {
+    if (swipeActiveRef.current) {
+      return;
+    }
+    swipeActiveRef.current = true;
+    onGallerySwipeStart();
+  }, [onGallerySwipeStart]);
+
+  const endGallerySwipe = useCallback(() => {
+    if (!swipeActiveRef.current) {
+      return;
+    }
+    swipeActiveRef.current = false;
+    onGallerySwipeEnd();
+  }, [onGallerySwipeEnd]);
+
+  useEffect(
+    () => () => {
+      endGallerySwipe();
+    },
+    [endGallerySwipe]
+  );
+
+  useEffect(() => {
+    setIsNotesTruncated(false);
+  }, [item.id, notes]);
+
+  useEffect(() => {
+    if (photoFrameWidth <= 0) {
+      return;
+    }
+    photoTranslateX.stopAnimation();
+    photoTranslateX.setValue(-activePhotoIndex * photoFrameWidth);
+  }, [activePhotoIndex, photoFrameWidth, photoTranslateX]);
+
+  useEffect(() => {
+    const maxIndex = Math.max(0, galleryPhotos.length - 1);
+    if (activePhotoIndex <= maxIndex) {
+      return;
+    }
+    setActivePhotoIndex(maxIndex);
+  }, [activePhotoIndex, galleryPhotos.length]);
+
+  useEffect(() => {
+    if (galleryPhotos.length <= 1) {
+      return;
+    }
+    galleryPhotos.forEach((photo) => {
+      void Image.prefetch(photo.url);
+    });
+  }, [item.id, galleryPhotos]);
+
+  const animateToPhotoIndex = useCallback(
+    (nextIndex: number) => {
+      const maxIndex = Math.max(0, galleryPhotos.length - 1);
+      const clampedIndex = Math.max(0, Math.min(maxIndex, nextIndex));
+      setActivePhotoIndex(clampedIndex);
+      if (photoFrameWidth <= 0) {
+        return;
+      }
+      Animated.spring(photoTranslateX, {
+        toValue: -clampedIndex * photoFrameWidth,
+        useNativeDriver: true,
+        bounciness: 0,
+        speed: 20,
+      }).start();
+    },
+    [galleryPhotos.length, photoFrameWidth, photoTranslateX]
+  );
+
+  const photoSwipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          hasMultiplePhotos &&
+          photoFrameWidth > 0 &&
+          Math.abs(gestureState.dx) > 8 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+        onMoveShouldSetPanResponderCapture: (_, gestureState) =>
+          hasMultiplePhotos &&
+          photoFrameWidth > 0 &&
+          Math.abs(gestureState.dx) > 8 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+        onPanResponderGrant: () => {
+          beginGallerySwipe();
+          photoTranslateX.stopAnimation();
+        },
+        onPanResponderMove: (_, gestureState) => {
+          if (!hasMultiplePhotos || photoFrameWidth <= 0) {
+            return;
+          }
+          const baseOffset = -activePhotoIndex * photoFrameWidth;
+          const minOffset = -(galleryPhotos.length - 1) * photoFrameWidth;
+          let nextOffset = baseOffset + gestureState.dx;
+          if (nextOffset > 0) {
+            nextOffset = nextOffset * 0.32;
+          } else if (nextOffset < minOffset) {
+            nextOffset = minOffset + (nextOffset - minOffset) * 0.32;
+          }
+          photoTranslateX.setValue(nextOffset);
+        },
+        onPanResponderTerminationRequest: () => false,
+        onPanResponderRelease: (_, gestureState) => {
+          if (
+            !hasMultiplePhotos ||
+            photoFrameWidth <= 0 ||
+            Math.abs(gestureState.dx) <= Math.abs(gestureState.dy)
+          ) {
+            animateToPhotoIndex(activePhotoIndex);
+            endGallerySwipe();
+            return;
+          }
+          const threshold = Math.max(28, Math.min(120, photoFrameWidth * 0.2));
+          if (gestureState.dx <= -threshold) {
+            animateToPhotoIndex(activePhotoIndex + 1);
+          } else if (gestureState.dx >= threshold) {
+            animateToPhotoIndex(activePhotoIndex - 1);
+          } else {
+            animateToPhotoIndex(activePhotoIndex);
+          }
+          endGallerySwipe();
+        },
+        onPanResponderTerminate: () => {
+          animateToPhotoIndex(activePhotoIndex);
+          endGallerySwipe();
+        },
+      }),
+    [
+      activePhotoIndex,
+      animateToPhotoIndex,
+      beginGallerySwipe,
+      endGallerySwipe,
+      galleryPhotos.length,
+      hasMultiplePhotos,
+      photoFrameWidth,
+      photoTranslateX,
+    ]
+  );
 
   return (
     <View style={styles.feedCard}>
@@ -980,13 +1160,67 @@ function FeedCard({
         <Text style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</Text>
       </View>
 
-      <View style={styles.feedPhotoFrame}>
-        {photo ? (
+      <View
+        style={styles.feedPhotoFrame}
+        onLayout={(event) => {
+          const nextWidth = Math.round(event.nativeEvent.layout.width);
+          if (nextWidth > 0 && nextWidth !== photoFrameWidth) {
+            setPhotoFrameWidth(nextWidth);
+          }
+        }}
+        {...photoSwipeResponder.panHandlers}
+      >
+        {activePhoto ? (
           <>
-            <Image source={{ uri: photo.url }} style={styles.feedPhoto} resizeMode="cover" />
+            {hasMultiplePhotos && photoFrameWidth > 0 ? (
+              <Animated.View
+                style={[
+                  styles.feedPhotoTrack,
+                  {
+                    width: photoFrameWidth * galleryPhotos.length,
+                    transform: [{ translateX: photoTranslateX }],
+                  },
+                ]}
+                pointerEvents="none"
+              >
+                {galleryPhotos.map((photo, photoIndex) => (
+                  <Image
+                    key={`${item.id}-${photo.type}-${photo.url}-${photoIndex}`}
+                    source={{ uri: photo.url }}
+                    style={[styles.feedPhotoTrackSlide, { width: photoFrameWidth }]}
+                    resizeMode="cover"
+                    fadeDuration={0}
+                  />
+                ))}
+              </Animated.View>
+            ) : (
+              <Image
+                source={{ uri: activePhoto.url }}
+                style={styles.feedPhotoStatic}
+                resizeMode="cover"
+                fadeDuration={0}
+              />
+            )}
             <View style={styles.photoTypeChip}>
-              <Text style={styles.photoTypeChipText}>{PHOTO_TYPE_LABELS[photo.type]}</Text>
+              <Text style={styles.photoTypeChipText}>
+                {PHOTO_TYPE_LABELS[activePhoto.type]}
+              </Text>
             </View>
+            {hasMultiplePhotos ? (
+              <View style={styles.photoDotRow}>
+                {galleryPhotos.map((_, dotIndex) => (
+                  <Pressable
+                    key={`${item.id}-dot-${dotIndex}`}
+                    onPress={() => animateToPhotoIndex(dotIndex)}
+                    hitSlop={6}
+                    style={[
+                      styles.photoDot,
+                      dotIndex === activePhotoIndex ? styles.photoDotActive : null,
+                    ]}
+                  />
+                ))}
+              </View>
+            ) : null}
           </>
         ) : (
           <View style={styles.feedPhotoFallback}>
@@ -1000,17 +1234,38 @@ function FeedCard({
         {metaFields.length > 0 ? (
           <Text style={styles.feedMetaText}>{metaFields.join(" · ")}</Text>
         ) : null}
+        {item.tasted_with_users.length > 0 ? (
+          <Text style={styles.feedTastedWithText}>
+            Tasted with:{" "}
+            {item.tasted_with_users
+              .map((user) => user.display_name ?? user.email ?? "Unknown")
+              .join(", ")}
+          </Text>
+        ) : null}
       </View>
 
       {notes ? (
-        <Pressable style={styles.notesWrap} onPress={onToggleNotes}>
+        <Pressable
+          style={styles.notesWrap}
+          onPress={onToggleNotes}
+          disabled={!canToggleNotes}
+        >
           <Text
             style={styles.notesText}
             numberOfLines={notesExpanded ? undefined : 2}
+            onTextLayout={(event) => {
+              if (notesExpanded) {
+                return;
+              }
+              const nextTruncated = event.nativeEvent.lines.length > 2;
+              if (nextTruncated !== isNotesTruncated) {
+                setIsNotesTruncated(nextTruncated);
+              }
+            }}
           >
             {notes}
           </Text>
-          {notes.length > 120 ? (
+          {canToggleNotes ? (
             <Text style={styles.notesToggleText}>
               {notesExpanded ? "Show less" : "Read more"}
             </Text>
@@ -1031,7 +1286,7 @@ function FeedCard({
 
       <View style={styles.feedInteractionRow}>
         <View>
-          {item.can_comment ? (
+          {showCommentsControl ? (
             <Pressable
               onPress={onToggleComments}
               style={[
@@ -1147,6 +1402,14 @@ function FeedCard({
                   >
                     {comment.is_deleted ? "[deleted]" : comment.body}
                   </Text>
+                  {!comment.is_deleted && showCommentsControl ? (
+                    <Pressable
+                      onPress={() => onSetReplyTarget(comment.id)}
+                      style={styles.replyActionButton}
+                    >
+                      <Text style={styles.replyActionText}>Reply</Text>
+                    </Pressable>
+                  ) : null}
                   {comment.replies.length > 0 ? (
                     <View style={styles.replyList}>
                       {comment.replies.map((reply) => (
@@ -1175,12 +1438,20 @@ function FeedCard({
               ))}
             </View>
           )}
-          {item.can_comment ? (
+          {showCommentsControl ? (
             <View style={styles.commentComposer}>
+              {replyTargetName ? (
+                <View style={styles.replyTargetRow}>
+                  <Text style={styles.replyTargetText}>Replying to {replyTargetName}</Text>
+                  <Pressable onPress={onClearReplyTarget}>
+                    <Text style={styles.replyTargetCancel}>Cancel</Text>
+                  </Pressable>
+                </View>
+              ) : null}
               <TextInput
                 value={commentDraft}
                 onChangeText={onChangeCommentDraft}
-                placeholder="Write a comment..."
+                placeholder={replyTargetName ? "Write a reply..." : "Write a comment..."}
                 placeholderTextColor="#71717a"
                 style={styles.commentInput}
                 multiline
@@ -1196,7 +1467,7 @@ function FeedCard({
                 ]}
               >
                 <Text style={styles.commentSubmitButtonText}>
-                  {postingComment ? "Posting..." : "Post"}
+                  {postingComment ? "Posting..." : replyTargetName ? "Post reply" : "Post"}
                 </Text>
               </Pressable>
             </View>
@@ -1239,6 +1510,10 @@ export default function FeedScreen() {
   >({});
   const [commentDraftByEntryId, setCommentDraftByEntryId] = useState<
     Record<string, string>
+  >({});
+  const [isGallerySwipeActive, setIsGallerySwipeActive] = useState(false);
+  const [replyTargetByEntryId, setReplyTargetByEntryId] = useState<
+    Record<string, string | null>
   >({});
   const [loadingCommentsByEntryId, setLoadingCommentsByEntryId] = useState<
     Record<string, boolean>
@@ -1416,7 +1691,16 @@ export default function FeedScreen() {
       return;
     }
     const body = (commentDraftByEntryId[entryId] ?? "").trim();
+    const replyTargetId = replyTargetByEntryId[entryId] ?? null;
+    const canComment = entries.find((entry) => entry.id === entryId)?.can_comment ?? false;
     if (!body) {
+      return;
+    }
+    if (!canComment) {
+      setCommentErrorByEntryId((current) => ({
+        ...current,
+        [entryId]: null,
+      }));
       return;
     }
     if (postingCommentByEntryId[entryId]) {
@@ -1436,7 +1720,7 @@ export default function FeedScreen() {
       entry_id: entryId,
       user_id: user.id,
       body,
-      parent_comment_id: null,
+      parent_comment_id: replyTargetId,
     });
 
     if (error) {
@@ -1454,6 +1738,10 @@ export default function FeedScreen() {
     setCommentDraftByEntryId((current) => ({
       ...current,
       [entryId]: "",
+    }));
+    setReplyTargetByEntryId((current) => ({
+      ...current,
+      [entryId]: null,
     }));
     await loadCommentsForEntry(entryId, { force: true });
 
@@ -1559,6 +1847,7 @@ export default function FeedScreen() {
         setExpandedCommentsByEntryId({});
         setCommentsByEntryId({});
         setCommentDraftByEntryId({});
+        setReplyTargetByEntryId({});
         setLoadingCommentsByEntryId({});
         setPostingCommentByEntryId({});
         setCommentErrorByEntryId({});
@@ -1571,6 +1860,7 @@ export default function FeedScreen() {
         setExpandedCommentsByEntryId({});
         setCommentsByEntryId({});
         setCommentDraftByEntryId({});
+        setReplyTargetByEntryId({});
         setLoadingCommentsByEntryId({});
         setPostingCommentByEntryId({});
         setCommentErrorByEntryId({});
@@ -1628,6 +1918,7 @@ export default function FeedScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
+        scrollEnabled={!isGallerySwipeActive}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -1690,44 +1981,72 @@ export default function FeedScreen() {
           </View>
         ) : (
           <View style={styles.feedStack}>
-            {entries.map((entry) => (
-              <FeedCard
-                key={entry.id}
-                item={entry}
-                notesExpanded={Boolean(expandedNotesByEntryId[entry.id])}
-                onToggleNotes={() =>
-                  setExpandedNotesByEntryId((current) => ({
-                    ...current,
-                    [entry.id]: !current[entry.id],
-                  }))
-                }
-                commentsExpanded={Boolean(expandedCommentsByEntryId[entry.id])}
-                onToggleComments={() => toggleCommentsExpanded(entry.id)}
-                commentCount={countComments(
-                  commentsByEntryId[entry.id],
-                  entry.comment_count
-                )}
-                comments={commentsByEntryId[entry.id] ?? []}
-                commentsLoading={Boolean(loadingCommentsByEntryId[entry.id])}
-                commentDraft={commentDraftByEntryId[entry.id] ?? ""}
-                onChangeCommentDraft={(value) =>
-                  setCommentDraftByEntryId((current) => ({
-                    ...current,
-                    [entry.id]: value,
-                  }))
-                }
-                onSubmitComment={() => void submitCommentForEntry(entry.id)}
-                postingComment={Boolean(postingCommentByEntryId[entry.id])}
-                commentError={commentErrorByEntryId[entry.id] ?? null}
-                reactionPickerOpen={reactionPopupEntryId === entry.id}
-                onToggleReactionPicker={() =>
-                  setReactionPopupEntryId((current) =>
-                    current === entry.id ? null : entry.id
-                  )
-                }
-                onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
-              />
-            ))}
+            {entries.map((entry) => {
+              const entryComments = commentsByEntryId[entry.id] ?? [];
+              const replyTargetId = replyTargetByEntryId[entry.id] ?? null;
+              const replyTarget =
+                replyTargetId && entryComments.length > 0
+                  ? entryComments.find((comment) => comment.id === replyTargetId) ?? null
+                  : null;
+
+              return (
+                <FeedCard
+                  key={entry.id}
+                  item={entry}
+                  notesExpanded={Boolean(expandedNotesByEntryId[entry.id])}
+                  onToggleNotes={() =>
+                    setExpandedNotesByEntryId((current) => ({
+                      ...current,
+                      [entry.id]: !current[entry.id],
+                    }))
+                  }
+                  commentsExpanded={Boolean(expandedCommentsByEntryId[entry.id])}
+                  onToggleComments={() => toggleCommentsExpanded(entry.id)}
+                  onGallerySwipeStart={() =>
+                    setIsGallerySwipeActive((current) => (current ? current : true))
+                  }
+                  onGallerySwipeEnd={() =>
+                    setIsGallerySwipeActive((current) => (current ? false : current))
+                  }
+                  replyTargetName={replyTarget?.author_name ?? null}
+                  onSetReplyTarget={(commentId) =>
+                    setReplyTargetByEntryId((current) => ({
+                      ...current,
+                      [entry.id]: current[entry.id] === commentId ? null : commentId,
+                    }))
+                  }
+                  onClearReplyTarget={() =>
+                    setReplyTargetByEntryId((current) => ({
+                      ...current,
+                      [entry.id]: null,
+                    }))
+                  }
+                  commentCount={countComments(
+                    commentsByEntryId[entry.id],
+                    entry.comment_count
+                  )}
+                  comments={entryComments}
+                  commentsLoading={Boolean(loadingCommentsByEntryId[entry.id])}
+                  commentDraft={commentDraftByEntryId[entry.id] ?? ""}
+                  onChangeCommentDraft={(value) =>
+                    setCommentDraftByEntryId((current) => ({
+                      ...current,
+                      [entry.id]: value,
+                    }))
+                  }
+                  onSubmitComment={() => void submitCommentForEntry(entry.id)}
+                  postingComment={Boolean(postingCommentByEntryId[entry.id])}
+                  commentError={commentErrorByEntryId[entry.id] ?? null}
+                  reactionPickerOpen={reactionPopupEntryId === entry.id}
+                  onToggleReactionPicker={() =>
+                    setReactionPopupEntryId((current) =>
+                      current === entry.id ? null : entry.id
+                    )
+                  }
+                  onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
+                />
+              );
+            })}
           </View>
         )}
 
@@ -1883,7 +2202,7 @@ const styles = StyleSheet.create({
   },
   feedPhotoFrame: {
     width: "100%",
-    aspectRatio: 3 / 2,
+    aspectRatio: 7 / 5,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
@@ -1891,9 +2210,40 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.45)",
     position: "relative",
   },
-  feedPhoto: {
+  feedPhotoTrack: {
+    flexDirection: "row",
     width: "100%",
     height: "100%",
+  },
+  feedPhotoTrackSlide: {
+    height: "100%",
+  },
+  feedPhotoStatic: {
+    width: "100%",
+    height: "100%",
+  },
+  photoDotRow: {
+    position: "absolute",
+    bottom: 8,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  photoDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(161,161,170,0.85)",
+  },
+  photoDotActive: {
+    backgroundColor: "#fcd34d",
   },
   feedPhotoFallback: {
     flex: 1,
@@ -1935,6 +2285,12 @@ const styles = StyleSheet.create({
     color: "#a1a1aa",
     fontSize: 13,
     lineHeight: 18,
+  },
+  feedTastedWithText: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 4,
   },
   feedValueRow: {
     flexDirection: "row",
@@ -2200,11 +2556,41 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontStyle: "italic",
   },
+  replyActionButton: {
+    alignSelf: "flex-start",
+  },
+  replyActionText: {
+    color: "#d4d4d8",
+    fontSize: 11,
+    fontWeight: "600",
+  },
   commentComposer: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.1)",
     paddingTop: 8,
     gap: 8,
+  },
+  replyTargetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  replyTargetText: {
+    color: "#d4d4d8",
+    fontSize: 11,
+    flex: 1,
+  },
+  replyTargetCancel: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "600",
   },
   commentInput: {
     borderRadius: 10,
