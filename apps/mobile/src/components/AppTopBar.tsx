@@ -260,6 +260,11 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     router.replace("/(auth)/sign-in");
   };
 
+  const onOpenLegalPage = (path: "/privacy" | "/terms") => {
+    setMenuOpen(false);
+    router.push(path);
+  };
+
   const onRespondToFriendRequest = async (
     requestId: string,
     action: "accept" | "decline"
@@ -484,6 +489,15 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             <Pressable style={styles.menuItem} onPress={() => void onSignOut()}>
               <AppText style={styles.menuItemText}>Sign out</AppText>
             </Pressable>
+            <View style={styles.menuLegalRow}>
+              <Pressable onPress={() => void onOpenLegalPage("/privacy")}>
+                <AppText style={styles.menuLegalLink}>Privacy</AppText>
+              </Pressable>
+              <AppText style={styles.menuLegalSeparator}>{" \u00B7 "}</AppText>
+              <Pressable onPress={() => void onOpenLegalPage("/terms")}>
+                <AppText style={styles.menuLegalLink}>Terms</AppText>
+              </Pressable>
+            </View>
           </View>
         </View>
       ) : null}
@@ -679,5 +693,23 @@ const styles = StyleSheet.create({
   },
   menuItemTextActive: {
     color: "#fef3c7",
+  },
+  menuLegalRow: {
+    paddingTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuLegalLink: {
+    color: "#71717a",
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    fontWeight: "600",
+  },
+  menuLegalSeparator: {
+    color: "#71717a",
+    fontSize: 11,
+    letterSpacing: 1.2,
   },
 });
