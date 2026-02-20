@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextInputProps,
   View,
 } from "react-native";
 import { Link, router } from "expo-router";
@@ -23,6 +24,8 @@ import {
   normalizePhone,
 } from "@cellarsnap/shared";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
+
+const INPUT_SELECTION_COLOR = "#52525b";
 
 type PhoneSignupFields = {
   username: string;
@@ -248,6 +251,8 @@ export default function SignUpScreen() {
                   setPhoneFields((previous) => ({ ...previous, username: value }))
                 }
                 autoCapitalize="none"
+                autoComplete="username"
+                textContentType="username"
                 placeholder="At least 3 characters"
               />
               <Field
@@ -258,6 +263,8 @@ export default function SignUpScreen() {
                 }
                 keyboardType="phone-pad"
                 autoCapitalize="none"
+                autoComplete="tel"
+                textContentType="telephoneNumber"
                 placeholder="(555) 123-4567"
               />
               <Field
@@ -268,6 +275,8 @@ export default function SignUpScreen() {
                 }
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
                 placeholder="you@example.com"
               />
             </>
@@ -278,6 +287,8 @@ export default function SignUpScreen() {
               onChange={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               placeholder="you@example.com"
             />
           )}
@@ -287,6 +298,9 @@ export default function SignUpScreen() {
             value={password}
             onChange={setPassword}
             secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
             placeholder="********"
           />
           <Pressable onPress={() => setShowPassword((previous) => !previous)}>
@@ -298,6 +312,9 @@ export default function SignUpScreen() {
             value={confirmPassword}
             onChange={setConfirmPassword}
             secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
             placeholder="********"
           />
 
@@ -341,7 +358,9 @@ function Field({
   onChange,
   secureTextEntry = false,
   autoCapitalize = "sentences",
+  autoComplete,
   keyboardType = "default",
+  textContentType,
   placeholder,
 }: {
   label: string;
@@ -349,12 +368,14 @@ function Field({
   onChange: (value: string) => void;
   secureTextEntry?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  autoComplete?: TextInputProps["autoComplete"];
   keyboardType?:
     | "default"
     | "email-address"
     | "numeric"
     | "phone-pad"
     | "number-pad";
+  textContentType?: TextInputProps["textContentType"];
   placeholder?: string;
 }) {
   return (
@@ -366,7 +387,10 @@ function Field({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete}
+        textContentType={textContentType}
         autoCorrect={false}
+        selectionColor={INPUT_SELECTION_COLOR}
         placeholder={placeholder}
         placeholderTextColor="#71717a"
         style={styles.input}

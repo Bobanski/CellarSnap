@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,6 +22,31 @@ type GroupScheme = "region" | "vintage" | "varietal";
 type LibraryViewMode = "grouped" | "all";
 type ControlPanel = "sort" | "filter" | "organize" | null;
 type QprLevel = "extortion" | "pricey" | "mid" | "good_value" | "absolute_steal";
+type PrimaryGrape = {
+  id: string;
+  name: string;
+  position: number;
+};
+type EntryPrimaryGrapeRow = {
+  entry_id: string;
+  position: number;
+  grape_varieties:
+    | {
+        id: string;
+        name: string;
+      }
+    | {
+        id: string;
+        name: string;
+      }[]
+    | null;
+};
+type EntryPhotoRow = {
+  entry_id: string;
+  path: string;
+  position: number;
+  created_at: string;
+};
 
 const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   extortion: "Extortion",
@@ -31,10 +57,13 @@ const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
 };
 
 type MobileEntry = WineEntrySummary & {
+  label_image_path: string | null;
+  label_image_url?: string | null;
   country: string | null;
   region: string | null;
   appellation: string | null;
   classification: string | null;
+  primary_grapes?: PrimaryGrape[];
   qpr_level: QprLevel | null;
 };
 
@@ -45,6 +74,37 @@ type EntryGroup = {
 };
 
 const GROUP_PREVIEW_COUNT = 4;
+
+function toWordSet(value: string | null | undefined): Set<string> {
+  const normalized = value?.toLowerCase() ?? "";
+  const words = normalized.match(/[a-z0-9]+/g) ?? [];
+  return new Set(words.filter((word) => word.length >= 2));
+}
+
+function shouldHideProducerInEntryTile(
+  wineName: string | null | undefined,
+  producer: string | null | undefined
+) {
+  const wineWords = toWordSet(wineName);
+  const producerWords = toWordSet(producer);
+
+  if (wineWords.size === 0 || producerWords.size === 0) {
+    return false;
+  }
+
+  let sharedWordCount = 0;
+  for (const word of producerWords) {
+    if (!wineWords.has(word)) {
+      continue;
+    }
+    sharedWordCount += 1;
+    if (sharedWordCount >= 3) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 function formatConsumedDate(raw: string) {
   const date = new Date(`${raw}T00:00:00`);
@@ -80,11 +140,29 @@ function getGroupLabel(entry: MobileEntry, scheme: GroupScheme) {
   if (scheme === "vintage") {
     return normalizeLabel(entry.vintage, "Unknown vintage");
   }
+  const primaryVarietal = entry.primary_grapes?.find(
+    (grape) => grape.name.trim().length > 0
+  )?.name.trim();
+  if (primaryVarietal) {
+    return primaryVarietal;
+  }
   return entry.classification?.trim() || "Unknown varietal";
 }
 
 function createGroupId(scheme: GroupScheme, label: string) {
   return `${scheme}:${label.toLowerCase()}`;
+}
+
+function normalizeVariety(
+  variety: EntryPrimaryGrapeRow["grape_varieties"]
+): { id: string; name: string } | null {
+  if (!variety) {
+    return null;
+  }
+  if (Array.isArray(variety)) {
+    return variety[0] ?? null;
+  }
+  return variety;
 }
 
 function entryMatchesSearch(entry: MobileEntry, query: string) {
@@ -100,7 +178,12 @@ function entryMatchesSearch(entry: MobileEntry, query: string) {
     entry.rating,
     entry.qpr_level,
   ];
-  return fields.some((field) => includesSearchValue(field, query));
+  if (fields.some((field) => includesSearchValue(field, query))) {
+    return true;
+  }
+  return Boolean(
+    entry.primary_grapes?.some((grape) => includesSearchValue(grape.name, query))
+  );
 }
 
 function getDisplayRating(rating: number | null): string | null {
@@ -128,21 +211,36 @@ function Pill({
 }
 
 function EntryCard({ item }: { item: MobileEntry }) {
-  const producerVintage = [item.producer, item.vintage].filter(Boolean).join(" - ");
+  const hideProducer = shouldHideProducerInEntryTile(item.wine_name, item.producer);
+  const producer = hideProducer ? null : (item.producer?.trim() ?? null);
+  const vintage = item.vintage?.trim() ?? null;
   const displayRating = getDisplayRating(item.rating);
   return (
     <View style={styles.entryCard}>
       <View style={styles.photoBox}>
-        <Text style={styles.photoText}>No photo</Text>
+        {item.label_image_url ? (
+          <Image source={{ uri: item.label_image_url }} style={styles.photoImage} resizeMode="cover" />
+        ) : (
+          <Text style={styles.photoText}>No photo</Text>
+        )}
       </View>
       <View style={styles.entryMain}>
         <View>
           <Text style={styles.entryTitle}>{item.wine_name?.trim() || "Untitled wine"}</Text>
-          <Text style={styles.entrySubtitle}>{producerVintage || "No producer or vintage"}</Text>
+          {producer || vintage ? (
+            <Text style={styles.entrySubtitle}>
+              {producer ?? ""}
+              {producer && vintage ? ` · ${vintage}` : vintage ?? ""}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.entryMeta}>
-          <View style={styles.ratingWrap}>
-            {displayRating ? <Text style={styles.ratingText}>{displayRating}</Text> : null}
+          <View style={styles.ratingStack}>
+            {displayRating ? (
+              <View style={styles.ratingWrap}>
+                <Text style={styles.ratingText}>{displayRating}</Text>
+              </View>
+            ) : null}
             {item.qpr_level ? (
               <Text style={[styles.qprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
                 {QPR_LEVEL_LABELS[item.qpr_level]}
@@ -234,7 +332,19 @@ export default function EntriesScreen() {
       else groups.set(id, { id, label, entries: [entry] });
     });
     const sortedGroups = Array.from(groups.values());
-    sortedGroups.sort((left, right) => left.label.localeCompare(right.label));
+    sortedGroups.sort((left, right) => {
+      if (groupScheme === "vintage") {
+        if (left.label === "Unknown vintage") return 1;
+        if (right.label === "Unknown vintage") return -1;
+        return right.label.localeCompare(left.label, undefined, { numeric: true });
+      }
+      const leftUnknown = left.label.startsWith("Unknown ");
+      const rightUnknown = right.label.startsWith("Unknown ");
+      if (leftUnknown !== rightUnknown) {
+        return leftUnknown ? 1 : -1;
+      }
+      return left.label.localeCompare(right.label);
+    });
     return sortedGroups;
   }, [groupScheme, libraryViewMode, sortedEntries]);
 
@@ -246,13 +356,88 @@ export default function EntriesScreen() {
 
       const { data, error } = await supabase
         .from("wine_entries")
-        .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, country, region, appellation, classification, qpr_level")
+        .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level")
         .eq("user_id", user.id)
         .order("consumed_at", { ascending: false })
         .limit(100);
 
-      if (error) setErrorMessage(error.message);
-      else setEntries((data ?? []) as MobileEntry[]);
+      if (error) {
+        setErrorMessage(error.message);
+      } else {
+        const rows = (data ?? []) as MobileEntry[];
+        const entryIds = rows.map((entry) => entry.id);
+        const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
+        const labelPathByEntryId = new Map<string, string>();
+        const signedUrlByPath = new Map<string, string | null>();
+
+        if (entryIds.length > 0) {
+          const { data: primaryGrapeRows, error: primaryGrapeError } = await supabase
+            .from("entry_primary_grapes")
+            .select("entry_id, position, grape_varieties(id, name)")
+            .in("entry_id", entryIds)
+            .order("position", { ascending: true });
+
+          if (!primaryGrapeError && primaryGrapeRows) {
+            (primaryGrapeRows as EntryPrimaryGrapeRow[]).forEach((row) => {
+              const variety = normalizeVariety(row.grape_varieties);
+              if (!variety) {
+                return;
+              }
+              const current = primaryGrapeMap.get(row.entry_id) ?? [];
+              current.push({
+                id: variety.id,
+                name: variety.name,
+                position: row.position,
+              });
+              primaryGrapeMap.set(row.entry_id, current);
+            });
+          }
+
+          const { data: labelPhotos, error: labelPhotoError } = await supabase
+            .from("entry_photos")
+            .select("entry_id, path, position, created_at")
+            .eq("type", "label")
+            .in("entry_id", entryIds)
+            .order("position", { ascending: true })
+            .order("created_at", { ascending: true });
+
+          if (!labelPhotoError && labelPhotos) {
+            (labelPhotos as EntryPhotoRow[]).forEach((photo) => {
+              if (!labelPathByEntryId.has(photo.entry_id)) {
+                labelPathByEntryId.set(photo.entry_id, photo.path);
+              }
+            });
+          }
+        }
+
+        const labelPathsToSign = Array.from(
+          new Set(
+            rows
+              .map((entry) => labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null)
+              .filter((path): path is string => Boolean(path && path !== "pending"))
+          )
+        );
+
+        await Promise.all(
+          labelPathsToSign.map(async (path) => {
+            const { data: signedUrl, error: signedUrlError } = await supabase.storage
+              .from("wine-photos")
+              .createSignedUrl(path, 60 * 60);
+            signedUrlByPath.set(path, signedUrlError ? null : signedUrl.signedUrl);
+          })
+        );
+
+        setEntries(
+          rows.map((entry) => {
+            const labelPath = labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null;
+            return {
+              ...entry,
+              label_image_url: labelPath ? signedUrlByPath.get(labelPath) ?? null : null,
+              primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
+            };
+          })
+        );
+      }
 
       setIsLoading(false);
       setIsRefreshing(false);
@@ -284,10 +469,6 @@ export default function EntriesScreen() {
     );
   }
 
-  const sortSummary = sortBy === "consumed_at" ? "Date" : sortBy === "rating" ? "Rating" : "Vintage";
-  const filterSummary = filterType ? (filterType === "country" ? `Country: ${filterValue || "all"}` : `${filterType} range`) : "None";
-  const organizeSummary = libraryViewMode === "all" ? "Full list" : `Grouped by ${groupScheme}`;
-
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -310,9 +491,9 @@ export default function EntriesScreen() {
 
         <View style={styles.controls}>
           <View style={styles.controlButtons}>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Sort</Text><Text style={styles.controlBtnSummary}>{sortSummary}</Text></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Filter</Text><Text style={styles.controlBtnSummary}>{filterSummary}</Text></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Organize</Text><Text style={styles.controlBtnSummary}>{organizeSummary}</Text></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Sort</Text></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Filter</Text></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Organize</Text></Pressable>
           </View>
           <View style={styles.searchRow}>
             <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, or varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
@@ -396,13 +577,12 @@ const styles = StyleSheet.create({
   header: { gap: 6 },
   eyebrow: { color: "#fcd34d", fontSize: 11, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
   title: { color: "#fafafa", fontSize: 29, fontWeight: "700" },
-  subtitle: { color: "#d4d4d8", fontSize: 14, lineHeight: 20 },
+  subtitle: { color: "#d4d4d8", fontSize: 13, lineHeight: 18 },
   controls: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 12, gap: 9 },
   controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 11, paddingVertical: 8, gap: 2 },
+  controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 11, paddingVertical: 8 },
   controlBtnActive: { borderColor: "rgba(252,211,77,0.7)", backgroundColor: "rgba(251,191,36,0.15)" },
   controlBtnLabel: { color: "#e4e4e7", fontSize: 12, fontWeight: "700" },
-  controlBtnSummary: { color: "#a1a1aa", fontSize: 11 },
   searchRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   searchInput: { flex: 1, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.3)", color: "#f4f4f5", paddingHorizontal: 14, paddingVertical: 10, fontSize: 14 },
   panel: { borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(0,0,0,0.25)", padding: 10, gap: 8 },
@@ -422,21 +602,23 @@ const styles = StyleSheet.create({
   groupCard: { borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 10, gap: 8 },
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   groupTitle: { color: "#fafafa", fontSize: 17, fontWeight: "700" },
-  groupCount: { color: "#a1a1aa", fontSize: 12, marginTop: 2 },
+  groupCount: { color: "#a1a1aa", fontSize: 11, marginTop: 2 },
   entryCard: { flexDirection: "row", gap: 14, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 14 },
-  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
-  photoText: { color: "#71717a", fontSize: 11, textAlign: "center" },
+  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  photoImage: { width: "100%", height: "100%" },
+  photoText: { color: "#71717a", fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
   entryMain: { flex: 1, justifyContent: "space-between", gap: 8 },
-  entryTitle: { color: "#fafafa", fontSize: 17, fontWeight: "700" },
-  entrySubtitle: { marginTop: 4, color: "#a1a1aa", fontSize: 13 },
-  ratingWrap: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
-  qprTag: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, overflow: "hidden", fontSize: 10, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase" },
+  entryTitle: { color: "#fafafa", fontSize: 14, fontWeight: "700" },
+  entrySubtitle: { marginTop: 3, color: "#a1a1aa", fontSize: 12 },
+  ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
+  ratingStack: { flex: 1, minWidth: 0, gap: 4 },
+  qprTag: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden", fontSize: 8, fontWeight: "700", letterSpacing: 0.25, textTransform: "uppercase" },
   qpr_extortion: { borderColor: "rgba(251, 113, 133, 0.4)", backgroundColor: "rgba(251, 113, 133, 0.1)", color: "#fecdd3" },
   qpr_pricey: { borderColor: "rgba(248, 113, 113, 0.4)", backgroundColor: "rgba(248, 113, 113, 0.1)", color: "#fecaca" },
   qpr_mid: { borderColor: "rgba(251, 191, 36, 0.4)", backgroundColor: "rgba(251, 191, 36, 0.1)", color: "#fde68a" },
   qpr_good_value: { borderColor: "rgba(74, 222, 128, 0.4)", backgroundColor: "rgba(74, 222, 128, 0.1)", color: "#bbf7d0" },
   qpr_absolute_steal: { borderColor: "rgba(34, 197, 94, 0.4)", backgroundColor: "rgba(34, 197, 94, 0.1)", color: "#86efac" },
-  entryMeta: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  ratingText: { color: "#fcd34d", fontSize: 17, fontWeight: "800" },
-  entryDate: { color: "#a1a1aa", fontSize: 12 },
+  entryMeta: { marginTop: 6, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
+  ratingText: { color: "#fcd34d", fontSize: 12, fontWeight: "800" },
+  entryDate: { color: "#a1a1aa", fontSize: 12, flexShrink: 0, textAlign: "right" },
 });

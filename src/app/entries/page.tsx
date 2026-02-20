@@ -183,10 +183,10 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
             </p>
           ) : null}
         </div>
-        <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+        <div className="mt-2 flex items-start justify-between gap-2 text-xs text-zinc-400">
           {((typeof entry.rating === "number" && !Number.isNaN(entry.rating)) ||
             entry.qpr_level) ? (
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
               {typeof entry.rating === "number" && !Number.isNaN(entry.rating) ? (
                 <RatingBadge rating={entry.rating} variant="text" />
               ) : null}
@@ -195,7 +195,9 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
           ) : (
             <span />
           )}
-          <span>{formatConsumedDate(entry.consumed_at)}</span>
+          <span className="shrink-0 text-right leading-tight sm:leading-normal">
+            {formatConsumedDate(entry.consumed_at)}
+          </span>
         </div>
       </div>
     </Link>

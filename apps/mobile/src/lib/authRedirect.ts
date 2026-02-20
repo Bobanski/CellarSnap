@@ -23,9 +23,16 @@ function isEmailOtpType(value: string): value is EmailOtpType {
   return EMAIL_OTP_TYPES.includes(value as EmailOtpType);
 }
 
-export async function handleIncomingAuthUrl(url: string) {
+export type AuthRedirectResult = {
+  isRecovery: boolean;
+};
+
+export async function handleIncomingAuthUrl(url: string): Promise<AuthRedirectResult> {
   const parsed = Linking.parse(url);
   const query = parsed.queryParams ?? {};
+
+  const otpTypeRaw = asQueryStringValue(query.type);
+  const isRecovery = otpTypeRaw === "recovery";
 
   const accessToken = asQueryStringValue(query.access_token);
   const refreshToken = asQueryStringValue(query.refresh_token);
@@ -34,21 +41,23 @@ export async function handleIncomingAuthUrl(url: string) {
       access_token: accessToken,
       refresh_token: refreshToken,
     });
-    return;
+    return { isRecovery };
   }
 
   const authCode = asQueryStringValue(query.code);
   if (authCode) {
     await supabase.auth.exchangeCodeForSession(authCode);
-    return;
+    return { isRecovery };
   }
 
   const tokenHash = asQueryStringValue(query.token_hash);
-  const otpTypeRaw = asQueryStringValue(query.type);
   if (tokenHash && otpTypeRaw && isEmailOtpType(otpTypeRaw)) {
     await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: otpTypeRaw,
     });
+    return { isRecovery: otpTypeRaw === "recovery" };
   }
+
+  return { isRecovery: false };
 }

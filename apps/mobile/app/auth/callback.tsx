@@ -10,11 +10,13 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     void (async () => {
       try {
+        let isRecovery = false;
         const currentUrl = await Linking.getInitialURL();
         if (currentUrl) {
-          await handleIncomingAuthUrl(currentUrl);
+          const result = await handleIncomingAuthUrl(currentUrl);
+          isRecovery = result.isRecovery;
         }
-        router.replace("/(app)/entries");
+        router.replace(isRecovery ? "/(auth)/reset-password" : "/(app)/entries");
       } catch (callbackError) {
         setError(
           callbackError instanceof Error

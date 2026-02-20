@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,7 +15,9 @@ import {
   resolveSignInIdentifier,
   type AuthMode,
 } from "@cellarsnap/shared";
-import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
+import { supabase } from "@/src/lib/supabase";
+
+const INPUT_SELECTION_COLOR = "#52525b";
 
 function getCredentialText(authMode: AuthMode) {
   return authMode === "phone" ? "Username or phone number" : "Email or username";
@@ -34,7 +35,7 @@ export default function SignInScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
-  const canSubmit = identifier.trim().length > 0 && password.length > 0 && !isSubmitting;
+  const canSubmit = !isSubmitting;
 
   const submitPasswordSignIn = async () => {
     setIsSubmitting(true);
@@ -42,9 +43,20 @@ export default function SignInScreen() {
     setInfoMessage("Signing in...");
 
     try {
+      const normalizedIdentifier = identifier.trim();
+      if (!normalizedIdentifier) {
+        setErrorMessage(
+          authMode === "phone"
+            ? "Username or phone number is required."
+            : "Email or username is required."
+        );
+        setInfoMessage(null);
+        return;
+      }
+
       const resolved = await resolveSignInIdentifier({
         client: supabase,
-        identifier,
+        identifier: normalizedIdentifier,
         mode: "auto",
       });
 
@@ -61,12 +73,10 @@ export default function SignInScreen() {
           ? { phone, password }
           : email
             ? { email, password }
-            : phone
-              ? { phone, password }
-              : null;
+            : null;
 
       if (!credential) {
-        setErrorMessage("Unable to resolve a valid sign-in credential.");
+        setErrorMessage("No account matches that sign-in identifier.");
         setInfoMessage(null);
         return;
       }
@@ -79,42 +89,8 @@ export default function SignInScreen() {
       }
 
       router.replace("/(app)/entries");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Unable to sign in right now."
-      );
-      setInfoMessage(null);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const sendMagicLink = async () => {
-    const normalizedEmail = identifier.trim().toLowerCase();
-    if (!normalizedEmail.includes("@")) {
-      setErrorMessage("Enter an email address to send a magic link.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    setInfoMessage("Sending magic link...");
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: buildAuthRedirectUrl(),
-        },
-      });
-      if (error) {
-        setErrorMessage(error.message);
-        setInfoMessage(null);
-        return;
-      }
-      setInfoMessage("Magic link sent. Open the link on this device.");
     } catch {
-      setErrorMessage("Unable to send magic link right now.");
+      setErrorMessage("Unable to sign in. Check your connection and try again.");
       setInfoMessage(null);
     } finally {
       setIsSubmitting(false);
@@ -149,6 +125,9 @@ export default function SignInScreen() {
               onChangeText={setIdentifier}
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete={authMode === "phone" ? "username" : "email"}
+              textContentType={authMode === "phone" ? "username" : "emailAddress"}
+              selectionColor={INPUT_SELECTION_COLOR}
               placeholder={
                 authMode === "phone"
                   ? "username or (555) 123-4567"
@@ -171,6 +150,11 @@ export default function SignInScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="current-password"
+                textContentType="password"
+                selectionColor={INPUT_SELECTION_COLOR}
                 placeholder="********"
                 placeholderTextColor="#71717a"
                 style={styles.passwordInput}
@@ -192,28 +176,24 @@ export default function SignInScreen() {
             disabled={!canSubmit}
             style={[styles.primaryButton, !canSubmit ? styles.disabledButton : null]}
           >
-            {isSubmitting ? (
-              <ActivityIndicator color="#09090b" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Sign In</Text>
-            )}
+            <Text style={styles.primaryButtonText}>{isSubmitting ? "Signing in..." : "Sign In"}</Text>
           </Pressable>
 
-          <Pressable
-            onPress={() => void sendMagicLink()}
-            disabled={isSubmitting}
-            style={styles.secondaryButton}
-          >
-            <Text style={styles.secondaryButtonText}>Send Magic Link</Text>
-          </Pressable>
-
-          <Link href="/(auth)/sign-up" style={styles.linkButtonText}>
-            Create Account
+          <Link href="/(auth)/sign-up" asChild>
+            <Pressable style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Create Account</Text>
+            </Pressable>
           </Link>
+
+          <View style={styles.forgotPasswordWrap}>
+            <Link href="/(auth)/forgot-password" style={styles.forgotPasswordLink}>
+              Forgot password?
+            </Link>
+          </View>
 
           <View style={styles.legalRow}>
             <Text style={styles.legalLink}>Privacy</Text>
-            <Text style={styles.legalSeparator}> - </Text>
+            <Text style={styles.legalSeparator}> · </Text>
             <Text style={styles.legalLink}>Terms</Text>
           </View>
         </View>
@@ -380,7 +360,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
     alignItems: "center",
     paddingVertical: 12,
   },
@@ -389,10 +369,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  linkButtonText: {
-    color: "#e4e4e7",
-    fontSize: 14,
-    textAlign: "center",
+  forgotPasswordWrap: {
+    alignItems: "center",
+  },
+  forgotPasswordLink: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
     fontWeight: "600",
   },
   legalRow: {

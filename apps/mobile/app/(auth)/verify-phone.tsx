@@ -14,12 +14,19 @@ import { Link, useLocalSearchParams, router } from "expo-router";
 import { PHONE_FORMAT_MESSAGE, normalizePhone } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 
+type VerifyMode = "signup" | "recovery";
+
 export default function VerifyPhoneScreen() {
   const params = useLocalSearchParams<{
     phone?: string;
     username?: string;
     email?: string;
+    mode?: string;
   }>();
+  const mode = useMemo<VerifyMode>(
+    () => (params.mode === "recovery" ? "recovery" : "signup"),
+    [params.mode]
+  );
   const defaultPhone = useMemo(() => {
     const raw = typeof params.phone === "string" ? params.phone : "";
     const normalized = normalizePhone(raw);
@@ -66,6 +73,11 @@ export default function VerifyPhoneScreen() {
         return;
       }
 
+      if (mode === "recovery") {
+        router.replace("/(auth)/reset-password");
+        return;
+      }
+
       const userId = data.user?.id;
       if (userId && defaultUsername) {
         const { error: profileError } = await supabase.from("profiles").upsert(
@@ -106,6 +118,7 @@ export default function VerifyPhoneScreen() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         phone: normalizedPhone,
+        options: mode === "recovery" ? { shouldCreateUser: false } : undefined,
       });
       if (error) {
         setErrorMessage(error.message);
@@ -131,10 +144,14 @@ export default function VerifyPhoneScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headBlock}>
-            <Text style={styles.eyebrow}>Verify phone</Text>
-            <Text style={styles.title}>Enter your confirmation code</Text>
+            <Text style={styles.eyebrow}>{mode === "recovery" ? "Reset access" : "Verify phone"}</Text>
+            <Text style={styles.title}>
+              {mode === "recovery" ? "Enter your recovery code" : "Enter your confirmation code"}
+            </Text>
             <Text style={styles.subtitle}>
-              We sent a verification code to your phone number.
+              {mode === "recovery"
+                ? "We sent a recovery code to your phone number."
+                : "We sent a verification code to your phone number."}
             </Text>
           </View>
 
@@ -172,7 +189,7 @@ export default function VerifyPhoneScreen() {
             <Text style={styles.secondaryButtonText}>Resend code</Text>
           </Pressable>
 
-          <LinkText />
+          <LinkText mode={mode} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -208,7 +225,18 @@ function Field({
   );
 }
 
-function LinkText() {
+function LinkText({ mode }: { mode: VerifyMode }) {
+  if (mode === "recovery") {
+    return (
+      <View style={styles.legalRow}>
+        <Text style={styles.legalMuted}>Back to </Text>
+        <Link href="/(auth)/sign-in" style={styles.legalLink}>
+          sign in
+        </Link>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.legalRow}>
       <Text style={styles.legalMuted}>Back to </Text>
