@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  PixelRatio,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -1000,6 +1001,7 @@ function FeedCard({
   onToggleCommentMenu,
   onReportComment,
   onOpenAuthorProfile,
+  canOpenEntry,
   onOpenEntry,
 }: {
   item: MobileFeedEntry;
@@ -1033,6 +1035,7 @@ function FeedCard({
   onToggleCommentMenu: (commentId: string) => void;
   onReportComment: (commentId: string, targetUserId: string) => void;
   onOpenAuthorProfile: () => void;
+  canOpenEntry: () => boolean;
   onOpenEntry: () => void;
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
@@ -1180,12 +1183,12 @@ function FeedCard({
   }, [activePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
 
   const handleCardPress = useCallback(() => {
-    if (Date.now() < blockCardOpenUntilRef.current) {
+    if (Date.now() < blockCardOpenUntilRef.current || !canOpenEntry()) {
       return;
     }
     blockCardOpenUntilRef.current = Date.now() + 320;
     onOpenEntry();
-  }, [onOpenEntry]);
+  }, [canOpenEntry, onOpenEntry]);
 
   return (
     <View style={styles.feedCard}>
@@ -1257,7 +1260,7 @@ function FeedCard({
       <View
         style={styles.feedPhotoFrame}
         onLayout={(event) => {
-          const nextWidth = event.nativeEvent.layout.width;
+          const nextWidth = PixelRatio.roundToNearestPixel(event.nativeEvent.layout.width);
           if (nextWidth > 0 && Math.abs(nextWidth - photoFrameWidth) > 0.5) {
             setPhotoFrameWidth(nextWidth);
             if (galleryScrollRef.current && hasMultiplePhotos) {
@@ -1277,7 +1280,9 @@ function FeedCard({
                   galleryScrollRef.current = node;
                 }}
                 horizontal
-                pagingEnabled
+                snapToInterval={photoFrameWidth}
+                snapToAlignment="start"
+                disableIntervalMomentum
                 bounces={false}
                 directionalLockEnabled
                 nestedScrollEnabled
@@ -1351,13 +1356,6 @@ function FeedCard({
                     if (clampedIndex !== activePhotoIndex) {
                       setActivePhotoIndex(clampedIndex);
                     }
-                    const snappedX = clampedIndex * photoFrameWidth;
-                    if (Math.abs(offsetX - snappedX) > 0.5 && galleryScrollRef.current) {
-                      galleryScrollRef.current.scrollTo({
-                        x: snappedX,
-                        animated: false,
-                      });
-                    }
                   }
                   blockCardOpenUntilRef.current = Date.now() + 200;
                   endGallerySwipe();
@@ -1374,7 +1372,7 @@ function FeedCard({
                 ))}
               </ScrollView>
             ) : (
-              <Pressable onPress={onOpenEntry}>
+              <Pressable onPress={handleCardPress}>
                 <Image
                   source={{ uri: activePhoto.url }}
                   style={styles.feedPhotoStatic}
@@ -1436,13 +1434,13 @@ function FeedCard({
             ) : null}
           </>
         ) : (
-          <Pressable style={styles.feedPhotoFallback} onPress={onOpenEntry}>
+          <Pressable style={styles.feedPhotoFallback} onPress={handleCardPress}>
             <AppText style={styles.feedPhotoFallbackText}>No photo</AppText>
           </Pressable>
         )}
       </View>
 
-      <Pressable style={styles.feedTextStack} onPress={onOpenEntry}>
+      <Pressable style={styles.feedTextStack} onPress={handleCardPress}>
         {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
         {metaFields.length > 0 ? (
           <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
@@ -1460,7 +1458,7 @@ function FeedCard({
       {notes ? (
         <Pressable
           style={styles.notesWrap}
-          onPress={onOpenEntry}
+          onPress={handleCardPress}
         >
           <AppText
             style={styles.notesText}
@@ -1485,7 +1483,7 @@ function FeedCard({
         </Pressable>
       ) : null}
 
-      <Pressable style={styles.feedValueRow} onPress={onOpenEntry}>
+      <Pressable style={styles.feedValueRow} onPress={handleCardPress}>
         {displayRating ? <AppText style={styles.feedRating}>{displayRating}</AppText> : null}
         {item.qpr_level ? (
           <AppText style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
@@ -1862,6 +1860,45 @@ export default function FeedScreen() {
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const isFeedScrollActiveRef = useRef(false);
+  const feedOpenBlockUntilRef = useRef(0);
+  const feedScrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFeedScrollIdleTimer = useCallback(() => {
+    if (!feedScrollIdleTimerRef.current) {
+      return;
+    }
+    clearTimeout(feedScrollIdleTimerRef.current);
+    feedScrollIdleTimerRef.current = null;
+  }, []);
+
+  const markFeedScrolling = useCallback(
+    (unlockDelayMs = 220) => {
+      isFeedScrollActiveRef.current = true;
+      feedOpenBlockUntilRef.current = Date.now() + Math.max(180, unlockDelayMs);
+      clearFeedScrollIdleTimer();
+      feedScrollIdleTimerRef.current = setTimeout(() => {
+        isFeedScrollActiveRef.current = false;
+        feedScrollIdleTimerRef.current = null;
+      }, unlockDelayMs);
+    },
+    [clearFeedScrollIdleTimer]
+  );
+
+  const canOpenEntry = useCallback(() => {
+    if (isFeedScrollActiveRef.current) {
+      return false;
+    }
+    return Date.now() >= feedOpenBlockUntilRef.current;
+  }, []);
+
+  useEffect(
+    () => () => {
+      clearFeedScrollIdleTimer();
+      isFeedScrollActiveRef.current = false;
+    },
+    [clearFeedScrollIdleTimer]
+  );
 
   useEffect(() => {
     if (!moderationNotice) {
@@ -2505,6 +2542,22 @@ export default function FeedScreen() {
     <View style={styles.screen}>
       <ScrollView
         scrollEnabled={!isGallerySwipeActive}
+        scrollEventThrottle={16}
+        onScroll={() => {
+          markFeedScrolling(220);
+        }}
+        onScrollBeginDrag={() => {
+          markFeedScrolling(280);
+        }}
+        onScrollEndDrag={() => {
+          markFeedScrolling(280);
+        }}
+        onMomentumScrollBegin={() => {
+          markFeedScrolling(340);
+        }}
+        onMomentumScrollEnd={() => {
+          markFeedScrolling(240);
+        }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -2767,6 +2820,7 @@ export default function FeedScreen() {
                       ? router.push("/(app)/profile")
                       : router.push(`/(app)/profile/${entry.user_id}`)
                   }
+                  canOpenEntry={canOpenEntry}
                   onOpenEntry={() => router.push(`/(app)/entries/${entry.id}`)}
                 />
               );
