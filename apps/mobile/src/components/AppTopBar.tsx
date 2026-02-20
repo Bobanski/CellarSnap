@@ -417,7 +417,13 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
   return (
     <View style={styles.container}>
       <View style={styles.navRow}>
-        <AppText style={styles.brand}>CellarSnap</AppText>
+        <Pressable
+          onPress={() => router.push("/(app)/home")}
+          accessibilityRole="button"
+          accessibilityLabel="Go to home"
+        >
+          <AppText style={styles.brand}>CellarSnap</AppText>
+        </Pressable>
         <View style={styles.navActions}>
           <Pressable
             style={styles.newBtn}

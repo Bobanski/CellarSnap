@@ -1044,7 +1044,13 @@ export default function NewEntryScreen() {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.navRow}>
-          <AppText style={styles.navBrand}>CellarSnap</AppText>
+          <Pressable
+            onPress={() => router.push("/(app)/home")}
+            accessibilityRole="button"
+            accessibilityLabel="Go to home"
+          >
+            <AppText style={styles.navBrand}>CellarSnap</AppText>
+          </Pressable>
           <Pressable style={styles.backButton} onPress={() => router.replace("/(app)/entries")}>
             <AppText style={styles.backButtonText}>Back</AppText>
           </Pressable>
