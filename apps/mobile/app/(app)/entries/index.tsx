@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: { color: "#e4e4e7", fontSize: 12, fontWeight: "700" },
   header: { gap: 6 },
   eyebrow: { color: "#fcd34d", fontSize: 11, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
-  title: { color: "#fafafa", fontSize: 29, fontWeight: "700" },
+  title: { color: "#fafafa", fontSize: 24, fontWeight: "700" },
   subtitle: { color: "#d4d4d8", fontSize: 13, lineHeight: 18 },
   controls: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 12, gap: 9 },
   controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap" },

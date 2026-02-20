@@ -613,7 +613,9 @@ export default function HomeScreen() {
           <AppText style={styles.eyebrow}>
             {isFirstTime ? "Getting started" : "Home"}
           </AppText>
-          <AppText style={styles.title}>
+          <AppText
+            style={[styles.title, !isFirstTime ? styles.returningTitle : null]}
+          >
             {isFirstTime
               ? welcomeName
                 ? `Welcome to CellarSnap, ${welcomeName}.`
@@ -858,6 +860,10 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "700",
     lineHeight: 36,
+  },
+  returningTitle: {
+    fontSize: 24,
+    lineHeight: 30,
   },
   subtitle: {
     color: "#d4d4d8",

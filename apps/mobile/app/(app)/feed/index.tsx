@@ -2359,7 +2359,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#fafafa",
-    fontSize: 29,
+    fontSize: 24,
     fontWeight: "700",
   },
   subtitle: {

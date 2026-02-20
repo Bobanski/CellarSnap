@@ -9,6 +9,7 @@ import {
   View
 } from "react-native";
 import { router, usePathname } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
@@ -372,11 +373,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={alertsOpen ? "Close alerts" : "Open alerts"}
           >
-            <View style={styles.bellIconWrap}>
-              <View style={styles.bellTop} />
-              <View style={styles.bellLip} />
-              <View style={styles.bellClapper} />
-            </View>
+            <Feather name="bell" size={16} color="#e4e4e7" />
             {alertCount > 0 ? (
               <View style={styles.alertBadge}>
                 <AppText style={styles.alertBadgeText}>
@@ -392,21 +389,13 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
           >
-            {menuOpen ? (
-              <AppText style={styles.closeIcon}>×</AppText>
-            ) : (
-              <View style={styles.hamburgerWrap}>
-                <View style={styles.hamburgerLine} />
-                <View style={styles.hamburgerLine} />
-                <View style={styles.hamburgerLine} />
-              </View>
-            )}
+            <Feather name={menuOpen ? "x" : "menu"} size={18} color="#e4e4e7" />
           </Pressable>
         </View>
       </View>
 
       {alertsOpen ? (
-        <View style={styles.panel}>
+        <View style={[styles.panel, styles.floatingPanel]}>
           <View style={styles.panelHeader}>
             <AppText style={styles.panelTitle}>Alerts</AppText>
             <Pressable onPress={() => void markAllSeen()}>
@@ -471,7 +460,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       ) : null}
 
       {menuOpen ? (
-        <View style={styles.panel}>
+        <View style={[styles.panel, styles.floatingPanel]}>
           <View style={styles.menuList}>
             {NAV_ITEMS.map((item) => (
               <Pressable
@@ -508,6 +497,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
     paddingBottom: 12,
     gap: 10,
+    position: "relative",
+    overflow: "visible",
+    zIndex: 20,
   },
   navRow: {
     flexDirection: "row",
@@ -545,48 +537,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
-  hamburgerWrap: {
-    width: 14,
-    gap: 2.5,
-  },
-  hamburgerLine: {
-    height: 1.5,
-    borderRadius: 999,
-    backgroundColor: "#e4e4e7",
-  },
-  closeIcon: {
-    color: "#e4e4e7",
-    fontSize: 20,
-    lineHeight: 20,
-    marginTop: -2,
-  },
-  bellIconWrap: {
-    width: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 1,
-  },
-  bellTop: {
-    width: 9,
-    height: 6,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    borderWidth: 1.5,
-    borderBottomWidth: 0,
-    borderColor: "#e4e4e7",
-  },
-  bellLip: {
-    width: 12,
-    height: 1.7,
-    borderRadius: 999,
-    backgroundColor: "#e4e4e7",
-  },
-  bellClapper: {
-    width: 3.5,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: "#e4e4e7",
-  },
   alertBadge: {
     position: "absolute",
     right: -3,
@@ -611,6 +561,21 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(20,16,15,0.98)",
     padding: 10,
     gap: 8,
+  },
+  floatingPanel: {
+    position: "absolute",
+    top: 44,
+    left: 0,
+    right: 0,
+    zIndex: 40,
+    shadowColor: "#000",
+    shadowOpacity: 0.45,
+    shadowRadius: 22,
+    shadowOffset: {
+      width: 0,
+      height: 14,
+    },
+    elevation: 14,
   },
   panelHeader: {
     flexDirection: "row",
