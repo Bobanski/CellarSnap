@@ -7,11 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import type { WineEntrySummary } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -267,7 +267,7 @@ export default function EntriesScreen() {
   const [filterValue, setFilterValue] = useState("");
   const [filterMin, setFilterMin] = useState("");
   const [filterMax, setFilterMax] = useState("");
-  const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>("grouped");
+  const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>("all");
   const [groupScheme, setGroupScheme] = useState<GroupScheme>("region");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeControlPanel, setActiveControlPanel] = useState<ControlPanel>(null);
@@ -485,7 +485,7 @@ export default function EntriesScreen() {
             <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><Text style={styles.controlBtnLabel}>Organize</Text></Pressable>
           </View>
           <View style={styles.searchRow}>
-            <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, or varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
+            <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, or varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
             {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={() => setSearchQuery("")}><Text style={styles.secondaryBtnText}>Clear</Text></Pressable> : null}
           </View>
 
@@ -503,7 +503,7 @@ export default function EntriesScreen() {
               <Text style={styles.panelLabel}>Filter by</Text>
               <View style={styles.pills}><Pill label="None" active={filterType === ""} onPress={() => updateFilterType("")} /><Pill label="Country" active={filterType === "country"} onPress={() => updateFilterType("country")} /><Pill label="Vintage range" active={filterType === "vintage"} onPress={() => updateFilterType("vintage")} /><Pill label="Rating range" active={filterType === "rating"} onPress={() => updateFilterType("rating")} /></View>
               {filterType === "country" ? <View style={styles.pills}><Pill label="All countries" active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
-              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><TextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /><TextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
+              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
             </View>
           ) : null}
 

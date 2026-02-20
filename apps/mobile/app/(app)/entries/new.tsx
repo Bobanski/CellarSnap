@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { router } from "expo-router";
@@ -18,6 +17,7 @@ import {
 } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 
 type EntryFormState = {
   wine_name: string;
@@ -194,7 +194,7 @@ function Field({
   return (
     <View style={styles.fieldBlock}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
+      <DoneTextInput
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}

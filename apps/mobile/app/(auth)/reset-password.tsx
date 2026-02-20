@@ -6,11 +6,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/src/lib/supabase";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 
 const INPUT_SELECTION_COLOR = "#52525b";
 
@@ -142,7 +142,7 @@ export default function ResetPasswordScreen() {
                 <>
                   <View style={styles.formField}>
                     <Text style={styles.label}>Email address</Text>
-                    <TextInput
+                    <DoneTextInput
                       value={email}
                       onChangeText={setEmail}
                       autoCapitalize="none"
@@ -159,7 +159,7 @@ export default function ResetPasswordScreen() {
 
                   <View style={styles.formField}>
                     <Text style={styles.label}>Recovery code</Text>
-                    <TextInput
+                    <DoneTextInput
                       value={code}
                       onChangeText={setCode}
                       autoCapitalize="none"
@@ -185,7 +185,7 @@ export default function ResetPasswordScreen() {
               <View style={styles.formField}>
                 <Text style={styles.label}>New password</Text>
                 <View style={styles.passwordWrap}>
-                  <TextInput
+                  <DoneTextInput
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -209,7 +209,7 @@ export default function ResetPasswordScreen() {
 
               <View style={styles.formField}>
                 <Text style={styles.label}>Confirm new password</Text>
-                <TextInput
+                <DoneTextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showPassword}

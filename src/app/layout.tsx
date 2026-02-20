@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import StandaloneHomeLaunchRedirect from "@/components/StandaloneHomeLaunchRedirect";
+import KeyboardDoneHint from "@/components/KeyboardDoneHint";
 
 export const metadata: Metadata = {
   title: "CellarSnap",
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <StandaloneHomeLaunchRedirect />
+        <KeyboardDoneHint />
         {children}
       </body>
     </html>

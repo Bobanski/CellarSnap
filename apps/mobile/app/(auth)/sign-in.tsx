@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Link, router } from "expo-router";
@@ -16,6 +15,7 @@ import {
   type AuthMode,
 } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 
 const INPUT_SELECTION_COLOR = "#52525b";
 
@@ -120,7 +120,7 @@ export default function SignInScreen() {
 
           <View style={styles.formField}>
             <Text style={styles.label}>{getCredentialText(authMode)}</Text>
-            <TextInput
+            <DoneTextInput
               value={identifier}
               onChangeText={setIdentifier}
               autoCapitalize="none"
@@ -146,7 +146,7 @@ export default function SignInScreen() {
           <View style={styles.formField}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordWrap}>
-              <TextInput
+              <DoneTextInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}

@@ -219,7 +219,7 @@ export default function EntriesPage() {
   const [filterMin, setFilterMin] = useState<string>("");
   const [filterMax, setFilterMax] = useState<string>("");
   const [libraryViewMode, setLibraryViewMode] =
-    useState<LibraryViewMode>("grouped");
+    useState<LibraryViewMode>("all");
   const [groupScheme, setGroupScheme] = useState<GroupScheme>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("libraryGroupScheme");

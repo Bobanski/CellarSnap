@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   type TextInputProps,
   View,
 } from "react-native";
@@ -24,6 +23,7 @@ import {
   normalizePhone,
 } from "@cellarsnap/shared";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 
 const INPUT_SELECTION_COLOR = "#52525b";
 
@@ -381,7 +381,7 @@ function Field({
   return (
     <View style={styles.fieldBlock}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
+      <DoneTextInput
         value={value}
         onChangeText={onChange}
         secureTextEntry={secureTextEntry}

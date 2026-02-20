@@ -9,10 +9,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -132,6 +132,11 @@ type FeedComment = {
   replies: FeedReply[];
 };
 
+type UserOption = {
+  id: string;
+  display_name: string | null;
+};
+
 const PAGE_SIZE = 24;
 const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
 const PHOTO_TYPE_LABELS: Record<FeedPhotoType, string> = {
@@ -178,6 +183,24 @@ function isMissingSharedTastingColumns(message: string) {
 
 function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
+}
+
+function sanitizeUserSearch(search: string) {
+  return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function buildTokenAndFilter(tokens: string[], fields: string[]) {
+  const cleaned = tokens.map((token) => token.trim()).filter(Boolean).slice(0, 4);
+  if (cleaned.length <= 1) {
+    return null;
+  }
+
+  const tokenOr = (token: string) => {
+    const pattern = `%${token}%`;
+    return `or(${fields.map((field) => `${field}.ilike.${pattern}`).join(",")})`;
+  };
+
+  return `and(${cleaned.map(tokenOr).join(",")})`;
 }
 
 function formatConsumedDate(raw: string) {
@@ -1067,6 +1090,24 @@ function FeedCard({
     [galleryPhotos.length, photoFrameWidth, photoTranslateX]
   );
 
+  const goToPreviousPhoto = useCallback(() => {
+    if (!hasMultiplePhotos) {
+      return;
+    }
+    const maxIndex = Math.max(0, galleryPhotos.length - 1);
+    const nextIndex = activePhotoIndex <= 0 ? maxIndex : activePhotoIndex - 1;
+    animateToPhotoIndex(nextIndex);
+  }, [activePhotoIndex, animateToPhotoIndex, galleryPhotos.length, hasMultiplePhotos]);
+
+  const goToNextPhoto = useCallback(() => {
+    if (!hasMultiplePhotos) {
+      return;
+    }
+    const maxIndex = Math.max(0, galleryPhotos.length - 1);
+    const nextIndex = activePhotoIndex >= maxIndex ? 0 : activePhotoIndex + 1;
+    animateToPhotoIndex(nextIndex);
+  }, [activePhotoIndex, animateToPhotoIndex, galleryPhotos.length, hasMultiplePhotos]);
+
   const photoSwipeResponder = useMemo(
     () =>
       PanResponder.create({
@@ -1220,6 +1261,28 @@ function FeedCard({
                   />
                 ))}
               </View>
+            ) : null}
+            {hasMultiplePhotos ? (
+              <>
+                <Pressable
+                  onPress={goToPreviousPhoto}
+                  hitSlop={8}
+                  style={[styles.photoNavButton, styles.photoNavButtonLeft]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous photo"
+                >
+                  <Text style={styles.photoNavButtonText}>{"<"}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={goToNextPhoto}
+                  hitSlop={8}
+                  style={[styles.photoNavButton, styles.photoNavButtonRight]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Next photo"
+                >
+                  <Text style={styles.photoNavButtonText}>{">"}</Text>
+                </Pressable>
+              </>
             ) : null}
           </>
         ) : (
@@ -1448,7 +1511,7 @@ function FeedCard({
                   </Pressable>
                 </View>
               ) : null}
-              <TextInput
+              <DoneTextInput
                 value={commentDraft}
                 onChangeText={onChangeCommentDraft}
                 placeholder={replyTargetName ? "Write a reply..." : "Write a comment..."}
@@ -1489,6 +1552,12 @@ function countComments(comments: FeedComment[] | undefined, fallback: number) {
 export default function FeedScreen() {
   const { user } = useAuth();
   const [feedScope, setFeedScope] = useState<FeedScope>("public");
+  const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
+  const [friendSearchQuery, setFriendSearchQuery] = useState("");
+  const [friendSearchResults, setFriendSearchResults] = useState<UserOption[]>([]);
+  const [isFriendSearchLoading, setIsFriendSearchLoading] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  const [selectedFriendName, setSelectedFriendName] = useState<string | null>(null);
   const [entries, setEntries] = useState<MobileFeedEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1524,6 +1593,105 @@ export default function FeedScreen() {
   const [commentErrorByEntryId, setCommentErrorByEntryId] = useState<
     Record<string, string | null>
   >({});
+
+  const visibleEntries = useMemo(() => {
+    if (!selectedFriendId) {
+      return entries;
+    }
+    return entries.filter((entry) => entry.user_id === selectedFriendId);
+  }, [entries, selectedFriendId]);
+
+  useEffect(() => {
+    if (!isFriendSearchOpen || !user?.id) {
+      setFriendSearchResults([]);
+      setIsFriendSearchLoading(false);
+      return;
+    }
+
+    const trimmedQuery = friendSearchQuery.trim();
+    if (!trimmedQuery) {
+      setFriendSearchResults([]);
+      setIsFriendSearchLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      setIsFriendSearchLoading(true);
+      const search = sanitizeUserSearch(trimmedQuery);
+      const pattern = `%${search}%`;
+      const tokens = search.split(" ").filter(Boolean);
+      const tokenAndFilter = buildTokenAndFilter(tokens, [
+        "display_name",
+        "email",
+        "first_name",
+        "last_name",
+      ]);
+
+      const baseFilters = [
+        `display_name.ilike.${pattern}`,
+        `email.ilike.${pattern}`,
+        `first_name.ilike.${pattern}`,
+        `last_name.ilike.${pattern}`,
+        tokenAndFilter,
+      ]
+        .filter(Boolean)
+        .join(",");
+
+      const firstAttempt = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .neq("id", user.id)
+        .or(baseFilters)
+        .order("display_name", { ascending: true })
+        .limit(25);
+
+      let data = firstAttempt.data;
+      let error = firstAttempt.error;
+
+      if (
+        error &&
+        (error.message.includes("first_name") || error.message.includes("last_name"))
+      ) {
+        const fallbackTokenAndFilter = buildTokenAndFilter(tokens, [
+          "display_name",
+          "email",
+        ]);
+        const fallbackFilters = [
+          `display_name.ilike.${pattern}`,
+          `email.ilike.${pattern}`,
+          fallbackTokenAndFilter,
+        ]
+          .filter(Boolean)
+          .join(",");
+        const fallbackAttempt = await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .neq("id", user.id)
+          .or(fallbackFilters)
+          .order("display_name", { ascending: true })
+          .limit(25);
+        data = fallbackAttempt.data;
+        error = fallbackAttempt.error;
+      }
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (error) {
+        setFriendSearchResults([]);
+      } else {
+        setFriendSearchResults((data ?? []) as UserOption[]);
+      }
+      setIsFriendSearchLoading(false);
+    }, 200);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [friendSearchQuery, isFriendSearchOpen, user?.id]);
 
   const loadCommentsForEntry = useCallback(
     async (entryId: string, options?: { force?: boolean }) => {
@@ -1907,6 +2075,32 @@ export default function FeedScreen() {
     setIsLoadingMore(false);
   };
 
+  const clearFriendSearch = () => {
+    setFriendSearchQuery("");
+    setFriendSearchResults([]);
+    setSelectedFriendId(null);
+    setSelectedFriendName(null);
+  };
+
+  const toggleFriendSearch = () => {
+    setIsFriendSearchOpen((current) => {
+      const next = !current;
+      if (!next) {
+        clearFriendSearch();
+      }
+      return next;
+    });
+  };
+
+  const selectFriendFilter = (option: UserOption) => {
+    const displayName = option.display_name?.trim() || "Unknown";
+    setFeedScope("friends");
+    setSelectedFriendId(option.id);
+    setSelectedFriendName(displayName);
+    setFriendSearchQuery(displayName);
+    setFriendSearchResults([]);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
@@ -1971,17 +2165,105 @@ export default function FeedScreen() {
               Friends only
             </Text>
           </Pressable>
+          <Pressable
+            style={[
+              styles.searchToggleButton,
+              isFriendSearchOpen ? styles.searchToggleButtonActive : null,
+            ]}
+            onPress={toggleFriendSearch}
+            accessibilityRole="button"
+            accessibilityLabel={isFriendSearchOpen ? "Hide friend search" : "Show friend search"}
+          >
+            <Text
+              style={[
+                styles.searchToggleIcon,
+                isFriendSearchOpen ? styles.searchToggleIconActive : null,
+              ]}
+            >
+              ⌕
+            </Text>
+          </Pressable>
         </View>
+
+        {isFriendSearchOpen ? (
+          <View style={styles.friendSearchPanel}>
+            <View style={styles.friendSearchInputRow}>
+              <DoneTextInput
+                value={friendSearchQuery}
+                onChangeText={(value) => {
+                  setFriendSearchQuery(value);
+                  setSelectedFriendId(null);
+                  setSelectedFriendName(null);
+                  if (!value.trim()) {
+                    setFriendSearchResults([]);
+                  }
+                }}
+                placeholder="Search by username..."
+                placeholderTextColor="#71717a"
+                style={styles.friendSearchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {friendSearchQuery.trim() || selectedFriendId ? (
+                <Pressable
+                  style={styles.friendSearchClearButton}
+                  onPress={clearFriendSearch}
+                >
+                  <Text style={styles.friendSearchClearText}>Clear</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {selectedFriendId ? (
+              <Text style={styles.friendSearchSelectionText}>
+                Showing posts from {selectedFriendName ?? "this friend"}.
+              </Text>
+            ) : null}
+
+            {friendSearchQuery.trim() ? (
+              <View style={styles.friendSearchResultsWrap}>
+                {isFriendSearchLoading ? (
+                  <Text style={styles.friendSearchMetaText}>Searching...</Text>
+                ) : friendSearchResults.length === 0 ? (
+                  <Text style={styles.friendSearchMetaText}>
+                    No friends match your search.
+                  </Text>
+                ) : (
+                  friendSearchResults.map((option) => {
+                    const displayName = option.display_name?.trim() || "Unknown";
+                    return (
+                      <Pressable
+                        key={option.id}
+                        style={styles.friendSearchResultRow}
+                        onPress={() => selectFriendFilter(option)}
+                      >
+                        <Text style={styles.friendSearchResultText}>{displayName}</Text>
+                      </Pressable>
+                    );
+                  })
+                )}
+              </View>
+            ) : (
+              <Text style={styles.friendSearchMetaText}>
+                Search for a friend, then tap a result to filter the feed.
+              </Text>
+            )}
+          </View>
+        ) : null}
 
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        {entries.length === 0 ? (
+        {visibleEntries.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No entries yet.</Text>
+            <Text style={styles.emptyText}>
+              {selectedFriendId
+                ? `No posts from ${selectedFriendName ?? "this friend"} in this feed yet.`
+                : "No entries yet."}
+            </Text>
           </View>
         ) : (
           <View style={styles.feedStack}>
-            {entries.map((entry) => {
+            {visibleEntries.map((entry) => {
               const entryComments = commentsByEntryId[entry.id] ?? [];
               const replyTargetId = replyTargetByEntryId[entry.id] ?? null;
               const replyTarget =
@@ -2107,6 +2389,7 @@ const styles = StyleSheet.create({
   },
   scopeRow: {
     flexDirection: "row",
+    alignItems: "center",
     flexWrap: "wrap",
     gap: 8,
   },
@@ -2128,6 +2411,93 @@ const styles = StyleSheet.create({
   },
   scopePillTextActive: {
     color: "#fef3c7",
+  },
+  searchToggleButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,0,0,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchToggleButtonActive: {
+    borderColor: "rgba(252,211,77,0.7)",
+    backgroundColor: "rgba(251,191,36,0.15)",
+  },
+  searchToggleIcon: {
+    color: "#d4d4d8",
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  searchToggleIconActive: {
+    color: "#fef3c7",
+  },
+  friendSearchPanel: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.25)",
+    padding: 10,
+    gap: 8,
+  },
+  friendSearchInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  friendSearchInput: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    color: "#f4f4f5",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  friendSearchClearButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  friendSearchClearText: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  friendSearchResultsWrap: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    overflow: "hidden",
+  },
+  friendSearchResultRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  friendSearchResultText: {
+    color: "#e4e4e7",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  friendSearchMetaText: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  friendSearchSelectionText: {
+    color: "#fde68a",
+    fontSize: 12,
   },
   errorText: {
     color: "#fecdd3",
@@ -2244,6 +2614,31 @@ const styles = StyleSheet.create({
   },
   photoDotActive: {
     backgroundColor: "#fcd34d",
+  },
+  photoNavButton: {
+    position: "absolute",
+    top: "50%",
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoNavButtonLeft: {
+    left: 8,
+  },
+  photoNavButtonRight: {
+    right: 8,
+  },
+  photoNavButtonText: {
+    color: "#f4f4f5",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 14,
   },
   feedPhotoFallback: {
     flex: 1,

@@ -7,12 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Link, useLocalSearchParams, router } from "expo-router";
 import { PHONE_FORMAT_MESSAGE, normalizePhone } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 
 type VerifyMode = "signup" | "recovery";
 
@@ -212,7 +212,7 @@ function Field({
   return (
     <View style={styles.fieldBlock}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
+      <DoneTextInput
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}

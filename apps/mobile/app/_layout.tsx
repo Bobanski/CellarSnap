@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/providers/AuthProvider";
+import { KeyboardDoneAccessory } from "@/src/components/KeyboardDoneAccessory";
 
 export default function RootLayout() {
   return (
@@ -14,6 +15,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: "#0f0a09" },
         }}
       />
+      <KeyboardDoneAccessory />
     </AuthProvider>
   );
 }

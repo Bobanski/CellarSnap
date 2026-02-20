@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Link, router } from "expo-router";
@@ -16,6 +15,7 @@ import {
   type AuthMode,
 } from "@cellarsnap/shared";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 
 function getRecoveryHelperText(authMode: AuthMode) {
   if (authMode === "phone") {
@@ -123,7 +123,7 @@ export default function ForgotPasswordScreen() {
 
           <View style={styles.formField}>
             <Text style={styles.label}>Username, phone, or email</Text>
-            <TextInput
+            <DoneTextInput
               value={identifier}
               onChangeText={setIdentifier}
               autoCapitalize="none"
