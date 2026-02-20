@@ -2096,7 +2096,7 @@ const styles = StyleSheet.create({
     width: 14,
     textAlign: "center",
   },
-  accordionTitle: { color: "#f4f4f5", fontSize: 14, fontWeight: "700" },
+  accordionTitle: { color: "#e4e4e7", fontSize: 14, fontWeight: "600" },
   accordionBody: {
     borderTopWidth: 1,
     borderTopColor: "rgba(255, 255, 255, 0.07)",
