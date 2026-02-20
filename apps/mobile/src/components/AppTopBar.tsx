@@ -1,13 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  View
-} from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { supabase } from "@/src/lib/supabase";
@@ -24,6 +16,7 @@ type NavItem = {
 type TagAlert = {
   id: string;
   type: "tagged";
+  entry_id: string;
   created_at: string;
   actor_name: string;
   wine_name: string | null;
@@ -44,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Feed", href: "/(app)/feed" },
   { label: "Profile", href: "/(app)/profile" },
 ];
+const WEB_API_BASE_URL = process.env.EXPO_PUBLIC_WEB_API_BASE_URL;
 
 function formatAlertDate(value: string) {
   const parsed = new Date(value);
@@ -73,6 +67,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     null
   );
   const [dismissingTagId, setDismissingTagId] = useState<string | null>(null);
+  const [addingToCellarId, setAddingToCellarId] = useState<string | null>(null);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -219,6 +214,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     const tagAlerts: TagAlert[] = tagRows.map((row) => ({
       id: row.id,
       type: "tagged",
+      entry_id: row.entry_id,
       created_at: row.created_at,
       actor_name: profileNameById.get(row.actor_id) ?? "Unknown",
       wine_name: wineNameByEntryId.get(row.entry_id) ?? null,
@@ -321,6 +317,64 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     await Promise.all([loadAlerts(), refreshAlertCount()]);
   };
 
+  const onAddToCellar = async (alert: TagAlert) => {
+    if (!WEB_API_BASE_URL) {
+      setAlertsError(
+        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable Add to my cellar."
+      );
+      return;
+    }
+
+    const { data: sessionResult } = await supabase.auth.getSession();
+    const accessToken = sessionResult.session?.access_token;
+    if (!accessToken) {
+      setAlertsError("Session expired. Sign in again and try.");
+      return;
+    }
+
+    setAddingToCellarId(alert.id);
+    setAlertsError(null);
+
+    try {
+      const response = await fetch(
+        `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/entries/${alert.entry_id}/add-to-log`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        entry_id?: unknown;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setAlertsError(payload.error ?? "Unable to add this tasting right now.");
+        return;
+      }
+
+      const nextEntryId =
+        typeof payload.entry_id === "string" ? payload.entry_id : null;
+      if (!nextEntryId) {
+        setAlertsError("Unable to add this tasting right now.");
+        return;
+      }
+
+      setAlerts((current) => current.filter((item) => item.id !== alert.id));
+      setAlertCount((current) => Math.max(0, current - 1));
+      setAlertsOpen(false);
+      router.push(`/(app)/entries/${nextEntryId}`);
+      void refreshAlertCount();
+    } catch {
+      setAlertsError("Unable to add this tasting right now.");
+    } finally {
+      setAddingToCellarId(null);
+    }
+  };
+
   const markAllSeen = async () => {
     if (!user) {
       return;
@@ -417,22 +471,25 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             <AppText style={styles.panelEmpty}>No new alerts yet.</AppText>
           ) : (
             <View style={styles.alertList}>
-              {alerts.map((alert) => (
-                <View key={`${alert.type}-${alert.id}`} style={styles.alertRow}>
-                  <View style={styles.alertBody}>
-                    <AppText style={styles.alertLabel}>
-                      {alert.type === "friend_request"
-                        ? `${alert.requester_name} sent a friend request`
-                        : `${alert.actor_name} tagged you in ${alert.wine_name ?? "a post"}`}
-                    </AppText>
-                    <AppText style={styles.alertDate}>{formatAlertDate(alert.created_at)}</AppText>
-                  </View>
-                  {alert.type === "friend_request" ? (
+              {alerts.map((alert) =>
+                alert.type === "friend_request" ? (
+                  <View key={`${alert.type}-${alert.id}`} style={styles.alertRow}>
+                    <View style={styles.alertBody}>
+                      <AppText style={styles.alertLabel}>
+                        <AppText style={styles.alertActor}>{alert.requester_name}</AppText>
+                        {" sent a friend request"}
+                      </AppText>
+                      <AppText style={styles.alertDate}>
+                        {formatAlertDate(alert.created_at)}
+                      </AppText>
+                    </View>
                     <View style={styles.alertActions}>
                       <Pressable
                         style={styles.actionPill}
                         disabled={respondingRequestId === alert.id}
-                        onPress={() => void onRespondToFriendRequest(alert.id, "accept")}
+                        onPress={() =>
+                          void onRespondToFriendRequest(alert.id, "accept")
+                        }
                       >
                         <AppText style={styles.actionPillText}>
                           {respondingRequestId === alert.id ? "..." : "Accept"}
@@ -441,24 +498,61 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
                       <Pressable
                         style={styles.actionGhost}
                         disabled={respondingRequestId === alert.id}
-                        onPress={() => void onRespondToFriendRequest(alert.id, "decline")}
+                        onPress={() =>
+                          void onRespondToFriendRequest(alert.id, "decline")
+                        }
                       >
                         <AppText style={styles.actionGhostText}>Decline</AppText>
                       </Pressable>
                     </View>
-                  ) : (
-                    <Pressable
-                      style={styles.actionGhost}
-                      disabled={dismissingTagId === alert.id}
-                      onPress={() => void onDismissTag(alert.id)}
-                    >
-                      <AppText style={styles.actionGhostText}>
-                        {dismissingTagId === alert.id ? "..." : "Dismiss"}
-                      </AppText>
-                    </Pressable>
-                  )}
-                </View>
-              ))}
+                  </View>
+                ) : (
+                  <View key={`${alert.type}-${alert.id}`} style={styles.alertRow}>
+                    <View style={styles.alertTagHeader}>
+                      <View style={styles.alertTagTextWrap}>
+                        <AppText style={styles.alertLabel}>
+                          <AppText style={styles.alertActor}>{alert.actor_name}</AppText>
+                          {" tagged you in "}
+                          <AppText style={styles.alertWineName}>
+                            {alert.wine_name ?? "a wine"}
+                          </AppText>
+                        </AppText>
+                        <AppText style={styles.alertDate}>
+                          {formatAlertDate(alert.created_at)}
+                        </AppText>
+                      </View>
+                      <Pressable
+                        style={styles.alertDismissButton}
+                        disabled={dismissingTagId === alert.id}
+                        onPress={() => void onDismissTag(alert.id)}
+                      >
+                        <AppText style={styles.alertDismissButtonText}>
+                          {dismissingTagId === alert.id ? "..." : "x"}
+                        </AppText>
+                      </Pressable>
+                    </View>
+                    <View style={styles.alertActions}>
+                      <Pressable
+                        style={styles.actionGhost}
+                        onPress={() => router.push(`/(app)/entries/${alert.entry_id}`)}
+                      >
+                        <AppText style={styles.actionGhostText}>View</AppText>
+                      </Pressable>
+                      <Pressable
+                        style={styles.actionAmber}
+                        disabled={addingToCellarId === alert.id}
+                        onPress={() => void onAddToCellar(alert)}
+                      >
+                        <AppText style={styles.actionAmberText}>
+                          {addingToCellarId === alert.id
+                            ? "Adding..."
+                            : "Add to my cellar"}
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  </View>
+                )
+              )}
             </View>
           )}
         </View>
@@ -632,19 +726,53 @@ const styles = StyleSheet.create({
   alertBody: {
     gap: 2,
   },
+  alertTagHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  alertTagTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
   alertLabel: {
     color: "#f4f4f5",
     fontSize: 12,
     lineHeight: 17,
   },
+  alertActor: {
+    color: "#fcd34d",
+    fontWeight: "700",
+  },
+  alertWineName: {
+    color: "#fafafa",
+    fontWeight: "600",
+  },
   alertDate: {
     color: "#a1a1aa",
     fontSize: 11,
+  },
+  alertDismissButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  alertDismissButtonText: {
+    color: "#d4d4d8",
+    fontSize: 11,
+    fontWeight: "700",
   },
   alertActions: {
     flexDirection: "row",
     gap: 8,
     alignItems: "center",
+    flexWrap: "wrap",
   },
   actionPill: {
     borderRadius: 999,
@@ -669,6 +797,17 @@ const styles = StyleSheet.create({
   },
   actionGhostText: {
     color: "#d4d4d8",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  actionAmber: {
+    borderRadius: 999,
+    backgroundColor: "#fbbf24",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  actionAmberText: {
+    color: "#09090b",
     fontSize: 11,
     fontWeight: "700",
   },

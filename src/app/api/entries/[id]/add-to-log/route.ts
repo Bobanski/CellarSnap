@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { createClient, type User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
 
@@ -50,16 +51,55 @@ function isLegacyPendingPath(path: string | null | undefined) {
   return !path || path === "pending";
 }
 
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+async function createRequestSupabaseClient(
+  request: Request
+): Promise<{ supabase: ServerSupabaseClient; user: User | null }> {
+  const authHeader = request.headers.get("authorization");
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
+  const bearerToken = bearerMatch?.[1]?.trim();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (bearerToken && supabaseUrl && supabaseAnonKey) {
+    const bearerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+        },
+      },
+    });
+    const {
+      data: { user },
+    } = await bearerClient.auth.getUser();
+    if (user) {
+      return {
+        supabase: bearerClient as unknown as ServerSupabaseClient,
+        user,
+      };
+    }
+  }
 
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return { supabase, user };
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const { supabase, user } = await createRequestSupabaseClient(request);
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
