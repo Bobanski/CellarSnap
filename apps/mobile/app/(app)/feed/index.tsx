@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Image,
-  PanResponder,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -997,8 +995,9 @@ function FeedCard({
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
   const [isNotesTruncated, setIsNotesTruncated] = useState(false);
-  const photoTranslateX = useRef(new Animated.Value(0)).current;
+  const galleryScrollRef = useRef<ScrollView | null>(null);
   const swipeActiveRef = useRef(false);
+  const pendingSwipeEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reactions = useMemo(
     () =>
       Object.entries(item.reaction_counts)
@@ -1016,9 +1015,10 @@ function FeedCard({
 
   useEffect(() => {
     setActivePhotoIndex(0);
-    photoTranslateX.stopAnimation();
-    photoTranslateX.setValue(0);
-  }, [item.id, photoTranslateX]);
+    if (galleryScrollRef.current) {
+      galleryScrollRef.current.scrollTo({ x: 0, animated: false });
+    }
+  }, [item.id]);
 
   const beginGallerySwipe = useCallback(() => {
     if (swipeActiveRef.current) {
@@ -1036,11 +1036,31 @@ function FeedCard({
     onGallerySwipeEnd();
   }, [onGallerySwipeEnd]);
 
+  const clearPendingSwipeEnd = useCallback(() => {
+    if (!pendingSwipeEndTimerRef.current) {
+      return;
+    }
+    clearTimeout(pendingSwipeEndTimerRef.current);
+    pendingSwipeEndTimerRef.current = null;
+  }, []);
+
+  const scheduleGallerySwipeEnd = useCallback(
+    (delayMs = 90) => {
+      clearPendingSwipeEnd();
+      pendingSwipeEndTimerRef.current = setTimeout(() => {
+        pendingSwipeEndTimerRef.current = null;
+        endGallerySwipe();
+      }, delayMs);
+    },
+    [clearPendingSwipeEnd, endGallerySwipe]
+  );
+
   useEffect(
     () => () => {
+      clearPendingSwipeEnd();
       endGallerySwipe();
     },
-    [endGallerySwipe]
+    [clearPendingSwipeEnd, endGallerySwipe]
   );
 
   useEffect(() => {
@@ -1048,20 +1068,18 @@ function FeedCard({
   }, [item.id, notes]);
 
   useEffect(() => {
-    if (photoFrameWidth <= 0) {
-      return;
-    }
-    photoTranslateX.stopAnimation();
-    photoTranslateX.setValue(-activePhotoIndex * photoFrameWidth);
-  }, [activePhotoIndex, photoFrameWidth, photoTranslateX]);
-
-  useEffect(() => {
     const maxIndex = Math.max(0, galleryPhotos.length - 1);
     if (activePhotoIndex <= maxIndex) {
       return;
     }
     setActivePhotoIndex(maxIndex);
-  }, [activePhotoIndex, galleryPhotos.length]);
+    if (galleryScrollRef.current && photoFrameWidth > 0) {
+      galleryScrollRef.current.scrollTo({
+        x: maxIndex * photoFrameWidth,
+        animated: false,
+      });
+    }
+  }, [activePhotoIndex, galleryPhotos.length, photoFrameWidth]);
 
   useEffect(() => {
     if (galleryPhotos.length <= 1) {
@@ -1072,22 +1090,20 @@ function FeedCard({
     });
   }, [item.id, galleryPhotos]);
 
-  const animateToPhotoIndex = useCallback(
-    (nextIndex: number) => {
+  const scrollToPhotoIndex = useCallback(
+    (nextIndex: number, animated = true) => {
       const maxIndex = Math.max(0, galleryPhotos.length - 1);
       const clampedIndex = Math.max(0, Math.min(maxIndex, nextIndex));
       setActivePhotoIndex(clampedIndex);
-      if (photoFrameWidth <= 0) {
+      if (!galleryScrollRef.current || photoFrameWidth <= 0) {
         return;
       }
-      Animated.spring(photoTranslateX, {
-        toValue: -clampedIndex * photoFrameWidth,
-        useNativeDriver: true,
-        bounciness: 0,
-        speed: 20,
-      }).start();
+      galleryScrollRef.current.scrollTo({
+        x: clampedIndex * photoFrameWidth,
+        animated,
+      });
     },
-    [galleryPhotos.length, photoFrameWidth, photoTranslateX]
+    [galleryPhotos.length, photoFrameWidth]
   );
 
   const goToPreviousPhoto = useCallback(() => {
@@ -1096,8 +1112,8 @@ function FeedCard({
     }
     const maxIndex = Math.max(0, galleryPhotos.length - 1);
     const nextIndex = activePhotoIndex <= 0 ? maxIndex : activePhotoIndex - 1;
-    animateToPhotoIndex(nextIndex);
-  }, [activePhotoIndex, animateToPhotoIndex, galleryPhotos.length, hasMultiplePhotos]);
+    scrollToPhotoIndex(nextIndex);
+  }, [activePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
 
   const goToNextPhoto = useCallback(() => {
     if (!hasMultiplePhotos) {
@@ -1105,79 +1121,8 @@ function FeedCard({
     }
     const maxIndex = Math.max(0, galleryPhotos.length - 1);
     const nextIndex = activePhotoIndex >= maxIndex ? 0 : activePhotoIndex + 1;
-    animateToPhotoIndex(nextIndex);
-  }, [activePhotoIndex, animateToPhotoIndex, galleryPhotos.length, hasMultiplePhotos]);
-
-  const photoSwipeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onStartShouldSetPanResponderCapture: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) =>
-          hasMultiplePhotos &&
-          photoFrameWidth > 0 &&
-          Math.abs(gestureState.dx) > 8 &&
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-        onMoveShouldSetPanResponderCapture: (_, gestureState) =>
-          hasMultiplePhotos &&
-          photoFrameWidth > 0 &&
-          Math.abs(gestureState.dx) > 8 &&
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
-        onPanResponderGrant: () => {
-          beginGallerySwipe();
-          photoTranslateX.stopAnimation();
-        },
-        onPanResponderMove: (_, gestureState) => {
-          if (!hasMultiplePhotos || photoFrameWidth <= 0) {
-            return;
-          }
-          const baseOffset = -activePhotoIndex * photoFrameWidth;
-          const minOffset = -(galleryPhotos.length - 1) * photoFrameWidth;
-          let nextOffset = baseOffset + gestureState.dx;
-          if (nextOffset > 0) {
-            nextOffset = nextOffset * 0.32;
-          } else if (nextOffset < minOffset) {
-            nextOffset = minOffset + (nextOffset - minOffset) * 0.32;
-          }
-          photoTranslateX.setValue(nextOffset);
-        },
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderRelease: (_, gestureState) => {
-          if (
-            !hasMultiplePhotos ||
-            photoFrameWidth <= 0 ||
-            Math.abs(gestureState.dx) <= Math.abs(gestureState.dy)
-          ) {
-            animateToPhotoIndex(activePhotoIndex);
-            endGallerySwipe();
-            return;
-          }
-          const threshold = Math.max(28, Math.min(120, photoFrameWidth * 0.2));
-          if (gestureState.dx <= -threshold) {
-            animateToPhotoIndex(activePhotoIndex + 1);
-          } else if (gestureState.dx >= threshold) {
-            animateToPhotoIndex(activePhotoIndex - 1);
-          } else {
-            animateToPhotoIndex(activePhotoIndex);
-          }
-          endGallerySwipe();
-        },
-        onPanResponderTerminate: () => {
-          animateToPhotoIndex(activePhotoIndex);
-          endGallerySwipe();
-        },
-      }),
-    [
-      activePhotoIndex,
-      animateToPhotoIndex,
-      beginGallerySwipe,
-      endGallerySwipe,
-      galleryPhotos.length,
-      hasMultiplePhotos,
-      photoFrameWidth,
-      photoTranslateX,
-    ]
-  );
+    scrollToPhotoIndex(nextIndex);
+  }, [activePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
 
   return (
     <View style={styles.feedCard}>
@@ -1204,25 +1149,55 @@ function FeedCard({
       <View
         style={styles.feedPhotoFrame}
         onLayout={(event) => {
-          const nextWidth = Math.round(event.nativeEvent.layout.width);
+          const nextWidth = Math.ceil(event.nativeEvent.layout.width);
           if (nextWidth > 0 && nextWidth !== photoFrameWidth) {
             setPhotoFrameWidth(nextWidth);
+            if (galleryScrollRef.current && hasMultiplePhotos) {
+              galleryScrollRef.current.scrollTo({
+                x: activePhotoIndex * nextWidth,
+                animated: false,
+              });
+            }
           }
         }}
-        {...photoSwipeResponder.panHandlers}
       >
         {activePhoto ? (
           <>
             {hasMultiplePhotos && photoFrameWidth > 0 ? (
-              <Animated.View
-                style={[
-                  styles.feedPhotoTrack,
-                  {
-                    width: photoFrameWidth * galleryPhotos.length,
-                    transform: [{ translateX: photoTranslateX }],
-                  },
-                ]}
-                pointerEvents="none"
+              <ScrollView
+                ref={(node) => {
+                  galleryScrollRef.current = node;
+                }}
+                horizontal
+                pagingEnabled
+                bounces={false}
+                directionalLockEnabled
+                nestedScrollEnabled
+                overScrollMode="never"
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                scrollEventThrottle={16}
+                contentContainerStyle={styles.feedPhotoTrack}
+                onScrollBeginDrag={() => {
+                  beginGallerySwipe();
+                  clearPendingSwipeEnd();
+                }}
+                onScrollEndDrag={() => {
+                  scheduleGallerySwipeEnd();
+                }}
+                onMomentumScrollBegin={clearPendingSwipeEnd}
+                onMomentumScrollEnd={(event) => {
+                  if (photoFrameWidth > 0) {
+                    const offsetX = event.nativeEvent.contentOffset.x;
+                    const rawIndex = Math.round(offsetX / photoFrameWidth);
+                    const maxIndex = Math.max(0, galleryPhotos.length - 1);
+                    const clampedIndex = Math.max(0, Math.min(maxIndex, rawIndex));
+                    if (clampedIndex !== activePhotoIndex) {
+                      setActivePhotoIndex(clampedIndex);
+                    }
+                  }
+                  endGallerySwipe();
+                }}
               >
                 {galleryPhotos.map((photo, photoIndex) => (
                   <Image
@@ -1233,7 +1208,7 @@ function FeedCard({
                     fadeDuration={0}
                   />
                 ))}
-              </Animated.View>
+              </ScrollView>
             ) : (
               <Image
                 source={{ uri: activePhoto.url }}
@@ -1252,7 +1227,7 @@ function FeedCard({
                 {galleryPhotos.map((_, dotIndex) => (
                   <Pressable
                     key={`${item.id}-dot-${dotIndex}`}
-                    onPress={() => animateToPhotoIndex(dotIndex)}
+                    onPress={() => scrollToPhotoIndex(dotIndex)}
                     hitSlop={6}
                     style={[
                       styles.photoDot,
@@ -2582,11 +2557,13 @@ const styles = StyleSheet.create({
   },
   feedPhotoTrack: {
     flexDirection: "row",
-    width: "100%",
     height: "100%",
+    backgroundColor: "#000000",
   },
   feedPhotoTrackSlide: {
     height: "100%",
+    backgroundColor: "#000000",
+    flexShrink: 0,
   },
   feedPhotoStatic: {
     width: "100%",
