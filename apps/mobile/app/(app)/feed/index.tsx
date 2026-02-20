@@ -1154,8 +1154,9 @@ function FeedCard({
         <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
       </Pressable>
 
-      <View
+      <Pressable
         style={styles.feedPhotoFrame}
+        onPress={onOpenEntry}
         onLayout={(event) => {
           const nextWidth = Math.ceil(event.nativeEvent.layout.width);
           if (nextWidth > 0 && nextWidth !== photoFrameWidth) {
@@ -1235,7 +1236,10 @@ function FeedCard({
                 {galleryPhotos.map((_, dotIndex) => (
                   <Pressable
                     key={`${item.id}-dot-${dotIndex}`}
-                    onPress={() => scrollToPhotoIndex(dotIndex)}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      scrollToPhotoIndex(dotIndex);
+                    }}
                     hitSlop={6}
                     style={[
                       styles.photoDot,
@@ -1248,7 +1252,10 @@ function FeedCard({
             {hasMultiplePhotos ? (
               <>
                 <Pressable
-                  onPress={goToPreviousPhoto}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    goToPreviousPhoto();
+                  }}
                   hitSlop={8}
                   style={[styles.photoNavButton, styles.photoNavButtonLeft]}
                   accessibilityRole="button"
@@ -1257,7 +1264,10 @@ function FeedCard({
                   <AppText style={styles.photoNavButtonText}>{"<"}</AppText>
                 </Pressable>
                 <Pressable
-                  onPress={goToNextPhoto}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    goToNextPhoto();
+                  }}
                   hitSlop={8}
                   style={[styles.photoNavButton, styles.photoNavButtonRight]}
                   accessibilityRole="button"
@@ -1273,7 +1283,7 @@ function FeedCard({
             <AppText style={styles.feedPhotoFallbackText}>No photo</AppText>
           </View>
         )}
-      </View>
+      </Pressable>
 
       <Pressable style={styles.feedTextStack} onPress={onOpenEntry}>
         {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
@@ -1288,7 +1298,6 @@ function FeedCard({
               .join(", ")}
           </AppText>
         ) : null}
-        <AppText style={styles.feedOpenLink}>Open post {"\u2192"}</AppText>
       </Pressable>
 
       {notes ? (
@@ -2673,12 +2682,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     marginTop: 4,
-  },
-  feedOpenLink: {
-    color: "#fde68a",
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 3,
   },
   feedValueRow: {
     flexDirection: "row",

@@ -1,8 +1,11 @@
 import {
+  Children,
   useEffect,
   useMemo,
   useRef,
-  useState } from "react";
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -237,6 +240,7 @@ const MONTH_SHORT_LABELS = [
   "Nov",
   "Dec",
 ] as const;
+const FIELD_ROW_GAP = 10;
 
 function formatYmd(date: Date): string {
   const year = date.getFullYear();
@@ -1091,26 +1095,22 @@ export default function NewEntryScreen() {
             placeholder="Optional tasting notes"
           />
 
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Field
-                label="Rating (1-100)"
-                value={form.rating}
-                onChange={(value) => updateField("rating", value)}
-                keyboardType="number-pad"
-                placeholder="Required"
-                required
-              />
-            </View>
-            <View style={styles.col}>
-              <SelectField
-                label="QPR (Quality : Price Ratio)"
-                value={form.qpr_level}
-                options={QPR_OPTIONS}
-                onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
-              />
-            </View>
-          </View>
+          <AdaptiveFieldRow minColumnWidth={170}>
+            <Field
+              label="Rating (1-100)"
+              value={form.rating}
+              onChange={(value) => updateField("rating", value)}
+              keyboardType="number-pad"
+              placeholder="Required"
+              required
+            />
+            <SelectField
+              label="QPR"
+              value={form.qpr_level}
+              options={QPR_OPTIONS}
+              onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
+            />
+          </AdaptiveFieldRow>
 
           <Accordion
             title="Wine details"
@@ -1129,38 +1129,30 @@ export default function NewEntryScreen() {
               value={form.producer}
               onChange={(v) => updateField("producer", v)}
             />
-            <View style={styles.row}>
-              <View style={styles.col}>
-                <Field
-                  label="Vintage"
-                  value={form.vintage}
-                  onChange={(v) => updateField("vintage", v)}
-                />
-              </View>
-              <View style={styles.col}>
-                <Field
-                  label="Country"
-                  value={form.country}
-                  onChange={(v) => updateField("country", v)}
-                />
-              </View>
-            </View>
-            <View style={styles.row}>
-              <View style={styles.col}>
-                <Field
-                  label="Region"
-                  value={form.region}
-                  onChange={(v) => updateField("region", v)}
-                />
-              </View>
-              <View style={styles.col}>
-                <Field
-                  label="Appellation"
-                  value={form.appellation}
-                  onChange={(v) => updateField("appellation", v)}
-                />
-              </View>
-            </View>
+            <AdaptiveFieldRow minColumnWidth={160}>
+              <Field
+                label="Vintage"
+                value={form.vintage}
+                onChange={(v) => updateField("vintage", v)}
+              />
+              <Field
+                label="Country"
+                value={form.country}
+                onChange={(v) => updateField("country", v)}
+              />
+            </AdaptiveFieldRow>
+            <AdaptiveFieldRow minColumnWidth={160}>
+              <Field
+                label="Region"
+                value={form.region}
+                onChange={(v) => updateField("region", v)}
+              />
+              <Field
+                label="Appellation"
+                value={form.appellation}
+                onChange={(v) => updateField("appellation", v)}
+              />
+            </AdaptiveFieldRow>
             <Field
               label="Classification"
               value={form.classification}
@@ -1496,6 +1488,46 @@ function Field({
   );
 }
 
+function AdaptiveFieldRow({
+  children,
+  minColumnWidth,
+}: {
+  children: ReactNode;
+  minColumnWidth: number;
+}) {
+  const [rowWidth, setRowWidth] = useState(0);
+  const items = Children.toArray(children);
+  const canUseTwoColumns =
+    items.length === 2 &&
+    rowWidth > 0 &&
+    (rowWidth - FIELD_ROW_GAP) / 2 >= minColumnWidth;
+  const twoColWidth = canUseTwoColumns ? (rowWidth - FIELD_ROW_GAP) / 2 : 0;
+
+  return (
+    <View
+      style={styles.adaptiveRow}
+      onLayout={(event) => {
+        const nextWidth = Math.round(event.nativeEvent.layout.width);
+        setRowWidth((current) => (current === nextWidth ? current : nextWidth));
+      }}
+    >
+      {items.map((item, index) => (
+        <View
+          key={`adaptive-field-${index}`}
+          style={[
+            styles.adaptiveCol,
+            canUseTwoColumns && twoColWidth > 0
+              ? { width: twoColWidth }
+              : styles.adaptiveColFull,
+          ]}
+        >
+          {item}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function SelectField({
   label,
   value,
@@ -1561,7 +1593,9 @@ function SelectField({
     <View style={styles.block}>
       {hideLabel ? null : <AppText style={styles.label}>{label}</AppText>}
       <Pressable ref={triggerRef} style={styles.selectTrigger} onPress={openPopover}>
-        <AppText style={styles.selectTriggerText}>{selectedLabel}</AppText>
+        <AppText style={styles.selectTriggerText} numberOfLines={1}>
+          {selectedLabel}
+        </AppText>
         <AppText style={styles.selectChevron}>v</AppText>
       </Pressable>
       <Modal
@@ -1982,8 +2016,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  col: { flex: 1, minWidth: 150 },
+  adaptiveRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: FIELD_ROW_GAP,
+  },
+  adaptiveCol: {
+    minWidth: 0,
+  },
+  adaptiveColFull: {
+    width: "100%",
+  },
   locationDateRow: {
     flexDirection: "row",
     alignItems: "flex-start",
