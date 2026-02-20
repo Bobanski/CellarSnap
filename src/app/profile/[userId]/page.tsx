@@ -41,6 +41,9 @@ export default function FriendProfilePage() {
   const [confirmingUnfriend, setConfirmingUnfriend] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [friendActionError, setFriendActionError] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockActionLoading, setBlockActionLoading] = useState(false);
+  const [blockActionError, setBlockActionError] = useState<string | null>(null);
   const [theirEntries, setTheirEntries] = useState<EntryWithAuthor[]>([]);
   const [taggedEntries, setTaggedEntries] = useState<EntryWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,16 +78,18 @@ export default function FriendProfilePage() {
       setLoading(true);
       setErrorMessage(null);
       setFriendActionError(null);
+      setBlockActionError(null);
       setConfirmingUnfriend(false);
       setShowAllEntries(false);
       setShowAllTaggedEntries(false);
 
-      const [profileRes, entriesRes, taggedRes, myProfileRes] =
+      const [profileRes, entriesRes, taggedRes, myProfileRes, blockRes] =
         await Promise.all([
           fetch(`/api/users/${userId}`, { cache: "no-store" }),
           fetch(`/api/users/${userId}/entries`, { cache: "no-store" }),
           fetch(`/api/users/${userId}/tagged`, { cache: "no-store" }),
           fetch("/api/profile", { cache: "no-store" }),
+          fetch(`/api/users/${userId}/block`, { cache: "no-store" }),
         ]);
 
       if (!profileRes.ok) {
@@ -105,6 +110,9 @@ export default function FriendProfilePage() {
       const myProfileData = myProfileRes.ok
         ? await myProfileRes.json()
         : { profile: null };
+      const blockData = blockRes.ok
+        ? await blockRes.json()
+        : { blocked: false };
 
       if (isMounted) {
         setProfile(profileData.profile);
@@ -115,6 +123,7 @@ export default function FriendProfilePage() {
         setIncomingRequestId(profileData.profile?.incoming_request_id ?? null);
         setOutgoingRequestId(profileData.profile?.outgoing_request_id ?? null);
         setFriendRequestId(profileData.profile?.friend_request_id ?? null);
+        setIsBlocked(Boolean(blockData.blocked));
 
         setLoading(false);
       }
@@ -262,6 +271,55 @@ export default function FriendProfilePage() {
     }
   };
 
+  const toggleBlock = async () => {
+    if (!userId || blockActionLoading) {
+      return;
+    }
+
+    if (!isBlocked) {
+      const confirmed =
+        typeof window === "undefined"
+          ? true
+          : window.confirm(
+              `Block ${profile?.display_name ?? "this user"}? You will no longer see each other's posts or comments.`
+            );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setBlockActionLoading(true);
+    setBlockActionError(null);
+    try {
+      const response = await fetch(`/api/users/${userId}/block`, {
+        method: isBlocked ? "DELETE" : "POST",
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        blocked?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setBlockActionError(payload.error ?? "Unable to update block state.");
+        return;
+      }
+
+      const nextBlocked = Boolean(payload.blocked);
+      setIsBlocked(nextBlocked);
+      if (nextBlocked) {
+        setFriendStatus("none");
+        setIncomingRequestId(null);
+        setOutgoingRequestId(null);
+        setFriendRequestId(null);
+        setConfirmingUnfriend(false);
+      }
+    } catch {
+      setBlockActionError("Unable to update block state.");
+    } finally {
+      setBlockActionLoading(false);
+    }
+  };
+
   const isOwnProfile = currentUserId === userId;
   const fullName =
     profile && (profile.first_name || profile.last_name)
@@ -356,92 +414,121 @@ export default function FriendProfilePage() {
             {/* ── Friend action button ── */}
             {!isOwnProfile ? (
               <div className="shrink-0 space-y-2">
-                {friendStatus === "friends" ? (
-                  confirmingUnfriend ? (
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <span className="text-xs text-zinc-400">Remove friend?</span>
-                      <button
-                        type="button"
-                        disabled={friendActionLoading}
-                        onClick={removeFriend}
-                        className="rounded-full bg-rose-500/80 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
-                      >
-                        {friendActionLoading ? "Removing..." : "Yes, remove"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={friendActionLoading}
-                        onClick={() => setConfirmingUnfriend(false)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        Friends
-                      </span>
-                      <button
-                        type="button"
-                        disabled={friendActionLoading}
-                        onClick={() => {
-                          setFriendActionError(null);
-                          setConfirmingUnfriend(true);
-                        }}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )
-                ) : friendStatus === "request_sent" ? (
+                {isBlocked ? (
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
-                      Request sent
+                    <span className="rounded-full border border-rose-400/35 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100">
+                      Blocked
                     </span>
                     <button
                       type="button"
-                      disabled={friendActionLoading || !outgoingRequestId}
-                      onClick={cancelOutgoingRequest}
+                      disabled={blockActionLoading}
+                      onClick={toggleBlock}
                       className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
                     >
-                      {friendActionLoading ? "Cancelling..." : "Cancel"}
+                      {blockActionLoading ? "Updating..." : "Unblock"}
                     </button>
                   </div>
-                ) : friendStatus === "request_received" ? (
-                  <button
-                    type="button"
-                    disabled={friendActionLoading}
-                    onClick={acceptRequest}
-                    className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
-                  >
-                    {friendActionLoading ? "Accepting..." : "Accept friend request"}
-                  </button>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={friendActionLoading}
-                    onClick={sendFriendRequest}
-                    className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
-                  >
-                    {friendActionLoading ? "Sending..." : "Add friend"}
-                  </button>
+                  <>
+                    {friendStatus === "friends" ? (
+                      confirmingUnfriend ? (
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <span className="text-xs text-zinc-400">Remove friend?</span>
+                          <button
+                            type="button"
+                            disabled={friendActionLoading}
+                            onClick={removeFriend}
+                            className="rounded-full bg-rose-500/80 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                          >
+                            {friendActionLoading ? "Removing..." : "Yes, remove"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={friendActionLoading}
+                            onClick={() => setConfirmingUnfriend(false)}
+                            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            Friends
+                          </span>
+                          <button
+                            type="button"
+                            disabled={friendActionLoading}
+                            onClick={() => {
+                              setFriendActionError(null);
+                              setConfirmingUnfriend(true);
+                            }}
+                            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )
+                    ) : friendStatus === "request_sent" ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
+                          Request sent
+                        </span>
+                        <button
+                          type="button"
+                          disabled={friendActionLoading || !outgoingRequestId}
+                          onClick={cancelOutgoingRequest}
+                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                        >
+                          {friendActionLoading ? "Cancelling..." : "Cancel"}
+                        </button>
+                      </div>
+                    ) : friendStatus === "request_received" ? (
+                      <button
+                        type="button"
+                        disabled={friendActionLoading}
+                        onClick={acceptRequest}
+                        className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
+                      >
+                        {friendActionLoading ? "Accepting..." : "Accept friend request"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={friendActionLoading}
+                        onClick={sendFriendRequest}
+                        className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
+                      >
+                        {friendActionLoading ? "Sending..." : "Add friend"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={blockActionLoading}
+                      onClick={toggleBlock}
+                      className="w-full text-right text-[11px] uppercase tracking-[0.16em] text-zinc-500 transition hover:text-zinc-200 disabled:opacity-50"
+                    >
+                      {blockActionLoading ? "Updating..." : "Block user"}
+                    </button>
+                  </>
                 )}
                 {friendActionError ? (
                   <p className="text-right text-xs text-rose-200">{friendActionError}</p>
+                ) : null}
+                {blockActionError ? (
+                  <p className="text-right text-xs text-rose-200">{blockActionError}</p>
                 ) : null}
               </div>
             ) : null}

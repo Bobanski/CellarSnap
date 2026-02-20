@@ -10,6 +10,16 @@ export type EntryPrivacy =
   | null
   | undefined;
 
+function isMissingBlocksTableError(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("user_blocks") ||
+    lower.includes("relation") ||
+    lower.includes("does not exist") ||
+    lower.includes("column")
+  );
+}
+
 function normalizeEntryPrivacy(
   value: EntryPrivacy
 ): "public" | "friends_of_friends" | "friends" | "private" {
@@ -17,6 +27,36 @@ function normalizeEntryPrivacy(
     return value;
   }
   return "public";
+}
+
+async function isBlockedEitherWay(
+  supabase: SupabaseClient,
+  viewerUserId: string,
+  ownerUserId: string
+) {
+  if (viewerUserId === ownerUserId) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from("user_blocks")
+    .select("blocker_id")
+    .or(
+      [
+        `and(blocker_id.eq.${viewerUserId},blocked_id.eq.${ownerUserId})`,
+        `and(blocker_id.eq.${ownerUserId},blocked_id.eq.${viewerUserId})`,
+      ].join(",")
+    )
+    .limit(1);
+
+  if (error) {
+    if (isMissingBlocksTableError(error.message)) {
+      return false;
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).length > 0;
 }
 
 export async function getAcceptedFriendIds(
@@ -118,6 +158,10 @@ export async function canUserViewEntry({
 }): Promise<boolean> {
   if (viewerUserId === ownerUserId) {
     return true;
+  }
+
+  if (await isBlockedEitherWay(supabase, viewerUserId, ownerUserId)) {
+    return false;
   }
 
   const privacy = normalizeEntryPrivacy(entryPrivacy);

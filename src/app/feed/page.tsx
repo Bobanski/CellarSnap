@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
@@ -300,6 +301,7 @@ function formatCommentDate(value: string) {
 
 export default function FeedPage() {
   const router = useRouter();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserOption[]>([]);
@@ -340,6 +342,20 @@ export default function FeedPage() {
   const [commentErrorByEntryId, setCommentErrorByEntryId] = useState<Record<string, string | null>>(
     {}
   );
+  const [postMenuEntryId, setPostMenuEntryId] = useState<string | null>(null);
+  const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
+  const [moderationNotice, setModerationNotice] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!moderationNotice) {
+      return;
+    }
+    const timer = window.setTimeout(() => setModerationNotice(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [moderationNotice]);
 
   const toggleNotesExpanded = (entryId: string) => {
     setExpandedNotesByEntryId((current) => ({
@@ -631,6 +647,54 @@ export default function FeedPage() {
     }
   };
 
+  const reportPost = async (entryId: string, targetUserId: string) => {
+    if (!viewerUserId) {
+      setModerationNotice({
+        kind: "error",
+        message: "Sign in to report content.",
+      });
+      return;
+    }
+    if (viewerUserId === targetUserId) {
+      return;
+    }
+
+    if (typeof window !== "undefined" && !window.confirm("Report this post?")) {
+      return;
+    }
+
+    setReportingEntryId(entryId);
+    setModerationNotice(null);
+    setPostMenuEntryId(null);
+
+    const { error } = await supabase.from("content_reports").insert({
+      reporter_id: viewerUserId,
+      target_type: "entry",
+      entry_id: entryId,
+      comment_id: null,
+      target_user_id: targetUserId,
+      reason: null,
+      details: null,
+    });
+
+    if (error) {
+      setModerationNotice({
+        kind: "error",
+        message: error.message.includes("content_reports")
+          ? "Reporting is temporarily unavailable."
+          : "Unable to report right now.",
+      });
+      setReportingEntryId(null);
+      return;
+    }
+
+    setModerationNotice({
+      kind: "success",
+      message: "Report submitted.",
+    });
+    setReportingEntryId(null);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -680,6 +744,8 @@ export default function FeedPage() {
           setDeletingCommentById({});
           setCommentErrorByEntryId({});
           setReactionPopupEntryId(null);
+          setPostMenuEntryId(null);
+          setReportingEntryId(null);
           setNextCursor(feedData.next_cursor ?? null);
           setHasMore(Boolean(feedData.has_more));
           setLoading(false);
@@ -808,6 +874,18 @@ export default function FeedPage() {
           </button>
         </div>
 
+        {moderationNotice ? (
+          <div
+            className={`rounded-xl border px-3 py-2 text-xs ${
+              moderationNotice.kind === "success"
+                ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                : "border-rose-500/40 bg-rose-500/10 text-rose-100"
+            }`}
+          >
+            {moderationNotice.message}
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
             Loading feed...
@@ -866,7 +944,49 @@ export default function FeedPage() {
                       </span>
                     </button>
                   </div>
-                  <span className="shrink-0">{formatConsumedDate(entry.consumed_at)}</span>
+                  <div className="shrink-0 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      {viewerUserId && viewerUserId !== entry.user_id ? (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPostMenuEntryId((current) =>
+                                current === entry.id ? null : entry.id
+                              );
+                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                            aria-label="More actions"
+                          >
+                            <span className="inline-flex items-center gap-0.5" aria-hidden>
+                              <span className="h-1 w-1 rounded-full bg-current" />
+                              <span className="h-1 w-1 rounded-full bg-current" />
+                              <span className="h-1 w-1 rounded-full bg-current" />
+                            </span>
+                          </button>
+                          {postMenuEntryId === entry.id ? (
+                            <div
+                              className="absolute right-0 z-20 mt-1 w-32 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <button
+                                type="button"
+                                disabled={reportingEntryId === entry.id}
+                                onClick={() => void reportPost(entry.id, entry.user_id)}
+                                className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
+                              >
+                                {reportingEntryId === entry.id
+                                  ? "Reporting..."
+                                  : "Report post"}
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
                 <div className="mt-4">
                   <EntryPhotoGallery entry={entry} />

@@ -5,6 +5,7 @@ import {
   useRef,
   useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   Image,
   Pressable,
@@ -951,6 +952,9 @@ async function fetchFeedPage({
 
 function FeedCard({
   item,
+  viewerUserId,
+  reportMenuOpen,
+  reportBusy,
   notesExpanded,
   onToggleNotes,
   commentsExpanded,
@@ -971,9 +975,15 @@ function FeedCard({
   reactionPickerOpen,
   onToggleReactionPicker,
   onToggleReaction,
+  onToggleReportMenu,
+  onReportPost,
+  onOpenAuthorProfile,
   onOpenEntry,
 }: {
   item: MobileFeedEntry;
+  viewerUserId: string | null;
+  reportMenuOpen: boolean;
+  reportBusy: boolean;
   notesExpanded: boolean;
   onToggleNotes: () => void;
   commentsExpanded: boolean;
@@ -994,6 +1004,9 @@ function FeedCard({
   reactionPickerOpen: boolean;
   onToggleReactionPicker: () => void;
   onToggleReaction: (emoji: string) => void;
+  onToggleReportMenu: () => void;
+  onReportPost: () => void;
+  onOpenAuthorProfile: () => void;
   onOpenEntry: () => void;
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
@@ -1134,8 +1147,8 @@ function FeedCard({
 
   return (
     <View style={styles.feedCard}>
-      <Pressable style={styles.feedAuthorRow} onPress={onOpenEntry}>
-        <View style={styles.feedAuthorStack}>
+      <View style={styles.feedAuthorRow}>
+        <Pressable style={styles.feedAuthorStack} onPress={onOpenAuthorProfile}>
           <View style={styles.feedAvatar}>
             {item.author_avatar_url ? (
               <Image
@@ -1150,9 +1163,33 @@ function FeedCard({
             )}
           </View>
           <AppText style={styles.feedAuthorName}>{item.author_name}</AppText>
+        </Pressable>
+        <View style={styles.feedAuthorRight}>
+          <View style={styles.feedMetaRow}>
+            <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
+            {viewerUserId && viewerUserId !== item.user_id ? (
+              <View style={styles.feedMenuWrap}>
+                <Pressable style={styles.feedMenuButton} onPress={onToggleReportMenu}>
+                  <View style={styles.feedMenuDotsRow}>
+                    <View style={styles.feedMenuDot} />
+                    <View style={styles.feedMenuDot} />
+                    <View style={styles.feedMenuDot} />
+                  </View>
+                </Pressable>
+                {reportMenuOpen ? (
+                  <View style={styles.feedMenuPanel}>
+                    <Pressable disabled={reportBusy} onPress={onReportPost}>
+                      <AppText style={styles.feedMenuItemText}>
+                        {reportBusy ? "Reporting..." : "Report post"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
         </View>
-        <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
-      </Pressable>
+      </View>
 
       <Pressable
         style={styles.feedPhotoFrame}
@@ -1586,6 +1623,22 @@ export default function FeedScreen() {
   const [commentErrorByEntryId, setCommentErrorByEntryId] = useState<
     Record<string, string | null>
   >({});
+  const [reportMenuEntryId, setReportMenuEntryId] = useState<string | null>(null);
+  const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
+  const [moderationNotice, setModerationNotice] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!moderationNotice) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setModerationNotice(null);
+    }, 3200);
+    return () => clearTimeout(timer);
+  }, [moderationNotice]);
 
   const visibleEntries = useMemo(() => {
     if (!selectedFriendId) {
@@ -2003,6 +2056,8 @@ export default function FeedScreen() {
         setEntries([]);
         setHasMore(false);
         setNextCursor(null);
+        setReportMenuEntryId(null);
+        setReportingEntryId(null);
         setExpandedNotesByEntryId({});
         setReactionPopupEntryId(null);
         setExpandedCommentsByEntryId({});
@@ -2016,6 +2071,8 @@ export default function FeedScreen() {
         setEntries(result.entries);
         setHasMore(result.hasMore);
         setNextCursor(result.nextCursor);
+        setReportMenuEntryId(null);
+        setReportingEntryId(null);
         setExpandedNotesByEntryId({});
         setReactionPopupEntryId(null);
         setExpandedCommentsByEntryId({});
@@ -2031,6 +2088,46 @@ export default function FeedScreen() {
       setIsRefreshing(false);
     },
     [feedScope, user?.id]
+  );
+
+  const reportContent = useCallback(
+    async ({ entryId, targetUserId }: { entryId: string; targetUserId: string }) => {
+      if (!user?.id || user.id === targetUserId) {
+        return;
+      }
+
+      setReportingEntryId(entryId);
+      setModerationNotice(null);
+      setReportMenuEntryId(null);
+
+      const { error } = await supabase.from("content_reports").insert({
+        reporter_id: user.id,
+        target_type: "entry",
+        entry_id: entryId,
+        comment_id: null,
+        target_user_id: targetUserId,
+        reason: null,
+        details: null,
+      });
+
+      if (error) {
+        setModerationNotice({
+          kind: "error",
+          message: error.message.includes("content_reports")
+            ? "Reporting is temporarily unavailable."
+            : "Unable to report right now.",
+        });
+        setReportingEntryId(null);
+        return;
+      }
+
+      setModerationNotice({
+        kind: "success",
+        message: "Report submitted.",
+      });
+      setReportingEntryId(null);
+    },
+    [user?.id]
   );
 
   useEffect(() => {
@@ -2245,6 +2342,18 @@ export default function FeedScreen() {
         ) : null}
 
         {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+        {moderationNotice ? (
+          <View
+            style={[
+              styles.moderationNotice,
+              moderationNotice.kind === "success"
+                ? styles.moderationNoticeSuccess
+                : styles.moderationNoticeError,
+            ]}
+          >
+            <AppText style={styles.moderationNoticeText}>{moderationNotice.message}</AppText>
+          </View>
+        ) : null}
 
         {visibleEntries.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -2268,6 +2377,9 @@ export default function FeedScreen() {
                 <FeedCard
                   key={entry.id}
                   item={entry}
+                  viewerUserId={user?.id ?? null}
+                  reportMenuOpen={reportMenuEntryId === entry.id}
+                  reportBusy={reportingEntryId === entry.id}
                   notesExpanded={Boolean(expandedNotesByEntryId[entry.id])}
                   onToggleNotes={() =>
                     setExpandedNotesByEntryId((current) => ({
@@ -2319,6 +2431,34 @@ export default function FeedScreen() {
                     )
                   }
                   onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
+                  onToggleReportMenu={() =>
+                    setReportMenuEntryId((current) =>
+                      current === entry.id ? null : entry.id
+                    )
+                  }
+                  onReportPost={() =>
+                    Alert.alert(
+                      "Report post?",
+                      "We will flag this post for review.",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Report",
+                          style: "destructive",
+                          onPress: () =>
+                            void reportContent({
+                              entryId: entry.id,
+                              targetUserId: entry.user_id,
+                            }),
+                        },
+                      ]
+                    )
+                  }
+                  onOpenAuthorProfile={() =>
+                    entry.user_id === user?.id
+                      ? router.push("/(app)/profile")
+                      : router.push(`/(app)/profile/${entry.user_id}`)
+                  }
                   onOpenEntry={() => router.push(`/(app)/entries/${entry.id}`)}
                 />
               );
@@ -2497,6 +2637,24 @@ const styles = StyleSheet.create({
     color: "#fecdd3",
     fontSize: 13,
   },
+  moderationNotice: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  moderationNoticeSuccess: {
+    borderColor: "rgba(16, 185, 129, 0.4)",
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+  },
+  moderationNoticeError: {
+    borderColor: "rgba(251, 113, 133, 0.4)",
+    backgroundColor: "rgba(251, 113, 133, 0.12)",
+  },
+  moderationNoticeText: {
+    color: "#f4f4f5",
+    fontSize: 12,
+  },
   emptyCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -2563,6 +2721,59 @@ const styles = StyleSheet.create({
     color: "#a1a1aa",
     fontSize: 11,
     flexShrink: 0,
+  },
+  feedAuthorRight: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  feedMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  feedMenuWrap: {
+    position: "relative",
+  },
+  feedMenuButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(0,0,0,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  feedMenuDotsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  feedMenuDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "#a1a1aa",
+  },
+  feedMenuPanel: {
+    position: "absolute",
+    right: 0,
+    top: 22,
+    zIndex: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "#1a1412",
+    minWidth: 116,
+    paddingVertical: 4,
+  },
+  feedMenuItemText: {
+    color: "#e4e4e7",
+    fontSize: 11,
+    fontWeight: "600",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   feedPhotoFrame: {
     width: "100%",
