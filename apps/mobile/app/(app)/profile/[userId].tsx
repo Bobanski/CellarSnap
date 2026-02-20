@@ -416,62 +416,58 @@ export default function UserProfileScreen() {
           <>
             <View style={styles.profileCard}>
               <View style={styles.profileHeader}>
-                <View style={styles.avatarWrap}>
-                  {profile.avatar_url ? (
-                    <Image
-                      source={{ uri: profile.avatar_url }}
-                      style={styles.avatarImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <AppText style={styles.avatarFallback}>
-                      {(profile.display_name ?? profile.email ?? "?")[0]?.toUpperCase() ?? "?"}
+                <View style={styles.profileIdentity}>
+                  <View style={styles.avatarWrap}>
+                    {profile.avatar_url ? (
+                      <Image
+                        source={{ uri: profile.avatar_url }}
+                        style={styles.avatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <AppText style={styles.avatarFallback}>
+                        {(profile.display_name ?? profile.email ?? "?")[0]?.toUpperCase() ?? "?"}
+                      </AppText>
+                    )}
+                  </View>
+                  <View style={styles.profileMeta}>
+                    <AppText style={styles.username}>
+                      {profile.display_name ?? profile.email ?? "Unknown"}
                     </AppText>
-                  )}
+                    {fullName ? <AppText style={styles.fullName}>{fullName}</AppText> : null}
+                  </View>
                 </View>
-                <View style={styles.profileMeta}>
-                  <AppText style={styles.username}>
-                    {profile.display_name ?? profile.email ?? "Unknown"}
+                {blocksUnavailable ? (
+                  <AppText style={styles.blockUnavailable}>
+                    Blocking unavailable
                   </AppText>
-                  {fullName ? <AppText style={styles.fullName}>{fullName}</AppText> : null}
-                  <AppText style={styles.subtitle}>
-                    {isBlocked
-                      ? "You have blocked this user."
-                      : "Tap below to block if needed."}
-                  </AppText>
-                </View>
+                ) : (
+                  <View style={styles.headerActions}>
+                    {isBlocked ? (
+                      <View style={styles.blockedChip}>
+                        <AppText style={styles.blockedChipText}>Blocked</AppText>
+                      </View>
+                    ) : null}
+                    <Pressable
+                      style={[
+                        styles.blockButton,
+                        isBlocked ? styles.unblockButton : styles.blockActionButton,
+                        blockActionLoading ? styles.blockButtonDisabled : null,
+                      ]}
+                      disabled={blockActionLoading}
+                      onPress={handleToggleBlock}
+                    >
+                      <AppText style={styles.blockButtonText}>
+                        {blockActionLoading
+                          ? "Updating..."
+                          : isBlocked
+                            ? "Unblock"
+                            : "Block user"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                )}
               </View>
-
-              {blocksUnavailable ? (
-                <AppText style={styles.blockUnavailable}>
-                  Blocking is temporarily unavailable.
-                </AppText>
-              ) : (
-                <View style={styles.blockRow}>
-                  {isBlocked ? (
-                    <View style={styles.blockedChip}>
-                      <AppText style={styles.blockedChipText}>Blocked</AppText>
-                    </View>
-                  ) : null}
-                  <Pressable
-                    style={[
-                      styles.blockButton,
-                      isBlocked ? styles.unblockButton : styles.blockActionButton,
-                      blockActionLoading ? styles.blockButtonDisabled : null,
-                    ]}
-                    disabled={blockActionLoading}
-                    onPress={handleToggleBlock}
-                  >
-                    <AppText style={styles.blockButtonText}>
-                      {blockActionLoading
-                        ? "Updating..."
-                        : isBlocked
-                          ? "Unblock"
-                          : "Block user"}
-                    </AppText>
-                  </Pressable>
-                </View>
-              )}
 
               {blockActionError ? (
                 <AppText style={styles.blockErrorText}>{blockActionError}</AppText>
@@ -580,8 +576,15 @@ const styles = StyleSheet.create({
   },
   profileHeader: {
     flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: 10,
+  },
+  profileIdentity: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+    flex: 1,
   },
   avatarWrap: {
     width: 48,
@@ -609,26 +612,24 @@ const styles = StyleSheet.create({
   },
   username: {
     color: "#f4f4f5",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
   },
   fullName: {
     color: "#d4d4d8",
     fontSize: 12,
   },
-  subtitle: {
-    color: "#a1a1aa",
-    fontSize: 12,
-  },
   blockUnavailable: {
     color: "#fca5a5",
     fontSize: 12,
+    marginTop: 6,
   },
-  blockRow: {
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 8,
+    gap: 6,
+    alignSelf: "flex-start",
+    marginTop: 2,
   },
   blockedChip: {
     borderRadius: 999,

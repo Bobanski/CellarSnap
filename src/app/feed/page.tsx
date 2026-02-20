@@ -21,12 +21,23 @@ const PHOTO_TYPE_LABELS = {
   lineup: "Lineup",
   other_bottles: "Other bottle",
 } as const;
+const REPORT_REASON_OPTIONS = [
+  { value: "spam", label: "Spam" },
+  { value: "harassment", label: "Harassment" },
+  { value: "hate", label: "Hate speech" },
+  { value: "nudity", label: "Nudity" },
+  { value: "misinfo", label: "False info" },
+  { value: "other", label: "Other" },
+] as const;
+const DEFAULT_REPORT_REASON = REPORT_REASON_OPTIONS[0].value;
 const COLLAPSED_NOTES_STYLE: CSSProperties = {
   display: "-webkit-box",
   WebkitLineClamp: 2,
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
 };
+
+type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
 
 type FeedPhoto = {
   type: keyof typeof PHOTO_TYPE_LABELS;
@@ -148,6 +159,8 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   const photos = entry.photo_gallery?.length ? entry.photo_gallery : fallbackPhotos;
   const [index, setIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const didSwipeRef = useRef(false);
 
   if (photos.length === 0) {
     return null;
@@ -159,24 +172,60 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   const goNext = () => setIndex((current) => (current + 1) % total);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40"
+      onClickCapture={(event) => {
+        if (!didSwipeRef.current) {
+          return;
+        }
+        didSwipeRef.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    >
       <div
         className="flex h-60 transition-transform duration-300 md:h-84 lg:h-[25rem]"
-        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        style={{
+          transform: `translateX(-${activeIndex * 100}%)`,
+          touchAction: "pan-y",
+        }}
         onTouchStart={(event) => {
           touchStartXRef.current = event.touches[0]?.clientX ?? null;
+          touchStartYRef.current = event.touches[0]?.clientY ?? null;
+          didSwipeRef.current = false;
+        }}
+        onTouchMove={(event) => {
+          if (touchStartXRef.current === null || touchStartYRef.current === null) {
+            return;
+          }
+          const point = event.touches[0];
+          if (!point) {
+            return;
+          }
+          const deltaX = Math.abs(point.clientX - touchStartXRef.current);
+          const deltaY = Math.abs(point.clientY - touchStartYRef.current);
+          if (deltaX > 10 || deltaY > 10) {
+            didSwipeRef.current = true;
+          }
         }}
         onTouchEnd={(event) => {
           if (photos.length <= 1 || touchStartXRef.current === null) {
             touchStartXRef.current = null;
+            touchStartYRef.current = null;
             return;
           }
           const endX = event.changedTouches[0]?.clientX ?? touchStartXRef.current;
           const delta = touchStartXRef.current - endX;
           touchStartXRef.current = null;
+          touchStartYRef.current = null;
           if (Math.abs(delta) < 40) return;
+          didSwipeRef.current = true;
           if (delta > 0) goNext();
           else goPrev();
+        }}
+        onTouchCancel={() => {
+          touchStartXRef.current = null;
+          touchStartYRef.current = null;
         }}
       >
         {photos.map((photo, photoIndex) => (
@@ -344,6 +393,14 @@ export default function FeedPage() {
   );
   const [postMenuEntryId, setPostMenuEntryId] = useState<string | null>(null);
   const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
+  const [postReportReasonByEntryId, setPostReportReasonByEntryId] = useState<
+    Record<string, ReportReason>
+  >({});
+  const [commentMenuKey, setCommentMenuKey] = useState<string | null>(null);
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
+  const [commentReportReasonByCommentId, setCommentReportReasonByCommentId] = useState<
+    Record<string, ReportReason>
+  >({});
   const [moderationNotice, setModerationNotice] = useState<{
     kind: "success" | "error";
     message: string;
@@ -517,6 +574,7 @@ export default function FeedPage() {
 
   const toggleCommentsExpanded = (entryId: string) => {
     setReactionPopupEntryId(null);
+    setCommentMenuKey(null);
     setExpandedCommentsByEntryId((current) => {
       const nextExpanded = !current[entryId];
       if (nextExpanded) {
@@ -647,7 +705,19 @@ export default function FeedPage() {
     }
   };
 
-  const reportPost = async (entryId: string, targetUserId: string) => {
+  const reportContent = async ({
+    targetType,
+    entryId,
+    targetUserId,
+    reason,
+    commentId,
+  }: {
+    targetType: "entry" | "comment";
+    entryId: string;
+    targetUserId: string;
+    reason: ReportReason;
+    commentId?: string;
+  }) => {
     if (!viewerUserId) {
       setModerationNotice({
         kind: "error",
@@ -659,21 +729,22 @@ export default function FeedPage() {
       return;
     }
 
-    if (typeof window !== "undefined" && !window.confirm("Report this post?")) {
-      return;
+    if (targetType === "entry") {
+      setReportingEntryId(entryId);
+      setPostMenuEntryId(null);
+    } else if (commentId) {
+      setReportingCommentId(commentId);
+      setCommentMenuKey(null);
     }
-
-    setReportingEntryId(entryId);
     setModerationNotice(null);
-    setPostMenuEntryId(null);
 
     const { error } = await supabase.from("content_reports").insert({
       reporter_id: viewerUserId,
-      target_type: "entry",
+      target_type: targetType,
       entry_id: entryId,
-      comment_id: null,
+      comment_id: commentId ?? null,
       target_user_id: targetUserId,
-      reason: null,
+      reason,
       details: null,
     });
 
@@ -684,7 +755,11 @@ export default function FeedPage() {
           ? "Reporting is temporarily unavailable."
           : "Unable to report right now.",
       });
-      setReportingEntryId(null);
+      if (targetType === "entry") {
+        setReportingEntryId(null);
+      } else if (commentId) {
+        setReportingCommentId(null);
+      }
       return;
     }
 
@@ -692,7 +767,11 @@ export default function FeedPage() {
       kind: "success",
       message: "Report submitted.",
     });
-    setReportingEntryId(null);
+    if (targetType === "entry") {
+      setReportingEntryId(null);
+    } else if (commentId) {
+      setReportingCommentId(null);
+    }
   };
 
   useEffect(() => {
@@ -746,6 +825,10 @@ export default function FeedPage() {
           setReactionPopupEntryId(null);
           setPostMenuEntryId(null);
           setReportingEntryId(null);
+          setPostReportReasonByEntryId({});
+          setCommentMenuKey(null);
+          setReportingCommentId(null);
+          setCommentReportReasonByCommentId({});
           setNextCursor(feedData.next_cursor ?? null);
           setHasMore(Boolean(feedData.has_more));
           setLoading(false);
@@ -968,13 +1051,47 @@ export default function FeedPage() {
                           </button>
                           {postMenuEntryId === entry.id ? (
                             <div
-                              className="absolute right-0 z-20 mt-1 w-32 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                              className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
                               onClick={(event) => event.stopPropagation()}
                             >
+                              <div className="px-3 pb-1">
+                                <label
+                                  htmlFor={`post-report-reason-${entry.id}`}
+                                  className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-zinc-500"
+                                >
+                                  Reason
+                                </label>
+                                <select
+                                  id={`post-report-reason-${entry.id}`}
+                                  value={postReportReasonByEntryId[entry.id] ?? DEFAULT_REPORT_REASON}
+                                  onChange={(event) =>
+                                    setPostReportReasonByEntryId((current) => ({
+                                      ...current,
+                                      [entry.id]: event.target.value as ReportReason,
+                                    }))
+                                  }
+                                  className="w-full rounded border border-white/15 bg-black/30 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-300/60 focus:outline-none"
+                                >
+                                  {REPORT_REASON_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                               <button
                                 type="button"
                                 disabled={reportingEntryId === entry.id}
-                                onClick={() => void reportPost(entry.id, entry.user_id)}
+                                onClick={() =>
+                                  void reportContent({
+                                    targetType: "entry",
+                                    entryId: entry.id,
+                                    targetUserId: entry.user_id,
+                                    reason:
+                                      postReportReasonByEntryId[entry.id] ??
+                                      DEFAULT_REPORT_REASON,
+                                  })
+                                }
                                 className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
                               >
                                 {reportingEntryId === entry.id
@@ -1248,6 +1365,7 @@ export default function FeedPage() {
                                 const deletingComment = Boolean(
                                   deletingCommentById[comment.id]
                                 );
+                                const topCommentMenuKey = `${entry.id}:${comment.id}`;
                                 return (
                                   <li
                                     key={comment.id}
@@ -1292,6 +1410,90 @@ export default function FeedPage() {
                                           >
                                             {deletingComment ? "Deleting..." : "Delete"}
                                           </button>
+                                        ) : null}
+                                        {!isCommentDeleted &&
+                                        viewerUserId &&
+                                        viewerUserId !== comment.user_id ? (
+                                          <div className="relative">
+                                            <button
+                                              type="button"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                setCommentMenuKey((current) =>
+                                                  current === topCommentMenuKey
+                                                    ? null
+                                                    : topCommentMenuKey
+                                                );
+                                              }}
+                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                                              aria-label="Comment actions"
+                                            >
+                                              <span className="inline-flex items-center gap-0.5" aria-hidden>
+                                                <span className="h-1 w-1 rounded-full bg-current" />
+                                                <span className="h-1 w-1 rounded-full bg-current" />
+                                                <span className="h-1 w-1 rounded-full bg-current" />
+                                              </span>
+                                            </button>
+                                            {commentMenuKey === topCommentMenuKey ? (
+                                              <div
+                                                className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                                                onClick={(event) => event.stopPropagation()}
+                                              >
+                                                <div className="px-3 pb-1">
+                                                  <label
+                                                    htmlFor={`comment-report-reason-${comment.id}`}
+                                                    className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-zinc-500"
+                                                  >
+                                                    Reason
+                                                  </label>
+                                                  <select
+                                                    id={`comment-report-reason-${comment.id}`}
+                                                    value={
+                                                      commentReportReasonByCommentId[comment.id] ??
+                                                      DEFAULT_REPORT_REASON
+                                                    }
+                                                    onChange={(event) =>
+                                                      setCommentReportReasonByCommentId(
+                                                        (current) => ({
+                                                          ...current,
+                                                          [comment.id]: event.target
+                                                            .value as ReportReason,
+                                                        })
+                                                      )
+                                                    }
+                                                    className="w-full rounded border border-white/15 bg-black/30 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-300/60 focus:outline-none"
+                                                  >
+                                                    {REPORT_REASON_OPTIONS.map((option) => (
+                                                      <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  disabled={reportingCommentId === comment.id}
+                                                  onClick={() =>
+                                                    void reportContent({
+                                                      targetType: "comment",
+                                                      entryId: entry.id,
+                                                      commentId: comment.id,
+                                                      targetUserId: comment.user_id,
+                                                      reason:
+                                                        commentReportReasonByCommentId[
+                                                          comment.id
+                                                        ] ?? DEFAULT_REPORT_REASON,
+                                                    })
+                                                  }
+                                                  className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
+                                                >
+                                                  {reportingCommentId === comment.id
+                                                    ? "Reporting..."
+                                                    : "Report comment"}
+                                                </button>
+                                              </div>
+                                            ) : null}
+                                          </div>
                                         ) : null}
                                       </div>
                                     </div>
@@ -1338,6 +1540,7 @@ export default function FeedPage() {
                                           const deletingReply = Boolean(
                                             deletingCommentById[reply.id]
                                           );
+                                          const replyMenuKey = `${entry.id}:${reply.id}`;
                                           return (
                                             <div
                                               key={reply.id}
@@ -1385,6 +1588,91 @@ export default function FeedPage() {
                                                     >
                                                       {deletingReply ? "Deleting..." : "Delete"}
                                                     </button>
+                                                  ) : null}
+                                                  {!isReplyDeleted &&
+                                                  viewerUserId &&
+                                                  viewerUserId !== reply.user_id ? (
+                                                    <div className="relative">
+                                                      <button
+                                                        type="button"
+                                                        onClick={(event) => {
+                                                          event.stopPropagation();
+                                                          setCommentMenuKey((current) =>
+                                                            current === replyMenuKey
+                                                              ? null
+                                                              : replyMenuKey
+                                                          );
+                                                        }}
+                                                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                                                        aria-label="Reply actions"
+                                                      >
+                                                        <span className="inline-flex items-center gap-0.5" aria-hidden>
+                                                          <span className="h-1 w-1 rounded-full bg-current" />
+                                                          <span className="h-1 w-1 rounded-full bg-current" />
+                                                          <span className="h-1 w-1 rounded-full bg-current" />
+                                                        </span>
+                                                      </button>
+                                                      {commentMenuKey === replyMenuKey ? (
+                                                        <div
+                                                          className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                                                          onClick={(event) => event.stopPropagation()}
+                                                        >
+                                                          <div className="px-3 pb-1">
+                                                            <label
+                                                              htmlFor={`comment-report-reason-${reply.id}`}
+                                                              className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-zinc-500"
+                                                            >
+                                                              Reason
+                                                            </label>
+                                                            <select
+                                                              id={`comment-report-reason-${reply.id}`}
+                                                              value={
+                                                                commentReportReasonByCommentId[
+                                                                  reply.id
+                                                                ] ?? DEFAULT_REPORT_REASON
+                                                              }
+                                                              onChange={(event) =>
+                                                                setCommentReportReasonByCommentId(
+                                                                  (current) => ({
+                                                                    ...current,
+                                                                    [reply.id]: event.target
+                                                                      .value as ReportReason,
+                                                                  })
+                                                                )
+                                                              }
+                                                              className="w-full rounded border border-white/15 bg-black/30 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-300/60 focus:outline-none"
+                                                            >
+                                                              {REPORT_REASON_OPTIONS.map((option) => (
+                                                                <option key={option.value} value={option.value}>
+                                                                  {option.label}
+                                                                </option>
+                                                              ))}
+                                                            </select>
+                                                          </div>
+                                                          <button
+                                                            type="button"
+                                                            disabled={reportingCommentId === reply.id}
+                                                            onClick={() =>
+                                                              void reportContent({
+                                                                targetType: "comment",
+                                                                entryId: entry.id,
+                                                                commentId: reply.id,
+                                                                targetUserId: reply.user_id,
+                                                                reason:
+                                                                  commentReportReasonByCommentId[
+                                                                    reply.id
+                                                                  ] ?? DEFAULT_REPORT_REASON,
+                                                              })
+                                                            }
+                                                            className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
+                                                          >
+                                                            {reportingCommentId === reply.id
+                                                              ? "Reporting..."
+                                                              : "Report comment"}
+                                                          </button>
+                                                        </div>
+                                                      ) : null}
+                                                    </div>
                                                   ) : null}
                                                 </div>
                                               </div>

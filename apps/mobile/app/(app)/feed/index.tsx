@@ -5,9 +5,9 @@ import {
   useRef,
   useState } from "react";
 import {
-  Alert,
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -142,8 +142,26 @@ type UserOption = {
   display_name: string | null;
 };
 
+type PendingReport = {
+  targetType: "entry" | "comment";
+  entryId: string;
+  commentId?: string;
+  targetUserId: string;
+  reason: ReportReason;
+};
+
 const PAGE_SIZE = 24;
 const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
+const REPORT_REASON_OPTIONS = [
+  { value: "spam", label: "Spam" },
+  { value: "harassment", label: "Harassment" },
+  { value: "hate", label: "Hate speech" },
+  { value: "nudity", label: "Nudity" },
+  { value: "misinfo", label: "False info" },
+  { value: "other", label: "Other" },
+] as const;
+type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
+const DEFAULT_REPORT_REASON: ReportReason = REPORT_REASON_OPTIONS[0].value;
 const PHOTO_TYPE_LABELS: Record<FeedPhotoType, string> = {
   label: "Label",
   place: "Place",
@@ -972,11 +990,15 @@ function FeedCard({
   onSubmitComment,
   postingComment,
   commentError,
+  commentMenuKey,
+  reportingCommentId,
   reactionPickerOpen,
   onToggleReactionPicker,
   onToggleReaction,
   onToggleReportMenu,
   onReportPost,
+  onToggleCommentMenu,
+  onReportComment,
   onOpenAuthorProfile,
   onOpenEntry,
 }: {
@@ -1001,11 +1023,15 @@ function FeedCard({
   onSubmitComment: () => void;
   postingComment: boolean;
   commentError: string | null;
+  commentMenuKey: string | null;
+  reportingCommentId: string | null;
   reactionPickerOpen: boolean;
   onToggleReactionPicker: () => void;
   onToggleReaction: (emoji: string) => void;
   onToggleReportMenu: () => void;
   onReportPost: () => void;
+  onToggleCommentMenu: (commentId: string) => void;
+  onReportComment: (commentId: string, targetUserId: string) => void;
   onOpenAuthorProfile: () => void;
   onOpenEntry: () => void;
 }) {
@@ -1191,9 +1217,8 @@ function FeedCard({
         </View>
       </View>
 
-      <Pressable
+      <View
         style={styles.feedPhotoFrame}
-        onPress={onOpenEntry}
         onLayout={(event) => {
           const nextWidth = Math.ceil(event.nativeEvent.layout.width);
           if (nextWidth > 0 && nextWidth !== photoFrameWidth) {
@@ -1256,12 +1281,14 @@ function FeedCard({
                 ))}
               </ScrollView>
             ) : (
-              <Image
-                source={{ uri: activePhoto.url }}
-                style={styles.feedPhotoStatic}
-                resizeMode="cover"
-                fadeDuration={0}
-              />
+              <Pressable onPress={onOpenEntry}>
+                <Image
+                  source={{ uri: activePhoto.url }}
+                  style={styles.feedPhotoStatic}
+                  resizeMode="cover"
+                  fadeDuration={0}
+                />
+              </Pressable>
             )}
             <View style={styles.photoTypeChip}>
               <AppText style={styles.photoTypeChipText}>
@@ -1316,11 +1343,11 @@ function FeedCard({
             ) : null}
           </>
         ) : (
-          <View style={styles.feedPhotoFallback}>
+          <Pressable style={styles.feedPhotoFallback} onPress={onOpenEntry}>
             <AppText style={styles.feedPhotoFallbackText}>No photo</AppText>
-          </View>
+          </Pressable>
         )}
-      </Pressable>
+      </View>
 
       <Pressable style={styles.feedTextStack} onPress={onOpenEntry}>
         {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
@@ -1483,9 +1510,41 @@ function FeedCard({
                     <AppText style={styles.commentAuthor}>
                       {comment.author_name ?? "Unknown"}
                     </AppText>
-                    <AppText style={styles.commentDate}>
-                      {formatCommentDate(comment.created_at)}
-                    </AppText>
+                    <View style={styles.commentHeaderRight}>
+                      <AppText style={styles.commentDate}>
+                        {formatCommentDate(comment.created_at)}
+                      </AppText>
+                      {!comment.is_deleted &&
+                      viewerUserId &&
+                      viewerUserId !== comment.user_id ? (
+                        <View style={styles.commentMenuWrap}>
+                          <Pressable
+                            style={styles.commentMenuButton}
+                            onPress={() => onToggleCommentMenu(comment.id)}
+                          >
+                            <View style={styles.commentMenuDotsRow}>
+                              <View style={styles.commentMenuDot} />
+                              <View style={styles.commentMenuDot} />
+                              <View style={styles.commentMenuDot} />
+                            </View>
+                          </Pressable>
+                          {commentMenuKey === `${item.id}:${comment.id}` ? (
+                            <View style={styles.commentMenuPanel}>
+                              <Pressable
+                                disabled={reportingCommentId === comment.id}
+                                onPress={() => onReportComment(comment.id, comment.user_id)}
+                              >
+                                <AppText style={styles.commentMenuItemText}>
+                                  {reportingCommentId === comment.id
+                                    ? "Reporting..."
+                                    : "Report comment"}
+                                </AppText>
+                              </Pressable>
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                   <AppText
                     style={[
@@ -1511,9 +1570,41 @@ function FeedCard({
                             <AppText style={styles.commentAuthor}>
                               {reply.author_name ?? "Unknown"}
                             </AppText>
-                            <AppText style={styles.commentDate}>
-                              {formatCommentDate(reply.created_at)}
-                            </AppText>
+                            <View style={styles.commentHeaderRight}>
+                              <AppText style={styles.commentDate}>
+                                {formatCommentDate(reply.created_at)}
+                              </AppText>
+                              {!reply.is_deleted &&
+                              viewerUserId &&
+                              viewerUserId !== reply.user_id ? (
+                                <View style={styles.commentMenuWrap}>
+                                  <Pressable
+                                    style={styles.commentMenuButton}
+                                    onPress={() => onToggleCommentMenu(reply.id)}
+                                  >
+                                    <View style={styles.commentMenuDotsRow}>
+                                      <View style={styles.commentMenuDot} />
+                                      <View style={styles.commentMenuDot} />
+                                      <View style={styles.commentMenuDot} />
+                                    </View>
+                                  </Pressable>
+                                  {commentMenuKey === `${item.id}:${reply.id}` ? (
+                                    <View style={styles.commentMenuPanel}>
+                                      <Pressable
+                                        disabled={reportingCommentId === reply.id}
+                                        onPress={() => onReportComment(reply.id, reply.user_id)}
+                                      >
+                                        <AppText style={styles.commentMenuItemText}>
+                                          {reportingCommentId === reply.id
+                                            ? "Reporting..."
+                                            : "Report comment"}
+                                        </AppText>
+                                      </Pressable>
+                                    </View>
+                                  ) : null}
+                                </View>
+                              ) : null}
+                            </View>
                           </View>
                           <AppText
                             style={[
@@ -1625,6 +1716,9 @@ export default function FeedScreen() {
   >({});
   const [reportMenuEntryId, setReportMenuEntryId] = useState<string | null>(null);
   const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
+  const [commentMenuKey, setCommentMenuKey] = useState<string | null>(null);
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
+  const [pendingReport, setPendingReport] = useState<PendingReport | null>(null);
   const [moderationNotice, setModerationNotice] = useState<{
     kind: "success" | "error";
     message: string;
@@ -1888,6 +1982,7 @@ export default function FeedScreen() {
 
   const toggleCommentsExpanded = (entryId: string) => {
     setReactionPopupEntryId(null);
+    setCommentMenuKey(null);
     setExpandedCommentsByEntryId((current) => {
       const nextExpanded = !current[entryId];
       if (nextExpanded) {
@@ -2058,6 +2153,9 @@ export default function FeedScreen() {
         setNextCursor(null);
         setReportMenuEntryId(null);
         setReportingEntryId(null);
+        setCommentMenuKey(null);
+        setReportingCommentId(null);
+        setPendingReport(null);
         setExpandedNotesByEntryId({});
         setReactionPopupEntryId(null);
         setExpandedCommentsByEntryId({});
@@ -2073,6 +2171,9 @@ export default function FeedScreen() {
         setNextCursor(result.nextCursor);
         setReportMenuEntryId(null);
         setReportingEntryId(null);
+        setCommentMenuKey(null);
+        setReportingCommentId(null);
+        setPendingReport(null);
         setExpandedNotesByEntryId({});
         setReactionPopupEntryId(null);
         setExpandedCommentsByEntryId({});
@@ -2091,22 +2192,39 @@ export default function FeedScreen() {
   );
 
   const reportContent = useCallback(
-    async ({ entryId, targetUserId }: { entryId: string; targetUserId: string }) => {
+    async ({
+      targetType,
+      entryId,
+      targetUserId,
+      reason,
+      commentId,
+    }: {
+      targetType: "entry" | "comment";
+      entryId: string;
+      targetUserId: string;
+      reason: ReportReason;
+      commentId?: string;
+    }) => {
       if (!user?.id || user.id === targetUserId) {
         return;
       }
 
-      setReportingEntryId(entryId);
+      if (targetType === "entry") {
+        setReportingEntryId(entryId);
+        setReportMenuEntryId(null);
+      } else if (commentId) {
+        setReportingCommentId(commentId);
+        setCommentMenuKey(null);
+      }
       setModerationNotice(null);
-      setReportMenuEntryId(null);
 
       const { error } = await supabase.from("content_reports").insert({
         reporter_id: user.id,
-        target_type: "entry",
+        target_type: targetType,
         entry_id: entryId,
-        comment_id: null,
+        comment_id: commentId ?? null,
         target_user_id: targetUserId,
-        reason: null,
+        reason,
         details: null,
       });
 
@@ -2117,7 +2235,11 @@ export default function FeedScreen() {
             ? "Reporting is temporarily unavailable."
             : "Unable to report right now.",
         });
-        setReportingEntryId(null);
+        if (targetType === "entry") {
+          setReportingEntryId(null);
+        } else if (commentId) {
+          setReportingCommentId(null);
+        }
         return;
       }
 
@@ -2125,10 +2247,51 @@ export default function FeedScreen() {
         kind: "success",
         message: "Report submitted.",
       });
-      setReportingEntryId(null);
+      if (targetType === "entry") {
+        setReportingEntryId(null);
+      } else if (commentId) {
+        setReportingCommentId(null);
+      }
     },
     [user?.id]
   );
+
+  const openReportReasonSheet = useCallback(
+    ({
+      targetType,
+      entryId,
+      targetUserId,
+      commentId,
+    }: {
+      targetType: "entry" | "comment";
+      entryId: string;
+      targetUserId: string;
+      commentId?: string;
+    }) => {
+      if (!user?.id || user.id === targetUserId) {
+        return;
+      }
+      setReportMenuEntryId(null);
+      setCommentMenuKey(null);
+      setPendingReport({
+        targetType,
+        entryId,
+        commentId,
+        targetUserId,
+        reason: DEFAULT_REPORT_REASON,
+      });
+    },
+    [user?.id]
+  );
+
+  const submitPendingReport = useCallback(async () => {
+    if (!pendingReport) {
+      return;
+    }
+    const nextReport = pendingReport;
+    setPendingReport(null);
+    await reportContent(nextReport);
+  }, [pendingReport, reportContent]);
 
   useEffect(() => {
     void loadFeed();
@@ -2424,6 +2587,8 @@ export default function FeedScreen() {
                   onSubmitComment={() => void submitCommentForEntry(entry.id)}
                   postingComment={Boolean(postingCommentByEntryId[entry.id])}
                   commentError={commentErrorByEntryId[entry.id] ?? null}
+                  commentMenuKey={commentMenuKey}
+                  reportingCommentId={reportingCommentId}
                   reactionPickerOpen={reactionPopupEntryId === entry.id}
                   onToggleReactionPicker={() =>
                     setReactionPopupEntryId((current) =>
@@ -2437,22 +2602,26 @@ export default function FeedScreen() {
                     )
                   }
                   onReportPost={() =>
-                    Alert.alert(
-                      "Report post?",
-                      "We will flag this post for review.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Report",
-                          style: "destructive",
-                          onPress: () =>
-                            void reportContent({
-                              entryId: entry.id,
-                              targetUserId: entry.user_id,
-                            }),
-                        },
-                      ]
+                    openReportReasonSheet({
+                      targetType: "entry",
+                      entryId: entry.id,
+                      targetUserId: entry.user_id,
+                    })
+                  }
+                  onToggleCommentMenu={(commentId) =>
+                    setCommentMenuKey((current) =>
+                      current === `${entry.id}:${commentId}`
+                        ? null
+                        : `${entry.id}:${commentId}`
                     )
+                  }
+                  onReportComment={(commentId, targetUserId) =>
+                    openReportReasonSheet({
+                      targetType: "comment",
+                      entryId: entry.id,
+                      commentId,
+                      targetUserId,
+                    })
                   }
                   onOpenAuthorProfile={() =>
                     entry.user_id === user?.id
@@ -2480,6 +2649,70 @@ export default function FeedScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <Modal
+        visible={Boolean(pendingReport)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingReport(null)}
+      >
+        <View style={styles.reportModalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setPendingReport(null)}
+          />
+          <View style={styles.reportModalCard}>
+            <AppText style={styles.reportModalTitle}>Report reason</AppText>
+            <AppText style={styles.reportModalSubtitle}>
+              Select the reason for this report.
+            </AppText>
+
+            <View style={styles.reportReasonList}>
+              {REPORT_REASON_OPTIONS.map((option) => {
+                const selected = pendingReport?.reason === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() =>
+                      setPendingReport((current) =>
+                        current ? { ...current, reason: option.value } : current
+                      )
+                    }
+                    style={[
+                      styles.reportReasonRow,
+                      selected ? styles.reportReasonRowActive : null,
+                    ]}
+                  >
+                    <AppText
+                      style={[
+                        styles.reportReasonText,
+                        selected ? styles.reportReasonTextActive : null,
+                      ]}
+                    >
+                      {option.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={styles.reportModalActions}>
+              <Pressable
+                style={styles.reportModalCancelButton}
+                onPress={() => setPendingReport(null)}
+              >
+                <AppText style={styles.reportModalCancelText}>Cancel</AppText>
+              </Pressable>
+              <Pressable
+                style={styles.reportModalSubmitButton}
+                onPress={() => void submitPendingReport()}
+              >
+                <AppText style={styles.reportModalSubmitText}>Report</AppText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -2654,6 +2887,87 @@ const styles = StyleSheet.create({
   moderationNoticeText: {
     color: "#f4f4f5",
     fontSize: 12,
+  },
+  reportModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  reportModalCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "#1a1412",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  reportModalTitle: {
+    color: "#f4f4f5",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  reportModalSubtitle: {
+    color: "#a1a1aa",
+    fontSize: 12,
+  },
+  reportReasonList: {
+    gap: 6,
+  },
+  reportReasonRow: {
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  reportReasonRowActive: {
+    borderColor: "rgba(252,211,77,0.55)",
+    backgroundColor: "rgba(251,191,36,0.14)",
+  },
+  reportReasonText: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  reportReasonTextActive: {
+    color: "#fef3c7",
+  },
+  reportModalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 2,
+  },
+  reportModalCancelButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  reportModalCancelText: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  reportModalSubmitButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(252,211,77,0.5)",
+    backgroundColor: "rgba(251,191,36,0.15)",
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  reportModalSubmitText: {
+    color: "#fef3c7",
+    fontSize: 12,
+    fontWeight: "700",
   },
   emptyCard: {
     borderRadius: 16,
@@ -3140,14 +3454,64 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  commentHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   commentAuthor: {
     color: "#e4e4e7",
     fontSize: 11,
     fontWeight: "700",
+    flex: 1,
   },
   commentDate: {
     color: "#71717a",
     fontSize: 10,
+  },
+  commentMenuWrap: {
+    position: "relative",
+  },
+  commentMenuButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(0,0,0,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commentMenuDotsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 1.5,
+  },
+  commentMenuDot: {
+    width: 2.5,
+    height: 2.5,
+    borderRadius: 999,
+    backgroundColor: "#a1a1aa",
+  },
+  commentMenuPanel: {
+    position: "absolute",
+    right: 0,
+    top: 20,
+    zIndex: 25,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "#1a1412",
+    minWidth: 120,
+    paddingVertical: 4,
+  },
+  commentMenuItemText: {
+    color: "#e4e4e7",
+    fontSize: 11,
+    fontWeight: "600",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   commentBody: {
     color: "#d4d4d8",

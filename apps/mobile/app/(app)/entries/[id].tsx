@@ -469,6 +469,17 @@ export default function EntryDetailScreen() {
     });
   };
 
+  const openAuthorProfile = () => {
+    if (!entry) {
+      return;
+    }
+    if (user?.id && entry.user_id === user.id) {
+      router.push("/(app)/profile");
+      return;
+    }
+    router.push(`/(app)/profile/${entry.user_id}`);
+  };
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -495,7 +506,7 @@ export default function EntryDetailScreen() {
         ) : (
           <>
             <View style={styles.headerBlock}>
-              <View style={styles.authorRow}>
+              <Pressable style={styles.authorRow} onPress={openAuthorProfile}>
                 <View style={styles.authorAvatar}>
                   {authorAvatarUrl ? (
                     <Image source={{ uri: authorAvatarUrl }} style={styles.authorAvatarImage} />
@@ -511,7 +522,7 @@ export default function EntryDetailScreen() {
                     {formatConsumedDate(entry.consumed_at)}
                   </AppText>
                 </View>
-              </View>
+              </Pressable>
               <AppText style={styles.eyebrow}>Cellar entry</AppText>
               <AppText style={styles.title}>
                 {entry.wine_name?.trim() || "Untitled wine"}
