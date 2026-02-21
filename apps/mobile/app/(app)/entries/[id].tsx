@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   Pressable,
@@ -274,6 +275,8 @@ export default function EntryDetailScreen() {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
   const [advancedNotesOpen, setAdvancedNotesOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const galleryScrollRef = useRef<ScrollView | null>(null);
 
   const loadEntry = useCallback(async () => {
@@ -479,6 +482,81 @@ export default function EntryDetailScreen() {
     }
     router.push(`/(app)/profile/${entry.user_id}`);
   };
+
+  const onDeleteEntry = useCallback(async () => {
+    if (!entry || deleting) {
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const { data: photoRows, error: photoFetchError } = await supabase
+        .from("entry_photos")
+        .select("path")
+        .eq("entry_id", entry.id);
+
+      if (photoFetchError) {
+        throw new Error(photoFetchError.message);
+      }
+
+      const paths = Array.from(
+        new Set(
+          [
+            entry.label_image_path,
+            entry.place_image_path,
+            entry.pairing_image_path,
+            ...((photoRows ?? []) as Array<{ path: string | null }>).map(
+              (photo) => photo.path
+            ),
+          ].filter((path): path is string => Boolean(path && path !== "pending"))
+        )
+      );
+
+      const { error: deleteErrorResponse } = await supabase
+        .from("wine_entries")
+        .delete()
+        .eq("id", entry.id)
+        .eq("user_id", entry.user_id);
+
+      if (deleteErrorResponse) {
+        throw new Error(deleteErrorResponse.message);
+      }
+
+      if (paths.length > 0) {
+        await supabase.storage.from("wine-photos").remove(paths);
+      }
+
+      router.replace("/(app)/entries");
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Unable to delete entry."
+      );
+      setDeleting(false);
+    }
+  }, [deleting, entry]);
+
+  const confirmDeleteEntry = useCallback(() => {
+    if (!entry || deleting) {
+      return;
+    }
+
+    Alert.alert(
+      "Delete this entry?",
+      "This action can't be undone. The entry and its photos will be removed.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: deleting ? "Deleting..." : "Delete",
+          style: "destructive",
+          onPress: () => {
+            void onDeleteEntry();
+          },
+        },
+      ]
+    );
+  }, [deleting, entry, onDeleteEntry]);
 
   return (
     <View style={styles.screen}>
@@ -769,6 +847,34 @@ export default function EntryDetailScreen() {
                   ) : null}
                 </View>
               ) : null}
+
+              {isOwner ? (
+                <View style={styles.deleteCard}>
+                  <View style={styles.deleteHeader}>
+                    <View style={styles.deleteCopy}>
+                      <AppText style={styles.deleteTitle}>Delete</AppText>
+                      <AppText style={styles.deleteDescription}>
+                        Deleting removes this entry and its photos.
+                      </AppText>
+                    </View>
+                    <Pressable
+                      style={[
+                        styles.deleteButton,
+                        deleting ? styles.deleteButtonDisabled : null,
+                      ]}
+                      onPress={confirmDeleteEntry}
+                      disabled={deleting}
+                    >
+                      <AppText style={styles.deleteButtonText}>
+                        {deleting ? "Deleting..." : "Delete entry"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                  {deleteError ? (
+                    <AppText style={styles.deleteErrorText}>{deleteError}</AppText>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           </>
         )}
@@ -1046,5 +1152,56 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.8,
+  },
+  deleteCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(251,113,133,0.34)",
+    backgroundColor: "rgba(244,63,94,0.1)",
+    padding: 12,
+    gap: 8,
+  },
+  deleteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  deleteCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  deleteTitle: {
+    color: "#ffe4e6",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  deleteDescription: {
+    color: "#fecdd3",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  deleteButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251,113,133,0.55)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "rgba(127,29,29,0.4)",
+  },
+  deleteButtonDisabled: {
+    opacity: 0.6,
+  },
+  deleteButtonText: {
+    color: "#fecdd3",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  deleteErrorText: {
+    color: "#fecaca",
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
