@@ -39,6 +39,20 @@ function toVintageNumber(value: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function compareEntryChronology(a: WineEntryWithUrls, b: WineEntryWithUrls): number {
+  const consumedDateSort = a.consumed_at.localeCompare(b.consumed_at);
+  if (consumedDateSort !== 0) {
+    return consumedDateSort;
+  }
+
+  const createdAtSort = a.created_at.localeCompare(b.created_at);
+  if (createdAtSort !== 0) {
+    return createdAtSort;
+  }
+
+  return a.id.localeCompare(b.id);
+}
+
 function getGroupLabel(entry: WineEntryWithUrls, scheme: GroupScheme): string {
   if (scheme === "region") {
     const region = entry.region?.trim();
@@ -311,7 +325,11 @@ export default function EntriesPage() {
       return copy.sort((a, b) => {
         const aValue = a.rating ?? -Infinity;
         const bValue = b.rating ?? -Infinity;
-        return mult * (aValue - bValue);
+        const numericSort = aValue - bValue;
+        if (numericSort !== 0) {
+          return mult * numericSort;
+        }
+        return mult * compareEntryChronology(a, b);
       });
     }
 
@@ -319,11 +337,15 @@ export default function EntriesPage() {
       return copy.sort((a, b) => {
         const aValue = toVintageNumber(a.vintage) ?? -Infinity;
         const bValue = toVintageNumber(b.vintage) ?? -Infinity;
-        return mult * (aValue - bValue);
+        const numericSort = aValue - bValue;
+        if (numericSort !== 0) {
+          return mult * numericSort;
+        }
+        return mult * compareEntryChronology(a, b);
       });
     }
 
-    return copy.sort((a, b) => mult * a.consumed_at.localeCompare(b.consumed_at));
+    return copy.sort((a, b) => mult * compareEntryChronology(a, b));
   }, [searchedEntries, sortBy, sortOrder]);
 
   const groupedEntries = useMemo<EntryGroup[]>(() => {

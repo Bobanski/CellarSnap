@@ -129,6 +129,20 @@ function toVintageNumber(value: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function compareEntryChronology(left: MobileEntry, right: MobileEntry): number {
+  const consumedDateSort = left.consumed_at.localeCompare(right.consumed_at);
+  if (consumedDateSort !== 0) {
+    return consumedDateSort;
+  }
+
+  const createdAtSort = left.created_at.localeCompare(right.created_at);
+  if (createdAtSort !== 0) {
+    return createdAtSort;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
 function normalizeLabel(value: string | null | undefined, fallback: string) {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
@@ -323,12 +337,26 @@ export default function EntriesScreen() {
     const copy = [...searchedEntries];
     const mult = sortOrder === "asc" ? 1 : -1;
     if (sortBy === "rating") {
-      return copy.sort((left, right) => mult * ((left.rating ?? -Infinity) - (right.rating ?? -Infinity)));
+      return copy.sort((left, right) => {
+        const numericSort = (left.rating ?? -Infinity) - (right.rating ?? -Infinity);
+        if (numericSort !== 0) {
+          return mult * numericSort;
+        }
+        return mult * compareEntryChronology(left, right);
+      });
     }
     if (sortBy === "vintage") {
-      return copy.sort((left, right) => mult * ((toVintageNumber(left.vintage) ?? -Infinity) - (toVintageNumber(right.vintage) ?? -Infinity)));
+      return copy.sort((left, right) => {
+        const numericSort =
+          (toVintageNumber(left.vintage) ?? -Infinity) -
+          (toVintageNumber(right.vintage) ?? -Infinity);
+        if (numericSort !== 0) {
+          return mult * numericSort;
+        }
+        return mult * compareEntryChronology(left, right);
+      });
     }
-    return copy.sort((left, right) => mult * left.consumed_at.localeCompare(right.consumed_at));
+    return copy.sort((left, right) => mult * compareEntryChronology(left, right));
   }, [searchedEntries, sortBy, sortOrder]);
 
   const groupedEntries = useMemo<EntryGroup[]>(() => {
@@ -369,6 +397,7 @@ export default function EntriesScreen() {
         .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level")
         .eq("user_id", user.id)
         .order("consumed_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) {
