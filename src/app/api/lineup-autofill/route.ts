@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
+import { createClient, type User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
@@ -150,11 +151,44 @@ function extractJson(text: string) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-export async function POST(request: Request) {
+async function getAuthenticatedUser(request: Request): Promise<User | null> {
+  const authHeader = request.headers.get("authorization");
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
+  const bearerToken = bearerMatch?.[1]?.trim();
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (bearerToken && supabaseUrl && supabaseAnonKey) {
+    const bearerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+        },
+      },
+    });
+    const {
+      data: { user },
+    } = await bearerClient.auth.getUser();
+    if (user) {
+      return user;
+    }
+  }
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return user;
+}
+
+export async function POST(request: Request) {
+  const user = await getAuthenticatedUser(request);
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

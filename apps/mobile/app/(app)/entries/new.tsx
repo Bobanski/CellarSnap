@@ -142,6 +142,25 @@ type PostSaveSurveyAnswers = {
   drink_again: SurveyDrinkAgainResponse;
 };
 
+type UploadPhotoType =
+  | "label"
+  | "place"
+  | "people"
+  | "pairing"
+  | "lineup"
+  | "other_bottles";
+
+type ContextPhotoTag = "place" | "pairing" | "people" | "other_bottles" | "unknown";
+
+type UploadPhotoItem = {
+  id: string;
+  uri: string;
+  name: string;
+  mimeType: string;
+  type: UploadPhotoType;
+  contextConfidence: number | null;
+};
+
 type LabelAutofillResponse = {
   wine_name?: string | null;
   producer?: string | null;
@@ -152,7 +171,48 @@ type LabelAutofillResponse = {
   classification?: string | null;
   primary_grape_suggestions?: string[] | null;
   primary_grape_confidence?: number | null;
+  confidence?: number | null;
+  warnings?: string[] | null;
   error?: string;
+};
+
+type PhotoContextResponse = {
+  tag?: string;
+  confidence?: number | null;
+  error?: string;
+};
+
+type LineupApiWine = {
+  wine_name?: string | null;
+  producer?: string | null;
+  vintage?: string | null;
+  country?: string | null;
+  region?: string | null;
+  appellation?: string | null;
+  classification?: string | null;
+  primary_grape_suggestions?: string[] | null;
+  confidence?: number | null;
+};
+
+type LineupAutofillResponse = {
+  wines?: LineupApiWine[];
+  total_bottles_detected?: number;
+  error?: string;
+};
+
+type LineupWine = {
+  id: string;
+  photoIndex: number;
+  included: boolean;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  classification: string | null;
+  primary_grape_suggestions: string[];
+  confidence: number | null;
 };
 
 const DEFAULT_PRIVACY: PrivacyDefaults = {
@@ -200,6 +260,27 @@ const DRINK_AGAIN_OPTIONS: ChipOption[] = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
 ];
+
+const PHOTO_TYPE_LABELS: Record<UploadPhotoType, string> = {
+  label: "Label",
+  place: "Place",
+  people: "People",
+  pairing: "Pairing",
+  lineup: "Lineup",
+  other_bottles: "Other bottle",
+};
+
+const PHOTO_TYPE_OPTIONS: ChipOption[] = [
+  { value: "label", label: "Label" },
+  { value: "place", label: "Place" },
+  { value: "people", label: "People" },
+  { value: "pairing", label: "Pairing" },
+  { value: "lineup", label: "Lineup" },
+  { value: "other_bottles", label: "Other bottle" },
+];
+
+const MAX_PHOTOS_PER_TYPE = 10;
+const MAX_TOTAL_UPLOAD_PHOTOS = 30;
 
 const ADVANCED_NOTE_FIELDS: Array<{
   key: keyof AdvancedNotesFormValues;
@@ -336,6 +417,145 @@ function normalizeGrapeLookupValue(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function normalizeLineupText(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function hasLineupWineDetails(wine: {
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  classification: string | null;
+}) {
+  return Boolean(
+    wine.wine_name ||
+      wine.producer ||
+      wine.vintage ||
+      wine.country ||
+      wine.region ||
+      wine.appellation ||
+      wine.classification
+  );
+}
+
+const BULK_CREATE_CONCURRENCY = 4;
+
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  concurrency: number
+): Promise<T[]> {
+  if (tasks.length === 0) {
+    return [] as T[];
+  }
+  const safeConcurrency = Math.max(1, Math.min(concurrency, tasks.length));
+  const results = new Array<T>(tasks.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: safeConcurrency }, async () => {
+    while (true) {
+      const taskIndex = nextIndex;
+      nextIndex += 1;
+      if (taskIndex >= tasks.length) {
+        return;
+      }
+      results[taskIndex] = await tasks[taskIndex]();
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+function isNetworkFailureError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("network request failed") ||
+    message.includes("failed to fetch") ||
+    message.includes("networkerror")
+  );
+}
+
+function normalizeAnalysisErrorMessage(value: string | null | undefined) {
+  const message = (value ?? "").trim();
+  if (!message) {
+    return "Could not analyze one of the selected photos. Please retry.";
+  }
+
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("does not represent a valid image") ||
+    normalized.includes("supported image formats") ||
+    normalized.includes("invalid image")
+  ) {
+    return "One of the selected photos could not be read for AI scan. Re-add the photo and retry.";
+  }
+
+  return message;
+}
+
+function normalizeConfidence(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+  return Math.min(1, Math.max(0, value));
+}
+
+function normalizeContextTag(value: unknown): ContextPhotoTag {
+  return value === "place" ||
+    value === "pairing" ||
+    value === "people" ||
+    value === "other_bottles" ||
+    value === "unknown"
+    ? value
+    : "unknown";
+}
+
+function mapContextTagToPhotoType(tag: ContextPhotoTag): UploadPhotoType {
+  if (tag === "place" || tag === "pairing" || tag === "people") {
+    return tag;
+  }
+  return "other_bottles";
+}
+
+function extensionForMimeType(mimeType: string) {
+  if (mimeType === "image/png") {
+    return "png";
+  }
+  if (mimeType === "image/webp") {
+    return "webp";
+  }
+  if (mimeType === "image/heic" || mimeType === "image/heif") {
+    return "heic";
+  }
+  if (mimeType === "image/gif") {
+    return "gif";
+  }
+  return "jpg";
+}
+
+function ensurePhotoMimeType(mimeType: string | null | undefined) {
+  return mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg";
+}
+
+function computeOverallConfidence(values: Array<number | null | undefined>) {
+  const normalized = values
+    .map((value) => normalizeConfidence(value))
+    .filter((value): value is number => typeof value === "number");
+  if (normalized.length === 0) {
+    return null;
+  }
+  const total = normalized.reduce((sum, value) => sum + value, 0);
+  return Math.min(1, Math.max(0, total / normalized.length));
+}
+
 function getPrivacyBadgeTone(level: PrivacyLevel) {
   if (level === "public") {
     return {
@@ -459,7 +679,16 @@ export default function NewEntryScreen() {
   >([]);
   const [isPrimaryGrapeLoading, setIsPrimaryGrapeLoading] = useState(false);
   const [primaryGrapeError, setPrimaryGrapeError] = useState<string | null>(null);
-  const [labelPhotoUri, setLabelPhotoUri] = useState<string | null>(null);
+  const [uploadPhotos, setUploadPhotos] = useState<UploadPhotoItem[]>([]);
+  const [uploadAnalysisStatus, setUploadAnalysisStatus] = useState<
+    "idle" | "loading" | "success" | "error" | "timeout"
+  >("idle");
+  const [uploadGalleryActiveIndex, setUploadGalleryActiveIndex] = useState(0);
+  const [uploadGalleryFrameWidth, setUploadGalleryFrameWidth] = useState(0);
+  const uploadGalleryScrollRef = useRef<ScrollView | null>(null);
+  const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
+  const [isBulkCreating, setIsBulkCreating] = useState(false);
+  const [bulkCreateMessage, setBulkCreateMessage] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -482,9 +711,50 @@ export default function NewEntryScreen() {
     useState<PostSaveSurveyAnswers | null>(null);
   const [surveyErrorMessage, setSurveyErrorMessage] = useState<string | null>(null);
   const [isSubmittingSurvey, setIsSubmittingSurvey] = useState(false);
+  const labelPhotoUri =
+    uploadPhotos.find((photo) => photo.type === "label")?.uri ??
+    uploadPhotos[0]?.uri ??
+    null;
+  const showProcessedGallery =
+    uploadPhotos.length > 0 && uploadAnalysisStatus !== "loading";
+  const includedLineupWines = lineupWines.filter((wine) => wine.included);
+  const readyLineupWines = lineupWines.filter(
+    (wine) => wine.included && hasLineupWineDetails(wine)
+  );
+  const isBulkLineupMode = lineupWines.length > 0;
+  const showAnalysisRetry =
+    (uploadAnalysisStatus === "error" ||
+      uploadAnalysisStatus === "timeout" ||
+      /network request failed|failed to fetch|networkerror/i.test(uploadMessage ?? "")) &&
+    uploadPhotos.length > 0 &&
+    !isAutofillLoading &&
+    !isBulkCreating;
+  const showBulkRetry = Boolean(
+    bulkCreateMessage &&
+      !isBulkCreating &&
+      includedLineupWines.length > 0 &&
+      /(failed|unable|network|error)/i.test(bulkCreateMessage)
+  );
 
   const updateField = <K extends keyof EntryFormState>(field: K, value: EntryFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const getAccessTokenForApi = async () => {
+    const { data: sessionResult } = await supabase.auth.getSession();
+    let session = sessionResult.session;
+    const expiresSoon =
+      typeof session?.expires_at === "number" &&
+      session.expires_at * 1000 <= Date.now() + 90_000;
+
+    if (!session?.access_token || expiresSoon) {
+      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
+      if (refreshedSessionResult.session?.access_token) {
+        session = refreshedSessionResult.session;
+      }
+    }
+
+    return session?.access_token ?? null;
   };
 
   const updateAdvanced = (field: keyof AdvancedNotesFormValues, value: string) => {
@@ -852,6 +1122,29 @@ export default function NewEntryScreen() {
     }
   };
 
+  const persistPrimaryGrapesByIds = async (entryId: string, grapeIds: string[]) => {
+    if (grapeIds.length === 0) {
+      return;
+    }
+
+    const primaryGrapeRows = grapeIds.slice(0, 3).map((grapeId, index) => ({
+      entry_id: entryId,
+      variety_id: grapeId,
+      position: index + 1,
+    }));
+
+    const { error } = await supabase.from("entry_primary_grapes").insert(primaryGrapeRows);
+    if (error) {
+      const message = error.message ?? "";
+      if (
+        message.includes("entry_primary_grapes") ||
+        message.includes("grape_varieties")
+      ) {
+        return;
+      }
+    }
+  };
+
   const fetchComparisonCandidateForEntry = async (
     currentEntryId: string,
     ownerUserId: string
@@ -1143,62 +1436,581 @@ export default function NewEntryScreen() {
     return true;
   };
 
-  const analyzeLabelPhoto = async (uri: string) => {
-    if (!WEB_API_BASE_URL) {
-      setUploadMessage(
-        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable label autofill on upload."
+  const applyLineupAutofill = async (wine: LineupWine) => {
+    const normalizeText = (value?: string | null) => {
+      if (typeof value !== "string") {
+        return "";
+      }
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : "";
+    };
+
+    setForm((current) => ({
+      ...current,
+      wine_name: current.wine_name || normalizeText(wine.wine_name),
+      producer: current.producer || normalizeText(wine.producer),
+      vintage: current.vintage || normalizeText(wine.vintage),
+      country: current.country || normalizeText(wine.country),
+      region: current.region || normalizeText(wine.region),
+      appellation: current.appellation || normalizeText(wine.appellation),
+      classification: current.classification || normalizeText(wine.classification),
+    }));
+
+    if (selectedPrimaryGrapes.length > 0) {
+      return false;
+    }
+
+    const suggestions = Array.isArray(wine.primary_grape_suggestions)
+      ? wine.primary_grape_suggestions
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+          .slice(0, 2)
+      : [];
+    if (suggestions.length === 0) {
+      return false;
+    }
+
+    const resolved = await resolveSuggestedGrapes(suggestions);
+    if (resolved.length === 0) {
+      return false;
+    }
+
+    setSelectedPrimaryGrapes((current) => {
+      if (current.length > 0) {
+        return current;
+      }
+      return resolved;
+    });
+
+    return true;
+  };
+
+  const updateUploadPhotoType = (photoId: string, nextType: UploadPhotoType) => {
+    setUploadPhotos((current) =>
+      current.map((photo) =>
+        photo.id === photoId ? { ...photo, type: nextType } : photo
+      )
+    );
+  };
+
+  const removeUploadPhoto = (photoId: string) => {
+    const wasLastPhoto =
+      uploadPhotos.length === 1 && uploadPhotos[0]?.id === photoId;
+    setLineupWines([]);
+    setBulkCreateMessage(null);
+    setUploadPhotos((current) => {
+      const next = current.filter((photo) => photo.id !== photoId);
+      if (next.length === 0) return next;
+      if (next.some((photo) => photo.type === "label")) {
+        return next;
+      }
+      return next.map((photo, index) =>
+        index === 0 ? { ...photo, type: "label" } : photo
       );
+    });
+    if (wasLastPhoto) {
+      setUploadAnalysisStatus("idle");
+      setUploadMessage(null);
+      setUploadGalleryActiveIndex(0);
+    }
+  };
+
+  useEffect(() => {
+    const maxIndex = Math.max(0, uploadPhotos.length - 1);
+    if (uploadGalleryActiveIndex > maxIndex) {
+      setUploadGalleryActiveIndex(maxIndex);
+    }
+  }, [uploadGalleryActiveIndex, uploadPhotos.length]);
+
+  const scrollToUploadPhotoIndex = (index: number, animated = true) => {
+    if (!uploadGalleryScrollRef.current || uploadGalleryFrameWidth <= 0) {
       return;
     }
+    const maxIndex = Math.max(0, uploadPhotos.length - 1);
+    const nextIndex = Math.max(0, Math.min(maxIndex, index));
+    setUploadGalleryActiveIndex(nextIndex);
+    uploadGalleryScrollRef.current.scrollTo({
+      x: nextIndex * uploadGalleryFrameWidth,
+      animated,
+    });
+  };
 
-    const { data: sessionResult } = await supabase.auth.getSession();
-    const accessToken = sessionResult.session?.access_token;
-    if (!accessToken) {
-      setUploadMessage("Session expired. Sign in again to use label autofill.");
-      return;
+  const requestLabelAutofill = async (photo: UploadPhotoItem, accessToken: string) => {
+    if (!WEB_API_BASE_URL) {
+      return {
+        payload: null as LabelAutofillResponse | null,
+        errorMessage:
+          "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable label autofill and auto-tagging.",
+      };
     }
 
-    setIsAutofillLoading(true);
-    setUploadMessage("Analyzing label...");
+    const formData = new FormData();
+    formData.append(
+      "label",
+      {
+        uri: photo.uri,
+        name: photo.name,
+        type: photo.mimeType,
+      } as unknown as Blob
+    );
+
+    const response = await fetch(
+      `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/label-autofill`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      }
+    );
+    const payload = (await response.json().catch(() => ({}))) as LabelAutofillResponse;
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return {
+          payload: null as LabelAutofillResponse | null,
+          errorMessage: "Session expired. Sign in again to use AI photo analysis.",
+        };
+      }
+      return {
+        payload: null as LabelAutofillResponse | null,
+        errorMessage:
+          normalizeAnalysisErrorMessage(payload.error) ||
+          "Could not read this label. Try a clearer photo.",
+      };
+    }
+
+    return { payload, errorMessage: null as string | null };
+  };
+
+  const requestPhotoContext = async (photo: UploadPhotoItem, accessToken: string) => {
+    if (!WEB_API_BASE_URL) {
+      return {
+        tag: "unknown" as ContextPhotoTag,
+        confidence: null as number | null,
+      };
+    }
+
+    const formData = new FormData();
+    formData.append(
+      "photo",
+      {
+        uri: photo.uri,
+        name: photo.name,
+        type: photo.mimeType,
+      } as unknown as Blob
+    );
+
+    const response = await fetch(
+      `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/photo-context`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Session expired. Sign in again to use AI photo analysis.");
+      }
+      return {
+        tag: "unknown" as ContextPhotoTag,
+        confidence: null as number | null,
+      };
+    }
+
+    const payload = (await response.json().catch(() => ({}))) as PhotoContextResponse;
+    return {
+      tag: normalizeContextTag(payload.tag),
+      confidence: normalizeConfidence(payload.confidence),
+    };
+  };
+
+  const requestLineupAutofill = async (
+    photo: UploadPhotoItem,
+    accessToken: string
+  ) => {
+    if (!WEB_API_BASE_URL) {
+      return {
+        wines: [] as LineupWine[],
+        errorMessage: null as string | null,
+      };
+    }
+
+    const formData = new FormData();
+    formData.append(
+      "photo",
+      {
+        uri: photo.uri,
+        name: photo.name,
+        type: photo.mimeType,
+      } as unknown as Blob
+    );
+
+    const response = await fetch(
+      `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/lineup-autofill`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("Session expired. Sign in again to use AI bulk scan.");
+      }
+      const payload = (await response.json().catch(() => ({}))) as LineupAutofillResponse;
+      return {
+        wines: [] as LineupWine[],
+        errorMessage:
+          normalizeAnalysisErrorMessage(payload.error) ||
+          "Could not analyze one of the lineup photos.",
+      };
+    }
+
+    const payload = (await response.json().catch(() => ({}))) as LineupAutofillResponse;
+    const normalizedWines = (Array.isArray(payload.wines) ? payload.wines : [])
+      .map((wine, index) => {
+        const normalized = {
+          wine_name: normalizeLineupText(wine.wine_name),
+          producer: normalizeLineupText(wine.producer),
+          vintage: normalizeLineupText(wine.vintage),
+          country: normalizeLineupText(wine.country),
+          region: normalizeLineupText(wine.region),
+          appellation: normalizeLineupText(wine.appellation),
+          classification: normalizeLineupText(wine.classification),
+          primary_grape_suggestions: Array.isArray(wine.primary_grape_suggestions)
+            ? wine.primary_grape_suggestions
+                .map((value) => value.trim())
+                .filter((value) => value.length > 0)
+                .slice(0, 3)
+            : [],
+          confidence: normalizeConfidence(wine.confidence),
+        };
+        return {
+          ...normalized,
+          id: `${photo.id}-lineup-${index}`,
+          photoIndex: 0,
+          included: true,
+        } satisfies LineupWine;
+      })
+      .filter((wine) => hasLineupWineDetails(wine));
+
+    return {
+      wines: normalizedWines,
+      errorMessage: null as string | null,
+    };
+  };
+
+  const toggleLineupWineIncluded = (wineId: string) => {
+    setLineupWines((current) =>
+      current.map((wine) =>
+        wine.id === wineId ? { ...wine, included: !wine.included } : wine
+      )
+    );
+  };
+
+  const cancelBulkLineup = () => {
+    setLineupWines([]);
+    setBulkCreateMessage(null);
+    setUploadMessage("Bulk scan canceled. Continue with single entry details.");
+  };
+
+  const uploadPhotoToEntry = async ({
+    entryId,
+    ownerUserId,
+    photo,
+    position,
+  }: {
+    entryId: string;
+    ownerUserId: string;
+    photo: UploadPhotoItem;
+    position: number;
+  }) => {
+    let createdPhotoId: string | null = null;
+    let uploadedPath: string | null = null;
 
     try {
-      const formData = new FormData();
-      formData.append(
-        "label",
-        {
-          uri,
-          name: `label-${Date.now()}.jpg`,
-          type: "image/jpeg",
-        } as unknown as Blob
-      );
+      const createResult = await supabase
+        .from("entry_photos")
+        .insert({
+          entry_id: entryId,
+          type: photo.type,
+          path: "pending",
+          position,
+        })
+        .select("id")
+        .single();
 
-      const response = await fetch(
-        `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/label-autofill`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: formData,
-        }
-      );
-      const payload = (await response.json().catch(() => ({}))) as LabelAutofillResponse;
-
-      if (!response.ok) {
-        setUploadMessage(payload.error || "Could not read this label. Try a clearer photo.");
-        setIsAutofillLoading(false);
-        return;
+      if (createResult.error || !createResult.data?.id) {
+        throw new Error(createResult.error?.message ?? "Unable to create photo record.");
       }
 
-      const grapesFilled = await applyLabelAutofill(payload);
-      setUploadMessage(
-        grapesFilled
-          ? "Label details filled and primary grapes preselected."
-          : "Label details filled. Review and adjust as needed."
+      createdPhotoId = createResult.data.id;
+      const extension = extensionForMimeType(photo.mimeType);
+      uploadedPath = `${ownerUserId}/${entryId}/${photo.type}/${createdPhotoId}.${extension}`;
+
+      const updateResult = await supabase
+        .from("entry_photos")
+        .update({ path: uploadedPath })
+        .eq("id", createdPhotoId)
+        .eq("entry_id", entryId);
+
+      if (updateResult.error) {
+        throw new Error(updateResult.error.message);
+      }
+
+      const fileResponse = await fetch(photo.uri);
+      if (!fileResponse.ok) {
+        throw new Error("Unable to read selected photo.");
+      }
+      const fileBlob = await fileResponse.blob();
+
+      const uploadResult = await supabase.storage
+        .from("wine-photos")
+        .upload(uploadedPath, fileBlob, {
+          upsert: true,
+          contentType: photo.mimeType,
+        });
+
+      if (uploadResult.error) {
+        throw new Error(uploadResult.error.message);
+      }
+    } catch (error) {
+      if (uploadedPath) {
+        await supabase.storage.from("wine-photos").remove([uploadedPath]);
+      }
+      if (createdPhotoId) {
+        await supabase
+          .from("entry_photos")
+          .delete()
+          .eq("id", createdPhotoId)
+          .eq("entry_id", entryId);
+      }
+      throw error;
+    }
+  };
+
+  const uploadPhotosToEntry = async (entryId: string, ownerUserId: string) => {
+    if (uploadPhotos.length === 0) {
+      return;
+    }
+
+    const typeCount = new Map<UploadPhotoType, number>();
+    for (const photo of uploadPhotos) {
+      const count = (typeCount.get(photo.type) ?? 0) + 1;
+      typeCount.set(photo.type, count);
+      if (count > MAX_PHOTOS_PER_TYPE) {
+        throw new Error(`Max ${MAX_PHOTOS_PER_TYPE} photos allowed for ${PHOTO_TYPE_LABELS[photo.type]}.`);
+      }
+    }
+
+    const positionByType = new Map<UploadPhotoType, number>();
+    for (const photo of uploadPhotos) {
+      const position = positionByType.get(photo.type) ?? 0;
+      await uploadPhotoToEntry({
+        entryId,
+        ownerUserId,
+        photo,
+        position,
+      });
+      positionByType.set(photo.type, position + 1);
+    }
+  };
+
+  const uploadSpecificPhotosToEntry = async (
+    entryId: string,
+    ownerUserId: string,
+    photosToUpload: UploadPhotoItem[]
+  ) => {
+    if (photosToUpload.length === 0) {
+      return;
+    }
+
+    const typeCount = new Map<UploadPhotoType, number>();
+    for (const photo of photosToUpload) {
+      const count = (typeCount.get(photo.type) ?? 0) + 1;
+      typeCount.set(photo.type, count);
+      if (count > MAX_PHOTOS_PER_TYPE) {
+        throw new Error(`Max ${MAX_PHOTOS_PER_TYPE} photos allowed for ${PHOTO_TYPE_LABELS[photo.type]}.`);
+      }
+    }
+
+    const positionByType = new Map<UploadPhotoType, number>();
+    for (const photo of photosToUpload) {
+      const position = positionByType.get(photo.type) ?? 0;
+      await uploadPhotoToEntry({
+        entryId,
+        ownerUserId,
+        photo,
+        position,
+      });
+      positionByType.set(photo.type, position + 1);
+    }
+  };
+
+  const runPhotoAnalysis = async ({
+    analysisPhotos,
+    labelTarget,
+    accessToken,
+  }: {
+    analysisPhotos: UploadPhotoItem[];
+    labelTarget: UploadPhotoItem | null;
+    accessToken: string;
+  }) => {
+    const shouldRunLabelAutofill = analysisPhotos.length === 1;
+    const contextTargets = analysisPhotos.filter(
+      (photo) => !labelTarget || photo.id !== labelTarget.id
+    );
+
+    try {
+      const [labelResult, contextResults, lineupResults] = await Promise.all([
+        shouldRunLabelAutofill && labelTarget
+          ? requestLabelAutofill(labelTarget, accessToken)
+          : Promise.resolve({
+              payload: null as LabelAutofillResponse | null,
+              errorMessage: null as string | null,
+            }),
+        Promise.all(
+          contextTargets.map(async (photo) => {
+            const context = await requestPhotoContext(photo, accessToken);
+            return {
+              id: photo.id,
+              type: mapContextTagToPhotoType(context.tag),
+              confidence: context.confidence,
+            };
+          })
+        ),
+        Promise.all(
+          analysisPhotos.map(async (photo, photoIndex) => {
+            const lineup = await requestLineupAutofill(photo, accessToken);
+            return {
+              photoIndex,
+              ...lineup,
+            };
+          })
+        ),
+      ]);
+
+      const taggedById = new Map(
+        contextResults.map((result) => [
+          result.id,
+          { type: result.type, confidence: result.confidence },
+        ])
       );
-      setIsAutofillLoading(false);
-    } catch {
-      setUploadMessage("Unable to analyze label. Check your connection and try again.");
+
+      setUploadPhotos((current) =>
+        current.map((photo) => {
+          if (shouldRunLabelAutofill && labelTarget && photo.id === labelTarget.id) {
+            return {
+              ...photo,
+              type: "label",
+            };
+          }
+          const tagged = taggedById.get(photo.id);
+          if (!tagged) {
+            return photo;
+          }
+          return {
+            ...photo,
+            type: tagged.type,
+            contextConfidence: tagged.confidence,
+          };
+        })
+      );
+
+      let grapesFilled = false;
+      if (labelResult.payload) {
+        grapesFilled = await applyLabelAutofill(labelResult.payload);
+      }
+
+      const lineupErrors = lineupResults
+        .map((result) => result.errorMessage)
+        .filter((message): message is string => Boolean(message));
+      const detectedLineupWines = lineupResults.flatMap((result) =>
+        result.wines.map((wine, wineIndex) => ({
+          ...wine,
+          id: `${wine.id}-${result.photoIndex}-${wineIndex}`,
+          photoIndex: result.photoIndex,
+          included: true,
+        }))
+      );
+      if (detectedLineupWines.length > 1) {
+        setLineupWines(detectedLineupWines);
+        setBulkCreateMessage(
+          `Detected ${detectedLineupWines.length} bottles. Review and create entries below.`
+        );
+      } else {
+        setLineupWines([]);
+        setBulkCreateMessage(null);
+      }
+
+      const singleDetectedWine =
+        detectedLineupWines.length === 1 ? detectedLineupWines[0] : null;
+      const canFallbackToLineup =
+        !labelResult.payload && Boolean(singleDetectedWine) && lineupErrors.length === 0;
+      if (canFallbackToLineup && singleDetectedWine) {
+        grapesFilled = (await applyLineupAutofill(singleDetectedWine)) || grapesFilled;
+      }
+
+      const analysisErrors = [
+        !canFallbackToLineup && labelResult.errorMessage
+          ? normalizeAnalysisErrorMessage(labelResult.errorMessage)
+          : null,
+        ...lineupErrors.map((message) => normalizeAnalysisErrorMessage(message)),
+      ].filter((message): message is string => Boolean(message));
+
+      if (analysisErrors.length > 0) {
+        setUploadAnalysisStatus("error");
+        setUploadMessage(analysisErrors[0]);
+      } else {
+        setUploadAnalysisStatus("success");
+        const warningCount = Array.isArray(labelResult.payload?.warnings)
+          ? labelResult.payload?.warnings.length ?? 0
+          : 0;
+        const warningLabel =
+          warningCount > 0
+            ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
+            : null;
+        const overallConfidence = computeOverallConfidence([
+          labelResult.payload?.confidence ?? null,
+          ...contextResults.map((result) => result.confidence),
+        ]);
+        const confidenceLabel =
+          typeof overallConfidence === "number"
+            ? `Confidence ${Math.round(overallConfidence * 100)}%`
+            : null;
+        const successSummary = [confidenceLabel, warningLabel]
+          .filter(Boolean)
+          .join(" • ");
+        if (detectedLineupWines.length > 1) {
+          setUploadMessage(
+            `Detected ${detectedLineupWines.length} bottles. Review and create entries below.`
+          );
+        } else {
+          setUploadMessage(
+            successSummary ||
+              (grapesFilled
+                ? "Autofill complete. Review the details."
+                : "Autofill complete. Review and adjust as needed.")
+          );
+        }
+      }
+    } catch (error) {
+      setUploadAnalysisStatus("error");
+      if (error instanceof Error && error.message) {
+        setUploadMessage(error.message);
+      } else {
+        setUploadMessage("Unable to analyze photos. Check your connection and try again.");
+      }
+    } finally {
       setIsAutofillLoading(false);
     }
   };
@@ -1206,27 +2018,456 @@ export default function NewEntryScreen() {
   const pickLabelImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setUploadMessage("Allow photo access to upload a label image.");
+      setUploadMessage("Allow photo access to upload and tag photos.");
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+    const existingPhotos = uploadPhotos;
+    const remainingSlots = Math.max(0, MAX_TOTAL_UPLOAD_PHOTOS - existingPhotos.length);
+    if (remainingSlots <= 0) {
+      setUploadMessage(`You can upload up to ${MAX_TOTAL_UPLOAD_PHOTOS} photos.`);
+      return;
+    }
+
+    const pickerOptions: ImagePicker.ImagePickerOptions = {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: false,
+      allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
+      orderedSelection: true,
       quality: 0.85,
-    });
+    };
+    if (Platform.OS === "ios") {
+      pickerOptions.preferredAssetRepresentationMode =
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
     if (result.canceled) {
       return;
     }
 
-    const asset = result.assets[0];
-    if (!asset?.uri) {
-      setUploadMessage("No image selected.");
+    const assets = result.assets
+      .filter((asset) => typeof asset.uri === "string")
+      .slice(0, remainingSlots);
+    if (assets.length === 0) {
+      setUploadMessage("No photos selected.");
       return;
     }
 
-    setLabelPhotoUri(asset.uri);
-    await analyzeLabelPhoto(asset.uri);
+    const createdAt = Date.now();
+    const hasLabelAlready = existingPhotos.some((photo) => photo.type === "label");
+    const initialPhotos: UploadPhotoItem[] = assets.map((asset, index) => {
+      const mimeType = ensurePhotoMimeType(asset.mimeType);
+      const extension = extensionForMimeType(mimeType);
+      const name =
+        asset.fileName && asset.fileName.trim().length > 0
+          ? asset.fileName
+          : `entry-photo-${createdAt}-${index + 1}.${extension}`;
+
+      return {
+        id: `${createdAt}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+        uri: asset.uri,
+        name,
+        mimeType,
+        type: !hasLabelAlready && index === 0 ? "label" : "other_bottles",
+        contextConfidence: null,
+      };
+    });
+
+    setUploadPhotos([...existingPhotos, ...initialPhotos]);
+
+    const photosForAnalysis = [...existingPhotos, ...initialPhotos];
+    const labelTarget =
+      photosForAnalysis.find((photo) => photo.type === "label") ??
+      photosForAnalysis[0] ??
+      null;
+    const totalForRun = initialPhotos.length;
+
+    setUploadAnalysisStatus("loading");
+    setIsAutofillLoading(true);
+    setLineupWines([]);
+    setBulkCreateMessage(null);
+    setUploadMessage(
+      totalForRun === 1
+        ? "Extracting wine details. Please allow more time for larger lineups."
+        : `Extracting wine details from ${totalForRun} photos. Please allow more time for larger lineups.`
+    );
+
+    if (!WEB_API_BASE_URL) {
+      setUploadAnalysisStatus("error");
+      setIsAutofillLoading(false);
+      setUploadMessage(
+        `Added ${initialPhotos.length} photo${
+          initialPhotos.length === 1 ? "" : "s"
+        }. Set EXPO_PUBLIC_WEB_API_BASE_URL to enable AI autofill and auto-tagging.`
+      );
+      return;
+    }
+
+    const accessToken = await getAccessTokenForApi();
+    if (!accessToken) {
+      setUploadAnalysisStatus("error");
+      setIsAutofillLoading(false);
+      setUploadMessage(
+        `Added ${initialPhotos.length} photo${
+          initialPhotos.length === 1 ? "" : "s"
+        }. Sign in again to run AI autofill and auto-tagging.`
+      );
+      return;
+    }
+
+    await runPhotoAnalysis({
+      analysisPhotos: photosForAnalysis,
+      labelTarget,
+      accessToken,
+    });
+  };
+
+  const retryPhotoAnalysis = async () => {
+    if (uploadPhotos.length === 0) {
+      setUploadMessage("Upload photos first.");
+      return;
+    }
+    if (!WEB_API_BASE_URL) {
+      setUploadAnalysisStatus("error");
+      setUploadMessage(
+        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable AI autofill and auto-tagging."
+      );
+      return;
+    }
+
+    const accessToken = await getAccessTokenForApi();
+    if (!accessToken) {
+      setUploadAnalysisStatus("error");
+      setUploadMessage("Session expired. Sign in again to retry analysis.");
+      return;
+    }
+
+    setUploadAnalysisStatus("loading");
+    setIsAutofillLoading(true);
+    setLineupWines([]);
+    setBulkCreateMessage(null);
+    setUploadMessage(
+      uploadPhotos.length === 1
+        ? "Extracting wine details. Please allow more time for larger lineups."
+        : `Extracting wine details from ${uploadPhotos.length} photos. Please allow more time for larger lineups.`
+    );
+
+    const labelTarget =
+      uploadPhotos.find((photo) => photo.type === "label") ??
+      uploadPhotos[0] ??
+      null;
+    await runPhotoAnalysis({
+      analysisPhotos: uploadPhotos,
+      labelTarget,
+      accessToken,
+    });
+  };
+
+  const createBulkEntriesFromLineup = async () => {
+    if (!user) {
+      setErrorMessage("You must be signed in.");
+      return;
+    }
+    const selected = lineupWines.filter((wine) => wine.included);
+    if (selected.length === 0) {
+      setBulkCreateMessage("Select at least one detected bottle first.");
+      return;
+    }
+
+    const included = selected.filter(hasLineupWineDetails);
+    if (included.length === 0) {
+      setBulkCreateMessage(
+        "Selected bottles have no readable label details. Uncheck unknown bottles or retry with a clearer photo."
+      );
+      return;
+    }
+    if (uploadPhotos.length === 0) {
+      setBulkCreateMessage("Upload photos before creating bulk entries.");
+      return;
+    }
+
+    setIsBulkCreating(true);
+    setBulkCreateMessage("Resolving grape varieties...");
+    setErrorMessage(null);
+
+    const accessToken = await getAccessTokenForApi();
+    const normalizedBaseUrl = WEB_API_BASE_URL?.replace(/\/$/, "") ?? null;
+
+    const grapeLookupCache = new Map<string, PrimaryGrapeSelection[]>();
+    const resolveSuggestedGrapesCached = async (suggestions: string[]) => {
+      const normalizedKey = suggestions
+        .map(normalizeGrapeLookupValue)
+        .filter((v) => v.length > 0)
+        .slice(0, 2)
+        .join("|");
+      if (!normalizedKey) return [] as PrimaryGrapeSelection[];
+      const cached = grapeLookupCache.get(normalizedKey);
+      if (cached) return cached;
+      const resolved = await resolveSuggestedGrapes(suggestions.slice(0, 2));
+      grapeLookupCache.set(normalizedKey, resolved);
+      return resolved;
+    };
+
+    const grapeIdsByIndex = new Map<number, string[]>();
+    await Promise.all(
+      included.map(async (wine, i) => {
+        const suggestions = wine.primary_grape_suggestions ?? [];
+        if (suggestions.length > 0) {
+          const resolved = await resolveSuggestedGrapesCached(suggestions);
+          if (resolved.length > 0) {
+            grapeIdsByIndex.set(i, resolved.map((g) => g.id));
+          }
+        }
+      })
+    );
+
+    setBulkCreateMessage(`Creating entries... (0/${included.length} started)`);
+
+    const ratingValue =
+      form.rating.trim().length > 0 ? Number(form.rating.trim()) : null;
+    const numericRating =
+      typeof ratingValue === "number" && Number.isFinite(ratingValue)
+        ? Math.max(1, Math.min(100, Math.round(ratingValue)))
+        : null;
+
+    let started = 0;
+    let fatalCreationError: string | null = null;
+
+    type BulkCreationResult = {
+      entryId: string | null;
+      errorMessage: string | null;
+    };
+
+    const creationTasks = included.map(
+      (wine, i) =>
+        async (): Promise<BulkCreationResult> => {
+          if (fatalCreationError) {
+            return { entryId: null, errorMessage: fatalCreationError };
+          }
+          try {
+            const primaryGrapeIds = grapeIdsByIndex.get(i) ?? [];
+
+            const defaultWineName =
+              wine.wine_name ??
+              wine.producer ??
+              wine.appellation ??
+              wine.region ??
+              wine.primary_grape_suggestions?.[0] ??
+              "Unknown wine";
+
+            let entryId: string | null = null;
+
+            const createEntryViaSupabase = async () => {
+              const fallbackPayload: Record<string, unknown> = {
+                user_id: user.id,
+                wine_name: defaultWineName,
+                producer: wine.producer,
+                vintage: wine.vintage,
+                country: wine.country,
+                region: wine.region,
+                appellation: wine.appellation,
+                classification: wine.classification,
+                notes: form.notes.trim().length > 0 ? form.notes.trim() : null,
+                location_text:
+                  form.location_text.trim().length > 0 ? form.location_text.trim() : null,
+                location_place_id:
+                  form.location_place_id.trim().length > 0
+                    ? form.location_place_id.trim()
+                    : null,
+                consumed_at: form.consumed_at || defaultConsumedDate,
+                tasted_with_user_ids: selectedUserIds,
+                entry_privacy: form.entry_privacy,
+                reaction_privacy: form.reaction_privacy,
+                comments_privacy: form.comments_privacy,
+              };
+              if (numericRating !== null) {
+                fallbackPayload.rating = numericRating;
+              }
+
+              const createResult = await insertEntryWithFallback(fallbackPayload);
+              if (createResult.error || !createResult.entryId) {
+                throw new Error(createResult.error?.message ?? "Unable to create a bulk entry.");
+              }
+              const createdEntryId = createResult.entryId;
+              await persistPrimaryGrapesByIds(createdEntryId, primaryGrapeIds);
+              return createdEntryId;
+            };
+
+            if (normalizedBaseUrl && accessToken) {
+              try {
+                const response = await fetch(`${normalizedBaseUrl}/api/entries`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                  body: JSON.stringify({
+                    wine_name: defaultWineName,
+                    producer: wine.producer,
+                    vintage: wine.vintage,
+                    country: wine.country,
+                    region: wine.region,
+                    appellation: wine.appellation,
+                    classification: wine.classification,
+                    primary_grape_ids: primaryGrapeIds,
+                    rating: numericRating,
+                    notes: form.notes.trim().length > 0 ? form.notes.trim() : null,
+                    location_text:
+                      form.location_text.trim().length > 0 ? form.location_text.trim() : null,
+                    location_place_id:
+                      form.location_place_id.trim().length > 0
+                        ? form.location_place_id.trim()
+                        : null,
+                    consumed_at: form.consumed_at || defaultConsumedDate,
+                    tasted_with_user_ids: selectedUserIds,
+                    entry_privacy: form.entry_privacy,
+                    reaction_privacy: form.reaction_privacy,
+                    comments_privacy: form.comments_privacy,
+                    is_feed_visible: false,
+                    skip_comparison_candidate: true,
+                  }),
+                });
+
+                const payload = (await response.json().catch(() => ({}))) as {
+                  entry?: { id?: string };
+                  error?: string;
+                };
+                if (!response.ok) {
+                  if (response.status === 401) {
+                    throw new Error("Session expired. Sign in again to use bulk entry.");
+                  }
+                  if (response.status >= 500) {
+                    entryId = await createEntryViaSupabase();
+                  } else {
+                    throw new Error(payload.error || "Unable to create a bulk entry.");
+                  }
+                } else {
+                  entryId = payload.entry?.id ?? null;
+                  if (!entryId) {
+                    throw new Error("Bulk entry creation succeeded but no entry ID returned.");
+                  }
+                }
+              } catch (error) {
+                if (isNetworkFailureError(error)) {
+                  entryId = await createEntryViaSupabase();
+                } else {
+                  throw error;
+                }
+              }
+            } else {
+              entryId = await createEntryViaSupabase();
+            }
+
+            if (!entryId) {
+              throw new Error("Unable to create a bulk entry.");
+            }
+
+            started += 1;
+            setBulkCreateMessage(
+              started < included.length
+                ? `Creating entries... (${started}/${included.length} started)`
+                : "All entries started. Finishing photo uploads..."
+            );
+
+            const labelSourcePhoto =
+              uploadPhotos[wine.photoIndex] ??
+              uploadPhotos.find((photo) => photo.type === "label") ??
+              uploadPhotos[0];
+            if (!labelSourcePhoto) {
+              throw new Error("No source photo available for this bottle.");
+            }
+            const contextSourcePhotos = uploadPhotos.filter(
+              (photo) => photo.id !== labelSourcePhoto?.id
+            );
+            const photosForEntry: UploadPhotoItem[] = [
+              { ...labelSourcePhoto, type: "label" },
+              ...contextSourcePhotos.map((photo) => ({
+                ...photo,
+                type: (photo.type === "label" ? "lineup" : photo.type) as UploadPhotoType,
+              })),
+            ];
+            try {
+              await uploadSpecificPhotosToEntry(entryId, user.id, photosForEntry);
+            } catch (uploadError) {
+              try {
+                await supabase
+                  .from("wine_entries")
+                  .delete()
+                  .eq("id", entryId)
+                  .eq("user_id", user.id);
+              } catch {
+                // Rollback failed; entry remains as partial record.
+              }
+              const uploadMessage =
+                uploadError instanceof Error ? uploadError.message : "Photo upload failed.";
+              return { entryId: null, errorMessage: uploadMessage };
+            }
+
+            return { entryId, errorMessage: null };
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Bulk entry creation failed.";
+            fatalCreationError =
+              fatalCreationError ?? (message.includes("Session expired") ? message : null);
+            return { entryId: null, errorMessage: message };
+          }
+        }
+    );
+
+    const creationResults = await runWithConcurrency(
+      creationTasks,
+      BULK_CREATE_CONCURRENCY
+    );
+
+    setIsBulkCreating(false);
+
+    const createdEntryIds = creationResults
+      .map((result) => result.entryId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    const failedCount = creationResults.length - createdEntryIds.length;
+    const firstFailureMessage =
+      creationResults.find(
+        (result) => result.entryId === null && Boolean(result.errorMessage)
+      )?.errorMessage ?? null;
+    const lowConfidenceCount = included.filter(
+      (wine) =>
+        typeof wine.confidence === "number" &&
+        Number.isFinite(wine.confidence) &&
+        wine.confidence < 0.72
+    ).length;
+    const uncertaintyNotes: string[] = [];
+    if (lowConfidenceCount > 0) {
+      uncertaintyNotes.push(
+        `${lowConfidenceCount} bottle${lowConfidenceCount === 1 ? "" : "s"} had low confidence`
+      );
+    }
+    const uncertaintySuffix =
+      uncertaintyNotes.length > 0 ? ` Flagged: ${uncertaintyNotes.join(" \u2022 ")}.` : "";
+
+    if (createdEntryIds.length > 0) {
+      const queue = encodeURIComponent(createdEntryIds.join(","));
+      const successMessage =
+        failedCount > 0
+          ? `Created ${createdEntryIds.length} entr${
+              createdEntryIds.length === 1 ? "y" : "ies"
+            }. ${failedCount} could not be created.${
+              firstFailureMessage ? ` First issue: ${firstFailureMessage}` : ""
+            }${uncertaintySuffix} Opening guided review...`
+          : `Created ${createdEntryIds.length} entr${
+              createdEntryIds.length === 1 ? "y" : "ies"
+            }!${uncertaintySuffix} Opening guided review...`;
+      setBulkCreateMessage(successMessage);
+      setUploadMessage(successMessage);
+      router.push(
+        `/(app)/entries/${createdEntryIds[0]}?bulk=1&queue=${queue}&index=0`
+      );
+    } else {
+      setBulkCreateMessage(
+        firstFailureMessage
+          ? `Failed to create entries. ${firstFailureMessage}`
+          : "Failed to create entries. Try again."
+      );
+    }
   };
 
   const submit = async () => {
@@ -1289,6 +2530,17 @@ export default function NewEntryScreen() {
       }
 
       await persistPrimaryGrapes(entryId);
+      try {
+        await uploadPhotosToEntry(entryId, user.id);
+      } catch (uploadError) {
+        const message =
+          uploadError instanceof Error
+            ? uploadError.message
+            : "Photo upload failed.";
+        setUploadMessage(
+          `Entry saved, but at least one photo failed to upload (${message}). You can edit the entry and re-upload.`
+        );
+      }
 
       let comparisonCandidate: SurveyComparisonCandidate | null = null;
       try {
@@ -1384,371 +2636,646 @@ export default function NewEntryScreen() {
                 place. we&apos;ll tag them
               </AppText>
             </View>
-            {labelPhotoUri ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image source={{ uri: labelPhotoUri }} style={styles.uploadPreview} resizeMode="cover" />
+            {showProcessedGallery ? (
+              <View
+                style={styles.uploadGalleryFrame}
+                onLayout={(event) => {
+                  const width = event.nativeEvent.layout.width;
+                  if (width > 0 && Math.abs(width - uploadGalleryFrameWidth) > 0.5) {
+                    setUploadGalleryFrameWidth(width);
+                    if (uploadGalleryScrollRef.current && uploadPhotos.length > 1) {
+                      uploadGalleryScrollRef.current.scrollTo({
+                        x: uploadGalleryActiveIndex * width,
+                        animated: false,
+                      });
+                    }
+                  }
+                }}
+              >
+                {uploadPhotos.length > 1 && uploadGalleryFrameWidth > 0 ? (
+                  <ScrollView
+                    ref={(node) => {
+                      uploadGalleryScrollRef.current = node;
+                    }}
+                    horizontal
+                    pagingEnabled
+                    bounces={false}
+                    showsHorizontalScrollIndicator={false}
+                    decelerationRate="fast"
+                    onMomentumScrollEnd={(event) => {
+                      if (uploadGalleryFrameWidth <= 0) {
+                        return;
+                      }
+                      const offsetX = event.nativeEvent.contentOffset.x;
+                      const nextIndex = Math.round(offsetX / uploadGalleryFrameWidth);
+                      const maxIndex = Math.max(0, uploadPhotos.length - 1);
+                      const clampedIndex = Math.max(0, Math.min(maxIndex, nextIndex));
+                      setUploadGalleryActiveIndex(clampedIndex);
+                      const snappedX = clampedIndex * uploadGalleryFrameWidth;
+                      if (
+                        Math.abs(offsetX - snappedX) > 0.5 &&
+                        uploadGalleryScrollRef.current
+                      ) {
+                        uploadGalleryScrollRef.current.scrollTo({
+                          x: snappedX,
+                          animated: false,
+                        });
+                      }
+                    }}
+                  >
+                    {uploadPhotos.map((photo, index) => (
+                      <View
+                        key={photo.id}
+                        style={[styles.uploadPhotoSlide, { width: uploadGalleryFrameWidth }]}
+                      >
+                        <Image
+                          source={{ uri: photo.uri }}
+                          style={styles.uploadPreview}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.uploadPreviewTypeOverlay}>
+                          <SelectField
+                            label={`Photo ${index + 1} type`}
+                            value={photo.type}
+                            options={PHOTO_TYPE_OPTIONS}
+                            onChange={(value) =>
+                              updateUploadPhotoType(photo.id, value as UploadPhotoType)
+                            }
+                            hideLabel
+                            compact
+                          />
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.uploadPhotoSlide}>
+                    {uploadPhotos[0] ? (
+                      <>
+                        <Image
+                          source={{ uri: uploadPhotos[0].uri }}
+                          style={styles.uploadPreview}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.uploadPreviewTypeOverlay}>
+                          <SelectField
+                            label="Photo 1 type"
+                            value={uploadPhotos[0].type}
+                            options={PHOTO_TYPE_OPTIONS}
+                            onChange={(value) =>
+                              updateUploadPhotoType(uploadPhotos[0].id, value as UploadPhotoType)
+                            }
+                            hideLabel
+                            compact
+                          />
+                        </View>
+                      </>
+                    ) : null}
+                  </View>
+                )}
+
+                {uploadPhotos.length > 1 ? (
+                  <View style={styles.uploadPhotoDotRow}>
+                    {uploadPhotos.map((_, index) => (
+                      <Pressable
+                        key={`upload-dot-${index}`}
+                        onPress={() => scrollToUploadPhotoIndex(index)}
+                        hitSlop={6}
+                        style={[
+                          styles.uploadPhotoDot,
+                          index === uploadGalleryActiveIndex
+                            ? styles.uploadPhotoDotActive
+                            : null,
+                        ]}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : uploadPhotos.length > 0 ? (
+              <AppText style={styles.uploadWaitingText}>
+                Photos uploaded. Waiting for AI processing to complete...
+              </AppText>
             ) : null}
-            {uploadMessage ? <AppText style={[styles.hint, styles.uploadHint]}>{uploadMessage}</AppText> : null}
+            {showProcessedGallery && uploadPhotos.length > 0 ? (
+              <View style={styles.uploadGalleryFooter}>
+                <AppText style={styles.hint}>
+                  {uploadGalleryActiveIndex + 1} of {uploadPhotos.length}
+                </AppText>
+                <Pressable
+                  style={styles.uploadRemoveButton}
+                  onPress={() => {
+                    const active = uploadPhotos[uploadGalleryActiveIndex];
+                    if (active) {
+                      removeUploadPhoto(active.id);
+                    }
+                  }}
+                  disabled={isAutofillLoading || isBulkCreating}
+                >
+                  <AppText style={styles.uploadRemoveButtonText}>Remove</AppText>
+                </Pressable>
+              </View>
+            ) : null}
+            {uploadMessage ? (
+              uploadAnalysisStatus === "loading" ? (
+                <View style={styles.uploadLoadingRow}>
+                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <AppText style={styles.uploadLoadingText}>{uploadMessage}</AppText>
+                </View>
+              ) : (
+                <AppText
+                  style={[
+                    styles.uploadStatusText,
+                    uploadAnalysisStatus === "error" || uploadAnalysisStatus === "timeout"
+                      ? styles.uploadStatusTextError
+                      : styles.uploadStatusTextSuccess,
+                  ]}
+                >
+                  {uploadMessage}
+                </AppText>
+              )
+            ) : null}
+            {showAnalysisRetry ? (
+              <Pressable
+                style={styles.retryActionButton}
+                onPress={() => void retryPhotoAnalysis()}
+                disabled={isAutofillLoading || isBulkCreating}
+              >
+                <AppText style={styles.retryActionButtonText}>Retry analysis</AppText>
+              </Pressable>
+            ) : null}
             <Pressable
               style={[styles.ghostButton, styles.uploadActionButton]}
               onPress={() => void pickLabelImage()}
-              disabled={isAutofillLoading}
+              disabled={isAutofillLoading || isBulkCreating}
             >
               <AppText style={styles.ghostButtonText}>
                 {isAutofillLoading
                   ? "Analyzing..."
-                  : labelPhotoUri
-                  ? "Change image"
+                  : uploadPhotos.length > 0
+                  ? "Add images"
                   : "Upload images"}
               </AppText>
             </Pressable>
-          </View>
-
-          <Field
-            label="Notes"
-            value={form.notes}
-            onChange={(value) => updateField("notes", value)}
-            multiline
-            placeholder="Optional tasting notes"
-          />
-
-          <AdaptiveFieldRow minColumnWidth={170}>
-            <Field
-              label="Rating (1-100)"
-              value={form.rating}
-              onChange={(value) => updateField("rating", value)}
-              keyboardType="number-pad"
-              placeholder="Required"
-              required
-            />
-            <SelectField
-              label="QPR"
-              value={form.qpr_level}
-              options={QPR_OPTIONS}
-              onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
-            />
-          </AdaptiveFieldRow>
-
-          <Accordion
-            title="Wine details"
-            description="Optional identity details for this bottle."
-            expanded={expanded.wine_details}
-            onToggle={() => toggleSection("wine_details")}
-          >
-            <Field
-              label="Wine name"
-              value={form.wine_name}
-              onChange={(value) => updateField("wine_name", value)}
-              placeholder="Required"
-            />
-            <Field
-              label="Producer"
-              value={form.producer}
-              onChange={(v) => updateField("producer", v)}
-            />
-            <AdaptiveFieldRow minColumnWidth={160}>
-              <Field
-                label="Vintage"
-                value={form.vintage}
-                onChange={(v) => updateField("vintage", v)}
-              />
-              <Field
-                label="Country"
-                value={form.country}
-                onChange={(v) => updateField("country", v)}
-              />
-            </AdaptiveFieldRow>
-            <AdaptiveFieldRow minColumnWidth={160}>
-              <Field
-                label="Region"
-                value={form.region}
-                onChange={(v) => updateField("region", v)}
-              />
-              <Field
-                label="Appellation"
-                value={form.appellation}
-                onChange={(v) => updateField("appellation", v)}
-              />
-            </AdaptiveFieldRow>
-            <Field
-              label="Classification"
-              value={form.classification}
-              onChange={(v) => updateField("classification", v)}
-              placeholder="Optional (e.g. Premier Cru, DOCG)"
-            />
-            <View style={styles.block}>
-              <View style={styles.primaryGrapeHeaderRow}>
-                <AppText style={styles.label}>Primary grapes</AppText>
-                <AppText style={styles.hint}>{selectedPrimaryGrapes.length}/3</AppText>
-              </View>
-              <AppText style={styles.hint}>
-                Type at least 4 letters to search. Select up to 3 grapes.
-              </AppText>
-              <View style={styles.primaryGrapeChipWrap}>
-                {selectedPrimaryGrapes.map((grape) => (
+            {isBulkLineupMode ? (
+              <View style={styles.bulkLineupCard}>
+                <View style={styles.bulkLineupHeader}>
+                  <AppText style={styles.bulkLineupTitle}>Lineup preview</AppText>
                   <Pressable
-                    key={grape.id}
-                    style={styles.primaryGrapeChip}
-                    onPress={() => removePrimaryGrape(grape.id)}
+                    style={styles.bulkBackButton}
+                    onPress={cancelBulkLineup}
+                    disabled={isBulkCreating}
                   >
-                    <AppText style={styles.primaryGrapeChipText}>{grape.name}</AppText>
-                    <AppText style={styles.primaryGrapeChipRemove}>x</AppText>
+                    <AppText style={styles.bulkBackButtonText}>{"\u2190"} Back</AppText>
                   </Pressable>
-                ))}
-                {selectedPrimaryGrapes.length === 0 ? (
-                  <AppText style={styles.hint}>No grapes selected yet.</AppText>
-                ) : null}
-              </View>
-              <DoneTextInput
-                value={primaryGrapeQuery}
-                onChangeText={setPrimaryGrapeQuery}
-                onFocus={() => setIsPrimaryGrapeFocused(true)}
-                onBlur={() => {
-                  setTimeout(() => setIsPrimaryGrapeFocused(false), 120);
-                }}
-                editable={selectedPrimaryGrapes.length < 3}
-                autoCapitalize="words"
-                autoCorrect={false}
-                placeholder={
-                  selectedPrimaryGrapes.length < 3
-                    ? "Search primary grapes"
-                    : "Maximum primary grapes selected"
-                }
-                placeholderTextColor="#71717a"
-                style={styles.input}
-              />
-              {isPrimaryGrapeLoading ? (
-                <AppText style={styles.hint}>Searching grapes...</AppText>
-              ) : null}
-              {primaryGrapeError ? (
-                <AppText style={styles.error}>{primaryGrapeError}</AppText>
-              ) : null}
-              {isPrimaryGrapeFocused &&
-              primaryGrapeQuery.trim().length >= 4 &&
-              primaryGrapeSuggestions.length > 0 ? (
-                <View style={styles.inlineSuggestionList}>
-                  {primaryGrapeSuggestions.map((option) => (
-                    <Pressable
-                      key={option.id}
-                      style={styles.suggestionItem}
-                      onPress={() => addPrimaryGrape(option)}
-                    >
-                      <AppText style={styles.suggestionText}>{option.name}</AppText>
-                    </Pressable>
-                  ))}
                 </View>
-              ) : null}
-              {!isPrimaryGrapeLoading &&
-              isPrimaryGrapeFocused &&
-              primaryGrapeQuery.trim().length >= 4 &&
-              primaryGrapeSuggestions.length === 0 &&
-              !primaryGrapeError ? (
-                <AppText style={styles.hint}>No grape matches found.</AppText>
-              ) : null}
-            </View>
-          </Accordion>
-
-          <Accordion
-            title="Location & date"
-            description="Where and when this bottle was consumed."
-            expanded={expanded.location_date}
-            onToggle={() => toggleSection("location_date")}
-          >
-            <View style={styles.locationDateStack}>
-              <View style={styles.block}>
-                <AppText style={styles.label}>Location</AppText>
-                <View style={styles.locationInputWrap}>
-                  <DoneTextInput
-                    value={form.location_text}
-                    onChangeText={(value) => {
-                      updateField("location_text", value);
-                      if (form.location_place_id) {
-                        updateField("location_place_id", "");
-                      }
-                    }}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    placeholder="Search places"
-                    placeholderTextColor="#71717a"
-                    style={styles.input}
-                  />
-                  {locationSuggestions.length > 0 ? (
-                    <View style={styles.suggestionOverlay}>
-                      <View style={styles.suggestionList}>
-                        {locationSuggestions.map((suggestion) => (
-                          <Pressable
-                            key={suggestion.place_id}
-                            style={styles.suggestionItem}
-                            onPress={() => {
-                              updateField("location_text", suggestion.description);
-                              updateField("location_place_id", suggestion.place_id);
-                              setLocationSuggestions([]);
-                              setLocationApiMessage(null);
-                              setLocationSessionToken(
-                                `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-                              );
-                            }}
-                          >
-                            <AppText style={styles.suggestionText}>{suggestion.description}</AppText>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
-                {isLocationLoading ? (
-                  <AppText style={styles.hint}>Searching Google Maps...</AppText>
-                ) : null}
-                {locationApiMessage ? (
-                  <AppText style={styles.hint}>{locationApiMessage}</AppText>
-                ) : null}
-              </View>
-              <DateField
-                label="Consumed date"
-                value={form.consumed_at}
-                onChange={(value) => updateField("consumed_at", value)}
-              />
-            </View>
-          </Accordion>
-
-          <Accordion
-            title="Tasted with"
-            description="Tag friends who were with you."
-            expanded={expanded.tasted_with}
-            onToggle={() => toggleSection("tasted_with")}
-          >
-            {isLoadingFriends ? <AppText style={styles.hint}>Loading friends...</AppText> : null}
-            {!isLoadingFriends && users.length === 0 ? (
-              <AppText style={styles.hint}>No other users yet.</AppText>
-            ) : null}
-            {users.length > 0 ? (
-              <>
-                <View style={styles.chipWrap}>
-                  {topFriends.map((friend) => {
-                    const selected = selectedUserIds.includes(friend.id);
-                    return (
+                {!isBulkCreating ? (
+                  <View style={styles.bulkLineupList}>
+                    {lineupWines.map((wine) => (
                       <Pressable
-                        key={`friend-top-${friend.id}`}
-                        style={[styles.friendChip, selected ? styles.friendChipActive : null]}
-                        onPress={() => toggleFriend(friend.id)}
+                        key={wine.id}
+                        style={[
+                          styles.bulkLineupRow,
+                          wine.included ? styles.bulkLineupRowActive : null,
+                        ]}
+                        onPress={() => toggleLineupWineIncluded(wine.id)}
                       >
-                        <AppText style={[styles.friendText, selected ? styles.friendTextActive : null]}>
-                          {formatFriendName(friend)}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
-                  {extraSelected.map((friend) => (
-                    <Pressable
-                      key={`friend-extra-${friend.id}`}
-                      style={[styles.friendChip, styles.friendChipActive]}
-                      onPress={() => toggleFriend(friend.id)}
-                    >
-                      <AppText style={[styles.friendText, styles.friendTextActive]}>
-                        {formatFriendName(friend)}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
-                <Field
-                  label="Search friends"
-                  value={friendSearch}
-                  onChange={setFriendSearch}
-                  placeholder="Type 2+ letters..."
-                />
-                {searchResults.length > 0 ? (
-                  <View style={styles.chipWrap}>
-                    {searchResults.map((friend) => (
-                      <Pressable
-                        key={`friend-search-${friend.id}`}
-                        style={styles.friendChip}
-                        onPress={() => toggleFriend(friend.id)}
-                      >
-                        <AppText style={styles.friendText}>{formatFriendName(friend)}</AppText>
+                        <View
+                          style={[
+                            styles.bulkLineupCheckbox,
+                            wine.included ? styles.bulkLineupCheckboxActive : null,
+                          ]}
+                        >
+                          {wine.included ? (
+                            <AppText style={styles.bulkLineupCheckboxMark}>✓</AppText>
+                          ) : null}
+                        </View>
+                        <View style={styles.bulkLineupCopy}>
+                          <AppText style={styles.bulkLineupWineTitle} numberOfLines={1}>
+                            {wine.wine_name || "Unknown wine"}
+                          </AppText>
+                          <AppText style={styles.bulkLineupWineMeta} numberOfLines={2}>
+                            {[
+                              wine.producer,
+                              wine.vintage,
+                              wine.region,
+                              ...(wine.primary_grape_suggestions?.length
+                                ? [wine.primary_grape_suggestions.join(", ")]
+                                : []),
+                            ]
+                              .filter(Boolean)
+                              .join(" \u00b7 ") || "No details detected"}
+                          </AppText>
+                          {wine.confidence !== null ? (
+                            <AppText style={styles.bulkLineupWineMeta}>
+                              Confidence: {Math.round(wine.confidence * 100)}%
+                            </AppText>
+                          ) : null}
+                        </View>
                       </Pressable>
                     ))}
                   </View>
-                ) : search.length >= 2 ? (
-                  <AppText style={styles.hint}>No matching friends found.</AppText>
                 ) : null}
-              </>
+                {bulkCreateMessage ? (
+                  isBulkCreating ? (
+                    <View style={styles.uploadLoadingRow}>
+                      <ActivityIndicator size="small" color="#fbbf24" />
+                      <AppText style={styles.uploadLoadingText}>{bulkCreateMessage}</AppText>
+                    </View>
+                  ) : (
+                    <AppText style={styles.bulkLineupMessage}>{bulkCreateMessage}</AppText>
+                  )
+                ) : null}
+                {showBulkRetry ? (
+                  <Pressable
+                    style={styles.bulkRetryButton}
+                    onPress={() => void createBulkEntriesFromLineup()}
+                    disabled={isBulkCreating}
+                  >
+                    <AppText style={styles.bulkRetryButtonText}>Retry bulk create</AppText>
+                  </Pressable>
+                ) : null}
+                {!isBulkCreating ? (
+                  <Pressable
+                    style={[
+                      styles.bulkCreateButton,
+                      readyLineupWines.length === 0
+                        ? styles.submitButtonDisabled
+                        : null,
+                    ]}
+                    onPress={() => void createBulkEntriesFromLineup()}
+                    disabled={readyLineupWines.length === 0}
+                  >
+                    <AppText style={styles.bulkCreateButtonText}>
+                      Create {readyLineupWines.length} entr
+                      {readyLineupWines.length === 1 ? "y" : "ies"}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+              </View>
             ) : null}
-          </Accordion>
+          </View>
 
-          <Accordion
-            title="Advanced notes"
-            description="Optional structure for deeper tasting notes."
-            expanded={expanded.advanced_notes}
-            onToggle={() => toggleSection("advanced_notes")}
-          >
-            <View style={styles.twoColGrid}>
-              {ADVANCED_NOTE_FIELDS.map((field) => (
-                <View
-                  key={field.key}
-                  style={[
-                    styles.twoColItem,
-                    field.key === "body" ? styles.twoColItemFull : null,
-                  ]}
-                >
-                  <SelectField
-                    label={field.label}
-                    value={form.advanced_notes[field.key]}
-                    options={field.options}
-                    onChange={(value) => updateAdvanced(field.key, value)}
+          {!isBulkLineupMode ? (
+            <>
+              <Field
+                label="Notes"
+                value={form.notes}
+                onChange={(value) => updateField("notes", value)}
+                multiline
+                placeholder="Optional tasting notes"
+              />
+
+              <AdaptiveFieldRow minColumnWidth={170}>
+                <Field
+                  label="Rating (1-100)"
+                  value={form.rating}
+                  onChange={(value) => updateField("rating", value)}
+                  keyboardType="number-pad"
+                  placeholder="Required"
+                  required
+                />
+                <SelectField
+                  label="QPR"
+                  value={form.qpr_level}
+                  options={QPR_OPTIONS}
+                  onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
+                />
+              </AdaptiveFieldRow>
+
+              <Accordion
+                title="Wine details"
+                description="Optional identity details for this bottle."
+                expanded={expanded.wine_details}
+                onToggle={() => toggleSection("wine_details")}
+              >
+                <Field
+                  label="Wine name"
+                  value={form.wine_name}
+                  onChange={(value) => updateField("wine_name", value)}
+                  placeholder="Required"
+                />
+                <Field
+                  label="Producer"
+                  value={form.producer}
+                  onChange={(v) => updateField("producer", v)}
+                />
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Vintage"
+                    value={form.vintage}
+                    onChange={(v) => updateField("vintage", v)}
+                  />
+                  <Field
+                    label="Country"
+                    value={form.country}
+                    onChange={(v) => updateField("country", v)}
+                  />
+                </AdaptiveFieldRow>
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Region"
+                    value={form.region}
+                    onChange={(v) => updateField("region", v)}
+                  />
+                  <Field
+                    label="Appellation"
+                    value={form.appellation}
+                    onChange={(v) => updateField("appellation", v)}
+                  />
+                </AdaptiveFieldRow>
+                <Field
+                  label="Classification"
+                  value={form.classification}
+                  onChange={(v) => updateField("classification", v)}
+                  placeholder="Optional (e.g. Premier Cru, DOCG)"
+                />
+                <View style={styles.block}>
+                  <View style={styles.primaryGrapeHeaderRow}>
+                    <AppText style={styles.label}>Primary grapes</AppText>
+                    <AppText style={styles.hint}>{selectedPrimaryGrapes.length}/3</AppText>
+                  </View>
+                  <AppText style={styles.hint}>
+                    Type at least 4 letters to search. Select up to 3 grapes.
+                  </AppText>
+                  <View style={styles.primaryGrapeChipWrap}>
+                    {selectedPrimaryGrapes.map((grape) => (
+                      <Pressable
+                        key={grape.id}
+                        style={styles.primaryGrapeChip}
+                        onPress={() => removePrimaryGrape(grape.id)}
+                      >
+                        <AppText style={styles.primaryGrapeChipText}>{grape.name}</AppText>
+                        <AppText style={styles.primaryGrapeChipRemove}>x</AppText>
+                      </Pressable>
+                    ))}
+                    {selectedPrimaryGrapes.length === 0 ? (
+                      <AppText style={styles.hint}>No grapes selected yet.</AppText>
+                    ) : null}
+                  </View>
+                  <DoneTextInput
+                    value={primaryGrapeQuery}
+                    onChangeText={setPrimaryGrapeQuery}
+                    onFocus={() => setIsPrimaryGrapeFocused(true)}
+                    onBlur={() => {
+                      setTimeout(() => setIsPrimaryGrapeFocused(false), 120);
+                    }}
+                    editable={selectedPrimaryGrapes.length < 3}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    placeholder={
+                      selectedPrimaryGrapes.length < 3
+                        ? "Search primary grapes"
+                        : "Maximum primary grapes selected"
+                    }
+                    placeholderTextColor="#71717a"
+                    style={styles.input}
+                  />
+                  {isPrimaryGrapeLoading ? (
+                    <AppText style={styles.hint}>Searching grapes...</AppText>
+                  ) : null}
+                  {primaryGrapeError ? (
+                    <AppText style={styles.error}>{primaryGrapeError}</AppText>
+                  ) : null}
+                  {isPrimaryGrapeFocused &&
+                  primaryGrapeQuery.trim().length >= 4 &&
+                  primaryGrapeSuggestions.length > 0 ? (
+                    <View style={styles.inlineSuggestionList}>
+                      {primaryGrapeSuggestions.map((option) => (
+                        <Pressable
+                          key={option.id}
+                          style={styles.suggestionItem}
+                          onPress={() => addPrimaryGrape(option)}
+                        >
+                          <AppText style={styles.suggestionText}>{option.name}</AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : null}
+                  {!isPrimaryGrapeLoading &&
+                  isPrimaryGrapeFocused &&
+                  primaryGrapeQuery.trim().length >= 4 &&
+                  primaryGrapeSuggestions.length === 0 &&
+                  !primaryGrapeError ? (
+                    <AppText style={styles.hint}>No grape matches found.</AppText>
+                  ) : null}
+                </View>
+              </Accordion>
+
+              <Accordion
+                title="Location & date"
+                description="Where and when this bottle was consumed."
+                expanded={expanded.location_date}
+                onToggle={() => toggleSection("location_date")}
+              >
+                <View style={styles.locationDateStack}>
+                  <View style={styles.block}>
+                    <AppText style={styles.label}>Location</AppText>
+                    <View style={styles.locationInputWrap}>
+                      <DoneTextInput
+                        value={form.location_text}
+                        onChangeText={(value) => {
+                          updateField("location_text", value);
+                          if (form.location_place_id) {
+                            updateField("location_place_id", "");
+                          }
+                        }}
+                        autoCapitalize="words"
+                        autoCorrect={false}
+                        placeholder="Search places"
+                        placeholderTextColor="#71717a"
+                        style={styles.input}
+                      />
+                      {locationSuggestions.length > 0 ? (
+                        <View style={styles.suggestionOverlay}>
+                          <View style={styles.suggestionList}>
+                            {locationSuggestions.map((suggestion) => (
+                              <Pressable
+                                key={suggestion.place_id}
+                                style={styles.suggestionItem}
+                                onPress={() => {
+                                  updateField("location_text", suggestion.description);
+                                  updateField("location_place_id", suggestion.place_id);
+                                  setLocationSuggestions([]);
+                                  setLocationApiMessage(null);
+                                  setLocationSessionToken(
+                                    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                                  );
+                                }}
+                              >
+                                <AppText style={styles.suggestionText}>
+                                  {suggestion.description}
+                                </AppText>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </View>
+                      ) : null}
+                    </View>
+                    {isLocationLoading ? (
+                      <AppText style={styles.hint}>Searching Google Maps...</AppText>
+                    ) : null}
+                    {locationApiMessage ? (
+                      <AppText style={styles.hint}>{locationApiMessage}</AppText>
+                    ) : null}
+                  </View>
+                  <DateField
+                    label="Consumed date"
+                    value={form.consumed_at}
+                    onChange={(value) => updateField("consumed_at", value)}
                   />
                 </View>
-              ))}
-            </View>
-          </Accordion>
+              </Accordion>
 
-          <Accordion
-            title="Visibility & interaction"
-            description="Set who can view the post, reactions, and comments."
-            expanded={expanded.visibility}
-            onToggle={() => toggleSection("visibility")}
-          >
-            {isLoadingDefaults ? (
-              <AppText style={styles.hint}>Loading your default visibility settings...</AppText>
-            ) : null}
-            <View style={styles.visibilityGrid}>
-              <VisibilitySelect
-                title="Post visibility"
-                value={form.entry_privacy}
-                options={PRIVACY_OPTIONS}
-                onChange={(value) => updateField("entry_privacy", value as PrivacyLevel)}
-              />
-              <VisibilitySelect
-                title="Reactions"
-                value={form.reaction_privacy}
-                options={PRIVACY_OPTIONS}
-                onChange={(value) => updateField("reaction_privacy", value as PrivacyLevel)}
-              />
-              <VisibilitySelect
-                title="Comments"
-                value={form.comments_privacy}
-                options={PRIVACY_OPTIONS}
-                onChange={(value) => updateField("comments_privacy", value as PrivacyLevel)}
-              />
-            </View>
-            <AppText style={styles.hint}>
-              Privacy on reactions/comments controls both visibility and participation.
-            </AppText>
-          </Accordion>
+              <Accordion
+                title="Tasted with"
+                description="Tag friends who were with you."
+                expanded={expanded.tasted_with}
+                onToggle={() => toggleSection("tasted_with")}
+              >
+                {isLoadingFriends ? <AppText style={styles.hint}>Loading friends...</AppText> : null}
+                {!isLoadingFriends && users.length === 0 ? (
+                  <AppText style={styles.hint}>No other users yet.</AppText>
+                ) : null}
+                {users.length > 0 ? (
+                  <>
+                    <View style={styles.chipWrap}>
+                      {topFriends.map((friend) => {
+                        const selected = selectedUserIds.includes(friend.id);
+                        return (
+                          <Pressable
+                            key={`friend-top-${friend.id}`}
+                            style={[styles.friendChip, selected ? styles.friendChipActive : null]}
+                            onPress={() => toggleFriend(friend.id)}
+                          >
+                            <AppText
+                              style={[styles.friendText, selected ? styles.friendTextActive : null]}
+                            >
+                              {formatFriendName(friend)}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                      {extraSelected.map((friend) => (
+                        <Pressable
+                          key={`friend-extra-${friend.id}`}
+                          style={[styles.friendChip, styles.friendChipActive]}
+                          onPress={() => toggleFriend(friend.id)}
+                        >
+                          <AppText style={[styles.friendText, styles.friendTextActive]}>
+                            {formatFriendName(friend)}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Field
+                      label="Search friends"
+                      value={friendSearch}
+                      onChange={setFriendSearch}
+                      placeholder="Type 2+ letters..."
+                    />
+                    {searchResults.length > 0 ? (
+                      <View style={styles.chipWrap}>
+                        {searchResults.map((friend) => (
+                          <Pressable
+                            key={`friend-search-${friend.id}`}
+                            style={styles.friendChip}
+                            onPress={() => toggleFriend(friend.id)}
+                          >
+                            <AppText style={styles.friendText}>{formatFriendName(friend)}</AppText>
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : search.length >= 2 ? (
+                      <AppText style={styles.hint}>No matching friends found.</AppText>
+                    ) : null}
+                  </>
+                ) : null}
+              </Accordion>
 
-          {errorMessage ? <AppText style={styles.error}>{errorMessage}</AppText> : null}
+              <Accordion
+                title="Advanced notes"
+                description="Optional structure for deeper tasting notes."
+                expanded={expanded.advanced_notes}
+                onToggle={() => toggleSection("advanced_notes")}
+              >
+                <View style={styles.twoColGrid}>
+                  {ADVANCED_NOTE_FIELDS.map((field) => (
+                    <View
+                      key={field.key}
+                      style={[
+                        styles.twoColItem,
+                        field.key === "body" ? styles.twoColItemFull : null,
+                      ]}
+                    >
+                      <SelectField
+                        label={field.label}
+                        value={form.advanced_notes[field.key]}
+                        options={field.options}
+                        onChange={(value) => updateAdvanced(field.key, value)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </Accordion>
 
-          <View style={styles.actionRow}>
-            <Pressable style={styles.submitButton} onPress={() => void submit()} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <ActivityIndicator color="#09090b" />
-              ) : (
-                <AppText style={styles.submitButtonText}>Save entry</AppText>
-              )}
-            </Pressable>
-            <Pressable style={styles.cancelButton} onPress={() => router.replace("/(app)/entries")}>
-              <AppText style={styles.cancelButtonText}>Cancel</AppText>
-            </Pressable>
-          </View>
+              <Accordion
+                title="Visibility & interaction"
+                description="Set who can view the post, reactions, and comments."
+                expanded={expanded.visibility}
+                onToggle={() => toggleSection("visibility")}
+              >
+                {isLoadingDefaults ? (
+                  <AppText style={styles.hint}>Loading your default visibility settings...</AppText>
+                ) : null}
+                <View style={styles.visibilityGrid}>
+                  <VisibilitySelect
+                    title="Post visibility"
+                    value={form.entry_privacy}
+                    options={PRIVACY_OPTIONS}
+                    onChange={(value) => updateField("entry_privacy", value as PrivacyLevel)}
+                  />
+                  <VisibilitySelect
+                    title="Reactions"
+                    value={form.reaction_privacy}
+                    options={PRIVACY_OPTIONS}
+                    onChange={(value) => updateField("reaction_privacy", value as PrivacyLevel)}
+                  />
+                  <VisibilitySelect
+                    title="Comments"
+                    value={form.comments_privacy}
+                    options={PRIVACY_OPTIONS}
+                    onChange={(value) => updateField("comments_privacy", value as PrivacyLevel)}
+                  />
+                </View>
+                <AppText style={styles.hint}>
+                  Privacy on reactions/comments controls both visibility and participation.
+                </AppText>
+              </Accordion>
+
+              {errorMessage ? <AppText style={styles.error}>{errorMessage}</AppText> : null}
+
+              <View style={styles.actionRow}>
+                <Pressable
+                  style={styles.submitButton}
+                  onPress={() => void submit()}
+                  disabled={isSubmitting || isBulkCreating}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#09090b" />
+                  ) : (
+                    <AppText style={styles.submitButtonText}>Save entry</AppText>
+                  )}
+                </Pressable>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => router.replace("/(app)/entries")}
+                >
+                  <AppText style={styles.cancelButtonText}>Cancel</AppText>
+                </Pressable>
+              </View>
+            </>
+          ) : null}
         </View>
       </ScrollView>
       <Modal
@@ -1758,7 +3285,12 @@ export default function NewEntryScreen() {
         onRequestClose={() => undefined}
       >
         <View style={styles.surveyModalRoot}>
-          <View style={styles.surveyCard}>
+          <View
+            style={[
+              styles.surveyCard,
+              postSaveSurveyStep === "comparison" ? styles.surveyCardComparison : null,
+            ]}
+          >
             {postSaveSurveyStep === "survey" ? (
               <>
                 <View style={styles.surveyHeader}>
@@ -1773,6 +3305,9 @@ export default function NewEntryScreen() {
                   onChange={(value) =>
                     setSurveyHowWasIt(value as SurveyHowWasItResponse | "")
                   }
+                  placeholderLabel="Select one"
+                  tone="amber"
+                  hideModalCloseAction
                 />
                 <SelectField
                   label="How did it compare to your expectations?"
@@ -1781,6 +3316,9 @@ export default function NewEntryScreen() {
                   onChange={(value) =>
                     setSurveyExpectations(value as SurveyExpectationsResponse | "")
                   }
+                  placeholderLabel="Select one"
+                  tone="amber"
+                  hideModalCloseAction
                 />
                 <SelectField
                   label="Would you drink it again?"
@@ -1789,6 +3327,9 @@ export default function NewEntryScreen() {
                   onChange={(value) =>
                     setSurveyDrinkAgain(value as SurveyDrinkAgainResponse | "")
                   }
+                  placeholderLabel="Select one"
+                  tone="amber"
+                  hideModalCloseAction
                 />
 
                 {surveyErrorMessage ? (
@@ -1815,7 +3356,9 @@ export default function NewEntryScreen() {
             ) : pendingPostSaveSurvey?.candidate ? (
               <>
                 <View style={styles.surveyCompareHeader}>
-                  <AppText style={styles.surveyTitle}>Which wine did you like more?</AppText>
+                  <AppText style={styles.surveyCompareTitleHeading}>
+                    Which wine did you like more?
+                  </AppText>
                   <Pressable
                     style={styles.surveySkipButton}
                     onPress={skipPostSaveComparison}
@@ -1994,12 +3537,20 @@ function SelectField({
   options,
   onChange,
   hideLabel = false,
+  compact = false,
+  placeholderLabel = "Not set",
+  tone = "default",
+  hideModalCloseAction = false,
 }: {
   label: string;
   value: string;
   options: ReadonlyArray<ChipOption>;
   onChange: (value: string) => void;
   hideLabel?: boolean;
+  compact?: boolean;
+  placeholderLabel?: string;
+  tone?: "default" | "amber";
+  hideModalCloseAction?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [popoverLayout, setPopoverLayout] = useState<{
@@ -2010,7 +3561,8 @@ function SelectField({
   } | null>(null);
   const triggerRef = useRef<View>(null);
   const selectedLabel =
-    options.find((option) => option.value === value)?.label ?? "Not set";
+    options.find((option) => option.value === value)?.label ?? placeholderLabel;
+  const hasSelection = value.trim().length > 0;
 
   const openPopover = () => {
     const trigger = triggerRef.current;
@@ -2050,13 +3602,39 @@ function SelectField({
   };
 
   return (
-    <View style={styles.block}>
+    <View style={compact ? styles.selectCompactBlock : styles.block}>
       {hideLabel ? null : <AppText style={styles.label}>{label}</AppText>}
-      <Pressable ref={triggerRef} style={styles.selectTrigger} onPress={openPopover}>
-        <AppText style={styles.selectTriggerText} numberOfLines={1}>
+      <Pressable
+        ref={triggerRef}
+        style={[
+          styles.selectTrigger,
+          compact ? styles.selectTriggerCompact : null,
+          tone === "amber" && hasSelection ? styles.selectTriggerAmber : null,
+          compact && tone === "amber" && hasSelection
+            ? styles.selectTriggerCompactAmber
+            : null,
+        ]}
+        onPress={openPopover}
+      >
+        <AppText
+          style={[
+            styles.selectTriggerText,
+            compact ? styles.selectTriggerTextCompact : null,
+            tone === "amber" && hasSelection ? styles.selectTriggerTextAmber : null,
+          ]}
+          numberOfLines={1}
+        >
           {selectedLabel}
         </AppText>
-        <AppText style={styles.selectChevron}>v</AppText>
+        <AppText
+          style={[
+            styles.selectChevron,
+            compact ? styles.selectChevronCompact : null,
+            tone === "amber" && hasSelection ? styles.selectChevronAmber : null,
+          ]}
+        >
+          v
+        </AppText>
       </Pressable>
       <Modal
         visible={isOpen}
@@ -2070,6 +3648,7 @@ function SelectField({
             <View
               style={[
                 styles.selectPopoverCard,
+                tone === "amber" ? styles.selectPopoverCardAmber : null,
                 {
                   top: popoverLayout.top,
                   left: popoverLayout.left,
@@ -2079,10 +3658,21 @@ function SelectField({
               ]}
             >
             <View style={styles.selectModalHeader}>
-              <AppText style={styles.selectModalTitle}>{label}</AppText>
-              <Pressable onPress={() => setIsOpen(false)}>
-                <AppText style={styles.selectModalCloseText}>Close</AppText>
-              </Pressable>
+              <AppText
+                style={[
+                  styles.selectModalTitle,
+                  tone === "amber" ? styles.selectModalTitleAmber : null,
+                ]}
+              >
+                {label}
+              </AppText>
+              {!hideModalCloseAction ? (
+                <Pressable onPress={() => setIsOpen(false)}>
+                  <AppText style={styles.selectModalCloseText}>Close</AppText>
+                </Pressable>
+              ) : (
+                <View />
+              )}
             </View>
             <ScrollView
               style={styles.selectPopoverList}
@@ -2096,6 +3686,7 @@ function SelectField({
                     style={[
                       styles.selectOption,
                       selected ? styles.selectOptionSelected : null,
+                      selected && tone === "amber" ? styles.selectOptionSelectedAmber : null,
                     ]}
                     onPress={() => {
                       onChange(option.value);
@@ -2106,6 +3697,9 @@ function SelectField({
                       style={[
                         styles.selectOptionText,
                         selected ? styles.selectOptionTextSelected : null,
+                        selected && tone === "amber"
+                          ? styles.selectOptionTextSelectedAmber
+                          : null,
                       ]}
                     >
                       {option.label}
@@ -2450,13 +4044,254 @@ const styles = StyleSheet.create({
   },
   uploadTextWrap: { gap: 4 },
   uploadHint: { color: "#fbbf24" },
-  uploadPreview: {
+  uploadGalleryFrame: {
     width: "100%",
-    height: 136,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 0, 0, 0.34)",
+    overflow: "hidden",
+  },
+  uploadPhotoSlide: {
+    position: "relative",
+  },
+  uploadPreview: {
+    width: "100%",
+    height: 232,
     backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  uploadPreviewTypeOverlay: {
+    position: "absolute",
+    left: 10,
+    top: 10,
+    width: 128,
+  },
+  uploadPhotoDotRow: {
+    position: "absolute",
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+  },
+  uploadPhotoDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.42)",
+  },
+  uploadPhotoDotActive: {
+    width: 8,
+    height: 8,
+    backgroundColor: "#fbbf24",
+  },
+  uploadGalleryFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    minHeight: 24,
+  },
+  uploadRemoveButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  uploadRemoveButtonText: {
+    color: "#f4f4f5",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  uploadWaitingText: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  uploadLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  uploadLoadingText: {
+    color: "#fbbf24",
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
+  },
+  uploadStatusText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  uploadStatusTextSuccess: {
+    color: "#86efac",
+  },
+  uploadStatusTextError: {
+    color: "#fca5a5",
+  },
+  retryActionButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.46)",
+    backgroundColor: "rgba(251, 191, 36, 0.14)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  retryActionButtonText: {
+    color: "#fde68a",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  bulkLineupCard: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.32)",
+    backgroundColor: "rgba(146, 64, 14, 0.18)",
+    padding: 10,
+    gap: 8,
+  },
+  bulkLineupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  bulkLineupTitle: {
+    color: "#fde68a",
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
+  bulkBackButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  bulkBackButtonText: {
+    color: "#d4d4d8",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  bulkLineupList: {
+    gap: 7,
+  },
+  bulkLineupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 0, 0, 0.22)",
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+  },
+  bulkLineupRowActive: {
+    borderColor: "rgba(251, 191, 36, 0.5)",
+    backgroundColor: "rgba(251, 191, 36, 0.12)",
+  },
+  bulkLineupCheckbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bulkLineupCheckboxActive: {
+    borderColor: "#fbbf24",
+    backgroundColor: "#fbbf24",
+  },
+  bulkLineupCheckboxMark: {
+    color: "#09090b",
+    fontSize: 11,
+    fontWeight: "800",
+    lineHeight: 12,
+  },
+  bulkLineupCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  bulkLineupWineTitle: {
+    color: "#fef3c7",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  bulkLineupWineMeta: {
+    color: "#d4d4d8",
+    fontSize: 11,
+  },
+  bulkLineupConfidence: {
+    color: "#fde68a",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  bulkLineupMessage: {
+    color: "#fde68a",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  bulkRetryButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.46)",
+    backgroundColor: "rgba(251, 191, 36, 0.16)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  bulkRetryButtonText: {
+    color: "#fef3c7",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  bulkCreateButton: {
+    borderRadius: 999,
+    backgroundColor: "#fbbf24",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    minHeight: 40,
+  },
+  bulkCreateButtonText: {
+    color: "#09090b",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  bulkCancelButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    minHeight: 40,
+  },
+  bulkCancelButtonText: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   ghostButton: {
     borderRadius: 999,
@@ -2570,6 +4405,7 @@ const styles = StyleSheet.create({
   },
   accordionFields: { gap: 10 },
   block: { gap: 6 },
+  selectCompactBlock: { gap: 0 },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   label: { color: "#e4e4e7", fontSize: 14, fontWeight: "600" },
   requiredStar: { color: "#fb7185", fontSize: 14, fontWeight: "700" },
@@ -2597,8 +4433,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
+  selectTriggerCompact: {
+    minHeight: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.62)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    gap: 6,
+  },
+  selectTriggerAmber: {
+    borderColor: "rgba(251, 191, 36, 0.45)",
+    backgroundColor: "rgba(251, 191, 36, 0.08)",
+  },
+  selectTriggerCompactAmber: {
+    borderColor: "rgba(251, 191, 36, 0.55)",
+    backgroundColor: "rgba(251, 191, 36, 0.24)",
+  },
   selectTriggerText: { color: "#f4f4f5", fontSize: 14, flex: 1 },
+  selectTriggerTextCompact: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  selectTriggerTextAmber: {
+    color: "#fde68a",
+    fontWeight: "600",
+  },
   selectChevron: { color: "#a1a1aa", fontSize: 12, fontWeight: "700" },
+  selectChevronCompact: { fontSize: 9 },
+  selectChevronAmber: {
+    color: "#fbbf24",
+  },
   selectPopoverCard: {
     position: "absolute",
     borderRadius: 16,
@@ -2614,6 +4481,10 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 20,
   },
+  selectPopoverCardAmber: {
+    borderColor: "rgba(251, 191, 36, 0.5)",
+    backgroundColor: "#140f08",
+  },
   selectModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -2625,6 +4496,9 @@ const styles = StyleSheet.create({
     color: "#f4f4f5",
     fontSize: 15,
     fontWeight: "700",
+  },
+  selectModalTitleAmber: {
+    color: "#fde68a",
   },
   selectModalCloseText: {
     color: "#d4d4d8",
@@ -2642,6 +4516,9 @@ const styles = StyleSheet.create({
   selectOptionSelected: {
     backgroundColor: "rgba(251, 191, 36, 0.16)",
   },
+  selectOptionSelectedAmber: {
+    backgroundColor: "rgba(251, 191, 36, 0.26)",
+  },
   selectOptionText: {
     color: "#d4d4d8",
     fontSize: 13,
@@ -2649,6 +4526,9 @@ const styles = StyleSheet.create({
   },
   selectOptionTextSelected: {
     color: "#fde68a",
+  },
+  selectOptionTextSelectedAmber: {
+    color: "#fef3c7",
   },
   locationInputWrap: {
     position: "relative",
@@ -2885,18 +4765,23 @@ const styles = StyleSheet.create({
   error: { color: "#fda4af", fontSize: 13 },
   surveyModalRoot: {
     flex: 1,
-    padding: 18,
+    padding: 12,
     justifyContent: "center",
     backgroundColor: "rgba(0, 0, 0, 0.72)",
   },
   surveyCard: {
+    width: "100%",
+    maxWidth: 620,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.12)",
     backgroundColor: "#14100f",
-    padding: 14,
-    gap: 10,
+    padding: 16,
+    gap: 12,
     maxHeight: "90%",
+  },
+  surveyCardComparison: {
+    maxHeight: "94%",
   },
   surveyHeader: {
     gap: 6,
@@ -2914,12 +4799,15 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(255, 255, 255, 0.08)",
   },
   surveyCompareHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
+  },
+  surveyCompareTitleHeading: {
+    color: "#fafafa",
+    fontSize: 22,
+    fontWeight: "700",
   },
   surveySkipButton: {
+    alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.16)",
@@ -2934,11 +4822,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   surveyCompareRow: {
-    flexDirection: "row",
-    gap: 8,
+    flexDirection: "column",
+    gap: 10,
   },
   surveyCompareCard: {
-    flex: 1,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
@@ -2946,7 +4833,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   surveyCompareImageWrap: {
-    height: 74,
+    height: 176,
     backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   surveyCompareImage: {

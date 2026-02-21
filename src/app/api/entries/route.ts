@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createClient, type User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import {
@@ -185,6 +186,46 @@ const createEntrySchema = z.object({
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+async function createRequestSupabaseClient(
+  request: Request
+): Promise<{ supabase: SupabaseClient; user: User | null }> {
+  const authHeader = request.headers.get("authorization");
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
+  const bearerToken = bearerMatch?.[1]?.trim();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (bearerToken && supabaseUrl && supabaseAnonKey) {
+    const bearerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+        },
+      },
+    });
+    const {
+      data: { user },
+    } = await bearerClient.auth.getUser();
+    if (user) {
+      return {
+        supabase: bearerClient as unknown as SupabaseClient,
+        user,
+      };
+    }
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return { supabase, user };
+}
+
 async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
   if (!path || path === "pending") {
     return null;
@@ -320,11 +361,7 @@ async function getRandomComparisonCandidate({
 }
 
 export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await createRequestSupabaseClient(request);
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -451,11 +488,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await createRequestSupabaseClient(request);
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

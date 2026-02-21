@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import * as Linking from "expo-linking";
+import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import { handleIncomingAuthUrl } from "@/src/lib/authRedirect";
 import { supabase } from "@/src/lib/supabase";
@@ -19,6 +20,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    if (AppState.currentState === "active") {
+      supabase.auth.startAutoRefresh();
+    }
 
     const bootstrap = async () => {
       try {
@@ -59,12 +63,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsReady(true);
     });
 
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+
     void bootstrap();
 
     return () => {
       isMounted = false;
       linkSubscription.remove();
       subscription.unsubscribe();
+      appStateSubscription.remove();
+      supabase.auth.stopAutoRefresh();
     };
   }, []);
 

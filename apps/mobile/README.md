@@ -17,7 +17,7 @@ EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 # Optional: defaults to "email"
 EXPO_PUBLIC_AUTH_MODE=email
-# Optional: enables label image autofill from web API route
+# Optional: enables AI label autofill + photo auto-tagging via web API routes
 EXPO_PUBLIC_WEB_API_BASE_URL=http://127.0.0.1:3000
 ```
 
@@ -45,6 +45,12 @@ From `apps/mobile`:
 npm run start
 npm run ios
 npm run android
+```
+
+If you use AI label autofill / photo auto-tagging, run the web app too (repo root):
+
+```bash
+npm run dev
 ```
 
 ## Auth Redirect URLs (Supabase)
