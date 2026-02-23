@@ -2249,7 +2249,7 @@ export default function NewEntryScreen() {
     }
 
     const pickerOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsMultipleSelection: true,
       selectionLimit: remainingSlots,
       orderedSelection: true,
