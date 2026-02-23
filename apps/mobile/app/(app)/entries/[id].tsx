@@ -1707,61 +1707,6 @@ export default function EntryDetailScreen() {
                 <AppText style={styles.bulkReviewDescription}>
                   Review this entry, then continue to the next wine.
                 </AppText>
-                <View style={styles.bulkReviewActionRow}>
-                  <Pressable
-                    style={[
-                      styles.bulkPrimaryButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={goToNextBulkEntry}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkPrimaryButtonText}>
-                      {isSavingBulkReview
-                        ? "Saving..."
-                        : nextBulkEntryId
-                        ? "Next wine"
-                        : "Finish review"}
-                    </AppText>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.bulkSecondaryButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={skipBulkReview}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkSecondaryButtonText}>
-                      Skip all and save
-                    </AppText>
-                  </Pressable>
-                </View>
-                <View style={styles.bulkReviewDangerRow}>
-                  <Pressable
-                    style={[
-                      styles.bulkDangerButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={cancelBulkEntry}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkDangerButtonText}>Cancel this wine</AppText>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.bulkDangerButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={cancelEntireBulkQueue}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkDangerButtonText}>Cancel bulk entry</AppText>
-                  </Pressable>
-                </View>
-                {bulkReviewError ? (
-                  <AppText style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
-                ) : null}
               </View>
             ) : null}
             <View style={styles.headerBlock}>
@@ -2643,6 +2588,65 @@ export default function EntryDetailScreen() {
               ) : null}
               </View>
             )}
+            {isBulkReview ? (
+              <View style={styles.bulkReviewControlsCard}>
+                <View style={styles.bulkReviewActionRow}>
+                  <Pressable
+                    style={[
+                      styles.bulkPrimaryButton,
+                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                    ]}
+                    onPress={goToNextBulkEntry}
+                    disabled={bulkActionsDisabled}
+                  >
+                    <AppText style={styles.bulkPrimaryButtonText}>
+                      {isSavingBulkReview
+                        ? "Saving..."
+                        : nextBulkEntryId
+                        ? "Next wine"
+                        : "Finish review"}
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.bulkSecondaryButton,
+                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                    ]}
+                    onPress={skipBulkReview}
+                    disabled={bulkActionsDisabled}
+                  >
+                    <AppText style={styles.bulkSecondaryButtonText}>
+                      Skip all and save
+                    </AppText>
+                  </Pressable>
+                </View>
+                <View style={styles.bulkReviewDangerRow}>
+                  <Pressable
+                    style={[
+                      styles.bulkDangerButton,
+                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                    ]}
+                    onPress={cancelBulkEntry}
+                    disabled={bulkActionsDisabled}
+                  >
+                    <AppText style={styles.bulkDangerButtonText}>Cancel this wine</AppText>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.bulkDangerButton,
+                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                    ]}
+                    onPress={cancelEntireBulkQueue}
+                    disabled={bulkActionsDisabled}
+                  >
+                    <AppText style={styles.bulkDangerButtonText}>Cancel bulk entry</AppText>
+                  </Pressable>
+                </View>
+                {bulkReviewError ? (
+                  <AppText style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
+                ) : null}
+              </View>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -2891,6 +2895,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(251,191,36,0.36)",
     backgroundColor: "rgba(146,64,14,0.18)",
+    padding: 12,
+    gap: 8,
+  },
+  bulkReviewControlsCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.36)",
+    backgroundColor: "rgba(146,64,14,0.14)",
     padding: 12,
     gap: 8,
   },
