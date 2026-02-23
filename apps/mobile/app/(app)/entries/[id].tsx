@@ -1666,7 +1666,11 @@ export default function EntryDetailScreen() {
                 </>
               ) : (
                 <View style={styles.photoFallback}>
-                  <AppText style={styles.photoFallbackText}>No photos uploaded.</AppText>
+                  <AppText style={styles.photoFallbackText}>
+                    {photos.length > 0
+                      ? "Photos found, but this image could not be displayed."
+                      : "No photos uploaded."}
+                  </AppText>
                 </View>
               )}
             </View>

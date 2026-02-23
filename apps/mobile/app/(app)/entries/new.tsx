@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   KeyboardAvoidingView,
@@ -150,6 +151,8 @@ type UploadPhotoType =
   | "lineup"
   | "other_bottles";
 
+type LegacyUploadPhotoType = "label" | "place" | "pairing";
+
 type ContextPhotoTag = "place" | "pairing" | "people" | "other_bottles" | "unknown";
 
 type UploadPhotoItem = {
@@ -278,6 +281,15 @@ const PHOTO_TYPE_OPTIONS: ChipOption[] = [
   { value: "lineup", label: "Lineup" },
   { value: "other_bottles", label: "Other bottle" },
 ];
+
+const LEGACY_UPLOAD_COLUMN_BY_TYPE: Record<
+  LegacyUploadPhotoType,
+  "label_image_path" | "place_image_path" | "pairing_image_path"
+> = {
+  label: "label_image_path",
+  place: "place_image_path",
+  pairing: "pairing_image_path",
+};
 
 const MAX_PHOTOS_PER_TYPE = 10;
 const MAX_TOTAL_UPLOAD_PHOTOS = 30;
@@ -501,6 +513,56 @@ function normalizeAnalysisErrorMessage(value: string | null | undefined) {
   return message;
 }
 
+function normalizePhotoUploadErrorMessage(value: unknown) {
+  const message = value instanceof Error ? value.message : String(value ?? "");
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("entry_photos") &&
+    (normalized.includes("does not exist") ||
+      normalized.includes("check constraint") ||
+      normalized.includes("violates"))
+  ) {
+    return "Photo schema is out of date in Supabase. Run migrations 007_entry_photos.sql and 028_entry_photo_context_types.sql.";
+  }
+
+  if (
+    normalized.includes("wine-photos") &&
+    (normalized.includes("bucket") || normalized.includes("not found"))
+  ) {
+    return "Storage bucket is not configured. Run migration 002_storage.sql.";
+  }
+
+  if (normalized.includes("row-level security")) {
+    return "Storage permissions are blocked. Re-apply migration 002_storage.sql policies for wine-photos.";
+  }
+
+  if (normalized.includes("unable to read selected photo")) {
+    return "Could not read the selected image on device. Re-pick the photo and try again.";
+  }
+
+  return message.trim() || "Photo upload failed.";
+}
+
+function isLegacyUploadPhotoType(type: UploadPhotoType): type is LegacyUploadPhotoType {
+  return type === "label" || type === "place" || type === "pairing";
+}
+
+function isEntryPhotosSchemaCompatibilityError(value: unknown) {
+  const message = value instanceof Error ? value.message : String(value ?? "");
+  const normalized = message.toLowerCase();
+  if (!normalized.includes("entry_photos")) {
+    return false;
+  }
+  return (
+    normalized.includes("does not exist") ||
+    normalized.includes("check constraint") ||
+    normalized.includes("violates") ||
+    normalized.includes("column") ||
+    normalized.includes("relation")
+  );
+}
+
 function normalizeConfidence(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return null;
@@ -541,8 +603,97 @@ function extensionForMimeType(mimeType: string) {
   return "jpg";
 }
 
-function ensurePhotoMimeType(mimeType: string | null | undefined) {
-  return mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg";
+function inferPhotoMimeTypeFromNameOrUri(
+  fileName: string | null | undefined,
+  uri: string | null | undefined
+) {
+  const candidate = (fileName ?? uri ?? "").toLowerCase();
+  const extensionMatch = candidate.match(/\.([a-z0-9]+)(?:\?|$)/);
+  const ext = extensionMatch?.[1] ?? "";
+
+  if (ext === "png") {
+    return "image/png";
+  }
+  if (ext === "webp") {
+    return "image/webp";
+  }
+  if (ext === "gif") {
+    return "image/gif";
+  }
+  if (ext === "heic" || ext === "heif") {
+    return "image/heic";
+  }
+  if (ext === "jpg" || ext === "jpeg") {
+    return "image/jpeg";
+  }
+  return null;
+}
+
+function ensurePhotoMimeType(
+  mimeType: string | null | undefined,
+  fileName?: string | null,
+  uri?: string | null
+) {
+  if (mimeType && mimeType.startsWith("image/")) {
+    return mimeType;
+  }
+
+  const inferred = inferPhotoMimeTypeFromNameOrUri(fileName, uri);
+  if (inferred) {
+    return inferred;
+  }
+
+  return "image/jpeg";
+}
+
+function readArrayBufferFromUriViaXhr(uri: string) {
+  return new Promise<ArrayBuffer>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const finishWithError = () => {
+      xhr.onload = null;
+      xhr.onerror = null;
+      reject(new Error("Unable to read selected photo."));
+    };
+
+    xhr.onload = () => {
+      const response = xhr.response;
+      xhr.onload = null;
+      xhr.onerror = null;
+      if (!(response instanceof ArrayBuffer) || response.byteLength === 0) {
+        reject(new Error("Unable to read selected photo."));
+        return;
+      }
+      resolve(response);
+    };
+    xhr.onerror = finishWithError;
+    xhr.responseType = "arraybuffer";
+    xhr.open("GET", uri, true);
+    xhr.send(null);
+  });
+}
+
+async function readPhotoBytes(uri: string) {
+  const normalizedUri = uri.trim();
+  if (!normalizedUri) {
+    throw new Error("Unable to read selected photo.");
+  }
+
+  const preferXhr = Platform.OS === "android" && normalizedUri.startsWith("content://");
+  if (!preferXhr) {
+    try {
+      const fileResponse = await fetch(normalizedUri);
+      if (fileResponse.ok) {
+        const bytes = await fileResponse.arrayBuffer();
+        if (bytes.byteLength > 0) {
+          return bytes;
+        }
+      }
+    } catch {
+      // Fall back to XHR path for device-local URIs that fetch cannot read in Expo Go.
+    }
+  }
+
+  return readArrayBufferFromUriViaXhr(normalizedUri);
 }
 
 function computeOverallConfidence(values: Array<number | null | undefined>) {
@@ -1767,15 +1918,11 @@ export default function NewEntryScreen() {
         throw new Error(updateResult.error.message);
       }
 
-      const fileResponse = await fetch(photo.uri);
-      if (!fileResponse.ok) {
-        throw new Error("Unable to read selected photo.");
-      }
-      const fileBlob = await fileResponse.blob();
+      const fileBytes = await readPhotoBytes(photo.uri);
 
       const uploadResult = await supabase.storage
         .from("wine-photos")
-        .upload(uploadedPath, fileBlob, {
+        .upload(uploadedPath, fileBytes, {
           upsert: true,
           contentType: photo.mimeType,
         });
@@ -1798,6 +1945,48 @@ export default function NewEntryScreen() {
     }
   };
 
+  const uploadLegacyPhotoToEntry = async ({
+    entryId,
+    ownerUserId,
+    photo,
+  }: {
+    entryId: string;
+    ownerUserId: string;
+    photo: UploadPhotoItem;
+  }) => {
+    if (!isLegacyUploadPhotoType(photo.type)) {
+      throw new Error("Legacy upload fallback only supports label/place/pairing photos.");
+    }
+
+    const extension = extensionForMimeType(photo.mimeType);
+    const fallbackId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const uploadedPath = `${ownerUserId}/${entryId}/${photo.type}/legacy-${fallbackId}.${extension}`;
+    const legacyColumn = LEGACY_UPLOAD_COLUMN_BY_TYPE[photo.type];
+    const fileBytes = await readPhotoBytes(photo.uri);
+
+    const uploadResult = await supabase.storage
+      .from("wine-photos")
+      .upload(uploadedPath, fileBytes, {
+        upsert: true,
+        contentType: photo.mimeType,
+      });
+
+    if (uploadResult.error) {
+      throw new Error(uploadResult.error.message);
+    }
+
+    const { error: updateError } = await supabase
+      .from("wine_entries")
+      .update({ [legacyColumn]: uploadedPath })
+      .eq("id", entryId)
+      .eq("user_id", ownerUserId);
+
+    if (updateError) {
+      await supabase.storage.from("wine-photos").remove([uploadedPath]);
+      throw new Error(updateError.message);
+    }
+  };
+
   const uploadPhotosToEntry = async (entryId: string, ownerUserId: string) => {
     if (uploadPhotos.length === 0) {
       return;
@@ -1815,12 +2004,27 @@ export default function NewEntryScreen() {
     const positionByType = new Map<UploadPhotoType, number>();
     for (const photo of uploadPhotos) {
       const position = positionByType.get(photo.type) ?? 0;
-      await uploadPhotoToEntry({
-        entryId,
-        ownerUserId,
-        photo,
-        position,
-      });
+      try {
+        await uploadPhotoToEntry({
+          entryId,
+          ownerUserId,
+          photo,
+          position,
+        });
+      } catch (error) {
+        if (
+          isEntryPhotosSchemaCompatibilityError(error) &&
+          isLegacyUploadPhotoType(photo.type)
+        ) {
+          await uploadLegacyPhotoToEntry({
+            entryId,
+            ownerUserId,
+            photo,
+          });
+        } else {
+          throw error;
+        }
+      }
       positionByType.set(photo.type, position + 1);
     }
   };
@@ -1846,12 +2050,27 @@ export default function NewEntryScreen() {
     const positionByType = new Map<UploadPhotoType, number>();
     for (const photo of photosToUpload) {
       const position = positionByType.get(photo.type) ?? 0;
-      await uploadPhotoToEntry({
-        entryId,
-        ownerUserId,
-        photo,
-        position,
-      });
+      try {
+        await uploadPhotoToEntry({
+          entryId,
+          ownerUserId,
+          photo,
+          position,
+        });
+      } catch (error) {
+        if (
+          isEntryPhotosSchemaCompatibilityError(error) &&
+          isLegacyUploadPhotoType(photo.type)
+        ) {
+          await uploadLegacyPhotoToEntry({
+            entryId,
+            ownerUserId,
+            photo,
+          });
+        } else {
+          throw error;
+        }
+      }
       positionByType.set(photo.type, position + 1);
     }
   };
@@ -2056,7 +2275,7 @@ export default function NewEntryScreen() {
     const createdAt = Date.now();
     const hasLabelAlready = existingPhotos.some((photo) => photo.type === "label");
     const initialPhotos: UploadPhotoItem[] = assets.map((asset, index) => {
-      const mimeType = ensurePhotoMimeType(asset.mimeType);
+      const mimeType = ensurePhotoMimeType(asset.mimeType, asset.fileName, asset.uri);
       const extension = extensionForMimeType(mimeType);
       const name =
         asset.fileName && asset.fileName.trim().length > 0
@@ -2398,8 +2617,7 @@ export default function NewEntryScreen() {
               } catch {
                 // Rollback failed; entry remains as partial record.
               }
-              const uploadMessage =
-                uploadError instanceof Error ? uploadError.message : "Photo upload failed.";
+              const uploadMessage = normalizePhotoUploadErrorMessage(uploadError);
               return { entryId: null, errorMessage: uploadMessage };
             }
 
@@ -2533,13 +2751,11 @@ export default function NewEntryScreen() {
       try {
         await uploadPhotosToEntry(entryId, user.id);
       } catch (uploadError) {
-        const message =
-          uploadError instanceof Error
-            ? uploadError.message
-            : "Photo upload failed.";
+        const message = normalizePhotoUploadErrorMessage(uploadError);
         setUploadMessage(
           `Entry saved, but at least one photo failed to upload (${message}). You can edit the entry and re-upload.`
         );
+        Alert.alert("Photo upload issue", message);
       }
 
       let comparisonCandidate: SurveyComparisonCandidate | null = null;
