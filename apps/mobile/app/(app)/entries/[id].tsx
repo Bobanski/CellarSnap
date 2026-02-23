@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -121,6 +122,7 @@ type EntryPhotoItem = {
   id: string;
   type: EntryPhotoType;
   url: string | null;
+  editable: boolean;
 };
 
 type FriendRequestRow = {
@@ -133,6 +135,13 @@ type AdvancedNoteKey = keyof typeof ADVANCED_NOTE_OPTIONS;
 
 type AdvancedNotesFormState = Record<AdvancedNoteKey, string>;
 
+type EditAccordionKey =
+  | "wine_details"
+  | "location_date"
+  | "tasted_with"
+  | "advanced_notes"
+  | "price";
+
 const PHOTO_TYPE_LABELS: Record<EntryPhotoType, string> = {
   label: "Label",
   place: "Place",
@@ -141,6 +150,17 @@ const PHOTO_TYPE_LABELS: Record<EntryPhotoType, string> = {
   lineup: "Lineup",
   other_bottles: "Other bottle",
 };
+
+const ENTRY_PHOTO_TYPES: EntryPhotoType[] = [
+  "label",
+  "place",
+  "people",
+  "pairing",
+  "lineup",
+  "other_bottles",
+];
+
+const MAX_ENTRY_PHOTOS_PER_TYPE = 10;
 
 const ADVANCED_NOTE_FIELDS: Array<{ key: string; label: string }> = [
   { key: "acidity", label: "Acidity" },
@@ -560,6 +580,20 @@ export default function EntryDetailScreen() {
     consumed_at: "",
     notes: "",
   });
+  const [ownerEditOpen, setOwnerEditOpen] = useState(false);
+  const [isSavingOwnerEdit, setIsSavingOwnerEdit] = useState(false);
+  const [isUpdatingPhotoMeta, setIsUpdatingPhotoMeta] = useState(false);
+  const [photoTypePickerOpen, setPhotoTypePickerOpen] = useState(false);
+  const [photoOrderPickerOpen, setPhotoOrderPickerOpen] = useState(false);
+  const [qprPickerOpen, setQprPickerOpen] = useState(false);
+  const [editExpanded, setEditExpanded] = useState<Record<EditAccordionKey, boolean>>({
+    wine_details: false,
+    location_date: false,
+    tasted_with: false,
+    advanced_notes: false,
+    price: false,
+  });
+  const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const galleryScrollRef = useRef<ScrollView | null>(null);
 
@@ -662,6 +696,7 @@ export default function EntryDetailScreen() {
             id: photo.id,
             type: photo.type,
             url: resolvePhotoUrl(photo.path, signedUrlMap),
+            editable: true,
           }))
         : legacyPhotoTuples
             .filter((photo) => Boolean(photo.path))
@@ -669,6 +704,7 @@ export default function EntryDetailScreen() {
               id: photo.id,
               type: photo.type,
               url: photo.path ? resolvePhotoUrl(photo.path, signedUrlMap) : null,
+              editable: false,
             }));
 
     const profileMap = new Map(profileRows.map((row) => [row.id, row]));
@@ -734,6 +770,17 @@ export default function EntryDetailScreen() {
     setFailedPhotoIds(new Set());
     setActivePhotoIndex(0);
     setAdvancedNotesOpen(false);
+    setEditExpanded({
+      wine_details: false,
+      location_date: false,
+      tasted_with: false,
+      advanced_notes: false,
+      price: false,
+    });
+    setPhotoEditError(null);
+    setPhotoTypePickerOpen(false);
+    setPhotoOrderPickerOpen(false);
+    setQprPickerOpen(false);
     if (galleryScrollRef.current) {
       galleryScrollRef.current.scrollTo({ x: 0, animated: false });
     }
@@ -872,9 +919,13 @@ export default function EntryDetailScreen() {
 
   const isOwner = Boolean(user?.id && entry?.user_id === user.id);
   const hasMultiplePhotos = photos.length > 1;
+  const isEditFormVisible = isBulkReview || (isOwner && ownerEditOpen);
   const activePhoto =
     photos[Math.max(0, Math.min(photos.length - 1, activePhotoIndex))] ?? null;
   const activePhotoFailed = activePhoto ? failedPhotoIds.has(activePhoto.id) : false;
+  const canEditActivePhotoMeta = Boolean(
+    isOwner && isEditFormVisible && activePhoto?.editable && !isUpdatingPhotoMeta
+  );
   const displayRating = getDisplayRating(entry?.rating ?? null);
   const advancedNoteRows = useMemo(
     () => getAdvancedNoteRows(entry?.advanced_notes),
@@ -894,6 +945,8 @@ export default function EntryDetailScreen() {
     ? buildLocationDisplayLabel(locationText)
     : "";
   const bulkActionsDisabled = deleting || isDeletingBulkQueue || isSavingBulkReview;
+  const ownerEditActionsDisabled =
+    deleting || isDeletingBulkQueue || isSavingBulkReview || isSavingOwnerEdit;
   const topFriends = friendUsers.slice(0, 5);
   const topFriendIds = new Set(topFriends.map((profile) => profile.id));
   const extraSelectedFriends = friendUsers.filter(
@@ -918,6 +971,115 @@ export default function EntryDetailScreen() {
           );
         })
       : [];
+  const activePhotoOrder =
+    activePhoto && photos.length > 0
+      ? photos.findIndex((photo) => photo.id === activePhoto.id) + 1
+      : 0;
+  const qprSelectionLabel =
+    bulkReviewForm.qpr_level && QPR_LEVEL_VALUES.includes(bulkReviewForm.qpr_level)
+      ? QPR_LEVEL_LABELS[bulkReviewForm.qpr_level]
+      : "Not set";
+
+  const toggleEditSection = useCallback((section: EditAccordionKey) => {
+    setEditExpanded((current) => ({ ...current, [section]: !current[section] }));
+  }, []);
+
+  const updateActivePhotoType = useCallback(
+    async (nextType: EntryPhotoType) => {
+      if (!entry || !activePhoto?.editable || !isOwner || !user?.id) {
+        return;
+      }
+      if (activePhoto.type === nextType) {
+        setPhotoTypePickerOpen(false);
+        return;
+      }
+
+      setIsUpdatingPhotoMeta(true);
+      setPhotoEditError(null);
+
+      const { count, error: countError } = await supabase
+        .from("entry_photos")
+        .select("id", { count: "exact", head: true })
+        .eq("entry_id", entry.id)
+        .eq("type", nextType);
+
+      if (countError) {
+        setPhotoEditError(countError.message);
+        setIsUpdatingPhotoMeta(false);
+        return;
+      }
+
+      if ((count ?? 0) >= MAX_ENTRY_PHOTOS_PER_TYPE) {
+        setPhotoEditError(
+          `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[nextType]}.`
+        );
+        setIsUpdatingPhotoMeta(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("entry_photos")
+        .update({ type: nextType })
+        .eq("id", activePhoto.id)
+        .eq("entry_id", entry.id);
+
+      if (error) {
+        setPhotoEditError(error.message);
+        setIsUpdatingPhotoMeta(false);
+        return;
+      }
+
+      setPhotoTypePickerOpen(false);
+      setIsUpdatingPhotoMeta(false);
+      await loadEntry();
+    },
+    [activePhoto?.editable, activePhoto?.id, activePhoto?.type, entry, isOwner, loadEntry, user?.id]
+  );
+
+  const updateActivePhotoOrder = useCallback(
+    async (targetIndex: number) => {
+      if (!entry || !activePhoto?.editable || !isOwner || !user?.id) {
+        return;
+      }
+
+      const editablePhotos = photos.filter((photo) => photo.editable);
+      const sourceIndex = editablePhotos.findIndex((photo) => photo.id === activePhoto.id);
+      if (sourceIndex < 0) {
+        return;
+      }
+
+      const clampedTarget = Math.max(0, Math.min(editablePhotos.length - 1, targetIndex));
+      if (clampedTarget === sourceIndex) {
+        setPhotoOrderPickerOpen(false);
+        return;
+      }
+
+      const reordered = [...editablePhotos];
+      const [moved] = reordered.splice(sourceIndex, 1);
+      reordered.splice(clampedTarget, 0, moved);
+
+      setIsUpdatingPhotoMeta(true);
+      setPhotoEditError(null);
+      for (let index = 0; index < reordered.length; index += 1) {
+        const photo = reordered[index];
+        const { error } = await supabase
+          .from("entry_photos")
+          .update({ position: index })
+          .eq("id", photo.id)
+          .eq("entry_id", entry.id);
+        if (error) {
+          setPhotoEditError(error.message);
+          setIsUpdatingPhotoMeta(false);
+          return;
+        }
+      }
+
+      setPhotoOrderPickerOpen(false);
+      setIsUpdatingPhotoMeta(false);
+      await loadEntry();
+    },
+    [activePhoto?.editable, activePhoto?.id, entry, isOwner, loadEntry, photos, user?.id]
+  );
 
   const addPrimaryGrape = useCallback((grape: PrimaryGrape) => {
     setSelectedPrimaryGrapes((current) => {
@@ -1142,6 +1304,128 @@ export default function EntryDetailScreen() {
     [user?.id]
   );
 
+  const persistEditedEntry = useCallback(async () => {
+    if (!entry || !user?.id) {
+      return "You must be signed in.";
+    }
+
+    const wineName = bulkReviewForm.wine_name.trim();
+    if (!wineName) {
+      return "Wine name is required.";
+    }
+
+    const ratingRaw = bulkReviewForm.rating.trim();
+    let ratingValue: number | null = null;
+    if (ratingRaw.length > 0) {
+      const parsed = Number(ratingRaw);
+      if (!Number.isFinite(parsed)) {
+        return "Rating must be a number between 1 and 100.";
+      }
+      ratingValue = Math.max(1, Math.min(100, Math.round(parsed)));
+    }
+
+    const priceRaw = bulkReviewForm.price_paid.trim();
+    let priceValue: number | null = null;
+    if (priceRaw.length > 0) {
+      const parsed = Number(priceRaw);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
+        return "Price paid must be a valid number.";
+      }
+      priceValue = Number(parsed.toFixed(2));
+    }
+
+    const priceCurrency = bulkReviewForm.price_paid_currency || null;
+    const priceSource = bulkReviewForm.price_paid_source || null;
+    if (priceValue !== null && !priceCurrency) {
+      return "Select a currency when entering price paid.";
+    }
+    if (priceValue !== null && !priceSource) {
+      return "Select retail or restaurant when entering price paid.";
+    }
+    if (priceValue === null && (priceCurrency || priceSource)) {
+      return "Enter a price paid amount when setting currency/source.";
+    }
+
+    const consumedAtRaw = bulkReviewForm.consumed_at.trim();
+    if (consumedAtRaw.length > 0 && !/^\d{4}-\d{2}-\d{2}$/.test(consumedAtRaw)) {
+      return "Consumed date must be YYYY-MM-DD.";
+    }
+
+    const advancedNotesPayload = toAdvancedNotesPayload(bulkAdvancedNotes);
+    const primaryGrapeIds = selectedPrimaryGrapes
+      .slice(0, 3)
+      .map((grape) => grape.id);
+    const nextTastedWithIds = Array.from(new Set(selectedTastedWithIds));
+
+    const { error: updateError } = await supabase
+      .from("wine_entries")
+      .update({
+        wine_name: wineName,
+        producer: normalizeOptionalText(bulkReviewForm.producer),
+        vintage: normalizeOptionalText(bulkReviewForm.vintage),
+        country: normalizeOptionalText(bulkReviewForm.country),
+        region: normalizeOptionalText(bulkReviewForm.region),
+        appellation: normalizeOptionalText(bulkReviewForm.appellation),
+        classification: normalizeOptionalText(bulkReviewForm.classification),
+        rating: ratingValue,
+        price_paid: priceValue,
+        price_paid_currency: priceValue !== null ? priceCurrency : null,
+        price_paid_source: priceValue !== null ? priceSource : null,
+        qpr_level: bulkReviewForm.qpr_level || null,
+        location_text: normalizeOptionalText(bulkReviewForm.location_text),
+        consumed_at: consumedAtRaw.length > 0 ? consumedAtRaw : entry.consumed_at,
+        notes: normalizeOptionalText(bulkReviewForm.notes),
+        tasted_with_user_ids: nextTastedWithIds,
+        advanced_notes: advancedNotesPayload,
+        is_feed_visible: true,
+      })
+      .eq("id", entry.id)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      return updateError.message;
+    }
+
+    const { error: clearPrimaryGrapesError } = await supabase
+      .from("entry_primary_grapes")
+      .delete()
+      .eq("entry_id", entry.id);
+
+    if (
+      clearPrimaryGrapesError &&
+      !isPrimaryGrapeTableMissingError(clearPrimaryGrapesError.message ?? "")
+    ) {
+      return clearPrimaryGrapesError.message;
+    }
+
+    if (primaryGrapeIds.length > 0) {
+      const { error: insertPrimaryGrapesError } = await supabase
+        .from("entry_primary_grapes")
+        .insert(
+          primaryGrapeIds.map((grapeId, index) => ({
+            entry_id: entry.id,
+            variety_id: grapeId,
+            position: index + 1,
+          }))
+        );
+      if (
+        insertPrimaryGrapesError &&
+        !isPrimaryGrapeTableMissingError(insertPrimaryGrapesError.message ?? "")
+      ) {
+        return insertPrimaryGrapesError.message;
+      }
+    }
+
+    return null;
+  }, [
+    bulkAdvancedNotes,
+    bulkReviewForm,
+    entry,
+    selectedPrimaryGrapes,
+    selectedTastedWithIds,
+    user?.id,
+  ]);
+
   const saveBulkReview = useCallback(
     async (intent: "next" | "exit") => {
       if (
@@ -1155,127 +1439,15 @@ export default function EntryDetailScreen() {
         return;
       }
 
-      const wineName = bulkReviewForm.wine_name.trim();
-      if (!wineName) {
-        setBulkReviewError("Wine name is required.");
-        return;
-      }
-
-      const ratingRaw = bulkReviewForm.rating.trim();
-      let ratingValue: number | null = null;
-      if (ratingRaw.length > 0) {
-        const parsed = Number(ratingRaw);
-        if (!Number.isFinite(parsed)) {
-          setBulkReviewError("Rating must be a number between 1 and 100.");
-          return;
-        }
-        ratingValue = Math.max(1, Math.min(100, Math.round(parsed)));
-      }
-
-      const priceRaw = bulkReviewForm.price_paid.trim();
-      let priceValue: number | null = null;
-      if (priceRaw.length > 0) {
-        const parsed = Number(priceRaw);
-        if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
-          setBulkReviewError("Price paid must be a valid number.");
-          return;
-        }
-        priceValue = Number(parsed.toFixed(2));
-      }
-
-      const priceCurrency = bulkReviewForm.price_paid_currency || null;
-      const priceSource = bulkReviewForm.price_paid_source || null;
-      if (priceValue !== null && !priceCurrency) {
-        setBulkReviewError("Select a currency when entering price paid.");
-        return;
-      }
-      if (priceValue !== null && !priceSource) {
-        setBulkReviewError("Select retail or restaurant when entering price paid.");
-        return;
-      }
-      if (priceValue === null && (priceCurrency || priceSource)) {
-        setBulkReviewError("Enter a price paid amount when setting currency/source.");
-        return;
-      }
-
-      const consumedAtRaw = bulkReviewForm.consumed_at.trim();
-      if (consumedAtRaw.length > 0 && !/^\d{4}-\d{2}-\d{2}$/.test(consumedAtRaw)) {
-        setBulkReviewError("Consumed date must be YYYY-MM-DD.");
-        return;
-      }
-
       setIsSavingBulkReview(true);
       setBulkReviewError(null);
       setDeleteError(null);
-      const advancedNotesPayload = toAdvancedNotesPayload(bulkAdvancedNotes);
-      const primaryGrapeIds = selectedPrimaryGrapes
-        .slice(0, 3)
-        .map((grape) => grape.id);
-      const nextTastedWithIds = Array.from(new Set(selectedTastedWithIds));
 
-      const { error: updateError } = await supabase
-        .from("wine_entries")
-        .update({
-          wine_name: wineName,
-          producer: normalizeOptionalText(bulkReviewForm.producer),
-          vintage: normalizeOptionalText(bulkReviewForm.vintage),
-          country: normalizeOptionalText(bulkReviewForm.country),
-          region: normalizeOptionalText(bulkReviewForm.region),
-          appellation: normalizeOptionalText(bulkReviewForm.appellation),
-          classification: normalizeOptionalText(bulkReviewForm.classification),
-          rating: ratingValue,
-          price_paid: priceValue,
-          price_paid_currency: priceValue !== null ? priceCurrency : null,
-          price_paid_source: priceValue !== null ? priceSource : null,
-          qpr_level: bulkReviewForm.qpr_level || null,
-          location_text: normalizeOptionalText(bulkReviewForm.location_text),
-          consumed_at: consumedAtRaw.length > 0 ? consumedAtRaw : entry.consumed_at,
-          notes: normalizeOptionalText(bulkReviewForm.notes),
-          tasted_with_user_ids: nextTastedWithIds,
-          advanced_notes: advancedNotesPayload,
-          is_feed_visible: true,
-        })
-        .eq("id", entry.id)
-        .eq("user_id", user.id);
-
-      if (updateError) {
-        setBulkReviewError(updateError.message);
+      const persistError = await persistEditedEntry();
+      if (persistError) {
+        setBulkReviewError(persistError);
         setIsSavingBulkReview(false);
         return;
-      }
-
-      const { error: clearPrimaryGrapesError } = await supabase
-        .from("entry_primary_grapes")
-        .delete()
-        .eq("entry_id", entry.id);
-
-      if (
-        clearPrimaryGrapesError &&
-        !isPrimaryGrapeTableMissingError(clearPrimaryGrapesError.message ?? "")
-      ) {
-        setBulkReviewError(clearPrimaryGrapesError.message);
-        setIsSavingBulkReview(false);
-        return;
-      }
-
-      if (primaryGrapeIds.length > 0) {
-        const { error: insertPrimaryGrapesError } = await supabase
-          .from("entry_primary_grapes")
-          .insert(
-            primaryGrapeIds.map((grapeId, index) => ({
-              entry_id: entry.id,
-              variety_id: grapeId,
-              position: index + 1,
-            }))
-          );
-        if (
-          insertPrimaryGrapesError &&
-          !isPrimaryGrapeTableMissingError(insertPrimaryGrapesError.message ?? "")
-        ) {
-          setBulkReviewError(insertPrimaryGrapesError.message);
-          setIsSavingBulkReview(false);
-          return;
-        }
       }
 
       const uniqueQueue = Array.from(new Set(bulkQueue));
@@ -1301,9 +1473,7 @@ export default function EntryDetailScreen() {
       setIsSavingBulkReview(false);
     },
     [
-      bulkAdvancedNotes,
       bulkQueue,
-      bulkReviewForm,
       currentBulkIndex,
       deleting,
       entry,
@@ -1311,12 +1481,68 @@ export default function EntryDetailScreen() {
       isDeletingBulkQueue,
       isSavingBulkReview,
       nextBulkEntryId,
+      persistEditedEntry,
       publishBulkQueueEntries,
-      selectedPrimaryGrapes,
-      selectedTastedWithIds,
       user?.id,
     ]
   );
+
+  const startOwnerEdit = useCallback(() => {
+    if (!isOwner || isBulkReview) {
+      return;
+    }
+    setBulkReviewError(null);
+    setDeleteError(null);
+    setOwnerEditOpen(true);
+  }, [isBulkReview, isOwner]);
+
+  const cancelOwnerEdit = useCallback(() => {
+    setOwnerEditOpen(false);
+    setBulkReviewError(null);
+    setDeleteError(null);
+    void loadEntry();
+  }, [loadEntry]);
+
+  const saveOwnerEdit = useCallback(async () => {
+    if (
+      !isOwner ||
+      isBulkReview ||
+      !entry ||
+      !user?.id ||
+      deleting ||
+      isDeletingBulkQueue ||
+      isSavingBulkReview ||
+      isSavingOwnerEdit
+    ) {
+      return;
+    }
+
+    setIsSavingOwnerEdit(true);
+    setBulkReviewError(null);
+    setDeleteError(null);
+
+    const persistError = await persistEditedEntry();
+    if (persistError) {
+      setBulkReviewError(persistError);
+      setIsSavingOwnerEdit(false);
+      return;
+    }
+
+    setOwnerEditOpen(false);
+    await loadEntry();
+    setIsSavingOwnerEdit(false);
+  }, [
+    deleting,
+    entry,
+    isBulkReview,
+    isDeletingBulkQueue,
+    isOwner,
+    isSavingBulkReview,
+    isSavingOwnerEdit,
+    loadEntry,
+    persistEditedEntry,
+    user?.id,
+  ]);
 
   const goToNextBulkEntry = useCallback(() => {
     if (!isBulkReview) {
@@ -1635,17 +1861,41 @@ export default function EntryDetailScreen() {
                     />
                   )}
 
-                  <View style={styles.photoTypeChip}>
+                  <Pressable
+                    style={[
+                      styles.photoTypeChip,
+                      canEditActivePhotoMeta ? styles.photoTypeChipEditable : null,
+                    ]}
+                    onPress={() => {
+                      if (canEditActivePhotoMeta) {
+                        setPhotoTypePickerOpen(true);
+                      }
+                    }}
+                    disabled={!canEditActivePhotoMeta}
+                  >
                     <AppText style={styles.photoTypeChipText}>
                       {PHOTO_TYPE_LABELS[activePhoto.type]}
+                      {canEditActivePhotoMeta ? " \u25BE" : ""}
                     </AppText>
-                  </View>
+                  </Pressable>
                   {hasMultiplePhotos ? (
-                    <View style={styles.photoOrderChip}>
+                    <Pressable
+                      style={[
+                        styles.photoOrderChip,
+                        canEditActivePhotoMeta ? styles.photoOrderChipEditable : null,
+                      ]}
+                      onPress={() => {
+                        if (canEditActivePhotoMeta) {
+                          setPhotoOrderPickerOpen(true);
+                        }
+                      }}
+                      disabled={!canEditActivePhotoMeta}
+                    >
                       <AppText style={styles.photoOrderChipText}>
                         {toOrdinal(activePhotoIndex + 1)}
+                        {canEditActivePhotoMeta ? " \u25BE" : ""}
                       </AppText>
-                    </View>
+                    </Pressable>
                   ) : null}
 
                   {hasMultiplePhotos ? (
@@ -1674,15 +1924,49 @@ export default function EntryDetailScreen() {
                 </View>
               )}
             </View>
+            {photoEditError ? (
+              <View style={styles.inlineErrorWrap}>
+                <AppText style={styles.bulkReviewErrorText}>{photoEditError}</AppText>
+              </View>
+            ) : null}
 
-            {isBulkReview ? (
+            {isEditFormVisible ? (
               <View style={styles.bulkEditCard}>
-                <AppText style={styles.bulkEditTitle}>Review and edit details</AppText>
-                <AppText style={styles.bulkEditDescription}>
-                  Save this wine, then continue through the queue.
+                <AppText style={styles.bulkEditTitle}>
+                  {isBulkReview ? "Review and edit details" : "Edit entry"}
                 </AppText>
+                <AppText style={styles.bulkEditDescription}>
+                  {isBulkReview
+                    ? "Save this wine, then continue through the queue."
+                    : "Update details, then save changes."}
+                </AppText>
+                {!isBulkReview ? (
+                  <View style={styles.bulkReviewActionRow}>
+                    <Pressable
+                      style={[
+                        styles.bulkPrimaryButton,
+                        ownerEditActionsDisabled ? styles.bulkButtonDisabled : null,
+                      ]}
+                      onPress={() => void saveOwnerEdit()}
+                      disabled={ownerEditActionsDisabled}
+                    >
+                      <AppText style={styles.bulkPrimaryButtonText}>
+                        {isSavingOwnerEdit ? "Saving..." : "Save changes"}
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.bulkSecondaryButton,
+                        ownerEditActionsDisabled ? styles.bulkButtonDisabled : null,
+                      ]}
+                      onPress={cancelOwnerEdit}
+                      disabled={ownerEditActionsDisabled}
+                    >
+                      <AppText style={styles.bulkSecondaryButtonText}>Cancel</AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
 
-                <AppText style={styles.bulkSectionHeading}>Notes</AppText>
                 <View style={styles.bulkFormField}>
                   <AppText style={styles.bulkFormLabel}>Notes</AppText>
                   <DoneTextInput
@@ -1711,52 +1995,22 @@ export default function EntryDetailScreen() {
                   </View>
                   <View style={styles.bulkFormCol}>
                     <AppText style={styles.bulkFormLabel}>QPR</AppText>
-                    <View style={styles.bulkChipWrap}>
-                      <Pressable
-                        style={[
-                          styles.bulkChip,
-                          bulkReviewForm.qpr_level === "" ? styles.bulkChipActive : null,
-                        ]}
-                        onPress={() => updateBulkReviewField("qpr_level", "")}
-                      >
-                        <AppText
-                          style={[
-                            styles.bulkChipText,
-                            bulkReviewForm.qpr_level === "" ? styles.bulkChipTextActive : null,
-                          ]}
-                        >
-                          Not set
-                        </AppText>
-                      </Pressable>
-                      {QPR_LEVEL_VALUES.map((option) => (
-                        <Pressable
-                          key={`qpr-${option}`}
-                          style={[
-                            styles.bulkChip,
-                            bulkReviewForm.qpr_level === option ? styles.bulkChipActive : null,
-                          ]}
-                          onPress={() => updateBulkReviewField("qpr_level", option)}
-                        >
-                          <AppText
-                            style={[
-                              styles.bulkChipText,
-                              bulkReviewForm.qpr_level === option
-                                ? styles.bulkChipTextActive
-                                : null,
-                            ]}
-                          >
-                            {QPR_LEVEL_LABELS[option]}
-                          </AppText>
-                        </Pressable>
-                      ))}
-                    </View>
+                    <Pressable
+                      style={styles.bulkSelectTrigger}
+                      onPress={() => setQprPickerOpen(true)}
+                    >
+                      <AppText style={styles.bulkSelectTriggerText}>{qprSelectionLabel}</AppText>
+                      <AppText style={styles.bulkSelectChevron}>{"\u25BE"}</AppText>
+                    </Pressable>
                   </View>
                 </View>
 
-                <AppText style={styles.bulkSectionHeading}>Wine details</AppText>
-                <AppText style={styles.bulkSectionHint}>
-                  Optional identity details for this bottle.
-                </AppText>
+                <Accordion
+                  title="Wine details"
+                  description="Optional identity details for this bottle."
+                  expanded={editExpanded.wine_details}
+                  onToggle={() => toggleEditSection("wine_details")}
+                >
                 <View style={styles.bulkFormField}>
                   <AppText style={styles.bulkFormLabel}>Wine name</AppText>
                   <DoneTextInput
@@ -1922,8 +2176,14 @@ export default function EntryDetailScreen() {
                     <AppText style={styles.bulkSectionHint}>No grape matches found.</AppText>
                   ) : null}
                 </View>
+                </Accordion>
 
-                <AppText style={styles.bulkSectionHeading}>Location & date</AppText>
+                <Accordion
+                  title="Location & date"
+                  description="Where and when this bottle was consumed."
+                  expanded={editExpanded.location_date}
+                  onToggle={() => toggleEditSection("location_date")}
+                >
                 <View style={styles.bulkFormField}>
                   <AppText style={styles.bulkFormLabel}>Location</AppText>
                   <DoneTextInput
@@ -1951,11 +2211,14 @@ export default function EntryDetailScreen() {
                     />
                   </View>
                 </View>
+                </Accordion>
 
-                <AppText style={styles.bulkSectionHeading}>Tasted with</AppText>
-                <AppText style={styles.bulkSectionHint}>
-                  Tag friends who were with you.
-                </AppText>
+                <Accordion
+                  title="Tasted with"
+                  description="Tag friends who were with you."
+                  expanded={editExpanded.tasted_with}
+                  onToggle={() => toggleEditSection("tasted_with")}
+                >
                 {isLoadingFriends ? (
                   <AppText style={styles.bulkSectionHint}>Loading friends...</AppText>
                 ) : null}
@@ -2029,11 +2292,14 @@ export default function EntryDetailScreen() {
                     ) : null}
                   </>
                 ) : null}
+                </Accordion>
 
-                <AppText style={styles.bulkSectionHeading}>Advanced notes</AppText>
-                <AppText style={styles.bulkSectionHint}>
-                  Optional structure for deeper tasting notes.
-                </AppText>
+                <Accordion
+                  title="Advanced notes"
+                  description="Optional structure for deeper tasting notes."
+                  expanded={editExpanded.advanced_notes}
+                  onToggle={() => toggleEditSection("advanced_notes")}
+                >
                 {(Object.keys(ADVANCED_NOTE_OPTIONS) as AdvancedNoteKey[]).map((key) => (
                   <View key={`bulk-advanced-${key}`} style={styles.bulkFormField}>
                     <AppText style={styles.bulkFormLabel}>
@@ -2086,8 +2352,14 @@ export default function EntryDetailScreen() {
                     </View>
                   </View>
                 ))}
+                </Accordion>
 
-                <AppText style={styles.bulkSectionHeading}>Price (optional)</AppText>
+                <Accordion
+                  title="Price (optional)"
+                  description="Optional purchase details."
+                  expanded={editExpanded.price}
+                  onToggle={() => toggleEditSection("price")}
+                >
                 <View style={styles.bulkFormField}>
                   <AppText style={styles.bulkFormLabel}>Price currency</AppText>
                   <View style={styles.bulkChipWrap}>
@@ -2181,9 +2453,21 @@ export default function EntryDetailScreen() {
                     ))}
                   </View>
                 </View>
+                </Accordion>
               </View>
             ) : (
               <View style={styles.detailsCard}>
+              {isOwner ? (
+                <View style={styles.ownerActionRow}>
+                  <Pressable
+                    style={styles.editButton}
+                    onPress={startOwnerEdit}
+                    disabled={deleting}
+                  >
+                    <AppText style={styles.editButtonText}>Edit entry</AppText>
+                  </Pressable>
+                </View>
+              ) : null}
               <View style={styles.metaGrid}>
                 <View style={styles.metaItem}>
                   <AppText style={styles.metaLabel}>Date consumed</AppText>
@@ -2362,6 +2646,189 @@ export default function EntryDetailScreen() {
           </>
         )}
       </ScrollView>
+      <Modal
+        visible={qprPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQprPickerOpen(false)}
+      >
+        <View style={styles.pickerModalRoot}>
+          <Pressable style={styles.pickerModalBackdrop} onPress={() => setQprPickerOpen(false)} />
+          <View style={styles.pickerModalCard}>
+            <AppText style={styles.pickerModalTitle}>Select QPR</AppText>
+            <ScrollView
+              style={styles.pickerModalList}
+              contentContainerStyle={styles.pickerModalListContent}
+            >
+              <Pressable
+                style={[
+                  styles.pickerModalItem,
+                  bulkReviewForm.qpr_level === "" ? styles.pickerModalItemSelected : null,
+                ]}
+                onPress={() => {
+                  updateBulkReviewField("qpr_level", "");
+                  setQprPickerOpen(false);
+                }}
+              >
+                <AppText
+                  style={[
+                    styles.pickerModalItemText,
+                    bulkReviewForm.qpr_level === "" ? styles.pickerModalItemTextSelected : null,
+                  ]}
+                >
+                  Not set
+                </AppText>
+              </Pressable>
+              {QPR_LEVEL_VALUES.map((option) => (
+                <Pressable
+                  key={`qpr-picker-${option}`}
+                  style={[
+                    styles.pickerModalItem,
+                    bulkReviewForm.qpr_level === option ? styles.pickerModalItemSelected : null,
+                  ]}
+                  onPress={() => {
+                    updateBulkReviewField("qpr_level", option);
+                    setQprPickerOpen(false);
+                  }}
+                >
+                  <AppText
+                    style={[
+                      styles.pickerModalItemText,
+                      bulkReviewForm.qpr_level === option
+                        ? styles.pickerModalItemTextSelected
+                        : null,
+                    ]}
+                  >
+                    {QPR_LEVEL_LABELS[option]}
+                  </AppText>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={photoTypePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoTypePickerOpen(false)}
+      >
+        <View style={styles.pickerModalRoot}>
+          <Pressable
+            style={styles.pickerModalBackdrop}
+            onPress={() => setPhotoTypePickerOpen(false)}
+          />
+          <View style={styles.pickerModalCard}>
+            <AppText style={styles.pickerModalTitle}>Set photo tag</AppText>
+            <ScrollView
+              style={styles.pickerModalList}
+              contentContainerStyle={styles.pickerModalListContent}
+            >
+              {ENTRY_PHOTO_TYPES.map((type) => (
+                <Pressable
+                  key={`photo-type-${type}`}
+                  style={[
+                    styles.pickerModalItem,
+                    activePhoto?.type === type ? styles.pickerModalItemSelected : null,
+                  ]}
+                  onPress={() => {
+                    void updateActivePhotoType(type);
+                  }}
+                  disabled={isUpdatingPhotoMeta}
+                >
+                  <AppText
+                    style={[
+                      styles.pickerModalItemText,
+                      activePhoto?.type === type ? styles.pickerModalItemTextSelected : null,
+                    ]}
+                  >
+                    {PHOTO_TYPE_LABELS[type]}
+                  </AppText>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={photoOrderPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoOrderPickerOpen(false)}
+      >
+        <View style={styles.pickerModalRoot}>
+          <Pressable
+            style={styles.pickerModalBackdrop}
+            onPress={() => setPhotoOrderPickerOpen(false)}
+          />
+          <View style={styles.pickerModalCard}>
+            <AppText style={styles.pickerModalTitle}>Set photo order</AppText>
+            <ScrollView
+              style={styles.pickerModalList}
+              contentContainerStyle={styles.pickerModalListContent}
+            >
+              {photos.map((_, index) => {
+                const orderNumber = index + 1;
+                return (
+                  <Pressable
+                    key={`photo-order-${orderNumber}`}
+                    style={[
+                      styles.pickerModalItem,
+                      activePhotoOrder === orderNumber ? styles.pickerModalItemSelected : null,
+                    ]}
+                    onPress={() => {
+                      void updateActivePhotoOrder(index);
+                    }}
+                    disabled={isUpdatingPhotoMeta}
+                  >
+                    <AppText
+                      style={[
+                        styles.pickerModalItemText,
+                        activePhotoOrder === orderNumber
+                          ? styles.pickerModalItemTextSelected
+                          : null,
+                      ]}
+                    >
+                      {toOrdinal(orderNumber)}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function Accordion({
+  title,
+  description,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  description?: string;
+  expanded: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.accordion}>
+      <Pressable style={styles.accordionHeader} onPress={onToggle}>
+        <View style={styles.accordionTitleRow}>
+          <AppText style={styles.accordionChevron}>{expanded ? "\u25BE" : "\u25B8"}</AppText>
+          <AppText style={styles.accordionTitle}>{title}</AppText>
+        </View>
+      </Pressable>
+      {expanded ? (
+        <View style={styles.accordionBody}>
+          {description ? <AppText style={styles.bulkSectionHint}>{description}</AppText> : null}
+          <View style={styles.accordionFields}>{children}</View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -2545,6 +3012,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  bulkSelectTrigger: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,0,0,0.22)",
+    minHeight: 42,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  bulkSelectTriggerText: {
+    color: "#f4f4f5",
+    fontSize: 14,
+    flex: 1,
+  },
+  bulkSelectChevron: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    fontWeight: "700",
+  },
   bulkFormInputMultiline: {
     minHeight: 88,
     textAlignVertical: "top",
@@ -2573,6 +3063,133 @@ const styles = StyleSheet.create({
   },
   bulkChipTextActive: {
     color: "#fde68a",
+  },
+  bulkSectionHeading: {
+    color: "#f4f4f5",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  bulkSectionHint: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  primaryGrapeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  primaryGrapeChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
+  primaryGrapeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.5)",
+    backgroundColor: "rgba(251, 191, 36, 0.14)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  primaryGrapeChipText: {
+    color: "#fde68a",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  primaryGrapeChipRemove: {
+    color: "#fef3c7",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  inlineSuggestionList: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#191513",
+    overflow: "hidden",
+    marginTop: 2,
+  },
+  suggestionItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.06)",
+  },
+  suggestionText: {
+    color: "#d4d4d8",
+    fontSize: 13,
+  },
+  friendChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+  },
+  friendChipActive: {
+    borderColor: "#fbbf24",
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+  },
+  friendText: { color: "#d4d4d8", fontSize: 12, fontWeight: "600" },
+  friendTextActive: { color: "#fde68a" },
+  accordion: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 0, 0, 0.18)",
+    overflow: "hidden",
+  },
+  accordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  accordionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  accordionChevron: {
+    color: "#f4f4f5",
+    fontSize: 12,
+    fontWeight: "700",
+    width: 14,
+    textAlign: "center",
+  },
+  accordionTitle: { color: "#e4e4e7", fontSize: 14, fontWeight: "600" },
+  accordionBody: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.07)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  accordionFields: { gap: 10 },
+  ownerActionRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  editButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.45)",
+    backgroundColor: "rgba(251,191,36,0.14)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  editButtonText: {
+    color: "#fde68a",
+    fontSize: 12,
+    fontWeight: "700",
   },
   headerBlock: {
     gap: 6,
@@ -2660,6 +3277,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  photoTypeChipEditable: {
+    borderColor: "rgba(251,191,36,0.55)",
+    backgroundColor: "rgba(113,63,18,0.8)",
+  },
   photoTypeChipText: {
     color: "#f4f4f5",
     fontSize: 10,
@@ -2678,10 +3299,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  photoOrderChipEditable: {
+    borderColor: "rgba(251,191,36,0.55)",
+    backgroundColor: "rgba(113,63,18,0.8)",
+  },
   photoOrderChipText: {
     color: "#f4f4f5",
     fontSize: 10,
     fontWeight: "700",
+  },
+  inlineErrorWrap: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(251,113,133,0.36)",
+    backgroundColor: "rgba(127,29,29,0.32)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 8,
   },
   photoDotRow: {
     position: "absolute",
@@ -2806,6 +3440,57 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.8,
+  },
+  pickerModalRoot: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  pickerModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  pickerModalCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "#171211",
+    padding: 14,
+    gap: 10,
+    maxHeight: "70%",
+  },
+  pickerModalTitle: {
+    color: "#f4f4f5",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  pickerModalList: {
+    maxHeight: 320,
+  },
+  pickerModalListContent: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  pickerModalItem: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  pickerModalItemSelected: {
+    borderColor: "rgba(251,191,36,0.55)",
+    backgroundColor: "rgba(251,191,36,0.16)",
+  },
+  pickerModalItemText: {
+    color: "#e4e4e7",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  pickerModalItemTextSelected: {
+    color: "#fde68a",
   },
   deleteCard: {
     borderRadius: 14,
