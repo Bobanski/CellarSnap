@@ -356,6 +356,8 @@ export async function POST(request: Request) {
                   "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per included bottle, left-to-right order). " +
                   "CRITICAL: ONLY include a bottle in the wines array if you can identify at least one meaningful detail for that same bottle: " +
                   "wine_name OR producer OR vintage OR country/region/appellation OR classification OR any readable label text. " +
+                  "Do not guess winery or cuvee names from bottle shape, foil color, capsule, scene context, or prior popularity; use readable label evidence only. " +
+                  "For wine_name, producer, and vintage, set null unless there is explicit readable text supporting that exact value. " +
                   "If a bottle has no readable identifying info, do NOT include it. If you are unsure something is a wine bottle, exclude it. " +
                   "wines array length MUST equal total_bottles_detected. total_bottles_detected should equal wines.length. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_bbox, label_anchor. " +

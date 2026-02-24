@@ -160,13 +160,15 @@ export async function POST(request: Request) {
               {
                 type: "input_text",
                 text:
-                  "Classify this wine-entry photo into one tag.\n" +
-                  "Tag priority: people > pairing > place > other_bottles.\n" +
-                  "people = one or more people are a clear subject, even if bottles are visible.\n" +
-                  "pairing = food/drink pairing is a clear subject, even if bottles are visible.\n" +
-                  "place = venue/location/environment is the clear subject (table, room, bar, scenery).\n" +
-                  "other_bottles = bottle(s), shelves, cellar, or bottle-focused context with no clear people/pairing/place focus.\n" +
+                  "Classify this wine-entry photo into one tag based on PRIMARY PHOTO INTENT.\n" +
+                  "Intent first, object presence second.\n" +
+                  "people = one or more people are the main subject, even if bottles are visible.\n" +
+                  "pairing = food/drink pairing is the main subject, even if bottles are visible.\n" +
+                  "place = venue/location/environment is the main subject (table, room, bar, scenery).\n" +
+                  "other_bottles = bottle(s) are the dominant subject (hero bottle shot, cellar/shelf/bottle-focused scene with weak people/place/pairing intent).\n" +
                   "unknown = ambiguous/uncertain.\n" +
+                  "Use bottle prominence/proximity only as a tiebreaker when intent is unclear.\n" +
+                  "If intent appears social or environmental, prefer people/place/pairing over other_bottles even when a bottle is near the center.\n" +
                   "Return exactly one tag and confidence 0-1.",
               },
               { type: "input_image", image_url: dataUrl, detail: "high" },

@@ -103,6 +103,8 @@ const GALLERY_TYPE_PRIORITY: Record<UploadPhotoType, number> = {
   lineup: 4,
   place: 5,
 };
+const OTHER_BOTTLES_CONFIDENCE_THRESHOLD = 0.72;
+const NON_BOTTLE_INTENT_CONFIDENCE_THRESHOLD = 0.6;
 
 function toOrdinal(value: number) {
   const abs = Math.abs(value);
@@ -1452,8 +1454,25 @@ export default function NewEntryPage() {
   const isPeoplePlaceOrPairingTag = (tag: ContextPhotoTag) =>
     tag === "people" || tag === "place" || tag === "pairing";
 
+  const isConfidentNonBottleIntent = (
+    tag: ContextPhotoTag,
+    confidence: number | null
+  ) => {
+    return (
+      isPeoplePlaceOrPairingTag(tag) &&
+      (confidence ?? 0) >= NON_BOTTLE_INTENT_CONFIDENCE_THRESHOLD
+    );
+  };
+
   const hasIdentifiedBottleDetails = (analysis: SourcePhotoAnalysis | null) =>
     (analysis?.identifiedBottleCount ?? 0) > 0;
+
+  const hasBottleEvidence = (analysis: SourcePhotoAnalysis | null) => {
+    if (!analysis) {
+      return false;
+    }
+    return analysis.detectedBottleCount > 0 || analysis.identifiedBottleCount > 0;
+  };
 
   const resolvePrimaryLabelPhotoIndex = (
     photos: UploadPhoto[],
@@ -1524,7 +1543,19 @@ export default function NewEntryPage() {
     if (analysis?.contextTag === "people") {
       return "people";
     }
-    return "other_bottles";
+    if (analysis?.contextTag === "other_bottles") {
+      if (
+        hasBottleEvidence(analysis) ||
+        (analysis.contextConfidence ?? 0) >= OTHER_BOTTLES_CONFIDENCE_THRESHOLD
+      ) {
+        return "other_bottles";
+      }
+      return "place";
+    }
+    if (analysis?.contextTag === "unknown") {
+      return hasBottleEvidence(analysis) ? "other_bottles" : "place";
+    }
+    return hasBottleEvidence(analysis) ? "other_bottles" : "place";
   };
 
   const buildResolvedPhotoTypeMap = (
@@ -2581,6 +2612,43 @@ export default function NewEntryPage() {
         });
       }
 
+      const contextResults = await Promise.all(
+        resized.map(async (resizedFile, photoIndex) => {
+          if (!resizedFile) {
+            return {
+              photoIndex,
+              tag: "unknown" as ContextPhotoTag,
+              confidence: null as number | null,
+            };
+          }
+          try {
+            const classified = await classifyContextPhoto(
+              resizedFile,
+              controller.signal
+            );
+            return { photoIndex, ...classified };
+          } catch {
+            return {
+              photoIndex,
+              tag: "unknown" as ContextPhotoTag,
+              confidence: null as number | null,
+            };
+          }
+        })
+      );
+      const contextTagByPhotoIndex = new Map<
+        number,
+        { tag: ContextPhotoTag; confidence: number | null }
+      >(
+        contextResults.map((result) => [
+          result.photoIndex,
+          {
+            tag: result.tag,
+            confidence: result.confidence,
+          },
+        ])
+      );
+
       const lineupResults = await Promise.allSettled(lineupFetches);
 
       clearTimeout(timeoutId);
@@ -2592,6 +2660,18 @@ export default function NewEntryPage() {
       const analysisFailedByPhoto = files.map(() => true);
       let detectedBottleCount = 0;
       for (let pi = 0; pi < lineupResults.length; pi++) {
+        const classifiedContext = contextTagByPhotoIndex.get(pi) ?? null;
+        if (
+          classifiedContext &&
+          isConfidentNonBottleIntent(
+            classifiedContext.tag,
+            classifiedContext.confidence
+          )
+        ) {
+          analysisFailedByPhoto[pi] = false;
+          continue;
+        }
+
         const result = lineupResults[pi];
         if (result.status !== "fulfilled" || !result.value.ok) {
           continue;
@@ -2666,49 +2746,6 @@ export default function NewEntryPage() {
         } satisfies SourcePhotoAnalysis;
       });
 
-      const contextPhotoIndexes = baseSourcePhotoAnalysis
-        .filter((analysis) => analysis.role !== "lineup")
-        .map((analysis) => analysis.photoIndex);
-      const contextTagByPhotoIndex = new Map<
-        number,
-        { tag: ContextPhotoTag; confidence: number | null }
-      >();
-
-      if (contextPhotoIndexes.length > 0) {
-        const contextResults = await Promise.all(
-          contextPhotoIndexes.map(async (photoIndex) => {
-            const resizedFile = resized[photoIndex];
-            if (!resizedFile) {
-              return {
-                photoIndex,
-                tag: "unknown" as ContextPhotoTag,
-                confidence: null,
-              };
-            }
-            try {
-              const classified = await classifyContextPhoto(
-                resizedFile,
-                controller.signal
-              );
-              return { photoIndex, ...classified };
-            } catch {
-              return {
-                photoIndex,
-                tag: "unknown" as ContextPhotoTag,
-                confidence: null,
-              };
-            }
-          })
-        );
-
-        contextResults.forEach((result) => {
-          contextTagByPhotoIndex.set(result.photoIndex, {
-            tag: result.tag,
-            confidence: result.confidence,
-          });
-        });
-      }
-
       const sourcePhotoAnalysis: SourcePhotoAnalysis[] =
         baseSourcePhotoAnalysis.map((analysis) => {
           const classifiedContext = contextTagByPhotoIndex.get(analysis.photoIndex);
@@ -2738,11 +2775,21 @@ export default function NewEntryPage() {
         });
       setLineupSourceAnalysis(sourcePhotoAnalysis);
 
+      const singlePhotoContext =
+        files.length === 1 ? contextTagByPhotoIndex.get(0) ?? null : null;
+      const shouldSkipSinglePhotoBottleExtraction = Boolean(
+        singlePhotoContext &&
+          isConfidentNonBottleIntent(
+            singlePhotoContext.tag,
+            singlePhotoContext.confidence
+          )
+      );
       const inferredBottleCount =
         detectedBottleCount > 0 ? detectedBottleCount : allWines.length;
       let guardrailCount: number | null = null;
       const needsCountGuardrail =
         files.length === 1 &&
+        !shouldSkipSinglePhotoBottleExtraction &&
         inferredBottleCount <= 1 &&
         allWines.length <= 1 &&
         Boolean(countFetch);
@@ -2783,6 +2830,19 @@ export default function NewEntryPage() {
 
       if (isSingleBottle) {
         clearLineupReviewState();
+        if (shouldSkipSinglePhotoBottleExtraction) {
+          setAutofillStatus("success");
+          const contextLabel =
+            singlePhotoContext?.tag === "people" ||
+            singlePhotoContext?.tag === "place" ||
+            singlePhotoContext?.tag === "pairing"
+              ? singlePhotoContext.tag
+              : "place";
+          setAutofillMessage(
+            `Detected ${contextLabel} intent. Skipped bottle scan for this photo; switch photo type manually if this should be a bottle entry.`
+          );
+          return;
+        }
         let labelResult: Response | null = null;
         if (labelFetch) {
           try {
@@ -2912,10 +2972,22 @@ export default function NewEntryPage() {
       } else {
         // Multiple bottles or multiple photos — lineup mode
         if (allWines.length === 0) {
+          const confidentNonBottleSourceCount = sourcePhotoAnalysis.filter(
+            (analysis) =>
+              isConfidentNonBottleIntent(
+                analysis.contextTag,
+                analysis.contextConfidence
+              )
+          ).length;
+          if (confidentNonBottleSourceCount > 0) {
+            setAutofillStatus("success");
+            setAutofillMessage(
+              "Detected people/place/pairing intent in uploaded photos. Skipped bottle scan for those images; review tags and enter bottle details manually if needed."
+            );
+            return;
+          }
           setAutofillStatus("error");
-          setAutofillMessage(
-            "No bottles detected. Try clearer photos."
-          );
+          setAutofillMessage("No bottles detected. Try clearer photos.");
           return;
         }
         setLineupWines(allWines);

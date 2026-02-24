@@ -293,6 +293,8 @@ const LEGACY_UPLOAD_COLUMN_BY_TYPE: Record<
 
 const MAX_PHOTOS_PER_TYPE = 10;
 const MAX_TOTAL_UPLOAD_PHOTOS = 30;
+const OTHER_BOTTLES_CONFIDENCE_THRESHOLD = 0.72;
+const NON_BOTTLE_INTENT_CONFIDENCE_THRESHOLD = 0.6;
 
 const ADVANCED_NOTE_FIELDS: Array<{
   key: keyof AdvancedNotesFormValues;
@@ -580,11 +582,45 @@ function normalizeContextTag(value: unknown): ContextPhotoTag {
     : "unknown";
 }
 
-function mapContextTagToPhotoType(tag: ContextPhotoTag): UploadPhotoType {
+function mapContextTagToPhotoType(
+  tag: ContextPhotoTag,
+  {
+    confidence,
+    detectedBottleCount,
+    identifiedBottleCount,
+  }: {
+    confidence: number | null;
+    detectedBottleCount: number;
+    identifiedBottleCount: number;
+  }
+): UploadPhotoType {
   if (tag === "place" || tag === "pairing" || tag === "people") {
     return tag;
   }
-  return "other_bottles";
+
+  const hasBottleEvidence = detectedBottleCount > 0 || identifiedBottleCount > 0;
+
+  if (tag === "other_bottles") {
+    if (
+      hasBottleEvidence ||
+      (confidence ?? 0) >= OTHER_BOTTLES_CONFIDENCE_THRESHOLD
+    ) {
+      return "other_bottles";
+    }
+    return "place";
+  }
+
+  return hasBottleEvidence ? "other_bottles" : "place";
+}
+
+function isConfidentNonBottleIntentTag(
+  tag: ContextPhotoTag,
+  confidence: number | null
+) {
+  return (
+    (tag === "people" || tag === "place" || tag === "pairing") &&
+    (confidence ?? 0) >= NON_BOTTLE_INTENT_CONFIDENCE_THRESHOLD
+  );
 }
 
 function extensionForMimeType(mimeType: string) {
@@ -1788,6 +1824,7 @@ export default function NewEntryScreen() {
     if (!WEB_API_BASE_URL) {
       return {
         wines: [] as LineupWine[],
+        detectedBottleCount: 0,
         errorMessage: null as string | null,
       };
     }
@@ -1820,6 +1857,7 @@ export default function NewEntryScreen() {
       const payload = (await response.json().catch(() => ({}))) as LineupAutofillResponse;
       return {
         wines: [] as LineupWine[],
+        detectedBottleCount: 0,
         errorMessage:
           normalizeAnalysisErrorMessage(payload.error) ||
           "Could not analyze one of the lineup photos.",
@@ -1827,6 +1865,11 @@ export default function NewEntryScreen() {
     }
 
     const payload = (await response.json().catch(() => ({}))) as LineupAutofillResponse;
+    const detectedBottleCount =
+      typeof payload.total_bottles_detected === "number" &&
+      Number.isFinite(payload.total_bottles_detected)
+        ? Math.max(0, Math.round(payload.total_bottles_detected))
+        : 0;
     const normalizedWines = (Array.isArray(payload.wines) ? payload.wines : [])
       .map((wine, index) => {
         const normalized = {
@@ -1856,6 +1899,7 @@ export default function NewEntryScreen() {
 
     return {
       wines: normalizedWines,
+      detectedBottleCount,
       errorMessage: null as string | null,
     };
   };
@@ -2085,9 +2129,7 @@ export default function NewEntryScreen() {
     accessToken: string;
   }) => {
     const shouldRunLabelAutofill = analysisPhotos.length === 1;
-    const contextTargets = analysisPhotos.filter(
-      (photo) => !labelTarget || photo.id !== labelTarget.id
-    );
+    const contextTargets = analysisPhotos;
 
     try {
       const [labelResult, contextResults, lineupResults] = await Promise.all([
@@ -2102,7 +2144,7 @@ export default function NewEntryScreen() {
             const context = await requestPhotoContext(photo, accessToken);
             return {
               id: photo.id,
-              type: mapContextTagToPhotoType(context.tag),
+              tag: context.tag,
               confidence: context.confidence,
             };
           })
@@ -2118,16 +2160,72 @@ export default function NewEntryScreen() {
         ),
       ]);
 
+      const photoIndexById = new Map(
+        analysisPhotos.map((photo, index) => [photo.id, index])
+      );
+      const contextByPhotoId = new Map(
+        contextResults.map((result) => [result.id, result])
+      );
+      const labelTargetContext =
+        labelTarget ? contextByPhotoId.get(labelTarget.id) ?? null : null;
+      const shouldSkipSinglePhotoBottleExtraction = Boolean(
+        shouldRunLabelAutofill &&
+          labelTargetContext &&
+          isConfidentNonBottleIntentTag(
+            labelTargetContext.tag,
+            labelTargetContext.confidence
+          )
+      );
       const taggedById = new Map(
-        contextResults.map((result) => [
-          result.id,
-          { type: result.type, confidence: result.confidence },
-        ])
+        contextResults.map((result) => {
+          const photoIndex = photoIndexById.get(result.id);
+          const lineupResult =
+            typeof photoIndex === "number" ? lineupResults[photoIndex] : null;
+          const identifiedBottleCount = lineupResult?.wines.length ?? 0;
+          const detectedBottleCount =
+            lineupResult?.detectedBottleCount ?? identifiedBottleCount;
+          const hasExtractedWineDetails = identifiedBottleCount > 0;
+          const hasStrongNonBottleIntent = isConfidentNonBottleIntentTag(
+            result.tag,
+            result.confidence
+          );
+          const shouldForceBottleType =
+            hasExtractedWineDetails && !hasStrongNonBottleIntent;
+          const forcedBottleType = shouldForceBottleType
+            ? labelTarget && result.id === labelTarget.id
+              ? "label"
+              : "other_bottles"
+            : null;
+          return [
+            result.id,
+            {
+              type:
+                forcedBottleType ??
+                mapContextTagToPhotoType(result.tag, {
+                  confidence: result.confidence,
+                  detectedBottleCount,
+                  identifiedBottleCount,
+                }),
+              confidence: result.confidence,
+            },
+          ];
+        })
       );
 
       setUploadPhotos((current) =>
         current.map((photo) => {
           if (shouldRunLabelAutofill && labelTarget && photo.id === labelTarget.id) {
+            if (shouldSkipSinglePhotoBottleExtraction && labelTargetContext) {
+              return {
+                ...photo,
+                type: mapContextTagToPhotoType(labelTargetContext.tag, {
+                  confidence: labelTargetContext.confidence,
+                  detectedBottleCount: 0,
+                  identifiedBottleCount: 0,
+                }),
+                contextConfidence: labelTargetContext.confidence,
+              };
+            }
             return {
               ...photo,
               type: "label",
@@ -2146,20 +2244,45 @@ export default function NewEntryScreen() {
       );
 
       let grapesFilled = false;
-      if (labelResult.payload) {
+      if (!shouldSkipSinglePhotoBottleExtraction && labelResult.payload) {
         grapesFilled = await applyLabelAutofill(labelResult.payload);
       }
 
       const lineupErrors = lineupResults
+        .filter((result) => {
+          const sourcePhoto = analysisPhotos[result.photoIndex];
+          if (!sourcePhoto) {
+            return true;
+          }
+          const context = contextByPhotoId.get(sourcePhoto.id);
+          if (!context) {
+            return true;
+          }
+          return !isConfidentNonBottleIntentTag(context.tag, context.confidence);
+        })
         .map((result) => result.errorMessage)
         .filter((message): message is string => Boolean(message));
       const detectedLineupWines = lineupResults.flatMap((result) =>
-        result.wines.map((wine, wineIndex) => ({
-          ...wine,
-          id: `${wine.id}-${result.photoIndex}-${wineIndex}`,
-          photoIndex: result.photoIndex,
-          included: true,
-        }))
+        result.wines
+          .filter((_wine, _wineIndex) => {
+            const sourcePhoto = analysisPhotos[result.photoIndex];
+            if (!sourcePhoto) {
+              return true;
+            }
+            const context = contextByPhotoId.get(sourcePhoto.id);
+            if (!context) {
+              return true;
+            }
+            const isNonBottleIntent =
+              isConfidentNonBottleIntentTag(context.tag, context.confidence);
+            return !isNonBottleIntent;
+          })
+          .map((wine, wineIndex) => ({
+            ...wine,
+            id: `${wine.id}-${result.photoIndex}-${wineIndex}`,
+            photoIndex: result.photoIndex,
+            included: true,
+          }))
       );
       if (detectedLineupWines.length > 1) {
         setLineupWines(detectedLineupWines);
@@ -2174,13 +2297,18 @@ export default function NewEntryScreen() {
       const singleDetectedWine =
         detectedLineupWines.length === 1 ? detectedLineupWines[0] : null;
       const canFallbackToLineup =
-        !labelResult.payload && Boolean(singleDetectedWine) && lineupErrors.length === 0;
+        !shouldSkipSinglePhotoBottleExtraction &&
+        !labelResult.payload &&
+        Boolean(singleDetectedWine) &&
+        lineupErrors.length === 0;
       if (canFallbackToLineup && singleDetectedWine) {
         grapesFilled = (await applyLineupAutofill(singleDetectedWine)) || grapesFilled;
       }
 
       const analysisErrors = [
-        !canFallbackToLineup && labelResult.errorMessage
+        !shouldSkipSinglePhotoBottleExtraction &&
+        !canFallbackToLineup &&
+        labelResult.errorMessage
           ? normalizeAnalysisErrorMessage(labelResult.errorMessage)
           : null,
         ...lineupErrors.map((message) => normalizeAnalysisErrorMessage(message)),
@@ -2212,6 +2340,10 @@ export default function NewEntryScreen() {
         if (detectedLineupWines.length > 1) {
           setUploadMessage(
             `Detected ${detectedLineupWines.length} bottles. Review and create entries below.`
+          );
+        } else if (shouldSkipSinglePhotoBottleExtraction && labelTargetContext) {
+          setUploadMessage(
+            `Detected ${labelTargetContext.tag} intent. Skipped bottle scan for this photo; switch photo type manually if this should be a bottle entry.`
           );
         } else {
           setUploadMessage(

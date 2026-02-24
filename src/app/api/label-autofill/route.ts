@@ -222,6 +222,8 @@ export async function POST(request: Request) {
                   "Classification must hold quality tiers or legal quality markers (for example Premier Cru, Grand Cru Classe, DOCG). " +
                   "For primary_grape_suggestions, include canonical grape variety names and be conservative: prefer one grape by default, " +
                   "only return multiple grapes if the label explicitly shows a blend or the style implies a highly certain blend. " +
+                  "Do not infer wine_name, producer, or vintage from bottle shape, capsule color, or scene context; require readable label evidence. " +
+                  "If readable label text is insufficient, return null for scalar fields instead of guessing. " +
                   "Do not guess multiple grapes from weak regional hints alone. Use null for unknown scalar fields, [] for unknown grapes. " +
                   "Both confidence fields are 0-1.",
               },

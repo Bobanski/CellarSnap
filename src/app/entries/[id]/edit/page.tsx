@@ -105,7 +105,7 @@ const CONTEXT_TAG_TO_PHOTO_TYPE: Record<ContextPhotoTag, EntryPhotoType> = {
   pairing: "pairing",
   people: "people",
   other_bottles: "other_bottles",
-  unknown: "other_bottles",
+  unknown: "place",
 };
 
 function toOrdinal(value: number) {
@@ -607,6 +607,7 @@ export default function EditEntryPage() {
       if (contextResponse.ok) {
         const payload = (await contextResponse.json()) as {
           tag?: ContextPhotoTag;
+          confidence?: number | null;
         };
         const tag: ContextPhotoTag =
           payload.tag === "place" ||
@@ -616,6 +617,14 @@ export default function EditEntryPage() {
           payload.tag === "unknown"
             ? payload.tag
             : "unknown";
+        const confidence =
+          typeof payload.confidence === "number" &&
+          Number.isFinite(payload.confidence)
+            ? Math.min(1, Math.max(0, payload.confidence))
+            : null;
+        if (tag === "other_bottles" && (confidence ?? 0) < 0.72) {
+          return "place";
+        }
         return CONTEXT_TAG_TO_PHOTO_TYPE[tag];
       }
     } catch {
