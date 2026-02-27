@@ -19,7 +19,7 @@ const responseSchema = z.object({
   warnings: z.array(z.string()).optional(),
 });
 
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 30000;
 const MAX_LABEL_BYTES = 8 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 120;

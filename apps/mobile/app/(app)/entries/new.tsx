@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import {
   createEntryInputSchema,
   getTodayLocalYmd,
@@ -295,6 +296,21 @@ const MAX_PHOTOS_PER_TYPE = 10;
 const MAX_TOTAL_UPLOAD_PHOTOS = 30;
 const OTHER_BOTTLES_CONFIDENCE_THRESHOLD = 0.72;
 const NON_BOTTLE_INTENT_CONFIDENCE_THRESHOLD = 0.6;
+
+const LABEL_AUTOFILL_TIMEOUT_MS = 45000;
+const PHOTO_CONTEXT_TIMEOUT_MS = 45000;
+const LINEUP_AUTOFILL_TIMEOUT_MS = 65000;
+const COMPRESS_MAX_DIMENSION = 1920;
+const COMPRESS_QUALITY = 0.7;
+
+async function compressForUpload(uri: string): Promise<{ uri: string; mimeType: string }> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: COMPRESS_MAX_DIMENSION } }],
+    { compress: COMPRESS_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
+  );
+  return { uri: result.uri, mimeType: "image/jpeg" };
+}
 
 const ADVANCED_NOTE_FIELDS: Array<{
   key: keyof AdvancedNotesFormValues;
@@ -1722,7 +1738,7 @@ export default function NewEntryScreen() {
     });
   };
 
-  const requestLabelAutofill = async (photo: UploadPhotoItem, accessToken: string) => {
+  const requestLabelAutofill = async (photo: UploadPhotoItem, accessToken: string, compressedUri: string) => {
     if (!WEB_API_BASE_URL) {
       return {
         payload: null as LabelAutofillResponse | null,
@@ -1735,43 +1751,50 @@ export default function NewEntryScreen() {
     formData.append(
       "label",
       {
-        uri: photo.uri,
+        uri: compressedUri,
         name: photo.name,
-        type: photo.mimeType,
+        type: "image/jpeg",
       } as unknown as Blob
     );
 
-    const response = await fetch(
-      `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/label-autofill`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      }
-    );
-    const payload = (await response.json().catch(() => ({}))) as LabelAutofillResponse;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LABEL_AUTOFILL_TIMEOUT_MS);
+    try {
+      const response = await fetch(
+        `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/label-autofill`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+          signal: controller.signal,
+        }
+      );
+      const payload = (await response.json().catch(() => ({}))) as LabelAutofillResponse;
 
-    if (!response.ok) {
-      if (response.status === 401) {
+      if (!response.ok) {
+        if (response.status === 401) {
+          return {
+            payload: null as LabelAutofillResponse | null,
+            errorMessage: "Session expired. Sign in again to use AI photo analysis.",
+          };
+        }
         return {
           payload: null as LabelAutofillResponse | null,
-          errorMessage: "Session expired. Sign in again to use AI photo analysis.",
+          errorMessage:
+            normalizeAnalysisErrorMessage(payload.error) ||
+            "Could not read this label. Try a clearer photo.",
         };
       }
-      return {
-        payload: null as LabelAutofillResponse | null,
-        errorMessage:
-          normalizeAnalysisErrorMessage(payload.error) ||
-          "Could not read this label. Try a clearer photo.",
-      };
-    }
 
-    return { payload, errorMessage: null as string | null };
+      return { payload, errorMessage: null as string | null };
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 
-  const requestPhotoContext = async (photo: UploadPhotoItem, accessToken: string) => {
+  const requestPhotoContext = async (photo: UploadPhotoItem, accessToken: string, compressedUri: string) => {
     if (!WEB_API_BASE_URL) {
       return {
         tag: "unknown" as ContextPhotoTag,
@@ -1783,43 +1806,51 @@ export default function NewEntryScreen() {
     formData.append(
       "photo",
       {
-        uri: photo.uri,
+        uri: compressedUri,
         name: photo.name,
-        type: photo.mimeType,
+        type: "image/jpeg",
       } as unknown as Blob
     );
 
-    const response = await fetch(
-      `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/photo-context`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PHOTO_CONTEXT_TIMEOUT_MS);
+    try {
+      const response = await fetch(
+        `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/photo-context`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+          signal: controller.signal,
+        }
+      );
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("Session expired. Sign in again to use AI photo analysis.");
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Session expired. Sign in again to use AI photo analysis.");
+        }
+        return {
+          tag: "unknown" as ContextPhotoTag,
+          confidence: null as number | null,
+        };
       }
+
+      const payload = (await response.json().catch(() => ({}))) as PhotoContextResponse;
       return {
-        tag: "unknown" as ContextPhotoTag,
-        confidence: null as number | null,
+        tag: normalizeContextTag(payload.tag),
+        confidence: normalizeConfidence(payload.confidence),
       };
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const payload = (await response.json().catch(() => ({}))) as PhotoContextResponse;
-    return {
-      tag: normalizeContextTag(payload.tag),
-      confidence: normalizeConfidence(payload.confidence),
-    };
   };
 
   const requestLineupAutofill = async (
     photo: UploadPhotoItem,
-    accessToken: string
+    accessToken: string,
+    compressedUri: string,
   ) => {
     if (!WEB_API_BASE_URL) {
       return {
@@ -1833,22 +1864,30 @@ export default function NewEntryScreen() {
     formData.append(
       "photo",
       {
-        uri: photo.uri,
+        uri: compressedUri,
         name: photo.name,
-        type: photo.mimeType,
+        type: "image/jpeg",
       } as unknown as Blob
     );
 
-    const response = await fetch(
-      `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/lineup-autofill`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), LINEUP_AUTOFILL_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(
+        `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/lineup-autofill`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+          signal: controller.signal,
+        }
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -2132,16 +2171,28 @@ export default function NewEntryScreen() {
     const contextTargets = analysisPhotos;
 
     try {
+      const compressedByUri = new Map<string, string>();
+      await Promise.all(
+        analysisPhotos.map(async (photo) => {
+          if (!compressedByUri.has(photo.uri)) {
+            const result = await compressForUpload(photo.uri);
+            compressedByUri.set(photo.uri, result.uri);
+          }
+        })
+      );
+      const getCompressedUri = (photo: UploadPhotoItem) =>
+        compressedByUri.get(photo.uri) ?? photo.uri;
+
       const [labelResult, contextResults, lineupResults] = await Promise.all([
         shouldRunLabelAutofill && labelTarget
-          ? requestLabelAutofill(labelTarget, accessToken)
+          ? requestLabelAutofill(labelTarget, accessToken, getCompressedUri(labelTarget))
           : Promise.resolve({
               payload: null as LabelAutofillResponse | null,
               errorMessage: null as string | null,
             }),
         Promise.all(
           contextTargets.map(async (photo) => {
-            const context = await requestPhotoContext(photo, accessToken);
+            const context = await requestPhotoContext(photo, accessToken, getCompressedUri(photo));
             return {
               id: photo.id,
               tag: context.tag,
@@ -2151,7 +2202,7 @@ export default function NewEntryScreen() {
         ),
         Promise.all(
           analysisPhotos.map(async (photo, photoIndex) => {
-            const lineup = await requestLineupAutofill(photo, accessToken);
+            const lineup = await requestLineupAutofill(photo, accessToken, getCompressedUri(photo));
             return {
               photoIndex,
               ...lineup,
@@ -2355,11 +2406,18 @@ export default function NewEntryScreen() {
         }
       }
     } catch (error) {
-      setUploadAnalysisStatus("error");
-      if (error instanceof Error && error.message) {
-        setUploadMessage(error.message);
+      const isTimeout =
+        error instanceof Error && error.name === "AbortError";
+      if (isTimeout) {
+        setUploadAnalysisStatus("timeout");
+        setUploadMessage("Analysis timed out. Check your connection and try again.");
       } else {
-        setUploadMessage("Unable to analyze photos. Check your connection and try again.");
+        setUploadAnalysisStatus("error");
+        if (error instanceof Error && error.message) {
+          setUploadMessage(error.message);
+        } else {
+          setUploadMessage("Unable to analyze photos. Check your connection and try again.");
+        }
       }
     } finally {
       setIsAutofillLoading(false);

@@ -10,7 +10,7 @@ const responseSchema = z.object({
   confidence: z.number().min(0).max(1).nullable().optional(),
 });
 
-const TIMEOUT_MS = 12000;
+const TIMEOUT_MS = 20000;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 180;
