@@ -239,6 +239,35 @@ function normalizeOptionalText(value: string) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function firstNonEmptyText(
+  ...values: Array<string | null | undefined>
+): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+function resolveEntryWineName(entry: EntryDetailRow): string {
+  return (
+    firstNonEmptyText(
+      entry.wine_name,
+      entry.producer,
+      entry.appellation,
+      entry.region,
+      entry.classification,
+      entry.country,
+      entry.vintage
+    ) ?? "Unknown wine"
+  );
+}
+
 function normalizePhotoPath(path: string) {
   return path.replace(/^\/+/, "").trim();
 }
@@ -732,7 +761,7 @@ export default function EntryDetailScreen() {
     setPrimaryGrapeSuggestions([]);
     setPrimaryGrapeError(null);
     setBulkReviewForm({
-      wine_name: nextEntry.wine_name ?? "",
+      wine_name: resolveEntryWineName(nextEntry),
       producer: nextEntry.producer ?? "",
       vintage: nextEntry.vintage ?? "",
       country: nextEntry.country ?? "",
@@ -1316,12 +1345,22 @@ export default function EntryDetailScreen() {
 
     const ratingRaw = bulkReviewForm.rating.trim();
     let ratingValue: number | null = null;
-    if (ratingRaw.length > 0) {
+    if (ratingRaw.length === 0) {
+      if (isBulkReview) {
+        return "Rating required.";
+      }
+    } else {
       const parsed = Number(ratingRaw);
       if (!Number.isFinite(parsed)) {
-        return "Rating must be a number between 1 and 100.";
+        return "Rating required.";
       }
-      ratingValue = Math.max(1, Math.min(100, Math.round(parsed)));
+      if (!Number.isInteger(parsed)) {
+        return "Rating must be a whole number (integer).";
+      }
+      if (parsed < 1 || parsed > 100) {
+        return "Rating must be between 1 and 100.";
+      }
+      ratingValue = parsed;
     }
 
     const priceRaw = bulkReviewForm.price_paid.trim();
@@ -1421,6 +1460,7 @@ export default function EntryDetailScreen() {
     bulkAdvancedNotes,
     bulkReviewForm,
     entry,
+    isBulkReview,
     selectedPrimaryGrapes,
     selectedTastedWithIds,
     user?.id,

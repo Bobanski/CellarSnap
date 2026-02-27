@@ -207,6 +207,7 @@ type LineupAutofillResponse = {
 type LineupWine = {
   id: string;
   photoIndex: number;
+  sourcePhotoId: string;
   included: boolean;
   wine_name: string | null;
   producer: string | null;
@@ -453,6 +454,21 @@ function normalizeLineupText(value: unknown) {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function firstNonEmptyText(
+  ...values: Array<string | null | undefined>
+): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return null;
 }
 
 function hasLineupWineDetails(wine: {
@@ -1647,10 +1663,21 @@ export default function NewEntryScreen() {
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : "";
     };
+    const inferredWineName =
+      firstNonEmptyText(
+        wine.wine_name,
+        wine.producer,
+        wine.appellation,
+        wine.region,
+        wine.classification,
+        wine.country,
+        wine.vintage,
+        wine.primary_grape_suggestions?.[0]
+      ) ?? "";
 
     setForm((current) => ({
       ...current,
-      wine_name: current.wine_name || normalizeText(wine.wine_name),
+      wine_name: current.wine_name || inferredWineName,
       producer: current.producer || normalizeText(wine.producer),
       vintage: current.vintage || normalizeText(wine.vintage),
       country: current.country || normalizeText(wine.country),
@@ -1931,6 +1958,7 @@ export default function NewEntryScreen() {
           ...normalized,
           id: `${photo.id}-lineup-${index}`,
           photoIndex: 0,
+          sourcePhotoId: photo.id,
           included: true,
         } satisfies LineupWine;
       })
@@ -2332,6 +2360,9 @@ export default function NewEntryScreen() {
             ...wine,
             id: `${wine.id}-${result.photoIndex}-${wineIndex}`,
             photoIndex: result.photoIndex,
+            sourcePhotoId:
+              analysisPhotos[result.photoIndex]?.id ??
+              wine.sourcePhotoId,
             included: true,
           }))
       );
@@ -2657,12 +2688,16 @@ export default function NewEntryScreen() {
             const primaryGrapeIds = grapeIdsByIndex.get(i) ?? [];
 
             const defaultWineName =
-              wine.wine_name ??
-              wine.producer ??
-              wine.appellation ??
-              wine.region ??
-              wine.primary_grape_suggestions?.[0] ??
-              "Unknown wine";
+              firstNonEmptyText(
+                wine.wine_name,
+                wine.producer,
+                wine.appellation,
+                wine.region,
+                wine.classification,
+                wine.country,
+                wine.vintage,
+                wine.primary_grape_suggestions?.[0]
+              ) ?? "Unknown wine";
 
             let entryId: string | null = null;
 
@@ -2779,6 +2814,7 @@ export default function NewEntryScreen() {
             );
 
             const labelSourcePhoto =
+              uploadPhotos.find((photo) => photo.id === wine.sourcePhotoId) ??
               uploadPhotos[wine.photoIndex] ??
               uploadPhotos.find((photo) => photo.type === "label") ??
               uploadPhotos[0];
@@ -2792,7 +2828,7 @@ export default function NewEntryScreen() {
               { ...labelSourcePhoto, type: "label" },
               ...contextSourcePhotos.map((photo) => ({
                 ...photo,
-                type: (photo.type === "label" ? "lineup" : photo.type) as UploadPhotoType,
+                type: (photo.type === "label" ? "other_bottles" : photo.type) as UploadPhotoType,
               })),
             ];
             try {
