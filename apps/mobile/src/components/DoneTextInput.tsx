@@ -1,19 +1,16 @@
-import { forwardRef } from "react";
+import { forwardRef, useId, useMemo } from "react";
 import {
+  InputAccessoryView,
   Keyboard,
   Platform,
+  Pressable,
+  StyleSheet,
   TextInput as ReactNativeTextInput,
+  View,
   type TextInputProps,
 } from "react-native";
-import { IOS_KEYBOARD_DONE_ACCESSORY_ID } from "@/src/components/KeyboardDoneAccessory";
+import { AppText } from "@/src/components/AppText";
 import { APP_SANS_FONT_FAMILY } from "@/src/lib/typography";
-
-const IOS_KEYBOARDS_WITHOUT_RETURN_KEY = new Set([
-  "number-pad",
-  "decimal-pad",
-  "numeric",
-  "phone-pad",
-]);
 
 export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
   (
@@ -34,34 +31,62 @@ export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
       returnKeyType ?? (multiline ? undefined : "done");
     const shouldAttachAccessory =
       Platform.OS === "ios" &&
-      !multiline &&
-      !inputAccessoryViewID &&
-      Boolean(keyboardType) &&
-      IOS_KEYBOARDS_WITHOUT_RETURN_KEY.has(String(keyboardType));
+      !inputAccessoryViewID;
+    const reactId = useId();
+    const autoAccessoryId = useMemo(
+      () => `cellarsnap-input-done-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`,
+      [reactId]
+    );
+    const resolvedAccessoryId = shouldAttachAccessory
+      ? autoAccessoryId
+      : inputAccessoryViewID;
 
     return (
-      <ReactNativeTextInput
-        {...props}
-        ref={ref}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        blurOnSubmit={resolvedBlurOnSubmit}
-        returnKeyType={resolvedReturnKeyType}
-        inputAccessoryViewID={
-          shouldAttachAccessory
-            ? IOS_KEYBOARD_DONE_ACCESSORY_ID
-            : inputAccessoryViewID
-        }
-        style={[APP_SANS_FONT_FAMILY ? { fontFamily: APP_SANS_FONT_FAMILY } : null, style]}
-        onSubmitEditing={(event) => {
-          onSubmitEditing?.(event);
-          if (!multiline || resolvedBlurOnSubmit) {
-            Keyboard.dismiss();
-          }
-        }}
-      />
+      <>
+        <ReactNativeTextInput
+          {...props}
+          ref={ref}
+          multiline={multiline}
+          keyboardType={keyboardType}
+          blurOnSubmit={resolvedBlurOnSubmit}
+          returnKeyType={resolvedReturnKeyType}
+          inputAccessoryViewID={resolvedAccessoryId}
+          style={[APP_SANS_FONT_FAMILY ? { fontFamily: APP_SANS_FONT_FAMILY } : null, style]}
+          onSubmitEditing={(event) => {
+            onSubmitEditing?.(event);
+            if (!multiline || resolvedBlurOnSubmit) {
+              Keyboard.dismiss();
+            }
+          }}
+        />
+        {shouldAttachAccessory ? (
+          <InputAccessoryView nativeID={autoAccessoryId}>
+            <View style={styles.accessory}>
+              <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
+                <AppText style={styles.doneText}>Done</AppText>
+              </Pressable>
+            </View>
+          </InputAccessoryView>
+        ) : null}
+      </>
     );
   }
 );
 
 DoneTextInput.displayName = "DoneTextInput";
+
+const styles = StyleSheet.create({
+  accessory: {
+    alignItems: "flex-end",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "#18181b",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  doneText: {
+    color: "#fcd34d",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+});
