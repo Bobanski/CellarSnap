@@ -1087,7 +1087,6 @@ export default function NewEntryScreen() {
       const url =
         "https://maps.googleapis.com/maps/api/place/autocomplete/json" +
         `?input=${encodeURIComponent(query)}` +
-        "&types=establishment|geocode" +
         `&sessiontoken=${encodeURIComponent(sessionToken)}` +
         `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
 

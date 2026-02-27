@@ -93,6 +93,13 @@ type PrimaryGrape = {
   position: number;
 };
 
+type LocationSuggestion = {
+  description: string;
+  place_id: string;
+};
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 type BulkReviewFormState = {
   wine_name: string;
   producer: string;
@@ -107,6 +114,7 @@ type BulkReviewFormState = {
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
   location_text: string;
+  location_place_id: string;
   consumed_at: string;
   notes: string;
 };
@@ -212,6 +220,32 @@ const EMPTY_ADVANCED_NOTES: AdvancedNotesFormState = {
   sweetness: "",
   body: "",
 };
+
+const MONTH_LABELS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+function parseYmd(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const parsed = new Date(year, monthIndex, day);
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== monthIndex || parsed.getDate() !== day) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatYmd(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function formatConsumedDate(raw: string) {
   const dateOnly = raw.slice(0, 10);
@@ -606,6 +640,7 @@ export default function EntryDetailScreen() {
     price_paid_source: "",
     qpr_level: "",
     location_text: "",
+    location_place_id: "",
     consumed_at: "",
     notes: "",
   });
@@ -615,6 +650,11 @@ export default function EntryDetailScreen() {
   const [photoTypePickerOpen, setPhotoTypePickerOpen] = useState(false);
   const [photoOrderPickerOpen, setPhotoOrderPickerOpen] = useState(false);
   const [qprPickerOpen, setQprPickerOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [editExpanded, setEditExpanded] = useState<Record<EditAccordionKey, boolean>>({
     wine_details: false,
     location_date: false,
@@ -624,6 +664,11 @@ export default function EntryDetailScreen() {
   });
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [locationSessionToken, setLocationSessionToken] = useState(() =>
+    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
   const galleryScrollRef = useRef<ScrollView | null>(null);
 
   const loadEntry = useCallback(async () => {
@@ -791,6 +836,7 @@ export default function EntryDetailScreen() {
           ? nextEntry.qpr_level
           : "",
       location_text: nextEntry.location_text ?? "",
+      location_place_id: nextEntry.location_place_id ?? "",
       consumed_at: nextEntry.consumed_at ?? "",
       notes: nextEntry.notes ?? "",
     });
@@ -826,6 +872,75 @@ export default function EntryDetailScreen() {
       setActivePhotoIndex(maxIndex);
     }
   }, [activePhotoIndex, photos.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const query = bulkReviewForm.location_text.trim();
+    const sessionToken = locationSessionToken;
+
+    const timer = setTimeout(async () => {
+      if (!GOOGLE_MAPS_API_KEY) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+        }
+        return;
+      }
+
+      if (query.length < 2) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+        }
+        return;
+      }
+
+      setIsLocationLoading(true);
+
+      const url =
+        "https://maps.googleapis.com/maps/api/place/autocomplete/json" +
+        `?input=${encodeURIComponent(query)}` +
+        `&sessiontoken=${encodeURIComponent(sessionToken)}` +
+        `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
+
+      try {
+        const response = await fetch(url);
+        const payload = (await response.json()) as {
+          status?: string;
+          predictions?: Array<{ description?: string; place_id?: string }>;
+        };
+
+        if (cancelled) return;
+
+        if (payload.status !== "OK" && payload.status !== "ZERO_RESULTS") {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          return;
+        }
+
+        const suggestions = (payload.predictions ?? [])
+          .map((item) => ({
+            description: item.description ?? "",
+            place_id: item.place_id ?? "",
+          }))
+          .filter((item) => item.description.length > 0 && item.place_id.length > 0)
+          .slice(0, 5);
+
+        setLocationSuggestions(suggestions);
+        setIsLocationLoading(false);
+      } catch {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [bulkReviewForm.location_text, locationSessionToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1412,6 +1527,7 @@ export default function EntryDetailScreen() {
         price_paid_source: priceValue !== null ? priceSource : null,
         qpr_level: bulkReviewForm.qpr_level || null,
         location_text: normalizeOptionalText(bulkReviewForm.location_text),
+        location_place_id: normalizeOptionalText(bulkReviewForm.location_place_id),
         consumed_at: consumedAtRaw.length > 0 ? consumedAtRaw : entry.consumed_at,
         notes: normalizeOptionalText(bulkReviewForm.notes),
         tasted_with_user_ids: nextTastedWithIds,
@@ -1968,7 +2084,7 @@ export default function EntryDetailScreen() {
 
                 <View style={styles.bulkFormRow}>
                   <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Rating (1-100)</AppText>
+                    <AppText style={styles.bulkFormLabel}>Rating (1-100) <AppText style={{ color: "#fb7185", fontWeight: "700" }}>*</AppText></AppText>
                     <DoneTextInput
                       value={bulkReviewForm.rating}
                       onChangeText={(value) => updateBulkReviewField("rating", value)}
@@ -2173,27 +2289,64 @@ export default function EntryDetailScreen() {
                   <AppText style={styles.bulkFormLabel}>Location</AppText>
                   <DoneTextInput
                     value={bulkReviewForm.location_text}
-                    onChangeText={(value) => updateBulkReviewField("location_text", value)}
-                    placeholder="Optional location"
+                    onChangeText={(value) => {
+                      updateBulkReviewField("location_text", value);
+                      if (bulkReviewForm.location_place_id) {
+                        updateBulkReviewField("location_place_id", "");
+                      }
+                    }}
+                    placeholder="Search places"
                     placeholderTextColor="#71717a"
                     autoCapitalize="words"
                     autoCorrect={false}
                     style={styles.bulkFormInput}
                   />
+                  {locationSuggestions.length > 0 ? (
+                    <View style={styles.inlineSuggestionList}>
+                      {locationSuggestions.map((suggestion) => (
+                        <Pressable
+                          key={suggestion.place_id}
+                          style={styles.suggestionItem}
+                          onPress={() => {
+                            updateBulkReviewField("location_text", suggestion.description);
+                            updateBulkReviewField("location_place_id", suggestion.place_id);
+                            setLocationSuggestions([]);
+                            setLocationSessionToken(
+                              `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                            );
+                          }}
+                        >
+                          <AppText style={styles.suggestionText}>
+                            {suggestion.description}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : null}
+                  {isLocationLoading ? (
+                    <AppText style={styles.bulkSectionHint}>Searching Google Maps...</AppText>
+                  ) : null}
                 </View>
 
                 <View style={styles.bulkFormRow}>
                   <View style={styles.bulkFormCol}>
                     <AppText style={styles.bulkFormLabel}>Consumed date</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.consumed_at}
-                      onChangeText={(value) => updateBulkReviewField("consumed_at", value)}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
+                    <Pressable
+                      style={styles.bulkSelectTrigger}
+                      onPress={() => {
+                        const parsed = parseYmd(bulkReviewForm.consumed_at);
+                        const d = parsed ?? new Date();
+                        setVisibleMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+                        setDatePickerOpen(true);
+                      }}
+                    >
+                      <AppText style={styles.bulkSelectTriggerText}>
+                        {bulkReviewForm.consumed_at
+                          ? formatConsumedDate(bulkReviewForm.consumed_at)
+                          : "Select date"}
+                      </AppText>
+                      <AppText style={styles.bulkSelectChevron}>{"\u25BE"}</AppText>
+                    </Pressable>
                   </View>
                 </View>
                 </Accordion>
@@ -2748,6 +2901,71 @@ export default function EntryDetailScreen() {
                 </Pressable>
               ))}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={datePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDatePickerOpen(false)}
+      >
+        <View style={styles.pickerModalRoot}>
+          <Pressable style={styles.pickerModalBackdrop} onPress={() => setDatePickerOpen(false)} />
+          <View style={styles.pickerModalCard}>
+            <View style={styles.calendarHeader}>
+              <Pressable onPress={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))}>
+                <AppText style={styles.calendarNavText}>{"<"}</AppText>
+              </Pressable>
+              <AppText style={styles.pickerModalTitle}>
+                {MONTH_LABELS[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}
+              </AppText>
+              <Pressable onPress={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))}>
+                <AppText style={styles.calendarNavText}>{">"}</AppText>
+              </Pressable>
+            </View>
+            <View style={styles.calendarWeekdayRow}>
+              {WEEKDAY_LABELS.map((wd) => (
+                <AppText key={wd} style={styles.calendarWeekdayText}>{wd}</AppText>
+              ))}
+            </View>
+            <View style={styles.calendarGrid}>
+              {(() => {
+                const year = visibleMonth.getFullYear();
+                const month = visibleMonth.getMonth();
+                const firstWeekday = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const selected = parseYmd(bulkReviewForm.consumed_at);
+                const cells: Array<number | null> = [];
+                for (let i = 0; i < firstWeekday; i++) cells.push(null);
+                for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                while (cells.length % 7 !== 0) cells.push(null);
+                return cells.map((day, idx) => {
+                  if (day === null) {
+                    return <View key={`blank-${idx}`} style={styles.calendarSlot} />;
+                  }
+                  const isSelected =
+                    selected !== null &&
+                    selected.getFullYear() === year &&
+                    selected.getMonth() === month &&
+                    selected.getDate() === day;
+                  return (
+                    <Pressable
+                      key={`day-${day}`}
+                      style={[styles.calendarSlot, styles.calendarCell, isSelected ? styles.calendarCellSelected : null]}
+                      onPress={() => {
+                        updateBulkReviewField("consumed_at", formatYmd(new Date(year, month, day)));
+                        setDatePickerOpen(false);
+                      }}
+                    >
+                      <AppText style={[styles.calendarCellText, isSelected ? styles.calendarCellTextSelected : null]}>
+                        {day}
+                      </AppText>
+                    </Pressable>
+                  );
+                });
+              })()}
+            </View>
           </View>
         </View>
       </Modal>
@@ -3594,5 +3812,55 @@ const styles = StyleSheet.create({
     color: "#fecaca",
     fontSize: 12,
     lineHeight: 16,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  calendarNavText: {
+    color: "#e4e4e7",
+    fontSize: 18,
+    fontWeight: "700",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  calendarWeekdayRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  calendarWeekdayText: {
+    flex: 1,
+    textAlign: "center",
+    color: "#71717a",
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  calendarSlot: {
+    width: "14.2857%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calendarCell: {
+    borderRadius: 999,
+  },
+  calendarCellSelected: {
+    backgroundColor: "#f59e0b",
+  },
+  calendarCellText: {
+    color: "#d4d4d8",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  calendarCellTextSelected: {
+    color: "#0f0a09",
+    fontWeight: "700",
   },
 });
