@@ -1917,8 +1917,13 @@ export default function NewEntryPage() {
     primary_grape_confidence?: number | null;
   }) => {
     const current = getValues();
-    if (!current.wine_name && data.wine_name) {
-      setValue("wine_name", data.wine_name);
+    const inferredWineName = data.wine_name ||
+      [data.producer, data.primary_grape_suggestions?.[0]]
+        .filter(Boolean)
+        .join(" ") ||
+      null;
+    if (!current.wine_name && inferredWineName) {
+      setValue("wine_name", inferredWineName);
     }
     if (!current.producer && data.producer) {
       setValue("producer", data.producer);

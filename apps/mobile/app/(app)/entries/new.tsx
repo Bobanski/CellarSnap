@@ -1597,9 +1597,15 @@ export default function NewEntryScreen() {
       return trimmed.length > 0 ? trimmed : "";
     };
 
+    const inferredWineName = normalizeText(payload.wine_name) ||
+      [normalizeText(payload.producer), normalizeText(payload.primary_grape_suggestions?.[0])]
+        .filter(Boolean)
+        .join(" ") ||
+      "";
+
     setForm((current) => ({
       ...current,
-      wine_name: current.wine_name || normalizeText(payload.wine_name),
+      wine_name: current.wine_name || inferredWineName,
       producer: current.producer || normalizeText(payload.producer),
       vintage: current.vintage || normalizeText(payload.vintage),
       country: current.country || normalizeText(payload.country),
