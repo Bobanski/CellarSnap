@@ -3,13 +3,18 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
+import {
+  OpenAiImagePreparationError,
+  prepareOpenAiImageDataUrl,
+} from "@/server/images/openAiImage";
 
 const responseSchema = z.object({
   total_bottles_detected: z.number().min(0),
 });
 
 const TIMEOUT_MS = 12000;
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_INPUT_BYTES = 24 * 1024 * 1024;
+const MAX_IMAGE_PROCESSED_BYTES = 8 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 120;
 
@@ -71,17 +76,34 @@ export async function POST(request: Request) {
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "File must be an image" }, { status: 400 });
   }
-  if (file.size > MAX_IMAGE_BYTES) {
+  if (file.size > MAX_IMAGE_INPUT_BYTES) {
     return NextResponse.json(
-      { error: "Image is too large (max 8 MB)" },
+      { error: "Image is too large (max 24 MB)" },
       { status: 413 }
     );
   }
 
-  const arrayBuffer = await file.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-  const mimeType = file.type || "image/jpeg";
-  const dataUrl = `data:${mimeType};base64,${base64}`;
+  let dataUrl: string;
+  try {
+    const prepared = await prepareOpenAiImageDataUrl(file, {
+      maxInputBytes: MAX_IMAGE_INPUT_BYTES,
+      maxOutputBytes: MAX_IMAGE_PROCESSED_BYTES,
+      maxDimension: 1600,
+      jpegQuality: 80,
+    });
+    dataUrl = prepared.dataUrl;
+  } catch (error) {
+    if (
+      error instanceof OpenAiImagePreparationError &&
+      error.code === "output_too_large"
+    ) {
+      return NextResponse.json(
+        { error: "Image is too large (max 8 MB after processing)" },
+        { status: 413 }
+      );
+    }
+    throw error;
+  }
 
   const openai = new OpenAI({ apiKey });
   const controller = new AbortController();

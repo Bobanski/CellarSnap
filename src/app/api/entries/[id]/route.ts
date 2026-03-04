@@ -19,7 +19,15 @@ import {
   fetchPrimaryGrapesByEntryId,
   normalizePrimaryGrapeIds,
 } from "@/lib/primaryGrapes";
-import { canUserViewEntry } from "@/lib/access/entryVisibility";
+import {
+  canUserViewEntry,
+  getAcceptedFriendIds,
+  getBlockedEitherWayUserIds,
+  getFriendsOfFriendsIds,
+} from "@/lib/access/entryVisibility";
+import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import { executeWithColumnFallback } from "@/server/db/compat";
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 const privacyLevelSchema = z.enum(["public", "friends_of_friends", "friends", "private"]);
 const commentScopeSchema = z.enum(["viewers", "friends"]);
@@ -210,8 +218,6 @@ const updateEntrySchema = z.object({
   }
 });
 
-type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
     message.includes("grape_varieties") ||
@@ -220,40 +226,14 @@ function isPrimaryGrapeSchemaMissing(message: string) {
   );
 }
 
-function isClassificationColumnMissing(message: string) {
-  return message.includes("classification");
-}
-
-function isFeedVisibleColumnMissing(message: string) {
-  return message.includes("is_feed_visible");
-}
-
-function isLocationPlaceIdColumnMissing(message: string) {
-  return message.includes("location_place_id");
-}
-
-function isCommentsScopeColumnMissing(message: string) {
-  return message.includes("comments_scope");
-}
-
-function isReactionPrivacyColumnMissing(message: string) {
-  return message.includes("reaction_privacy");
-}
-
-function isCommentsPrivacyColumnMissing(message: string) {
-  return message.includes("comments_privacy");
-}
-
-async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
-  if (!path || path === "pending") return null;
-
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-
-  if (error) return null;
-  return data.signedUrl;
-}
+const ENTRY_OPTIONAL_UPDATE_COLUMNS = [
+  "classification",
+  "is_feed_visible",
+  "location_place_id",
+  "comments_scope",
+  "reaction_privacy",
+  "comments_privacy",
+] as const;
 
 export async function GET(
   _request: Request,
@@ -280,12 +260,27 @@ export async function GET(
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   }
 
+  const needsVisibilityChecks = user.id !== data.user_id;
+  const blockedUserIds = needsVisibilityChecks
+    ? await getBlockedEitherWayUserIds(supabase, user.id)
+    : undefined;
+  const acceptedFriendIds = needsVisibilityChecks
+    ? await getAcceptedFriendIds(supabase, user.id)
+    : undefined;
+  const friendsOfFriendsIds =
+    needsVisibilityChecks && acceptedFriendIds
+      ? await getFriendsOfFriendsIds(supabase, user.id, acceptedFriendIds)
+      : undefined;
+
   try {
     const canView = await canUserViewEntry({
       supabase,
       viewerUserId: user.id,
       ownerUserId: data.user_id,
       entryPrivacy: data.entry_privacy,
+      acceptedFriendIds,
+      friendsOfFriendsIds,
+      blockedUserIds,
     });
     if (!canView) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -401,40 +396,36 @@ export async function GET(
     commentCount = commentCountResult;
   }
 
-  // Access flags — owner can always react/comment.
-  const isEntryOwner = user.id === data.user_id;
-  const canReact = isEntryOwner
-    ? true
-    : await canUserViewEntry({
-        supabase,
-        viewerUserId: user.id,
-        ownerUserId: data.user_id,
-        entryPrivacy: data.reaction_privacy ?? data.entry_privacy,
-      });
-  const canComment = isEntryOwner
-    ? true
-    : await canUserViewEntry({
-        supabase,
-        viewerUserId: user.id,
-        ownerUserId: data.user_id,
-        entryPrivacy: data.comments_privacy ?? data.entry_privacy,
-      });
+  const interactionAccess = await resolveInteractionAccessForViewer({
+    supabase,
+    viewerUserId: user.id,
+    ownerUserId: data.user_id,
+    entryPrivacy: data.entry_privacy,
+    reactionPrivacy: data.reaction_privacy,
+    commentsPrivacy: data.comments_privacy,
+    commentsScope: data.comments_scope,
+    acceptedFriendIds,
+    friendsOfFriendsIds,
+    blockedUserIds,
+  });
 
   const entry = {
     ...data,
     primary_grapes:
       (await fetchPrimaryGrapesByEntryId(supabase, [data.id])).get(data.id) ?? [],
-    label_image_url: await createSignedUrl(data.label_image_path, supabase),
-    place_image_url: await createSignedUrl(data.place_image_path, supabase),
-    pairing_image_url: await createSignedUrl(data.pairing_image_path, supabase),
+    label_image_url: await signPhotoUrl(data.label_image_path, supabase),
+    place_image_url: await signPhotoUrl(data.place_image_path, supabase),
+    pairing_image_url: await signPhotoUrl(data.pairing_image_path, supabase),
     tasted_with_users: tastedWithUsers,
     viewer_log_entry_id,
     reaction_counts: reactionCounts,
     my_reactions: myReactions,
     reaction_users: reactionUsers,
     comment_count: commentCount,
-    can_react: canReact,
-    can_comment: canComment,
+    reaction_privacy: interactionAccess.reactionPrivacy,
+    comments_privacy: interactionAccess.commentsPrivacy,
+    can_react: interactionAccess.canReact,
+    can_comment: interactionAccess.canComment,
   };
 
   return NextResponse.json({ entry });
@@ -514,86 +505,40 @@ export async function PUT(
   let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
 
   if (Object.keys(updates).length > 0) {
-    const updatesToApply: Record<string, unknown> = { ...updates };
-    let data: ({ id: string } & Record<string, unknown>) | null = null;
-    let error: { message: string; code?: string | null } | null = null;
+    const updateResult = await executeWithColumnFallback({
+      initialPayload: updates,
+      removableColumns: ENTRY_OPTIONAL_UPDATE_COLUMNS,
+      maxAttempts: 3,
+      attempt: async (payloadToApply) => {
+        if (Object.keys(payloadToApply).length === 0) {
+          const existingEntry = await supabase
+            .from("wine_entries")
+            .select("*")
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .maybeSingle();
+          return {
+            data: existingEntry.data,
+            error: existingEntry.error,
+          };
+        }
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (Object.keys(updatesToApply).length === 0) {
-        const existingEntry = await supabase
+        const updateAttempt = await supabase
           .from("wine_entries")
-          .select("*")
+          .update(payloadToApply)
           .eq("id", id)
           .eq("user_id", user.id)
+          .select("*")
           .maybeSingle();
 
-        data = existingEntry.data;
-        error = existingEntry.error;
-        break;
-      }
-
-      const updateAttempt = await supabase
-        .from("wine_entries")
-        .update(updatesToApply)
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select("*")
-        .maybeSingle();
-
-      data = updateAttempt.data;
-      error = updateAttempt.error;
-      if (!error) {
-        break;
-      }
-
-      let removedUnsupportedColumn = false;
-      if (
-        isClassificationColumnMissing(error.message) &&
-        "classification" in updatesToApply
-      ) {
-        delete updatesToApply.classification;
-        removedUnsupportedColumn = true;
-      }
-      if (
-        isFeedVisibleColumnMissing(error.message) &&
-        "is_feed_visible" in updatesToApply
-      ) {
-        delete updatesToApply.is_feed_visible;
-        removedUnsupportedColumn = true;
-      }
-      if (
-        isLocationPlaceIdColumnMissing(error.message) &&
-        "location_place_id" in updatesToApply
-      ) {
-        delete updatesToApply.location_place_id;
-        removedUnsupportedColumn = true;
-      }
-      if (
-        isCommentsScopeColumnMissing(error.message) &&
-        "comments_scope" in updatesToApply
-      ) {
-        delete updatesToApply.comments_scope;
-        removedUnsupportedColumn = true;
-      }
-      if (
-        isReactionPrivacyColumnMissing(error.message) &&
-        "reaction_privacy" in updatesToApply
-      ) {
-        delete updatesToApply.reaction_privacy;
-        removedUnsupportedColumn = true;
-      }
-      if (
-        isCommentsPrivacyColumnMissing(error.message) &&
-        "comments_privacy" in updatesToApply
-      ) {
-        delete updatesToApply.comments_privacy;
-        removedUnsupportedColumn = true;
-      }
-
-      if (!removedUnsupportedColumn) {
-        break;
-      }
-    }
+        return {
+          data: updateAttempt.data,
+          error: updateAttempt.error,
+        };
+      },
+    });
+    const data = updateResult.data;
+    const error = updateResult.error;
 
     if (!error && !data) {
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });

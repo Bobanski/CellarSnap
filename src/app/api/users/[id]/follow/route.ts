@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getFriendRelationship } from "@/lib/friends/relationship";
-
-function looksLikeRlsDeleteError(message: string) {
-  const lower = message.toLowerCase();
-  return (
-    lower.includes("row-level security") ||
-    lower.includes("rls") ||
-    lower.includes("permission denied")
-  );
-}
+import { getFriendRelationshipPayload } from "@/server/friends/relationshipPayload";
+import {
+  applyFriendTransition,
+  FriendTransitionError,
+} from "@/server/friends/transition";
 
 async function getTargetUserId(paramsPromise: Promise<{ id: string }>) {
   const { id } = await paramsPromise;
@@ -18,26 +13,19 @@ async function getTargetUserId(paramsPromise: Promise<{ id: string }>) {
   return parsed.success ? parsed.data : null;
 }
 
-async function getRelationshipPayload(
-  currentUserId: string,
-  targetUserId: string
-) {
-  const supabase = await createSupabaseServerClient();
-  const relationship = await getFriendRelationship(
-    supabase,
-    currentUserId,
-    targetUserId
-  );
+function transitionErrorResponse(error: unknown, fallbackMessage: string) {
+  if (error instanceof FriendTransitionError) {
+    return NextResponse.json(
+      {
+        error: error.message,
+        code: error.code,
+      },
+      { status: error.status }
+    );
+  }
 
-  return {
-    following: relationship.following,
-    follows_you: relationship.follows_you,
-    friends: relationship.friends,
-    friend_status: relationship.status,
-    outgoing_request_id: relationship.outgoing_request_id,
-    incoming_request_id: relationship.incoming_request_id,
-    friend_request_id: relationship.friend_request_id,
-  };
+  const message = error instanceof Error ? error.message : fallbackMessage;
+  return NextResponse.json({ error: message }, { status: 500 });
 }
 
 export async function GET(
@@ -59,7 +47,9 @@ export async function GET(
   }
 
   try {
-    return NextResponse.json(await getRelationshipPayload(user.id, targetUserId));
+    return NextResponse.json(
+      await getFriendRelationshipPayload(supabase, user.id, targetUserId)
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to load relationship";
@@ -92,126 +82,27 @@ export async function POST(
     );
   }
 
-  const { data: targetUser } = await supabase
+  const { data: targetUser, error: targetUserError } = await supabase
     .from("profiles")
     .select("id")
     .eq("id", targetUserId)
     .maybeSingle();
 
+  if (targetUserError) {
+    return NextResponse.json({ error: targetUserError.message }, { status: 500 });
+  }
+
   if (!targetUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { data: reverseRows, error: reverseError } = await supabase
-    .from("friend_requests")
-    .select("id, status, created_at")
-    .eq("requester_id", targetUserId)
-    .eq("recipient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (reverseError) {
-    return NextResponse.json({ error: reverseError.message }, { status: 500 });
-  }
-
-  const reverseAccepted = (reverseRows ?? []).find((row) => row.status === "accepted");
-  const reversePending = (reverseRows ?? []).find((row) => row.status === "pending");
-  const reverse = reverseAccepted ?? reversePending ?? null;
-
-  if (reverse && (reverse.status === "pending" || reverse.status === "accepted")) {
-    if (reverse.status === "pending") {
-      const { error: acceptError } = await supabase
-        .from("friend_requests")
-        .update({
-          status: "accepted",
-          responded_at: new Date().toISOString(),
-          seen_at: new Date().toISOString(),
-        })
-        .eq("id", reverse.id)
-        .eq("status", "pending")
-        .eq("recipient_id", user.id);
-
-      if (acceptError) {
-        return NextResponse.json({ error: acceptError.message }, { status: 500 });
-      }
-    }
-
-    const { error: cleanupOutgoingError } = await supabase
-      .from("friend_requests")
-      .delete()
-      .eq("requester_id", user.id)
-      .eq("recipient_id", targetUserId)
-      .in("status", ["pending", "accepted"]);
-
-    if (cleanupOutgoingError) {
-      return NextResponse.json(
-        { error: cleanupOutgoingError.message },
-        { status: 500 }
-      );
-    }
-  } else {
-    const { data: existingRows, error: existingError } = await supabase
-      .from("friend_requests")
-      .select("id, status, created_at")
-      .eq("requester_id", user.id)
-      .eq("recipient_id", targetUserId)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (existingError) {
-      return NextResponse.json({ error: existingError.message }, { status: 500 });
-    }
-
-    const existingAccepted = (existingRows ?? []).find((row) => row.status === "accepted");
-    const existingPending = (existingRows ?? []).find((row) => row.status === "pending");
-    const existingDeclined = (existingRows ?? []).find((row) => row.status === "declined");
-    const existing = existingAccepted ?? existingPending ?? existingDeclined ?? null;
-
-    if (!existing) {
-      const { error: insertError } = await supabase.from("friend_requests").insert({
-        requester_id: user.id,
-        recipient_id: targetUserId,
-        status: "pending",
-      });
-
-      if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 });
-      }
-    } else if (existing.status === "declined") {
-      // Requesters can't update declined rows under our default RLS policy.
-      // Delete any declined request(s) for this pair and recreate a fresh pending one.
-      const { error: deleteDeclinedError } = await supabase
-        .from("friend_requests")
-        .delete()
-        .eq("requester_id", user.id)
-        .eq("recipient_id", targetUserId)
-        .eq("status", "declined");
-
-      if (deleteDeclinedError) {
-        return NextResponse.json(
-          { error: deleteDeclinedError.message },
-          { status: 500 }
-        );
-      }
-
-      const { error: insertError } = await supabase.from("friend_requests").insert({
-        requester_id: user.id,
-        recipient_id: targetUserId,
-        status: "pending",
-      });
-
-      if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 });
-      }
-    }
-  }
-
   try {
-    return NextResponse.json(await getRelationshipPayload(user.id, targetUserId));
+    await applyFriendTransition(supabase, targetUserId, "request");
+    return NextResponse.json(
+      await getFriendRelationshipPayload(supabase, user.id, targetUserId)
+    );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to load relationship";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return transitionErrorResponse(error, "Unable to update relationship.");
   }
 }
 
@@ -233,45 +124,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Valid user ID required" }, { status: 400 });
   }
 
-  const [{ error: outgoingError }, { error: incomingError }] = await Promise.all([
-    supabase
-      .from("friend_requests")
-      .delete()
-      .eq("requester_id", user.id)
-      .eq("recipient_id", targetUserId)
-      .in("status", ["pending", "accepted"]),
-    supabase
-      .from("friend_requests")
-      .delete()
-      .eq("requester_id", targetUserId)
-      .eq("recipient_id", user.id)
-      .in("status", ["pending", "accepted"]),
-  ]);
-
-  if (outgoingError || incomingError) {
-    const message =
-      outgoingError?.message ?? incomingError?.message ?? "Unable to remove relationship.";
-    if (looksLikeRlsDeleteError(message)) {
-      return NextResponse.json(
-        {
-          error:
-            "Friend removal is temporarily unavailable. Please try again later. (FRIEND_REQUEST_DELETE_UNAVAILABLE)",
-          code: "FRIEND_REQUEST_DELETE_UNAVAILABLE",
-        },
-        { status: 503 }
-      );
-    }
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
-  }
-
   try {
-    return NextResponse.json(await getRelationshipPayload(user.id, targetUserId));
+    await applyFriendTransition(supabase, targetUserId, "remove");
+    return NextResponse.json(
+      await getFriendRelationshipPayload(supabase, user.id, targetUserId)
+    );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to load relationship";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return transitionErrorResponse(error, "Unable to remove relationship.");
   }
 }

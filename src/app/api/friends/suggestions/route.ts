@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 /**
  * GET /api/friends/suggestions
@@ -98,24 +99,18 @@ export async function GET() {
   );
   const countMap = new Map(sorted);
 
-  // Sign avatar URLs in parallel
-  const avatarUrlMap = new Map<string, string | null>();
-  await Promise.all(
-    (profiles ?? []).map(async (p) => {
-      if (p.avatar_path) {
-        const { data: urlData } = await supabase.storage
-          .from("wine-photos")
-          .createSignedUrl(p.avatar_path, 60 * 60);
-        avatarUrlMap.set(p.id, urlData?.signedUrl ?? null);
-      }
-    })
+  const avatarUrlByPath = await signPhotoUrls(
+    (profiles ?? []).map((profile) => profile.avatar_path),
+    supabase
   );
 
   const suggestions = suggestionIds.map((id) => ({
     id,
     display_name: profileMap.get(id)?.display_name ?? null,
     email: profileMap.get(id)?.email ?? null,
-    avatar_url: avatarUrlMap.get(id) ?? null,
+    avatar_url: profileMap.get(id)?.avatar_path
+      ? avatarUrlByPath.get(profileMap.get(id)?.avatar_path ?? "") ?? null
+      : null,
     mutual_count: countMap.get(id) ?? 0,
   }));
 

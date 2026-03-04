@@ -20,6 +20,33 @@ function isMissingBlocksTableError(message: string) {
   );
 }
 
+export async function getBlockedEitherWayUserIds(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("user_blocks")
+    .select("blocker_id, blocked_id")
+    .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+
+  if (error) {
+    if (isMissingBlocksTableError(error.message)) {
+      return new Set<string>();
+    }
+    throw new Error(error.message);
+  }
+
+  const blockedUserIds = new Set<string>();
+  (data ?? []).forEach((row) => {
+    const otherUserId = row.blocker_id === userId ? row.blocked_id : row.blocker_id;
+    if (otherUserId && otherUserId !== userId) {
+      blockedUserIds.add(otherUserId);
+    }
+  });
+
+  return blockedUserIds;
+}
+
 function normalizeEntryPrivacy(
   value: EntryPrivacy
 ): "public" | "friends_of_friends" | "friends" | "private" {
@@ -32,10 +59,15 @@ function normalizeEntryPrivacy(
 async function isBlockedEitherWay(
   supabase: SupabaseClient,
   viewerUserId: string,
-  ownerUserId: string
+  ownerUserId: string,
+  blockedUserIds?: Set<string>
 ) {
   if (viewerUserId === ownerUserId) {
     return false;
+  }
+
+  if (blockedUserIds) {
+    return blockedUserIds.has(ownerUserId);
   }
 
   const { data, error } = await supabase
@@ -148,6 +180,7 @@ export async function canUserViewEntry({
   entryPrivacy,
   acceptedFriendIds,
   friendsOfFriendsIds,
+  blockedUserIds,
 }: {
   supabase: SupabaseClient;
   viewerUserId: string;
@@ -155,12 +188,15 @@ export async function canUserViewEntry({
   entryPrivacy: EntryPrivacy;
   acceptedFriendIds?: Set<string>;
   friendsOfFriendsIds?: Set<string>;
+  blockedUserIds?: Set<string>;
 }): Promise<boolean> {
   if (viewerUserId === ownerUserId) {
     return true;
   }
 
-  if (await isBlockedEitherWay(supabase, viewerUserId, ownerUserId)) {
+  if (
+    await isBlockedEitherWay(supabase, viewerUserId, ownerUserId, blockedUserIds)
+  ) {
     return false;
   }
 

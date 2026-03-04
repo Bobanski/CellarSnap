@@ -1,23 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
-async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
-  if (!path || path === "pending") {
-    return null;
-  }
-
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-
-  if (error) {
-    return null;
-  }
-
-  return data.signedUrl;
-}
+import { executeSelectWithFallback } from "@/server/db/compat";
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -30,34 +14,53 @@ export async function GET() {
   }
 
   // ── Fetch user profile ──
-  const { data: profileWithPrivacy, error: profileError } = await supabase
-    .from("profiles")
-    .select("display_name, first_name, default_entry_privacy, privacy_confirmed_at")
-    .eq("id", user.id)
-    .maybeSingle();
+  const profileSelectResult = await executeSelectWithFallback({
+    attempts: [
+      {
+        select:
+          "display_name, first_name, default_entry_privacy, privacy_confirmed_at",
+        missingColumns: ["default_entry_privacy", "privacy_confirmed_at"] as const,
+        includesPrivacyDefaults: true,
+      },
+      {
+        select: "display_name, first_name, created_at",
+        missingColumns: [] as const,
+        includesPrivacyDefaults: false,
+      },
+    ],
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    attempt: async (attempt) => {
+      const response = await supabase
+        .from("profiles")
+        .select(attempt.select)
+        .eq("id", user.id)
+        .maybeSingle();
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
 
-  let profile = profileWithPrivacy;
-  if (
-    profileError &&
-    (profileError.message.includes("default_entry_privacy") ||
-      profileError.message.includes("privacy_confirmed_at"))
-  ) {
-    const fallback = await supabase
-      .from("profiles")
-      .select("display_name, first_name, created_at")
-      .eq("id", user.id)
-      .maybeSingle();
-    profile = fallback.data
-      ? {
-          ...fallback.data,
+  if (profileSelectResult.error) {
+    return NextResponse.json(
+      { error: profileSelectResult.error.message },
+      { status: 500 }
+    );
+  }
+
+  const profileData = profileSelectResult.data as Record<string, unknown> | null;
+  const profile = profileData
+    ? profileSelectResult.usedAttempt?.includesPrivacyDefaults
+      ? profileData
+      : {
+          ...profileData,
           default_entry_privacy: "public",
           privacy_confirmed_at:
-            fallback.data.created_at ?? new Date().toISOString(),
+            (profileData as { created_at?: string | null }).created_at ??
+            new Date().toISOString(),
         }
-      : null;
-  } else if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
-  }
+    : null;
 
   // ── Fetch user's total entry count (for first-time detection) ──
   const { count: totalEntryCount } = await supabase
@@ -94,30 +97,47 @@ export async function GET() {
   let friendEntries: typeof ownEntries = [];
 
   if (friendIds.length > 0) {
-    const buildFriendQuery = () =>
-      supabase
+    const buildFriendQuery = (withFeedVisibilityFilter: boolean) => {
+      let query = supabase
         .from("wine_entries")
         .select("*")
         .in("user_id", friendIds)
         .in("entry_privacy", ["public", "friends_of_friends", "friends"])
         .order("created_at", { ascending: false })
         .limit(6);
+      if (withFeedVisibilityFilter) {
+        query = query.eq("is_feed_visible", true);
+      }
+      return query;
+    };
 
-    let friendEntryRows: typeof ownEntries = [];
-    const attempt = await buildFriendQuery().eq("is_feed_visible", true);
-    if (!attempt.error) {
-      friendEntryRows = attempt.data ?? [];
-    } else if (
-      attempt.error.message.includes("is_feed_visible") ||
-      attempt.error.message.includes("column")
-    ) {
-      const fallback = await buildFriendQuery();
-      friendEntryRows = fallback.data ?? [];
-    } else {
-      return NextResponse.json({ error: attempt.error.message }, { status: 500 });
+    const friendEntriesResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          withFeedVisibilityFilter: true,
+          missingColumns: ["is_feed_visible"] as const,
+        },
+        { withFeedVisibilityFilter: false, missingColumns: [] as const },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      fallbackOnAnyMissingColumn: true,
+      attempt: async (attempt) => {
+        const response = await buildFriendQuery(attempt.withFeedVisibilityFilter);
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    });
+
+    if (friendEntriesResult.error) {
+      return NextResponse.json(
+        { error: friendEntriesResult.error.message },
+        { status: 500 }
+      );
     }
 
-    friendEntries = friendEntryRows;
+    friendEntries = friendEntriesResult.data ?? [];
   }
 
   // ── Resolve label photos for all entries ──
@@ -172,7 +192,7 @@ export async function GET() {
       rating: entry.rating,
       qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
-      label_image_url: await createSignedUrl(
+      label_image_url: await signPhotoUrl(
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase
       ),
@@ -194,7 +214,7 @@ export async function GET() {
         profileMap.get(entry.user_id)?.display_name ??
         profileMap.get(entry.user_id)?.email ??
         "Unknown",
-      label_image_url: await createSignedUrl(
+      label_image_url: await signPhotoUrl(
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase
       ),

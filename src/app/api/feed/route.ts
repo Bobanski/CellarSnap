@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import {
+  canUserViewEntry,
   getAcceptedFriendIds,
+  getBlockedEitherWayUserIds,
   getFriendsOfFriendsIds,
   type EntryPrivacy,
 } from "@/lib/access/entryVisibility";
+import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import { executeSelectWithFallback } from "@/server/db/compat";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 type FeedEntryRow = {
   id: string;
@@ -26,82 +31,85 @@ type FeedEntryRow = {
   label_image_path: string | null;
   place_image_path: string | null;
   pairing_image_path: string | null;
-  entry_privacy: EntryPrivacy;
+  entry_privacy: "public" | "friends_of_friends" | "friends" | "private";
   created_at: string;
 };
 
 type InteractionSettingsRow = {
   id: string;
-  reaction_privacy?: string | null;
-  comments_privacy?: string | null;
+  reaction_privacy?: EntryPrivacy;
+  comments_privacy?: EntryPrivacy;
   comments_scope?: string | null;
 };
 
-function normalizePrivacyValue(
-  value: unknown,
-  fallback: "public" | "friends_of_friends" | "friends" | "private"
-): "public" | "friends_of_friends" | "friends" | "private" {
-  if (
-    value === "public" ||
-    value === "friends_of_friends" ||
-    value === "friends" ||
-    value === "private"
-  ) {
-    return value;
-  }
-  return fallback;
+type FeedCursorToken = {
+  v: 1;
+  created_at: string;
+  id: string;
+  dedupe_key: string;
+};
+
+type FeedCursorPosition = {
+  createdAt: string;
+  id: string;
+  dedupeKey: string;
+};
+
+const MAX_FEED_ITERATIONS = 20;
+
+function isValidIsoTimestamp(value: string) {
+  return !Number.isNaN(Date.parse(value));
 }
 
-function canViewerAccessByPrivacy({
-  viewerUserId,
-  ownerUserId,
-  privacy,
-  acceptedFriendIds,
-  friendsOfFriendsIds,
-}: {
-  viewerUserId: string;
-  ownerUserId: string;
-  privacy: EntryPrivacy;
-  acceptedFriendIds: Set<string>;
-  friendsOfFriendsIds: Set<string>;
-}): boolean {
-  if (viewerUserId === ownerUserId) {
-    return true;
+function parseLegacyCursor(rawCursor: string | null) {
+  if (!rawCursor || !isValidIsoTimestamp(rawCursor)) {
+    return null;
   }
-
-  const normalized = normalizePrivacyValue(privacy, "public");
-  if (normalized === "public") {
-    return true;
-  }
-  if (normalized === "private") {
-    return false;
-  }
-  if (normalized === "friends") {
-    return acceptedFriendIds.has(ownerUserId);
-  }
-
-  return (
-    acceptedFriendIds.has(ownerUserId) || friendsOfFriendsIds.has(ownerUserId)
-  );
+  return rawCursor;
 }
 
-async function createSignedUrl(
-  path: string | null,
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-) {
-  if (!path) {
+function decodeCursorV2(rawCursor: string | null): FeedCursorToken | null {
+  if (!rawCursor) {
     return null;
   }
 
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(rawCursor, "base64url").toString("utf8")
+    ) as Partial<FeedCursorToken>;
+    if (
+      decoded.v !== 1 ||
+      typeof decoded.created_at !== "string" ||
+      typeof decoded.id !== "string" ||
+      typeof decoded.dedupe_key !== "string"
+    ) {
+      return null;
+    }
+    if (!isValidIsoTimestamp(decoded.created_at)) {
+      return null;
+    }
 
-  if (error) {
+    return {
+      v: 1,
+      created_at: decoded.created_at,
+      id: decoded.id,
+      dedupe_key: decoded.dedupe_key,
+    };
+  } catch {
     return null;
   }
+}
 
-  return data.signedUrl;
+function encodeCursorV2(cursor: FeedCursorPosition) {
+  return Buffer.from(
+    JSON.stringify({
+      v: 1,
+      created_at: cursor.createdAt,
+      id: cursor.id,
+      dedupe_key: cursor.dedupeKey,
+    } satisfies FeedCursorToken),
+    "utf8"
+  ).toString("base64url");
 }
 
 export async function GET(request: Request) {
@@ -116,13 +124,15 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope");
-  const cursor = url.searchParams.get("cursor"); // created_at (ISO)
+  const legacyCursor = parseLegacyCursor(url.searchParams.get("cursor"));
+  const cursorV2 = decodeCursorV2(url.searchParams.get("cursor_v2"));
   const rawLimit = Number(url.searchParams.get("limit") ?? "");
   const limit =
     Number.isFinite(rawLimit) && rawLimit > 0
       ? Math.min(50, Math.max(1, rawLimit))
       : 30;
 
+  const blockedUserIdsSet = await getBlockedEitherWayUserIds(supabase, user.id);
   const acceptedFriendIdsSet = await getAcceptedFriendIds(supabase, user.id);
   const friendIds = Array.from(acceptedFriendIdsSet);
   const friendsOfFriendsIdsSet = await getFriendsOfFriendsIds(
@@ -130,47 +140,38 @@ export async function GET(request: Request) {
     user.id,
     acceptedFriendIdsSet
   );
+  const socialAuthorIds = Array.from(
+    new Set([...friendIds, ...Array.from(friendsOfFriendsIdsSet)])
+  ).filter((id) => !blockedUserIdsSet.has(id));
 
   const baseSelectFields =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
 
-  const dedupeEntries = (rows: FeedEntryRow[]) => {
-    const byKey = new Map<string, FeedEntryRow>();
-
-    rows.forEach((entry) => {
-      const key = entry.root_entry_id ?? entry.id;
-      const existing = byKey.get(key);
-      if (!existing) {
-        byKey.set(key, entry);
-        return;
+  const initialCursor = cursorV2
+    ? {
+        createdAt: cursorV2.created_at,
+        id: cursorV2.id,
       }
-
-      const existingIsCanonical = !existing.root_entry_id;
-      const nextIsCanonical = !entry.root_entry_id;
-      if (nextIsCanonical && !existingIsCanonical) {
-        byKey.set(key, entry);
-      }
-    });
-
-    return Array.from(byKey.values()).sort((a, b) =>
-      b.created_at.localeCompare(a.created_at)
-    );
-  };
+    : legacyCursor
+      ? {
+          createdAt: legacyCursor,
+          id: null,
+        }
+      : null;
 
   const buildEntriesQuery = ({
     fields,
     withTastingSupport,
+    cursor,
   }: {
     fields: string;
     withTastingSupport: boolean;
+    cursor: { createdAt: string; id: string | null } | null;
   }) => {
     let query = supabase.from("wine_entries").select(fields);
 
     if (scope === "friends") {
-      const socialAuthorIds = Array.from(
-        new Set([...friendIds, ...Array.from(friendsOfFriendsIdsSet)])
-      );
       query = query
         .in("user_id", socialAuthorIds)
         .in("entry_privacy", ["public", "friends_of_friends", "friends"])
@@ -183,63 +184,207 @@ export async function GET(request: Request) {
       query = query.eq("is_feed_visible", true);
     }
 
-    if (cursor) {
-      query = query.lt("created_at", cursor);
+    if (cursor?.id) {
+      query = query.or(
+        `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`
+      );
+    } else if (cursor?.createdAt) {
+      query = query.lt("created_at", cursor.createdAt);
     }
 
     return query;
   };
 
-  if (scope === "friends" && friendIds.length === 0 && friendsOfFriendsIdsSet.size === 0) {
-    return NextResponse.json({ entries: [], viewer_user_id: user.id });
+  if (scope === "friends" && socialAuthorIds.length === 0) {
+    return NextResponse.json({
+      entries: [],
+      next_cursor: null,
+      next_cursor_v2: null,
+      has_more: false,
+      viewer_user_id: user.id,
+    });
   }
 
-  let entries: FeedEntryRow[] = [];
   let hasTastingSupport = false;
+  const dedupeOrder: string[] = [];
+  const dedupedByKey = new Map<string, FeedEntryRow>();
+  const fetchLimit = Math.min(200, Math.max(40, limit * 2));
+  let queryCursor = initialCursor;
+  let nextCursorAnchor: FeedCursorPosition | null = null;
+  let lastScannedRow: FeedCursorPosition | null = null;
+  let has_more = false;
 
-  {
-    const fetchLimit = Math.min(200, limit * 6 + 1);
-    const attempt = await buildEntriesQuery({
-      fields: extendedSelectFields,
-      withTastingSupport: true,
-    })
-      .order("created_at", { ascending: false })
-      .limit(fetchLimit);
+  for (let attemptIndex = 0; attemptIndex < MAX_FEED_ITERATIONS; attemptIndex += 1) {
+    const entrySelectResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          fields: extendedSelectFields,
+          withTastingSupport: true,
+          missingColumns: ["is_feed_visible", "root_entry_id"] as const,
+        },
+        {
+          fields: baseSelectFields,
+          withTastingSupport: false,
+          missingColumns: [] as const,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      fallbackOnAnyMissingColumn: true,
+      attempt: async (attempt) => {
+        const result = await buildEntriesQuery({
+          fields: attempt.fields,
+          withTastingSupport: attempt.withTastingSupport,
+          cursor: queryCursor,
+        })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(fetchLimit);
+        return {
+          data: result.data,
+          error: result.error,
+        };
+      },
+    });
 
-    if (!attempt.error) {
-      entries = (attempt.data ?? []) as unknown as FeedEntryRow[];
-      hasTastingSupport = true;
-    } else if (
-      attempt.error.message.includes("is_feed_visible") ||
-      attempt.error.message.includes("root_entry_id") ||
-      attempt.error.message.includes("column")
-    ) {
-      // Backwards compatible: if tasting columns haven't been added, fall back.
-      const fallback = await buildEntriesQuery({
-        fields: baseSelectFields,
-        withTastingSupport: false,
-      })
-        .order("created_at", { ascending: false })
-        .limit(fetchLimit);
+    if (entrySelectResult.error) {
+      return NextResponse.json(
+        { error: entrySelectResult.error.message },
+        { status: 500 }
+      );
+    }
 
-      if (fallback.error) {
-        return NextResponse.json(
-          { error: fallback.error.message },
-          { status: 500 }
-        );
+    const rawRows = (entrySelectResult.data ?? []) as unknown as FeedEntryRow[];
+    hasTastingSupport = Boolean(entrySelectResult.usedAttempt?.withTastingSupport);
+
+    if (rawRows.length === 0) {
+      break;
+    }
+
+    const rowsMissingInlinePhotos = rawRows
+      .filter(
+        (row) =>
+          !row.label_image_path &&
+          !row.place_image_path &&
+          !row.pairing_image_path
+      )
+      .map((row) => row.id);
+    const entryIdsWithGalleryPhotos = new Set<string>();
+    if (rowsMissingInlinePhotos.length > 0) {
+      const { data: galleryPhotoRows, error: galleryPhotoError } = await supabase
+        .from("entry_photos")
+        .select("entry_id")
+        .in("entry_id", rowsMissingInlinePhotos);
+
+      if (galleryPhotoError) {
+        if (
+          !galleryPhotoError.message.includes("entry_photos") &&
+          !galleryPhotoError.message.includes("relation") &&
+          !galleryPhotoError.message.includes("column")
+        ) {
+          return NextResponse.json(
+            { error: galleryPhotoError.message },
+            { status: 500 }
+          );
+        }
+      } else {
+        (galleryPhotoRows ?? []).forEach((photoRow) => {
+          if (typeof photoRow.entry_id === "string") {
+            entryIdsWithGalleryPhotos.add(photoRow.entry_id);
+          }
+        });
       }
-      entries = (fallback.data ?? []) as unknown as FeedEntryRow[];
-    } else {
-      return NextResponse.json({ error: attempt.error.message }, { status: 500 });
+    }
+
+    let reachedOverflow = false;
+    for (const row of rawRows) {
+      const dedupeKey =
+        hasTastingSupport ? row.root_entry_id ?? row.id : row.id;
+      const rowCursor: FeedCursorPosition = {
+        createdAt: row.created_at,
+        id: row.id,
+        dedupeKey,
+      };
+
+      const hasInlinePhoto =
+        Boolean(row.label_image_path) ||
+        Boolean(row.place_image_path) ||
+        Boolean(row.pairing_image_path);
+      if (!hasInlinePhoto && !entryIdsWithGalleryPhotos.has(row.id)) {
+        lastScannedRow = rowCursor;
+        continue;
+      }
+
+      const canSeeEntry = await canUserViewEntry({
+        supabase,
+        viewerUserId: user.id,
+        ownerUserId: row.user_id,
+        entryPrivacy: row.entry_privacy,
+        acceptedFriendIds: acceptedFriendIdsSet,
+        friendsOfFriendsIds: friendsOfFriendsIdsSet,
+        blockedUserIds: blockedUserIdsSet,
+      });
+
+      if (!canSeeEntry) {
+        lastScannedRow = rowCursor;
+        continue;
+      }
+
+      const existing = dedupedByKey.get(dedupeKey);
+      if (!existing) {
+        dedupeOrder.push(dedupeKey);
+        dedupedByKey.set(dedupeKey, row);
+      } else if (hasTastingSupport) {
+        const existingIsCanonical = !existing.root_entry_id;
+        const nextIsCanonical = !row.root_entry_id;
+        if (nextIsCanonical && !existingIsCanonical) {
+          dedupedByKey.set(dedupeKey, row);
+        }
+      }
+
+      if (dedupeOrder.length > limit) {
+        has_more = true;
+        nextCursorAnchor = lastScannedRow;
+        reachedOverflow = true;
+        break;
+      }
+
+      lastScannedRow = rowCursor;
+    }
+
+    if (reachedOverflow) {
+      break;
+    }
+
+    const lastRawRow = rawRows[rawRows.length - 1];
+    queryCursor = {
+      createdAt: lastRawRow.created_at,
+      id: lastRawRow.id,
+    };
+    lastScannedRow = {
+      createdAt: lastRawRow.created_at,
+      id: lastRawRow.id,
+      dedupeKey: hasTastingSupport
+        ? lastRawRow.root_entry_id ?? lastRawRow.id
+        : lastRawRow.id,
+    };
+
+    if (rawRows.length < fetchLimit) {
+      break;
     }
   }
 
-  const deduped = hasTastingSupport ? dedupeEntries(entries) : entries;
-  const pageEntries =
-    deduped && deduped.length > limit ? deduped.slice(0, limit) : deduped ?? [];
-  const has_more = (deduped?.length ?? 0) > limit;
+  const pageEntries = dedupeOrder
+    .slice(0, limit)
+    .map((key) => dedupedByKey.get(key))
+    .filter((entry): entry is FeedEntryRow => entry !== undefined);
+  const resolvedNextCursorAnchor = has_more
+    ? nextCursorAnchor ?? lastScannedRow
+    : null;
   const next_cursor = has_more
     ? pageEntries[pageEntries.length - 1]?.created_at ?? null
+    : null;
+  const next_cursor_v2 = resolvedNextCursorAnchor
+    ? encodeCursorV2(resolvedNextCursorAnchor)
     : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);
@@ -252,33 +397,59 @@ export async function GET(request: Request) {
       ])
     )
   );
-  const { data: profilesWithAvatar, error: profilesError } = await supabase
-    .from("profiles")
-    .select("id, display_name, email, avatar_path")
-    .in("id", userIds);
+  let profiles: {
+    id: string;
+    display_name: string | null;
+    email: string | null;
+    avatar_path?: string | null;
+  }[] = [];
 
-  let profiles:
-    | {
-        id: string;
-        display_name: string | null;
-        email: string | null;
-        avatar_path?: string | null;
-      }[]
-    | null = null;
-  if (
-    profilesError &&
-    (profilesError.message.includes("avatar_path") ||
-      profilesError.message.includes("column"))
-  ) {
-    const { data: fallback } = await supabase
-      .from("profiles")
-      .select("id, display_name, email")
-      .in("id", userIds);
-    profiles = (fallback ?? []).map((profile) => ({ ...profile, avatar_path: null }));
-  } else if (profilesError) {
-    return NextResponse.json({ error: profilesError.message }, { status: 500 });
-  } else {
-    profiles = profilesWithAvatar;
+  if (userIds.length > 0) {
+    const profileSelectResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          select: "id, display_name, email, avatar_path",
+          missingColumns: ["avatar_path"] as const,
+          includesAvatar: true,
+        },
+        {
+          select: "id, display_name, email",
+          missingColumns: [] as const,
+          includesAvatar: false,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      fallbackOnAnyMissingColumn: true,
+      attempt: async (attempt) => {
+        const response = await supabase
+          .from("profiles")
+          .select(attempt.select)
+          .in("id", userIds);
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    });
+
+    if (profileSelectResult.error) {
+      return NextResponse.json(
+        { error: profileSelectResult.error.message },
+        { status: 500 }
+      );
+    }
+
+    const profileRows = (profileSelectResult.data ?? []) as unknown as {
+      id: string;
+      display_name: string | null;
+      email: string | null;
+      avatar_path?: string | null;
+    }[];
+    profiles = profileRows.map((profile) =>
+      profileSelectResult.usedAttempt?.includesAvatar
+        ? profile
+        : { ...profile, avatar_path: null }
+    );
   }
 
   const profileMap = new Map(
@@ -313,43 +484,51 @@ export async function GET(request: Request) {
   // Load optional interaction settings with safe fallback when columns are missing.
   const interactionSettingsByEntryId = new Map<string, InteractionSettingsRow>();
   if (entryIds.length > 0) {
-    const selectAttempts = [
-      "id, reaction_privacy, comments_privacy, comments_scope",
-      "id, comments_scope",
-      "id",
-    ];
+    const interactionSettingsResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          select: "id, reaction_privacy, comments_privacy, comments_scope",
+          missingColumns: [
+            "reaction_privacy",
+            "comments_privacy",
+            "comments_scope",
+          ] as const,
+        },
+        {
+          select: "id, comments_scope",
+          missingColumns: ["comments_scope"] as const,
+        },
+        {
+          select: "id",
+          missingColumns: [] as const,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      attempt: async (attempt) => {
+        const response = await supabase
+          .from("wine_entries")
+          .select(attempt.select)
+          .in("id", entryIds);
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    });
 
-    let loaded = false;
-    for (let index = 0; index < selectAttempts.length; index += 1) {
-      const { data, error } = await supabase
-        .from("wine_entries")
-        .select(selectAttempts[index])
-        .in("id", entryIds);
-
-      if (!error) {
-        const settingsRows = (data ?? []) as unknown as InteractionSettingsRow[];
-        settingsRows.forEach((row) => {
-          interactionSettingsByEntryId.set(row.id, row);
-        });
-        loaded = true;
-        break;
-      }
-
-      const missingReactionPrivacy = error.message.includes("reaction_privacy");
-      const missingCommentsPrivacy = error.message.includes("comments_privacy");
-      const missingCommentsScope = error.message.includes("comments_scope");
-
-      if (index === 0 && (missingReactionPrivacy || missingCommentsPrivacy || missingCommentsScope)) {
-        continue;
-      }
-      if (index === 1 && missingCommentsScope) {
-        continue;
-      }
-
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (interactionSettingsResult.error) {
+      return NextResponse.json(
+        { error: interactionSettingsResult.error.message },
+        { status: 500 }
+      );
     }
 
-    if (!loaded) {
+    const settingsRows = (interactionSettingsResult.data ?? []) as unknown as InteractionSettingsRow[];
+    settingsRows.forEach((row) => {
+      interactionSettingsByEntryId.set(row.id, row);
+    });
+
+    if (interactionSettingsResult.data == null) {
       entryIds.forEach((entryId) => {
         interactionSettingsByEntryId.set(entryId, { id: entryId });
       });
@@ -526,14 +705,9 @@ export async function GET(request: Request) {
     });
   });
 
-  const signedUrlByPath = new Map<string, string | null>();
-  await Promise.all(
-    Array.from(pathsToSign).map(async (path) => {
-      signedUrlByPath.set(path, await createSignedUrl(path, supabase));
-    })
-  );
+  const signedUrlByPath = await signPhotoUrls(pathsToSign, supabase);
 
-  const feedEntries = pageEntries.map((entry) => {
+  const feedEntries = await Promise.all(pageEntries.map(async (entry) => {
     const authorProfile = profileMap.get(entry.user_id);
     const avatarPath = authorAvatarPathByUserId.get(entry.user_id) ?? null;
     const galleryRows = galleryRowsByEntryId.get(entry.id) ?? [];
@@ -563,42 +737,26 @@ export async function GET(request: Request) {
     }));
 
     const settings = interactionSettingsByEntryId.get(entry.id);
-    const entryPrivacy = normalizePrivacyValue(entry.entry_privacy, "public");
-    const legacyCommentsScope = settings?.comments_scope === "friends" ? "friends" : "viewers";
-    const reactionPrivacy = normalizePrivacyValue(
-      settings?.reaction_privacy,
-      entryPrivacy
-    );
-    const commentsPrivacy = normalizePrivacyValue(
-      settings?.comments_privacy ??
-        (legacyCommentsScope === "friends" && entryPrivacy !== "private"
-          ? "friends"
-          : entryPrivacy),
-      entryPrivacy
-    );
-
-    const canSeeReactions = canViewerAccessByPrivacy({
+    const interactionAccess = await resolveInteractionAccessForViewer({
+      supabase,
       viewerUserId: user.id,
       ownerUserId: entry.user_id,
-      privacy: reactionPrivacy,
+      entryPrivacy: entry.entry_privacy,
+      reactionPrivacy: settings?.reaction_privacy,
+      commentsPrivacy: settings?.comments_privacy,
+      commentsScope: settings?.comments_scope,
       acceptedFriendIds: acceptedFriendIdsSet,
       friendsOfFriendsIds: friendsOfFriendsIdsSet,
-    });
-    const canSeeComments = canViewerAccessByPrivacy({
-      viewerUserId: user.id,
-      ownerUserId: entry.user_id,
-      privacy: commentsPrivacy,
-      acceptedFriendIds: acceptedFriendIdsSet,
-      friendsOfFriendsIds: friendsOfFriendsIdsSet,
+      blockedUserIds: blockedUserIdsSet,
     });
 
-    const reactionCounts = canSeeReactions
+    const reactionCounts = interactionAccess.canReact
       ? reactionCountsMap.get(entry.id) ?? {}
       : {};
-    const myReactions = canSeeReactions
+    const myReactions = interactionAccess.canReact
       ? myReactionsMap.get(entry.id) ?? []
       : [];
-    const rawReactionUserIds = canSeeReactions
+    const rawReactionUserIds = interactionAccess.canReact
       ? reactionUserIdsMap.get(entry.id) ?? {}
       : {};
     const reactionUsers: Record<string, string[]> = {};
@@ -608,7 +766,7 @@ export async function GET(request: Request) {
         return profile?.display_name ?? profile?.email ?? "Unknown";
       });
     }
-    const commentCount = canSeeComments
+    const commentCount = interactionAccess.canComment
       ? commentCountsMap.get(entry.id) ?? 0
       : 0;
 
@@ -622,24 +780,21 @@ export async function GET(request: Request) {
       pairing_image_url: pairingPhoto,
       photo_gallery: photoGallery,
       tasted_with_users: tastedWithUsers,
-      reaction_privacy: reactionPrivacy,
-      comments_privacy: commentsPrivacy,
-      can_react: canSeeReactions,
-      can_comment: canSeeComments,
+      reaction_privacy: interactionAccess.reactionPrivacy,
+      comments_privacy: interactionAccess.commentsPrivacy,
+      can_react: interactionAccess.canReact,
+      can_comment: interactionAccess.canComment,
       comment_count: commentCount,
       reaction_counts: reactionCounts,
       my_reactions: myReactions,
       reaction_users: reactionUsers,
     };
-  });
-
-  const feedEntriesWithPhotos = feedEntries.filter(
-    (entry) => (entry.photo_gallery?.length ?? 0) > 0
-  );
+  }));
 
   return NextResponse.json({
-    entries: feedEntriesWithPhotos,
+    entries: feedEntries,
     next_cursor,
+    next_cursor_v2,
     has_more,
     viewer_user_id: user.id,
   });

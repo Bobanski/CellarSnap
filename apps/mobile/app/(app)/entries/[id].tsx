@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +26,11 @@ import {
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import {
+  ensurePhotoMimeType,
+  extensionForMimeType,
+  readPhotoBytes,
+} from "@/src/lib/entryFlow/photoIO";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -926,6 +932,12 @@ export default function EntryDetailScreen() {
   const canEditActivePhotoMeta = Boolean(
     isOwner && isEditFormVisible && activePhoto?.editable && !isUpdatingPhotoMeta
   );
+  const canManagePhotoContent = Boolean(
+    isOwner && isEditFormVisible && !isUpdatingPhotoMeta
+  );
+  const canRemoveActivePhoto = Boolean(
+    canManagePhotoContent && activePhoto?.editable
+  );
   const displayRating = getDisplayRating(entry?.rating ?? null);
   const advancedNoteRows = useMemo(
     () => getAdvancedNoteRows(entry?.advanced_notes),
@@ -1080,6 +1092,186 @@ export default function EntryDetailScreen() {
     },
     [activePhoto?.editable, activePhoto?.id, entry, isOwner, loadEntry, photos, user?.id]
   );
+
+  const addPhotosToEntry = useCallback(async () => {
+    if (!entry || !isOwner || !user?.id || !isEditFormVisible) {
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setPhotoEditError("Allow photo access to add images.");
+      return;
+    }
+
+    const existingTypeCount = photos.filter(
+      (photo) => photo.editable && photo.type === (activePhoto?.type ?? "label")
+    ).length;
+    const remainingSlots = Math.max(0, MAX_ENTRY_PHOTOS_PER_TYPE - existingTypeCount);
+    if (remainingSlots <= 0) {
+      setPhotoEditError(
+        `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[activePhoto?.type ?? "label"]}.`
+      );
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
+      orderedSelection: true,
+      quality: 0.8,
+    });
+    if (pickerResult.canceled) {
+      return;
+    }
+
+    const assets = pickerResult.assets
+      .filter((asset) => typeof asset.uri === "string" && asset.uri.trim().length > 0)
+      .slice(0, remainingSlots);
+    if (assets.length === 0) {
+      setPhotoEditError("No photos selected.");
+      return;
+    }
+
+    const targetType: EntryPhotoType =
+      activePhoto?.editable && activePhoto.type ? activePhoto.type : "label";
+
+    setIsUpdatingPhotoMeta(true);
+    setPhotoEditError(null);
+
+    const { count, error: countError } = await supabase
+      .from("entry_photos")
+      .select("id", { count: "exact", head: true })
+      .eq("entry_id", entry.id)
+      .eq("type", targetType);
+
+    if (countError) {
+      setPhotoEditError(countError.message);
+      setIsUpdatingPhotoMeta(false);
+      return;
+    }
+
+    if ((count ?? 0) + assets.length > MAX_ENTRY_PHOTOS_PER_TYPE) {
+      setPhotoEditError(
+        `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[targetType]}.`
+      );
+      setIsUpdatingPhotoMeta(false);
+      return;
+    }
+
+    let nextPosition = count ?? 0;
+    try {
+      for (const asset of assets) {
+        const mimeType = ensurePhotoMimeType(asset.mimeType, asset.fileName, asset.uri);
+        const extension = extensionForMimeType(mimeType);
+
+        const createResult = await supabase
+          .from("entry_photos")
+          .insert({
+            entry_id: entry.id,
+            type: targetType,
+            path: "pending",
+            position: nextPosition,
+          })
+          .select("id")
+          .single();
+
+        if (createResult.error || !createResult.data?.id) {
+          throw new Error(createResult.error?.message ?? "Unable to create photo record.");
+        }
+
+        const createdPhotoId = createResult.data.id;
+        const storagePath = `${user.id}/${entry.id}/${targetType}/${createdPhotoId}.${extension}`;
+        try {
+          const updateResult = await supabase
+            .from("entry_photos")
+            .update({ path: storagePath })
+            .eq("id", createdPhotoId)
+            .eq("entry_id", entry.id);
+          if (updateResult.error) {
+            throw new Error(updateResult.error.message);
+          }
+
+          const fileBytes = await readPhotoBytes(asset.uri);
+          const uploadResult = await supabase.storage
+            .from("wine-photos")
+            .upload(storagePath, fileBytes, {
+              upsert: true,
+              contentType: mimeType,
+            });
+          if (uploadResult.error) {
+            throw new Error(uploadResult.error.message);
+          }
+        } catch (error) {
+          await supabase.storage.from("wine-photos").remove([storagePath]);
+          await supabase
+            .from("entry_photos")
+            .delete()
+            .eq("id", createdPhotoId)
+            .eq("entry_id", entry.id);
+          throw error;
+        }
+
+        nextPosition += 1;
+      }
+
+      await loadEntry();
+      Alert.alert(
+        "Photos added",
+        `Added ${assets.length} photo${assets.length === 1 ? "" : "s"}.`
+      );
+    } catch (error) {
+      setPhotoEditError(error instanceof Error ? error.message : "Unable to add photos.");
+    } finally {
+      setIsUpdatingPhotoMeta(false);
+    }
+  }, [activePhoto?.editable, activePhoto?.type, entry, isEditFormVisible, isOwner, loadEntry, photos, user?.id]);
+
+  const removeActivePhoto = useCallback(async () => {
+    if (!entry || !activePhoto?.editable || !isOwner || !user?.id) {
+      return;
+    }
+
+    setIsUpdatingPhotoMeta(true);
+    setPhotoEditError(null);
+    try {
+      const fetchResult = await supabase
+        .from("entry_photos")
+        .select("id, path")
+        .eq("id", activePhoto.id)
+        .eq("entry_id", entry.id)
+        .maybeSingle();
+
+      if (fetchResult.error) {
+        throw new Error(fetchResult.error.message);
+      }
+      if (!fetchResult.data) {
+        throw new Error("Photo record not found.");
+      }
+
+      const storagePath = toStorageObjectPath(fetchResult.data.path);
+      const deleteResult = await supabase
+        .from("entry_photos")
+        .delete()
+        .eq("id", fetchResult.data.id)
+        .eq("entry_id", entry.id);
+
+      if (deleteResult.error) {
+        throw new Error(deleteResult.error.message);
+      }
+
+      if (storagePath) {
+        await supabase.storage.from("wine-photos").remove([storagePath]);
+      }
+
+      await loadEntry();
+    } catch (error) {
+      setPhotoEditError(error instanceof Error ? error.message : "Unable to remove photo.");
+    } finally {
+      setIsUpdatingPhotoMeta(false);
+    }
+  }, [activePhoto?.editable, activePhoto?.id, entry, isOwner, loadEntry, user?.id]);
 
   const addPrimaryGrape = useCallback((grape: PrimaryGrape) => {
     setSelectedPrimaryGrapes((current) => {
@@ -1869,6 +2061,47 @@ export default function EntryDetailScreen() {
                 </View>
               )}
             </View>
+            {isOwner && isEditFormVisible ? (
+              <View style={styles.photoActionRow}>
+                <Pressable
+                  style={[
+                    styles.bulkSecondaryButton,
+                    !canManagePhotoContent ? styles.bulkButtonDisabled : null,
+                  ]}
+                  disabled={!canManagePhotoContent}
+                  onPress={() => void addPhotosToEntry()}
+                >
+                  <AppText style={styles.bulkSecondaryButtonText}>Add images</AppText>
+                </Pressable>
+                {canRemoveActivePhoto ? (
+                  <Pressable
+                    style={[
+                      styles.bulkDangerButton,
+                      !canManagePhotoContent ? styles.bulkButtonDisabled : null,
+                    ]}
+                    disabled={!canManagePhotoContent}
+                    onPress={() => {
+                      Alert.alert(
+                        "Delete this photo?",
+                        "This removes the current photo from this entry.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () => {
+                              void removeActivePhoto();
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <AppText style={styles.bulkDangerButtonText}>Delete photo</AppText>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
             {photoEditError ? (
               <View style={styles.inlineErrorWrap}>
                 <AppText style={styles.bulkReviewErrorText}>{photoEditError}</AppText>
@@ -3327,6 +3560,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(127,29,29,0.32)",
     paddingHorizontal: 10,
     paddingVertical: 8,
+    marginTop: 8,
+  },
+  photoActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     marginTop: 8,
   },
   photoDotRow: {

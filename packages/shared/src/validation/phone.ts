@@ -82,3 +82,21 @@ export function formatPhoneForInput(raw: string): string {
 
   return `+${digits}`;
 }
+
+export function formatPhoneForDisplay(raw: string | null | undefined): string {
+  if (!raw) {
+    return "—";
+  }
+
+  const normalized = normalizePhone(raw);
+  if (!normalized) {
+    return raw;
+  }
+
+  const digits = normalized.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return formatUsNumberWithDashes(digits.slice(1));
+  }
+
+  return normalized;
+}

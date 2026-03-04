@@ -361,6 +361,7 @@ export default function FeedPage() {
   const [reactionPopupEntryId, setReactionPopupEntryId] = useState<string | null>(null);
   const [reactionUsersPopup, setReactionUsersPopup] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [nextCursorV2, setNextCursorV2] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
@@ -782,6 +783,7 @@ export default function FeedPage() {
         setLoading(true);
         setErrorMessage(null);
         setNextCursor(null);
+        setNextCursorV2(null);
         setHasMore(false);
       }
 
@@ -830,6 +832,7 @@ export default function FeedPage() {
           setReportingCommentId(null);
           setCommentReportReasonByCommentId({});
           setNextCursor(feedData.next_cursor ?? null);
+          setNextCursorV2(feedData.next_cursor_v2 ?? null);
           setHasMore(Boolean(feedData.has_more));
           setLoading(false);
         }
@@ -849,11 +852,14 @@ export default function FeedPage() {
   }, [feedScope]);
 
   const loadMoreFeed = async () => {
-    if (!hasMore || loadingMore || !nextCursor) return;
+    if (!hasMore || loadingMore || (!nextCursor && !nextCursorV2)) return;
     setLoadingMore(true);
     try {
+      const cursorQuery = nextCursorV2
+        ? `cursor_v2=${encodeURIComponent(nextCursorV2)}`
+        : `cursor=${encodeURIComponent(nextCursor ?? "")}`;
       const res = await fetch(
-        `/api/feed?scope=${feedScope}&limit=30&cursor=${encodeURIComponent(nextCursor)}`,
+        `/api/feed?scope=${feedScope}&limit=30&${cursorQuery}`,
         { cache: "no-store" }
       );
       if (!res.ok) return;
@@ -865,6 +871,7 @@ export default function FeedPage() {
         ...Object.fromEntries(nextEntries.map((entry) => [entry.id, entry.comment_count ?? 0])),
       }));
       setNextCursor(data.next_cursor ?? null);
+      setNextCursorV2(data.next_cursor_v2 ?? null);
       setHasMore(Boolean(data.has_more));
     } finally {
       setLoadingMore(false);

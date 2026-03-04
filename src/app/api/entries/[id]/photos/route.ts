@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
 import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 const MAX_PER_TYPE = MAX_ENTRY_PHOTOS_PER_TYPE;
 const typeSchema = z.enum([
@@ -18,8 +19,6 @@ const createSchema = z.object({
   type: typeSchema,
 });
 
-type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
 function isEntryPhotoTypeConstraintError(
   error: { message?: string | null; code?: string | null } | null | undefined
 ) {
@@ -32,14 +31,6 @@ function isEntryPhotoTypeConstraintError(
     message.includes("entry_photos_type_check") ||
     message.includes("violates check constraint")
   );
-}
-
-async function createSignedUrl(path: string, supabase: SupabaseClient) {
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-  if (error) return null;
-  return data.signedUrl;
 }
 
 export async function GET(
@@ -98,7 +89,7 @@ export async function GET(
   const photos = await Promise.all(
     (data ?? []).map(async (photo) => ({
       ...photo,
-      signed_url: await createSignedUrl(photo.path, supabase),
+      signed_url: await signPhotoUrl(photo.path, supabase),
     }))
   );
 

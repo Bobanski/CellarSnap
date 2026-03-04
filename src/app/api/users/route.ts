@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { executeSelectWithFallback } from "@/server/db/compat";
 
 function sanitizeUserSearch(search: string) {
   // Prevent PostgREST `.or()` filter syntax issues.
@@ -31,69 +32,60 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const search = sanitizeUserSearch(searchParams.get("search")?.trim() ?? "");
 
-  let query = supabase
-    .from("profiles")
-    .select("id, display_name")
-    .neq("id", user.id)
-    .order("display_name", { ascending: true });
+  const buildProfileQuery = (includeNameColumns: boolean) => {
+    const query = supabase
+      .from("profiles")
+      .select("id, display_name")
+      .neq("id", user.id)
+      .order("display_name", { ascending: true });
 
-  if (search) {
+    if (!search) {
+      return query;
+    }
+
     const pattern = `%${search}%`;
     const tokens = search.split(" ").filter(Boolean);
-    const tokenAndFilter = buildTokenAndFilter(tokens, [
-      "display_name",
-      "email",
-      "first_name",
-      "last_name",
-    ]);
-    query = query
-      .or(
-        [
+    const searchableFields = includeNameColumns
+      ? ["display_name", "email", "first_name", "last_name"]
+      : ["display_name", "email"];
+    const tokenAndFilter = buildTokenAndFilter(tokens, searchableFields);
+    const filters = includeNameColumns
+      ? [
           `display_name.ilike.${pattern}`,
           `email.ilike.${pattern}`,
           `first_name.ilike.${pattern}`,
           `last_name.ilike.${pattern}`,
           tokenAndFilter,
         ]
-          .filter(Boolean)
-          .join(",")
-      )
-      .limit(25);
-  }
+      : [`display_name.ilike.${pattern}`, `email.ilike.${pattern}`, tokenAndFilter];
 
-  let data: { id: string; display_name: string | null }[] | null = null;
-  let error: { message: string } | null = null;
+    return query.or(filters.filter(Boolean).join(",")).limit(25);
+  };
 
-  const firstAttempt = await query;
-  data = firstAttempt.data;
-  error = firstAttempt.error;
+  let data: { id: string; display_name: string | null }[] | null;
+  let error: { message: string } | null;
 
-  // Backwards-compatible fallback if profile name columns aren't present yet.
-  if (
-    error &&
-    search &&
-    (error.message.includes("first_name") || error.message.includes("last_name"))
-  ) {
-    const pattern = `%${search}%`;
-    const tokens = search.split(" ").filter(Boolean);
-    const tokenAndFilter = buildTokenAndFilter(tokens, ["display_name", "email"]);
-    const fallback = await supabase
-      .from("profiles")
-      .select("id, display_name")
-      .neq("id", user.id)
-      .or(
-        [
-          `display_name.ilike.${pattern}`,
-          `email.ilike.${pattern}`,
-          tokenAndFilter,
-        ]
-          .filter(Boolean)
-          .join(",")
-      )
-      .order("display_name", { ascending: true })
-      .limit(25);
-    data = fallback.data;
-    error = fallback.error;
+  if (search) {
+    const searchResult = await executeSelectWithFallback({
+      attempts: [
+        { includeNameColumns: true, missingColumns: ["first_name", "last_name"] as const },
+        { includeNameColumns: false, missingColumns: [] as const },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      attempt: async (attempt) => {
+        const response = await buildProfileQuery(attempt.includeNameColumns);
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    });
+    data = searchResult.data;
+    error = searchResult.error;
+  } else {
+    const response = await buildProfileQuery(false);
+    data = response.data;
+    error = response.error;
   }
 
   if (error) {

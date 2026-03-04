@@ -1,5 +1,22 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  applyFriendTransition,
+  FriendTransitionError,
+} from "@/server/friends/transition";
+
+function transitionErrorResponse(error: unknown) {
+  if (error instanceof FriendTransitionError) {
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status }
+    );
+  }
+
+  const message =
+    error instanceof Error ? error.message : "Request could not be accepted.";
+  return NextResponse.json({ error: message }, { status: 500 });
+}
 
 export async function POST(
   _request: Request,
@@ -41,44 +58,33 @@ export async function POST(
     );
   }
 
-  const { data: updated, error } = await supabase
-    .from("friend_requests")
-    .update({
-      status: "accepted",
-      responded_at: new Date().toISOString(),
-      seen_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("recipient_id", user.id)
-    .eq("status", "pending")
-    .select("id, status")
-    .maybeSingle();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (!updated) {
-    return NextResponse.json(
-      { error: "Request could not be accepted." },
-      { status: 409 }
+  try {
+    const transition = await applyFriendTransition(
+      supabase,
+      requestRow.requester_id,
+      "accept"
     );
+
+    if (transition.status !== "accepted") {
+      return NextResponse.json(
+        { error: "Request could not be accepted." },
+        { status: 409 }
+      );
+    }
+
+    if (transition.requestId && transition.requestId !== id) {
+      return NextResponse.json(
+        { error: "Request state changed unexpectedly." },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: transition.status,
+      request_id: id,
+    });
+  } catch (error) {
+    return transitionErrorResponse(error);
   }
-
-  const { error: cleanupError } = await supabase
-    .from("friend_requests")
-    .delete()
-    .eq("requester_id", user.id)
-    .eq("recipient_id", requestRow.requester_id)
-    .in("status", ["pending", "accepted"]);
-
-  if (cleanupError) {
-    return NextResponse.json({ error: cleanupError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    success: true,
-    status: updated.status,
-    request_id: updated.id,
-  });
 }

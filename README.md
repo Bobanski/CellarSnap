@@ -12,43 +12,14 @@ Required environment variables (in `.env.local`):
 
 Supabase SQL steps:
 
-- Run files in this exact order:
-  - `supabase/sql/001_init.sql`
-  - `supabase/sql/002_storage.sql`
-  - `supabase/sql/003_social.sql`
-  - `supabase/sql/004_pairing_and_rating.sql`
-  - `supabase/sql/004_follow_privacy.sql`
-  - `supabase/sql/005_notifications.sql`
-  - `supabase/sql/006_friends.sql`
-  - `supabase/sql/007_entry_photos.sql`
-  - `supabase/sql/008_username_login.sql`
-  - `supabase/sql/009_friendship_source_of_truth.sql`
-  - `supabase/sql/009_default_public_privacy.sql`
-  - `supabase/sql/010_friend_cancel_unfriend.sql`
-  - `supabase/sql/011_deprecate_user_follows.sql`
-  - `supabase/sql/012_privacy_onboarding.sql`
-  - `supabase/sql/013_advanced_notes.sql`
-  - `supabase/sql/013_profile_avatar.sql`
-  - `supabase/sql/014_entry_reactions.sql`
-  - `supabase/sql/015_entry_photos_visibility.sql`
-  - `supabase/sql/016_entry_pricing_qpr.sql`
-  - `supabase/sql/017_entry_price_currency.sql`
-  - `supabase/sql/018_entry_comparison_feedback.sql`
-  - `supabase/sql/019_entry_classification_and_primary_grapes.sql`
-  - `supabase/sql/020_ai_notes_summary.sql`
-  - `supabase/sql/021_feedback.sql`
-  - `supabase/sql/022_add_grape_varieties.sql`
-  - `supabase/sql/022_profile_names.sql`
-  - `supabase/sql/023_phone_login.sql`
-  - `supabase/sql/024_auth_identifier_helpers.sql`
-  - `supabase/sql/025_shared_tastings.sql`
-  - `supabase/sql/026_suppress_shared_copy_tag_notifications.sql`
-  - `supabase/sql/027_post_shares.sql`
-  - `supabase/sql/028_entry_photo_context_types.sql`
+- Source of truth for migration order is `supabase/sql/manifest.txt`.
+- Run every file in that manifest, in listed order.
+- Minimum supported schema baseline is `036_apply_friend_transition.sql`.
 
 Notes:
-- Some files intentionally share numeric prefixes (`004`, `009`, `013`); keep the order above.
-- `015_entry_photos_visibility.sql` also includes a compatibility overload for `can_view_entry(..., privacy text)` to support older schemas where `entry_privacy` is `text`.
+- Some files intentionally share numeric prefixes (`004`, `009`, `013`, `022`, `028`, `032`); rely on `manifest.txt` order rather than filename prefix alone.
+- `015_entry_photos_visibility.sql` includes a compatibility overload for `can_view_entry(..., privacy text)` to support older schemas where `entry_privacy` is `text`.
+- Compatibility fallback paths in API routes are temporary and should be removed once all environments are at the manifest baseline.
 
 Local development:
 
@@ -103,6 +74,14 @@ API rate limiting:
   - `/api/username-check`
   - `/api/phone-check`
   - `/api/auth/resolve-identifier`
+
+Schema health:
+
+- `GET /api/health/schema` verifies required schema features for:
+  - entry photo context support
+  - interaction privacy/comments
+  - blocks/reports
+  - post-save survey
 
 ## Getting Started
 

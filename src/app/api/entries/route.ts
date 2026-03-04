@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient, type User } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import {
   ACIDITY_LEVELS,
@@ -20,6 +18,12 @@ import {
   fetchPrimaryGrapesByEntryId,
   normalizePrimaryGrapeIds,
 } from "@/lib/primaryGrapes";
+import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
+import {
+  executeSelectWithFallback,
+  executeWithColumnFallback,
+} from "@/server/db/compat";
+import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
 
 const privacyLevelSchema = z.enum(["public", "friends_of_friends", "friends", "private"]);
 const commentScopeSchema = z.enum(["viewers", "friends"]);
@@ -184,63 +188,7 @@ const createEntrySchema = z.object({
   }
 });
 
-type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
-async function createRequestSupabaseClient(
-  request: Request
-): Promise<{ supabase: SupabaseClient; user: User | null }> {
-  const authHeader = request.headers.get("authorization");
-  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
-  const bearerToken = bearerMatch?.[1]?.trim();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (bearerToken && supabaseUrl && supabaseAnonKey) {
-    const bearerClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
-        },
-      },
-    });
-    const {
-      data: { user },
-    } = await bearerClient.auth.getUser();
-    if (user) {
-      return {
-        supabase: bearerClient as unknown as SupabaseClient,
-        user,
-      };
-    }
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
-}
-
-async function createSignedUrl(path: string | null, supabase: SupabaseClient) {
-  if (!path || path === "pending") {
-    return null;
-  }
-
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-
-  if (error) {
-    return null;
-  }
-
-  return data.signedUrl;
-}
+type RequestSupabaseClient = Awaited<ReturnType<typeof requireRequestAuth>>["supabase"];
 
 type ComparisonCandidate = {
   id: string;
@@ -280,29 +228,14 @@ function isPrimaryGrapeSchemaMissing(message: string) {
   );
 }
 
-function isClassificationColumnMissing(message: string) {
-  return message.includes("classification");
-}
-
-function isFeedVisibleColumnMissing(message: string) {
-  return message.includes("is_feed_visible");
-}
-
-function isLocationPlaceIdColumnMissing(message: string) {
-  return message.includes("location_place_id");
-}
-
-function isCommentsScopeColumnMissing(message: string) {
-  return message.includes("comments_scope");
-}
-
-function isReactionPrivacyColumnMissing(message: string) {
-  return message.includes("reaction_privacy");
-}
-
-function isCommentsPrivacyColumnMissing(message: string) {
-  return message.includes("comments_privacy");
-}
+const ENTRY_OPTIONAL_INSERT_COLUMNS = [
+  "classification",
+  "is_feed_visible",
+  "location_place_id",
+  "comments_scope",
+  "reaction_privacy",
+  "comments_privacy",
+] as const;
 
 async function getRandomComparisonCandidate({
   userId,
@@ -311,7 +244,7 @@ async function getRandomComparisonCandidate({
 }: {
   userId: string;
   newEntryId: string;
-  supabase: SupabaseClient;
+  supabase: RequestSupabaseClient;
 }): Promise<ComparisonCandidate | null> {
   const { count, error: countError } = await supabase
     .from("wine_entries")
@@ -356,16 +289,21 @@ async function getRandomComparisonCandidate({
     producer: candidate.producer,
     vintage: candidate.vintage,
     consumed_at: candidate.consumed_at,
-    label_image_url: await createSignedUrl(labelPath, supabase),
+    label_image_url: await signPhotoUrl(labelPath, supabase),
   };
 }
 
 export async function GET(request: Request) {
-  const { supabase, user } = await createRequestSupabaseClient(request);
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor"); // created_at or consumed_at (ISO)
@@ -377,6 +315,25 @@ export async function GET(request: Request) {
     "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
   const fallbackSelectFields =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
+
+  type EntryListSelectAttempt = {
+    fields: string;
+    missingColumns: readonly string[];
+    includesClassification: boolean;
+  };
+  const listSelectAttempts: EntryListSelectAttempt[] = [
+    {
+      fields: selectFields,
+      missingColumns: ["classification"],
+      includesClassification: true,
+    },
+    {
+      fields: fallbackSelectFields,
+      missingColumns: [],
+      includesClassification: false,
+    },
+  ];
+
   const buildQuery = (fields: string) => {
     let query = supabase
       .from("wine_entries")
@@ -391,22 +348,36 @@ export async function GET(request: Request) {
     return query;
   };
 
-  const initialQuery = await buildQuery(selectFields).limit(limit + 1);
-  let error = initialQuery.error;
-  let rows = (initialQuery.data ?? []) as unknown as EntryListRow[];
+  const listSelectResult = await executeSelectWithFallback({
+    attempts: listSelectAttempts,
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    attempt: async (attempt) => {
+      const result = await buildQuery(attempt.fields).limit(limit + 1);
+      return {
+        data: result.data,
+        error: result.error,
+      };
+    },
+  });
 
-  if (error?.message.includes("classification")) {
-    const fallback = await buildQuery(fallbackSelectFields).limit(limit + 1);
-    rows = (
-      (fallback.data ?? []) as unknown as Omit<EntryListRow, "classification">[]
-    ).map(
-      (entry) => ({ ...entry, classification: null })
+  const rows = listSelectResult.usedAttempt?.includesClassification
+    ? (((listSelectResult.data ?? []) as unknown as EntryListRow[]).map((entry) => ({
+        ...entry,
+        classification: entry.classification ?? null,
+      })) as EntryListRow[])
+    : (((listSelectResult.data ?? []) as unknown as Omit<
+        EntryListRow,
+        "classification"
+      >[]).map((entry) => ({
+        ...entry,
+        classification: null,
+      })) as EntryListRow[]);
+
+  if (listSelectResult.error) {
+    return NextResponse.json(
+      { error: listSelectResult.error.message },
+      { status: 500 }
     );
-    error = fallback.error;
-  }
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   const pageRows = rows.length > limit ? rows.slice(0, limit) : rows;
@@ -446,12 +417,7 @@ export async function GET(request: Request) {
     }
   });
 
-  const signedUrlByPath = new Map<string, string | null>();
-  await Promise.all(
-    Array.from(labelPathsToSign).map(async (path) => {
-      signedUrlByPath.set(path, await createSignedUrl(path, supabase));
-    })
-  );
+  const signedUrlByPath = await signPhotoUrls(labelPathsToSign, supabase);
 
   // Comment counts per entry (batch query).
   const commentCountMap = new Map<string, number>();
@@ -488,11 +454,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { supabase, user } = await createRequestSupabaseClient(request);
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   let body: unknown;
   try {
@@ -645,71 +616,24 @@ export async function POST(request: Request) {
     insertPayload.is_feed_visible = payload.data.is_feed_visible;
   }
 
-  const insertPayloadToApply: Record<string, unknown> = { ...insertPayload };
-  let data: ({ id: string } & Record<string, unknown>) | null = null;
-  let error: { message: string; code?: string | null } | null = null;
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const insertAttempt = await supabase
-      .from("wine_entries")
-      .insert(insertPayloadToApply)
-      .select("*")
-      .single();
-
-    data = insertAttempt.data;
-    error = insertAttempt.error;
-    if (!error) {
-      break;
-    }
-
-    let removedUnsupportedColumn = false;
-    if (
-      isClassificationColumnMissing(error.message) &&
-      "classification" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.classification;
-      removedUnsupportedColumn = true;
-    }
-    if (
-      isFeedVisibleColumnMissing(error.message) &&
-      "is_feed_visible" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.is_feed_visible;
-      removedUnsupportedColumn = true;
-    }
-    if (
-      isLocationPlaceIdColumnMissing(error.message) &&
-      "location_place_id" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.location_place_id;
-      removedUnsupportedColumn = true;
-    }
-    if (
-      isCommentsScopeColumnMissing(error.message) &&
-      "comments_scope" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.comments_scope;
-      removedUnsupportedColumn = true;
-    }
-    if (
-      isReactionPrivacyColumnMissing(error.message) &&
-      "reaction_privacy" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.reaction_privacy;
-      removedUnsupportedColumn = true;
-    }
-    if (
-      isCommentsPrivacyColumnMissing(error.message) &&
-      "comments_privacy" in insertPayloadToApply
-    ) {
-      delete insertPayloadToApply.comments_privacy;
-      removedUnsupportedColumn = true;
-    }
-
-    if (!removedUnsupportedColumn) {
-      break;
-    }
-  }
+  const insertResult = await executeWithColumnFallback({
+    initialPayload: insertPayload,
+    removableColumns: ENTRY_OPTIONAL_INSERT_COLUMNS,
+    maxAttempts: 3,
+    attempt: async (payloadToApply) => {
+      const insertAttempt = await supabase
+        .from("wine_entries")
+        .insert(payloadToApply)
+        .select("*")
+        .single();
+      return {
+        data: insertAttempt.data,
+        error: insertAttempt.error,
+      };
+    },
+  });
+  const data = insertResult.data;
+  const error = insertResult.error;
 
   if (error) {
     if (isMissingDbColumnError(error, "advanced_notes")) {

@@ -1227,7 +1227,7 @@ export default function ProfileScreen() {
         updates.avatar_path = uploadedAvatarPath;
       }
 
-      let updatesToApply = { ...updates };
+      const updatesToApply = { ...updates };
       while (Object.keys(updatesToApply).length > 0) {
         const result = await supabase
           .from("profiles")
@@ -1349,7 +1349,7 @@ export default function ProfileScreen() {
       setIsSavingPrivacy(true);
       setPrivacyMessage(null);
 
-      let updatesToApply: Record<string, string> = {
+      const updatesToApply: Record<string, string> = {
         ...updates,
         privacy_confirmed_at: new Date().toISOString(),
       };
@@ -2279,7 +2279,17 @@ export default function ProfileScreen() {
                     <View style={styles.compactList}>
                       {friends.map((friend) => (
                         <View key={friend.id} style={styles.friendRow}>
-                          <View style={styles.friendInline}>
+                          <Pressable
+                            style={styles.friendInline}
+                            onPress={() =>
+                              router.push({
+                                pathname: "/(app)/profile/[userId]",
+                                params: { userId: friend.id },
+                              })
+                            }
+                            accessibilityRole="button"
+                            accessibilityLabel={`View ${displayFriendName(friend)} profile`}
+                          >
                             <FriendAvatar profile={friend} />
                             <View>
                               <AppText style={styles.friendName}>
@@ -2292,7 +2302,7 @@ export default function ProfileScreen() {
                                 </AppText>
                               ) : null}
                             </View>
-                          </View>
+                          </Pressable>
                           {friend.request_id ? (
                             confirmingRemove === friend.request_id ? (
                               <View style={styles.actionRow}>

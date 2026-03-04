@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -45,17 +46,9 @@ export async function GET() {
     (profiles ?? []).map((profile) => [profile.id, profile])
   );
 
-  // Sign avatar URLs in parallel
-  const avatarUrlMap = new Map<string, string | null>();
-  await Promise.all(
-    (profiles ?? []).map(async (profile) => {
-      if (profile.avatar_path) {
-        const { data: urlData } = await supabase.storage
-          .from("wine-photos")
-          .createSignedUrl(profile.avatar_path, 60 * 60);
-        avatarUrlMap.set(profile.id, urlData?.signedUrl ?? null);
-      }
-    })
+  const avatarUrlByPath = await signPhotoUrls(
+    (profiles ?? []).map((profile) => profile.avatar_path),
+    supabase
   );
 
   // Count how often each friend appears in tasted_with_user_ids
@@ -82,7 +75,9 @@ export async function GET() {
       request_id: friendMap.get(id) ?? null,
       display_name: profileMap.get(id)?.display_name ?? null,
       email: profileMap.get(id)?.email ?? null,
-      avatar_url: avatarUrlMap.get(id) ?? null,
+      avatar_url: profileMap.get(id)?.avatar_path
+        ? avatarUrlByPath.get(profileMap.get(id)?.avatar_path ?? "") ?? null
+        : null,
       tasting_count: frequencyMap.get(id) ?? 0,
     })),
   });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getTodayLocalYmd } from "./date";
 
 export type PrivacyLevel = "public" | "friends_of_friends" | "friends" | "private";
 export const PRIVACY_LEVEL_VALUES = [
@@ -79,12 +80,7 @@ function toNullableString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function getTodayLocalYmd(now = new Date()): string {
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+export { getTodayLocalYmd } from "./date";
 
 export function normalizePrivacyLevel(
   value: unknown,
