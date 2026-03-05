@@ -29,7 +29,7 @@ export function KeyboardDoneAccessory() {
   });
 
   useEffect(() => {
-    if (Platform.OS !== "ios" && Platform.OS !== "android") {
+    if (Platform.OS !== "android") {
       return;
     }
 
@@ -45,36 +45,17 @@ export function KeyboardDoneAccessory() {
         height: 0,
       });
     };
-    const handleFrameChange = (event: KeyboardEvent) => {
-      const nextHeight = getKeyboardHeight(event);
-      if (nextHeight <= 0) {
-        handleHide();
-        return;
-      }
-      setKeyboard({
-        visible: true,
-        height: nextHeight,
-      });
-    };
-
-    const subscriptions =
-      Platform.OS === "ios"
-        ? [
-            Keyboard.addListener("keyboardWillShow", handleShow),
-            Keyboard.addListener("keyboardWillHide", handleHide),
-            Keyboard.addListener("keyboardWillChangeFrame", handleFrameChange),
-          ]
-        : [
-            Keyboard.addListener("keyboardDidShow", handleShow),
-            Keyboard.addListener("keyboardDidHide", handleHide),
-          ];
+    const subscriptions = [
+      Keyboard.addListener("keyboardDidShow", handleShow),
+      Keyboard.addListener("keyboardDidHide", handleHide),
+    ];
 
     return () => {
       subscriptions.forEach((subscription) => subscription.remove());
     };
   }, []);
 
-  if (!keyboard.visible) {
+  if (Platform.OS !== "android" || !keyboard.visible) {
     return null;
   }
 
@@ -86,10 +67,7 @@ export function KeyboardDoneAccessory() {
           { bottom: keyboard.height },
         ]}
       >
-        <Pressable onPress={Keyboard.dismiss} hitSlop={8} style={styles.doneButton}>
-          <View style={styles.checkBox}>
-            <AppText style={styles.checkMark}>✓</AppText>
-          </View>
+        <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
           <AppText style={styles.doneText}>Done</AppText>
         </Pressable>
       </View>
@@ -109,35 +87,14 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "flex-end",
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.12)",
-    backgroundColor: "#18181b",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  doneButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  checkBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.75)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(251, 191, 36, 0.2)",
-  },
-  checkMark: {
-    color: "#fde68a",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 14,
+    borderTopColor: "rgba(0, 0, 0, 0.14)",
+    backgroundColor: "#f2f2f7",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
   doneText: {
-    color: "#fcd34d",
-    fontSize: 15,
+    color: "#007aff",
+    fontSize: 17,
     fontWeight: "700",
   },
 });

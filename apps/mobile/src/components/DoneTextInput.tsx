@@ -20,9 +20,8 @@ export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
     },
     ref
   ) => {
-    const resolvedBlurOnSubmit = blurOnSubmit ?? !multiline;
-    const resolvedReturnKeyType =
-      returnKeyType ?? (multiline ? undefined : "done");
+    const resolvedBlurOnSubmit = blurOnSubmit ?? true;
+    const resolvedReturnKeyType = returnKeyType ?? "done";
 
     return (
       <ReactNativeTextInput
@@ -36,7 +35,7 @@ export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
         style={[APP_SANS_FONT_FAMILY ? { fontFamily: APP_SANS_FONT_FAMILY } : null, style]}
         onSubmitEditing={(event) => {
           onSubmitEditing?.(event);
-          if (!multiline || resolvedBlurOnSubmit) {
+          if (resolvedBlurOnSubmit) {
             Keyboard.dismiss();
           }
         }}

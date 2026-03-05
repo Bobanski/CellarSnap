@@ -7,12 +7,15 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  findNodeHandle,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  type GestureResponderEvent,
+  type TextInput as ReactNativeTextInput,
   View
 } from "react-native";
 import { router } from "expo-router";
@@ -177,6 +180,20 @@ type LineupWine = {
   label_anchor: NormalizedLabelAnchor | null;
   focus_crop_data_url: string | null;
 };
+
+type CropGestureState =
+  | {
+      mode: "pan";
+      startX: number;
+      startY: number;
+      startCenterX: number;
+      startCenterY: number;
+    }
+  | {
+      mode: "pinch";
+      startDistance: number;
+      startZoom: number;
+    };
 
 const DEFAULT_PRIVACY: PrivacyDefaults = {
   entry_privacy: "public",
@@ -430,13 +447,9 @@ export default function NewEntryScreen() {
       offsetY: centerPadY - overflowY * (cropCenterY / 100),
     };
   };
-  const cropDragRef = useRef<{
-    startX: number;
-    startY: number;
-    startCenterX: number;
-    startCenterY: number;
-  } | null>(null);
+  const cropDragRef = useRef<CropGestureState | null>(null);
   const formScrollRef = useRef<ScrollView | null>(null);
+  const locationInputRef = useRef<ReactNativeTextInput | null>(null);
   const {
     uploadGalleryActiveIndex,
     uploadGalleryFrameWidth,
@@ -482,9 +495,31 @@ export default function NewEntryScreen() {
   };
 
   const ensureLocationInputVisible = () => {
-    const delay = Platform.OS === "ios" ? 120 : 60;
+    const inputHandle = locationInputRef.current
+      ? findNodeHandle(locationInputRef.current)
+      : null;
+    if (!inputHandle) {
+      return;
+    }
+
+    const delay = Platform.OS === "ios" ? 40 : 20;
     setTimeout(() => {
-      formScrollRef.current?.scrollToEnd({ animated: true });
+      const responder = formScrollRef.current?.getScrollResponder?.() as
+        | {
+            scrollResponderScrollNativeHandleToKeyboard?: (
+              nodeHandle: number,
+              additionalOffset: number,
+              preventNegativeScrollOffset: boolean
+            ) => void;
+          }
+        | null
+        | undefined;
+
+      responder?.scrollResponderScrollNativeHandleToKeyboard?.(
+        inputHandle,
+        Platform.OS === "ios" ? 84 : 64,
+        true
+      );
     }, delay);
   };
 
@@ -1119,24 +1154,74 @@ export default function NewEntryScreen() {
     cropDragRef.current = null;
   };
 
-  const handleCropResponderGrant = (x: number, y: number) => {
+  const getTouchDistance = (event: GestureResponderEvent) => {
+    const touches = event.nativeEvent.touches;
+    if (touches.length < 2) {
+      return null;
+    }
+
+    const [touchA, touchB] = touches;
+    const dx = touchA.locationX - touchB.locationX;
+    const dy = touchA.locationY - touchB.locationY;
+    return Math.hypot(dx, dy);
+  };
+
+  const handleCropResponderGrant = (event: GestureResponderEvent) => {
+    const pinchDistance = getTouchDistance(event);
+    if (typeof pinchDistance === "number" && pinchDistance > 0) {
+      cropDragRef.current = {
+        mode: "pinch",
+        startDistance: pinchDistance,
+        startZoom: cropZoom,
+      };
+      return;
+    }
+
     cropDragRef.current = {
-      startX: x,
-      startY: y,
+      mode: "pan",
+      startX: event.nativeEvent.locationX,
+      startY: event.nativeEvent.locationY,
       startCenterX: cropCenterX,
       startCenterY: cropCenterY,
     };
   };
 
-  const handleCropResponderMove = (x: number, y: number) => {
+  const handleCropResponderMove = (event: GestureResponderEvent) => {
     const drag = cropDragRef.current;
     const geometry = getCropGeometry();
     if (!drag || !geometry) {
       return;
     }
 
-    const dx = x - drag.startX;
-    const dy = y - drag.startY;
+    const pinchDistance = getTouchDistance(event);
+    if (typeof pinchDistance === "number" && pinchDistance > 0) {
+      if (drag.mode !== "pinch") {
+        cropDragRef.current = {
+          mode: "pinch",
+          startDistance: pinchDistance,
+          startZoom: cropZoom,
+        };
+        return;
+      }
+
+      const zoomScale = pinchDistance / Math.max(1, drag.startDistance);
+      setCropZoom(clampCropZoom(drag.startZoom * zoomScale));
+      return;
+    }
+
+    if (drag.mode !== "pan") {
+      cropDragRef.current = {
+        mode: "pan",
+        startX: event.nativeEvent.locationX,
+        startY: event.nativeEvent.locationY,
+        startCenterX: cropCenterX,
+        startCenterY: cropCenterY,
+      };
+      return;
+    }
+
+    const dx = event.nativeEvent.locationX - drag.startX;
+    const dy = event.nativeEvent.locationY - drag.startY;
     const nextCenterX =
       geometry.overflowX > 0
         ? clampCropPercent(
@@ -2118,6 +2203,7 @@ export default function NewEntryScreen() {
                     <AppText style={styles.label}>Location</AppText>
                     <View style={styles.locationInputWrap}>
                       <DoneTextInput
+                        ref={locationInputRef}
                         value={form.location_text}
                         onChangeText={(value) => {
                           updateField("location_text", value);
@@ -2356,18 +2442,8 @@ export default function NewEntryScreen() {
               }}
               onStartShouldSetResponder={() => true}
               onMoveShouldSetResponder={() => true}
-              onResponderGrant={(event) => {
-                handleCropResponderGrant(
-                  event.nativeEvent.locationX,
-                  event.nativeEvent.locationY
-                );
-              }}
-              onResponderMove={(event) => {
-                handleCropResponderMove(
-                  event.nativeEvent.locationX,
-                  event.nativeEvent.locationY
-                );
-              }}
+              onResponderGrant={handleCropResponderGrant}
+              onResponderMove={handleCropResponderMove}
               onResponderRelease={() => {
                 cropDragRef.current = null;
               }}
