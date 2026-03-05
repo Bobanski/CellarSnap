@@ -1,5 +1,4 @@
 import {
-  hasLineupWineDetails,
   normalizeProducerText,
   normalizeGrapeLookupValue,
   OTHER_BOTTLES_CONFIDENCE_THRESHOLD,
@@ -111,7 +110,7 @@ export async function runBulkCreateWorkflow({
   rollbackEntry: (entryId: string, ownerUserId: string) => Promise<void>;
 }): Promise<BulkCreationResult> {
   const selected = lineupWines.filter((wine) => wine.included);
-  const included = selected.filter(hasLineupWineDetails);
+  const included = selected;
 
   const grapeLookupCache = new Map<string, PrimaryGrapeSelection[]>();
   const resolveSuggestedGrapesCached = async (suggestions: string[]) => {

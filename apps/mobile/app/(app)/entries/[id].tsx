@@ -11,6 +11,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  type GestureResponderEvent,
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -147,6 +148,26 @@ type EntryPhotoItem = {
   type: EntryPhotoType;
   url: string | null;
   editable: boolean;
+};
+
+type CropGestureState =
+  | {
+      mode: "pan";
+      startX: number;
+      startY: number;
+      startCenterX: number;
+      startCenterY: number;
+    }
+  | {
+      mode: "pinch";
+      startDistance: number;
+      startZoom: number;
+    };
+
+type SavedCropState = {
+  centerX: number;
+  centerY: number;
+  zoom: number;
 };
 
 type FriendRequestRow = {
@@ -329,6 +350,23 @@ function toStorageObjectPath(path: string) {
   }
 
   return normalizedPath || null;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length === 0) {
+    return "";
+  }
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(bytes.length, offset + chunkSize));
+    binary += String.fromCharCode(...chunk);
+  }
+  if (typeof globalThis.btoa === "function") {
+    return globalThis.btoa(binary);
+  }
+  throw new Error("Base64 encoding not supported on this device.");
 }
 
 function formatProfileName(profile: ProfileRow) {
@@ -578,6 +616,23 @@ export default function EntryDetailScreen() {
   const [failedPhotoIds, setFailedPhotoIds] = useState<Set<string>>(() => new Set());
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
+  const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
+  const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [cropFrameSize, setCropFrameSize] = useState(0);
+  const [cropCenterX, setCropCenterX] = useState(50);
+  const [cropCenterY, setCropCenterY] = useState(50);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropSourceLoading, setCropSourceLoading] = useState(false);
+  const [isSavingCrop, setIsSavingCrop] = useState(false);
+  const [savedCropByPhotoId, setSavedCropByPhotoId] = useState<
+    Record<string, SavedCropState>
+  >({});
+  const [cropSourceDataUrlByPhotoId, setCropSourceDataUrlByPhotoId] = useState<
+    Record<string, string>
+  >({});
   const [advancedNotesOpen, setAdvancedNotesOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDeletingBulkQueue, setIsDeletingBulkQueue] = useState(false);
@@ -636,6 +691,7 @@ export default function EntryDetailScreen() {
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const galleryScrollRef = useRef<ScrollView | null>(null);
+  const cropDragRef = useRef<CropGestureState | null>(null);
 
   const loadEntry = useCallback(async () => {
     if (!entryId) {
@@ -1048,11 +1104,122 @@ export default function EntryDetailScreen() {
     };
   }, [isBulkReview, user?.id]);
 
+  useEffect(() => {
+    const cropPhoto =
+      cropPhotoId !== null
+        ? photos.find((photo) => photo.id === cropPhotoId) ?? null
+        : null;
+    const sourceUri =
+      cropPhoto && cropSourceDataUrlByPhotoId[cropPhoto.id]
+        ? cropSourceDataUrlByPhotoId[cropPhoto.id]
+        : cropPhoto?.url ?? null;
+    if (!sourceUri) {
+      setCropImageNaturalSize(null);
+      setCropSourceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCropSourceLoading(true);
+    Image.getSize(
+      sourceUri,
+      (width, height) => {
+        if (cancelled) {
+          return;
+        }
+        setCropImageNaturalSize({
+          width: Math.max(1, width),
+          height: Math.max(1, height),
+        });
+        setCropSourceLoading(false);
+      },
+      () => {
+        if (cancelled) {
+          return;
+        }
+        setCropImageNaturalSize(null);
+        setCropSourceLoading(false);
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cropPhotoId, cropSourceDataUrlByPhotoId, photos]);
+
+  useEffect(() => {
+    setCropSourceDataUrlByPhotoId((current) => {
+      const photoIds = new Set(photos.map((photo) => photo.id));
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const [photoId, dataUrl] of Object.entries(current)) {
+        if (photoIds.has(photoId)) {
+          next[photoId] = dataUrl;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [photos]);
+
+  useEffect(() => {
+    setSavedCropByPhotoId((current) => {
+      const photoIds = new Set(photos.map((photo) => photo.id));
+      let changed = false;
+      const next: Record<string, SavedCropState> = {};
+      for (const [photoId, state] of Object.entries(current)) {
+        if (photoIds.has(photoId)) {
+          next[photoId] = state;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [photos]);
+
   const isOwner = Boolean(user?.id && entry?.user_id === user.id);
   const hasMultiplePhotos = photos.length > 1;
   const isEditFormVisible = isBulkReview || (isOwner && ownerEditOpen);
   const activePhoto =
     photos[Math.max(0, Math.min(photos.length - 1, activePhotoIndex))] ?? null;
+  const activeCropPhoto =
+    cropPhotoId !== null
+      ? photos.find((photo) => photo.id === cropPhotoId) ?? null
+      : null;
+  const activeCropPhotoSourceUri =
+    activeCropPhoto && cropSourceDataUrlByPhotoId[activeCropPhoto.id]
+      ? cropSourceDataUrlByPhotoId[activeCropPhoto.id]
+      : activeCropPhoto?.url ?? null;
+  const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
+  const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
+  const getCropGeometry = () => {
+    if (!cropImageNaturalSize || cropFrameSize <= 0) {
+      return null;
+    }
+
+    const baseScale = Math.min(
+      cropFrameSize / cropImageNaturalSize.width,
+      cropFrameSize / cropImageNaturalSize.height
+    );
+    const effectiveScale = baseScale * cropZoom;
+    const renderedWidth = cropImageNaturalSize.width * effectiveScale;
+    const renderedHeight = cropImageNaturalSize.height * effectiveScale;
+    const overflowX = Math.max(0, renderedWidth - cropFrameSize);
+    const overflowY = Math.max(0, renderedHeight - cropFrameSize);
+    const centerPadX = Math.max(0, (cropFrameSize - renderedWidth) / 2);
+    const centerPadY = Math.max(0, (cropFrameSize - renderedHeight) / 2);
+
+    return {
+      renderedWidth,
+      renderedHeight,
+      overflowX,
+      overflowY,
+      offsetX: centerPadX - overflowX * (cropCenterX / 100),
+      offsetY: centerPadY - overflowY * (cropCenterY / 100),
+    };
+  };
   const activePhotoFailed = activePhoto ? failedPhotoIds.has(activePhoto.id) : false;
   const canEditActivePhotoMeta = Boolean(
     isOwner && isEditFormVisible && activePhoto?.editable && !isUpdatingPhotoMeta
@@ -1112,6 +1279,7 @@ export default function EntryDetailScreen() {
     activePhoto && photos.length > 0
       ? photos.findIndex((photo) => photo.id === activePhoto.id) + 1
       : 0;
+  const cropGeometry = getCropGeometry();
 
   const toggleEditSection = useCallback((section: EditAccordionKey) => {
     setEditExpanded((current) => ({ ...current, [section]: !current[section] }));
@@ -1469,6 +1637,269 @@ export default function EntryDetailScreen() {
       setIsUpdatingPhotoMeta(false);
     }
   }, [activePhoto?.editable, activePhoto?.id, entry, isOwner, loadEntry, user?.id]);
+
+  const openCropEditorForActivePhoto = useCallback(() => {
+    if (!activePhoto?.url) {
+      return;
+    }
+    const saved = savedCropByPhotoId[activePhoto.id];
+    setPhotoEditError(null);
+    setCropPhotoId(activePhoto.id);
+    setCropCenterX(saved?.centerX ?? 50);
+    setCropCenterY(saved?.centerY ?? 50);
+    setCropZoom(saved?.zoom ?? 1);
+    cropDragRef.current = null;
+  }, [activePhoto?.id, activePhoto?.url, savedCropByPhotoId]);
+
+  const closeCropEditor = useCallback(() => {
+    if (isSavingCrop) {
+      return;
+    }
+    setCropPhotoId(null);
+    setCropImageNaturalSize(null);
+    setCropFrameSize(0);
+    setCropSourceLoading(false);
+    cropDragRef.current = null;
+  }, [isSavingCrop]);
+
+  const getTouchDistance = (event: GestureResponderEvent) => {
+    const touches = event.nativeEvent.touches;
+    if (touches.length < 2) {
+      return null;
+    }
+    const [touchA, touchB] = touches;
+    const dx = touchA.pageX - touchB.pageX;
+    const dy = touchA.pageY - touchB.pageY;
+    return Math.hypot(dx, dy);
+  };
+
+  const getPrimaryTouchPoint = (event: GestureResponderEvent) => {
+    const touch =
+      event.nativeEvent.touches[0] ??
+      event.nativeEvent.changedTouches?.[0];
+    if (!touch) {
+      return null;
+    }
+    return {
+      x: touch.pageX,
+      y: touch.pageY,
+    };
+  };
+
+  const handleCropResponderGrant = (event: GestureResponderEvent) => {
+    const pinchDistance = getTouchDistance(event);
+    if (typeof pinchDistance === "number" && pinchDistance > 0) {
+      cropDragRef.current = {
+        mode: "pinch",
+        startDistance: pinchDistance,
+        startZoom: cropZoom,
+      };
+      return;
+    }
+
+    const touchPoint = getPrimaryTouchPoint(event);
+    if (!touchPoint) {
+      return;
+    }
+    cropDragRef.current = {
+      mode: "pan",
+      startX: touchPoint.x,
+      startY: touchPoint.y,
+      startCenterX: cropCenterX,
+      startCenterY: cropCenterY,
+    };
+  };
+
+  const handleCropResponderMove = (event: GestureResponderEvent) => {
+    const drag = cropDragRef.current;
+    const geometry = getCropGeometry();
+    if (!drag || !geometry) {
+      return;
+    }
+
+    const pinchDistance = getTouchDistance(event);
+    if (typeof pinchDistance === "number" && pinchDistance > 0) {
+      if (drag.mode !== "pinch") {
+        cropDragRef.current = {
+          mode: "pinch",
+          startDistance: pinchDistance,
+          startZoom: cropZoom,
+        };
+        return;
+      }
+      const zoomScale = pinchDistance / Math.max(1, drag.startDistance);
+      const nextZoom = clampCropZoom(drag.startZoom * zoomScale);
+      setCropZoom((current) =>
+        Math.abs(current - nextZoom) < 0.01 ? current : nextZoom
+      );
+      return;
+    }
+
+    if (drag.mode !== "pan") {
+      const touchPoint = getPrimaryTouchPoint(event);
+      if (!touchPoint) {
+        return;
+      }
+      cropDragRef.current = {
+        mode: "pan",
+        startX: touchPoint.x,
+        startY: touchPoint.y,
+        startCenterX: cropCenterX,
+        startCenterY: cropCenterY,
+      };
+      return;
+    }
+
+    const touchPoint = getPrimaryTouchPoint(event);
+    if (!touchPoint) {
+      return;
+    }
+    const dx = touchPoint.x - drag.startX;
+    const dy = touchPoint.y - drag.startY;
+    const horizontalTravel = geometry.overflowX;
+    const verticalTravel = geometry.overflowY;
+    const nextCenterX =
+      horizontalTravel > 6
+        ? clampCropPercent(
+            drag.startCenterX - (dx / horizontalTravel) * 100
+          )
+        : drag.startCenterX;
+    const nextCenterY =
+      verticalTravel > 6
+        ? clampCropPercent(
+            drag.startCenterY - (dy / verticalTravel) * 100
+          )
+        : drag.startCenterY;
+
+    setCropCenterX((current) =>
+      Math.abs(current - nextCenterX) < 0.08 ? current : nextCenterX
+    );
+    setCropCenterY((current) =>
+      Math.abs(current - nextCenterY) < 0.08 ? current : nextCenterY
+    );
+  };
+
+  const saveCropEdits = useCallback(async () => {
+    if (!entry || !activeCropPhoto?.url || !isOwner) {
+      return;
+    }
+    if (!WEB_API_BASE_URL) {
+      setPhotoEditError(
+        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable in-place crop editing."
+      );
+      return;
+    }
+
+    const accessToken = await getAccessTokenForApi();
+    if (!accessToken) {
+      setPhotoEditError("Session expired. Sign in again to save crop edits.");
+      return;
+    }
+
+    setIsSavingCrop(true);
+    setPhotoEditError(null);
+    try {
+      let sourceDataUrl = cropSourceDataUrlByPhotoId[activeCropPhoto.id] ?? null;
+      if (!sourceDataUrl) {
+        const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+        const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
+        sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
+          sourceBytes
+        )}`;
+      }
+
+      const formData = new FormData();
+      formData.append("photo_data_url", sourceDataUrl);
+      formData.append("center_x", String(cropCenterX));
+      formData.append("center_y", String(cropCenterY));
+      formData.append("zoom", String(cropZoom));
+
+      const normalizedBaseUrl = WEB_API_BASE_URL.replace(/\/$/, "");
+      const response = await fetch(`${normalizedBaseUrl}/api/photo-crop`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        cropped_data_url?: string;
+        mime_type?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.cropped_data_url) {
+        if (response.status === 401) {
+          throw new Error("Session expired. Sign in again to save crop edits.");
+        }
+        throw new Error(payload.error ?? "Unable to crop this image.");
+      }
+
+      const cropRowResult = await supabase
+        .from("entry_photos")
+        .select("id, path")
+        .eq("id", activeCropPhoto.id)
+        .eq("entry_id", entry.id)
+        .maybeSingle();
+      if (cropRowResult.error) {
+        throw new Error(cropRowResult.error.message);
+      }
+      const storagePath = toStorageObjectPath(cropRowResult.data?.path ?? "");
+      if (!storagePath) {
+        throw new Error("Photo record not found.");
+      }
+
+      const croppedBytes = await readPhotoBytes(payload.cropped_data_url);
+      const uploadResult = await supabase.storage
+        .from("wine-photos")
+        .upload(storagePath, croppedBytes, {
+          upsert: true,
+          contentType: payload.mime_type ?? "image/jpeg",
+        });
+      if (uploadResult.error) {
+        throw new Error(uploadResult.error.message);
+      }
+
+      if (sourceDataUrl) {
+        setCropSourceDataUrlByPhotoId((current) =>
+          current[activeCropPhoto.id]
+            ? current
+            : { ...current, [activeCropPhoto.id]: sourceDataUrl }
+        );
+      }
+      setSavedCropByPhotoId((current) => ({
+        ...current,
+        [activeCropPhoto.id]: {
+          centerX: cropCenterX,
+          centerY: cropCenterY,
+          zoom: cropZoom,
+        },
+      }));
+
+      await loadEntry();
+      setCropPhotoId(null);
+      setCropImageNaturalSize(null);
+      setCropFrameSize(0);
+      setCropSourceLoading(false);
+      cropDragRef.current = null;
+    } catch (error) {
+      setPhotoEditError(
+        error instanceof Error ? error.message : "Unable to save crop edits."
+      );
+    } finally {
+      setIsSavingCrop(false);
+    }
+  }, [
+    activeCropPhoto?.id,
+    activeCropPhoto?.url,
+    cropSourceDataUrlByPhotoId,
+    cropCenterX,
+    cropCenterY,
+    cropZoom,
+    entry,
+    getAccessTokenForApi,
+    isOwner,
+    loadEntry,
+  ]);
 
   const addPrimaryGrape = useCallback((grape: PrimaryGrape) => {
     setSelectedPrimaryGrapes((current) => {
@@ -2279,6 +2710,20 @@ export default function EntryDetailScreen() {
                 >
                   <AppText style={styles.bulkSecondaryButtonText}>Add images</AppText>
                 </Pressable>
+                <Pressable
+                  style={[
+                    styles.bulkSecondaryButton,
+                    !canManagePhotoContent || !activePhoto?.editable || !activePhoto?.url
+                      ? styles.bulkButtonDisabled
+                      : null,
+                  ]}
+                  disabled={
+                    !canManagePhotoContent || !activePhoto?.editable || !activePhoto?.url
+                  }
+                  onPress={openCropEditorForActivePhoto}
+                >
+                  <AppText style={styles.bulkSecondaryButtonText}>Crop</AppText>
+                </Pressable>
                 {canRemoveActivePhoto ? (
                   <Pressable
                     style={[
@@ -3075,6 +3520,102 @@ export default function EntryDetailScreen() {
         )}
       </ScrollView>
       <Modal
+        visible={Boolean(activeCropPhoto)}
+        transparent
+        animationType="fade"
+        onRequestClose={closeCropEditor}
+      >
+        <View style={styles.cropModalRoot}>
+          <View style={styles.cropModalBackdrop} />
+          <View style={styles.cropModalCard}>
+            <View style={styles.cropModalHeader}>
+              <AppText style={styles.cropModalTitle}>Edit crop</AppText>
+              <Pressable onPress={closeCropEditor} hitSlop={8}>
+                <AppText style={styles.cropModalCloseText}>Close</AppText>
+              </Pressable>
+            </View>
+            <View
+              style={styles.cropFrame}
+              onLayout={(event) => {
+                const width = Math.round(event.nativeEvent.layout.width);
+                setCropFrameSize((current) => (current === width ? current : width));
+              }}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderTerminationRequest={() => false}
+              onResponderGrant={handleCropResponderGrant}
+              onResponderMove={handleCropResponderMove}
+              onResponderRelease={() => {
+                cropDragRef.current = null;
+              }}
+              onResponderTerminate={() => {
+                cropDragRef.current = null;
+              }}
+            >
+              {cropSourceLoading ? (
+                <View style={styles.cropFrameLoading}>
+                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <AppText style={styles.cropFrameHint}>Loading image...</AppText>
+                </View>
+              ) : activeCropPhotoSourceUri ? (
+                <>
+                  <View
+                    pointerEvents="none"
+                    style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
+                  >
+                    <Image
+                      source={{ uri: activeCropPhotoSourceUri }}
+                      style={[
+                        styles.cropFrameImage,
+                        cropGeometry
+                          ? {
+                              width: cropGeometry.renderedWidth,
+                              height: cropGeometry.renderedHeight,
+                              transform: [
+                                { translateX: cropGeometry.offsetX },
+                                { translateY: cropGeometry.offsetY },
+                              ],
+                            }
+                          : null,
+                      ]}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View pointerEvents="none" style={styles.cropFrameOutline} />
+                  <View pointerEvents="none" style={styles.cropFrameCrosshair} />
+                </>
+              ) : (
+                <View style={styles.cropFrameLoading}>
+                  <AppText style={styles.cropFrameHint}>Image unavailable.</AppText>
+                </View>
+              )}
+            </View>
+            <AppText style={styles.cropFrameHint}>
+              Pinch to zoom and drag to reposition.
+            </AppText>
+            <View style={styles.cropActionRow}>
+              <Pressable style={styles.bulkSecondaryButton} onPress={closeCropEditor}>
+                <AppText style={styles.bulkSecondaryButtonText}>Cancel</AppText>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.bulkPrimaryButton,
+                  isSavingCrop ? styles.bulkButtonDisabled : null,
+                ]}
+                onPress={() => void saveCropEdits()}
+                disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
+              >
+                {isSavingCrop ? (
+                  <ActivityIndicator color="#09090b" />
+                ) : (
+                  <AppText style={styles.bulkPrimaryButtonText}>Save crop</AppText>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
         visible={photoTypePickerOpen}
         transparent
         animationType="fade"
@@ -3727,6 +4268,89 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontSize: 12,
     textAlign: "center",
+  },
+  cropModalRoot: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  cropModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.62)",
+  },
+  cropModalCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "#18110f",
+    padding: 14,
+    gap: 12,
+  },
+  cropModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cropModalTitle: {
+    color: "#fafafa",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  cropModalCloseText: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  cropFrame: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    overflow: "hidden",
+    position: "relative",
+  },
+  cropFrameImage: {
+    position: "absolute",
+  },
+  cropFrameOutline: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 2,
+    borderColor: "rgba(251, 191, 36, 0.85)",
+  },
+  cropFrameCrosshair: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    left: "50%",
+    top: "50%",
+    marginLeft: -9,
+    marginTop: -9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.9)",
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+  },
+  cropFrameLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  cropFrameHint: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  cropActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "flex-end",
   },
   detailsCard: {
     borderRadius: 18,

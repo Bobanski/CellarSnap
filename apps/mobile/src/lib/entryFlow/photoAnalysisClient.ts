@@ -62,6 +62,11 @@ type LineupAutofillResponse = {
   error?: string;
 };
 
+type BottleCountResponse = {
+  total_bottles_detected?: number;
+  error?: string;
+};
+
 export type AnalyzedLineupWine = {
   id: string;
   photoIndex: number;
@@ -80,6 +85,13 @@ export type AnalyzedLineupWine = {
   label_anchor: NormalizedLabelAnchor | null;
   focus_crop_data_url: string | null;
 };
+
+function hasLineupBottleCandidate(wine: AnalyzedLineupWine) {
+  return (
+    hasLineupWineDetails(wine) ||
+    Boolean(wine.bottle_bbox || wine.label_bbox || wine.label_anchor)
+  );
+}
 
 function normalizeInlineImageDataUrl(value: unknown) {
   if (typeof value !== "string") {
@@ -303,11 +315,75 @@ export async function requestLineupAutofill({
         included: true,
       } satisfies AnalyzedLineupWine;
     })
-    .filter((wine) => hasLineupWineDetails(wine));
+    .filter((wine) => hasLineupBottleCandidate(wine));
 
   return {
     wines: normalizedWines,
     detectedBottleCount,
+    errorMessage: null as string | null,
+  };
+}
+
+export async function requestBottleCount({
+  baseUrl,
+  photo,
+  accessToken,
+}: {
+  baseUrl: string | null;
+  photo: UploadPhotoAnalysisTarget;
+  accessToken: string;
+}) {
+  if (!baseUrl) {
+    return {
+      bottleCount: null as number | null,
+      errorMessage: null as string | null,
+    };
+  }
+
+  const formData = new FormData();
+  formData.append(
+    "photo",
+    {
+      uri: photo.uri,
+      name: photo.name,
+      type: photo.mimeType,
+    } as unknown as Blob
+  );
+
+  const response = await fetch(`${baseUrl}/api/bottle-count`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expired. Sign in again to use AI bulk scan.");
+    }
+    const payload = (await response.json().catch(() => ({}))) as BottleCountResponse;
+    return {
+      bottleCount: null as number | null,
+      errorMessage:
+        normalizeAnalysisErrorMessage(payload.error) ||
+        "Could not estimate bottle count for this photo.",
+    };
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as BottleCountResponse;
+  if (
+    typeof payload.total_bottles_detected === "number" &&
+    Number.isFinite(payload.total_bottles_detected)
+  ) {
+    return {
+      bottleCount: Math.max(0, Math.round(payload.total_bottles_detected)),
+      errorMessage: null as string | null,
+    };
+  }
+
+  return {
+    bottleCount: null as number | null,
     errorMessage: null as string | null,
   };
 }

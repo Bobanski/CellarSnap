@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
+import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 import {
   OpenAiImagePreparationError,
   prepareOpenAiImageDataUrl,
@@ -28,14 +28,16 @@ function extractJson(text: string) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { user } = auth;
 
   const rateLimit = applyRateLimit({
     request,
@@ -137,7 +139,7 @@ export async function POST(request: Request) {
               {
                 type: "input_text",
                 text:
-                  "Count distinct wine bottles that have at least some readable or recognizable label/branding. " +
+                  "Count distinct wine bottles that are clearly visible foreground bottle subjects with visible bottle silhouette and/or label area, even if label text is partially unreadable. " +
                   "Ignore tiny/blurred background bottles, reflections, wine glasses, people, and bottle-like background objects. " +
                   "If you are unsure something is a wine bottle, exclude it. " +
                   "Return only total_bottles_detected as a non-negative integer.",

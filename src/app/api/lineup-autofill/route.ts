@@ -103,6 +103,26 @@ function normalize(value?: string | null) {
   return trimmed.length ? trimmed : null;
 }
 
+function hasReadableIdentityFields(wine: {
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  classification: string | null;
+}) {
+  return Boolean(
+    wine.wine_name ||
+      wine.producer ||
+      wine.vintage ||
+      wine.country ||
+      wine.region ||
+      wine.appellation ||
+      wine.classification
+  );
+}
+
 function normalizeBottleBbox(value?: {
   x?: number;
   y?: number;
@@ -578,14 +598,14 @@ export async function POST(request: Request) {
                 type: "input_text",
                 text:
                   "This photo shows one or more wine bottles. Identify the bottles that are relevant for creating entries: " +
-                  "focus on the main lineup / foreground bottles that have at least some readable or recognizable label/branding. " +
-                  "Ignore tiny/blurred background bottles, reflections, posters, glassware, bottle-like shapes, and anything without identifying label info. " +
+                  "focus on the main lineup / foreground bottles that are clearly bottle subjects with visible label area, even if text is partially unreadable. " +
+                  "Ignore tiny/blurred background bottles, reflections, posters, glassware, bottle-like shapes, and non-bottle objects. " +
                   "Return JSON with 'total_bottles_detected' (integer, generated first) followed by a 'wines' array (one object per included bottle, left-to-right order). " +
-                  "CRITICAL: ONLY include a bottle in the wines array if you can identify at least one meaningful detail for that same bottle: " +
-                  "wine_name OR producer OR vintage OR country/region/appellation OR classification OR any readable label text. " +
+                  "CRITICAL: include each clearly visible foreground bottle once, even when readable identity details are limited. " +
                   "Do not guess winery or cuvee names from bottle shape, foil color, capsule, scene context, or prior popularity; use readable label evidence only. " +
                   "For wine_name, producer, and vintage, set null unless there is explicit readable text supporting that exact value. " +
-                  "If a bottle has no readable identifying info, do NOT include it. If you are unsure something is a wine bottle, exclude it. " +
+                  "If a bottle has little/no readable identifying text, keep it in wines but set unknown fields to null. " +
+                  "If you are unsure something is a wine bottle, exclude it. " +
                   "wines array length MUST equal total_bottles_detected. total_bottles_detected should equal wines.length. " +
                   "Each wine object has keys: wine_name, producer, vintage, country, region, appellation, classification, primary_grape_suggestions, confidence, bottle_bbox, label_bbox, label_anchor. " +
                   "bottle_bbox is a normalized box for the full bottle silhouette with keys x, y, width, height in 0-1 image coordinates; use null if uncertain. " +
@@ -661,21 +681,24 @@ export async function POST(request: Request) {
       focus_crop_data_url: focusCrops[index] ?? null,
     }));
 
+    const reportedBottleCount =
+      typeof parsed.data.total_bottles_detected === "number" &&
+      Number.isFinite(parsed.data.total_bottles_detected)
+        ? Math.max(0, Math.round(parsed.data.total_bottles_detected))
+        : 0;
+
     const filteredWines = winesWithCrops.filter((wine) => {
-      return Boolean(
-        wine.wine_name ||
-          wine.producer ||
-          wine.vintage ||
-          wine.country ||
-          wine.region ||
-          wine.appellation ||
-          wine.classification
+      return (
+        hasReadableIdentityFields(wine) ||
+        Boolean(wine.bottle_bbox || wine.label_bbox || wine.label_anchor)
       );
     });
 
+    const detectedBottleCount = Math.max(reportedBottleCount, filteredWines.length);
+
     return NextResponse.json({
       wines: filteredWines,
-      total_bottles_detected: filteredWines.length,
+      total_bottles_detected: detectedBottleCount,
     }, {
       headers: rateLimitHeaders(rateLimit),
     });

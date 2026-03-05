@@ -23,7 +23,6 @@ import * as ImagePicker from "expo-image-picker";
 import {
   createEntryInputSchema,
   getTodayLocalYmd,
-  hasLineupWineDetails,
   isUnknownWineName,
   normalizeGrapeLookupValue,
   normalizePrivacyLevel,
@@ -156,6 +155,7 @@ type LocationSuggestion = {
 type UploadPhotoItem = {
   id: string;
   uri: string;
+  originalUri?: string | null;
   name: string;
   mimeType: string;
   type: UploadPhotoType;
@@ -194,6 +194,12 @@ type CropGestureState =
       startDistance: number;
       startZoom: number;
     };
+
+type SavedCropState = {
+  centerX: number;
+  centerY: number;
+  zoom: number;
+};
 
 const DEFAULT_PRIVACY: PrivacyDefaults = {
   entry_privacy: "public",
@@ -374,6 +380,13 @@ export default function NewEntryScreen() {
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
+  const [cropLineupWineId, setCropLineupWineId] = useState<string | null>(null);
+  const [savedCropByPhotoId, setSavedCropByPhotoId] = useState<
+    Record<string, SavedCropState>
+  >({});
+  const [savedCropByLineupWineId, setSavedCropByLineupWineId] = useState<
+    Record<string, SavedCropState>
+  >({});
   const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
     width: number;
     height: number;
@@ -394,9 +407,6 @@ export default function NewEntryScreen() {
   const showProcessedGallery =
     uploadPhotos.length > 0 && uploadAnalysisStatus !== "loading";
   const includedLineupWines = lineupWines.filter((wine) => wine.included);
-  const readyLineupWines = lineupWines.filter(
-    (wine) => wine.included && hasLineupWineDetails(wine)
-  );
   const isBulkLineupMode = lineupWines.length > 0;
   const hasLowScanConfidence =
     typeof lastScanConfidence === "number" &&
@@ -415,10 +425,16 @@ export default function NewEntryScreen() {
       includedLineupWines.length > 0 &&
       /(failed|unable|network|error)/i.test(bulkCreateMessage)
   );
+  const activeCropLineupWine =
+    cropLineupWineId !== null
+      ? lineupWines.find((wine) => wine.id === cropLineupWineId) ?? null
+      : null;
   const activeCropPhoto =
     cropPhotoId !== null
       ? uploadPhotos.find((photo) => photo.id === cropPhotoId) ?? null
       : null;
+  const activeCropPhotoSourceUri =
+    activeCropPhoto?.originalUri ?? activeCropPhoto?.uri ?? null;
   const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
   const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
   const getCropGeometry = () => {
@@ -620,7 +636,7 @@ export default function NewEntryScreen() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!activeCropPhoto) {
+    if (!activeCropPhotoSourceUri) {
       setCropImageNaturalSize(null);
       setCropSourceLoading(false);
       return;
@@ -629,7 +645,7 @@ export default function NewEntryScreen() {
     let cancelled = false;
     setCropSourceLoading(true);
     Image.getSize(
-      activeCropPhoto.uri,
+      activeCropPhotoSourceUri,
       (width, height) => {
         if (cancelled) {
           return;
@@ -652,7 +668,39 @@ export default function NewEntryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [activeCropPhoto]);
+  }, [activeCropPhotoSourceUri]);
+
+  useEffect(() => {
+    setSavedCropByPhotoId((current) => {
+      const photoIds = new Set(uploadPhotos.map((photo) => photo.id));
+      let changed = false;
+      const next: Record<string, SavedCropState> = {};
+      for (const [photoId, state] of Object.entries(current)) {
+        if (photoIds.has(photoId)) {
+          next[photoId] = state;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [uploadPhotos]);
+
+  useEffect(() => {
+    setSavedCropByLineupWineId((current) => {
+      const wineIds = new Set(lineupWines.map((wine) => wine.id));
+      let changed = false;
+      const next: Record<string, SavedCropState> = {};
+      for (const [wineId, state] of Object.entries(current)) {
+        if (wineIds.has(wineId)) {
+          next[wineId] = state;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [lineupWines]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1125,6 +1173,14 @@ export default function NewEntryScreen() {
         index === 0 ? { ...photo, type: "label" } : photo
       );
     });
+    setSavedCropByPhotoId((current) => {
+      if (!current[photoId]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[photoId];
+      return next;
+    });
     if (wasLastPhoto) {
       setUploadAnalysisStatus("idle");
       setLastScanConfidence(null);
@@ -1138,15 +1194,65 @@ export default function NewEntryScreen() {
     if (!active) {
       return;
     }
+    const saved = savedCropByPhotoId[active.id];
+    setCropLineupWineId(null);
     setCropPhotoId(active.id);
-    setCropCenterX(50);
-    setCropCenterY(50);
-    setCropZoom(1);
+    setCropCenterX(saved?.centerX ?? 50);
+    setCropCenterY(saved?.centerY ?? 50);
+    setCropZoom(saved?.zoom ?? 1);
+    cropDragRef.current = null;
+  };
+
+  const openCropEditorForLineupWine = (wine: LineupWine) => {
+    const sourcePhoto = uploadPhotos[wine.photoIndex];
+    if (!sourcePhoto) {
+      setUploadMessage("Unable to open crop editor for this bottle.");
+      return;
+    }
+
+    const saved = savedCropByLineupWineId[wine.id];
+    let centerX = 50;
+    let centerY = 50;
+    let targetZoom = 1;
+    if (saved) {
+      centerX = saved.centerX;
+      centerY = saved.centerY;
+      targetZoom = saved.zoom;
+    } else {
+      const anchor = wine.label_anchor;
+      const targetBox = wine.bottle_bbox ?? wine.label_bbox;
+      centerX =
+        typeof anchor?.x === "number"
+          ? anchor.x * 100
+          : targetBox
+          ? (targetBox.x + targetBox.width / 2) * 100
+          : 50;
+      centerY =
+        typeof anchor?.y === "number"
+          ? anchor.y * 100
+          : targetBox
+          ? (targetBox.y + targetBox.height / 2) * 100
+          : 50;
+      const targetSpan = targetBox
+        ? Math.max(targetBox.width, targetBox.height)
+        : null;
+      targetZoom =
+        typeof targetSpan === "number" && targetSpan > 0
+          ? clampCropZoom(1 / Math.min(1, targetSpan * 1.35))
+          : 1;
+    }
+
+    setCropLineupWineId(wine.id);
+    setCropPhotoId(sourcePhoto.id);
+    setCropCenterX(clampCropPercent(centerX));
+    setCropCenterY(clampCropPercent(centerY));
+    setCropZoom(targetZoom);
     cropDragRef.current = null;
   };
 
   const closeCropEditor = () => {
     setCropPhotoId(null);
+    setCropLineupWineId(null);
     setCropImageNaturalSize(null);
     setCropFrameSize(0);
     setCropSourceLoading(false);
@@ -1161,9 +1267,22 @@ export default function NewEntryScreen() {
     }
 
     const [touchA, touchB] = touches;
-    const dx = touchA.locationX - touchB.locationX;
-    const dy = touchA.locationY - touchB.locationY;
+    const dx = touchA.pageX - touchB.pageX;
+    const dy = touchA.pageY - touchB.pageY;
     return Math.hypot(dx, dy);
+  };
+
+  const getPrimaryTouchPoint = (event: GestureResponderEvent) => {
+    const touch =
+      event.nativeEvent.touches[0] ??
+      event.nativeEvent.changedTouches?.[0];
+    if (!touch) {
+      return null;
+    }
+    return {
+      x: touch.pageX,
+      y: touch.pageY,
+    };
   };
 
   const handleCropResponderGrant = (event: GestureResponderEvent) => {
@@ -1177,10 +1296,15 @@ export default function NewEntryScreen() {
       return;
     }
 
+    const touchPoint = getPrimaryTouchPoint(event);
+    if (!touchPoint) {
+      return;
+    }
+
     cropDragRef.current = {
       mode: "pan",
-      startX: event.nativeEvent.locationX,
-      startY: event.nativeEvent.locationY,
+      startX: touchPoint.x,
+      startY: touchPoint.y,
       startCenterX: cropCenterX,
       startCenterY: cropCenterY,
     };
@@ -1205,38 +1329,55 @@ export default function NewEntryScreen() {
       }
 
       const zoomScale = pinchDistance / Math.max(1, drag.startDistance);
-      setCropZoom(clampCropZoom(drag.startZoom * zoomScale));
+      const nextZoom = clampCropZoom(drag.startZoom * zoomScale);
+      setCropZoom((current) =>
+        Math.abs(current - nextZoom) < 0.01 ? current : nextZoom
+      );
       return;
     }
 
     if (drag.mode !== "pan") {
+      const touchPoint = getPrimaryTouchPoint(event);
+      if (!touchPoint) {
+        return;
+      }
       cropDragRef.current = {
         mode: "pan",
-        startX: event.nativeEvent.locationX,
-        startY: event.nativeEvent.locationY,
+        startX: touchPoint.x,
+        startY: touchPoint.y,
         startCenterX: cropCenterX,
         startCenterY: cropCenterY,
       };
       return;
     }
 
-    const dx = event.nativeEvent.locationX - drag.startX;
-    const dy = event.nativeEvent.locationY - drag.startY;
+    const touchPoint = getPrimaryTouchPoint(event);
+    if (!touchPoint) {
+      return;
+    }
+    const dx = touchPoint.x - drag.startX;
+    const dy = touchPoint.y - drag.startY;
+    const horizontalTravel = geometry.overflowX;
+    const verticalTravel = geometry.overflowY;
     const nextCenterX =
-      geometry.overflowX > 0
+      horizontalTravel > 6
         ? clampCropPercent(
-            drag.startCenterX - (dx / geometry.overflowX) * 100
+            drag.startCenterX - (dx / horizontalTravel) * 100
           )
         : drag.startCenterX;
     const nextCenterY =
-      geometry.overflowY > 0
+      verticalTravel > 6
         ? clampCropPercent(
-            drag.startCenterY - (dy / geometry.overflowY) * 100
+            drag.startCenterY - (dy / verticalTravel) * 100
           )
         : drag.startCenterY;
 
-    setCropCenterX(nextCenterX);
-    setCropCenterY(nextCenterY);
+    setCropCenterX((current) =>
+      Math.abs(current - nextCenterX) < 0.08 ? current : nextCenterX
+    );
+    setCropCenterY((current) =>
+      Math.abs(current - nextCenterY) < 0.08 ? current : nextCenterY
+    );
   };
 
   const saveCropEdits = async () => {
@@ -1244,6 +1385,12 @@ export default function NewEntryScreen() {
     if (!sourcePhoto) {
       return;
     }
+    const sourceCropUri = sourcePhoto.originalUri ?? sourcePhoto.uri;
+    if (!sourceCropUri) {
+      setUploadMessage("Unable to load this image for crop editing.");
+      return;
+    }
+    const targetLineupWineId = cropLineupWineId;
     if (!WEB_API_BASE_URL) {
       setUploadMessage(
         "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable in-place crop editing."
@@ -1263,13 +1410,13 @@ export default function NewEntryScreen() {
 
     try {
       const formData = new FormData();
-      if (sourcePhoto.uri.startsWith("data:image/")) {
-        formData.append("photo_data_url", sourcePhoto.uri);
+      if (sourceCropUri.startsWith("data:image/")) {
+        formData.append("photo_data_url", sourceCropUri);
       } else {
         formData.append(
           "photo",
           {
-            uri: sourcePhoto.uri,
+            uri: sourceCropUri,
             name: sourcePhoto.name,
             type: sourcePhoto.mimeType,
           } as unknown as Blob
@@ -1299,26 +1446,53 @@ export default function NewEntryScreen() {
         throw new Error(payload.error ?? "Unable to crop this image.");
       }
 
+      if (targetLineupWineId) {
+        setSavedCropByLineupWineId((current) => ({
+          ...current,
+          [targetLineupWineId]: {
+            centerX: cropCenterX,
+            centerY: cropCenterY,
+            zoom: cropZoom,
+          },
+        }));
+        setLineupWines((current) =>
+          current.map((wine) =>
+            wine.id === targetLineupWineId
+              ? {
+                  ...wine,
+                  focus_crop_data_url: payload.cropped_data_url ?? wine.focus_crop_data_url,
+                }
+              : wine
+          )
+        );
+        closeCropEditor();
+        setUploadMessage("Bottle crop saved.");
+        return;
+      }
+
       const nextPhotos = uploadPhotos.map((photo) =>
         photo.id === sourcePhoto.id
           ? {
               ...photo,
               uri: payload.cropped_data_url ?? photo.uri,
+              originalUri: photo.originalUri ?? photo.uri,
               mimeType: payload.mime_type ?? "image/jpeg",
               name: `${photo.name.replace(/\.[a-z0-9]+$/i, "")}-crop.jpg`,
             }
           : photo
       );
 
+      setSavedCropByPhotoId((current) => ({
+        ...current,
+        [sourcePhoto.id]: {
+          centerX: cropCenterX,
+          centerY: cropCenterY,
+          zoom: cropZoom,
+        },
+      }));
       setUploadPhotos(nextPhotos);
       closeCropEditor();
-      setUploadMessage("Crop saved. Re-scanning...");
-
-      beginPhotoAnalysisRun(nextPhotos.length);
-      await executePhotoAnalysis({
-        analysisPhotos: nextPhotos,
-        accessToken,
-      });
+      setUploadMessage("Crop saved.");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to crop this image.";
@@ -1459,6 +1633,7 @@ export default function NewEntryScreen() {
       return {
         id: `${createdAt}-${index}-${Math.random().toString(36).slice(2, 8)}`,
         uri: asset.uri,
+        originalUri: asset.uri,
         name,
         mimeType,
         type: !hasLabelAlready && index === 0 ? "label" : "other_bottles",
@@ -1533,14 +1708,6 @@ export default function NewEntryScreen() {
     const selected = lineupWines.filter((wine) => wine.included);
     if (selected.length === 0) {
       setBulkCreateMessage("Select at least one detected bottle first.");
-      return;
-    }
-
-    const included = selected.filter(hasLineupWineDetails);
-    if (included.length === 0) {
-      setBulkCreateMessage(
-        "Selected bottles have no readable label details. Uncheck unknown bottles or retry with a clearer photo."
-      );
       return;
     }
     if (uploadPhotos.length === 0) {
@@ -1962,47 +2129,60 @@ export default function NewEntryScreen() {
                 {!isBulkCreating ? (
                   <View style={styles.bulkLineupList}>
                     {lineupWines.map((wine) => (
-                      <Pressable
+                      <View
                         key={wine.id}
                         style={[
                           styles.bulkLineupRow,
                           wine.included ? styles.bulkLineupRowActive : null,
                         ]}
-                        onPress={() => toggleLineupWineIncluded(wine.id)}
                       >
-                        <View
-                          style={[
-                            styles.bulkLineupCheckbox,
-                            wine.included ? styles.bulkLineupCheckboxActive : null,
-                          ]}
+                        <Pressable
+                          style={styles.bulkLineupRowMain}
+                          onPress={() => toggleLineupWineIncluded(wine.id)}
                         >
-                          {wine.included ? (
-                            <AppText style={styles.bulkLineupCheckboxMark}>✓</AppText>
-                          ) : null}
-                        </View>
-                        <View style={styles.bulkLineupCopy}>
-                          <AppText style={styles.bulkLineupWineTitle} numberOfLines={1}>
-                            {resolveLineupWineDisplayName(wine)}
-                          </AppText>
-                          <AppText style={styles.bulkLineupWineMeta} numberOfLines={2}>
-                            {[
-                              wine.producer,
-                              wine.vintage,
-                              wine.region,
-                              ...(wine.primary_grape_suggestions?.length
-                                ? [wine.primary_grape_suggestions.join(", ")]
-                                : []),
-                            ]
-                              .filter(Boolean)
-                              .join(" \u00b7 ") || "No details detected"}
-                          </AppText>
-                          {wine.confidence !== null ? (
-                            <AppText style={styles.bulkLineupWineMeta}>
-                              Confidence: {Math.round(wine.confidence * 100)}%
+                          <View
+                            style={[
+                              styles.bulkLineupCheckbox,
+                              wine.included ? styles.bulkLineupCheckboxActive : null,
+                            ]}
+                          >
+                            {wine.included ? (
+                              <AppText style={styles.bulkLineupCheckboxMark}>✓</AppText>
+                            ) : null}
+                          </View>
+                          <View style={styles.bulkLineupCopy}>
+                            <AppText style={styles.bulkLineupWineTitle} numberOfLines={1}>
+                              {resolveLineupWineDisplayName(wine)}
                             </AppText>
-                          ) : null}
-                        </View>
-                      </Pressable>
+                            <AppText style={styles.bulkLineupWineMeta} numberOfLines={2}>
+                              {[
+                                wine.producer,
+                                wine.vintage,
+                                wine.region,
+                                ...(wine.primary_grape_suggestions?.length
+                                  ? [wine.primary_grape_suggestions.join(", ")]
+                                  : []),
+                              ]
+                                .filter(Boolean)
+                                .join(" \u00b7 ") || "No details detected"}
+                            </AppText>
+                            {wine.confidence !== null ? (
+                              <AppText style={styles.bulkLineupWineMeta}>
+                                Confidence: {Math.round(wine.confidence * 100)}%
+                              </AppText>
+                            ) : null}
+                          </View>
+                        </Pressable>
+                        <Pressable
+                          style={styles.bulkLineupCropButton}
+                          onPress={() => openCropEditorForLineupWine(wine)}
+                          disabled={isBulkCreating}
+                        >
+                          <AppText style={styles.bulkLineupCropButtonText}>
+                            {wine.focus_crop_data_url ? "Edit crop" : "Crop"}
+                          </AppText>
+                        </Pressable>
+                      </View>
                     ))}
                   </View>
                 ) : null}
@@ -2029,16 +2209,16 @@ export default function NewEntryScreen() {
                   <Pressable
                     style={[
                       styles.bulkCreateButton,
-                      readyLineupWines.length === 0
+                      includedLineupWines.length === 0
                         ? styles.submitButtonDisabled
                         : null,
                     ]}
                     onPress={() => void createBulkEntriesFromLineup()}
-                    disabled={readyLineupWines.length === 0}
+                    disabled={includedLineupWines.length === 0}
                   >
                     <AppText style={styles.bulkCreateButtonText}>
-                      Create {readyLineupWines.length} entr
-                      {readyLineupWines.length === 1 ? "y" : "ies"}
+                      Create {includedLineupWines.length} entr
+                      {includedLineupWines.length === 1 ? "y" : "ies"}
                     </AppText>
                   </Pressable>
                 ) : null}
@@ -2429,7 +2609,9 @@ export default function NewEntryScreen() {
         <View style={styles.cropModalBackdrop}>
           <View style={styles.cropModalCard}>
             <View style={styles.cropModalHeader}>
-              <AppText style={styles.cropModalTitle}>Edit crop</AppText>
+              <AppText style={styles.cropModalTitle}>
+                {activeCropLineupWine ? "Edit bottle crop" : "Edit crop"}
+              </AppText>
               <Pressable onPress={closeCropEditor} hitSlop={8}>
                 <AppText style={styles.cropModalCloseText}>Close</AppText>
               </Pressable>
@@ -2442,6 +2624,7 @@ export default function NewEntryScreen() {
               }}
               onStartShouldSetResponder={() => true}
               onMoveShouldSetResponder={() => true}
+              onResponderTerminationRequest={() => false}
               onResponderGrant={handleCropResponderGrant}
               onResponderMove={handleCropResponderMove}
               onResponderRelease={() => {
@@ -2456,25 +2639,30 @@ export default function NewEntryScreen() {
                   <ActivityIndicator size="small" color="#fbbf24" />
                   <AppText style={styles.cropFrameHint}>Loading image...</AppText>
                 </View>
-              ) : activeCropPhoto?.uri ? (
+              ) : activeCropPhotoSourceUri ? (
                 <>
-                  <Image
-                    source={{ uri: activeCropPhoto.uri }}
-                    style={[
-                      styles.cropFrameImage,
-                      cropGeometry
-                        ? {
-                            width: cropGeometry.renderedWidth,
-                            height: cropGeometry.renderedHeight,
-                            transform: [
-                              { translateX: cropGeometry.offsetX },
-                              { translateY: cropGeometry.offsetY },
-                            ],
-                          }
-                        : null,
-                    ]}
-                    resizeMode="contain"
-                  />
+                  <View
+                    pointerEvents="none"
+                    style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
+                  >
+                    <Image
+                      source={{ uri: activeCropPhotoSourceUri }}
+                      style={[
+                        styles.cropFrameImage,
+                        cropGeometry
+                          ? {
+                              width: cropGeometry.renderedWidth,
+                              height: cropGeometry.renderedHeight,
+                              transform: [
+                                { translateX: cropGeometry.offsetX },
+                                { translateY: cropGeometry.offsetY },
+                              ],
+                            }
+                          : null,
+                      ]}
+                      resizeMode="contain"
+                    />
+                  </View>
                   <View pointerEvents="none" style={styles.cropFrameOutline} />
                   <View pointerEvents="none" style={styles.cropFrameCrosshair} />
                 </>
@@ -2484,27 +2672,8 @@ export default function NewEntryScreen() {
                 </View>
               )}
             </View>
-            <View style={styles.cropZoomRow}>
-              <Pressable
-                style={styles.cropZoomButton}
-                onPress={() => {
-                  setCropZoom((current) => clampCropZoom(current - 0.2));
-                }}
-              >
-                <AppText style={styles.cropZoomButtonText}>-</AppText>
-              </Pressable>
-              <AppText style={styles.cropZoomValue}>{cropZoom.toFixed(2)}x</AppText>
-              <Pressable
-                style={styles.cropZoomButton}
-                onPress={() => {
-                  setCropZoom((current) => clampCropZoom(current + 0.2));
-                }}
-              >
-                <AppText style={styles.cropZoomButtonText}>+</AppText>
-              </Pressable>
-            </View>
             <AppText style={styles.cropFrameHint}>
-              Drag to reposition. Use zoom for tighter bottle framing.
+              Pinch to zoom and drag to reposition.
             </AppText>
             <View style={styles.cropActionRow}>
               <Pressable style={styles.cancelButton} onPress={closeCropEditor}>

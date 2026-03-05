@@ -8,25 +8,18 @@ const MAX_ZOOM = 4;
 const OUTPUT_SIDE = 1200;
 
 type SharpFactory = (
-  input: Buffer,
-  options?: Record<string, unknown>
-) => {
-  rotate: () => {
-    metadata: () => Promise<{ width?: number; height?: number }>;
-    extract: (region: {
-      left: number;
-      top: number;
-      width: number;
-      height: number;
-    }) => {
-      resize: (options: { width: number; height: number; fit: "inside" }) => {
-        jpeg: (options: { quality: number; mozjpeg: boolean }) => {
-          toBuffer: () => Promise<Buffer>;
+  input:
+    | Buffer
+    | {
+        create: {
+          width: number;
+          height: number;
+          channels: number;
+          background: { r: number; g: number; b: number; alpha?: number };
         };
-      };
-    };
-  };
-};
+      },
+  options?: Record<string, unknown>
+) => any;
 
 let sharpFactoryPromise: Promise<SharpFactory | null> | null = null;
 
@@ -159,8 +152,12 @@ export async function POST(request: Request) {
   try {
     const image = sharpFactory(sourceBuffer, { failOn: "none" }).rotate();
     const metadata = await image.metadata();
-    const width = metadata.width ?? 0;
-    const height = metadata.height ?? 0;
+    const rawWidth = metadata.width ?? 0;
+    const rawHeight = metadata.height ?? 0;
+    const orientation = metadata.orientation ?? 1;
+    const orientationSwapsAxes = orientation >= 5 && orientation <= 8;
+    const width = orientationSwapsAxes ? rawHeight : rawWidth;
+    const height = orientationSwapsAxes ? rawWidth : rawHeight;
 
     if (width < MIN_CROP_SIDE || height < MIN_CROP_SIDE) {
       return NextResponse.json(
@@ -169,28 +166,72 @@ export async function POST(request: Request) {
       );
     }
 
-    const baseSide = Math.min(width, height);
-    const cropSide = Math.max(
-      MIN_CROP_SIDE,
-      Math.min(baseSide, Math.round(baseSide / zoom))
+    // Match mobile/web preview behavior: fit image into square frame at 1x, then
+    // apply zoom and translation in that rendered space before final clipping.
+    const baseScale = Math.min(OUTPUT_SIDE / width, OUTPUT_SIDE / height);
+    const effectiveScale = baseScale * zoom;
+    const renderedWidth = Math.max(1, Math.round(width * effectiveScale));
+    const renderedHeight = Math.max(1, Math.round(height * effectiveScale));
+    const overflowX = Math.max(0, renderedWidth - OUTPUT_SIDE);
+    const overflowY = Math.max(0, renderedHeight - OUTPUT_SIDE);
+    const centerPadX = Math.max(0, (OUTPUT_SIDE - renderedWidth) / 2);
+    const centerPadY = Math.max(0, (OUTPUT_SIDE - renderedHeight) / 2);
+    const effectiveCenterXPercent = overflowX <= 1 ? 50 : centerXPercent;
+    const effectiveCenterYPercent = overflowY <= 1 ? 50 : centerYPercent;
+    const offsetX = Math.round(
+      centerPadX - overflowX * (effectiveCenterXPercent / 100)
     );
-    const centerX = (centerXPercent / 100) * width;
-    const centerY = (centerYPercent / 100) * height;
-    const left = Math.round(clamp(centerX - cropSide / 2, 0, width - cropSide));
-    const top = Math.round(clamp(centerY - cropSide / 2, 0, height - cropSide));
+    const offsetY = Math.round(
+      centerPadY - overflowY * (effectiveCenterYPercent / 100)
+    );
 
-    const croppedBuffer = await image
-      .extract({
-        left,
-        top,
-        width: cropSide,
-        height: cropSide,
-      })
+    const sourceLeft = Math.max(0, -offsetX);
+    const sourceTop = Math.max(0, -offsetY);
+    const destLeft = Math.max(0, offsetX);
+    const destTop = Math.max(0, offsetY);
+    const sourceWidth = Math.min(renderedWidth - sourceLeft, OUTPUT_SIDE - destLeft);
+    const sourceHeight = Math.min(renderedHeight - sourceTop, OUTPUT_SIDE - destTop);
+
+    if (sourceWidth <= 0 || sourceHeight <= 0) {
+      return NextResponse.json(
+        { error: "Unable to crop this photo." },
+        { status: 422 }
+      );
+    }
+
+    const renderedBuffer = await sharpFactory(sourceBuffer, { failOn: "none" })
+      .rotate()
       .resize({
-        width: Math.min(OUTPUT_SIDE, cropSide),
-        height: Math.min(OUTPUT_SIDE, cropSide),
-        fit: "inside",
+        width: renderedWidth,
+        height: renderedHeight,
+        fit: "fill",
       })
+      .toBuffer();
+
+    const clippedBuffer = await sharpFactory(renderedBuffer, { failOn: "none" })
+      .extract({
+        left: sourceLeft,
+        top: sourceTop,
+        width: sourceWidth,
+        height: sourceHeight,
+      })
+      .toBuffer();
+
+    const croppedBuffer = await sharpFactory({
+      create: {
+        width: OUTPUT_SIDE,
+        height: OUTPUT_SIDE,
+        channels: 3,
+        background: { r: 0, g: 0, b: 0, alpha: 1 },
+      },
+    })
+      .composite([
+        {
+          input: clippedBuffer,
+          left: destLeft,
+          top: destTop,
+        },
+      ])
       .jpeg({
         quality: 88,
         mozjpeg: true,
