@@ -211,7 +211,9 @@ export async function POST(
   const insertPayload: Record<string, unknown> = {
     user_id: user.id,
     root_entry_id: rootEntry.id,
-    is_feed_visible: true,
+    // Keep the original tagged post as the single feed/home item.
+    // Personal follow-up ratings stay on the user's profile.
+    is_feed_visible: false,
     wine_name: rootEntry.wine_name ?? null,
     producer: rootEntry.producer ?? null,
     vintage: rootEntry.vintage ?? null,

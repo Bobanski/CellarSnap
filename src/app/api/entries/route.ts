@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
+import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
 import {
   ACIDITY_LEVELS,
   ALCOHOL_LEVELS,
@@ -583,8 +584,11 @@ export async function POST(request: Request) {
 
   const insertPayload: Record<string, unknown> = {
     user_id: user.id,
-    wine_name: payload.data.wine_name ?? null,
-    producer: payload.data.producer ?? null,
+    wine_name:
+      normalizeWineNameText(payload.data.wine_name) ??
+      payload.data.wine_name?.trim() ??
+      null,
+    producer: normalizeProducerText(payload.data.producer) ?? null,
     vintage: payload.data.vintage ?? null,
     country: payload.data.country ?? null,
     region: payload.data.region ?? null,

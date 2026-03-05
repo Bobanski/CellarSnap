@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
+import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
 import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 import {
   OpenAiImagePreparationError,
@@ -55,6 +56,46 @@ const MAX_IMAGE_INPUT_BYTES = 24 * 1024 * 1024;
 const MAX_IMAGE_PROCESSED_BYTES = 8 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 60;
+const MIN_CROP_SIDE = 8;
+const DEFAULT_CROP_OUTPUT_SIZE = 960;
+
+type NormalizedRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type NormalizedAnchor = {
+  x: number;
+  y: number;
+};
+
+type SharpFactory = (
+  input: Buffer,
+  options?: Record<string, unknown>
+) => {
+  metadata: () => Promise<{ width?: number; height?: number }>;
+  extract: (region: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }) => {
+    resize: (options: {
+      width: number;
+      height: number;
+      fit: "inside";
+      withoutEnlargement: boolean;
+    }) => {
+      jpeg: (options: { quality: number; mozjpeg: boolean }) => {
+        toBuffer: () => Promise<Buffer>;
+      };
+    };
+  };
+};
+
+let sharpFactoryPromise: Promise<SharpFactory | null> | null = null;
 
 function normalize(value?: string | null) {
   if (value === undefined || value === null) return null;
@@ -153,6 +194,202 @@ function extractJson(text: string) {
     throw new Error("Invalid JSON response");
   }
   return JSON.parse(text.slice(start, end + 1));
+}
+
+async function loadSharpFactory() {
+  if (!sharpFactoryPromise) {
+    sharpFactoryPromise = import("sharp")
+      .then((module) => {
+        const candidate = (module as { default?: unknown }).default;
+        return typeof candidate === "function"
+          ? (candidate as SharpFactory)
+          : null;
+      })
+      .catch(() => null);
+  }
+  return sharpFactoryPromise;
+}
+
+function parseImageDataUrl(dataUrl: string) {
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl.trim());
+  if (!match) {
+    return null;
+  }
+
+  try {
+    return {
+      mimeType: match[1].toLowerCase(),
+      buffer: Buffer.from(match[2], "base64"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function computeBottleCrop({
+  imageWidth,
+  imageHeight,
+  bottleBbox,
+  labelBbox,
+  labelAnchor,
+}: {
+  imageWidth: number;
+  imageHeight: number;
+  bottleBbox: NormalizedRect | null;
+  labelBbox: NormalizedRect | null;
+  labelAnchor: NormalizedAnchor | null;
+}) {
+  if (!bottleBbox) {
+    return null;
+  }
+
+  const boxX = Math.round(bottleBbox.x * imageWidth);
+  const boxY = Math.round(bottleBbox.y * imageHeight);
+  const boxWidth = Math.round(bottleBbox.width * imageWidth);
+  const boxHeight = Math.round(bottleBbox.height * imageHeight);
+
+  if (boxWidth < MIN_CROP_SIDE || boxHeight < MIN_CROP_SIDE) {
+    return null;
+  }
+
+  const horizontalPadding = Math.round(boxWidth * 0.16);
+  const cropX = Math.max(0, boxX - horizontalPadding);
+  const cropRight = Math.min(imageWidth, boxX + boxWidth + horizontalPadding);
+  const cropWidth = cropRight - cropX;
+  const side = Math.round(Math.min(cropWidth, imageWidth, imageHeight));
+
+  if (side < MIN_CROP_SIDE) {
+    return null;
+  }
+
+  const inferredLabelTop = boxY + boxHeight * 0.28;
+  const inferredLabelBottom = boxY + boxHeight * 0.82;
+  let labelTop = inferredLabelTop;
+  let labelBottom = inferredLabelBottom;
+
+  if (labelBbox) {
+    const modelLabelTop = labelBbox.y * imageHeight;
+    const modelLabelBottom = (labelBbox.y + labelBbox.height) * imageHeight;
+    const boundedTop = Math.max(
+      boxY + boxHeight * 0.12,
+      Math.min(boxY + boxHeight * 0.9, modelLabelTop)
+    );
+    const boundedBottom = Math.max(
+      boundedTop + MIN_CROP_SIDE,
+      Math.min(boxY + boxHeight * 0.95, modelLabelBottom)
+    );
+    if (boundedBottom - boundedTop >= MIN_CROP_SIDE) {
+      labelTop = boundedTop;
+      labelBottom = boundedBottom;
+    }
+  }
+
+  const labelHeight = Math.max(MIN_CROP_SIDE, labelBottom - labelTop);
+  const labelCenterY = labelTop + labelHeight / 2;
+  const anchorY = labelAnchor ? labelAnchor.y * imageHeight : null;
+  const anchorIsReasonable =
+    typeof anchorY === "number" &&
+    Number.isFinite(anchorY) &&
+    anchorY >= labelTop - boxHeight * 0.08 &&
+    anchorY <= labelBottom + boxHeight * 0.18;
+  const blendedCenterY = anchorIsReasonable
+    ? labelCenterY * 0.7 + anchorY * 0.3
+    : labelCenterY;
+
+  const focusY = blendedCenterY + labelHeight * 0.16;
+  const minY = labelTop + labelHeight * 0.2;
+  const maxY = labelBottom + labelHeight * 0.9;
+  const constrainedFocusY = Math.min(maxY, Math.max(minY, focusY));
+  const cropY = Math.min(
+    Math.max(0, Math.round(constrainedFocusY - side / 2)),
+    Math.max(0, imageHeight - side)
+  );
+  const cropLeft = Math.min(Math.max(0, Math.round(cropX)), Math.max(0, imageWidth - side));
+
+  return {
+    left: cropLeft,
+    top: cropY,
+    width: side,
+    height: side,
+  };
+}
+
+async function createFocusCropDataUrls({
+  sourceDataUrl,
+  wines,
+}: {
+  sourceDataUrl: string;
+  wines: Array<{
+    bottle_bbox: NormalizedRect | null;
+    label_bbox: NormalizedRect | null;
+    label_anchor: NormalizedAnchor | null;
+  }>;
+}) {
+  const parsed = parseImageDataUrl(sourceDataUrl);
+  if (!parsed) {
+    return wines.map(() => null as string | null);
+  }
+
+  const sharpFactory = await loadSharpFactory();
+  if (!sharpFactory) {
+    return wines.map(() => null as string | null);
+  }
+
+  let width = 0;
+  let height = 0;
+  try {
+    const metadata = await sharpFactory(parsed.buffer, { failOn: "none" }).metadata();
+    width = metadata.width ?? 0;
+    height = metadata.height ?? 0;
+  } catch {
+    return wines.map(() => null as string | null);
+  }
+
+  if (width < MIN_CROP_SIDE || height < MIN_CROP_SIDE) {
+    return wines.map(() => null as string | null);
+  }
+
+  const outputs = await Promise.all(
+    wines.map(async (wine) => {
+      const crop = computeBottleCrop({
+        imageWidth: width,
+        imageHeight: height,
+        bottleBbox: wine.bottle_bbox,
+        labelBbox: wine.label_bbox,
+        labelAnchor: wine.label_anchor,
+      });
+
+      if (!crop) {
+        return null;
+      }
+
+      try {
+        const croppedBuffer = await sharpFactory(parsed.buffer, { failOn: "none" })
+          .extract(crop)
+          .resize({
+            width: DEFAULT_CROP_OUTPUT_SIZE,
+            height: DEFAULT_CROP_OUTPUT_SIZE,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .jpeg({
+            quality: 88,
+            mozjpeg: true,
+          })
+          .toBuffer();
+
+        if (!croppedBuffer.byteLength) {
+          return null;
+        }
+
+        return `data:image/jpeg;base64,${croppedBuffer.toString("base64")}`;
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return outputs;
 }
 
 export async function POST(request: Request) {
@@ -396,8 +633,9 @@ export async function POST(request: Request) {
     }
 
     const wines = parsed.data.wines.map((wine) => ({
-      wine_name: normalize(wine.wine_name),
-      producer: normalize(wine.producer),
+      wine_name:
+        normalizeWineNameText(wine.wine_name) ?? normalize(wine.wine_name),
+      producer: normalizeProducerText(wine.producer) ?? normalize(wine.producer),
       vintage: normalize(wine.vintage),
       country: normalize(wine.country),
       region: normalize(wine.region),
@@ -413,7 +651,17 @@ export async function POST(request: Request) {
       label_anchor: normalizeAnchor(wine.label_anchor),
     }));
 
-    const filteredWines = wines.filter((wine) => {
+    const focusCrops = await createFocusCropDataUrls({
+      sourceDataUrl: dataUrl,
+      wines,
+    });
+
+    const winesWithCrops = wines.map((wine, index) => ({
+      ...wine,
+      focus_crop_data_url: focusCrops[index] ?? null,
+    }));
+
+    const filteredWines = winesWithCrops.filter((wine) => {
       return Boolean(
         wine.wine_name ||
           wine.producer ||

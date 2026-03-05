@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
+import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
 import {
   ACIDITY_LEVELS,
   ALCOHOL_LEVELS,
@@ -463,6 +464,17 @@ export async function PUT(
 
   const normalizedData = {
     ...payload.data,
+    wine_name:
+      payload.data.wine_name === undefined
+        ? undefined
+        : payload.data.wine_name === null
+          ? null
+          : normalizeWineNameText(payload.data.wine_name) ??
+            payload.data.wine_name,
+    producer:
+      payload.data.producer === undefined
+        ? undefined
+        : normalizeProducerText(payload.data.producer),
     advanced_notes:
       payload.data.advanced_notes === undefined
         ? undefined

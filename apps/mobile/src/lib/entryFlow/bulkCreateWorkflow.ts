@@ -1,7 +1,9 @@
 import {
   hasLineupWineDetails,
+  normalizeProducerText,
   normalizeGrapeLookupValue,
   OTHER_BOTTLES_CONFIDENCE_THRESHOLD,
+  resolveLineupWineDisplayName,
   runWithConcurrency,
   type PrivacyLevel,
 } from "@cellarsnap/shared";
@@ -39,6 +41,7 @@ export type LineupWine = {
   classification: string | null;
   primary_grape_suggestions: string[];
   confidence: number | null;
+  focus_crop_data_url?: string | null;
 };
 
 export type BulkEntryFormSnapshot = {
@@ -163,13 +166,8 @@ export async function runBulkCreateWorkflow({
 
         try {
           const primaryGrapeIds = grapeIdsByIndex.get(index) ?? [];
-          const defaultWineName =
-            wine.wine_name ??
-            wine.producer ??
-            wine.appellation ??
-            wine.region ??
-            wine.primary_grape_suggestions?.[0] ??
-            "Unknown wine";
+          const defaultWineName = resolveLineupWineDisplayName(wine);
+          const normalizedProducer = normalizeProducerText(wine.producer);
 
           let entryId: string | null = null;
 
@@ -177,7 +175,7 @@ export async function runBulkCreateWorkflow({
             const fallbackPayload: Record<string, unknown> = {
               user_id: userId,
               wine_name: defaultWineName,
-              producer: wine.producer,
+              producer: normalizedProducer,
               vintage: wine.vintage,
               country: wine.country,
               region: wine.region,
@@ -223,7 +221,7 @@ export async function runBulkCreateWorkflow({
                 },
                 body: JSON.stringify({
                   wine_name: defaultWineName,
-                  producer: wine.producer,
+                  producer: normalizedProducer,
                   vintage: wine.vintage,
                   country: wine.country,
                   region: wine.region,
@@ -293,24 +291,43 @@ export async function runBulkCreateWorkflow({
               : "All entries started. Finishing photo uploads..."
           );
 
-          const labelSourcePhoto =
+          const lineupSourcePhoto =
             uploadPhotos[wine.photoIndex] ??
+            uploadPhotos.find((photo) => photo.type === "lineup") ??
             uploadPhotos.find((photo) => photo.type === "label") ??
             uploadPhotos[0];
+          const croppedLabelPhoto =
+            typeof wine.focus_crop_data_url === "string" &&
+            wine.focus_crop_data_url.trim().length > 0
+              ? ({
+                  id: `${wine.id}-focus-crop`,
+                  uri: wine.focus_crop_data_url,
+                  name: `${wine.id}-focus.jpg`,
+                  mimeType: "image/jpeg",
+                  type: "label",
+                  contextConfidence: wine.confidence,
+                } as UploadPhotoItem)
+              : null;
+          const labelSourcePhoto = croppedLabelPhoto ?? lineupSourcePhoto;
           if (!labelSourcePhoto) {
             throw new Error("No source photo available for this bottle.");
           }
 
           const contextSourcePhotos = uploadPhotos.filter(
-            (photo) => photo.id !== labelSourcePhoto.id
+            (photo) => photo.id !== lineupSourcePhoto?.id
           );
-          const photosForEntry: UploadPhotoItem[] = [
-            { ...labelSourcePhoto, type: "label" },
+          const photosForEntry: UploadPhotoItem[] = [{ ...labelSourcePhoto, type: "label" }];
+
+          if (lineupSourcePhoto) {
+            photosForEntry.push({ ...lineupSourcePhoto, type: "lineup" });
+          }
+
+          photosForEntry.push(
             ...contextSourcePhotos.map((photo) => ({
               ...photo,
               type: (photo.type === "label" ? "lineup" : photo.type) as UploadPhotoType,
-            })),
-          ];
+            }))
+          );
 
           try {
             await uploadSpecificPhotosToEntry(entryId, userId, photosForEntry);

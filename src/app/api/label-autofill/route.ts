@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
+import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
 import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 import {
   OpenAiImagePreparationError,
@@ -247,8 +248,9 @@ export async function POST(request: Request) {
 
     const data = parsed.data;
     return NextResponse.json({
-      wine_name: normalize(data.wine_name),
-      producer: normalize(data.producer),
+      wine_name:
+        normalizeWineNameText(data.wine_name) ?? normalize(data.wine_name),
+      producer: normalizeProducerText(data.producer) ?? normalize(data.producer),
       vintage: normalize(data.vintage),
       country: normalize(data.country),
       region: normalize(data.region),

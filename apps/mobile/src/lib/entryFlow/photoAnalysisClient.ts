@@ -1,9 +1,16 @@
 import {
   hasLineupWineDetails,
+  normalizeBottleBbox,
   normalizeConfidence,
   normalizeContextPhotoTag,
+  normalizeLabelAnchor,
+  normalizeLabelBbox,
   normalizeLineupText,
+  normalizeProducerText,
+  normalizeWineNameText,
   type ContextPhotoTag,
+  type NormalizedLabelAnchor,
+  type NormalizedLineupBbox,
 } from "@cellarsnap/shared";
 
 type UploadPhotoAnalysisTarget = {
@@ -43,6 +50,10 @@ type LineupApiWine = {
   classification?: string | null;
   primary_grape_suggestions?: string[] | null;
   confidence?: number | null;
+  bottle_bbox?: NormalizedLineupBbox | null;
+  label_bbox?: NormalizedLineupBbox | null;
+  label_anchor?: NormalizedLabelAnchor | null;
+  focus_crop_data_url?: string | null;
 };
 
 type LineupAutofillResponse = {
@@ -64,7 +75,22 @@ export type AnalyzedLineupWine = {
   classification: string | null;
   primary_grape_suggestions: string[];
   confidence: number | null;
+  bottle_bbox: NormalizedLineupBbox | null;
+  label_bbox: NormalizedLineupBbox | null;
+  label_anchor: NormalizedLabelAnchor | null;
+  focus_crop_data_url: string | null;
 };
+
+function normalizeInlineImageDataUrl(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim();
+  if (!/^data:image\/[a-z0-9.+-]+;base64,/i.test(normalized)) {
+    return null;
+  }
+  return normalized;
+}
 
 export function normalizeAnalysisErrorMessage(value: string | null | undefined) {
   const message = (value ?? "").trim();
@@ -247,8 +273,12 @@ export async function requestLineupAutofill({
   const normalizedWines = (Array.isArray(payload.wines) ? payload.wines : [])
     .map((wine, index) => {
       const normalized = {
-        wine_name: normalizeLineupText(wine.wine_name),
-        producer: normalizeLineupText(wine.producer),
+        wine_name:
+          normalizeWineNameText(wine.wine_name) ??
+          normalizeLineupText(wine.wine_name),
+        producer:
+          normalizeProducerText(wine.producer) ??
+          normalizeLineupText(wine.producer),
         vintage: normalizeLineupText(wine.vintage),
         country: normalizeLineupText(wine.country),
         region: normalizeLineupText(wine.region),
@@ -261,6 +291,10 @@ export async function requestLineupAutofill({
               .slice(0, 3)
           : [],
         confidence: normalizeConfidence(wine.confidence),
+        bottle_bbox: normalizeBottleBbox(wine.bottle_bbox),
+        label_bbox: normalizeLabelBbox(wine.label_bbox),
+        label_anchor: normalizeLabelAnchor(wine.label_anchor),
+        focus_crop_data_url: normalizeInlineImageDataUrl(wine.focus_crop_data_url),
       };
       return {
         ...normalized,

@@ -137,7 +137,32 @@ export async function GET() {
       );
     }
 
-    friendEntries = friendEntriesResult.data ?? [];
+    const rawFriendEntries = (friendEntriesResult.data ?? []) as Array<
+      Record<string, unknown> & { id: string; root_entry_id?: string | null }
+    >;
+    const dedupedByRoot = new Map<string, Record<string, unknown>>();
+
+    rawFriendEntries.forEach((entry) => {
+      const dedupeKey =
+        typeof entry.root_entry_id === "string" && entry.root_entry_id.length > 0
+          ? entry.root_entry_id
+          : entry.id;
+      const existing = dedupedByRoot.get(dedupeKey) as
+        | (Record<string, unknown> & { root_entry_id?: string | null })
+        | undefined;
+      if (!existing) {
+        dedupedByRoot.set(dedupeKey, entry);
+        return;
+      }
+
+      const existingIsCanonical = !existing.root_entry_id;
+      const nextIsCanonical = !entry.root_entry_id;
+      if (nextIsCanonical && !existingIsCanonical) {
+        dedupedByRoot.set(dedupeKey, entry);
+      }
+    });
+
+    friendEntries = Array.from(dedupedByRoot.values()) as typeof ownEntries;
   }
 
   // ── Resolve label photos for all entries ──

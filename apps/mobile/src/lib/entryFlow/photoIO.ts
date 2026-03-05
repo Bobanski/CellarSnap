@@ -85,10 +85,39 @@ function readArrayBufferFromUriViaXhr(uri: string) {
   });
 }
 
+function readArrayBufferFromDataUrl(uri: string) {
+  const match = /^data:image\/[a-z0-9.+-]+;base64,([a-z0-9+/=]+)$/i.exec(uri.trim());
+  if (!match?.[1]) {
+    return null;
+  }
+  if (typeof globalThis.atob !== "function") {
+    return null;
+  }
+
+  try {
+    const decoded = globalThis.atob(match[1]);
+    if (!decoded.length) {
+      return null;
+    }
+    const bytes = new Uint8Array(decoded.length);
+    for (let index = 0; index < decoded.length; index += 1) {
+      bytes[index] = decoded.charCodeAt(index);
+    }
+    return bytes.buffer;
+  } catch {
+    return null;
+  }
+}
+
 export async function readPhotoBytes(uri: string) {
   const normalizedUri = uri.trim();
   if (!normalizedUri) {
     throw new Error("Unable to read selected photo.");
+  }
+
+  const inlineDataBytes = readArrayBufferFromDataUrl(normalizedUri);
+  if (inlineDataBytes && inlineDataBytes.byteLength > 0) {
+    return inlineDataBytes;
   }
 
   const preferXhr =

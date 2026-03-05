@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -19,15 +21,21 @@ import {
   createEntryInputSchema,
   getTodayLocalYmd,
   hasLineupWineDetails,
+  isUnknownWineName,
   normalizeGrapeLookupValue,
   normalizePrivacyLevel,
+  normalizeProducerText,
+  normalizeWineNameText,
   PRIVACY_LEVEL_LABELS,
   PRIVACY_LEVEL_VALUES,
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
+  resolveLineupWineDisplayName,
   toWineEntryInsertPayload,
   type PricePaidCurrency,
   type PricePaidSource,
+  type NormalizedLabelAnchor,
+  type NormalizedLineupBbox,
   type PrivacyLevel,
   type QprLevel,
 } from "@cellarsnap/shared";
@@ -164,6 +172,10 @@ type LineupWine = {
   classification: string | null;
   primary_grape_suggestions: string[];
   confidence: number | null;
+  bottle_bbox: NormalizedLineupBbox | null;
+  label_bbox: NormalizedLineupBbox | null;
+  label_anchor: NormalizedLabelAnchor | null;
+  focus_crop_data_url: string | null;
 };
 
 const DEFAULT_PRIVACY: PrivacyDefaults = {
@@ -321,6 +333,7 @@ export default function NewEntryScreen() {
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLocationFocused, setIsLocationFocused] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [locationApiMessage, setLocationApiMessage] = useState<string | null>(null);
   const [locationSessionToken, setLocationSessionToken] = useState(() =>
@@ -343,6 +356,17 @@ export default function NewEntryScreen() {
   const [bulkCreateMessage, setBulkCreateMessage] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
+  const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [cropFrameSize, setCropFrameSize] = useState(0);
+  const [cropCenterX, setCropCenterX] = useState(50);
+  const [cropCenterY, setCropCenterY] = useState(50);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropSourceLoading, setCropSourceLoading] = useState(false);
+  const [isSavingCrop, setIsSavingCrop] = useState(false);
   const [lastScanConfidence, setLastScanConfidence] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -374,6 +398,45 @@ export default function NewEntryScreen() {
       includedLineupWines.length > 0 &&
       /(failed|unable|network|error)/i.test(bulkCreateMessage)
   );
+  const activeCropPhoto =
+    cropPhotoId !== null
+      ? uploadPhotos.find((photo) => photo.id === cropPhotoId) ?? null
+      : null;
+  const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
+  const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
+  const getCropGeometry = () => {
+    if (!cropImageNaturalSize || cropFrameSize <= 0) {
+      return null;
+    }
+
+    const baseScale = Math.min(
+      cropFrameSize / cropImageNaturalSize.width,
+      cropFrameSize / cropImageNaturalSize.height
+    );
+    const effectiveScale = baseScale * cropZoom;
+    const renderedWidth = cropImageNaturalSize.width * effectiveScale;
+    const renderedHeight = cropImageNaturalSize.height * effectiveScale;
+    const overflowX = Math.max(0, renderedWidth - cropFrameSize);
+    const overflowY = Math.max(0, renderedHeight - cropFrameSize);
+    const centerPadX = Math.max(0, (cropFrameSize - renderedWidth) / 2);
+    const centerPadY = Math.max(0, (cropFrameSize - renderedHeight) / 2);
+
+    return {
+      renderedWidth,
+      renderedHeight,
+      overflowX,
+      overflowY,
+      offsetX: centerPadX - overflowX * (cropCenterX / 100),
+      offsetY: centerPadY - overflowY * (cropCenterY / 100),
+    };
+  };
+  const cropDragRef = useRef<{
+    startX: number;
+    startY: number;
+    startCenterX: number;
+    startCenterY: number;
+  } | null>(null);
+  const formScrollRef = useRef<ScrollView | null>(null);
   const {
     uploadGalleryActiveIndex,
     uploadGalleryFrameWidth,
@@ -416,6 +479,13 @@ export default function NewEntryScreen() {
 
   const updateField = <K extends keyof EntryFormState>(field: K, value: EntryFormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const ensureLocationInputVisible = () => {
+    const delay = Platform.OS === "ios" ? 120 : 60;
+    setTimeout(() => {
+      formScrollRef.current?.scrollToEnd({ animated: true });
+    }, delay);
   };
 
   const getAccessTokenForApi = async () => {
@@ -515,11 +585,54 @@ export default function NewEntryScreen() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!activeCropPhoto) {
+      setCropImageNaturalSize(null);
+      setCropSourceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCropSourceLoading(true);
+    Image.getSize(
+      activeCropPhoto.uri,
+      (width, height) => {
+        if (cancelled) {
+          return;
+        }
+        setCropImageNaturalSize({
+          width: Math.max(1, width),
+          height: Math.max(1, height),
+        });
+        setCropSourceLoading(false);
+      },
+      () => {
+        if (cancelled) {
+          return;
+        }
+        setCropImageNaturalSize(null);
+        setCropSourceLoading(false);
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCropPhoto]);
+
+  useEffect(() => {
     let cancelled = false;
     const query = form.location_text.trim();
     const sessionToken = locationSessionToken;
 
     const timer = setTimeout(async () => {
+      if (!isLocationFocused) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+        }
+        return;
+      }
+
       if (!GOOGLE_MAPS_API_KEY) {
         if (!cancelled) {
           setLocationSuggestions([]);
@@ -594,7 +707,7 @@ export default function NewEntryScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [form.location_text, locationSessionToken]);
+  }, [form.location_text, isLocationFocused, locationSessionToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -818,30 +931,25 @@ export default function NewEntryScreen() {
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : "";
     };
-    const isUnknownWineName = (value: string) => {
-      const normalized = value.trim().toLowerCase();
-      return (
-        normalized === "unknown" ||
-        normalized === "unknown wine" ||
-        normalized === "n/a" ||
-        normalized === "na" ||
-        normalized === "not sure"
-      );
-    };
 
     setForm((current) => ({
       ...current,
       wine_name:
         current.wine_name ||
         (() => {
-          const normalizedWineName = normalizeText(payload.wine_name);
-          const normalizedProducer = normalizeText(payload.producer);
+          const normalizedWineName =
+            normalizeWineNameText(payload.wine_name) ?? normalizeText(payload.wine_name);
+          const normalizedProducer =
+            normalizeProducerText(payload.producer) ?? normalizeText(payload.producer);
           if (normalizedWineName && !isUnknownWineName(normalizedWineName)) {
             return normalizedWineName;
           }
           return normalizedProducer;
         })(),
-      producer: current.producer || normalizeText(payload.producer),
+      producer:
+        current.producer ||
+        normalizeProducerText(payload.producer) ||
+        normalizeText(payload.producer),
       vintage: current.vintage || normalizeText(payload.vintage),
       country: current.country || normalizeText(payload.country),
       region: current.region || normalizeText(payload.region),
@@ -904,30 +1012,25 @@ export default function NewEntryScreen() {
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : "";
     };
-    const isUnknownWineName = (value: string) => {
-      const normalized = value.trim().toLowerCase();
-      return (
-        normalized === "unknown" ||
-        normalized === "unknown wine" ||
-        normalized === "n/a" ||
-        normalized === "na" ||
-        normalized === "not sure"
-      );
-    };
 
     setForm((current) => ({
       ...current,
       wine_name:
         current.wine_name ||
         (() => {
-          const normalizedWineName = normalizeText(wine.wine_name);
-          const normalizedProducer = normalizeText(wine.producer);
+          const normalizedWineName =
+            normalizeWineNameText(wine.wine_name) ?? normalizeText(wine.wine_name);
+          const normalizedProducer =
+            normalizeProducerText(wine.producer) ?? normalizeText(wine.producer);
           if (normalizedWineName && !isUnknownWineName(normalizedWineName)) {
             return normalizedWineName;
           }
           return normalizedProducer;
         })(),
-      producer: current.producer || normalizeText(wine.producer),
+      producer:
+        current.producer ||
+        normalizeProducerText(wine.producer) ||
+        normalizeText(wine.producer),
       vintage: current.vintage || normalizeText(wine.vintage),
       country: current.country || normalizeText(wine.country),
       region: current.region || normalizeText(wine.region),
@@ -992,6 +1095,151 @@ export default function NewEntryScreen() {
       setLastScanConfidence(null);
       setUploadMessage(null);
       resetUploadGallery();
+    }
+  };
+
+  const openCropEditorForActivePhoto = () => {
+    const active = uploadPhotos[uploadGalleryActiveIndex];
+    if (!active) {
+      return;
+    }
+    setCropPhotoId(active.id);
+    setCropCenterX(50);
+    setCropCenterY(50);
+    setCropZoom(1);
+    cropDragRef.current = null;
+  };
+
+  const closeCropEditor = () => {
+    setCropPhotoId(null);
+    setCropImageNaturalSize(null);
+    setCropFrameSize(0);
+    setCropSourceLoading(false);
+    setIsSavingCrop(false);
+    cropDragRef.current = null;
+  };
+
+  const handleCropResponderGrant = (x: number, y: number) => {
+    cropDragRef.current = {
+      startX: x,
+      startY: y,
+      startCenterX: cropCenterX,
+      startCenterY: cropCenterY,
+    };
+  };
+
+  const handleCropResponderMove = (x: number, y: number) => {
+    const drag = cropDragRef.current;
+    const geometry = getCropGeometry();
+    if (!drag || !geometry) {
+      return;
+    }
+
+    const dx = x - drag.startX;
+    const dy = y - drag.startY;
+    const nextCenterX =
+      geometry.overflowX > 0
+        ? clampCropPercent(
+            drag.startCenterX - (dx / geometry.overflowX) * 100
+          )
+        : drag.startCenterX;
+    const nextCenterY =
+      geometry.overflowY > 0
+        ? clampCropPercent(
+            drag.startCenterY - (dy / geometry.overflowY) * 100
+          )
+        : drag.startCenterY;
+
+    setCropCenterX(nextCenterX);
+    setCropCenterY(nextCenterY);
+  };
+
+  const saveCropEdits = async () => {
+    const sourcePhoto = activeCropPhoto;
+    if (!sourcePhoto) {
+      return;
+    }
+    if (!WEB_API_BASE_URL) {
+      setUploadMessage(
+        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable in-place crop editing."
+      );
+      return;
+    }
+
+    const accessToken = await getAccessTokenForApi();
+    if (!accessToken) {
+      setUploadMessage("Session expired. Sign in again to save crop edits.");
+      return;
+    }
+
+    const normalizedBaseUrl = WEB_API_BASE_URL.replace(/\/$/, "");
+    setIsSavingCrop(true);
+    setUploadMessage("Saving crop...");
+
+    try {
+      const formData = new FormData();
+      if (sourcePhoto.uri.startsWith("data:image/")) {
+        formData.append("photo_data_url", sourcePhoto.uri);
+      } else {
+        formData.append(
+          "photo",
+          {
+            uri: sourcePhoto.uri,
+            name: sourcePhoto.name,
+            type: sourcePhoto.mimeType,
+          } as unknown as Blob
+        );
+      }
+      formData.append("center_x", String(cropCenterX));
+      formData.append("center_y", String(cropCenterY));
+      formData.append("zoom", String(cropZoom));
+
+      const response = await fetch(`${normalizedBaseUrl}/api/photo-crop`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        cropped_data_url?: string;
+        mime_type?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.cropped_data_url) {
+        if (response.status === 401) {
+          throw new Error("Session expired. Sign in again to save crop edits.");
+        }
+        throw new Error(payload.error ?? "Unable to crop this image.");
+      }
+
+      const nextPhotos = uploadPhotos.map((photo) =>
+        photo.id === sourcePhoto.id
+          ? {
+              ...photo,
+              uri: payload.cropped_data_url ?? photo.uri,
+              mimeType: payload.mime_type ?? "image/jpeg",
+              name: `${photo.name.replace(/\.[a-z0-9]+$/i, "")}-crop.jpg`,
+            }
+          : photo
+      );
+
+      setUploadPhotos(nextPhotos);
+      closeCropEditor();
+      setUploadMessage("Crop saved. Re-scanning...");
+
+      beginPhotoAnalysisRun(nextPhotos.length);
+      await executePhotoAnalysis({
+        analysisPhotos: nextPhotos,
+        accessToken,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to crop this image.";
+      setUploadMessage(message);
+    } finally {
+      setIsSavingCrop(false);
     }
   };
 
@@ -1087,11 +1335,13 @@ export default function NewEntryScreen() {
       return;
     }
 
+    const allowMultipleSelection = remainingSlots > 1;
     const pickerOptions: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      selectionLimit: remainingSlots,
-      orderedSelection: true,
+      allowsMultipleSelection: allowMultipleSelection,
+      selectionLimit: allowMultipleSelection ? remainingSlots : 1,
+      orderedSelection: allowMultipleSelection,
+      allowsEditing: !allowMultipleSelection,
       quality: 0.8,
     };
     if (Platform.OS === "ios") {
@@ -1404,13 +1654,20 @@ export default function NewEntryScreen() {
     );
     setFriendSearch("");
   };
+  const cropGeometry = getCropGeometry();
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.screen}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={formScrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+      >
         <View style={styles.navRow}>
           <Pressable
             onPress={() => router.push("/(app)/home")}
@@ -1541,18 +1798,27 @@ export default function NewEntryScreen() {
                 <AppText style={styles.hint}>
                   {uploadGalleryActiveIndex + 1} of {uploadPhotos.length}
                 </AppText>
-                <Pressable
-                  style={styles.uploadRemoveButton}
-                  onPress={() => {
-                    const active = uploadPhotos[uploadGalleryActiveIndex];
-                    if (active) {
-                      removeUploadPhoto(active.id);
-                    }
-                  }}
-                  disabled={isAutofillLoading || isBulkCreating}
-                >
-                  <AppText style={styles.uploadRemoveButtonText}>Remove</AppText>
-                </Pressable>
+                <View style={styles.uploadGalleryFooterActions}>
+                  <Pressable
+                    style={styles.uploadCropButton}
+                    onPress={openCropEditorForActivePhoto}
+                    disabled={isAutofillLoading || isBulkCreating}
+                  >
+                    <AppText style={styles.uploadCropButtonText}>Crop</AppText>
+                  </Pressable>
+                  <Pressable
+                    style={styles.uploadRemoveButton}
+                    onPress={() => {
+                      const active = uploadPhotos[uploadGalleryActiveIndex];
+                      if (active) {
+                        removeUploadPhoto(active.id);
+                      }
+                    }}
+                    disabled={isAutofillLoading || isBulkCreating}
+                  >
+                    <AppText style={styles.uploadRemoveButtonText}>Remove</AppText>
+                  </Pressable>
+                </View>
               </View>
             ) : null}
             {uploadMessage ? (
@@ -1631,7 +1897,7 @@ export default function NewEntryScreen() {
                         </View>
                         <View style={styles.bulkLineupCopy}>
                           <AppText style={styles.bulkLineupWineTitle} numberOfLines={1}>
-                            {wine.wine_name || "Unknown wine"}
+                            {resolveLineupWineDisplayName(wine)}
                           </AppText>
                           <AppText style={styles.bulkLineupWineMeta} numberOfLines={2}>
                             {[
@@ -1859,13 +2125,23 @@ export default function NewEntryScreen() {
                             updateField("location_place_id", "");
                           }
                         }}
+                        onFocus={() => {
+                          setIsLocationFocused(true);
+                          ensureLocationInputVisible();
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setIsLocationFocused(false);
+                            setLocationSuggestions([]);
+                          }, 120);
+                        }}
                         autoCapitalize="words"
                         autoCorrect={false}
                         placeholder="Search places"
                         placeholderTextColor="#71717a"
                         style={styles.input}
                       />
-                      {locationSuggestions.length > 0 ? (
+                      {isLocationFocused && locationSuggestions.length > 0 ? (
                         <View style={styles.suggestionOverlay}>
                           <View style={styles.suggestionList}>
                             {locationSuggestions.map((suggestion) => (
@@ -1875,6 +2151,7 @@ export default function NewEntryScreen() {
                                 onPress={() => {
                                   updateField("location_text", suggestion.description);
                                   updateField("location_place_id", suggestion.place_id);
+                                  setIsLocationFocused(false);
                                   setLocationSuggestions([]);
                                   setLocationApiMessage(null);
                                   setLocationSessionToken(
@@ -2057,6 +2334,121 @@ export default function NewEntryScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <Modal
+        visible={Boolean(activeCropPhoto)}
+        transparent
+        animationType="fade"
+        onRequestClose={closeCropEditor}
+      >
+        <View style={styles.cropModalBackdrop}>
+          <View style={styles.cropModalCard}>
+            <View style={styles.cropModalHeader}>
+              <AppText style={styles.cropModalTitle}>Edit crop</AppText>
+              <Pressable onPress={closeCropEditor} hitSlop={8}>
+                <AppText style={styles.cropModalCloseText}>Close</AppText>
+              </Pressable>
+            </View>
+            <View
+              style={styles.cropFrame}
+              onLayout={(event) => {
+                const width = Math.round(event.nativeEvent.layout.width);
+                setCropFrameSize((current) => (current === width ? current : width));
+              }}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={(event) => {
+                handleCropResponderGrant(
+                  event.nativeEvent.locationX,
+                  event.nativeEvent.locationY
+                );
+              }}
+              onResponderMove={(event) => {
+                handleCropResponderMove(
+                  event.nativeEvent.locationX,
+                  event.nativeEvent.locationY
+                );
+              }}
+              onResponderRelease={() => {
+                cropDragRef.current = null;
+              }}
+              onResponderTerminate={() => {
+                cropDragRef.current = null;
+              }}
+            >
+              {cropSourceLoading ? (
+                <View style={styles.cropFrameLoading}>
+                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <AppText style={styles.cropFrameHint}>Loading image...</AppText>
+                </View>
+              ) : activeCropPhoto?.uri ? (
+                <>
+                  <Image
+                    source={{ uri: activeCropPhoto.uri }}
+                    style={[
+                      styles.cropFrameImage,
+                      cropGeometry
+                        ? {
+                            width: cropGeometry.renderedWidth,
+                            height: cropGeometry.renderedHeight,
+                            transform: [
+                              { translateX: cropGeometry.offsetX },
+                              { translateY: cropGeometry.offsetY },
+                            ],
+                          }
+                        : null,
+                    ]}
+                    resizeMode="contain"
+                  />
+                  <View pointerEvents="none" style={styles.cropFrameOutline} />
+                  <View pointerEvents="none" style={styles.cropFrameCrosshair} />
+                </>
+              ) : (
+                <View style={styles.cropFrameLoading}>
+                  <AppText style={styles.cropFrameHint}>Image unavailable.</AppText>
+                </View>
+              )}
+            </View>
+            <View style={styles.cropZoomRow}>
+              <Pressable
+                style={styles.cropZoomButton}
+                onPress={() => {
+                  setCropZoom((current) => clampCropZoom(current - 0.2));
+                }}
+              >
+                <AppText style={styles.cropZoomButtonText}>-</AppText>
+              </Pressable>
+              <AppText style={styles.cropZoomValue}>{cropZoom.toFixed(2)}x</AppText>
+              <Pressable
+                style={styles.cropZoomButton}
+                onPress={() => {
+                  setCropZoom((current) => clampCropZoom(current + 0.2));
+                }}
+              >
+                <AppText style={styles.cropZoomButtonText}>+</AppText>
+              </Pressable>
+            </View>
+            <AppText style={styles.cropFrameHint}>
+              Drag to reposition. Use zoom for tighter bottle framing.
+            </AppText>
+            <View style={styles.cropActionRow}>
+              <Pressable style={styles.cancelButton} onPress={closeCropEditor}>
+                <AppText style={styles.cancelButtonText}>Cancel</AppText>
+              </Pressable>
+              <Pressable
+                style={[styles.submitButton, isSavingCrop ? styles.submitButtonDisabled : null]}
+                onPress={() => void saveCropEdits()}
+                disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
+              >
+                {isSavingCrop ? (
+                  <ActivityIndicator color="#09090b" />
+                ) : (
+                  <AppText style={styles.submitButtonText}>Save crop</AppText>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <PostSaveSurveyModal
         pendingPostSaveSurvey={pendingPostSaveSurvey}
         postSaveSurveyStep={postSaveSurveyStep}

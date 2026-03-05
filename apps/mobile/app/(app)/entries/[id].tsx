@@ -4,8 +4,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +21,9 @@ import {
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
+  mapContextTagToPhotoType,
+  normalizeProducerText,
+  normalizeWineNameText,
   type PricePaidCurrency,
   type PricePaidSource,
   type QprLevel,
@@ -27,10 +32,17 @@ import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import {
+  AdaptiveFieldRow,
+  DateField,
+  Field,
+  SelectField,
+} from "@/src/components/entries/newEntryFormParts";
+import {
   ensurePhotoMimeType,
   extensionForMimeType,
   readPhotoBytes,
 } from "@/src/lib/entryFlow/photoIO";
+import { requestPhotoContext } from "@/src/lib/entryFlow/photoAnalysisClient";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -113,8 +125,14 @@ type BulkReviewFormState = {
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
   location_text: string;
+  location_place_id: string;
   consumed_at: string;
   notes: string;
+};
+
+type LocationSuggestion = {
+  description: string;
+  place_id: string;
 };
 
 type ProfileRow = {
@@ -167,6 +185,8 @@ const ENTRY_PHOTO_TYPES: EntryPhotoType[] = [
 ];
 
 const MAX_ENTRY_PHOTOS_PER_TYPE = 10;
+const WEB_API_BASE_URL = process.env.EXPO_PUBLIC_WEB_API_BASE_URL;
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const ADVANCED_NOTE_FIELDS: Array<{ key: string; label: string }> = [
   { key: "acidity", label: "Acidity" },
@@ -218,6 +238,14 @@ const EMPTY_ADVANCED_NOTES: AdvancedNotesFormState = {
   sweetness: "",
   body: "",
 };
+
+const QPR_OPTIONS = [
+  { value: "", label: "Not set" },
+  ...QPR_LEVEL_VALUES.map((value) => ({
+    value,
+    label: QPR_LEVEL_LABELS[value],
+  })),
+];
 
 function formatConsumedDate(raw: string) {
   const dateOnly = raw.slice(0, 10);
@@ -568,6 +596,12 @@ export default function EntryDetailScreen() {
   const [friendUsers, setFriendUsers] = useState<ProfileRow[]>([]);
   const [selectedTastedWithIds, setSelectedTastedWithIds] = useState<string[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [locationApiMessage, setLocationApiMessage] = useState<string | null>(null);
+  const [locationSessionToken, setLocationSessionToken] = useState(() =>
+    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [bulkReviewForm, setBulkReviewForm] = useState<BulkReviewFormState>({
     wine_name: "",
@@ -583,6 +617,7 @@ export default function EntryDetailScreen() {
     price_paid_source: "",
     qpr_level: "",
     location_text: "",
+    location_place_id: "",
     consumed_at: "",
     notes: "",
   });
@@ -591,7 +626,6 @@ export default function EntryDetailScreen() {
   const [isUpdatingPhotoMeta, setIsUpdatingPhotoMeta] = useState(false);
   const [photoTypePickerOpen, setPhotoTypePickerOpen] = useState(false);
   const [photoOrderPickerOpen, setPhotoOrderPickerOpen] = useState(false);
-  const [qprPickerOpen, setQprPickerOpen] = useState(false);
   const [editExpanded, setEditExpanded] = useState<Record<EditAccordionKey, boolean>>({
     wine_details: false,
     location_date: false,
@@ -768,10 +802,13 @@ export default function EntryDetailScreen() {
           ? nextEntry.qpr_level
           : "",
       location_text: nextEntry.location_text ?? "",
+      location_place_id: nextEntry.location_place_id ?? "",
       consumed_at: nextEntry.consumed_at ?? "",
       notes: nextEntry.notes ?? "",
     });
     setBulkReviewError(null);
+    setLocationSuggestions([]);
+    setLocationApiMessage(null);
     setPhotos(nextPhotos);
     setFailedPhotoIds(new Set());
     setActivePhotoIndex(0);
@@ -786,7 +823,6 @@ export default function EntryDetailScreen() {
     setPhotoEditError(null);
     setPhotoTypePickerOpen(false);
     setPhotoOrderPickerOpen(false);
-    setQprPickerOpen(false);
     if (galleryScrollRef.current) {
       galleryScrollRef.current.scrollTo({ x: 0, animated: false });
     }
@@ -856,6 +892,95 @@ export default function EntryDetailScreen() {
       clearTimeout(timer);
     };
   }, [isBulkReview, isPrimaryGrapeFocused, primaryGrapeQuery, selectedPrimaryGrapes]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const query = bulkReviewForm.location_text.trim();
+    const sessionToken = locationSessionToken;
+    const canLookup = isBulkReview || ownerEditOpen;
+
+    const timer = setTimeout(async () => {
+      if (!canLookup) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          setLocationApiMessage(null);
+        }
+        return;
+      }
+
+      if (!GOOGLE_MAPS_API_KEY) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          setLocationApiMessage(
+            "Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to enable location autocomplete."
+          );
+        }
+        return;
+      }
+
+      if (query.length < 2) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          setLocationApiMessage(null);
+        }
+        return;
+      }
+
+      setIsLocationLoading(true);
+      setLocationApiMessage(null);
+
+      const url =
+        "https://maps.googleapis.com/maps/api/place/autocomplete/json" +
+        `?input=${encodeURIComponent(query)}` +
+        "&types=establishment|geocode" +
+        `&sessiontoken=${encodeURIComponent(sessionToken)}` +
+        `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
+
+      try {
+        const response = await fetch(url);
+        const payload = (await response.json()) as {
+          status?: string;
+          error_message?: string;
+          predictions?: Array<{ description?: string; place_id?: string }>;
+        };
+
+        if (cancelled) {
+          return;
+        }
+
+        if (payload.status !== "OK" && payload.status !== "ZERO_RESULTS") {
+          setLocationSuggestions([]);
+          setLocationApiMessage(payload.error_message || "Location lookup failed.");
+          setIsLocationLoading(false);
+          return;
+        }
+
+        const suggestions = (payload.predictions ?? [])
+          .map((item) => ({
+            description: item.description ?? "",
+            place_id: item.place_id ?? "",
+          }))
+          .filter((item) => item.description.length > 0 && item.place_id.length > 0)
+          .slice(0, 5);
+        setLocationSuggestions(suggestions);
+        setIsLocationLoading(false);
+      } catch {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setLocationApiMessage("Unable to reach Google Maps. Check connection.");
+          setIsLocationLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [bulkReviewForm.location_text, isBulkReview, locationSessionToken, ownerEditOpen]);
 
   useEffect(() => {
     if (!user?.id || !isBulkReview) {
@@ -952,7 +1077,7 @@ export default function EntryDetailScreen() {
       : null;
   const locationText = entry?.location_text?.trim() ?? "";
   const hasLocation = locationText.length > 0;
-  const canOpenLocation = hasLocation && Boolean(entry?.location_place_id?.trim());
+  const canOpenLocation = hasLocation;
   const locationDisplayLabel = hasLocation
     ? buildLocationDisplayLabel(locationText)
     : "";
@@ -987,14 +1112,79 @@ export default function EntryDetailScreen() {
     activePhoto && photos.length > 0
       ? photos.findIndex((photo) => photo.id === activePhoto.id) + 1
       : 0;
-  const qprSelectionLabel =
-    bulkReviewForm.qpr_level && QPR_LEVEL_VALUES.includes(bulkReviewForm.qpr_level)
-      ? QPR_LEVEL_LABELS[bulkReviewForm.qpr_level]
-      : "Not set";
 
   const toggleEditSection = useCallback((section: EditAccordionKey) => {
     setEditExpanded((current) => ({ ...current, [section]: !current[section] }));
   }, []);
+
+  const getAccessTokenForApi = useCallback(async () => {
+    const { data: sessionResult } = await supabase.auth.getSession();
+    let session = sessionResult.session;
+    const expiresSoon =
+      typeof session?.expires_at === "number" &&
+      session.expires_at * 1000 <= Date.now() + 90_000;
+
+    if (!session?.access_token || expiresSoon) {
+      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
+      if (refreshedSessionResult.session?.access_token) {
+        session = refreshedSessionResult.session;
+      }
+    }
+
+    return session?.access_token ?? null;
+  }, []);
+
+  const inferPhotoTypeFromAi = useCallback(
+    async ({
+      fallbackType,
+      uri,
+      name,
+      mimeType,
+    }: {
+      fallbackType: EntryPhotoType;
+      uri: string;
+      name: string;
+      mimeType: string;
+    }) => {
+      const normalizedBaseUrl = WEB_API_BASE_URL?.replace(/\/$/, "") ?? null;
+      if (!normalizedBaseUrl) {
+        return fallbackType;
+      }
+
+      const accessToken = await getAccessTokenForApi();
+      if (!accessToken) {
+        return fallbackType;
+      }
+
+      try {
+        const context = await requestPhotoContext({
+          baseUrl: normalizedBaseUrl,
+          accessToken,
+          photo: {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            uri,
+            name,
+            mimeType,
+          },
+        });
+
+        if (context.tag === "unknown") {
+          return fallbackType === "label" ? "other_bottles" : fallbackType;
+        }
+
+        const suggestedType = mapContextTagToPhotoType(context.tag, {
+          confidence: context.confidence,
+          detectedBottleCount: 0,
+          identifiedBottleCount: 0,
+        });
+
+        return suggestedType;
+      } catch {
+        return fallbackType;
+      }
+    },
+    [getAccessTokenForApi]
+  );
 
   const updateActivePhotoType = useCallback(
     async (nextType: EntryPhotoType) => {
@@ -1104,22 +1294,11 @@ export default function EntryDetailScreen() {
       return;
     }
 
-    const existingTypeCount = photos.filter(
-      (photo) => photo.editable && photo.type === (activePhoto?.type ?? "label")
-    ).length;
-    const remainingSlots = Math.max(0, MAX_ENTRY_PHOTOS_PER_TYPE - existingTypeCount);
-    if (remainingSlots <= 0) {
-      setPhotoEditError(
-        `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[activePhoto?.type ?? "label"]}.`
-      );
-      return;
-    }
-
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      selectionLimit: remainingSlots,
-      orderedSelection: true,
+      allowsMultipleSelection: false,
+      selectionLimit: 1,
+      allowsEditing: true,
       quality: 0.8,
     });
     if (pickerResult.canceled) {
@@ -1128,43 +1307,52 @@ export default function EntryDetailScreen() {
 
     const assets = pickerResult.assets
       .filter((asset) => typeof asset.uri === "string" && asset.uri.trim().length > 0)
-      .slice(0, remainingSlots);
+      .slice(0, 1);
     if (assets.length === 0) {
       setPhotoEditError("No photos selected.");
       return;
     }
 
-    const targetType: EntryPhotoType =
+    const fallbackType: EntryPhotoType =
       activePhoto?.editable && activePhoto.type ? activePhoto.type : "label";
 
     setIsUpdatingPhotoMeta(true);
     setPhotoEditError(null);
-
-    const { count, error: countError } = await supabase
-      .from("entry_photos")
-      .select("id", { count: "exact", head: true })
-      .eq("entry_id", entry.id)
-      .eq("type", targetType);
-
-    if (countError) {
-      setPhotoEditError(countError.message);
-      setIsUpdatingPhotoMeta(false);
-      return;
-    }
-
-    if ((count ?? 0) + assets.length > MAX_ENTRY_PHOTOS_PER_TYPE) {
-      setPhotoEditError(
-        `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[targetType]}.`
-      );
-      setIsUpdatingPhotoMeta(false);
-      return;
-    }
-
-    let nextPosition = count ?? 0;
     try {
+      const nextPositionByType = new Map<EntryPhotoType, number>();
       for (const asset of assets) {
         const mimeType = ensurePhotoMimeType(asset.mimeType, asset.fileName, asset.uri);
         const extension = extensionForMimeType(mimeType);
+        const fileName =
+          asset.fileName && asset.fileName.trim().length > 0
+            ? asset.fileName
+            : `entry-photo-${Date.now()}.${extension}`;
+        const targetType = await inferPhotoTypeFromAi({
+          fallbackType,
+          uri: asset.uri,
+          name: fileName,
+          mimeType,
+        });
+
+        let nextPosition = nextPositionByType.get(targetType);
+        if (nextPosition === undefined) {
+          const { count, error: countError } = await supabase
+            .from("entry_photos")
+            .select("id", { count: "exact", head: true })
+            .eq("entry_id", entry.id)
+            .eq("type", targetType);
+
+          if (countError) {
+            throw new Error(countError.message);
+          }
+
+          if ((count ?? 0) >= MAX_ENTRY_PHOTOS_PER_TYPE) {
+            throw new Error(
+              `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[targetType]}.`
+            );
+          }
+          nextPosition = count ?? 0;
+        }
 
         const createResult = await supabase
           .from("entry_photos")
@@ -1213,7 +1401,7 @@ export default function EntryDetailScreen() {
           throw error;
         }
 
-        nextPosition += 1;
+        nextPositionByType.set(targetType, nextPosition + 1);
       }
 
       await loadEntry();
@@ -1226,7 +1414,16 @@ export default function EntryDetailScreen() {
     } finally {
       setIsUpdatingPhotoMeta(false);
     }
-  }, [activePhoto?.editable, activePhoto?.type, entry, isEditFormVisible, isOwner, loadEntry, photos, user?.id]);
+  }, [
+    activePhoto?.editable,
+    activePhoto?.type,
+    entry,
+    inferPhotoTypeFromAi,
+    isEditFormVisible,
+    isOwner,
+    loadEntry,
+    user?.id,
+  ]);
 
   const removeActivePhoto = useCallback(async () => {
     if (!entry || !activePhoto?.editable || !isOwner || !user?.id) {
@@ -1501,7 +1698,7 @@ export default function EntryDetailScreen() {
       return "You must be signed in.";
     }
 
-    const wineName = bulkReviewForm.wine_name.trim();
+    const wineName = normalizeWineNameText(bulkReviewForm.wine_name);
     if (!wineName) {
       return "Wine name is required.";
     }
@@ -1553,7 +1750,7 @@ export default function EntryDetailScreen() {
       .from("wine_entries")
       .update({
         wine_name: wineName,
-        producer: normalizeOptionalText(bulkReviewForm.producer),
+        producer: normalizeProducerText(bulkReviewForm.producer),
         vintage: normalizeOptionalText(bulkReviewForm.vintage),
         country: normalizeOptionalText(bulkReviewForm.country),
         region: normalizeOptionalText(bulkReviewForm.region),
@@ -1565,6 +1762,7 @@ export default function EntryDetailScreen() {
         price_paid_source: priceValue !== null ? priceSource : null,
         qpr_level: bulkReviewForm.qpr_level || null,
         location_text: normalizeOptionalText(bulkReviewForm.location_text),
+        location_place_id: normalizeOptionalText(bulkReviewForm.location_place_id),
         consumed_at: consumedAtRaw.length > 0 ? consumedAtRaw : entry.consumed_at,
         notes: normalizeOptionalText(bulkReviewForm.notes),
         tasted_with_user_ids: nextTastedWithIds,
@@ -1866,8 +2064,16 @@ export default function EntryDetailScreen() {
   ]);
 
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+      >
         <AppTopBar activeHref="/(app)/entries" />
 
         <Pressable
@@ -2145,43 +2351,32 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
-                <View style={styles.bulkFormField}>
-                  <AppText style={styles.bulkFormLabel}>Notes</AppText>
-                  <DoneTextInput
-                    value={bulkReviewForm.notes}
-                    onChangeText={(value) => updateBulkReviewField("notes", value)}
-                    placeholder="Optional tasting notes"
-                    placeholderTextColor="#71717a"
-                    autoCapitalize="sentences"
-                    autoCorrect
-                    multiline
-                    style={[styles.bulkFormInput, styles.bulkFormInputMultiline]}
-                  />
-                </View>
+                <Field
+                  label="Notes"
+                  value={bulkReviewForm.notes}
+                  onChange={(value) => updateBulkReviewField("notes", value)}
+                  placeholder="Optional tasting notes"
+                  multiline
+                />
 
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Rating (1-100)</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.rating}
-                      onChangeText={(value) => updateBulkReviewField("rating", value)}
-                      placeholder="Required"
-                      placeholderTextColor="#71717a"
-                      keyboardType="number-pad"
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>QPR</AppText>
-                    <Pressable
-                      style={styles.bulkSelectTrigger}
-                      onPress={() => setQprPickerOpen(true)}
-                    >
-                      <AppText style={styles.bulkSelectTriggerText}>{qprSelectionLabel}</AppText>
-                      <AppText style={styles.bulkSelectChevron}>{"\u25BE"}</AppText>
-                    </Pressable>
-                  </View>
-                </View>
+                <AdaptiveFieldRow minColumnWidth={170}>
+                  <Field
+                    label="Rating (1-100)"
+                    value={bulkReviewForm.rating}
+                    onChange={(value) => updateBulkReviewField("rating", value)}
+                    keyboardType="number-pad"
+                    placeholder="Required"
+                    required
+                  />
+                  <SelectField
+                    label="QPR"
+                    value={bulkReviewForm.qpr_level}
+                    options={QPR_OPTIONS}
+                    onChange={(value) =>
+                      updateBulkReviewField("qpr_level", value as QprLevel | "")
+                    }
+                  />
+                </AdaptiveFieldRow>
 
                 <Accordion
                   title="Wine details"
@@ -2189,98 +2384,58 @@ export default function EntryDetailScreen() {
                   expanded={editExpanded.wine_details}
                   onToggle={() => toggleEditSection("wine_details")}
                 >
-                <View style={styles.bulkFormField}>
-                  <AppText style={styles.bulkFormLabel}>Wine name</AppText>
-                  <DoneTextInput
-                    value={bulkReviewForm.wine_name}
-                    onChangeText={(value) => updateBulkReviewField("wine_name", value)}
-                    placeholder="Required"
-                    placeholderTextColor="#71717a"
+                <Field
+                  label="Wine name"
+                  value={bulkReviewForm.wine_name}
+                  onChange={(value) => updateBulkReviewField("wine_name", value)}
+                  placeholder="Required"
+                  required
+                />
+
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Producer"
+                    value={bulkReviewForm.producer}
+                    onChange={(value) => updateBulkReviewField("producer", value)}
                     autoCapitalize="words"
-                    autoCorrect={false}
-                    style={styles.bulkFormInput}
                   />
-                </View>
+                  <Field
+                    label="Vintage"
+                    value={bulkReviewForm.vintage}
+                    onChange={(value) => updateBulkReviewField("vintage", value)}
+                    keyboardType="number-pad"
+                  />
+                </AdaptiveFieldRow>
 
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Producer</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.producer}
-                      onChangeText={(value) => updateBulkReviewField("producer", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Vintage</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.vintage}
-                      onChangeText={(value) => updateBulkReviewField("vintage", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      keyboardType="number-pad"
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                </View>
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Country"
+                    value={bulkReviewForm.country}
+                    onChange={(value) => updateBulkReviewField("country", value)}
+                    autoCapitalize="words"
+                  />
+                  <Field
+                    label="Region"
+                    value={bulkReviewForm.region}
+                    onChange={(value) => updateBulkReviewField("region", value)}
+                    autoCapitalize="words"
+                  />
+                </AdaptiveFieldRow>
 
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Country</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.country}
-                      onChangeText={(value) => updateBulkReviewField("country", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Region</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.region}
-                      onChangeText={(value) => updateBulkReviewField("region", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Appellation</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.appellation}
-                      onChangeText={(value) => updateBulkReviewField("appellation", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Classification</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.classification}
-                      onChangeText={(value) => updateBulkReviewField("classification", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                </View>
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Appellation"
+                    value={bulkReviewForm.appellation}
+                    onChange={(value) => updateBulkReviewField("appellation", value)}
+                    autoCapitalize="words"
+                  />
+                  <Field
+                    label="Classification"
+                    value={bulkReviewForm.classification}
+                    onChange={(value) => updateBulkReviewField("classification", value)}
+                    autoCapitalize="words"
+                  />
+                </AdaptiveFieldRow>
 
                 <View style={styles.bulkFormField}>
                   <View style={styles.primaryGrapeHeaderRow}>
@@ -2366,26 +2521,62 @@ export default function EntryDetailScreen() {
                   <AppText style={styles.bulkFormLabel}>Location</AppText>
                   <DoneTextInput
                     value={bulkReviewForm.location_text}
-                    onChangeText={(value) => updateBulkReviewField("location_text", value)}
+                    onChangeText={(value) => {
+                      updateBulkReviewField("location_text", value);
+                      if (bulkReviewForm.location_place_id) {
+                        updateBulkReviewField("location_place_id", "");
+                      }
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setLocationSuggestions([]);
+                      }, 120);
+                    }}
                     placeholder="Optional location"
                     placeholderTextColor="#71717a"
                     autoCapitalize="words"
                     autoCorrect={false}
                     style={styles.bulkFormInput}
                   />
+                  {locationSuggestions.length > 0 ? (
+                    <View style={styles.inlineSuggestionList}>
+                      {locationSuggestions.map((suggestion) => (
+                        <Pressable
+                          key={`bulk-location-${suggestion.place_id}`}
+                          style={styles.suggestionItem}
+                          onPress={() => {
+                            updateBulkReviewField("location_text", suggestion.description);
+                            updateBulkReviewField("location_place_id", suggestion.place_id);
+                            setLocationSuggestions([]);
+                            setLocationApiMessage(null);
+                            setLocationSessionToken(
+                              `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                            );
+                          }}
+                        >
+                          <AppText style={styles.suggestionText}>
+                            {suggestion.description}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : null}
+                  {isLocationLoading ? (
+                    <AppText style={styles.bulkSectionHint}>
+                      Searching Google Maps...
+                    </AppText>
+                  ) : null}
+                  {locationApiMessage ? (
+                    <AppText style={styles.bulkSectionHint}>{locationApiMessage}</AppText>
+                  ) : null}
                 </View>
 
                 <View style={styles.bulkFormRow}>
                   <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Consumed date</AppText>
-                    <DoneTextInput
+                    <DateField
+                      label="Consumed date"
                       value={bulkReviewForm.consumed_at}
-                      onChangeText={(value) => updateBulkReviewField("consumed_at", value)}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
+                      onChange={(value) => updateBulkReviewField("consumed_at", value)}
                     />
                   </View>
                 </View>
@@ -2884,67 +3075,6 @@ export default function EntryDetailScreen() {
         )}
       </ScrollView>
       <Modal
-        visible={qprPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setQprPickerOpen(false)}
-      >
-        <View style={styles.pickerModalRoot}>
-          <Pressable style={styles.pickerModalBackdrop} onPress={() => setQprPickerOpen(false)} />
-          <View style={styles.pickerModalCard}>
-            <AppText style={styles.pickerModalTitle}>Select QPR</AppText>
-            <ScrollView
-              style={styles.pickerModalList}
-              contentContainerStyle={styles.pickerModalListContent}
-            >
-              <Pressable
-                style={[
-                  styles.pickerModalItem,
-                  bulkReviewForm.qpr_level === "" ? styles.pickerModalItemSelected : null,
-                ]}
-                onPress={() => {
-                  updateBulkReviewField("qpr_level", "");
-                  setQprPickerOpen(false);
-                }}
-              >
-                <AppText
-                  style={[
-                    styles.pickerModalItemText,
-                    bulkReviewForm.qpr_level === "" ? styles.pickerModalItemTextSelected : null,
-                  ]}
-                >
-                  Not set
-                </AppText>
-              </Pressable>
-              {QPR_LEVEL_VALUES.map((option) => (
-                <Pressable
-                  key={`qpr-picker-${option}`}
-                  style={[
-                    styles.pickerModalItem,
-                    bulkReviewForm.qpr_level === option ? styles.pickerModalItemSelected : null,
-                  ]}
-                  onPress={() => {
-                    updateBulkReviewField("qpr_level", option);
-                    setQprPickerOpen(false);
-                  }}
-                >
-                  <AppText
-                    style={[
-                      styles.pickerModalItemText,
-                      bulkReviewForm.qpr_level === option
-                        ? styles.pickerModalItemTextSelected
-                        : null,
-                    ]}
-                  >
-                    {QPR_LEVEL_LABELS[option]}
-                  </AppText>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      <Modal
         visible={photoTypePickerOpen}
         transparent
         animationType="fade"
@@ -3035,7 +3165,7 @@ export default function EntryDetailScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

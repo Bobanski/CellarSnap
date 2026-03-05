@@ -1,3 +1,10 @@
+import {
+  isUnknownWineName,
+  normalizeProducerText,
+  normalizeWineNameText,
+  normalizeWineText,
+} from "../wineText";
+
 export type LineupWineDetails = {
   wine_name: string | null;
   producer: string | null;
@@ -13,17 +20,34 @@ export function normalizeGrapeLookupValue(value: string) {
 }
 
 export function normalizeLineupText(value: unknown) {
-  if (typeof value !== "string") {
-    return null;
+  return normalizeWineText(value);
+}
+
+export function resolveLineupWineDisplayName(
+  wine: LineupWineDetails & { primary_grape_suggestions?: string[] | null }
+) {
+  const normalizedWineName = normalizeWineNameText(wine.wine_name);
+  if (normalizedWineName && !isUnknownWineName(normalizedWineName)) {
+    return normalizedWineName;
   }
 
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  return (
+    normalizeProducerText(wine.producer) ??
+    normalizeWineText(wine.appellation) ??
+    normalizeWineText(wine.region) ??
+    normalizeWineText(wine.primary_grape_suggestions?.[0]) ??
+    "Unknown wine"
+  );
 }
 
 export function hasLineupWineDetails(wine: LineupWineDetails) {
+  const normalizedWineName = normalizeWineText(wine.wine_name);
+  const hasExplicitWineName = Boolean(
+    normalizedWineName && !isUnknownWineName(normalizedWineName)
+  );
+
   return Boolean(
-    wine.wine_name ||
+    hasExplicitWineName ||
       wine.producer ||
       wine.vintage ||
       wine.country ||

@@ -253,6 +253,23 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     void loadAlerts();
   }, [alertsOpen, loadAlerts]);
 
+  const getAccessTokenForApi = useCallback(async () => {
+    const { data: sessionResult } = await supabase.auth.getSession();
+    let session = sessionResult.session;
+    const expiresSoon =
+      typeof session?.expires_at === "number" &&
+      session.expires_at * 1000 <= Date.now() + 90_000;
+
+    if (!session?.access_token || expiresSoon) {
+      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
+      if (refreshedSessionResult.session?.access_token) {
+        session = refreshedSessionResult.session;
+      }
+    }
+
+    return session?.access_token ?? null;
+  }, []);
+
   const onSignOut = async () => {
     await signOut();
     router.replace("/(auth)/sign-in");
@@ -275,8 +292,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       return;
     }
 
-    const { data: sessionResult } = await supabase.auth.getSession();
-    const accessToken = sessionResult.session?.access_token;
+    const accessToken = await getAccessTokenForApi();
     if (!accessToken) {
       setAlertsError("Session expired. Sign in again and try.");
       return;
@@ -344,8 +360,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       return;
     }
 
-    const { data: sessionResult } = await supabase.auth.getSession();
-    const accessToken = sessionResult.session?.access_token;
+    const accessToken = await getAccessTokenForApi();
     if (!accessToken) {
       setAlertsError("Session expired. Sign in again and try.");
       return;
