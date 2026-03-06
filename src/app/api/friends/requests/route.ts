@@ -1,9 +1,28 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
+import {
+  applyFriendTransition,
+  FriendTransitionError,
+} from "@/server/friends/transition";
 
 type FriendRequestPayload = {
   recipient_id?: string;
 };
+
+function transitionErrorResponse(error: unknown) {
+  if (error instanceof FriendTransitionError) {
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status }
+    );
+  }
+
+  const message =
+    error instanceof Error ? error.message : "Unable to update request.";
+  return NextResponse.json({ error: message }, { status: 500 });
+}
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -47,17 +66,9 @@ export async function GET() {
     (profiles ?? []).map((profile) => [profile.id, profile])
   );
 
-  // Sign avatar URLs in parallel
-  const avatarUrlMap = new Map<string, string | null>();
-  await Promise.all(
-    (profiles ?? []).map(async (profile) => {
-      if (profile.avatar_path) {
-        const { data: urlData } = await supabase.storage
-          .from("wine-photos")
-          .createSignedUrl(profile.avatar_path, 60 * 60);
-        avatarUrlMap.set(profile.id, urlData?.signedUrl ?? null);
-      }
-    })
+  const avatarUrlByPath = await signPhotoUrls(
+    (profiles ?? []).map((profile) => profile.avatar_path),
+    supabase
   );
 
   const incoming = (requests ?? [])
@@ -68,7 +79,10 @@ export async function GET() {
         id: request.requester_id,
         display_name: profileMap.get(request.requester_id)?.display_name ?? null,
         email: profileMap.get(request.requester_id)?.email ?? null,
-        avatar_url: avatarUrlMap.get(request.requester_id) ?? null,
+        avatar_url: profileMap.get(request.requester_id)?.avatar_path
+          ? avatarUrlByPath.get(profileMap.get(request.requester_id)?.avatar_path ?? "") ??
+            null
+          : null,
       },
       created_at: request.created_at,
       seen_at: request.seen_at,
@@ -82,7 +96,10 @@ export async function GET() {
         id: request.recipient_id,
         display_name: profileMap.get(request.recipient_id)?.display_name ?? null,
         email: profileMap.get(request.recipient_id)?.email ?? null,
-        avatar_url: avatarUrlMap.get(request.recipient_id) ?? null,
+        avatar_url: profileMap.get(request.recipient_id)?.avatar_path
+          ? avatarUrlByPath.get(profileMap.get(request.recipient_id)?.avatar_path ?? "") ??
+            null
+          : null,
       },
       created_at: request.created_at,
     }));
@@ -108,135 +125,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Recipient required." }, { status: 400 });
   }
 
-  if (recipientId === user.id) {
+  const parsedRecipientId = z.string().uuid().safeParse(recipientId);
+  if (!parsedRecipientId.success) {
+    return NextResponse.json(
+      { error: "Recipient must be a valid user ID." },
+      { status: 400 }
+    );
+  }
+
+  if (parsedRecipientId.data === user.id) {
     return NextResponse.json({ error: "Cannot friend yourself." }, { status: 400 });
   }
 
-  const { data: reverseRows, error: reverseError } = await supabase
-    .from("friend_requests")
-    .select("id, status, created_at")
-    .eq("requester_id", recipientId)
-    .eq("recipient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (reverseError) {
-    return NextResponse.json({ error: reverseError.message }, { status: 500 });
-  }
-
-  const reverseAccepted = (reverseRows ?? []).find((row) => row.status === "accepted");
-  const reversePending = (reverseRows ?? []).find((row) => row.status === "pending");
-  const reverse = reverseAccepted ?? reversePending ?? null;
-
-  if (reverse && (reverse.status === "pending" || reverse.status === "accepted")) {
-    if (reverse.status === "pending") {
-      const { error: acceptError } = await supabase
-        .from("friend_requests")
-        .update({
-          status: "accepted",
-          responded_at: new Date().toISOString(),
-          seen_at: new Date().toISOString(),
-        })
-        .eq("id", reverse.id)
-        .eq("status", "pending")
-        .eq("recipient_id", user.id);
-
-      if (acceptError) {
-        return NextResponse.json({ error: acceptError.message }, { status: 500 });
-      }
-    }
-
-    const { error: cleanupOutgoingError } = await supabase
-      .from("friend_requests")
-      .delete()
-      .eq("requester_id", user.id)
-      .eq("recipient_id", recipientId)
-      .in("status", ["pending", "accepted"]);
-
-    if (cleanupOutgoingError) {
+  try {
+    const transition = await applyFriendTransition(
+      supabase,
+      parsedRecipientId.data,
+      "request"
+    );
+    if (transition.status !== "pending" && transition.status !== "accepted") {
       return NextResponse.json(
-        { error: cleanupOutgoingError.message },
+        { error: "Unexpected friend request transition response." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ status: "accepted", request_id: reverse.id });
-  }
-
-  const { data: existingRows, error: existingError } = await supabase
-    .from("friend_requests")
-    .select("id, status, created_at")
-    .eq("requester_id", user.id)
-    .eq("recipient_id", recipientId)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 500 });
-  }
-
-  const existingAccepted = (existingRows ?? []).find((row) => row.status === "accepted");
-  const existingPending = (existingRows ?? []).find((row) => row.status === "pending");
-  const existingDeclined = (existingRows ?? []).find((row) => row.status === "declined");
-  const existing = existingAccepted ?? existingPending ?? existingDeclined ?? null;
-
-  if (existing) {
-    if (existing.status === "declined") {
-      // Requesters can't update declined rows under our default RLS policy.
-      // Delete any declined request(s) for this pair and recreate a fresh pending one.
-      const { error: deleteDeclinedError } = await supabase
-        .from("friend_requests")
-        .delete()
-        .eq("requester_id", user.id)
-        .eq("recipient_id", recipientId)
-        .eq("status", "declined");
-
-      if (deleteDeclinedError) {
-        return NextResponse.json(
-          { error: deleteDeclinedError.message },
-          { status: 500 }
-        );
-      }
-
-      const recreatedId = crypto.randomUUID();
-      const { error: recreateError } = await supabase
-        .from("friend_requests")
-        .insert({
-          id: recreatedId,
-          requester_id: user.id,
-          recipient_id: recipientId,
-          status: "pending",
-        });
-
-      if (recreateError) {
-        return NextResponse.json({ error: recreateError.message }, { status: 500 });
-      }
-
-      return NextResponse.json({
-        status: "pending",
-        request_id: recreatedId,
-      });
+    if (!transition.requestId) {
+      return NextResponse.json(
+        { error: "Unexpected missing request identifier." },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ status: existing.status, request_id: existing.id });
-  }
-
-  const createdId = crypto.randomUUID();
-  const { error: insertError } = await supabase
-    .from("friend_requests")
-    .insert({
-      id: createdId,
-      requester_id: user.id,
-      recipient_id: recipientId,
-      status: "pending",
+    return NextResponse.json({
+      status: transition.status,
+      request_id: transition.requestId,
     });
-
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  } catch (error) {
+    return transitionErrorResponse(error);
   }
-
-  return NextResponse.json({
-    status: "pending",
-    request_id: createdId,
-  });
 }

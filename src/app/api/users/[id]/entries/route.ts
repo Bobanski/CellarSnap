@@ -4,20 +4,7 @@ import {
   getAcceptedFriendIds,
   getFriendsOfFriendsIds,
 } from "@/lib/access/entryVisibility";
-
-async function createSignedUrl(
-  path: string | null,
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-) {
-  if (!path) {
-    return null;
-  }
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-  if (error) return null;
-  return data.signedUrl;
-}
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 export async function GET(
   _request: Request,
@@ -103,11 +90,11 @@ export async function GET(
   const entries = await Promise.all(
     (data ?? []).map(async (entry) => ({
       ...entry,
-      label_image_url: await createSignedUrl(
+      label_image_url: await signPhotoUrl(
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase
       ),
-      place_image_url: await createSignedUrl(entry.place_image_path, supabase),
+      place_image_url: await signPhotoUrl(entry.place_image_path, supabase),
     }))
   );
 

@@ -1,88 +1,100 @@
 import { useEffect, useState } from "react";
 import {
-  InputAccessoryView,
   Keyboard,
   Platform,
   Pressable,
   StyleSheet,
+  type KeyboardEvent,
   View,
 } from "react-native";
 import { AppText } from "@/src/components/AppText";
 
-export const IOS_KEYBOARD_DONE_ACCESSORY_ID = "cellarsnap-keyboard-done-accessory";
+type KeyboardVisibility = {
+  visible: boolean;
+  height: number;
+};
+
+function getKeyboardHeight(event: KeyboardEvent | undefined) {
+  const maybeHeight = event?.endCoordinates?.height;
+  if (typeof maybeHeight !== "number" || maybeHeight <= 0) {
+    return 0;
+  }
+  return Math.round(maybeHeight);
+}
 
 export function KeyboardDoneAccessory() {
-  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
-  const [androidKeyboardVisible, setAndroidKeyboardVisible] = useState(false);
+  const [keyboard, setKeyboard] = useState<KeyboardVisibility>({
+    visible: false,
+    height: 0,
+  });
 
   useEffect(() => {
     if (Platform.OS !== "android") {
       return;
     }
 
-    const showSub = Keyboard.addListener("keyboardDidShow", (event) => {
-      setAndroidKeyboardHeight(event.endCoordinates?.height ?? 0);
-      setAndroidKeyboardVisible(true);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setAndroidKeyboardVisible(false);
-      setAndroidKeyboardHeight(0);
-    });
+    const handleShow = (event: KeyboardEvent) => {
+      setKeyboard({
+        visible: true,
+        height: getKeyboardHeight(event),
+      });
+    };
+    const handleHide = () => {
+      setKeyboard({
+        visible: false,
+        height: 0,
+      });
+    };
+    const subscriptions = [
+      Keyboard.addListener("keyboardDidShow", handleShow),
+      Keyboard.addListener("keyboardDidHide", handleHide),
+    ];
 
     return () => {
-      showSub.remove();
-      hideSub.remove();
+      subscriptions.forEach((subscription) => subscription.remove());
     };
   }, []);
 
-  if (Platform.OS === "ios") {
-    return (
-      <InputAccessoryView nativeID={IOS_KEYBOARD_DONE_ACCESSORY_ID}>
-        <View style={styles.accessory}>
-          <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
-            <AppText style={styles.doneText}>Done</AppText>
-          </Pressable>
-        </View>
-      </InputAccessoryView>
-    );
+  if (Platform.OS !== "android" || !keyboard.visible) {
+    return null;
   }
 
-  if (Platform.OS === "android" && androidKeyboardVisible) {
-    return (
-      <View pointerEvents="box-none" style={styles.androidOverlay}>
-        <View style={[styles.accessory, styles.androidAccessory, { bottom: androidKeyboardHeight }]}>
-          <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
-            <AppText style={styles.doneText}>Done</AppText>
-          </Pressable>
-        </View>
+  return (
+    <View pointerEvents="box-none" style={styles.root}>
+      <View
+        style={[
+          styles.accessory,
+          { bottom: keyboard.height },
+        ]}
+      >
+        <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
+          <AppText style={styles.doneText}>Done</AppText>
+        </Pressable>
       </View>
-    );
-  }
-
-  return null;
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  androidOverlay: {
+  root: {
     ...StyleSheet.absoluteFillObject,
-  },
-  androidAccessory: {
-    left: 0,
-    right: 0,
-    position: "absolute",
+    zIndex: 999,
+    elevation: 999,
   },
   accessory: {
+    position: "absolute",
+    left: 0,
+    right: 0,
     alignItems: "flex-end",
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.12)",
-    backgroundColor: "#18181b",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderTopColor: "rgba(0, 0, 0, 0.14)",
+    backgroundColor: "#f2f2f7",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
   doneText: {
-    color: "#fcd34d",
-    fontSize: 15,
+    color: "#007aff",
+    fontSize: 17,
     fontWeight: "700",
   },
 });
-

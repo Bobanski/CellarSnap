@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  executeSelectWithFallback,
+  executeWithColumnFallback,
+} from "@/server/db/compat";
 
 type CommentRow = {
   id: string;
@@ -10,46 +14,52 @@ type CommentRow = {
   deleted_at?: string | null;
 };
 
-function isMissingColumn(message: string, column: string) {
-  return message.includes(column) || message.includes("column");
-}
-
 async function loadCommentById(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   commentId: string
 ): Promise<CommentRow | null> {
-  const withDeletedAt = await supabase
-    .from("entry_comments")
-    .select("id, entry_id, user_id, parent_comment_id, body, deleted_at")
-    .eq("id", commentId)
-    .maybeSingle();
+  const commentSelectResult = await executeSelectWithFallback({
+    attempts: [
+      {
+        select: "id, entry_id, user_id, parent_comment_id, body, deleted_at",
+        missingColumns: ["deleted_at"] as const,
+        includesDeletedAt: true,
+      },
+      {
+        select: "id, entry_id, user_id, parent_comment_id, body",
+        missingColumns: [] as const,
+        includesDeletedAt: false,
+      },
+    ],
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    fallbackOnAnyMissingColumn: true,
+    attempt: async (attempt) => {
+      const response = await supabase
+        .from("entry_comments")
+        .select(attempt.select)
+        .eq("id", commentId)
+        .maybeSingle();
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
 
-  if (!withDeletedAt.error) {
-    return (withDeletedAt.data as CommentRow | null) ?? null;
+  if (commentSelectResult.error) {
+    throw new Error(commentSelectResult.error.message);
   }
 
-  if (isMissingColumn(withDeletedAt.error.message, "deleted_at")) {
-    const fallback = await supabase
-      .from("entry_comments")
-      .select("id, entry_id, user_id, parent_comment_id, body")
-      .eq("id", commentId)
-      .maybeSingle();
-
-    if (fallback.error) {
-      throw new Error(fallback.error.message);
-    }
-
-    if (!fallback.data) {
-      return null;
-    }
-
-    return {
-      ...(fallback.data as Omit<CommentRow, "deleted_at">),
-      deleted_at: null,
-    };
+  if (!commentSelectResult.data) {
+    return null;
   }
 
-  throw new Error(withDeletedAt.error.message);
+  return commentSelectResult.usedAttempt?.includesDeletedAt
+    ? (commentSelectResult.data as unknown as CommentRow)
+    : {
+        ...(commentSelectResult.data as unknown as Omit<CommentRow, "deleted_at">),
+        deleted_at: null,
+      };
 }
 
 export async function DELETE(
@@ -121,31 +131,28 @@ export async function DELETE(
     }
 
     const nowIso = new Date().toISOString();
-    const withDeletedAt = await supabase
-      .from("entry_comments")
-      .update({ body: "[deleted]", deleted_at: nowIso })
-      .eq("id", commentId)
-      .eq("user_id", user.id);
+    const updateResult = await executeWithColumnFallback({
+      initialPayload: { body: "[deleted]", deleted_at: nowIso },
+      removableColumns: ["deleted_at"] as const,
+      maxAttempts: 2,
+      attempt: async (payload) => {
+        const response = await supabase
+          .from("entry_comments")
+          .update(payload)
+          .eq("id", commentId)
+          .eq("user_id", user.id);
+        return {
+          data: null,
+          error: response.error,
+        };
+      },
+    });
 
-    if (!withDeletedAt.error) {
-      return NextResponse.json({ ok: true, deleted: true, soft_deleted: true });
+    if (updateResult.error) {
+      return NextResponse.json({ error: updateResult.error.message }, { status: 500 });
     }
 
-    if (isMissingColumn(withDeletedAt.error.message, "deleted_at")) {
-      const fallback = await supabase
-        .from("entry_comments")
-        .update({ body: "[deleted]" })
-        .eq("id", commentId)
-        .eq("user_id", user.id);
-
-      if (!fallback.error) {
-        return NextResponse.json({ ok: true, deleted: true, soft_deleted: true });
-      }
-
-      return NextResponse.json({ error: fallback.error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ error: withDeletedAt.error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, deleted: true, soft_deleted: true });
   }
 
   const { error: deleteError } = await supabase

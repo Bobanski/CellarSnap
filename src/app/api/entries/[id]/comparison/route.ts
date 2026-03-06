@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient, type User } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError, isMissingDbTableError } from "@/lib/supabase/errors";
+import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 
 const responseSchema = z.enum(["more", "less", "same_or_not_sure"]);
 const howWasItSchema = z.enum(["awful", "bad", "okay", "good", "exceptional"]);
@@ -43,58 +42,21 @@ function isSurveyColumnUnavailable(error: { message: string; code?: string | nul
   );
 }
 
-type ComparisonSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
-async function createRequestSupabaseClient(
-  request: Request
-): Promise<{ supabase: ComparisonSupabaseClient; user: User | null }> {
-  const authHeader = request.headers.get("authorization");
-  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
-  const bearerToken = bearerMatch?.[1]?.trim();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (bearerToken && supabaseUrl && supabaseAnonKey) {
-    const bearerClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
-        },
-      },
-    });
-    const {
-      data: { user },
-    } = await bearerClient.auth.getUser();
-    if (user) {
-      return {
-        supabase: bearerClient as unknown as ComparisonSupabaseClient,
-        user,
-      };
-    }
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
-}
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: newEntryId } = await params;
-  const { supabase, user } = await createRequestSupabaseClient(request);
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   let body: unknown;
   try {

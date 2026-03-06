@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { createClient, type User } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
+import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
+import { executeWithColumnFallback, hasMissingAnyColumn } from "@/server/db/compat";
 
 type WineEntryRow = {
   id: string;
@@ -51,59 +51,22 @@ function isLegacyPendingPath(path: string | null | undefined) {
   return !path || path === "pending";
 }
 
-type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-
-async function createRequestSupabaseClient(
-  request: Request
-): Promise<{ supabase: ServerSupabaseClient; user: User | null }> {
-  const authHeader = request.headers.get("authorization");
-  const bearerMatch = /^Bearer\s+(.+)$/i.exec(authHeader ?? "");
-  const bearerToken = bearerMatch?.[1]?.trim();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (bearerToken && supabaseUrl && supabaseAnonKey) {
-    const bearerClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
-        },
-      },
-    });
-    const {
-      data: { user },
-    } = await bearerClient.auth.getUser();
-    if (user) {
-      return {
-        supabase: bearerClient as unknown as ServerSupabaseClient,
-        user,
-      };
-    }
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
-}
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
 
-  const { supabase, user } = await createRequestSupabaseClient(request);
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   if (!id) {
     return NextResponse.json({ error: "Entry ID required." }, { status: 400 });
@@ -248,7 +211,9 @@ export async function POST(
   const insertPayload: Record<string, unknown> = {
     user_id: user.id,
     root_entry_id: rootEntry.id,
-    is_feed_visible: true,
+    // Keep the original tagged post as the single feed/home item.
+    // Personal follow-up ratings stay on the user's profile.
+    is_feed_visible: false,
     wine_name: rootEntry.wine_name ?? null,
     producer: rootEntry.producer ?? null,
     vintage: rootEntry.vintage ?? null,
@@ -308,24 +273,26 @@ export async function POST(
     "appellation",
   ];
 
-  const insertAttemptPayload: Record<string, unknown> = { ...insertPayload };
-  let insertedId: string | null = null;
+  const insertResult = await executeWithColumnFallback({
+    initialPayload: insertPayload,
+    removableColumns: optionalColumns,
+    maxAttempts: 6,
+    attempt: async (payloadToApply) => {
+      const insertAttempt = await supabase
+        .from("wine_entries")
+        .insert(payloadToApply)
+        .select("id")
+        .single();
+      return {
+        data: insertAttempt.data,
+        error: insertAttempt.error,
+      };
+    },
+  });
+  const insertedId = insertResult.data?.id ?? null;
 
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const insertAttempt = await supabase
-      .from("wine_entries")
-      .insert(insertAttemptPayload)
-      .select("id")
-      .single();
-
-    if (!insertAttempt.error) {
-      insertedId = insertAttempt.data?.id ?? null;
-      break;
-    }
-
-    const message = insertAttempt.error.message ?? "";
-    const missingRequired = requiredColumns.find((col) => message.includes(col));
-    if (missingRequired) {
+  if (insertResult.error) {
+    if (hasMissingAnyColumn(insertResult.error, requiredColumns)) {
       return NextResponse.json(
         {
           error:
@@ -335,14 +302,10 @@ export async function POST(
         { status: 503 }
       );
     }
-
-    const missingOptional = optionalColumns.find((col) => message.includes(col));
-    if (missingOptional && missingOptional in insertAttemptPayload) {
-      delete insertAttemptPayload[missingOptional];
-      continue;
-    }
-
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: insertResult.error.message ?? "Unable to add this tasting to your log." },
+      { status: 500 }
+    );
   }
 
   if (!insertedId) {

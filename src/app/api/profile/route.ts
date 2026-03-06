@@ -15,6 +15,11 @@ import {
   PHONE_E164_REGEX,
   PHONE_FORMAT_MESSAGE,
 } from "@/lib/validation/phone";
+import {
+  executeSelectWithFallback,
+  executeWithColumnFallback,
+} from "@/server/db/compat";
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 const privacyLevelSchema = z.enum([
   "public",
@@ -119,19 +124,6 @@ const updateProfileSchema = z
     { message: "No profile updates provided." }
   );
 
-function hasMissingPrivacyColumns(message: string) {
-  return (
-    message.includes("default_entry_privacy") ||
-    message.includes("default_reaction_privacy") ||
-    message.includes("default_comments_privacy") ||
-    message.includes("privacy_confirmed_at")
-  );
-}
-
-function hasMissingNameColumns(message: string) {
-  return message.includes("first_name") || message.includes("last_name");
-}
-
 function hasMissingAvatarColumn(message: string) {
   return message.includes("avatar_path");
 }
@@ -142,16 +134,6 @@ function hasMissingPhoneColumn(message: string) {
 
 function hasMissingBioColumn(message: string) {
   return message.includes("bio");
-}
-
-function hasMissingKnownProfileColumns(message: string) {
-  return (
-    hasMissingPrivacyColumns(message) ||
-    hasMissingNameColumns(message) ||
-    hasMissingAvatarColumn(message) ||
-    hasMissingPhoneColumn(message) ||
-    hasMissingBioColumn(message)
-  );
 }
 
 type ProfileSelectAttempt = {
@@ -258,6 +240,17 @@ const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
   },
 ];
 
+const PROFILE_OPTIONAL_UPDATE_COLUMNS = [
+  "default_entry_privacy",
+  "default_reaction_privacy",
+  "default_comments_privacy",
+  "privacy_confirmed_at",
+  "first_name",
+  "last_name",
+  "phone",
+  "bio",
+] as const;
+
 async function ensureProfileRowExists(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   user: { id: string; email?: string | null; phone?: string | null }
@@ -308,40 +301,45 @@ async function selectProfileRow(
   attempt: ProfileSelectAttempt | null;
   error: string | null;
 }> {
-  for (const attempt of PROFILE_SELECT_ATTEMPTS) {
-    const response = (await supabase
-      .from("profiles")
-      .select(attempt.select)
-      .eq("id", userId)
-      .single()) as unknown as {
-      data: Record<string, unknown> | null;
-      error: { message: string } | null;
-    };
-    const { data, error } = response;
-
-    if (!error && data) {
-      return {
-        data,
-        attempt,
-        error: null,
+  const selectResult = await executeSelectWithFallback({
+    attempts: PROFILE_SELECT_ATTEMPTS,
+    getFallbackColumns: () => [
+      "default_entry_privacy",
+      "default_reaction_privacy",
+      "default_comments_privacy",
+      "privacy_confirmed_at",
+      "first_name",
+      "last_name",
+      "avatar_path",
+    ],
+    attempt: async (attempt) => {
+      const response = (await supabase
+        .from("profiles")
+        .select(attempt.select)
+        .eq("id", userId)
+        .single()) as unknown as {
+        data: Record<string, unknown> | null;
+        error: { message: string } | null;
       };
-    }
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
 
-    if (error && hasMissingKnownProfileColumns(error.message)) {
-      continue;
-    }
-
+  if (!selectResult.error && selectResult.data && selectResult.usedAttempt) {
     return {
-      data: null,
-      attempt: null,
-      error: error?.message ?? "Unable to load profile.",
+      data: selectResult.data,
+      attempt: selectResult.usedAttempt,
+      error: null,
     };
   }
 
   return {
     data: null,
     attempt: null,
-    error: "Unable to load profile.",
+    error: selectResult.error?.message ?? "Unable to load profile.",
   };
 }
 
@@ -412,10 +410,7 @@ export async function GET() {
 
   let avatar_url: string | null = null;
   if (avatarPath) {
-    const { data: urlData } = await supabase.storage
-      .from("wine-photos")
-      .createSignedUrl(avatarPath, 60 * 60);
-    avatar_url = urlData?.signedUrl ?? null;
+    avatar_url = await signPhotoUrl(avatarPath, supabase);
   }
 
   const { data: phoneRow, error: phoneError } = await supabase
@@ -585,76 +580,40 @@ export async function PATCH(request: Request) {
     updates.privacy_confirmed_at = confirmedPrivacyAt;
   }
 
-  const updatesToApply: Record<string, string | null> = { ...updates };
-  while (Object.keys(updatesToApply).length > 0) {
-    const updateResult = await supabase
-      .from("profiles")
-      .update(updatesToApply)
-      .eq("id", user.id)
-      .select("id")
-      .single();
+  const updateResult = await executeWithColumnFallback({
+    initialPayload: updates,
+    removableColumns: PROFILE_OPTIONAL_UPDATE_COLUMNS,
+    maxAttempts: 10,
+    attempt: async (updatesToApply) => {
+      if (Object.keys(updatesToApply).length === 0) {
+        return {
+          data: { id: user.id },
+          error: null,
+        };
+      }
 
-    if (!updateResult.error) {
-      break;
-    }
+      const result = await supabase
+        .from("profiles")
+        .update(updatesToApply)
+        .eq("id", user.id)
+        .select("id")
+        .single();
+      return {
+        data: result.data,
+        error: result.error,
+      };
+    },
+  });
 
+  if (updateResult.error) {
     const message = updateResult.error.message;
-    let removedUnsupportedColumn = false;
-
     if (message.includes("profiles_phone_unique")) {
       return NextResponse.json(
         { error: "That phone number is already in use." },
         { status: 400 }
       );
     }
-
-    if (hasMissingPrivacyColumns(message)) {
-      if ("default_entry_privacy" in updatesToApply) {
-        delete updatesToApply.default_entry_privacy;
-        removedUnsupportedColumn = true;
-      }
-      if ("default_reaction_privacy" in updatesToApply) {
-        delete updatesToApply.default_reaction_privacy;
-        removedUnsupportedColumn = true;
-      }
-      if ("default_comments_privacy" in updatesToApply) {
-        delete updatesToApply.default_comments_privacy;
-        removedUnsupportedColumn = true;
-      }
-      if ("privacy_confirmed_at" in updatesToApply) {
-        delete updatesToApply.privacy_confirmed_at;
-        removedUnsupportedColumn = true;
-      }
-    }
-
-    if (hasMissingNameColumns(message)) {
-      if ("first_name" in updatesToApply) {
-        delete updatesToApply.first_name;
-        removedUnsupportedColumn = true;
-      }
-      if ("last_name" in updatesToApply) {
-        delete updatesToApply.last_name;
-        removedUnsupportedColumn = true;
-      }
-    }
-
-    if (hasMissingPhoneColumn(message)) {
-      if ("phone" in updatesToApply) {
-        delete updatesToApply.phone;
-        removedUnsupportedColumn = true;
-      }
-    }
-
-    if (hasMissingBioColumn(message)) {
-      if ("bio" in updatesToApply) {
-        delete updatesToApply.bio;
-        removedUnsupportedColumn = true;
-      }
-    }
-
-    if (!removedUnsupportedColumn) {
-      return NextResponse.json({ error: message }, { status: 500 });
-    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   const selected = await selectProfileRow(supabase, user.id);

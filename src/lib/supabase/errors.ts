@@ -50,6 +50,14 @@ export function isMissingDbColumnError(error: SupabaseErrorLike, column: string)
 
   if (code === "42703" && message.includes(needle)) return true; // undefined_column
 
+  if (message.includes("schema cache") && message.includes("column") && message.includes(needle)) {
+    return true;
+  }
+
+  if (message.includes("could not find") && message.includes("column") && message.includes(needle)) {
+    return true;
+  }
+
   if (message.includes("column") && message.includes("does not exist") && message.includes(needle)) {
     return true;
   }
@@ -57,3 +65,15 @@ export function isMissingDbColumnError(error: SupabaseErrorLike, column: string)
   return false;
 }
 
+export function isAnyMissingDbColumnError(error: SupabaseErrorLike) {
+  const code = error.code ?? "";
+  const message = normalize(error.message);
+
+  if (code === "42703") return true; // undefined_column
+
+  if (message.includes("schema cache") && message.includes("column")) return true;
+  if (message.includes("could not find") && message.includes("column")) return true;
+  if (message.includes("column") && message.includes("does not exist")) return true;
+
+  return false;
+}

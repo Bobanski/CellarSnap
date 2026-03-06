@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry, type EntryPrivacy } from "@/lib/access/entryVisibility";
+import { executeSelectWithFallback } from "@/server/db/compat";
+import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
 
 type EntryRow = {
   id: string;
@@ -75,34 +77,41 @@ async function getEntryWithCommentSettings(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   entryId: string
 ): Promise<EntryRow | null> {
-  const selectAttempts = [
-    "id, user_id, entry_privacy, comments_privacy, comments_scope",
-    "id, user_id, entry_privacy, comments_scope",
-    "id, user_id, entry_privacy",
-  ];
+  const entrySettingsResult = await executeSelectWithFallback({
+    attempts: [
+      {
+        select: "id, user_id, entry_privacy, comments_privacy, comments_scope",
+        missingColumns: ["comments_privacy", "comments_scope"] as const,
+      },
+      {
+        select: "id, user_id, entry_privacy, comments_scope",
+        missingColumns: ["comments_scope"] as const,
+      },
+      {
+        select: "id, user_id, entry_privacy",
+        missingColumns: [] as const,
+      },
+    ],
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    fallbackOnAnyMissingColumn: true,
+    attempt: async (attempt) => {
+      const response = await supabase
+        .from("wine_entries")
+        .select(attempt.select)
+        .eq("id", entryId)
+        .maybeSingle();
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
 
-  for (const select of selectAttempts) {
-    const response = await supabase
-      .from("wine_entries")
-      .select(select)
-      .eq("id", entryId)
-      .maybeSingle();
-
-    if (!response.error) {
-      return response.data as EntryRow | null;
-    }
-
-    const missingCommentsPrivacy = response.error.message.includes("comments_privacy");
-    const missingCommentsScope = response.error.message.includes("comments_scope");
-
-    if ((missingCommentsPrivacy || missingCommentsScope) && select !== "id, user_id, entry_privacy") {
-      continue;
-    }
-
-    throw new Error(response.error.message);
+  if (entrySettingsResult.error) {
+    throw new Error(entrySettingsResult.error.message);
   }
 
-  return null;
+  return (entrySettingsResult.data as EntryRow | null) ?? null;
 }
 
 async function canUserAccessComments({
@@ -145,52 +154,45 @@ async function fetchCommentsForEntry(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   entryId: string
 ): Promise<CommentRow[]> {
-  const withDeletedAt = await supabase
-    .from("entry_comments")
-    .select("id, entry_id, user_id, parent_comment_id, body, created_at, deleted_at")
-    .eq("entry_id", entryId)
-    .order("created_at", { ascending: true });
+  const commentsResult = await executeSelectWithFallback({
+    attempts: [
+      {
+        select: "id, entry_id, user_id, parent_comment_id, body, created_at, deleted_at",
+        missingColumns: ["deleted_at"] as const,
+        includesDeletedAt: true,
+      },
+      {
+        select: "id, entry_id, user_id, parent_comment_id, body, created_at",
+        missingColumns: [] as const,
+        includesDeletedAt: false,
+      },
+    ],
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    fallbackOnAnyMissingColumn: true,
+    attempt: async (attempt) => {
+      const response = await supabase
+        .from("entry_comments")
+        .select(attempt.select)
+        .eq("entry_id", entryId)
+        .order("created_at", { ascending: true });
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
 
-  if (!withDeletedAt.error) {
-    return (withDeletedAt.data ?? []) as CommentRow[];
+  if (commentsResult.error) {
+    throw new Error(commentsResult.error.message);
   }
 
-  if (withDeletedAt.error.message.includes("deleted_at")) {
-    const fallback = await supabase
-      .from("entry_comments")
-      .select("id, entry_id, user_id, parent_comment_id, body, created_at")
-      .eq("entry_id", entryId)
-      .order("created_at", { ascending: true });
-
-    if (fallback.error) {
-      throw new Error(fallback.error.message);
-    }
-
-    return ((fallback.data ?? []) as Omit<CommentRow, "deleted_at">[]).map(
-      (row) => ({ ...row, deleted_at: null })
-    );
+  if (commentsResult.usedAttempt?.includesDeletedAt) {
+    return (commentsResult.data ?? []) as unknown as CommentRow[];
   }
 
-  throw new Error(withDeletedAt.error.message);
-}
-
-async function createAvatarSignedUrl(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  path: string | null | undefined
-) {
-  if (!path) {
-    return null;
-  }
-
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-
-  if (error) {
-    return null;
-  }
-
-  return data.signedUrl;
+  return ((commentsResult.data ?? []) as unknown as Omit<CommentRow, "deleted_at">[]).map(
+    (row) => ({ ...row, deleted_at: null })
+  );
 }
 
 export async function GET(
@@ -253,29 +255,41 @@ export async function GET(
   const authorIds = Array.from(new Set(rows.map((row) => row.user_id)));
   let profiles: ProfileRow[] = [];
   if (authorIds.length > 0) {
-    const { data: profilesWithAvatar, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, display_name, email, avatar_path")
-      .in("id", authorIds);
+    const profilesResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          select: "id, display_name, email, avatar_path",
+          missingColumns: ["avatar_path"] as const,
+          includesAvatar: true,
+        },
+        {
+          select: "id, display_name, email",
+          missingColumns: [] as const,
+          includesAvatar: false,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      fallbackOnAnyMissingColumn: true,
+      attempt: async (attempt) => {
+        const response = await supabase
+          .from("profiles")
+          .select(attempt.select)
+          .in("id", authorIds);
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    });
 
-    if (
-      profilesError &&
-      (profilesError.message.includes("avatar_path") ||
-        profilesError.message.includes("column"))
-    ) {
-      const { data: fallback, error: fallbackError } = await supabase
-        .from("profiles")
-        .select("id, display_name, email")
-        .in("id", authorIds);
-      if (fallbackError) {
-        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
-      }
-      profiles = (fallback ?? []).map((profile) => ({ ...profile, avatar_path: null }));
-    } else if (profilesError) {
-      return NextResponse.json({ error: profilesError.message }, { status: 500 });
-    } else {
-      profiles = (profilesWithAvatar ?? []) as ProfileRow[];
+    if (profilesResult.error) {
+      return NextResponse.json({ error: profilesResult.error.message }, { status: 500 });
     }
+
+    const profileRows = (profilesResult.data ?? []) as unknown as ProfileRow[];
+    profiles = profilesResult.usedAttempt?.includesAvatar
+      ? profileRows
+      : profileRows.map((profile) => ({ ...profile, avatar_path: null }));
   }
 
   const authorNameById = new Map(
@@ -289,11 +303,9 @@ export async function GET(
       .filter((profile) => profile.avatar_path)
       .map((profile) => [profile.id, profile.avatar_path as string])
   );
-  const signedAvatarUrlByPath = new Map<string, string | null>();
-  await Promise.all(
-    Array.from(new Set(authorAvatarPathById.values())).map(async (path) => {
-      signedAvatarUrlByPath.set(path, await createAvatarSignedUrl(supabase, path));
-    })
+  const signedAvatarUrlByPath = await signPhotoUrls(
+    new Set(authorAvatarPathById.values()),
+    supabase
   );
 
   const topLevel = rows.filter((row) => row.parent_comment_id === null);
@@ -449,37 +461,49 @@ export async function POST(
       }
     | null = null;
   {
-    const { data: withAvatar, error: withAvatarError } = await supabase
-      .from("profiles")
-      .select("display_name, email, avatar_path")
-      .eq("id", user.id)
-      .maybeSingle();
+    const profileResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          select: "display_name, email, avatar_path",
+          missingColumns: ["avatar_path"] as const,
+          includesAvatar: true,
+        },
+        {
+          select: "display_name, email",
+          missingColumns: [] as const,
+          includesAvatar: false,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      fallbackOnAnyMissingColumn: true,
+      attempt: async (attempt) => {
+        const response = await supabase
+          .from("profiles")
+          .select(attempt.select)
+          .eq("id", user.id)
+          .maybeSingle();
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    });
 
-    if (
-      withAvatarError &&
-      (withAvatarError.message.includes("avatar_path") ||
-        withAvatarError.message.includes("column"))
-    ) {
-      const { data: fallback, error: fallbackError } = await supabase
-        .from("profiles")
-        .select("display_name, email")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (fallbackError) {
-        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
-      }
-      profile = fallback ? { ...fallback, avatar_path: null } : null;
-    } else if (withAvatarError) {
-      return NextResponse.json({ error: withAvatarError.message }, { status: 500 });
-    } else {
-      profile = withAvatar;
+    if (profileResult.error) {
+      return NextResponse.json({ error: profileResult.error.message }, { status: 500 });
     }
+
+    const profileRow = profileResult.data as
+      | { display_name: string | null; email: string | null; avatar_path?: string | null }
+      | null;
+    profile = profileResult.usedAttempt?.includesAvatar
+      ? profileRow
+      : profileRow
+        ? { ...profileRow, avatar_path: null }
+        : null;
   }
 
-  const authorAvatarUrl = await createAvatarSignedUrl(
-    supabase,
-    profile?.avatar_path ?? null
-  );
+  const authorAvatarUrl = await signPhotoUrl(profile?.avatar_path ?? null, supabase);
 
   return NextResponse.json({
     comment: {

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  applyFriendTransition,
+  FriendTransitionError,
+} from "@/server/friends/transition";
 
 function looksLikeRlsDeleteError(message: string) {
   const lower = message.toLowerCase();
@@ -8,6 +12,30 @@ function looksLikeRlsDeleteError(message: string) {
     lower.includes("rls") ||
     lower.includes("permission denied")
   );
+}
+
+function transitionErrorResponse(error: unknown) {
+  if (error instanceof FriendTransitionError) {
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status }
+    );
+  }
+
+  const message =
+    error instanceof Error ? error.message : "Unable to process request.";
+  if (looksLikeRlsDeleteError(message)) {
+    return NextResponse.json(
+      {
+        error:
+          "Friend removal is temporarily unavailable. Please try again later. (FRIEND_REQUEST_DELETE_UNAVAILABLE)",
+        code: "FRIEND_REQUEST_DELETE_UNAVAILABLE",
+      },
+      { status: 503 }
+    );
+  }
+
+  return NextResponse.json({ error: message }, { status: 500 });
 }
 
 /**
@@ -48,37 +76,31 @@ export async function DELETE(
     return NextResponse.json({ error: "Request not found." }, { status: 404 });
   }
 
-  if (
-    request.requester_id !== user.id &&
-    request.recipient_id !== user.id
-  ) {
+  if (request.requester_id !== user.id && request.recipient_id !== user.id) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
-  let deleteError: { message: string } | null = null;
   if (request.status === "pending" || request.status === "accepted") {
-    const [forwardDelete, reverseDelete] = await Promise.all([
-      supabase
-        .from("friend_requests")
-        .delete()
-        .eq("requester_id", request.requester_id)
-        .eq("recipient_id", request.recipient_id)
-        .in("status", ["pending", "accepted"]),
-      supabase
-        .from("friend_requests")
-        .delete()
-        .eq("requester_id", request.recipient_id)
-        .eq("recipient_id", request.requester_id)
-        .in("status", ["pending", "accepted"]),
-    ]);
-    deleteError = forwardDelete.error ?? reverseDelete.error;
-  } else {
-    const singleDelete = await supabase
-      .from("friend_requests")
-      .delete()
-      .eq("id", id);
-    deleteError = singleDelete.error;
+    const targetUserId =
+      request.requester_id === user.id ? request.recipient_id : request.requester_id;
+
+    try {
+      await applyFriendTransition(supabase, targetUserId, "remove");
+    } catch (error) {
+      return transitionErrorResponse(error);
+    }
+
+    return NextResponse.json({
+      success: true,
+      request_id: request.id,
+      status: request.status,
+    });
   }
+
+  const { error: deleteError } = await supabase
+    .from("friend_requests")
+    .delete()
+    .eq("id", id);
 
   if (deleteError) {
     if (looksLikeRlsDeleteError(deleteError.message)) {
@@ -91,6 +113,7 @@ export async function DELETE(
         { status: 503 }
       );
     }
+
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { getTodayLocalYmd } from "./date";
+import { normalizeProducerText, normalizeWineNameText } from "./wineText";
 
 export type PrivacyLevel = "public" | "friends_of_friends" | "friends" | "private";
 export const PRIVACY_LEVEL_VALUES = [
@@ -79,12 +81,7 @@ function toNullableString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function getTodayLocalYmd(now = new Date()): string {
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+export { getTodayLocalYmd } from "./date";
 
 export function normalizePrivacyLevel(
   value: unknown,
@@ -154,8 +151,12 @@ const optionalPricePaidSchema = z.preprocess(
 );
 
 export const createEntryInputSchema = z.object({
-  wine_name: z.string().trim().min(1, "Wine name is required."),
-  producer: z.string().optional().transform((value) => toNullableString(value)),
+  wine_name: z
+    .string()
+    .trim()
+    .min(1, "Wine name is required.")
+    .transform((value) => normalizeWineNameText(value) ?? value),
+  producer: z.string().optional().transform((value) => normalizeProducerText(value)),
   vintage: z.string().optional().transform((value) => toNullableString(value)),
   country: z.string().optional().transform((value) => toNullableString(value)),
   region: z.string().optional().transform((value) => toNullableString(value)),
@@ -265,8 +266,8 @@ export function toWineEntryInsertPayload(
 
   return {
     user_id: userId,
-    wine_name: input.wine_name.trim(),
-    producer: input.producer ?? null,
+    wine_name: normalizeWineNameText(input.wine_name) ?? input.wine_name.trim(),
+    producer: normalizeProducerText(input.producer) ?? null,
     vintage: input.vintage ?? null,
     country: input.country ?? null,
     region: input.region ?? null,

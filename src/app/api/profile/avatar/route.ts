@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 const AVATAR_PATH_PREFIX = "avatar";
 const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
@@ -103,12 +104,8 @@ export async function POST(request: Request) {
     await supabase.storage.from("wine-photos").remove(staleAvatarPaths);
   }
 
-  const { data: urlData } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-
   return NextResponse.json({
-    avatar_url: urlData?.signedUrl ?? null,
+    avatar_url: await signPhotoUrl(path, supabase),
     avatar_path: path,
     saved: true,
   });

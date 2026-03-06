@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  type GestureResponderEvent,
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -18,6 +22,9 @@ import {
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
+  mapContextTagToPhotoType,
+  normalizeProducerText,
+  normalizeWineNameText,
   type PricePaidCurrency,
   type PricePaidSource,
   type QprLevel,
@@ -25,6 +32,17 @@ import {
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import {
+  AdaptiveFieldRow,
+  Field,
+  SelectField,
+} from "@/src/components/entries/newEntryFormParts";
+import {
+  ensurePhotoMimeType,
+  extensionForMimeType,
+  readPhotoBytes,
+} from "@/src/lib/entryFlow/photoIO";
+import { requestPhotoContext } from "@/src/lib/entryFlow/photoAnalysisClient";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -133,6 +151,26 @@ type EntryPhotoItem = {
   editable: boolean;
 };
 
+type CropGestureState =
+  | {
+      mode: "pan";
+      startX: number;
+      startY: number;
+      startCenterX: number;
+      startCenterY: number;
+    }
+  | {
+      mode: "pinch";
+      startDistance: number;
+      startZoom: number;
+    };
+
+type SavedCropState = {
+  centerX: number;
+  centerY: number;
+  zoom: number;
+};
+
 type FriendRequestRow = {
   requester_id: string;
   recipient_id: string;
@@ -169,6 +207,7 @@ const ENTRY_PHOTO_TYPES: EntryPhotoType[] = [
 ];
 
 const MAX_ENTRY_PHOTOS_PER_TYPE = 10;
+const WEB_API_BASE_URL = process.env.EXPO_PUBLIC_WEB_API_BASE_URL;
 
 const ADVANCED_NOTE_FIELDS: Array<{ key: string; label: string }> = [
   { key: "acidity", label: "Acidity" },
@@ -246,6 +285,14 @@ function formatYmd(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+const QPR_OPTIONS = [
+  { value: "", label: "Not set" },
+  ...QPR_LEVEL_VALUES.map((value) => ({
+    value,
+    label: QPR_LEVEL_LABELS[value],
+  })),
+];
 
 function formatConsumedDate(raw: string) {
   const dateOnly = raw.slice(0, 10);
@@ -358,6 +405,23 @@ function toStorageObjectPath(path: string) {
   }
 
   return normalizedPath || null;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length === 0) {
+    return "";
+  }
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(bytes.length, offset + chunkSize));
+    binary += String.fromCharCode(...chunk);
+  }
+  if (typeof globalThis.btoa === "function") {
+    return globalThis.btoa(binary);
+  }
+  throw new Error("Base64 encoding not supported on this device.");
 }
 
 function formatProfileName(profile: ProfileRow) {
@@ -607,6 +671,23 @@ export default function EntryDetailScreen() {
   const [failedPhotoIds, setFailedPhotoIds] = useState<Set<string>>(() => new Set());
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
+  const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
+  const [cropImageNaturalSize, setCropImageNaturalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [cropFrameSize, setCropFrameSize] = useState(0);
+  const [cropCenterX, setCropCenterX] = useState(50);
+  const [cropCenterY, setCropCenterY] = useState(50);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropSourceLoading, setCropSourceLoading] = useState(false);
+  const [isSavingCrop, setIsSavingCrop] = useState(false);
+  const [savedCropByPhotoId, setSavedCropByPhotoId] = useState<
+    Record<string, SavedCropState>
+  >({});
+  const [cropSourceDataUrlByPhotoId, setCropSourceDataUrlByPhotoId] = useState<
+    Record<string, string>
+  >({});
   const [advancedNotesOpen, setAdvancedNotesOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDeletingBulkQueue, setIsDeletingBulkQueue] = useState(false);
@@ -625,6 +706,12 @@ export default function EntryDetailScreen() {
   const [friendUsers, setFriendUsers] = useState<ProfileRow[]>([]);
   const [selectedTastedWithIds, setSelectedTastedWithIds] = useState<string[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [locationApiMessage, setLocationApiMessage] = useState<string | null>(null);
+  const [locationSessionToken, setLocationSessionToken] = useState(() =>
+    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  );
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
   const [bulkReviewForm, setBulkReviewForm] = useState<BulkReviewFormState>({
     wine_name: "",
@@ -649,7 +736,6 @@ export default function EntryDetailScreen() {
   const [isUpdatingPhotoMeta, setIsUpdatingPhotoMeta] = useState(false);
   const [photoTypePickerOpen, setPhotoTypePickerOpen] = useState(false);
   const [photoOrderPickerOpen, setPhotoOrderPickerOpen] = useState(false);
-  const [qprPickerOpen, setQprPickerOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const now = new Date();
@@ -664,12 +750,8 @@ export default function EntryDetailScreen() {
   });
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
-  const [isLocationLoading, setIsLocationLoading] = useState(false);
-  const [locationSessionToken, setLocationSessionToken] = useState(() =>
-    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-  );
   const galleryScrollRef = useRef<ScrollView | null>(null);
+  const cropDragRef = useRef<CropGestureState | null>(null);
 
   const loadEntry = useCallback(async () => {
     if (!entryId) {
@@ -841,6 +923,8 @@ export default function EntryDetailScreen() {
       notes: nextEntry.notes ?? "",
     });
     setBulkReviewError(null);
+    setLocationSuggestions([]);
+    setLocationApiMessage(null);
     setPhotos(nextPhotos);
     setFailedPhotoIds(new Set());
     setActivePhotoIndex(0);
@@ -855,7 +939,6 @@ export default function EntryDetailScreen() {
     setPhotoEditError(null);
     setPhotoTypePickerOpen(false);
     setPhotoOrderPickerOpen(false);
-    setQprPickerOpen(false);
     if (galleryScrollRef.current) {
       galleryScrollRef.current.scrollTo({ x: 0, animated: false });
     }
@@ -996,6 +1079,95 @@ export default function EntryDetailScreen() {
   }, [isBulkReview, isPrimaryGrapeFocused, primaryGrapeQuery, selectedPrimaryGrapes]);
 
   useEffect(() => {
+    let cancelled = false;
+    const query = bulkReviewForm.location_text.trim();
+    const sessionToken = locationSessionToken;
+    const canLookup = isBulkReview || ownerEditOpen;
+
+    const timer = setTimeout(async () => {
+      if (!canLookup) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          setLocationApiMessage(null);
+        }
+        return;
+      }
+
+      if (!GOOGLE_MAPS_API_KEY) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          setLocationApiMessage(
+            "Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to enable location autocomplete."
+          );
+        }
+        return;
+      }
+
+      if (query.length < 2) {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setIsLocationLoading(false);
+          setLocationApiMessage(null);
+        }
+        return;
+      }
+
+      setIsLocationLoading(true);
+      setLocationApiMessage(null);
+
+      const url =
+        "https://maps.googleapis.com/maps/api/place/autocomplete/json" +
+        `?input=${encodeURIComponent(query)}` +
+        "&types=establishment|geocode" +
+        `&sessiontoken=${encodeURIComponent(sessionToken)}` +
+        `&key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}`;
+
+      try {
+        const response = await fetch(url);
+        const payload = (await response.json()) as {
+          status?: string;
+          error_message?: string;
+          predictions?: Array<{ description?: string; place_id?: string }>;
+        };
+
+        if (cancelled) {
+          return;
+        }
+
+        if (payload.status !== "OK" && payload.status !== "ZERO_RESULTS") {
+          setLocationSuggestions([]);
+          setLocationApiMessage(payload.error_message || "Location lookup failed.");
+          setIsLocationLoading(false);
+          return;
+        }
+
+        const suggestions = (payload.predictions ?? [])
+          .map((item) => ({
+            description: item.description ?? "",
+            place_id: item.place_id ?? "",
+          }))
+          .filter((item) => item.description.length > 0 && item.place_id.length > 0)
+          .slice(0, 5);
+        setLocationSuggestions(suggestions);
+        setIsLocationLoading(false);
+      } catch {
+        if (!cancelled) {
+          setLocationSuggestions([]);
+          setLocationApiMessage("Unable to reach Google Maps. Check connection.");
+          setIsLocationLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [bulkReviewForm.location_text, isBulkReview, locationSessionToken, ownerEditOpen]);
+
+  useEffect(() => {
     if (!user?.id || !isBulkReview) {
       return;
     }
@@ -1061,14 +1233,131 @@ export default function EntryDetailScreen() {
     };
   }, [isBulkReview, user?.id]);
 
+  useEffect(() => {
+    const cropPhoto =
+      cropPhotoId !== null
+        ? photos.find((photo) => photo.id === cropPhotoId) ?? null
+        : null;
+    const sourceUri =
+      cropPhoto && cropSourceDataUrlByPhotoId[cropPhoto.id]
+        ? cropSourceDataUrlByPhotoId[cropPhoto.id]
+        : cropPhoto?.url ?? null;
+    if (!sourceUri) {
+      setCropImageNaturalSize(null);
+      setCropSourceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCropSourceLoading(true);
+    Image.getSize(
+      sourceUri,
+      (width, height) => {
+        if (cancelled) {
+          return;
+        }
+        setCropImageNaturalSize({
+          width: Math.max(1, width),
+          height: Math.max(1, height),
+        });
+        setCropSourceLoading(false);
+      },
+      () => {
+        if (cancelled) {
+          return;
+        }
+        setCropImageNaturalSize(null);
+        setCropSourceLoading(false);
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cropPhotoId, cropSourceDataUrlByPhotoId, photos]);
+
+  useEffect(() => {
+    setCropSourceDataUrlByPhotoId((current) => {
+      const photoIds = new Set(photos.map((photo) => photo.id));
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const [photoId, dataUrl] of Object.entries(current)) {
+        if (photoIds.has(photoId)) {
+          next[photoId] = dataUrl;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [photos]);
+
+  useEffect(() => {
+    setSavedCropByPhotoId((current) => {
+      const photoIds = new Set(photos.map((photo) => photo.id));
+      let changed = false;
+      const next: Record<string, SavedCropState> = {};
+      for (const [photoId, state] of Object.entries(current)) {
+        if (photoIds.has(photoId)) {
+          next[photoId] = state;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [photos]);
+
   const isOwner = Boolean(user?.id && entry?.user_id === user.id);
   const hasMultiplePhotos = photos.length > 1;
   const isEditFormVisible = isBulkReview || (isOwner && ownerEditOpen);
   const activePhoto =
     photos[Math.max(0, Math.min(photos.length - 1, activePhotoIndex))] ?? null;
+  const activeCropPhoto =
+    cropPhotoId !== null
+      ? photos.find((photo) => photo.id === cropPhotoId) ?? null
+      : null;
+  const activeCropPhotoSourceUri =
+    activeCropPhoto && cropSourceDataUrlByPhotoId[activeCropPhoto.id]
+      ? cropSourceDataUrlByPhotoId[activeCropPhoto.id]
+      : activeCropPhoto?.url ?? null;
+  const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
+  const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
+  const getCropGeometry = () => {
+    if (!cropImageNaturalSize || cropFrameSize <= 0) {
+      return null;
+    }
+
+    const baseScale = Math.min(
+      cropFrameSize / cropImageNaturalSize.width,
+      cropFrameSize / cropImageNaturalSize.height
+    );
+    const effectiveScale = baseScale * cropZoom;
+    const renderedWidth = cropImageNaturalSize.width * effectiveScale;
+    const renderedHeight = cropImageNaturalSize.height * effectiveScale;
+    const overflowX = Math.max(0, renderedWidth - cropFrameSize);
+    const overflowY = Math.max(0, renderedHeight - cropFrameSize);
+    const centerPadX = Math.max(0, (cropFrameSize - renderedWidth) / 2);
+    const centerPadY = Math.max(0, (cropFrameSize - renderedHeight) / 2);
+
+    return {
+      renderedWidth,
+      renderedHeight,
+      overflowX,
+      overflowY,
+      offsetX: centerPadX - overflowX * (cropCenterX / 100),
+      offsetY: centerPadY - overflowY * (cropCenterY / 100),
+    };
+  };
   const activePhotoFailed = activePhoto ? failedPhotoIds.has(activePhoto.id) : false;
   const canEditActivePhotoMeta = Boolean(
     isOwner && isEditFormVisible && activePhoto?.editable && !isUpdatingPhotoMeta
+  );
+  const canManagePhotoContent = Boolean(
+    isOwner && isEditFormVisible && !isUpdatingPhotoMeta
+  );
+  const canRemoveActivePhoto = Boolean(
+    canManagePhotoContent && activePhoto?.editable
   );
   const displayRating = getDisplayRating(entry?.rating ?? null);
   const advancedNoteRows = useMemo(
@@ -1084,7 +1373,7 @@ export default function EntryDetailScreen() {
       : null;
   const locationText = entry?.location_text?.trim() ?? "";
   const hasLocation = locationText.length > 0;
-  const canOpenLocation = hasLocation && Boolean(entry?.location_place_id?.trim());
+  const canOpenLocation = hasLocation;
   const locationDisplayLabel = hasLocation
     ? buildLocationDisplayLabel(locationText)
     : "";
@@ -1119,14 +1408,80 @@ export default function EntryDetailScreen() {
     activePhoto && photos.length > 0
       ? photos.findIndex((photo) => photo.id === activePhoto.id) + 1
       : 0;
-  const qprSelectionLabel =
-    bulkReviewForm.qpr_level && QPR_LEVEL_VALUES.includes(bulkReviewForm.qpr_level)
-      ? QPR_LEVEL_LABELS[bulkReviewForm.qpr_level]
-      : "Not set";
+  const cropGeometry = getCropGeometry();
 
   const toggleEditSection = useCallback((section: EditAccordionKey) => {
     setEditExpanded((current) => ({ ...current, [section]: !current[section] }));
   }, []);
+
+  const getAccessTokenForApi = useCallback(async () => {
+    const { data: sessionResult } = await supabase.auth.getSession();
+    let session = sessionResult.session;
+    const expiresSoon =
+      typeof session?.expires_at === "number" &&
+      session.expires_at * 1000 <= Date.now() + 90_000;
+
+    if (!session?.access_token || expiresSoon) {
+      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
+      if (refreshedSessionResult.session?.access_token) {
+        session = refreshedSessionResult.session;
+      }
+    }
+
+    return session?.access_token ?? null;
+  }, []);
+
+  const inferPhotoTypeFromAi = useCallback(
+    async ({
+      fallbackType,
+      uri,
+      name,
+      mimeType,
+    }: {
+      fallbackType: EntryPhotoType;
+      uri: string;
+      name: string;
+      mimeType: string;
+    }) => {
+      const normalizedBaseUrl = WEB_API_BASE_URL?.replace(/\/$/, "") ?? null;
+      if (!normalizedBaseUrl) {
+        return fallbackType;
+      }
+
+      const accessToken = await getAccessTokenForApi();
+      if (!accessToken) {
+        return fallbackType;
+      }
+
+      try {
+        const context = await requestPhotoContext({
+          baseUrl: normalizedBaseUrl,
+          accessToken,
+          photo: {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            uri,
+            name,
+            mimeType,
+          },
+        });
+
+        if (context.tag === "unknown") {
+          return fallbackType === "label" ? "other_bottles" : fallbackType;
+        }
+
+        const suggestedType = mapContextTagToPhotoType(context.tag, {
+          confidence: context.confidence,
+          detectedBottleCount: 0,
+          identifiedBottleCount: 0,
+        });
+
+        return suggestedType;
+      } catch {
+        return fallbackType;
+      }
+    },
+    [getAccessTokenForApi]
+  );
 
   const updateActivePhotoType = useCallback(
     async (nextType: EntryPhotoType) => {
@@ -1224,6 +1579,456 @@ export default function EntryDetailScreen() {
     },
     [activePhoto?.editable, activePhoto?.id, entry, isOwner, loadEntry, photos, user?.id]
   );
+
+  const addPhotosToEntry = useCallback(async () => {
+    if (!entry || !isOwner || !user?.id || !isEditFormVisible) {
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setPhotoEditError("Allow photo access to add images.");
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: false,
+      selectionLimit: 1,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (pickerResult.canceled) {
+      return;
+    }
+
+    const assets = pickerResult.assets
+      .filter((asset) => typeof asset.uri === "string" && asset.uri.trim().length > 0)
+      .slice(0, 1);
+    if (assets.length === 0) {
+      setPhotoEditError("No photos selected.");
+      return;
+    }
+
+    const fallbackType: EntryPhotoType =
+      activePhoto?.editable && activePhoto.type ? activePhoto.type : "label";
+
+    setIsUpdatingPhotoMeta(true);
+    setPhotoEditError(null);
+    try {
+      const nextPositionByType = new Map<EntryPhotoType, number>();
+      for (const asset of assets) {
+        const mimeType = ensurePhotoMimeType(asset.mimeType, asset.fileName, asset.uri);
+        const extension = extensionForMimeType(mimeType);
+        const fileName =
+          asset.fileName && asset.fileName.trim().length > 0
+            ? asset.fileName
+            : `entry-photo-${Date.now()}.${extension}`;
+        const targetType = await inferPhotoTypeFromAi({
+          fallbackType,
+          uri: asset.uri,
+          name: fileName,
+          mimeType,
+        });
+
+        let nextPosition = nextPositionByType.get(targetType);
+        if (nextPosition === undefined) {
+          const { count, error: countError } = await supabase
+            .from("entry_photos")
+            .select("id", { count: "exact", head: true })
+            .eq("entry_id", entry.id)
+            .eq("type", targetType);
+
+          if (countError) {
+            throw new Error(countError.message);
+          }
+
+          if ((count ?? 0) >= MAX_ENTRY_PHOTOS_PER_TYPE) {
+            throw new Error(
+              `Max ${MAX_ENTRY_PHOTOS_PER_TYPE} photos for ${PHOTO_TYPE_LABELS[targetType]}.`
+            );
+          }
+          nextPosition = count ?? 0;
+        }
+
+        const createResult = await supabase
+          .from("entry_photos")
+          .insert({
+            entry_id: entry.id,
+            type: targetType,
+            path: "pending",
+            position: nextPosition,
+          })
+          .select("id")
+          .single();
+
+        if (createResult.error || !createResult.data?.id) {
+          throw new Error(createResult.error?.message ?? "Unable to create photo record.");
+        }
+
+        const createdPhotoId = createResult.data.id;
+        const storagePath = `${user.id}/${entry.id}/${targetType}/${createdPhotoId}.${extension}`;
+        try {
+          const updateResult = await supabase
+            .from("entry_photos")
+            .update({ path: storagePath })
+            .eq("id", createdPhotoId)
+            .eq("entry_id", entry.id);
+          if (updateResult.error) {
+            throw new Error(updateResult.error.message);
+          }
+
+          const fileBytes = await readPhotoBytes(asset.uri);
+          const uploadResult = await supabase.storage
+            .from("wine-photos")
+            .upload(storagePath, fileBytes, {
+              upsert: true,
+              contentType: mimeType,
+            });
+          if (uploadResult.error) {
+            throw new Error(uploadResult.error.message);
+          }
+        } catch (error) {
+          await supabase.storage.from("wine-photos").remove([storagePath]);
+          await supabase
+            .from("entry_photos")
+            .delete()
+            .eq("id", createdPhotoId)
+            .eq("entry_id", entry.id);
+          throw error;
+        }
+
+        nextPositionByType.set(targetType, nextPosition + 1);
+      }
+
+      await loadEntry();
+      Alert.alert(
+        "Photos added",
+        `Added ${assets.length} photo${assets.length === 1 ? "" : "s"}.`
+      );
+    } catch (error) {
+      setPhotoEditError(error instanceof Error ? error.message : "Unable to add photos.");
+    } finally {
+      setIsUpdatingPhotoMeta(false);
+    }
+  }, [
+    activePhoto?.editable,
+    activePhoto?.type,
+    entry,
+    inferPhotoTypeFromAi,
+    isEditFormVisible,
+    isOwner,
+    loadEntry,
+    user?.id,
+  ]);
+
+  const removeActivePhoto = useCallback(async () => {
+    if (!entry || !activePhoto?.editable || !isOwner || !user?.id) {
+      return;
+    }
+
+    setIsUpdatingPhotoMeta(true);
+    setPhotoEditError(null);
+    try {
+      const fetchResult = await supabase
+        .from("entry_photos")
+        .select("id, path")
+        .eq("id", activePhoto.id)
+        .eq("entry_id", entry.id)
+        .maybeSingle();
+
+      if (fetchResult.error) {
+        throw new Error(fetchResult.error.message);
+      }
+      if (!fetchResult.data) {
+        throw new Error("Photo record not found.");
+      }
+
+      const storagePath = toStorageObjectPath(fetchResult.data.path);
+      const deleteResult = await supabase
+        .from("entry_photos")
+        .delete()
+        .eq("id", fetchResult.data.id)
+        .eq("entry_id", entry.id);
+
+      if (deleteResult.error) {
+        throw new Error(deleteResult.error.message);
+      }
+
+      if (storagePath) {
+        await supabase.storage.from("wine-photos").remove([storagePath]);
+      }
+
+      await loadEntry();
+    } catch (error) {
+      setPhotoEditError(error instanceof Error ? error.message : "Unable to remove photo.");
+    } finally {
+      setIsUpdatingPhotoMeta(false);
+    }
+  }, [activePhoto?.editable, activePhoto?.id, entry, isOwner, loadEntry, user?.id]);
+
+  const openCropEditorForActivePhoto = useCallback(() => {
+    if (!activePhoto?.url) {
+      return;
+    }
+    const saved = savedCropByPhotoId[activePhoto.id];
+    setPhotoEditError(null);
+    setCropPhotoId(activePhoto.id);
+    setCropCenterX(saved?.centerX ?? 50);
+    setCropCenterY(saved?.centerY ?? 50);
+    setCropZoom(saved?.zoom ?? 1);
+    cropDragRef.current = null;
+  }, [activePhoto?.id, activePhoto?.url, savedCropByPhotoId]);
+
+  const closeCropEditor = useCallback(() => {
+    if (isSavingCrop) {
+      return;
+    }
+    setCropPhotoId(null);
+    setCropImageNaturalSize(null);
+    setCropFrameSize(0);
+    setCropSourceLoading(false);
+    cropDragRef.current = null;
+  }, [isSavingCrop]);
+
+  const getTouchDistance = (event: GestureResponderEvent) => {
+    const touches = event.nativeEvent.touches;
+    if (touches.length < 2) {
+      return null;
+    }
+    const [touchA, touchB] = touches;
+    const dx = touchA.pageX - touchB.pageX;
+    const dy = touchA.pageY - touchB.pageY;
+    return Math.hypot(dx, dy);
+  };
+
+  const getPrimaryTouchPoint = (event: GestureResponderEvent) => {
+    const touch =
+      event.nativeEvent.touches[0] ??
+      event.nativeEvent.changedTouches?.[0];
+    if (!touch) {
+      return null;
+    }
+    return {
+      x: touch.pageX,
+      y: touch.pageY,
+    };
+  };
+
+  const handleCropResponderGrant = (event: GestureResponderEvent) => {
+    const pinchDistance = getTouchDistance(event);
+    if (typeof pinchDistance === "number" && pinchDistance > 0) {
+      cropDragRef.current = {
+        mode: "pinch",
+        startDistance: pinchDistance,
+        startZoom: cropZoom,
+      };
+      return;
+    }
+
+    const touchPoint = getPrimaryTouchPoint(event);
+    if (!touchPoint) {
+      return;
+    }
+    cropDragRef.current = {
+      mode: "pan",
+      startX: touchPoint.x,
+      startY: touchPoint.y,
+      startCenterX: cropCenterX,
+      startCenterY: cropCenterY,
+    };
+  };
+
+  const handleCropResponderMove = (event: GestureResponderEvent) => {
+    const drag = cropDragRef.current;
+    const geometry = getCropGeometry();
+    if (!drag || !geometry) {
+      return;
+    }
+
+    const pinchDistance = getTouchDistance(event);
+    if (typeof pinchDistance === "number" && pinchDistance > 0) {
+      if (drag.mode !== "pinch") {
+        cropDragRef.current = {
+          mode: "pinch",
+          startDistance: pinchDistance,
+          startZoom: cropZoom,
+        };
+        return;
+      }
+      const zoomScale = pinchDistance / Math.max(1, drag.startDistance);
+      const nextZoom = clampCropZoom(drag.startZoom * zoomScale);
+      setCropZoom((current) =>
+        Math.abs(current - nextZoom) < 0.01 ? current : nextZoom
+      );
+      return;
+    }
+
+    if (drag.mode !== "pan") {
+      const touchPoint = getPrimaryTouchPoint(event);
+      if (!touchPoint) {
+        return;
+      }
+      cropDragRef.current = {
+        mode: "pan",
+        startX: touchPoint.x,
+        startY: touchPoint.y,
+        startCenterX: cropCenterX,
+        startCenterY: cropCenterY,
+      };
+      return;
+    }
+
+    const touchPoint = getPrimaryTouchPoint(event);
+    if (!touchPoint) {
+      return;
+    }
+    const dx = touchPoint.x - drag.startX;
+    const dy = touchPoint.y - drag.startY;
+    const horizontalTravel = geometry.overflowX;
+    const verticalTravel = geometry.overflowY;
+    const nextCenterX =
+      horizontalTravel > 6
+        ? clampCropPercent(
+            drag.startCenterX - (dx / horizontalTravel) * 100
+          )
+        : drag.startCenterX;
+    const nextCenterY =
+      verticalTravel > 6
+        ? clampCropPercent(
+            drag.startCenterY - (dy / verticalTravel) * 100
+          )
+        : drag.startCenterY;
+
+    setCropCenterX((current) =>
+      Math.abs(current - nextCenterX) < 0.08 ? current : nextCenterX
+    );
+    setCropCenterY((current) =>
+      Math.abs(current - nextCenterY) < 0.08 ? current : nextCenterY
+    );
+  };
+
+  const saveCropEdits = useCallback(async () => {
+    if (!entry || !activeCropPhoto?.url || !isOwner) {
+      return;
+    }
+    if (!WEB_API_BASE_URL) {
+      setPhotoEditError(
+        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable in-place crop editing."
+      );
+      return;
+    }
+
+    const accessToken = await getAccessTokenForApi();
+    if (!accessToken) {
+      setPhotoEditError("Session expired. Sign in again to save crop edits.");
+      return;
+    }
+
+    setIsSavingCrop(true);
+    setPhotoEditError(null);
+    try {
+      let sourceDataUrl = cropSourceDataUrlByPhotoId[activeCropPhoto.id] ?? null;
+      if (!sourceDataUrl) {
+        const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+        const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
+        sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
+          sourceBytes
+        )}`;
+      }
+
+      const formData = new FormData();
+      formData.append("photo_data_url", sourceDataUrl);
+      formData.append("center_x", String(cropCenterX));
+      formData.append("center_y", String(cropCenterY));
+      formData.append("zoom", String(cropZoom));
+
+      const normalizedBaseUrl = WEB_API_BASE_URL.replace(/\/$/, "");
+      const response = await fetch(`${normalizedBaseUrl}/api/photo-crop`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        cropped_data_url?: string;
+        mime_type?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.cropped_data_url) {
+        if (response.status === 401) {
+          throw new Error("Session expired. Sign in again to save crop edits.");
+        }
+        throw new Error(payload.error ?? "Unable to crop this image.");
+      }
+
+      const cropRowResult = await supabase
+        .from("entry_photos")
+        .select("id, path")
+        .eq("id", activeCropPhoto.id)
+        .eq("entry_id", entry.id)
+        .maybeSingle();
+      if (cropRowResult.error) {
+        throw new Error(cropRowResult.error.message);
+      }
+      const storagePath = toStorageObjectPath(cropRowResult.data?.path ?? "");
+      if (!storagePath) {
+        throw new Error("Photo record not found.");
+      }
+
+      const croppedBytes = await readPhotoBytes(payload.cropped_data_url);
+      const uploadResult = await supabase.storage
+        .from("wine-photos")
+        .upload(storagePath, croppedBytes, {
+          upsert: true,
+          contentType: payload.mime_type ?? "image/jpeg",
+        });
+      if (uploadResult.error) {
+        throw new Error(uploadResult.error.message);
+      }
+
+      if (sourceDataUrl) {
+        setCropSourceDataUrlByPhotoId((current) =>
+          current[activeCropPhoto.id]
+            ? current
+            : { ...current, [activeCropPhoto.id]: sourceDataUrl }
+        );
+      }
+      setSavedCropByPhotoId((current) => ({
+        ...current,
+        [activeCropPhoto.id]: {
+          centerX: cropCenterX,
+          centerY: cropCenterY,
+          zoom: cropZoom,
+        },
+      }));
+
+      await loadEntry();
+      setCropPhotoId(null);
+      setCropImageNaturalSize(null);
+      setCropFrameSize(0);
+      setCropSourceLoading(false);
+      cropDragRef.current = null;
+    } catch (error) {
+      setPhotoEditError(
+        error instanceof Error ? error.message : "Unable to save crop edits."
+      );
+    } finally {
+      setIsSavingCrop(false);
+    }
+  }, [
+    activeCropPhoto?.id,
+    activeCropPhoto?.url,
+    cropSourceDataUrlByPhotoId,
+    cropCenterX,
+    cropCenterY,
+    cropZoom,
+    entry,
+    getAccessTokenForApi,
+    isOwner,
+    loadEntry,
+  ]);
 
   const addPrimaryGrape = useCallback((grape: PrimaryGrape) => {
     setSelectedPrimaryGrapes((current) => {
@@ -1453,7 +2258,7 @@ export default function EntryDetailScreen() {
       return "You must be signed in.";
     }
 
-    const wineName = bulkReviewForm.wine_name.trim();
+    const wineName = normalizeWineNameText(bulkReviewForm.wine_name);
     if (!wineName) {
       return "Wine name is required.";
     }
@@ -1515,7 +2320,7 @@ export default function EntryDetailScreen() {
       .from("wine_entries")
       .update({
         wine_name: wineName,
-        producer: normalizeOptionalText(bulkReviewForm.producer),
+        producer: normalizeProducerText(bulkReviewForm.producer),
         vintage: normalizeOptionalText(bulkReviewForm.vintage),
         country: normalizeOptionalText(bulkReviewForm.country),
         region: normalizeOptionalText(bulkReviewForm.region),
@@ -1830,8 +2635,16 @@ export default function EntryDetailScreen() {
   ]);
 
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+      >
         <AppTopBar activeHref="/(app)/entries" />
 
         <Pressable
@@ -2025,6 +2838,61 @@ export default function EntryDetailScreen() {
                 </View>
               )}
             </View>
+            {isOwner && isEditFormVisible ? (
+              <View style={styles.photoActionRow}>
+                <Pressable
+                  style={[
+                    styles.bulkSecondaryButton,
+                    !canManagePhotoContent ? styles.bulkButtonDisabled : null,
+                  ]}
+                  disabled={!canManagePhotoContent}
+                  onPress={() => void addPhotosToEntry()}
+                >
+                  <AppText style={styles.bulkSecondaryButtonText}>Add images</AppText>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.bulkSecondaryButton,
+                    !canManagePhotoContent || !activePhoto?.editable || !activePhoto?.url
+                      ? styles.bulkButtonDisabled
+                      : null,
+                  ]}
+                  disabled={
+                    !canManagePhotoContent || !activePhoto?.editable || !activePhoto?.url
+                  }
+                  onPress={openCropEditorForActivePhoto}
+                >
+                  <AppText style={styles.bulkSecondaryButtonText}>Crop</AppText>
+                </Pressable>
+                {canRemoveActivePhoto ? (
+                  <Pressable
+                    style={[
+                      styles.bulkDangerButton,
+                      !canManagePhotoContent ? styles.bulkButtonDisabled : null,
+                    ]}
+                    disabled={!canManagePhotoContent}
+                    onPress={() => {
+                      Alert.alert(
+                        "Delete this photo?",
+                        "This removes the current photo from this entry.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: () => {
+                              void removeActivePhoto();
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <AppText style={styles.bulkDangerButtonText}>Delete photo</AppText>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
             {photoEditError ? (
               <View style={styles.inlineErrorWrap}>
                 <AppText style={styles.bulkReviewErrorText}>{photoEditError}</AppText>
@@ -2068,43 +2936,32 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
-                <View style={styles.bulkFormField}>
-                  <AppText style={styles.bulkFormLabel}>Notes</AppText>
-                  <DoneTextInput
-                    value={bulkReviewForm.notes}
-                    onChangeText={(value) => updateBulkReviewField("notes", value)}
-                    placeholder="Optional tasting notes"
-                    placeholderTextColor="#71717a"
-                    autoCapitalize="sentences"
-                    autoCorrect
-                    multiline
-                    style={[styles.bulkFormInput, styles.bulkFormInputMultiline]}
-                  />
-                </View>
+                <Field
+                  label="Notes"
+                  value={bulkReviewForm.notes}
+                  onChange={(value) => updateBulkReviewField("notes", value)}
+                  placeholder="Optional tasting notes"
+                  multiline
+                />
 
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Rating (1-100) <AppText style={{ color: "#fb7185", fontWeight: "700" }}>*</AppText></AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.rating}
-                      onChangeText={(value) => updateBulkReviewField("rating", value)}
-                      placeholder="Required"
-                      placeholderTextColor="#71717a"
-                      keyboardType="number-pad"
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>QPR</AppText>
-                    <Pressable
-                      style={styles.bulkSelectTrigger}
-                      onPress={() => setQprPickerOpen(true)}
-                    >
-                      <AppText style={styles.bulkSelectTriggerText}>{qprSelectionLabel}</AppText>
-                      <AppText style={styles.bulkSelectChevron}>{"\u25BE"}</AppText>
-                    </Pressable>
-                  </View>
-                </View>
+                <AdaptiveFieldRow minColumnWidth={170}>
+                  <Field
+                    label="Rating (1-100)"
+                    value={bulkReviewForm.rating}
+                    onChange={(value) => updateBulkReviewField("rating", value)}
+                    keyboardType="number-pad"
+                    placeholder="Required"
+                    required
+                  />
+                  <SelectField
+                    label="QPR"
+                    value={bulkReviewForm.qpr_level}
+                    options={QPR_OPTIONS}
+                    onChange={(value) =>
+                      updateBulkReviewField("qpr_level", value as QprLevel | "")
+                    }
+                  />
+                </AdaptiveFieldRow>
 
                 <Accordion
                   title="Wine details"
@@ -2112,98 +2969,58 @@ export default function EntryDetailScreen() {
                   expanded={editExpanded.wine_details}
                   onToggle={() => toggleEditSection("wine_details")}
                 >
-                <View style={styles.bulkFormField}>
-                  <AppText style={styles.bulkFormLabel}>Wine name</AppText>
-                  <DoneTextInput
-                    value={bulkReviewForm.wine_name}
-                    onChangeText={(value) => updateBulkReviewField("wine_name", value)}
-                    placeholder="Required"
-                    placeholderTextColor="#71717a"
+                <Field
+                  label="Wine name"
+                  value={bulkReviewForm.wine_name}
+                  onChange={(value) => updateBulkReviewField("wine_name", value)}
+                  placeholder="Required"
+                  required
+                />
+
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Producer"
+                    value={bulkReviewForm.producer}
+                    onChange={(value) => updateBulkReviewField("producer", value)}
                     autoCapitalize="words"
-                    autoCorrect={false}
-                    style={styles.bulkFormInput}
                   />
-                </View>
+                  <Field
+                    label="Vintage"
+                    value={bulkReviewForm.vintage}
+                    onChange={(value) => updateBulkReviewField("vintage", value)}
+                    keyboardType="number-pad"
+                  />
+                </AdaptiveFieldRow>
 
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Producer</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.producer}
-                      onChangeText={(value) => updateBulkReviewField("producer", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Vintage</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.vintage}
-                      onChangeText={(value) => updateBulkReviewField("vintage", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      keyboardType="number-pad"
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                </View>
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Country"
+                    value={bulkReviewForm.country}
+                    onChange={(value) => updateBulkReviewField("country", value)}
+                    autoCapitalize="words"
+                  />
+                  <Field
+                    label="Region"
+                    value={bulkReviewForm.region}
+                    onChange={(value) => updateBulkReviewField("region", value)}
+                    autoCapitalize="words"
+                  />
+                </AdaptiveFieldRow>
 
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Country</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.country}
-                      onChangeText={(value) => updateBulkReviewField("country", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Region</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.region}
-                      onChangeText={(value) => updateBulkReviewField("region", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.bulkFormRow}>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Appellation</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.appellation}
-                      onChangeText={(value) => updateBulkReviewField("appellation", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                  <View style={styles.bulkFormCol}>
-                    <AppText style={styles.bulkFormLabel}>Classification</AppText>
-                    <DoneTextInput
-                      value={bulkReviewForm.classification}
-                      onChangeText={(value) => updateBulkReviewField("classification", value)}
-                      placeholder="Optional"
-                      placeholderTextColor="#71717a"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      style={styles.bulkFormInput}
-                    />
-                  </View>
-                </View>
+                <AdaptiveFieldRow minColumnWidth={160}>
+                  <Field
+                    label="Appellation"
+                    value={bulkReviewForm.appellation}
+                    onChange={(value) => updateBulkReviewField("appellation", value)}
+                    autoCapitalize="words"
+                  />
+                  <Field
+                    label="Classification"
+                    value={bulkReviewForm.classification}
+                    onChange={(value) => updateBulkReviewField("classification", value)}
+                    autoCapitalize="words"
+                  />
+                </AdaptiveFieldRow>
 
                 <View style={styles.bulkFormField}>
                   <View style={styles.primaryGrapeHeaderRow}>
@@ -2295,7 +3112,12 @@ export default function EntryDetailScreen() {
                         updateBulkReviewField("location_place_id", "");
                       }
                     }}
-                    placeholder="Search places"
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setLocationSuggestions([]);
+                      }, 120);
+                    }}
+                    placeholder="Search places (optional)"
                     placeholderTextColor="#71717a"
                     autoCapitalize="words"
                     autoCorrect={false}
@@ -2305,12 +3127,13 @@ export default function EntryDetailScreen() {
                     <View style={styles.inlineSuggestionList}>
                       {locationSuggestions.map((suggestion) => (
                         <Pressable
-                          key={suggestion.place_id}
+                          key={`bulk-location-${suggestion.place_id}`}
                           style={styles.suggestionItem}
                           onPress={() => {
                             updateBulkReviewField("location_text", suggestion.description);
                             updateBulkReviewField("location_place_id", suggestion.place_id);
                             setLocationSuggestions([]);
+                            setLocationApiMessage(null);
                             setLocationSessionToken(
                               `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
                             );
@@ -2324,7 +3147,12 @@ export default function EntryDetailScreen() {
                     </View>
                   ) : null}
                   {isLocationLoading ? (
-                    <AppText style={styles.bulkSectionHint}>Searching Google Maps...</AppText>
+                    <AppText style={styles.bulkSectionHint}>
+                      Searching Google Maps...
+                    </AppText>
+                  ) : null}
+                  {locationApiMessage ? (
+                    <AppText style={styles.bulkSectionHint}>{locationApiMessage}</AppText>
                   ) : null}
                 </View>
 
@@ -2844,63 +3672,98 @@ export default function EntryDetailScreen() {
         )}
       </ScrollView>
       <Modal
-        visible={qprPickerOpen}
+        visible={Boolean(activeCropPhoto)}
         transparent
         animationType="fade"
-        onRequestClose={() => setQprPickerOpen(false)}
+        onRequestClose={closeCropEditor}
       >
-        <View style={styles.pickerModalRoot}>
-          <Pressable style={styles.pickerModalBackdrop} onPress={() => setQprPickerOpen(false)} />
-          <View style={styles.pickerModalCard}>
-            <AppText style={styles.pickerModalTitle}>Select QPR</AppText>
-            <ScrollView
-              style={styles.pickerModalList}
-              contentContainerStyle={styles.pickerModalListContent}
+        <View style={styles.cropModalRoot}>
+          <View style={styles.cropModalBackdrop} />
+          <View style={styles.cropModalCard}>
+            <View style={styles.cropModalHeader}>
+              <AppText style={styles.cropModalTitle}>Edit crop</AppText>
+              <Pressable onPress={closeCropEditor} hitSlop={8}>
+                <AppText style={styles.cropModalCloseText}>Close</AppText>
+              </Pressable>
+            </View>
+            <View
+              style={styles.cropFrame}
+              onLayout={(event) => {
+                const width = Math.round(event.nativeEvent.layout.width);
+                setCropFrameSize((current) => (current === width ? current : width));
+              }}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderTerminationRequest={() => false}
+              onResponderGrant={handleCropResponderGrant}
+              onResponderMove={handleCropResponderMove}
+              onResponderRelease={() => {
+                cropDragRef.current = null;
+              }}
+              onResponderTerminate={() => {
+                cropDragRef.current = null;
+              }}
             >
+              {cropSourceLoading ? (
+                <View style={styles.cropFrameLoading}>
+                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <AppText style={styles.cropFrameHint}>Loading image...</AppText>
+                </View>
+              ) : activeCropPhotoSourceUri ? (
+                <>
+                  <View
+                    pointerEvents="none"
+                    style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
+                  >
+                    <Image
+                      source={{ uri: activeCropPhotoSourceUri }}
+                      style={[
+                        styles.cropFrameImage,
+                        cropGeometry
+                          ? {
+                              width: cropGeometry.renderedWidth,
+                              height: cropGeometry.renderedHeight,
+                              transform: [
+                                { translateX: cropGeometry.offsetX },
+                                { translateY: cropGeometry.offsetY },
+                              ],
+                            }
+                          : null,
+                      ]}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View pointerEvents="none" style={styles.cropFrameOutline} />
+                  <View pointerEvents="none" style={styles.cropFrameCrosshair} />
+                </>
+              ) : (
+                <View style={styles.cropFrameLoading}>
+                  <AppText style={styles.cropFrameHint}>Image unavailable.</AppText>
+                </View>
+              )}
+            </View>
+            <AppText style={styles.cropFrameHint}>
+              Pinch to zoom and drag to reposition.
+            </AppText>
+            <View style={styles.cropActionRow}>
+              <Pressable style={styles.bulkSecondaryButton} onPress={closeCropEditor}>
+                <AppText style={styles.bulkSecondaryButtonText}>Cancel</AppText>
+              </Pressable>
               <Pressable
                 style={[
-                  styles.pickerModalItem,
-                  bulkReviewForm.qpr_level === "" ? styles.pickerModalItemSelected : null,
+                  styles.bulkPrimaryButton,
+                  isSavingCrop ? styles.bulkButtonDisabled : null,
                 ]}
-                onPress={() => {
-                  updateBulkReviewField("qpr_level", "");
-                  setQprPickerOpen(false);
-                }}
+                onPress={() => void saveCropEdits()}
+                disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
               >
-                <AppText
-                  style={[
-                    styles.pickerModalItemText,
-                    bulkReviewForm.qpr_level === "" ? styles.pickerModalItemTextSelected : null,
-                  ]}
-                >
-                  Not set
-                </AppText>
+                {isSavingCrop ? (
+                  <ActivityIndicator color="#09090b" />
+                ) : (
+                  <AppText style={styles.bulkPrimaryButtonText}>Save crop</AppText>
+                )}
               </Pressable>
-              {QPR_LEVEL_VALUES.map((option) => (
-                <Pressable
-                  key={`qpr-picker-${option}`}
-                  style={[
-                    styles.pickerModalItem,
-                    bulkReviewForm.qpr_level === option ? styles.pickerModalItemSelected : null,
-                  ]}
-                  onPress={() => {
-                    updateBulkReviewField("qpr_level", option);
-                    setQprPickerOpen(false);
-                  }}
-                >
-                  <AppText
-                    style={[
-                      styles.pickerModalItemText,
-                      bulkReviewForm.qpr_level === option
-                        ? styles.pickerModalItemTextSelected
-                        : null,
-                    ]}
-                  >
-                    {QPR_LEVEL_LABELS[option]}
-                  </AppText>
-                </Pressable>
-              ))}
-            </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>
@@ -3060,7 +3923,7 @@ export default function EntryDetailScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -3587,6 +4450,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 8,
   },
+  photoActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
   photoDotRow: {
     position: "absolute",
     bottom: 10,
@@ -3616,6 +4485,89 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontSize: 12,
     textAlign: "center",
+  },
+  cropModalRoot: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  cropModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.62)",
+  },
+  cropModalCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "#18110f",
+    padding: 14,
+    gap: 12,
+  },
+  cropModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cropModalTitle: {
+    color: "#fafafa",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  cropModalCloseText: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  cropFrame: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    overflow: "hidden",
+    position: "relative",
+  },
+  cropFrameImage: {
+    position: "absolute",
+  },
+  cropFrameOutline: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 2,
+    borderColor: "rgba(251, 191, 36, 0.85)",
+  },
+  cropFrameCrosshair: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    left: "50%",
+    top: "50%",
+    marginLeft: -9,
+    marginTop: -9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.9)",
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+  },
+  cropFrameLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+  cropFrameHint: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  cropActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "flex-end",
   },
   detailsCard: {
     borderRadius: 18,

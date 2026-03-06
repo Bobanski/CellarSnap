@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFriendRelationship } from "@/lib/friends/relationship";
+import { executeSelectWithFallback } from "@/server/db/compat";
+import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 type ProfileSelectAttempt = {
   select: string;
@@ -31,14 +33,6 @@ const PROFILE_SELECT_ATTEMPTS: ProfileSelectAttempt[] = [
   },
 ];
 
-function hasMissingProfileColumns(message: string) {
-  return (
-    message.includes("first_name") ||
-    message.includes("last_name") ||
-    message.includes("avatar_path")
-  );
-}
-
 type SelectedProfile = {
   id: string;
   display_name: string | null;
@@ -51,45 +45,50 @@ async function selectProfile(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   id: string
 ): Promise<SelectedProfile | null> {
-  for (const attempt of PROFILE_SELECT_ATTEMPTS) {
-    const response = (await supabase
-      .from("profiles")
-      .select(attempt.select)
-      .eq("id", id)
-      .single()) as unknown as {
-      data: Record<string, unknown> | null;
-      error: { message: string } | null;
-    };
-    const { data, error } = response;
-
-    if (!error && data) {
-      return {
-        id: typeof data.id === "string" ? data.id : id,
-        display_name:
-          typeof data.display_name === "string" ? data.display_name : null,
-        first_name:
-          attempt.includesNames && typeof data.first_name === "string"
-            ? data.first_name
-            : null,
-        last_name:
-          attempt.includesNames && typeof data.last_name === "string"
-            ? data.last_name
-            : null,
-        avatar_path:
-          attempt.includesAvatar && typeof data.avatar_path === "string"
-            ? data.avatar_path
-            : null,
+  const selectResult = await executeSelectWithFallback({
+    attempts: PROFILE_SELECT_ATTEMPTS.map((attempt) => ({
+      ...attempt,
+      missingColumns: ["first_name", "last_name", "avatar_path"] as const,
+    })),
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    attempt: async (attempt) => {
+      const response = (await supabase
+        .from("profiles")
+        .select(attempt.select)
+        .eq("id", id)
+        .single()) as unknown as {
+        data: Record<string, unknown> | null;
+        error: { message: string } | null;
       };
-    }
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
 
-    if (error && hasMissingProfileColumns(error.message)) {
-      continue;
-    }
-
+  if (selectResult.error || !selectResult.data || !selectResult.usedAttempt) {
     return null;
   }
 
-  return null;
+  const data = selectResult.data;
+  const attempt = selectResult.usedAttempt;
+  return {
+    id: typeof data.id === "string" ? data.id : id,
+    display_name: typeof data.display_name === "string" ? data.display_name : null,
+    first_name:
+      attempt.includesNames && typeof data.first_name === "string"
+        ? data.first_name
+        : null,
+    last_name:
+      attempt.includesNames && typeof data.last_name === "string"
+        ? data.last_name
+        : null,
+    avatar_path:
+      attempt.includesAvatar && typeof data.avatar_path === "string"
+        ? data.avatar_path
+        : null,
+  };
 }
 
 export async function GET(
@@ -118,10 +117,7 @@ export async function GET(
   let avatar_url: string | null = null;
   const avatarPath = profileData.avatar_path ?? null;
   if (avatarPath) {
-    const { data: urlData } = await supabase.storage
-      .from("wine-photos")
-      .createSignedUrl(avatarPath, 60 * 60);
-    avatar_url = urlData?.signedUrl ?? null;
+    avatar_url = await signPhotoUrl(avatarPath, supabase);
   }
 
   let relationship;

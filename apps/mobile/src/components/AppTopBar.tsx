@@ -80,26 +80,28 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       return;
     }
 
-    const [{ count: tagCount, error: tagError }, { count: requestCount, error: requestError }] =
-      await Promise.all([
-        supabase
-          .from("wine_notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .is("seen_at", null),
-        supabase
-          .from("friend_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("recipient_id", user.id)
-          .eq("status", "pending")
-          .is("seen_at", null),
-      ]);
+    const [
+      { data: tagRows, error: tagError },
+      { data: requestRows, error: requestError },
+    ] = await Promise.all([
+      supabase
+        .from("wine_notifications")
+        .select("id")
+        .eq("user_id", user.id)
+        .is("seen_at", null),
+      supabase
+        .from("friend_requests")
+        .select("id")
+        .eq("recipient_id", user.id)
+        .eq("status", "pending")
+        .is("seen_at", null),
+    ]);
 
     if (tagError || requestError) {
       return;
     }
 
-    setAlertCount((tagCount ?? 0) + (requestCount ?? 0));
+    setAlertCount((tagRows?.length ?? 0) + (requestRows?.length ?? 0));
   }, [user]);
 
   const loadAlerts = useCallback(async () => {
@@ -226,11 +228,11 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       requester_name: profileNameById.get(row.requester_id) ?? "Unknown",
     }));
 
-    setAlerts(
-      [...tagAlerts, ...friendAlerts].sort((left, right) =>
-        right.created_at.localeCompare(left.created_at)
-      )
+    const mergedAlerts = [...tagAlerts, ...friendAlerts].sort((left, right) =>
+      right.created_at.localeCompare(left.created_at)
     );
+    setAlerts(mergedAlerts);
+    setAlertCount(mergedAlerts.length);
     setAlertsLoading(false);
   }, [user]);
 
@@ -251,6 +253,23 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     void loadAlerts();
   }, [alertsOpen, loadAlerts]);
 
+  const getAccessTokenForApi = useCallback(async () => {
+    const { data: sessionResult } = await supabase.auth.getSession();
+    let session = sessionResult.session;
+    const expiresSoon =
+      typeof session?.expires_at === "number" &&
+      session.expires_at * 1000 <= Date.now() + 90_000;
+
+    if (!session?.access_token || expiresSoon) {
+      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
+      if (refreshedSessionResult.session?.access_token) {
+        session = refreshedSessionResult.session;
+      }
+    }
+
+    return session?.access_token ?? null;
+  }, []);
+
   const onSignOut = async () => {
     await signOut();
     router.replace("/(auth)/sign-in");
@@ -268,22 +287,38 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     if (!user) {
       return;
     }
+    if (!WEB_API_BASE_URL) {
+      setAlertsError("Set EXPO_PUBLIC_WEB_API_BASE_URL to handle friend requests.");
+      return;
+    }
+
+    const accessToken = await getAccessTokenForApi();
+    if (!accessToken) {
+      setAlertsError("Session expired. Sign in again and try.");
+      return;
+    }
+
     setRespondingRequestId(requestId);
     setAlertsError(null);
-    const nowIso = new Date().toISOString();
-    const { error } = await supabase
-      .from("friend_requests")
-      .update({
-        status: action === "accept" ? "accepted" : "declined",
-        responded_at: nowIso,
-        seen_at: nowIso,
-      })
-      .eq("id", requestId)
-      .eq("recipient_id", user.id)
-      .eq("status", "pending");
+    const endpoint =
+      action === "accept"
+        ? `/api/friends/requests/${requestId}/accept`
+        : `/api/friends/requests/${requestId}/decline`;
+    const response = await fetch(
+      `${WEB_API_BASE_URL.replace(/\/$/, "")}${endpoint}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-    if (error) {
-      setAlertsError(error.message);
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      setAlertsError(payload.error ?? "Unable to update friend request.");
       setRespondingRequestId(null);
       return;
     }
@@ -325,8 +360,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       return;
     }
 
-    const { data: sessionResult } = await supabase.auth.getSession();
-    const accessToken = sessionResult.session?.access_token;
+    const accessToken = await getAccessTokenForApi();
     if (!accessToken) {
       setAlertsError("Session expired. Sign in again and try.");
       return;
