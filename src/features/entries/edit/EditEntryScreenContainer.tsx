@@ -79,6 +79,11 @@ const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
 
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
 type LegacyPhotoType = "label" | "place" | "pairing";
+type SavedCropState = {
+  centerX: number;
+  centerY: number;
+  zoom: number;
+};
 
 const PHOTO_TYPE_LABELS: Record<EntryPhotoType, string> = {
   label: "Label",
@@ -223,6 +228,9 @@ export default function EditEntryPage() {
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
   const [cropSourcePath, setCropSourcePath] = useState<string | null>(null);
   const [cropSourceLoading, setCropSourceLoading] = useState(false);
+  const [savedCropByPhotoId, setSavedCropByPhotoId] = useState<
+    Record<string, SavedCropState>
+  >({});
   const MIN_CROP_ZOOM = 1;
   const MAX_CROP_ZOOM = 6;
   const cropFrameRef = useRef<HTMLDivElement | null>(null);
@@ -263,6 +271,15 @@ export default function EditEntryPage() {
     string | null
   >(null);
   const [isSubmittingBulkSurvey, setIsSubmittingBulkSurvey] = useState(false);
+
+  const scrollToTopForOverlay = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }, []);
 
   const withCacheBust = (url: string | null | undefined) => {
     if (!url) return null;
@@ -776,10 +793,11 @@ export default function EditEntryPage() {
     cropOpenRequestRef.current = requestId;
     const isCurrentRequest = () => cropOpenRequestRef.current === requestId;
 
+    const saved = savedCropByPhotoId[photo.id];
     setCropImageNaturalSize(null);
-    setCropCenterX(50);
-    setCropCenterY(50);
-    setCropZoom(MIN_CROP_ZOOM);
+    setCropCenterX(saved?.centerX ?? 50);
+    setCropCenterY(saved?.centerY ?? 50);
+    setCropZoom(saved?.zoom ?? MIN_CROP_ZOOM);
     setIsDraggingCrop(false);
     cropDragRef.current = null;
     cropTouchRef.current = null;
@@ -791,6 +809,14 @@ export default function EditEntryPage() {
 
     const fallbackSourceUrl = photo.signed_url ?? null;
     const fallbackSourcePath = photo.path ?? null;
+    const hasSavedCrop = Boolean(savedCropByPhotoId[photo.id]);
+
+    if (!hasSavedCrop && photo.type === "label" && fallbackSourceUrl) {
+      setCropSourceUrl(fallbackSourceUrl);
+      setCropSourcePath(fallbackSourcePath);
+      setCropSourceLoading(false);
+      return;
+    }
 
     if (!photo.path) {
       if (!isCurrentRequest()) {
@@ -905,6 +931,22 @@ export default function EditEntryPage() {
     setCropSourcePath(fallbackSourcePath);
     setCropSourceLoading(false);
   };
+
+  useEffect(() => {
+    setSavedCropByPhotoId((current) => {
+      const activePhotoIds = new Set(photos.map((photo) => photo.id));
+      let changed = false;
+      const next: Record<string, SavedCropState> = {};
+      for (const [photoId, state] of Object.entries(current)) {
+        if (activePhotoIds.has(photoId)) {
+          next[photoId] = state;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [photos]);
 
   const closeCropEditor = () => {
     if (savingCrop) {
@@ -1266,6 +1308,14 @@ export default function EditEntryPage() {
         if (error) {
           throw new Error(error.message);
         }
+        setSavedCropByPhotoId((current) => ({
+          ...current,
+          [cropEditorPhoto.id]: {
+            centerX: cropCenterX,
+            centerY: cropCenterY,
+            zoom: cropZoom,
+          },
+        }));
       } finally {
         URL.revokeObjectURL(sourceUrl);
       }
@@ -1561,6 +1611,7 @@ export default function EditEntryPage() {
         Boolean(pendingBulkSurvey.candidate)
       );
       if (transition.nextStep === "comparison") {
+        scrollToTopForOverlay();
         setPendingBulkSurvey((current) =>
           current
             ? {
@@ -1782,6 +1833,7 @@ export default function EditEntryPage() {
       }
 
       setIsSubmitting(false);
+      scrollToTopForOverlay();
       setPendingBulkSurvey({
         entry: {
           id: entry.id,

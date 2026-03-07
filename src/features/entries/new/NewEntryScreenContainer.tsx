@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -100,6 +100,11 @@ type UploadPhoto = {
   file: File;
   preview: string;
   originalFile: File;
+};
+type SavedCropState = {
+  centerX: number;
+  centerY: number;
+  zoom: number;
 };
 
 const PHOTO_TYPE_OPTIONS: { value: UploadPhotoType; label: string }[] = [
@@ -211,6 +216,14 @@ export default function NewEntryPage() {
   const [isSubmittingPostSaveSurvey, setIsSubmittingPostSaveSurvey] = useState(
     false
   );
+  const scrollToTopForOverlay = useCallback(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }, []);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
   const labelPhotosRef = useRef<UploadPhoto[]>([]);
@@ -226,6 +239,9 @@ export default function NewEntryPage() {
   const [savingCrop, setSavingCrop] = useState(false);
   const [cropSourceUrl, setCropSourceUrl] = useState<string | null>(null);
   const [cropSourceLoading, setCropSourceLoading] = useState(false);
+  const [savedCropByPreview, setSavedCropByPreview] = useState<
+    Record<string, SavedCropState>
+  >({});
   const MIN_CROP_ZOOM = 1;
   const MAX_CROP_ZOOM = 6;
   const cropFrameRef = useRef<HTMLDivElement | null>(null);
@@ -421,6 +437,22 @@ export default function NewEntryPage() {
   }, [labelPhotos]);
 
   useEffect(() => {
+    setSavedCropByPreview((current) => {
+      const validPreviews = new Set(labelPhotos.map((photo) => photo.preview));
+      let changed = false;
+      const next: Record<string, SavedCropState> = {};
+      for (const [preview, state] of Object.entries(current)) {
+        if (!validPreviews.has(preview)) {
+          changed = true;
+          continue;
+        }
+        next[preview] = state;
+      }
+      return changed ? next : current;
+    });
+  }, [labelPhotos]);
+
+  useEffect(() => {
     if (cropPhotoIndex === null) {
       return;
     }
@@ -561,13 +593,14 @@ export default function NewEntryPage() {
     if (!target) {
       return;
     }
+    const saved = savedCropByPreview[target.preview];
     setCropPhotoIndex(photoIndex);
     setCropSourceLoading(true);
     setCropSourceUrl(null);
     setCropImageNaturalSize(null);
-    setCropCenterX(50);
-    setCropCenterY(50);
-    setCropZoom(MIN_CROP_ZOOM);
+    setCropCenterX(saved?.centerX ?? 50);
+    setCropCenterY(saved?.centerY ?? 50);
+    setCropZoom(saved?.zoom ?? MIN_CROP_ZOOM);
     setIsDraggingCrop(false);
     cropDragRef.current = null;
     cropTouchRef.current = null;
@@ -871,6 +904,11 @@ export default function NewEntryPage() {
         type: "image/jpeg",
       });
       const nextPreview = URL.createObjectURL(croppedFile);
+      const savedStateForTarget = savedCropByPreview[targetPhoto.preview] ?? {
+        centerX: cropCenterX,
+        centerY: cropCenterY,
+        zoom: cropZoom,
+      };
 
       setLabelPhotos((prev) =>
         prev.map((photo, index) => {
@@ -885,6 +923,12 @@ export default function NewEntryPage() {
           };
         })
       );
+      setSavedCropByPreview((current) => {
+        const next = { ...current };
+        delete next[targetPhoto.preview];
+        next[nextPreview] = savedStateForTarget;
+        return next;
+      });
       setPhotoTypeOverrides((current) => {
         const currentOverride = current[targetPhoto.preview];
         if (!currentOverride) {
@@ -1212,6 +1256,7 @@ export default function NewEntryPage() {
         Boolean(pendingPostSaveSurvey.candidate)
       );
       if (transition.nextStep === "comparison") {
+        scrollToTopForOverlay();
         setPendingPostSaveSurvey((current) =>
           current
             ? {
@@ -1616,6 +1661,7 @@ export default function NewEntryPage() {
 
     setIsSubmitting(false);
 
+    scrollToTopForOverlay();
     setPendingPostSaveSurvey({
       entry,
       candidate: comparisonCandidate,

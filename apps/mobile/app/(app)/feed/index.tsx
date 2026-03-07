@@ -841,8 +841,9 @@ async function fetchFeedPage({
     const hasLabel = current.some((photo) => photo.type === "label");
     const hasPlace = current.some((photo) => photo.type === "place");
     const hasPairing = current.some((photo) => photo.type === "pairing");
+    const existingPaths = new Set(current.map((photo) => photo.path));
 
-    if (!hasLabel && entry.label_image_path) {
+    if (!hasLabel && entry.label_image_path && !existingPaths.has(entry.label_image_path)) {
       current.push({
         entry_id: entry.id,
         type: "label",
@@ -850,8 +851,9 @@ async function fetchFeedPage({
         position: 0,
         created_at: entry.created_at,
       });
+      existingPaths.add(entry.label_image_path);
     }
-    if (!hasPlace && entry.place_image_path) {
+    if (!hasPlace && entry.place_image_path && !existingPaths.has(entry.place_image_path)) {
       current.push({
         entry_id: entry.id,
         type: "place",
@@ -859,8 +861,13 @@ async function fetchFeedPage({
         position: 0,
         created_at: entry.created_at,
       });
+      existingPaths.add(entry.place_image_path);
     }
-    if (!hasPairing && entry.pairing_image_path) {
+    if (
+      !hasPairing &&
+      entry.pairing_image_path &&
+      !existingPaths.has(entry.pairing_image_path)
+    ) {
       current.push({
         entry_id: entry.id,
         type: "pairing",
@@ -868,14 +875,15 @@ async function fetchFeedPage({
         position: 0,
         created_at: entry.created_at,
       });
+      existingPaths.add(entry.pairing_image_path);
     }
 
     current.sort((left, right) => {
-      const typeDiff = TYPE_ORDER[left.type] - TYPE_ORDER[right.type];
-      if (typeDiff !== 0) return typeDiff;
       const posDiff = left.position - right.position;
       if (posDiff !== 0) return posDiff;
-      return left.created_at.localeCompare(right.created_at);
+      const createdDiff = left.created_at.localeCompare(right.created_at);
+      if (createdDiff !== 0) return createdDiff;
+      return TYPE_ORDER[left.type] - TYPE_ORDER[right.type];
     });
     galleryRowsByEntryId.set(entry.id, current);
   });
@@ -1458,7 +1466,14 @@ function FeedCard({
       {notes ? (
         <Pressable
           style={styles.notesWrap}
-          onPress={handleCardPress}
+          onPress={(event) => {
+            event.stopPropagation();
+            if (canToggleNotes) {
+              onToggleNotes();
+              return;
+            }
+            handleCardPress();
+          }}
         >
           <AppText
             style={styles.notesText}
