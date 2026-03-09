@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
 import { buildOriginalPhotoPath } from "@/lib/entryFlow/web/photoPath";
+import { resolveSharedTastingCopyTastedWithUserIds } from "@/server/entries/sharedTastings";
 import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 import { executeWithColumnFallback, hasMissingAnyColumn } from "@/server/db/compat";
 
@@ -131,6 +132,11 @@ export async function POST(
     : [];
   const isTaggedOnViewedEntry = taggedIdsOnViewedEntry.includes(user.id);
   const isTaggedOnRootEntry = taggedIdsOnRootEntry.includes(user.id);
+  const copiedTastedWithUserIds = resolveSharedTastingCopyTastedWithUserIds({
+    viewerUserId: user.id,
+    rootAuthorId: rootEntry.user_id,
+    rootTaggedUserIds: taggedIdsOnRootEntry,
+  });
 
   // Shared tasting copies can introduce tags that do not exist on the canonical root
   // entry. Accept either path so tagged users can still add the tasting to their log.
@@ -234,10 +240,10 @@ export async function POST(
     location_text: rootEntry.location_text ?? null,
     location_place_id: rootEntry.location_place_id ?? null,
     consumed_at: rootEntry.consumed_at ?? null,
-    // Pre-check the friend who tagged the user (the original author).
-    // The tagged user can remove/add people when editing their copy.
-    tasted_with_user_ids:
-      rootEntry.user_id && rootEntry.user_id !== user.id ? [rootEntry.user_id] : [],
+    // Carry over the canonical tasting group so the tagged user's copy reflects
+    // who was there, while shared-copy notification suppression prevents the
+    // original group from getting re-notified.
+    tasted_with_user_ids: copiedTastedWithUserIds,
     // We'll copy photos into this user's storage namespace after insert.
     label_image_path: null,
     place_image_path: null,

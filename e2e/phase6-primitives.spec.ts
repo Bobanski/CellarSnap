@@ -48,6 +48,10 @@ import {
   updateEntrySchema,
 } from "../src/server/entries/schema";
 import { resolvePersistedEntryRating } from "../src/server/entries/updateValidation";
+import {
+  resolveSharedTastingCopyTastedWithUserIds,
+  shouldSuppressSharedCopyTagNotification,
+} from "../src/server/entries/sharedTastings";
 import { resolveAllowedProfileEntryPrivacies } from "../src/server/users/profileVisibility";
 import { deleteUserAccount } from "../src/server/account/deleteAccount";
 
@@ -276,6 +280,40 @@ test.describe("Phase 6 entry/share access helpers", () => {
       hasDominantSingleBottleFrame({
         width: 0.22,
         height: 0.52,
+      })
+    ).toBeFalsy();
+  });
+
+  test("shared tasting copies keep the canonical group without re-alerting them", () => {
+    expect(
+      resolveSharedTastingCopyTastedWithUserIds({
+        viewerUserId: "user-bob",
+        rootAuthorId: "user-alice",
+        rootTaggedUserIds: ["user-bob", "user-carol", "user-alice", "user-carol"],
+      })
+    ).toEqual(["user-alice", "user-carol"]);
+
+    expect(
+      shouldSuppressSharedCopyTagNotification({
+        tagUserId: "user-alice",
+        rootAuthorId: "user-alice",
+        rootTaggedUserIds: ["user-bob", "user-carol"],
+      })
+    ).toBeTruthy();
+
+    expect(
+      shouldSuppressSharedCopyTagNotification({
+        tagUserId: "user-carol",
+        rootAuthorId: "user-alice",
+        rootTaggedUserIds: ["user-bob", "user-carol"],
+      })
+    ).toBeTruthy();
+
+    expect(
+      shouldSuppressSharedCopyTagNotification({
+        tagUserId: "user-dave",
+        rootAuthorId: "user-alice",
+        rootTaggedUserIds: ["user-bob", "user-carol"],
       })
     ).toBeFalsy();
   });
