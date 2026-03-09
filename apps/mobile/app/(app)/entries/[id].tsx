@@ -32,6 +32,7 @@ import {
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import {
   AdaptiveFieldRow,
@@ -427,15 +428,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 }
 
 function formatProfileName(profile: ProfileRow) {
-  const display = profile.display_name?.trim();
-  if (display) {
-    return display;
-  }
-  const email = profile.email?.trim();
-  if (email) {
-    return email;
-  }
-  return "Unknown";
+  return getPublicProfileName(profile);
 }
 
 function isPrimaryGrapeTableMissingError(message: string) {
@@ -814,7 +807,7 @@ export default function EntryDetailScreen() {
 
     const profileResponse = profileIds.length
       ? await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id, display_name, email, avatar_path")
           .in("id", profileIds)
       : { data: [] as ProfileRow[], error: null };
@@ -823,7 +816,7 @@ export default function EntryDetailScreen() {
     if (profileResponse.error && isMissingAvatarColumn(profileResponse.error.message)) {
       const fallback = profileIds.length
         ? await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, display_name, email")
             .in("id", profileIds)
         : { data: [] };
@@ -867,7 +860,7 @@ export default function EntryDetailScreen() {
     const profileMap = new Map(profileRows.map((row) => [row.id, row]));
     const authorProfile = profileMap.get(nextEntry.user_id);
     setAuthorName(
-      authorProfile?.display_name?.trim() || authorProfile?.email?.trim() || "Unknown"
+      getPublicProfileName(authorProfile)
     );
     setAuthorAvatarUrl(
       authorProfile?.avatar_path
@@ -1207,7 +1200,7 @@ export default function EntryDetailScreen() {
       }
 
       const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, display_name, email")
         .in("id", friendIds);
 
@@ -1398,11 +1391,7 @@ export default function EntryDetailScreen() {
             return false;
           }
           const displayName = profile.display_name?.toLowerCase() ?? "";
-          const email = profile.email?.toLowerCase() ?? "";
-          return (
-            displayName.includes(normalizedFriendSearch) ||
-            email.includes(normalizedFriendSearch)
-          );
+          return displayName.includes(normalizedFriendSearch);
         })
       : [];
   const activePhotoOrder =

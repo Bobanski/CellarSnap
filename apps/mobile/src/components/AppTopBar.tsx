@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
@@ -164,7 +165,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
         : Promise.resolve({ data: [] as { id: string; wine_name: string | null }[] }),
       profileIds.length > 0
         ? supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, display_name, email, avatar_path")
             .in("id", profileIds)
         : Promise.resolve({
@@ -189,7 +190,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     if (profileResponse.error && isMissingAvatarColumn(profileResponse.error.message)) {
       const fallback = profileIds.length
         ? await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, display_name, email")
             .in("id", profileIds)
         : { data: [] };
@@ -205,10 +206,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     }
 
     const profileNameById = new Map(
-      (profileRows ?? []).map((row) => [
-        row.id,
-        row.display_name ?? row.email ?? "Unknown",
-      ])
+      (profileRows ?? []).map((row) => [row.id, getPublicProfileName(row)])
     );
     const wineNameByEntryId = new Map(
       (entryRows ?? []).map((entry) => [entry.id, entry.wine_name ?? null])

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
   const buildProfileQuery = (includeNameColumns: boolean) => {
     const query = supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, display_name")
       .neq("id", user.id)
       .order("display_name", { ascending: true });
@@ -46,18 +46,17 @@ export async function GET(request: Request) {
     const pattern = `%${search}%`;
     const tokens = search.split(" ").filter(Boolean);
     const searchableFields = includeNameColumns
-      ? ["display_name", "email", "first_name", "last_name"]
-      : ["display_name", "email"];
+      ? ["display_name", "first_name", "last_name"]
+      : ["display_name"];
     const tokenAndFilter = buildTokenAndFilter(tokens, searchableFields);
     const filters = includeNameColumns
       ? [
           `display_name.ilike.${pattern}`,
-          `email.ilike.${pattern}`,
           `first_name.ilike.${pattern}`,
           `last_name.ilike.${pattern}`,
           tokenAndFilter,
         ]
-      : [`display_name.ilike.${pattern}`, `email.ilike.${pattern}`, tokenAndFilter];
+      : [`display_name.ilike.${pattern}`, tokenAndFilter];
 
     return query.or(filters.filter(Boolean).join(",")).limit(25);
   };

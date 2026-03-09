@@ -232,7 +232,7 @@ export function formatFriendName(user: {
   display_name: string | null;
   email: string | null;
 }) {
-  return user.display_name ?? user.email ?? "Unknown";
+  return user.display_name ?? "Unknown";
 }
 
 export function formatSurveyWineTitle(wine: {

@@ -865,7 +865,10 @@ export default function NewEntryScreen() {
       }
 
       const [{ data: profiles }, { data: entries }] = await Promise.all([
-        supabase.from("profiles").select("id, display_name, email").in("id", friendIds),
+        supabase
+          .from("public_profiles")
+          .select("id, display_name, email")
+          .in("id", friendIds),
         supabase
           .from("wine_entries")
           .select("tasted_with_user_ids")
@@ -1876,8 +1879,7 @@ export default function NewEntryScreen() {
           (u) =>
             !topFriendIds.has(u.id) &&
             !selectedUserIds.includes(u.id) &&
-            ((u.display_name ?? "").toLowerCase().includes(search) ||
-              (u.email ?? "").toLowerCase().includes(search))
+            (u.display_name ?? "").toLowerCase().includes(search)
         )
       : [];
 

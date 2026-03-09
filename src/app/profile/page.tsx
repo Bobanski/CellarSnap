@@ -403,7 +403,7 @@ export default function ProfilePage() {
   }, []);
 
   const displayFriendName = (p: FriendProfile | null) =>
-    p?.display_name ?? p?.email ?? "Unknown";
+    p?.display_name ?? "Unknown";
 
   const parseMutationPayload = async (
     response: Response
@@ -1099,7 +1099,7 @@ export default function ProfilePage() {
                       <input
                         value={friendSearch}
                         onChange={(e) => setFriendSearch(e.target.value)}
-                        placeholder="Search by username, name, or email"
+                        placeholder="Search by username or name"
                         className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                       />
                       {searchError ? (

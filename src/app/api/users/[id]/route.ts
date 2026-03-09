@@ -53,7 +53,7 @@ async function selectProfile(
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
       const response = (await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select(attempt.select)
         .eq("id", id)
         .single()) as unknown as {

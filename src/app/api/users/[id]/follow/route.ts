@@ -83,7 +83,7 @@ export async function POST(
   }
 
   const { data: targetUser, error: targetUserError } = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id")
     .eq("id", targetUserId)
     .maybeSingle();

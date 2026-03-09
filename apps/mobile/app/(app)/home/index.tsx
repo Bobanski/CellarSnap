@@ -23,6 +23,7 @@ import {
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -403,7 +404,7 @@ export default function HomeScreen() {
         let friendProfiles: FriendProfileRow[] = [];
         if (friendUserIds.length > 0) {
           const { data, error } = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, display_name, email")
             .in("id", friendUserIds);
           if (!error && data) {
@@ -412,10 +413,7 @@ export default function HomeScreen() {
         }
 
         const profileNameById = new Map(
-          friendProfiles.map((row) => [
-            row.id,
-            row.display_name?.trim() || row.email?.trim() || "Unknown",
-          ])
+          friendProfiles.map((row) => [row.id, getPublicProfileName(row)])
         );
 
         const recent = ownEntries.map((entry) => {

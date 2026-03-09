@@ -38,6 +38,10 @@ import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { deleteCurrentAccount } from "@/src/lib/api/account";
+import {
+  getPublicProfileInitial,
+  getPublicProfileName,
+} from "@/src/lib/publicProfiles";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrl, signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
@@ -205,7 +209,7 @@ const PRIVACY_OPTIONS: Array<{ value: PrivacyLevel; label: string }> = [
 ];
 
 function displayFriendName(profile: FriendProfile | null) {
-  return profile?.display_name ?? profile?.email ?? "Unknown";
+  return getPublicProfileName(profile);
 }
 
 function formatMemberSince(value: string | null): string {
@@ -223,8 +227,7 @@ function formatMemberSince(value: string | null): string {
 }
 
 function getAvatarFallbackLetter(name: string | null, email: string | null) {
-  const source = name?.trim() || email?.trim() || "?";
-  return source[0]?.toUpperCase() ?? "?";
+  return getPublicProfileInitial({ display_name: name, email });
 }
 
 function isMissingColumn(message: string, column: string) {
@@ -752,7 +755,7 @@ export default function ProfileScreen() {
     }
     const uniqueIds = Array.from(new Set(ids));
     const withAvatar = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, display_name, email, avatar_path")
       .in("id", uniqueIds);
 
@@ -767,7 +770,7 @@ export default function ProfileScreen() {
 
     if (withAvatar.error && isMissingColumn(withAvatar.error.message, "avatar_path")) {
       const fallback = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, display_name, email")
         .in("id", uniqueIds);
       if (fallback.error) {
@@ -1762,13 +1765,12 @@ export default function ProfileScreen() {
           }
           const pattern = `%${search}%`;
           const primary = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, display_name, email, first_name, last_name")
             .neq("id", user.id)
             .or(
               [
                 `display_name.ilike.${pattern}`,
-                `email.ilike.${pattern}`,
                 `first_name.ilike.${pattern}`,
                 `last_name.ilike.${pattern}`,
               ].join(",")
@@ -1785,10 +1787,10 @@ export default function ProfileScreen() {
               primary.error.message.includes("last_name"))
           ) {
             const fallback = await supabase
-              .from("profiles")
+              .from("public_profiles")
               .select("id, display_name, email")
               .neq("id", user.id)
-              .or([`display_name.ilike.${pattern}`, `email.ilike.${pattern}`].join(","))
+              .or(`display_name.ilike.${pattern}`)
               .order("display_name", { ascending: true })
               .limit(25);
             if (fallback.error) {
@@ -1809,8 +1811,8 @@ export default function ProfileScreen() {
 
           setSearchResults((rows ?? []).map((row) => ({
             id: row.id,
-            display_name: row.display_name ?? null,
-            email: row.email ?? null,
+            display_name: getPublicProfileName(row),
+            email: null,
           })));
           setSearchLoading(false);
         } catch (error) {
@@ -2085,7 +2087,7 @@ export default function ProfileScreen() {
                     label="Search users"
                     value={friendSearch}
                     onChangeText={setFriendSearch}
-                    placeholder="Search by username, name, or email"
+                    placeholder="Search by username or name"
                     autoCapitalize="none"
                   />
                   {searchError ? <AppText style={styles.errorText}>{searchError}</AppText> : null}
@@ -2103,7 +2105,7 @@ export default function ProfileScreen() {
                           <View key={candidate.id} style={styles.friendRow}>
                             <View style={styles.friendRowMain}>
                               <AppText style={styles.friendName}>
-                                {candidate.display_name ?? candidate.email ?? "Unknown"}
+                                {candidate.display_name ?? "Unknown"}
                               </AppText>
                               {isFriend ? (
                                 <AppText style={styles.statusGood}>Already friends</AppText>

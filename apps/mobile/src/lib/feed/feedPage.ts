@@ -1,3 +1,4 @@
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 
@@ -451,13 +452,13 @@ export async function fetchFeedPage({
   let profileRows: FeedProfileRow[] = [];
   if (userIds.length > 0) {
     const { data, error } = await supabaseClient
-      .from("profiles")
+      .from("public_profiles")
       .select("id, display_name, email, avatar_path")
       .in("id", userIds);
 
     if (error && isMissingAvatarColumn(error.message ?? "")) {
       const fallback = await supabaseClient
-        .from("profiles")
+        .from("public_profiles")
         .select("id, display_name, email")
         .in("id", userIds);
       profileRows = (fallback.data ?? []).map((row) => ({
@@ -713,14 +714,13 @@ export async function fetchFeedPage({
     });
     const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id) => ({
       id,
-      display_name: profileMap.get(id)?.display_name ?? null,
-      email: profileMap.get(id)?.email ?? null,
+      display_name: getPublicProfileName(profileMap.get(id)),
+      email: null,
     }));
 
     return {
       ...entry,
-      author_name:
-        authorProfile?.display_name ?? authorProfile?.email ?? "Unknown",
+      author_name: getPublicProfileName(authorProfile),
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
       photo_gallery: photoGallery,

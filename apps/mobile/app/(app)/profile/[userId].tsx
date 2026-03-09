@@ -12,6 +12,10 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import {
+  getPublicProfileInitial,
+  getPublicProfileName,
+} from "@/src/lib/publicProfiles";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
@@ -116,7 +120,7 @@ export default function UserProfileScreen() {
 
       try {
         const profileAttempt = await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id, display_name, first_name, last_name, email, avatar_path")
           .eq("id", userId)
           .maybeSingle();
@@ -135,7 +139,7 @@ export default function UserProfileScreen() {
             throw new Error(profileAttempt.error.message);
           }
           const fallbackAttempt = await supabase
-            .from("profiles")
+            .from("public_profiles")
             .select("id, display_name, email")
             .eq("id", userId)
             .maybeSingle();
@@ -386,13 +390,13 @@ export default function UserProfileScreen() {
                       />
                     ) : (
                       <AppText style={styles.avatarFallback}>
-                        {(profile.display_name ?? profile.email ?? "?")[0]?.toUpperCase() ?? "?"}
+                        {getPublicProfileInitial(profile)}
                       </AppText>
                     )}
                   </View>
                   <View style={styles.profileMeta}>
                     <AppText style={styles.username}>
-                      {profile.display_name ?? profile.email ?? "Unknown"}
+                      {getPublicProfileName(profile)}
                     </AppText>
                     {fullName ? <AppText style={styles.fullName}>{fullName}</AppText> : null}
                   </View>

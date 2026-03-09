@@ -1136,7 +1136,7 @@ export default function FeedPage() {
                   <div className="mt-3 break-words text-xs text-zinc-400">
                     Tasted with:{" "}
                     {entry.tasted_with_users
-                      .map((user) => user.display_name ?? user.email ?? "Unknown")
+                      .map((user) => user.display_name ?? "Unknown")
                       .join(", ")}
                   </div>
                 ) : null}

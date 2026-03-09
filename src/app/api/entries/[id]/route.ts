@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
@@ -113,16 +114,16 @@ export async function GET(
 
   if (tastedWithIds.length > 0) {
     const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, display_name, email")
+      .from("public_profiles")
+      .select("id, display_name, first_name, last_name, email")
       .in("id", tastedWithIds);
 
     const nameMap = new Map(
       (profiles ?? []).map((profile) => [
         profile.id,
         {
-          display_name: profile.display_name ?? null,
-          email: profile.email ?? null,
+          display_name: getPublicProfileName(profile),
+          email: null,
         },
       ])
     );
@@ -183,13 +184,13 @@ export async function GET(
   const reactorIds = Array.from(reactorUserIds);
   if (reactorIds.length > 0) {
     const { data: reactorProfiles } = await supabase
-      .from("profiles")
-      .select("id, display_name, email")
+      .from("public_profiles")
+      .select("id, display_name, first_name, last_name, email")
       .in("id", reactorIds);
     const reactorNameMap = new Map(
-      (reactorProfiles ?? []).map((p) => [
-        p.id as string,
-        (p.display_name ?? p.email ?? "Unknown") as string,
+      (reactorProfiles ?? []).map((profile) => [
+        profile.id as string,
+        getPublicProfileName(profile),
       ])
     );
     for (const emoji of Object.keys(reactionUsers)) {

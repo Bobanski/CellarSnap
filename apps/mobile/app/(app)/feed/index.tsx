@@ -661,9 +661,7 @@ function FeedCard({
         {item.tasted_with_users.length > 0 ? (
           <AppText style={styles.feedTastedWithText}>
             Tasted with:{" "}
-            {item.tasted_with_users
-              .map((user) => user.display_name ?? user.email ?? "Unknown")
-              .join(", ")}
+            {item.tasted_with_users.map((user) => user.display_name ?? "Unknown").join(", ")}
           </AppText>
         ) : null}
       </Pressable>
@@ -1128,14 +1126,12 @@ export default function FeedScreen() {
       const tokens = search.split(" ").filter(Boolean);
       const tokenAndFilter = buildTokenAndFilter(tokens, [
         "display_name",
-        "email",
         "first_name",
         "last_name",
       ]);
 
       const baseFilters = [
         `display_name.ilike.${pattern}`,
-        `email.ilike.${pattern}`,
         `first_name.ilike.${pattern}`,
         `last_name.ilike.${pattern}`,
         tokenAndFilter,
@@ -1144,7 +1140,7 @@ export default function FeedScreen() {
         .join(",");
 
       const firstAttempt = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, display_name")
         .neq("id", viewerUserId)
         .or(baseFilters)
@@ -1160,17 +1156,15 @@ export default function FeedScreen() {
       ) {
         const fallbackTokenAndFilter = buildTokenAndFilter(tokens, [
           "display_name",
-          "email",
         ]);
         const fallbackFilters = [
           `display_name.ilike.${pattern}`,
-          `email.ilike.${pattern}`,
           fallbackTokenAndFilter,
         ]
           .filter(Boolean)
           .join(",");
         const fallbackAttempt = await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id, display_name")
           .neq("id", viewerUserId)
           .or(fallbackFilters)

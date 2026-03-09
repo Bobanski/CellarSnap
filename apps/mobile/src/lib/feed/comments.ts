@@ -1,4 +1,5 @@
 import { supabase } from "@/src/lib/supabase";
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 
 type MobileSupabaseClient = typeof supabase;
 
@@ -98,14 +99,11 @@ export async function fetchFeedComments({
   const authorNameById = new Map<string, string>();
   if (authorIds.length > 0) {
     const { data: profiles } = await supabaseClient
-      .from("profiles")
+      .from("public_profiles")
       .select("id, display_name, email")
       .in("id", authorIds);
     (profiles ?? []).forEach((profile) => {
-      authorNameById.set(
-        profile.id,
-        profile.display_name ?? profile.email ?? "Unknown"
-      );
+      authorNameById.set(profile.id, getPublicProfileName(profile));
     });
   }
 

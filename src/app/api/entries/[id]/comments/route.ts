@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry, type EntryPrivacy } from "@/lib/access/entryVisibility";
 import { executeSelectWithFallback } from "@/server/db/compat";
@@ -272,7 +273,7 @@ export async function GET(
       fallbackOnAnyMissingColumn: true,
       attempt: async (attempt) => {
         const response = await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select(attempt.select)
           .in("id", authorIds);
         return {
@@ -293,10 +294,7 @@ export async function GET(
   }
 
   const authorNameById = new Map(
-    (profiles ?? []).map((profile) => [
-      profile.id,
-      profile.display_name ?? profile.email ?? "Unknown",
-    ])
+    (profiles ?? []).map((profile) => [profile.id, getPublicProfileName(profile)])
   );
   const authorAvatarPathById = new Map(
     profiles
@@ -508,7 +506,7 @@ export async function POST(
   return NextResponse.json({
     comment: {
       ...created,
-      author_name: profile?.display_name ?? profile?.email ?? "You",
+      author_name: profile?.display_name ?? "You",
       author_avatar_url: authorAvatarUrl,
       is_deleted: false,
     },

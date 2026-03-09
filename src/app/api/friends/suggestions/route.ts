@@ -90,7 +90,7 @@ export async function GET() {
   }
 
   const { data: profiles } = await supabase
-    .from("profiles")
+    .from("public_profiles")
     .select("id, display_name, email, avatar_path")
     .in("id", suggestionIds);
 

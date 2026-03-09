@@ -1078,7 +1078,6 @@ export default function EntryDetailPage() {
                           );
                           return (
                             fromEntry?.display_name ??
-                            fromEntry?.email ??
                             userMap.get(id) ??
                             "Unknown"
                           );

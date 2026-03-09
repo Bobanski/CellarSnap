@@ -44,7 +44,7 @@ export default function FriendsPage() {
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
 
   const displayName = (profile: Profile | null) =>
-    profile?.display_name ?? profile?.email ?? "Unknown";
+    profile?.display_name ?? "Unknown";
 
   const parseMutationPayload = async (
     response: Response
@@ -438,12 +438,12 @@ export default function FriendsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-zinc-200">Find friends</h2>
             <p className="mt-1 text-xs text-zinc-400">
-              Search by username, name, or email. Results show usernames only.
+              Search by username or name. Results show usernames only.
             </p>
             <input
               value={friendSearch}
               onChange={(event) => setFriendSearch(event.target.value)}
-              placeholder="Search by username, name, or email"
+              placeholder="Search by username or name"
               className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
             />
             {friendError ? (

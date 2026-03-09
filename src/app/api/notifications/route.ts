@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getPublicProfileName } from "@/lib/publicProfiles";
 
 type WineNotificationRow = {
   id: string;
@@ -193,7 +194,7 @@ export async function GET(request: Request) {
   const { data: actors } =
     actorIds.length > 0
       ? await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id, display_name, email")
           .in("id", actorIds)
       : { data: [] };
@@ -201,7 +202,7 @@ export async function GET(request: Request) {
   const { data: requesters } =
     requesterIds.length > 0
       ? await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id, display_name, email")
           .in("id", requesterIds)
       : { data: [] };
@@ -210,15 +211,12 @@ export async function GET(request: Request) {
     (entries ?? []).map((entry) => [entry.id, entry])
   );
   const actorMap = new Map(
-    (actors ?? []).map((actor) => [
-      actor.id,
-      actor.display_name ?? actor.email ?? "Unknown",
-    ])
+    (actors ?? []).map((actor) => [actor.id, getPublicProfileName(actor)])
   );
   const requesterMap = new Map(
     (requesters ?? []).map((requester) => [
       requester.id,
-      requester.display_name ?? requester.email ?? "Unknown",
+      getPublicProfileName(requester),
     ])
   );
 

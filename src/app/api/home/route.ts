@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
@@ -195,16 +196,13 @@ export async function GET() {
   const { data: friendProfiles } =
     friendUserIds.length > 0
       ? await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select("id, display_name, email")
           .in("id", friendUserIds)
       : { data: [] };
 
   const profileMap = new Map(
-    (friendProfiles ?? []).map((p) => [
-      p.id,
-      { display_name: p.display_name ?? null, email: p.email ?? null },
-    ])
+    (friendProfiles ?? []).map((profile) => [profile.id, profile])
   );
 
   // ── Build response for own entries ──
@@ -236,9 +234,7 @@ export async function GET() {
       qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
       author_name:
-        profileMap.get(entry.user_id)?.display_name ??
-        profileMap.get(entry.user_id)?.email ??
-        "Unknown",
+        getPublicProfileName(profileMap.get(entry.user_id)),
       label_image_url: await signPhotoUrl(
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase

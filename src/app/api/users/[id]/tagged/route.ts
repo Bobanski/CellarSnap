@@ -109,7 +109,7 @@ export function createTaggedEntriesGetHandler(
       new Set(visibleEntries.map((entry) => entry.user_id))
     );
     const { data: profiles } = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, display_name")
       .in("id", authorIds);
 

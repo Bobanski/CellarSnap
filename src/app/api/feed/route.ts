@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import {
@@ -422,7 +423,7 @@ export async function GET(request: Request) {
       fallbackOnAnyMissingColumn: true,
       attempt: async (attempt) => {
         const response = await supabase
-          .from("profiles")
+          .from("public_profiles")
           .select(attempt.select)
           .in("id", userIds);
         return {
@@ -569,7 +570,7 @@ export async function GET(request: Request) {
   );
   if (missingReactorIds.length > 0) {
     const { data: reactorProfiles } = await supabase
-      .from("profiles")
+      .from("public_profiles")
       .select("id, display_name, email")
       .in("id", missingReactorIds);
     (reactorProfiles ?? []).forEach((profile) => {
@@ -732,8 +733,8 @@ export async function GET(request: Request) {
 
     const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id: string) => ({
       id,
-      display_name: profileMap.get(id)?.display_name ?? null,
-      email: profileMap.get(id)?.email ?? null,
+      display_name: getPublicProfileName(profileMap.get(id)),
+      email: null,
     }));
 
     const settings = interactionSettingsByEntryId.get(entry.id);
@@ -763,7 +764,7 @@ export async function GET(request: Request) {
     for (const [emoji, ids] of Object.entries(rawReactionUserIds)) {
       reactionUsers[emoji] = ids.map((id) => {
         const profile = profileMap.get(id);
-        return profile?.display_name ?? profile?.email ?? "Unknown";
+        return getPublicProfileName(profile);
       });
     }
     const commentCount = interactionAccess.canComment
@@ -773,7 +774,7 @@ export async function GET(request: Request) {
     return {
       ...entry,
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
-      author_name: authorProfile?.display_name ?? authorProfile?.email ?? "Unknown",
+      author_name: getPublicProfileName(authorProfile),
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
       label_image_url: labelPhoto,
       place_image_url: placePhoto,
