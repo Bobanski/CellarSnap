@@ -32,11 +32,13 @@ import {
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import {
   AdaptiveFieldRow,
   Field,
   SelectField,
 } from "@/src/components/entries/newEntryFormParts";
+import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
 import {
   ensurePhotoMimeType,
   extensionForMimeType,
@@ -207,7 +209,7 @@ const ENTRY_PHOTO_TYPES: EntryPhotoType[] = [
 ];
 
 const MAX_ENTRY_PHOTOS_PER_TYPE = 10;
-const WEB_API_BASE_URL = process.env.EXPO_PUBLIC_WEB_API_BASE_URL;
+const WEB_API_BASE_URL = getWebApiBaseUrl();
 
 const ADVANCED_NOTE_FIELDS: Array<{ key: string; label: string }> = [
   { key: "acidity", label: "Acidity" },
@@ -555,10 +557,9 @@ async function createSignedUrlMap(paths: string[]) {
         return;
       }
 
-      const { data, error } = await supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(storagePath, 60 * 60);
-      const signedUrl = error ? null : data.signedUrl;
+      const signedUrl = await signPhotoUrl(storagePath, {
+        supabaseClient: supabase,
+      });
       map.set(path, signedUrl);
       map.set(storagePath, signedUrl);
       if (!map.has(normalizedPath)) {
@@ -1414,23 +1415,6 @@ export default function EntryDetailScreen() {
     setEditExpanded((current) => ({ ...current, [section]: !current[section] }));
   }, []);
 
-  const getAccessTokenForApi = useCallback(async () => {
-    const { data: sessionResult } = await supabase.auth.getSession();
-    let session = sessionResult.session;
-    const expiresSoon =
-      typeof session?.expires_at === "number" &&
-      session.expires_at * 1000 <= Date.now() + 90_000;
-
-    if (!session?.access_token || expiresSoon) {
-      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
-      if (refreshedSessionResult.session?.access_token) {
-        session = refreshedSessionResult.session;
-      }
-    }
-
-    return session?.access_token ?? null;
-  }, []);
-
   const inferPhotoTypeFromAi = useCallback(
     async ({
       fallbackType,
@@ -1443,8 +1427,7 @@ export default function EntryDetailScreen() {
       name: string;
       mimeType: string;
     }) => {
-      const normalizedBaseUrl = WEB_API_BASE_URL?.replace(/\/$/, "") ?? null;
-      if (!normalizedBaseUrl) {
+      if (!WEB_API_BASE_URL) {
         return fallbackType;
       }
 
@@ -1455,7 +1438,7 @@ export default function EntryDetailScreen() {
 
       try {
         const context = await requestPhotoContext({
-          baseUrl: normalizedBaseUrl,
+          baseUrl: WEB_API_BASE_URL,
           accessToken,
           photo: {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1480,7 +1463,7 @@ export default function EntryDetailScreen() {
         return fallbackType;
       }
     },
-    [getAccessTokenForApi]
+    []
   );
 
   const updateActivePhotoType = useCallback(
@@ -1943,8 +1926,7 @@ export default function EntryDetailScreen() {
       formData.append("center_y", String(cropCenterY));
       formData.append("zoom", String(cropZoom));
 
-      const normalizedBaseUrl = WEB_API_BASE_URL.replace(/\/$/, "");
-      const response = await fetch(`${normalizedBaseUrl}/api/photo-crop`, {
+      const response = await fetch(`${WEB_API_BASE_URL}/api/photo-crop`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -2025,7 +2007,6 @@ export default function EntryDetailScreen() {
     cropCenterY,
     cropZoom,
     entry,
-    getAccessTokenForApi,
     isOwner,
     loadEntry,
   ]);

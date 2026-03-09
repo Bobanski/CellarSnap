@@ -12,6 +12,8 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
+import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -69,24 +71,6 @@ function isMissingBlocksTableError(message: string) {
     lower.includes("does not exist") ||
     lower.includes("column")
   );
-}
-
-async function createSignedUrlMap(paths: string[]) {
-  const uniquePaths = Array.from(
-    new Set(paths.filter((path) => Boolean(path && path !== "pending")))
-  );
-  const map = new Map<string, string | null>();
-
-  await Promise.all(
-    uniquePaths.map(async (path) => {
-      const { data, error } = await supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(path, 60 * 60);
-      map.set(path, error ? null : data.signedUrl);
-    })
-  );
-
-  return map;
 }
 
 export default function UserProfileScreen() {
@@ -194,43 +178,19 @@ export default function UserProfileScreen() {
           consumed_at: string;
           label_image_path: string | null;
         }>;
-        const entryIds = entryRows.map((row) => row.id);
-
-        const labelResponse =
-          entryIds.length > 0
-            ? await supabase
-                .from("entry_photos")
-                .select("entry_id, path, position, created_at")
-                .eq("type", "label")
-                .in("entry_id", entryIds)
-                .order("position", { ascending: true })
-                .order("created_at", { ascending: true })
-            : { data: [] as { entry_id: string; path: string }[] };
-
-        const labelMap = new Map<string, string>();
-        (labelResponse.data ?? []).forEach((row) => {
-          if (!labelMap.has(row.entry_id)) {
-            labelMap.set(row.entry_id, row.path);
-          }
-        });
-
-        const paths = [
-          profileRow.avatar_path ?? null,
-          ...entryRows.map((row) => labelMap.get(row.id) ?? row.label_image_path ?? null),
-        ].filter((path): path is string => Boolean(path));
-        const signedUrlMap = await createSignedUrlMap(paths);
-        const avatarUrl = profileRow.avatar_path
-          ? signedUrlMap.get(profileRow.avatar_path) ?? null
-          : null;
+        const [entryLabelById, avatarUrl] = await Promise.all([
+          resolveEntryLabelPhotos(entryRows, { supabaseClient: supabase }),
+          signPhotoUrl(profileRow.avatar_path, { supabaseClient: supabase }),
+        ]);
 
         const nextEntries: EntryTile[] = entryRows.map((row) => {
-          const path = labelMap.get(row.id) ?? row.label_image_path ?? null;
+          const label = entryLabelById.get(row.id);
           return {
             id: row.id,
             wine_name: row.wine_name,
             consumed_at: row.consumed_at,
-            label_image_path: path,
-            label_image_url: path ? signedUrlMap.get(path) ?? null : null,
+            label_image_path: label?.path ?? null,
+            label_image_url: label?.signedUrl ?? null,
           };
         });
 

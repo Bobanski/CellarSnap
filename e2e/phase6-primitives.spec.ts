@@ -12,8 +12,16 @@ import { signPhotoUrl, signPhotoUrls } from "../src/server/storage/signedUrls";
 import { getAuthMode as getSharedAuthMode } from "../packages/shared/src/auth";
 import { toLocalYmd as toSharedLocalYmd } from "../packages/shared/src/date";
 import {
+  hasDominantSingleBottleFrame,
   normalizePhone as normalizeSharedPhone,
+  resolveSinglePhotoEntryMode,
   isUsernameFormatValid as isSharedUsernameFormatValid,
+  PRICE_PAID_CURRENCY_LABELS as sharedCurrencyLabels,
+  PRICE_PAID_CURRENCY_VALUES as sharedCurrencyValues,
+  PRICE_PAID_SOURCE_LABELS as sharedSourceLabels,
+  PRICE_PAID_SOURCE_VALUES as sharedSourceValues,
+  QPR_LEVEL_LABELS as sharedQprLabels,
+  QPR_LEVEL_VALUES as sharedQprValues,
 } from "../packages/shared/src";
 import { getAuthMode as getWebAuthMode } from "../src/lib/auth/mode";
 import {
@@ -21,11 +29,27 @@ import {
   toLocalYmd as toWebLocalYmd,
 } from "../src/lib/dateYmd";
 import {
+  PRICE_PAID_CURRENCY_LABELS as webCurrencyLabels,
+  PRICE_PAID_CURRENCY_VALUES as webCurrencyValues,
+  PRICE_PAID_SOURCE_LABELS as webSourceLabels,
+  PRICE_PAID_SOURCE_VALUES as webSourceValues,
+  QPR_LEVEL_LABELS as webQprLabels,
+  QPR_LEVEL_VALUES as webQprValues,
+} from "../src/lib/entryMeta";
+import {
   normalizePhone as normalizeWebPhone,
 } from "../src/lib/validation/phone";
 import {
   isUsernameFormatValid as isWebUsernameFormatValid,
 } from "../src/lib/validation/username";
+import { canManageEntryShare } from "../src/server/shares/access";
+import {
+  createEntrySchema,
+  updateEntrySchema,
+} from "../src/server/entries/schema";
+import { resolvePersistedEntryRating } from "../src/server/entries/updateValidation";
+import { resolveAllowedProfileEntryPrivacies } from "../src/server/users/profileVisibility";
+import { deleteUserAccount } from "../src/server/account/deleteAccount";
 
 function makeUser(id: string): User {
   return {
@@ -76,6 +100,255 @@ test.describe("Phase 6 utility unification", () => {
     expect(isWebUsernameFormatValid("bad @ name")).toBe(
       isSharedUsernameFormatValid("bad @ name")
     );
+    expect(webCurrencyValues).toEqual(sharedCurrencyValues);
+    expect(webSourceValues).toEqual(sharedSourceValues);
+    expect(webQprValues).toEqual(sharedQprValues);
+    expect(webCurrencyLabels).toEqual(sharedCurrencyLabels);
+    expect(webSourceLabels).toEqual(sharedSourceLabels);
+    expect(webQprLabels).toEqual(sharedQprLabels);
+  });
+});
+
+test.describe("Phase 6 entry/share access helpers", () => {
+  test("profile visibility helper resolves public, social, and blocked access", () => {
+    expect(
+      resolveAllowedProfileEntryPrivacies({
+        isOwnProfile: true,
+        isBlocked: false,
+        isFriend: false,
+        isFriendOfFriend: false,
+      })
+    ).toEqual(["public", "friends_of_friends", "friends"]);
+
+    expect(
+      resolveAllowedProfileEntryPrivacies({
+        isOwnProfile: false,
+        isBlocked: true,
+        isFriend: true,
+        isFriendOfFriend: true,
+      })
+    ).toEqual([]);
+
+    expect(
+      resolveAllowedProfileEntryPrivacies({
+        isOwnProfile: false,
+        isBlocked: false,
+        isFriend: true,
+        isFriendOfFriend: false,
+      })
+    ).toEqual(["public", "friends_of_friends", "friends"]);
+
+    expect(
+      resolveAllowedProfileEntryPrivacies({
+        isOwnProfile: false,
+        isBlocked: false,
+        isFriend: false,
+        isFriendOfFriend: true,
+      })
+    ).toEqual(["public", "friends_of_friends"]);
+
+    expect(
+      resolveAllowedProfileEntryPrivacies({
+        isOwnProfile: false,
+        isBlocked: false,
+        isFriend: false,
+        isFriendOfFriend: false,
+      })
+    ).toEqual(["public"]);
+  });
+
+  test("share access helper restricts management to the owner", () => {
+    expect(canManageEntryShare("user-1", "user-1")).toBeTruthy();
+    expect(canManageEntryShare("user-1", "user-2")).toBeFalsy();
+  });
+
+  test("entry schemas keep price triplet rules aligned", () => {
+    expect(
+      createEntrySchema.safeParse({
+        wine_name: "Clos Rougeard",
+        price_paid: 42,
+      }).success
+    ).toBeFalsy();
+
+    expect(
+      createEntrySchema.safeParse({
+        wine_name: "Clos Rougeard",
+        price_paid: 42,
+        price_paid_currency: "usd",
+        price_paid_source: "retail",
+      }).success
+    ).toBeTruthy();
+
+    expect(
+      updateEntrySchema.safeParse({
+        price_paid_currency: "usd",
+      }).success
+    ).toBeFalsy();
+
+    expect(
+      updateEntrySchema.safeParse({
+        price_paid: null,
+        price_paid_currency: null,
+        price_paid_source: null,
+      }).success
+    ).toBeTruthy();
+
+    expect(
+      updateEntrySchema.safeParse({
+        price_paid: 42,
+        price_paid_currency: "usd",
+        price_paid_source: "retail",
+      }).success
+    ).toBeTruthy();
+  });
+
+  test("update rating resolution preserves existing ratings for partial saves", () => {
+    expect(
+      resolvePersistedEntryRating({
+        existingRating: 92,
+        nextRating: undefined,
+      })
+    ).toBe(92);
+
+    expect(
+      resolvePersistedEntryRating({
+        existingRating: 92,
+        nextRating: 95,
+      })
+    ).toBe(95);
+
+    expect(
+      resolvePersistedEntryRating({
+        existingRating: null,
+        nextRating: undefined,
+      })
+    ).toBeNull();
+  });
+
+  test("single-photo quick count stays advisory when only one bottle is identified", () => {
+    expect(
+      resolveSinglePhotoEntryMode({
+        identifiedBottleCount: 1,
+        detectedBottleCount: 1,
+        guardrailBottleCount: 2,
+        hasStrongSingleBottleEvidence: true,
+      })
+    ).toEqual({
+      effectiveBottleCount: 2,
+      guardrailSuggestsAdditionalBottles: false,
+      likelyLineup: false,
+    });
+
+    expect(
+      resolveSinglePhotoEntryMode({
+        identifiedBottleCount: 1,
+        detectedBottleCount: 1,
+        guardrailBottleCount: 2,
+        hasStrongSingleBottleEvidence: false,
+      })
+    ).toEqual({
+      effectiveBottleCount: 2,
+      guardrailSuggestsAdditionalBottles: true,
+      likelyLineup: false,
+    });
+
+    expect(
+      resolveSinglePhotoEntryMode({
+        identifiedBottleCount: 1,
+        detectedBottleCount: 2,
+        guardrailBottleCount: 2,
+        hasStrongSingleBottleEvidence: false,
+      })
+    ).toEqual({
+      effectiveBottleCount: 2,
+      guardrailSuggestsAdditionalBottles: false,
+      likelyLineup: true,
+    });
+
+    expect(
+      hasDominantSingleBottleFrame({
+        width: 0.38,
+        height: 0.52,
+      })
+    ).toBeTruthy();
+
+    expect(
+      hasDominantSingleBottleFrame({
+        width: 0.22,
+        height: 0.52,
+      })
+    ).toBeFalsy();
+  });
+
+  test("account deletion hard-deletes the auth user and removes owned storage", async () => {
+    const removedPathBatches: string[][] = [];
+    const deletedUserIds: string[] = [];
+
+    const result = await deleteUserAccount(
+      {
+        auth: {
+          admin: {
+            deleteUser: async (userId: string) => {
+              deletedUserIds.push(userId);
+              return { data: { user: null }, error: null };
+            },
+          },
+        },
+        storage: {
+          from(bucket: string) {
+            expect(bucket).toBe("wine-photos");
+
+            return {
+              listV2: async ({ cursor }: { cursor?: string }) => {
+                if (!cursor) {
+                  return {
+                    data: {
+                      hasNext: true,
+                      nextCursor: "page-2",
+                      folders: [],
+                      objects: [
+                        { key: "user-1/avatar.jpg" },
+                        { key: "user-1/entry-1/label/photo-1.jpg" },
+                      ],
+                    },
+                    error: null,
+                  };
+                }
+
+                return {
+                  data: {
+                    hasNext: false,
+                    nextCursor: undefined,
+                    folders: [],
+                    objects: [{ key: "user-1/entry-1/place/photo-2.jpg" }],
+                  },
+                  error: null,
+                };
+              },
+              remove: async (paths: string[]) => {
+                removedPathBatches.push(paths);
+                return { data: null, error: null };
+              },
+            };
+          },
+        },
+      } as never,
+      "user-1"
+    );
+
+    expect(deletedUserIds).toEqual(["user-1"]);
+    expect(removedPathBatches).toEqual([
+      [
+        "user-1/avatar.jpg",
+        "user-1/entry-1/label/photo-1.jpg",
+        "user-1/entry-1/place/photo-2.jpg",
+      ],
+    ]);
+    expect(result).toEqual({
+      deleted: true,
+      mediaCleanupPending: false,
+      removedStorageObjectCount: 3,
+    });
   });
 });
 

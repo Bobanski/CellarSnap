@@ -35,6 +35,10 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 .accent-solid-button {
   background-color: var(--accent-solid);
   color: rgb(9 9 11);
@@ -93,5 +97,12 @@ select optgroup {
   select,
   textarea {
     font-size: 16px !important;
+  }
+
+  button,
+  [role="button"],
+  a,
+  summary {
+    touch-action: manipulation;
   }
 }

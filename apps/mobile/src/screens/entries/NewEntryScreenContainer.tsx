@@ -69,6 +69,7 @@ import {
 import { runBulkCreateWorkflow } from "@/src/lib/entryFlow/bulkCreateWorkflow";
 import { styles } from "@/src/components/entries/newEntryStyles";
 import { PostSaveSurveyModal } from "@/src/components/entries/PostSaveSurveyModal";
+import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import {
   fetchComparisonCandidateForEntry as fetchComparisonCandidateForEntryService,
   insertEntryWithFallback as insertEntryWithFallbackService,
@@ -312,7 +313,7 @@ const ADVANCED_NOTE_FIELDS: Array<{
 ];
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-const WEB_API_BASE_URL = process.env.EXPO_PUBLIC_WEB_API_BASE_URL;
+const WEB_API_BASE_URL = getWebApiBaseUrl();
 const RESCAN_CONFIDENCE_THRESHOLD = 0.6;
 
 export default function NewEntryScreen() {
@@ -537,23 +538,6 @@ export default function NewEntryScreen() {
         true
       );
     }, delay);
-  };
-
-  const getAccessTokenForApi = async () => {
-    const { data: sessionResult } = await supabase.auth.getSession();
-    let session = sessionResult.session;
-    const expiresSoon =
-      typeof session?.expires_at === "number" &&
-      session.expires_at * 1000 <= Date.now() + 90_000;
-
-    if (!session?.access_token || expiresSoon) {
-      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
-      if (refreshedSessionResult.session?.access_token) {
-        session = refreshedSessionResult.session;
-      }
-    }
-
-    return session?.access_token ?? null;
   };
 
   const updateAdvanced = (field: keyof AdvancedNotesFormValues, value: string) => {
@@ -1404,7 +1388,6 @@ export default function NewEntryScreen() {
       return;
     }
 
-    const normalizedBaseUrl = WEB_API_BASE_URL.replace(/\/$/, "");
     setIsSavingCrop(true);
     setUploadMessage("Saving crop...");
 
@@ -1426,7 +1409,7 @@ export default function NewEntryScreen() {
       formData.append("center_y", String(cropCenterY));
       formData.append("zoom", String(cropZoom));
 
-      const response = await fetch(`${normalizedBaseUrl}/api/photo-crop`, {
+      const response = await fetch(`${WEB_API_BASE_URL}/api/photo-crop`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -1566,7 +1549,7 @@ export default function NewEntryScreen() {
       analysisPhotos,
       labelTarget,
       accessToken,
-      baseUrl: WEB_API_BASE_URL?.replace(/\/$/, "") ?? null,
+      baseUrl: WEB_API_BASE_URL,
       setUploadPhotos,
       setLineupWines,
       setBulkCreateMessage,
@@ -1720,7 +1703,7 @@ export default function NewEntryScreen() {
     setErrorMessage(null);
 
     const accessToken = await getAccessTokenForApi();
-    const normalizedBaseUrl = WEB_API_BASE_URL?.replace(/\/$/, "") ?? null;
+    const normalizedBaseUrl = WEB_API_BASE_URL;
     try {
       const result = await runBulkCreateWorkflow({
         lineupWines,

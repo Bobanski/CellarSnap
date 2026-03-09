@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import type { WineEntryWithUrls } from "@/types/wine";
+import AppImage from "@/components/AppImage";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
@@ -385,7 +386,7 @@ export default function FriendProfilePage() {
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/30 ring-2 ring-white/5 sm:h-16 sm:w-16">
                 {profile.avatar_url ? (
-                  <img
+                  <AppImage
                     src={profile.avatar_url}
                     alt=""
                     className="h-full w-full object-cover"
@@ -535,188 +536,196 @@ export default function FriendProfilePage() {
           </div>
         </header>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-zinc-50">
-            {isOwnProfile ? "Wines you've uploaded" : "Wines they've uploaded"}
-          </h2>
-          {theirEntries.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
-              {isOwnProfile ? "You haven't uploaded any wines yet." : "No wines uploaded yet."}
-            </div>
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {displayedTheirEntries.map((entry) => (
-                <Link
-                  key={entry.id}
-                  href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
-                >
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
-                    {entry.label_image_url ? (
-                      <Photo
-                        src={entry.label_image_url}
-                        alt={entry.wine_name ?? entry.producer ?? "Wine label"}
-                        containerClassName="h-full w-full"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      "No photo"
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <h3 className="font-semibold text-zinc-50">
-                        {entry.wine_name || "Untitled wine"}
-                      </h3>
-                      {(() => {
-                        const hideProducer = shouldHideProducerInEntryTile(
-                          entry.wine_name,
-                          entry.producer
-                        );
-                        const producerLabel = entry.producer
-                          ? hideProducer
-                            ? null
-                            : entry.producer
-                          : "Unknown producer";
-                        if (!producerLabel && !entry.vintage) {
-                          return null;
-                        }
-                        return (
-                          <p className="text-sm text-zinc-400">
-                            {producerLabel ?? ""}
-                            {entry.vintage ? (
-                              <span className="text-zinc-500">
-                                {producerLabel ? " · " : ""}
-                                {entry.vintage}
-                              </span>
-                            ) : null}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {typeof entry.rating === "number" &&
-                        !Number.isNaN(entry.rating) ? (
-                          <RatingBadge rating={entry.rating} variant="text" />
-                        ) : null}
-                        {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+        {!isOwnProfile && isBlocked ? (
+          <section className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-100">
+            This user&apos;s content is hidden while blocked.
+          </section>
+        ) : (
+          <>
+            <section className="space-y-4">
+              <h2 className="text-lg font-semibold text-zinc-50">
+                {isOwnProfile ? "Wines you've uploaded" : "Wines they've uploaded"}
+              </h2>
+              {theirEntries.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
+                  {isOwnProfile ? "You haven't uploaded any wines yet." : "No wines uploaded yet."}
+                </div>
+              ) : (
+                <div className="grid gap-5 md:grid-cols-2">
+                  {displayedTheirEntries.map((entry) => (
+                    <Link
+                      key={entry.id}
+                      href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
+                      className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    >
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                        {entry.label_image_url ? (
+                          <Photo
+                            src={entry.label_image_url}
+                            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                            containerClassName="h-full w-full"
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          "No photo"
+                        )}
                       </div>
-                      <span>{formatConsumedDate(entry.consumed_at)}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-          {theirEntries.length > 10 ? (
-            <div className="flex items-center justify-center">
-              <button
-                type="button"
-                onClick={() => setShowAllEntries((prev) => !prev)}
-                className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
-              >
-                {showAllEntries ? "Show fewer entries" : "See all entries"}
-              </button>
-            </div>
-          ) : null}
-        </section>
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <h3 className="font-semibold text-zinc-50">
+                            {entry.wine_name || "Untitled wine"}
+                          </h3>
+                          {(() => {
+                            const hideProducer = shouldHideProducerInEntryTile(
+                              entry.wine_name,
+                              entry.producer
+                            );
+                            const producerLabel = entry.producer
+                              ? hideProducer
+                                ? null
+                                : entry.producer
+                              : "Unknown producer";
+                            if (!producerLabel && !entry.vintage) {
+                              return null;
+                            }
+                            return (
+                              <p className="text-sm text-zinc-400">
+                                {producerLabel ?? ""}
+                                {entry.vintage ? (
+                                  <span className="text-zinc-500">
+                                    {producerLabel ? " · " : ""}
+                                    {entry.vintage}
+                                  </span>
+                                ) : null}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {typeof entry.rating === "number" &&
+                            !Number.isNaN(entry.rating) ? (
+                              <RatingBadge rating={entry.rating} variant="text" />
+                            ) : null}
+                            {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                          </div>
+                          <span>{formatConsumedDate(entry.consumed_at)}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {theirEntries.length > 10 ? (
+                <div className="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllEntries((prev) => !prev)}
+                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
+                  >
+                    {showAllEntries ? "Show fewer entries" : "See all entries"}
+                  </button>
+                </div>
+              ) : null}
+            </section>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-zinc-50">
-            {isOwnProfile ? "Tagged entries" : "Tagged in by others"}
-          </h2>
-          {taggedEntries.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
-              {isOwnProfile
-                ? "You are not tagged in any entries yet."
-                : "Not tagged in any entries yet."}
-            </div>
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              {displayedTaggedEntries.map((entry) => (
-                <Link
-                  key={entry.id}
-                  href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                  className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
-                >
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
-                    {entry.label_image_url ? (
-                      <Photo
-                        src={entry.label_image_url}
-                        alt={entry.wine_name ?? entry.producer ?? "Wine label"}
-                        containerClassName="h-full w-full"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      "No photo"
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <p className="text-xs text-zinc-500">
-                        Logged by {entry.author_name ?? "Unknown"}
-                      </p>
-                      <h3 className="font-semibold text-zinc-50">
-                        {entry.wine_name || "Untitled wine"}
-                      </h3>
-                      {(() => {
-                        const hideProducer = shouldHideProducerInEntryTile(
-                          entry.wine_name,
-                          entry.producer
-                        );
-                        const producerLabel = entry.producer
-                          ? hideProducer
-                            ? null
-                            : entry.producer
-                          : "Unknown producer";
-                        if (!producerLabel && !entry.vintage) {
-                          return null;
-                        }
-                        return (
-                          <p className="text-sm text-zinc-400">
-                            {producerLabel ?? ""}
-                            {entry.vintage ? (
-                              <span className="text-zinc-500">
-                                {producerLabel ? " · " : ""}
-                                {entry.vintage}
-                              </span>
-                            ) : null}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {typeof entry.rating === "number" &&
-                        !Number.isNaN(entry.rating) ? (
-                          <RatingBadge rating={entry.rating} variant="text" />
-                        ) : null}
-                        {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+            <section className="space-y-4">
+              <h2 className="text-lg font-semibold text-zinc-50">
+                {isOwnProfile ? "Tagged entries" : "Tagged in by others"}
+              </h2>
+              {taggedEntries.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
+                  {isOwnProfile
+                    ? "You are not tagged in any entries yet."
+                    : "Not tagged in any entries yet."}
+                </div>
+              ) : (
+                <div className="grid gap-5 md:grid-cols-2">
+                  {displayedTaggedEntries.map((entry) => (
+                    <Link
+                      key={entry.id}
+                      href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
+                      className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    >
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                        {entry.label_image_url ? (
+                          <Photo
+                            src={entry.label_image_url}
+                            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                            containerClassName="h-full w-full"
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                        ) : (
+                          "No photo"
+                        )}
                       </div>
-                      <span>{formatConsumedDate(entry.consumed_at)}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-          {taggedEntries.length > 10 ? (
-            <div className="flex items-center justify-center">
-              <button
-                type="button"
-                onClick={() => setShowAllTaggedEntries((prev) => !prev)}
-                className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
-              >
-                {showAllTaggedEntries
-                  ? "Show fewer tagged entries"
-                  : "See all entries tagged in"}
-              </button>
-            </div>
-          ) : null}
-        </section>
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <p className="text-xs text-zinc-500">
+                            Logged by {entry.author_name ?? "Unknown"}
+                          </p>
+                          <h3 className="font-semibold text-zinc-50">
+                            {entry.wine_name || "Untitled wine"}
+                          </h3>
+                          {(() => {
+                            const hideProducer = shouldHideProducerInEntryTile(
+                              entry.wine_name,
+                              entry.producer
+                            );
+                            const producerLabel = entry.producer
+                              ? hideProducer
+                                ? null
+                                : entry.producer
+                              : "Unknown producer";
+                            if (!producerLabel && !entry.vintage) {
+                              return null;
+                            }
+                            return (
+                              <p className="text-sm text-zinc-400">
+                                {producerLabel ?? ""}
+                                {entry.vintage ? (
+                                  <span className="text-zinc-500">
+                                    {producerLabel ? " · " : ""}
+                                    {entry.vintage}
+                                  </span>
+                                ) : null}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {typeof entry.rating === "number" &&
+                            !Number.isNaN(entry.rating) ? (
+                              <RatingBadge rating={entry.rating} variant="text" />
+                            ) : null}
+                            {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                          </div>
+                          <span>{formatConsumedDate(entry.consumed_at)}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {taggedEntries.length > 10 ? (
+                <div className="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTaggedEntries((prev) => !prev)}
+                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
+                  >
+                    {showAllTaggedEntries
+                      ? "Show fewer tagged entries"
+                      : "See all entries tagged in"}
+                  </button>
+                </div>
+              ) : null}
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

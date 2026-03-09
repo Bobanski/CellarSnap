@@ -17,6 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import type { WineEntrySummary } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
@@ -47,13 +48,6 @@ type EntryPrimaryGrapeRow = {
       }[]
     | null;
 };
-type EntryPhotoRow = {
-  entry_id: string;
-  path: string;
-  position: number;
-  created_at: string;
-};
-
 const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   extortion: "Extortion",
   pricey: "Pricey",
@@ -389,7 +383,11 @@ export default function EntriesScreen() {
   const loadEntries = useCallback(
     async (refresh = false) => {
       if (!user) return;
-      refresh ? setIsRefreshing(true) : setIsLoading(true);
+      if (refresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setErrorMessage(null);
 
       const { data, error } = await supabase
@@ -406,8 +404,6 @@ export default function EntriesScreen() {
         const rows = (data ?? []) as MobileEntry[];
         const entryIds = rows.map((entry) => entry.id);
         const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
-        const labelPathByEntryId = new Map<string, string>();
-        const signedUrlByPath = new Map<string, string | null>();
 
         if (entryIds.length > 0) {
           const { data: primaryGrapeRows, error: primaryGrapeError } = await supabase
@@ -431,47 +427,17 @@ export default function EntriesScreen() {
               primaryGrapeMap.set(row.entry_id, current);
             });
           }
-
-          const { data: labelPhotos, error: labelPhotoError } = await supabase
-            .from("entry_photos")
-            .select("entry_id, path, position, created_at")
-            .eq("type", "label")
-            .in("entry_id", entryIds)
-            .order("position", { ascending: true })
-            .order("created_at", { ascending: true });
-
-          if (!labelPhotoError && labelPhotos) {
-            (labelPhotos as EntryPhotoRow[]).forEach((photo) => {
-              if (!labelPathByEntryId.has(photo.entry_id)) {
-                labelPathByEntryId.set(photo.entry_id, photo.path);
-              }
-            });
-          }
         }
 
-        const labelPathsToSign = Array.from(
-          new Set(
-            rows
-              .map((entry) => labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null)
-              .filter((path): path is string => Boolean(path && path !== "pending"))
-          )
-        );
-
-        await Promise.all(
-          labelPathsToSign.map(async (path) => {
-            const { data: signedUrl, error: signedUrlError } = await supabase.storage
-              .from("wine-photos")
-              .createSignedUrl(path, 60 * 60);
-            signedUrlByPath.set(path, signedUrlError ? null : signedUrl.signedUrl);
-          })
-        );
+        const labelByEntryId = await resolveEntryLabelPhotos(rows, {
+          supabaseClient: supabase,
+        });
 
         setEntries(
           rows.map((entry) => {
-            const labelPath = labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null;
             return {
               ...entry,
-              label_image_url: labelPath ? signedUrlByPath.get(labelPath) ?? null : null,
+              label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
               primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
             };
           })
@@ -485,7 +451,11 @@ export default function EntriesScreen() {
   );
 
   useEffect(() => {
-    void loadEntries();
+    const timeoutId = setTimeout(() => {
+      void loadEntries();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadEntries]);
 
   const updateFilterType = (newFilterType: FilterType) => {

@@ -1,11 +1,13 @@
 "use client";
 
 import { formatConsumedDate } from "@/lib/formatDate";
+import { useOverlayPresentation } from "@/lib/ui/overlayPresentation";
 import type {
   ComparisonResponse,
   SurveyComparisonCandidate,
   SurveyEntryCard,
 } from "@/components/EntryPostSaveSurveyModal";
+import AppImage from "@/components/AppImage";
 
 type EntryWineComparisonModalProps = {
   isOpen: boolean;
@@ -53,15 +55,17 @@ export default function EntryWineComparisonModal({
   onSelect,
   onSkip,
 }: EntryWineComparisonModalProps) {
+  useOverlayPresentation(isOpen);
+
   if (!isOpen || !entry || !candidate) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
       <div className="fixed inset-0 bg-black/75" aria-hidden />
-      <div className="relative flex min-h-full items-start justify-center sm:items-center">
-        <div className="relative h-[calc(100dvh-0.75rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:p-8">
+      <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
+        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-2xl font-semibold text-zinc-50">
               Which of these wines did you enjoy more?
@@ -90,7 +94,7 @@ export default function EntryWineComparisonModal({
             >
               <div className="h-32 w-full bg-black/40 sm:h-40">
                 {newWineImageUrl ? (
-                  <img
+                  <AppImage
                     src={newWineImageUrl}
                     alt="Wine you just logged"
                     className="h-full w-full object-cover"
@@ -121,7 +125,7 @@ export default function EntryWineComparisonModal({
             >
               <div className="h-32 w-full bg-black/40 sm:h-40">
                 {candidate.label_image_url ? (
-                  <img
+                  <AppImage
                     src={candidate.label_image_url}
                     alt="Previous wine for comparison"
                     className="h-full w-full object-cover"

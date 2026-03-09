@@ -17,7 +17,7 @@ EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 # Optional: defaults to "email"
 EXPO_PUBLIC_AUTH_MODE=email
-# Optional: enables AI label autofill + photo auto-tagging via web API routes
+# Optional in local dev, required for AI, crop editing, and in-app account deletion
 EXPO_PUBLIC_WEB_API_BASE_URL=http://127.0.0.1:3000
 ```
 
@@ -53,6 +53,8 @@ If you use AI label autofill / photo auto-tagging, run the web app too (repo roo
 npm run dev
 ```
 
+For TestFlight / App Review builds, point `EXPO_PUBLIC_WEB_API_BASE_URL` at the deployed web API, not localhost. The mobile app uses that API for AI photo analysis, crop editing, alerts actions, and account deletion.
+
 ## Auth Redirect URLs (Supabase)
 
 The app uses deep links and `auth/callback` for magic link / OTP callbacks.
@@ -70,3 +72,27 @@ If you later add OAuth providers (Google/Apple), use the same callback path and 
 - Identifier resolution parity with web (email/username/phone helpers via Supabase RPC)
 - Entries: list entries + create entry (`wine_entries`)
 - Loading and error states on auth and entries screens
+
+## Release Builds
+
+EAS profiles live in `apps/mobile/eas.json`.
+
+From `apps/mobile`:
+
+```bash
+npx eas build --platform ios --profile production
+npx eas submit --platform ios --profile production
+```
+
+Current release metadata is defined in `app.json`:
+
+- version: `1.0.0`
+- iOS build number: `1`
+- Android version code: `1`
+
+## App Review Checklist
+
+- Account deletion is available in-app under Profile -> Settings -> Delete account.
+- Privacy Policy and Terms are available in the mobile app.
+- Provide App Review with a valid demo account if your production sign-in is gated.
+- Verify `EXPO_PUBLIC_WEB_API_BASE_URL` points to the deployed environment before submitting.

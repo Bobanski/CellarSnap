@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
@@ -37,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Feed", href: "/(app)/feed" },
   { label: "Profile", href: "/(app)/profile" },
 ];
-const WEB_API_BASE_URL = process.env.EXPO_PUBLIC_WEB_API_BASE_URL;
+const WEB_API_BASE_URL = getWebApiBaseUrl();
 
 function formatAlertDate(value: string) {
   const parsed = new Date(value);
@@ -253,23 +254,6 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     void loadAlerts();
   }, [alertsOpen, loadAlerts]);
 
-  const getAccessTokenForApi = useCallback(async () => {
-    const { data: sessionResult } = await supabase.auth.getSession();
-    let session = sessionResult.session;
-    const expiresSoon =
-      typeof session?.expires_at === "number" &&
-      session.expires_at * 1000 <= Date.now() + 90_000;
-
-    if (!session?.access_token || expiresSoon) {
-      const { data: refreshedSessionResult } = await supabase.auth.refreshSession();
-      if (refreshedSessionResult.session?.access_token) {
-        session = refreshedSessionResult.session;
-      }
-    }
-
-    return session?.access_token ?? null;
-  }, []);
-
   const onSignOut = async () => {
     await signOut();
     router.replace("/(auth)/sign-in");
@@ -305,7 +289,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
         ? `/api/friends/requests/${requestId}/accept`
         : `/api/friends/requests/${requestId}/decline`;
     const response = await fetch(
-      `${WEB_API_BASE_URL.replace(/\/$/, "")}${endpoint}`,
+      `${WEB_API_BASE_URL}${endpoint}`,
       {
         method: "POST",
         headers: {
@@ -371,7 +355,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
 
     try {
       const response = await fetch(
-        `${WEB_API_BASE_URL.replace(/\/$/, "")}/api/entries/${alert.entry_id}/add-to-log`,
+        `${WEB_API_BASE_URL}/api/entries/${alert.entry_id}/add-to-log`,
         {
           method: "POST",
           headers: {

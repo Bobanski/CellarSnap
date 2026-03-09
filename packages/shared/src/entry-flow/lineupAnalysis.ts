@@ -123,3 +123,55 @@ export function shouldForceLineupForSinglePhoto(
   // Narrow, tall single-bottle detections are frequently lineup framing.
   return bottleBbox.width < 0.42 && bottleBbox.height > 0.45;
 }
+
+export function hasDominantSingleBottleFrame(
+  bottleBbox: Pick<NormalizedLineupBbox, "width" | "height"> | null
+) {
+  if (!bottleBbox) {
+    return false;
+  }
+
+  return bottleBbox.width >= 0.34 && bottleBbox.height >= 0.45;
+}
+
+export function resolveSinglePhotoEntryMode({
+  identifiedBottleCount,
+  detectedBottleCount,
+  guardrailBottleCount,
+  hasStrongSingleBottleEvidence,
+}: {
+  identifiedBottleCount: number;
+  detectedBottleCount: number;
+  guardrailBottleCount: number | null;
+  hasStrongSingleBottleEvidence: boolean;
+}) {
+  const normalizedIdentifiedBottleCount = Math.max(
+    0,
+    Math.round(identifiedBottleCount)
+  );
+  const normalizedDetectedBottleCount = Math.max(0, Math.round(detectedBottleCount));
+  const normalizedGuardrailBottleCount =
+    typeof guardrailBottleCount === "number" && Number.isFinite(guardrailBottleCount)
+      ? Math.max(0, Math.round(guardrailBottleCount))
+      : 0;
+
+  const effectiveBottleCount = Math.max(
+    normalizedIdentifiedBottleCount,
+    normalizedDetectedBottleCount,
+    normalizedGuardrailBottleCount
+  );
+
+  const likelyLineup =
+    normalizedIdentifiedBottleCount > 1 || normalizedDetectedBottleCount > 1;
+  const guardrailSuggestsAdditionalBottles =
+    normalizedGuardrailBottleCount > 1 &&
+    normalizedGuardrailBottleCount >
+      Math.max(normalizedIdentifiedBottleCount, normalizedDetectedBottleCount) &&
+    !hasStrongSingleBottleEvidence;
+
+  return {
+    effectiveBottleCount,
+    guardrailSuggestsAdditionalBottles,
+    likelyLineup,
+  };
+}

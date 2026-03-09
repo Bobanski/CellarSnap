@@ -8,6 +8,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -36,6 +37,9 @@ import {
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { deleteCurrentAccount } from "@/src/lib/api/account";
+import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
+import { signPhotoUrl, signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -256,39 +260,8 @@ function createUuid() {
   });
 }
 
-async function createSignedUrl(path: string | null) {
-  if (!path || path === "pending") {
-    return null;
-  }
-  const { data, error } = await supabase.storage
-    .from("wine-photos")
-    .createSignedUrl(path, 60 * 60);
-  if (error) {
-    return null;
-  }
-  return data.signedUrl;
-}
-
-async function createSignedUrlMap(paths: string[]) {
-  const uniquePaths = Array.from(
-    new Set(paths.filter((path) => Boolean(path && path !== "pending")))
-  );
-  const map = new Map<string, string | null>();
-
-  await Promise.all(
-    uniquePaths.map(async (path) => {
-      const { data, error } = await supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(path, 60 * 60);
-      map.set(path, error ? null : data.signedUrl);
-    })
-  );
-
-  return map;
-}
-
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const didHydrateEditFields = useRef(false);
   const authMode = process.env.EXPO_PUBLIC_AUTH_MODE === "phone" ? "phone" : "email";
 
@@ -343,6 +316,10 @@ export default function ProfileScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+  const [deleteAccountConfirmation, setDeleteAccountConfirmation] = useState("");
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -535,7 +512,9 @@ export default function ProfileScreen() {
 
       const avatarPath =
         typeof profileRow.avatar_path === "string" ? profileRow.avatar_path : null;
-      const avatarUrl = await createSignedUrl(avatarPath);
+      const avatarUrl = await signPhotoUrl(avatarPath, {
+        supabaseClient: supabase,
+      });
       const nextProfile: ProfileData = {
         id: String(profileRow.id ?? user.id),
         display_name:
@@ -613,37 +592,15 @@ export default function ProfileScreen() {
           wine_name: string | null;
           label_image_path: string | null;
         }[];
-        const entryIds = rows.map((row) => row.id);
-
-        const labelResponse =
-          entryIds.length > 0
-            ? await supabase
-                .from("entry_photos")
-                .select("entry_id, path, position, created_at")
-                .eq("type", "label")
-                .in("entry_id", entryIds)
-                .order("position", { ascending: true })
-                .order("created_at", { ascending: true })
-            : { data: [] as { entry_id: string; path: string }[], error: null };
-
-        const labelMap = new Map<string, string>();
-        (labelResponse.data ?? []).forEach((photo) => {
-          if (!labelMap.has(photo.entry_id)) {
-            labelMap.set(photo.entry_id, photo.path);
-          }
+        const labelByEntryId = await resolveEntryLabelPhotos(rows, {
+          supabaseClient: supabase,
         });
 
-        const paths = rows
-          .map((row) => labelMap.get(row.id) ?? row.label_image_path ?? null)
-          .filter((path): path is string => Boolean(path));
-        const signedMap = await createSignedUrlMap(paths);
-
         const nextEntries: EntryTile[] = rows.map((row) => {
-          const path = labelMap.get(row.id) ?? row.label_image_path ?? null;
           return {
             id: row.id,
             wine_name: row.wine_name ?? null,
-            label_image_url: path ? signedMap.get(path) ?? null : null,
+            label_image_url: labelByEntryId.get(row.id)?.signedUrl ?? null,
           };
         });
 
@@ -685,37 +642,15 @@ export default function ProfileScreen() {
         wine_name: string | null;
         label_image_path: string | null;
       }[];
-      const entryIds = rows.map((row) => row.id);
-
-      const labelResponse =
-        entryIds.length > 0
-          ? await supabase
-              .from("entry_photos")
-              .select("entry_id, path, position, created_at")
-              .eq("type", "label")
-              .in("entry_id", entryIds)
-              .order("position", { ascending: true })
-              .order("created_at", { ascending: true })
-          : { data: [] as { entry_id: string; path: string }[] };
-
-      const labelMap = new Map<string, string>();
-      (labelResponse.data ?? []).forEach((photo) => {
-        if (!labelMap.has(photo.entry_id)) {
-          labelMap.set(photo.entry_id, photo.path);
-        }
+      const labelByEntryId = await resolveEntryLabelPhotos(rows, {
+        supabaseClient: supabase,
       });
 
-      const paths = rows
-        .map((row) => labelMap.get(row.id) ?? row.label_image_path ?? null)
-        .filter((path): path is string => Boolean(path));
-      const signedMap = await createSignedUrlMap(paths);
-
       const nextTagged: EntryTile[] = rows.map((row) => {
-        const path = labelMap.get(row.id) ?? row.label_image_path ?? null;
         return {
           id: row.id,
           wine_name: row.wine_name ?? null,
-          label_image_url: path ? signedMap.get(path) ?? null : null,
+          label_image_url: labelByEntryId.get(row.id)?.signedUrl ?? null,
         };
       });
       setTaggedEntries(nextTagged);
@@ -850,7 +785,9 @@ export default function ProfileScreen() {
     const pathRows = (rows ?? [])
       .map((row) => row.avatar_path ?? null)
       .filter((path): path is string => Boolean(path));
-    const signedMap = await createSignedUrlMap(pathRows);
+    const signedMap = await signPhotoUrls(pathRows, {
+      supabaseClient: supabase,
+    });
     const rowMap = new Map((rows ?? []).map((row) => [row.id, row]));
 
     return uniqueIds.map((id) => {
@@ -1061,9 +998,12 @@ export default function ProfileScreen() {
     setProfileErrorMessage(null);
     setAvatarErrorMessage(null);
     setIsPasswordOpen(false);
+    setIsDeleteAccountOpen(false);
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
+    setDeleteAccountConfirmation("");
+    setDeleteAccountError(null);
     setPasswordError(null);
   };
 
@@ -1108,7 +1048,9 @@ export default function ProfileScreen() {
     const stalePaths = AVATAR_EXTENSIONS.map((candidateExt) => `${user.id}/avatar.${candidateExt}`)
       .filter((candidatePath) => candidatePath !== avatarPath);
     await supabase.storage.from("wine-photos").remove(stalePaths);
-    const avatarUrl = await createSignedUrl(avatarPath);
+    const avatarUrl = await signPhotoUrl(avatarPath, {
+      supabaseClient: supabase,
+    });
 
     return { avatarPath, avatarUrl };
   }, [pendingAvatarAsset, user]);
@@ -1478,6 +1420,55 @@ export default function ProfileScreen() {
       setIsSavingPassword(false);
     }
   }, [authMode, confirmPassword, currentPassword, newPassword, profile]);
+
+  const requestDeleteAccount = useCallback(() => {
+    setDeleteAccountError(null);
+
+    if (deleteAccountConfirmation.trim().toUpperCase() !== "DELETE") {
+      setDeleteAccountError('Type "DELETE" to confirm account deletion.');
+      return;
+    }
+
+    Alert.alert(
+      "Delete account?",
+      "This permanently deletes your profile, entries, comments, reactions, and uploaded photos. This cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setIsDeletingAccount(true);
+              setDeleteAccountError(null);
+
+              try {
+                const result = await deleteCurrentAccount();
+                if (!result.ok) {
+                  setDeleteAccountError(result.errorMessage);
+                  return;
+                }
+
+                try {
+                  await signOut();
+                } catch {
+                  // The auth user may already be gone by this point.
+                }
+
+                setSettingsOpen(false);
+                router.replace("/(auth)/sign-in");
+              } finally {
+                setIsDeletingAccount(false);
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [deleteAccountConfirmation, signOut]);
 
   const sendFriendRequest = useCallback(
     async (recipientId: string) => {
@@ -2655,6 +2646,78 @@ export default function ProfileScreen() {
                   </View>
                 ) : null}
               </View>
+
+              <View style={styles.sectionBlockTopBorder}>
+                <View style={styles.rowBetween}>
+                  <View style={styles.rowGrow}>
+                    <AppText style={styles.sectionTitle}>Delete account</AppText>
+                    <AppText style={styles.hintText}>
+                      Permanently remove your account and all cellar content from
+                      CellarSnap.
+                    </AppText>
+                  </View>
+                  {!isDeleteAccountOpen ? (
+                    <Pressable
+                      style={styles.declineButton}
+                      onPress={() => {
+                        setDeleteAccountConfirmation("");
+                        setDeleteAccountError(null);
+                        setIsDeleteAccountOpen(true);
+                      }}
+                    >
+                      <AppText style={styles.declineButtonText}>Delete account</AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {isDeleteAccountOpen ? (
+                  <View style={styles.dangerPanel}>
+                    <AppText style={styles.dangerHint}>
+                      Type DELETE below, then confirm. This action cannot be undone.
+                    </AppText>
+                    <LabeledInput
+                      label='Type "DELETE" to confirm'
+                      value={deleteAccountConfirmation}
+                      onChangeText={setDeleteAccountConfirmation}
+                      placeholder="DELETE"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                    />
+                    {deleteAccountError ? (
+                      <AppText style={styles.errorText}>{deleteAccountError}</AppText>
+                    ) : null}
+                    <View style={styles.passwordActions}>
+                      <Pressable
+                        style={[
+                          styles.declineButton,
+                          isDeletingAccount ? styles.primaryButtonDisabled : null,
+                        ]}
+                        disabled={isDeletingAccount}
+                        onPress={requestDeleteAccount}
+                      >
+                        {isDeletingAccount ? (
+                          <ActivityIndicator color="#fecdd3" />
+                        ) : (
+                          <AppText style={styles.declineButtonText}>
+                            Permanently delete
+                          </AppText>
+                        )}
+                      </Pressable>
+                      <Pressable
+                        style={styles.linkButton}
+                        disabled={isDeletingAccount}
+                        onPress={() => {
+                          setDeleteAccountConfirmation("");
+                          setDeleteAccountError(null);
+                          setIsDeleteAccountOpen(false);
+                        }}
+                      >
+                        <AppText style={styles.linkButtonText}>Cancel</AppText>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
             </ScrollView>
           </KeyboardAvoidingView>
         </View>
@@ -3258,6 +3321,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  dangerPanel: {
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(251,113,133,0.28)",
+    backgroundColor: "rgba(127,29,29,0.18)",
+    padding: 12,
+  },
+  dangerHint: {
+    color: "#fecaca",
+    fontSize: 12,
+    lineHeight: 18,
   },
   linkButton: {
     paddingVertical: 6,

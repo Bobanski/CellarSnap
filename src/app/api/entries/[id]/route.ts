@@ -1,21 +1,8 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
-import {
-  ACIDITY_LEVELS,
-  ALCOHOL_LEVELS,
-  BODY_LEVELS,
-  SWEETNESS_LEVELS,
-  TANNIN_LEVELS,
-  normalizeAdvancedNotes,
-} from "@/lib/advancedNotes";
-import {
-  PRICE_PAID_CURRENCY_VALUES,
-  PRICE_PAID_SOURCE_VALUES,
-  QPR_LEVEL_VALUES,
-} from "@/lib/entryMeta";
+import { normalizeAdvancedNotes } from "@/lib/advancedNotes";
 import {
   fetchPrimaryGrapesByEntryId,
   normalizePrimaryGrapeIds,
@@ -27,197 +14,10 @@ import {
   getFriendsOfFriendsIds,
 } from "@/lib/access/entryVisibility";
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import { updateEntrySchema } from "@/server/entries/schema";
 import { executeWithColumnFallback } from "@/server/db/compat";
+import { resolvePersistedEntryRating } from "@/server/entries/updateValidation";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
-
-const privacyLevelSchema = z.enum(["public", "friends_of_friends", "friends", "private"]);
-const commentScopeSchema = z.enum(["viewers", "friends"]);
-const pricePaidCurrencySchema = z.enum(PRICE_PAID_CURRENCY_VALUES);
-const pricePaidSourceSchema = z.enum(PRICE_PAID_SOURCE_VALUES);
-const qprLevelSchema = z.enum(QPR_LEVEL_VALUES);
-
-const nullableString = z.preprocess(
-  (value) => {
-    if (typeof value === "string" && value.trim() === "") return null;
-    return value;
-  },
-  z.string().nullable().optional()
-);
-
-const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
-  z.preprocess(
-    (value) => (value === "" ? null : value),
-    z.enum(values).nullable().optional()
-  );
-
-const nullablePricePaidSchema = z.preprocess(
-  (value) => {
-    if (value === undefined || value === "") {
-      return undefined;
-    }
-    if (value === null) {
-      return null;
-    }
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed === "") {
-        return undefined;
-      }
-      const parsed = Number(trimmed);
-      return Number.isFinite(parsed) ? parsed : value;
-    }
-    return value;
-  },
-  z
-    .number({ error: "Price paid must be numbers only (no $ or symbols)." })
-    .min(0, "Price paid must be a valid number.")
-    .max(100000, "Price paid must be a valid number.")
-    .nullable()
-    .optional()
-);
-
-const primaryGrapeIdsSchema = z.preprocess(
-  (value) => {
-    if (!Array.isArray(value)) {
-      return value;
-    }
-    return value.filter((item): item is string => typeof item === "string");
-  },
-  z.array(z.string().uuid()).max(3).optional()
-);
-
-const advancedNotesSchema = z
-  .object({
-    acidity: nullableEnum(ACIDITY_LEVELS),
-    tannin: nullableEnum(TANNIN_LEVELS),
-    alcohol: nullableEnum(ALCOHOL_LEVELS),
-    sweetness: nullableEnum(SWEETNESS_LEVELS),
-    body: nullableEnum(BODY_LEVELS),
-  })
-  .nullable()
-  .optional();
-
-const updateEntrySchema = z.object({
-  wine_name: nullableString,
-  producer: nullableString,
-  vintage: nullableString,
-  country: nullableString,
-  region: nullableString,
-  appellation: nullableString,
-  classification: nullableString,
-  primary_grape_ids: primaryGrapeIdsSchema,
-  rating: z
-    .number({ error: "Rating required." })
-    .int("Rating must be a whole number (integer).")
-    .min(1, "Rating must be between 1 and 100.")
-    .max(100, "Rating must be between 1 and 100."),
-  price_paid: nullablePricePaidSchema,
-  price_paid_currency: z.preprocess(
-    (value) => (value === "" ? null : value),
-    pricePaidCurrencySchema.nullable().optional()
-  ),
-  price_paid_source: z.preprocess(
-    (value) => (value === "" ? null : value),
-    pricePaidSourceSchema.nullable().optional()
-  ),
-  qpr_level: z.preprocess(
-    (value) => (value === "" ? null : value),
-    qprLevelSchema.nullable().optional()
-  ),
-  notes: nullableString,
-  advanced_notes: advancedNotesSchema,
-  location_text: nullableString,
-  location_place_id: nullableString,
-  consumed_at: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  tasted_with_user_ids: z.array(z.string().uuid()).optional(),
-  label_image_path: nullableString,
-  place_image_path: nullableString,
-  pairing_image_path: nullableString,
-  entry_privacy: privacyLevelSchema.optional(),
-  reaction_privacy: privacyLevelSchema.optional(),
-  comments_privacy: privacyLevelSchema.optional(),
-  comments_scope: commentScopeSchema.optional(),
-  label_photo_privacy: privacyLevelSchema.nullable().optional(),
-  place_photo_privacy: privacyLevelSchema.nullable().optional(),
-  is_feed_visible: z.boolean().optional(),
-}).superRefine((data, ctx) => {
-  const providedPrice = data.price_paid !== undefined;
-  const providedPriceCurrency = data.price_paid_currency !== undefined;
-  const providedPriceSource = data.price_paid_source !== undefined;
-  const hasAnyPriceField =
-    providedPrice || providedPriceCurrency || providedPriceSource;
-
-  if (!hasAnyPriceField) {
-    return;
-  }
-
-  if (!providedPrice) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Provide price paid when updating currency or source.",
-      path: ["price_paid"],
-    });
-  }
-
-  if (!providedPriceCurrency) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Provide currency when updating price paid.",
-      path: ["price_paid_currency"],
-    });
-  }
-
-  if (!providedPriceSource) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Provide retail or restaurant when updating price paid.",
-      path: ["price_paid_source"],
-    });
-  }
-
-  if (!providedPrice || !providedPriceCurrency || !providedPriceSource) {
-    return;
-  }
-
-  const hasPrice = data.price_paid !== null;
-  const hasPriceCurrency = data.price_paid_currency !== null;
-  const hasPriceSource = data.price_paid_source !== null;
-
-  if (hasPrice && !hasPriceCurrency) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Select a currency when entering price paid.",
-      path: ["price_paid_currency"],
-    });
-  }
-
-  if (hasPrice && !hasPriceSource) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Select retail or restaurant when entering price paid.",
-      path: ["price_paid_source"],
-    });
-  }
-
-  if (!hasPrice && hasPriceCurrency) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Enter a price paid amount when selecting a currency.",
-      path: ["price_paid"],
-    });
-  }
-
-  if (!hasPrice && hasPriceSource) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Enter a price paid amount when selecting retail or restaurant.",
-      path: ["price_paid"],
-    });
-  }
-});
 
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
@@ -235,6 +35,18 @@ const ENTRY_OPTIONAL_UPDATE_COLUMNS = [
   "reaction_privacy",
   "comments_privacy",
 ] as const;
+
+type EntryPutHandlerDependencies = {
+  createSupabaseServerClient: typeof createSupabaseServerClient;
+  executeWithColumnFallback: typeof executeWithColumnFallback;
+  fetchPrimaryGrapesByEntryId: typeof fetchPrimaryGrapesByEntryId;
+};
+
+const defaultEntryPutHandlerDependencies: EntryPutHandlerDependencies = {
+  createSupabaseServerClient,
+  executeWithColumnFallback,
+  fetchPrimaryGrapesByEntryId,
+};
 
 export async function GET(
   _request: Request,
@@ -432,275 +244,311 @@ export async function GET(
   return NextResponse.json({ entry });
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+export function createEntryPutHandler(
+  dependencies: Partial<EntryPutHandlerDependencies> = {}
 ) {
-  const { id } = await params;
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const payload = updateEntrySchema.safeParse(body);
-  if (!payload.success) {
-    return NextResponse.json(
-      { error: payload.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const normalizedData = {
-    ...payload.data,
-    wine_name:
-      payload.data.wine_name === undefined
-        ? undefined
-        : payload.data.wine_name === null
-          ? null
-          : normalizeWineNameText(payload.data.wine_name) ??
-            payload.data.wine_name,
-    producer:
-      payload.data.producer === undefined
-        ? undefined
-        : normalizeProducerText(payload.data.producer),
-    advanced_notes:
-      payload.data.advanced_notes === undefined
-        ? undefined
-        : normalizeAdvancedNotes(payload.data.advanced_notes),
+  const resolvedDependencies = {
+    ...defaultEntryPutHandlerDependencies,
+    ...dependencies,
   };
 
-  const primaryGrapeIds =
-    normalizedData.primary_grape_ids === undefined
-      ? undefined
-      : normalizePrimaryGrapeIds(normalizedData.primary_grape_ids);
-  const entryFieldUpdates = { ...normalizedData };
-  delete entryFieldUpdates.primary_grape_ids;
+  return async function PUT(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+  ) {
+    const { id } = await params;
 
-  const updates = Object.fromEntries(
-    Object.entries(entryFieldUpdates).filter(([, value]) => value !== undefined)
-  );
+    const supabase = await resolvedDependencies.createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (Object.keys(updates).length === 0 && primaryGrapeIds === undefined) {
-    return NextResponse.json({ error: "No updates provided" }, { status: 400 });
-  }
-
-  const { data: targetEntry, error: targetEntryError } = await supabase
-    .from("wine_entries")
-    .select("id, user_id")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (targetEntryError) {
-    return NextResponse.json({ error: targetEntryError.message }, { status: 500 });
-  }
-
-  if (!targetEntry) {
-    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-  }
-
-  if (targetEntry.user_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
-
-  if (Object.keys(updates).length > 0) {
-    const updateResult = await executeWithColumnFallback({
-      initialPayload: updates,
-      removableColumns: ENTRY_OPTIONAL_UPDATE_COLUMNS,
-      maxAttempts: 3,
-      attempt: async (payloadToApply) => {
-        if (Object.keys(payloadToApply).length === 0) {
-          const existingEntry = await supabase
-            .from("wine_entries")
-            .select("*")
-            .eq("id", id)
-            .eq("user_id", user.id)
-            .maybeSingle();
-          return {
-            data: existingEntry.data,
-            error: existingEntry.error,
-          };
-        }
-
-        const updateAttempt = await supabase
-          .from("wine_entries")
-          .update(payloadToApply)
-          .eq("id", id)
-          .eq("user_id", user.id)
-          .select("*")
-          .maybeSingle();
-
-        return {
-          data: updateAttempt.data,
-          error: updateAttempt.error,
-        };
-      },
-    });
-    const data = updateResult.data;
-    const error = updateResult.error;
-
-    if (!error && !data) {
-      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (error || !data) {
-      if (error && isMissingDbColumnError(error, "advanced_notes")) {
-        return NextResponse.json(
-          {
-            error:
-              "Advanced notes are temporarily unavailable. Please try again later. (ADVANCED_NOTES_UNAVAILABLE)",
-            code: "ADVANCED_NOTES_UNAVAILABLE",
-          },
-          { status: 503 }
-        );
-      }
-      if (
-        error?.message.includes("wine_entries_price_source_requires_price_check")
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
-          },
-          { status: 400 }
-        );
-      }
-      if (
-        (error && isMissingDbColumnError(error, "price_paid")) ||
-        (error && isMissingDbColumnError(error, "price_paid_currency")) ||
-        (error && isMissingDbColumnError(error, "price_paid_source")) ||
-        (error && isMissingDbColumnError(error, "qpr_level"))
-      ) {
-        return NextResponse.json(
-          {
-            error:
-              "Entry pricing and QPR are temporarily unavailable. Please try again later. (ENTRY_PRICING_UNAVAILABLE)",
-            code: "ENTRY_PRICING_UNAVAILABLE",
-          },
-          { status: 503 }
-        );
-      }
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const payload = updateEntrySchema.safeParse(body);
+    if (!payload.success) {
       return NextResponse.json(
-        { error: error?.message ?? "Update failed" },
+        { error: payload.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const normalizedData = {
+      ...payload.data,
+      wine_name:
+        payload.data.wine_name === undefined
+          ? undefined
+          : payload.data.wine_name === null
+            ? null
+            : normalizeWineNameText(payload.data.wine_name) ??
+              payload.data.wine_name,
+      producer:
+        payload.data.producer === undefined
+          ? undefined
+          : normalizeProducerText(payload.data.producer),
+      advanced_notes:
+        payload.data.advanced_notes === undefined
+          ? undefined
+          : normalizeAdvancedNotes(payload.data.advanced_notes),
+    };
+
+    const primaryGrapeIds =
+      normalizedData.primary_grape_ids === undefined
+        ? undefined
+        : normalizePrimaryGrapeIds(normalizedData.primary_grape_ids);
+    const entryFieldUpdates = { ...normalizedData };
+    delete entryFieldUpdates.primary_grape_ids;
+
+    const updates = Object.fromEntries(
+      Object.entries(entryFieldUpdates).filter(([, value]) => value !== undefined)
+    );
+
+    if (Object.keys(updates).length === 0 && primaryGrapeIds === undefined) {
+      return NextResponse.json(
+        { error: "No updates provided" },
+        { status: 400 }
+      );
+    }
+
+    const { data: targetEntry, error: targetEntryError } = await supabase
+      .from("wine_entries")
+      .select("id, user_id, rating")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (targetEntryError) {
+      return NextResponse.json(
+        { error: targetEntryError.message },
         { status: 500 }
       );
     }
 
-    updatedEntry = data;
-  } else {
-    const { data, error } = await supabase
-      .from("wine_entries")
-      .select("*")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (error || !data) {
+    if (!targetEntry) {
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
-    updatedEntry = data;
-  }
+    if (targetEntry.user_id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-  if (primaryGrapeIds !== undefined) {
-    let primaryGrapeSchemaAvailable = true;
+    const persistedRating = resolvePersistedEntryRating({
+      existingRating: targetEntry.rating,
+      nextRating: payload.data.rating,
+    });
+    if (persistedRating === null) {
+      return NextResponse.json(
+        {
+          error: {
+            formErrors: [],
+            fieldErrors: {
+              rating: ["Rating required."],
+            },
+          },
+        },
+        { status: 400 }
+      );
+    }
 
-    if (primaryGrapeIds.length > 0) {
-      const { data: grapeRows, error: grapeLookupError } = await supabase
-        .from("grape_varieties")
-        .select("id")
-        .in("id", primaryGrapeIds);
+    let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
 
-      if (grapeLookupError) {
-        if (isPrimaryGrapeSchemaMissing(grapeLookupError.message)) {
-          primaryGrapeSchemaAvailable = false;
-        } else {
+    if (Object.keys(updates).length > 0) {
+      const updateResult = await resolvedDependencies.executeWithColumnFallback({
+        initialPayload: updates,
+        removableColumns: ENTRY_OPTIONAL_UPDATE_COLUMNS,
+        maxAttempts: 3,
+        attempt: async (payloadToApply) => {
+          if (Object.keys(payloadToApply).length === 0) {
+            const existingEntry = await supabase
+              .from("wine_entries")
+              .select("*")
+              .eq("id", id)
+              .eq("user_id", user.id)
+              .maybeSingle();
+            return {
+              data: existingEntry.data,
+              error: existingEntry.error,
+            };
+          }
+
+          const updateAttempt = await supabase
+            .from("wine_entries")
+            .update(payloadToApply)
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .select("*")
+            .maybeSingle();
+
+          return {
+            data: updateAttempt.data,
+            error: updateAttempt.error,
+          };
+        },
+      });
+      const data = updateResult.data;
+      const error = updateResult.error;
+
+      if (!error && !data) {
+        return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+      }
+
+      if (error || !data) {
+        if (error && isMissingDbColumnError(error, "advanced_notes")) {
           return NextResponse.json(
-            { error: grapeLookupError.message },
-            { status: 500 }
+            {
+              error:
+                "Advanced notes are temporarily unavailable. Please try again later. (ADVANCED_NOTES_UNAVAILABLE)",
+              code: "ADVANCED_NOTES_UNAVAILABLE",
+            },
+            { status: 503 }
           );
         }
-      } else {
-        const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
-        if (validGrapeIds.size !== primaryGrapeIds.length) {
+        if (
+          error?.message.includes(
+            "wine_entries_price_source_requires_price_check"
+          )
+        ) {
           return NextResponse.json(
-            { error: "One or more selected primary grapes are invalid." },
+            {
+              error:
+                "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
+            },
             { status: 400 }
           );
         }
-      }
-    }
-
-    if (primaryGrapeSchemaAvailable) {
-      const { error: deletePrimaryGrapesError } = await supabase
-        .from("entry_primary_grapes")
-        .delete()
-        .eq("entry_id", id);
-
-      if (deletePrimaryGrapesError) {
-        if (isPrimaryGrapeSchemaMissing(deletePrimaryGrapesError.message)) {
-          primaryGrapeSchemaAvailable = false;
-        } else {
+        if (
+          (error && isMissingDbColumnError(error, "price_paid")) ||
+          (error && isMissingDbColumnError(error, "price_paid_currency")) ||
+          (error && isMissingDbColumnError(error, "price_paid_source")) ||
+          (error && isMissingDbColumnError(error, "qpr_level"))
+        ) {
           return NextResponse.json(
-            { error: deletePrimaryGrapesError.message },
-            { status: 500 }
+            {
+              error:
+                "Entry pricing and QPR are temporarily unavailable. Please try again later. (ENTRY_PRICING_UNAVAILABLE)",
+              code: "ENTRY_PRICING_UNAVAILABLE",
+            },
+            { status: 503 }
           );
         }
-      }
-    }
-
-    if (primaryGrapeSchemaAvailable && primaryGrapeIds.length > 0) {
-      const { error: insertPrimaryGrapesError } = await supabase
-        .from("entry_primary_grapes")
-        .insert(
-          primaryGrapeIds.map((varietyId, index) => ({
-            entry_id: id,
-            variety_id: varietyId,
-            position: index + 1,
-          }))
-        );
-
-      if (insertPrimaryGrapesError) {
-        if (isPrimaryGrapeSchemaMissing(insertPrimaryGrapesError.message)) {
-          // Ignore if migration is not installed yet; entry updates should still succeed.
-        } else {
         return NextResponse.json(
-          { error: insertPrimaryGrapesError.message },
+          { error: error?.message ?? "Update failed" },
           { status: 500 }
         );
+      }
+
+      updatedEntry = data;
+    } else {
+      const { data, error } = await supabase
+        .from("wine_entries")
+        .select("*")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error || !data) {
+        return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+      }
+
+      updatedEntry = data;
+    }
+
+    if (primaryGrapeIds !== undefined) {
+      let primaryGrapeSchemaAvailable = true;
+
+      if (primaryGrapeIds.length > 0) {
+        const { data: grapeRows, error: grapeLookupError } = await supabase
+          .from("grape_varieties")
+          .select("id")
+          .in("id", primaryGrapeIds);
+
+        if (grapeLookupError) {
+          if (isPrimaryGrapeSchemaMissing(grapeLookupError.message)) {
+            primaryGrapeSchemaAvailable = false;
+          } else {
+            return NextResponse.json(
+              { error: grapeLookupError.message },
+              { status: 500 }
+            );
+          }
+        } else {
+          const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
+          if (validGrapeIds.size !== primaryGrapeIds.length) {
+            return NextResponse.json(
+              { error: "One or more selected primary grapes are invalid." },
+              { status: 400 }
+            );
+          }
+        }
+      }
+
+      if (primaryGrapeSchemaAvailable) {
+        const { error: deletePrimaryGrapesError } = await supabase
+          .from("entry_primary_grapes")
+          .delete()
+          .eq("entry_id", id);
+
+        if (deletePrimaryGrapesError) {
+          if (isPrimaryGrapeSchemaMissing(deletePrimaryGrapesError.message)) {
+            primaryGrapeSchemaAvailable = false;
+          } else {
+            return NextResponse.json(
+              { error: deletePrimaryGrapesError.message },
+              { status: 500 }
+            );
+          }
+        }
+      }
+
+      if (primaryGrapeSchemaAvailable && primaryGrapeIds.length > 0) {
+        const { error: insertPrimaryGrapesError } = await supabase
+          .from("entry_primary_grapes")
+          .insert(
+            primaryGrapeIds.map((varietyId, index) => ({
+              entry_id: id,
+              variety_id: varietyId,
+              position: index + 1,
+            }))
+          );
+
+        if (insertPrimaryGrapesError) {
+          if (isPrimaryGrapeSchemaMissing(insertPrimaryGrapesError.message)) {
+            // Ignore if migration is not installed yet; entry updates should still succeed.
+          } else {
+            return NextResponse.json(
+              { error: insertPrimaryGrapesError.message },
+              { status: 500 }
+            );
+          }
         }
       }
     }
-  }
 
-  const primaryGrapesByEntryId = await fetchPrimaryGrapesByEntryId(supabase, [
-    id,
-  ]);
+    const primaryGrapesByEntryId =
+      await resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [id]);
 
-  if (!updatedEntry) {
-    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-  }
+    if (!updatedEntry) {
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+    }
 
-  return NextResponse.json({
-    entry: {
-      ...updatedEntry,
-      primary_grapes: primaryGrapesByEntryId.get(id) ?? [],
-    },
-  });
+    return NextResponse.json({
+      entry: {
+        ...updatedEntry,
+        primary_grapes: primaryGrapesByEntryId.get(id) ?? [],
+      },
+    });
+  };
 }
+
+export const PUT = createEntryPutHandler();
 
 export async function DELETE(
   _request: Request,

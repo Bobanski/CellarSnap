@@ -7,6 +7,31 @@ const MIN_CROP_SIDE = 96;
 const MAX_ZOOM = 4;
 const OUTPUT_SIDE = 1200;
 
+type SharpInstance = {
+  rotate(): SharpInstance;
+  metadata(): Promise<{
+    width?: number;
+    height?: number;
+    orientation?: number;
+  }>;
+  resize(options: {
+    width: number;
+    height: number;
+    fit: "fill";
+  }): SharpInstance;
+  toBuffer(): Promise<Buffer>;
+  extract(options: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }): SharpInstance;
+  composite(
+    input: Array<{ input: Buffer; left: number; top: number }>
+  ): SharpInstance;
+  jpeg(options: { quality: number; mozjpeg: boolean }): SharpInstance;
+};
+
 type SharpFactory = (
   input:
     | Buffer
@@ -19,7 +44,7 @@ type SharpFactory = (
         };
       },
   options?: Record<string, unknown>
-) => any;
+) => SharpInstance;
 
 let sharpFactoryPromise: Promise<SharpFactory | null> | null = null;
 

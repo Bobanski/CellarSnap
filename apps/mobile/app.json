@@ -10,16 +10,27 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.cellarsnap.mobile"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.cellarsnap.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures."
+      }
     },
     "android": {
-      "package": "com.cellarsnap.mobile"
+      "package": "com.cellarsnap.mobile",
+      "versionCode": 1
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

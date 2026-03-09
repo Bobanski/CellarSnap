@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import AppImage from "@/components/AppImage";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
@@ -33,9 +34,11 @@ import {
 } from "@/lib/entryMeta";
 import { getTodayLocalYmd } from "@/lib/dateYmd";
 import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
+import { isUnknownWineName } from "@/lib/wineText";
 import type { EntryPhotoType, PrimaryGrape, PrivacyLevel } from "@/types/wine";
 import {
   buildResolvedPhotoTypeMap,
+  hasDominantSingleBottleFrame,
   hasLineupWineDetails,
   isConfidentNonBottleIntentTag,
   isPeoplePlaceOrPairingTag,
@@ -48,15 +51,16 @@ import {
   normalizeGrapeLookupValue,
   normalizeLineupText,
   OTHER_BOTTLES_CONFIDENCE_THRESHOLD,
+  resolveSinglePhotoEntryMode,
   resolveSourcePhotoRole,
   resolvePostSaveSurveyTransition,
   runWithConcurrency,
-  shouldForceLineupForSinglePhoto,
   type ContextPhotoTag,
   type SourcePhotoTypeAnalysis,
 } from "@shared/entry-flow";
 import { buildOriginalPhotoPath } from "@/lib/entryFlow/web/photoPath";
 import { submitPostSaveSurveyRequest } from "@/lib/entryFlow/web/postSaveSurveyClient";
+import { snapViewportToTop } from "@/lib/ui/overlayPresentation";
 
 type NewEntryForm = {
   wine_name: string;
@@ -217,12 +221,7 @@ export default function NewEntryPage() {
     false
   );
   const scrollToTopForOverlay = useCallback(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
+    snapViewportToTop();
   }, []);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const labelInputRef = useRef<HTMLInputElement | null>(null);
@@ -315,6 +314,16 @@ export default function NewEntryPage() {
     primary_grape_confidence?: number | null;
     confidence?: number | null;
     warnings?: string[] | null;
+  };
+
+  type NormalizedLabelAutofillResult = Omit<
+    LabelAutofillResult,
+    "primary_grape_suggestions" | "primary_grape_confidence" | "confidence" | "warnings"
+  > & {
+    primary_grape_suggestions: string[];
+    primary_grape_confidence: number | null;
+    confidence: number | null;
+    warnings: string[];
   };
 
   type LineupWine = {
@@ -1686,16 +1695,6 @@ export default function NewEntryPage() {
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed : "";
     };
-    const isUnknownWineName = (value: string) => {
-      const normalized = value.trim().toLowerCase();
-      return (
-        normalized === "unknown" ||
-        normalized === "unknown wine" ||
-        normalized === "n/a" ||
-        normalized === "na" ||
-        normalized === "not sure"
-      );
-    };
 
     const current = getValues();
     const normalizedWineName = normalizeAutofillText(data.wine_name);
@@ -2353,7 +2352,8 @@ export default function NewEntryPage() {
         });
       }
 
-      // Fast count guardrail: only consumed later if lineup appears ambiguous.
+      // Advisory quick-count guardrail: use it for warnings and unresolved-bottle
+      // messaging, but do not force single-bottle photos into lineup mode.
       let countFetch: Promise<Response> | null = null;
       if (files.length === 1) {
         const countFd = new FormData();
@@ -2567,19 +2567,79 @@ export default function NewEntryPage() {
           guardrailCount = null;
         }
       }
-      const effectiveBottleCount = Math.max(
-        inferredBottleCount,
-        guardrailCount ?? 0
-      );
+      let labelResult: Response | null = null;
+      if (labelFetch) {
+        try {
+          labelResult = await labelFetch;
+        } catch {
+          labelResult = null;
+        }
+      }
+      let normalizedLabelData: NormalizedLabelAutofillResult | null = null;
+      if (labelResult?.ok) {
+        const rawLabelData = (await labelResult.json()) as LabelAutofillResult;
+        normalizedLabelData = {
+          wine_name: normalizeLineupText(rawLabelData.wine_name),
+          producer: normalizeLineupText(rawLabelData.producer),
+          vintage: normalizeLineupText(rawLabelData.vintage),
+          country: normalizeLineupText(rawLabelData.country),
+          region: normalizeLineupText(rawLabelData.region),
+          appellation: normalizeLineupText(rawLabelData.appellation),
+          classification: normalizeLineupText(rawLabelData.classification),
+          primary_grape_suggestions: Array.isArray(
+            rawLabelData.primary_grape_suggestions
+          )
+            ? rawLabelData.primary_grape_suggestions
+                .map((value) => value.trim())
+                .filter((value) => value.length > 0)
+                .slice(0, 3)
+            : [],
+          primary_grape_confidence:
+            typeof rawLabelData.primary_grape_confidence === "number" &&
+            Number.isFinite(rawLabelData.primary_grape_confidence)
+              ? Math.min(1, Math.max(0, rawLabelData.primary_grape_confidence))
+              : null,
+          confidence:
+            typeof rawLabelData.confidence === "number" &&
+            Number.isFinite(rawLabelData.confidence)
+              ? Math.min(1, Math.max(0, rawLabelData.confidence))
+              : null,
+          warnings: Array.isArray(rawLabelData.warnings)
+            ? rawLabelData.warnings
+                .map((warning) => warning.trim())
+                .filter((warning) => warning.length > 0)
+            : [],
+        };
+      }
+
       const singleWine = allWines[0] ?? null;
-      const forceLineupFromGeometry =
-        files.length === 1 &&
-        effectiveBottleCount <= 1 &&
-        allWines.length <= 1 &&
-        shouldForceLineupForSinglePhoto(singleWine?.bottle_bbox ?? null);
-      const likelyLineup =
-        allWines.length > 1 || effectiveBottleCount > 1 || forceLineupFromGeometry;
+      const hasMeaningfulLabelAutofill = Boolean(
+        normalizedLabelData &&
+          [
+            normalizedLabelData.wine_name,
+            normalizedLabelData.producer,
+            normalizedLabelData.vintage,
+            normalizedLabelData.country,
+            normalizedLabelData.region,
+            normalizedLabelData.appellation,
+            normalizedLabelData.classification,
+          ].some((value) => typeof value === "string" && value.trim().length > 0)
+      );
+      const singlePhotoDecision = resolveSinglePhotoEntryMode({
+        identifiedBottleCount: allWines.length,
+        detectedBottleCount: inferredBottleCount,
+        guardrailBottleCount: guardrailCount,
+        hasStrongSingleBottleEvidence:
+          hasMeaningfulLabelAutofill ||
+          hasDominantSingleBottleFrame(singleWine?.bottle_bbox ?? null),
+      });
+      const effectiveBottleCount = singlePhotoDecision.effectiveBottleCount;
+      const likelyLineup = allWines.length > 1 || singlePhotoDecision.likelyLineup;
       const isSingleBottle = !likelyLineup && allWines.length <= 1;
+      const possibleExtraBottleSuffix =
+        singlePhotoDecision.guardrailSuggestsAdditionalBottles
+          ? " Quick count thought there might be another bottle in frame, but only one wine was confidently identified. If this was a lineup, add a clearer photo and re-scan."
+          : "";
 
       if (isSingleBottle) {
         clearLineupReviewState();
@@ -2597,52 +2657,9 @@ export default function NewEntryPage() {
           );
           return;
         }
-        let labelResult: Response | null = null;
-        if (labelFetch) {
-          try {
-            labelResult = await labelFetch;
-          } catch {
-            labelResult = null;
-          }
-        }
-
         // Single photo with single bottle — prefer label-autofill (richer fields),
         // then fall back to lineup if needed.
-        if (labelResult && labelResult.ok) {
-          const rawLabelData = (await labelResult.json()) as LabelAutofillResult;
-          const normalizedLabelData = {
-            wine_name: normalizeLineupText(rawLabelData.wine_name),
-            producer: normalizeLineupText(rawLabelData.producer),
-            vintage: normalizeLineupText(rawLabelData.vintage),
-            country: normalizeLineupText(rawLabelData.country),
-            region: normalizeLineupText(rawLabelData.region),
-            appellation: normalizeLineupText(rawLabelData.appellation),
-            classification: normalizeLineupText(rawLabelData.classification),
-            primary_grape_suggestions: Array.isArray(
-              rawLabelData.primary_grape_suggestions
-            )
-              ? rawLabelData.primary_grape_suggestions
-                  .map((value) => value.trim())
-                  .filter((value) => value.length > 0)
-                  .slice(0, 3)
-              : [],
-            primary_grape_confidence:
-              typeof rawLabelData.primary_grape_confidence === "number" &&
-              Number.isFinite(rawLabelData.primary_grape_confidence)
-                ? Math.min(1, Math.max(0, rawLabelData.primary_grape_confidence))
-                : null,
-            confidence:
-              typeof rawLabelData.confidence === "number" &&
-              Number.isFinite(rawLabelData.confidence)
-                ? Math.min(1, Math.max(0, rawLabelData.confidence))
-                : null,
-            warnings: Array.isArray(rawLabelData.warnings)
-              ? rawLabelData.warnings
-                  .map((warning) => warning.trim())
-                  .filter((warning) => warning.length > 0)
-              : [],
-          };
-
+        if (normalizedLabelData) {
           await applyAutofill(normalizedLabelData);
           setAutofillStatus("success");
           setLastScanConfidence(normalizedLabelData.confidence);
@@ -2656,9 +2673,11 @@ export default function NewEntryPage() {
               ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
               : null;
           setAutofillMessage(
-            [confidenceLabel, warningLabel]
-              .filter(Boolean)
-              .join(" • ") || "Autofill complete. Review the details."
+            (
+              [confidenceLabel, warningLabel]
+                .filter(Boolean)
+                .join(" • ") || "Autofill complete. Review the details."
+            ) + possibleExtraBottleSuffix
           );
         } else if (allWines[0]) {
           const wine = allWines[0];
@@ -2683,7 +2702,8 @@ export default function NewEntryPage() {
               ? `Confidence ${Math.round(wine.confidence * 100)}%`
               : null;
           setAutofillMessage(
-            confidenceLabel ?? "Autofill complete. Review the details."
+            (confidenceLabel ?? "Autofill complete. Review the details.") +
+              possibleExtraBottleSuffix
           );
         } else if (labelResult && !labelResult.ok) {
           setLastScanConfidence(null);
@@ -2834,10 +2854,6 @@ export default function NewEntryPage() {
           setAutofillMessage(
             `Detected ${guardrailCount} bottles in quick count${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; add a clearer shot for missing bottles.${uncertaintySuffix}`
           );
-        } else if (forceLineupFromGeometry) {
-          setAutofillMessage(
-            `Detected lineup-style framing in this photo. Switched to lineup review to avoid incorrect single-bottle autofill.${uncertaintySuffix}`
-          );
         } else if (unresolvedCount > 0) {
           setAutofillMessage(
             `Detected ${effectiveBottleCount} bottles${photoLabel}. Identified ${identifiedCount} label${identifiedCount === 1 ? "" : "s"}; try a clearer photo to capture the rest.${uncertaintySuffix}`
@@ -2878,7 +2894,7 @@ export default function NewEntryPage() {
   const collapsibleSectionClassName =
     "group rounded-2xl border border-white/10 bg-black/30 p-4";
   const collapsibleSummaryClassName =
-    "cursor-pointer list-none select-none text-sm font-medium text-zinc-200 [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
+    "cursor-pointer list-none select-none text-base font-medium text-zinc-200 [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90 sm:text-sm";
   const baseUploadGalleryItems = labelPhotos
     .map((photo, sourceIndex) => {
       const resolvedType =
@@ -3050,7 +3066,7 @@ export default function NewEntryPage() {
                   {showRescanButton ? (
                     <button
                       type="button"
-                      className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                      className="rounded-full border border-white/10 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 sm:text-xs"
                       onClick={() => {
                         if (labelPhotos.length > 0) {
                           runAnalysis(labelPhotos.map((photo) => photo.file));
@@ -3062,7 +3078,7 @@ export default function NewEntryPage() {
                   ) : null}
                   <button
                     type="button"
-                    className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full border border-white/10 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
                     onClick={() => labelInputRef.current?.click()}
                     disabled={!canAddLabelPhoto || autofillStatus === "loading"}
                   >
@@ -3651,14 +3667,14 @@ export default function NewEntryPage() {
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
-                    className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="rounded-full bg-amber-400 px-5 py-2 text-base font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
                     disabled={isSubmitting}
                   >
                     Save entry
                   </button>
                   <button
                     type="button"
-                    className="text-sm font-medium text-zinc-300"
+                    className="text-base font-medium text-zinc-300 sm:text-sm"
                     onClick={returnAfterCancel}
                   >
                     Cancel
@@ -3713,7 +3729,7 @@ export default function NewEntryPage() {
                       <span>Loading photo...</span>
                     </div>
                   ) : cropSourceUrl ? (
-                    <img
+                    <AppImage
                       src={cropSourceUrl}
                       alt="Photo crop preview"
                       draggable={false}

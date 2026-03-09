@@ -1,5 +1,3 @@
-import "server-only";
-
 function normalizeUrl(url: string) {
   return url.replace(/\/+$/, "");
 }

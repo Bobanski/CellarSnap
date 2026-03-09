@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AppImage from "@/components/AppImage";
 import NavBar from "@/components/NavBar";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
@@ -14,7 +15,6 @@ import {
   isUsernameFormatValid,
 } from "@/lib/validation/username";
 import {
-  formatPhoneForDisplay,
   formatPhoneForInput,
   normalizePhone,
   PHONE_FORMAT_MESSAGE,
@@ -246,7 +246,7 @@ export default function ProfilePage() {
         let initialEditFirstName = profileFirstName;
         let initialEditLastName = profileLastName;
         let initialEditPhone = profilePhone;
-        let initialEditBio = profileBio;
+        const initialEditBio = profileBio;
         if (!profileDisplayName && typeof window !== "undefined") {
           try {
             const pendingUsername =
@@ -889,7 +889,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-4">
               <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
                 {profile.avatar_url ? (
-                  <img
+                  <AppImage
                     src={profile.avatar_url}
                     alt="Profile"
                     className="h-full w-full object-cover"
@@ -1005,7 +1005,7 @@ export default function ProfilePage() {
                         className="aspect-square overflow-hidden rounded-lg bg-white/5"
                       >
                         {entry.label_image_url ? (
-                          <img
+                          <AppImage
                             src={entry.label_image_url}
                             alt={entry.wine_name || "Wine entry"}
                             className="h-full w-full object-cover transition hover:scale-105"
@@ -1057,7 +1057,7 @@ export default function ProfilePage() {
                         className="aspect-square overflow-hidden rounded-lg bg-white/5"
                       >
                         {entry.label_image_url ? (
-                          <img
+                          <AppImage
                             src={entry.label_image_url}
                             alt={entry.wine_name || "Wine entry"}
                             className="h-full w-full object-cover transition hover:scale-105"
@@ -1177,7 +1177,7 @@ export default function ProfilePage() {
                                   <div className="flex items-center gap-2">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
                                       {req.requester.avatar_url ? (
-                                        <img
+                                        <AppImage
                                           src={req.requester.avatar_url}
                                           alt=""
                                           className="h-full w-full object-cover"
@@ -1235,7 +1235,7 @@ export default function ProfilePage() {
                                   <div className="flex items-center gap-2">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
                                       {req.recipient.avatar_url ? (
-                                        <img
+                                        <AppImage
                                           src={req.recipient.avatar_url}
                                           alt=""
                                           className="h-full w-full object-cover"
@@ -1317,7 +1317,7 @@ export default function ProfilePage() {
                                   <div className="flex items-center gap-2">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
                                       {person.avatar_url ? (
-                                        <img
+                                        <AppImage
                                           src={person.avatar_url}
                                           alt=""
                                           className="h-full w-full object-cover"
@@ -1376,7 +1376,7 @@ export default function ProfilePage() {
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30">
                                   {friend.avatar_url ? (
-                                    <img
+                                    <AppImage
                                       src={friend.avatar_url}
                                       alt=""
                                       className="h-full w-full object-cover"
@@ -1486,13 +1486,13 @@ export default function ProfilePage() {
                   <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                     <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-black/30 text-zinc-500 ring-2 ring-white/5 sm:h-28 sm:w-28">
                       {pendingAvatarPreview ? (
-                        <img
+                        <AppImage
                           src={pendingAvatarPreview}
                           alt="New profile"
                           className="h-full w-full object-cover"
                         />
                       ) : profile.avatar_url ? (
-                        <img
+                        <AppImage
                           src={profile.avatar_url}
                           alt="Profile"
                           className="h-full w-full object-cover"

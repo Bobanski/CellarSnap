@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import AppImage from "@/components/AppImage";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { resolvePublicPostShare } from "@/lib/shares";
 import { getConfiguredPublicSiteUrl } from "@/lib/siteUrl";
@@ -185,12 +186,11 @@ export default async function SharePage({ params }: SharePageProps) {
 
         <article className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
           {share.labelImageUrl ? (
-            <img
+            <AppImage
               src={share.labelImageUrl}
               alt={`Wine label for ${displayTitle}`}
               className="h-64 w-full object-cover"
               loading="eager"
-              decoding="async"
             />
           ) : (
             <div className="flex h-40 items-center justify-center bg-black/35 text-xs uppercase tracking-[0.3em] text-zinc-500">

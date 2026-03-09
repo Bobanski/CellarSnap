@@ -18,151 +18,29 @@ import {
 import { router } from "expo-router";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import type { FeedComment } from "@/src/lib/feed/comments";
+import {
+  fetchFeedPage,
+  type FeedPhotoType,
+  type FeedScope,
+  type MobileFeedEntry,
+  type QprLevel,
+} from "@/src/lib/feed/feedPage";
+import {
+  REPORT_REASON_OPTIONS,
+  useFeedInteractions,
+} from "@/src/lib/feed/useFeedInteractions";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
-
-type FeedScope = "public" | "friends";
-type EntryPrivacy = "public" | "friends_of_friends" | "friends" | "private";
-type QprLevel = "extortion" | "pricey" | "mid" | "good_value" | "absolute_steal";
-type FeedPhotoType =
-  | "label"
-  | "place"
-  | "people"
-  | "pairing"
-  | "lineup"
-  | "other_bottles";
-
-type FeedEntryRow = {
-  id: string;
-  user_id: string;
-  root_entry_id?: string | null;
-  is_feed_visible?: boolean | null;
-  wine_name: string | null;
-  producer: string | null;
-  vintage: string | null;
-  country: string | null;
-  region: string | null;
-  appellation: string | null;
-  notes: string | null;
-  consumed_at: string;
-  rating: number | null;
-  qpr_level: QprLevel | null;
-  tasted_with_user_ids: string[] | null;
-  label_image_path: string | null;
-  place_image_path: string | null;
-  pairing_image_path: string | null;
-  entry_privacy: EntryPrivacy;
-  created_at: string;
-};
-
-type PrimaryGrape = {
-  id: string;
-  name: string;
-  position: number;
-};
-
-type EntryPrimaryGrapeRow = {
-  entry_id: string;
-  position: number;
-  grape_varieties:
-    | {
-        id: string;
-        name: string;
-      }
-    | {
-        id: string;
-        name: string;
-      }[]
-    | null;
-};
-
-type FeedProfileRow = {
-  id: string;
-  display_name: string | null;
-  email: string | null;
-  avatar_path?: string | null;
-};
-
-type FeedPhoto = {
-  type: FeedPhotoType;
-  url: string;
-};
-
-type FeedPhotoRow = {
-  entry_id: string;
-  type: FeedPhotoType;
-  path: string;
-  position: number;
-  created_at: string;
-};
-
-type MobileFeedEntry = FeedEntryRow & {
-  author_name: string;
-  author_avatar_url: string | null;
-  primary_grapes: PrimaryGrape[];
-  photo_gallery: FeedPhoto[];
-  tasted_with_users: Array<{
-    id: string;
-    display_name: string | null;
-    email: string | null;
-  }>;
-  can_react: boolean;
-  can_comment: boolean;
-  comments_privacy: EntryPrivacy;
-  my_reactions: string[];
-  reaction_counts: Record<string, number>;
-  comment_count: number;
-};
-
-type FeedReply = {
-  id: string;
-  entry_id: string;
-  user_id: string;
-  parent_comment_id: string | null;
-  author_name: string | null;
-  body: string;
-  created_at: string;
-  is_deleted?: boolean;
-};
-
-type FeedComment = {
-  id: string;
-  entry_id: string;
-  user_id: string;
-  parent_comment_id: null;
-  author_name: string | null;
-  body: string;
-  created_at: string;
-  is_deleted?: boolean;
-  replies: FeedReply[];
-};
 
 type UserOption = {
   id: string;
   display_name: string | null;
 };
 
-type PendingReport = {
-  targetType: "entry" | "comment";
-  entryId: string;
-  commentId?: string;
-  targetUserId: string;
-  reason: ReportReason;
-};
-
 const PAGE_SIZE = 24;
 const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
-const REPORT_REASON_OPTIONS = [
-  { value: "spam", label: "Spam" },
-  { value: "harassment", label: "Harassment" },
-  { value: "hate", label: "Hate speech" },
-  { value: "nudity", label: "Nudity" },
-  { value: "misinfo", label: "False info" },
-  { value: "other", label: "Other" },
-] as const;
-type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
-const DEFAULT_REPORT_REASON: ReportReason = REPORT_REASON_OPTIONS[0].value;
 const PHOTO_TYPE_LABELS: Record<FeedPhotoType, string> = {
   label: "Label",
   place: "Place",
@@ -172,15 +50,6 @@ const PHOTO_TYPE_LABELS: Record<FeedPhotoType, string> = {
   other_bottles: "Other bottle",
 };
 
-const TYPE_ORDER: Record<FeedPhotoType, number> = {
-  place: 0,
-  people: 1,
-  label: 2,
-  lineup: 3,
-  other_bottles: 4,
-  pairing: 5,
-};
-
 const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   extortion: "Extortion",
   pricey: "Pricey",
@@ -188,26 +57,6 @@ const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   good_value: "Good Value",
   absolute_steal: "Absolute Steal",
 };
-
-type InteractionSettingsRow = {
-  id: string;
-  reaction_privacy?: string | null;
-  comments_privacy?: string | null;
-  comments_scope?: string | null;
-};
-
-function isMissingSharedTastingColumns(message: string) {
-  return (
-    message.includes("root_entry_id") ||
-    message.includes("is_feed_visible") ||
-    message.includes("column") ||
-    message.includes("schema")
-  );
-}
-
-function isMissingAvatarColumn(message: string) {
-  return message.includes("avatar_path") || message.includes("column");
-}
 
 function sanitizeUserSearch(search: string) {
   return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
@@ -246,54 +95,6 @@ function formatCommentDate(value: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function normalizePrivacyValue(
-  value: unknown,
-  fallback: "public" | "friends_of_friends" | "friends" | "private"
-): "public" | "friends_of_friends" | "friends" | "private" {
-  if (
-    value === "public" ||
-    value === "friends_of_friends" ||
-    value === "friends" ||
-    value === "private"
-  ) {
-    return value;
-  }
-  return fallback;
-}
-
-function canViewerAccessByPrivacy({
-  viewerUserId,
-  ownerUserId,
-  privacy,
-  acceptedFriendIds,
-  friendsOfFriendsIds,
-}: {
-  viewerUserId: string;
-  ownerUserId: string;
-  privacy: EntryPrivacy;
-  acceptedFriendIds: Set<string>;
-  friendsOfFriendsIds: Set<string>;
-}): boolean {
-  if (viewerUserId === ownerUserId) {
-    return true;
-  }
-
-  const normalized = normalizePrivacyValue(privacy, "public");
-  if (normalized === "public") {
-    return true;
-  }
-  if (normalized === "private") {
-    return false;
-  }
-  if (normalized === "friends") {
-    return acceptedFriendIds.has(ownerUserId);
-  }
-
-  return (
-    acceptedFriendIds.has(ownerUserId) || friendsOfFriendsIds.has(ownerUserId)
-  );
 }
 
 function normalizeMetaValue(value: string | null | undefined) {
@@ -390,591 +191,12 @@ function buildEntryMetaFields(entry: MobileFeedEntry) {
   return fields.slice(0, 2);
 }
 
-function normalizeVariety(
-  variety: EntryPrimaryGrapeRow["grape_varieties"]
-): { id: string; name: string } | null {
-  if (!variety) {
-    return null;
-  }
-  if (Array.isArray(variety)) {
-    return variety[0] ?? null;
-  }
-  return variety;
-}
-
-function dedupeEntries(rows: FeedEntryRow[]) {
-  const byKey = new Map<string, FeedEntryRow>();
-
-  rows.forEach((entry) => {
-    const key = entry.root_entry_id ?? entry.id;
-    const existing = byKey.get(key);
-    if (!existing) {
-      byKey.set(key, entry);
-      return;
-    }
-
-    const existingIsCanonical = !existing.root_entry_id;
-    const nextIsCanonical = !entry.root_entry_id;
-    if (nextIsCanonical && !existingIsCanonical) {
-      byKey.set(key, entry);
-    }
-  });
-
-  return Array.from(byKey.values()).sort((a, b) =>
-    b.created_at.localeCompare(a.created_at)
-  );
-}
-
 function getDisplayRating(rating: number | null): string | null {
   if (typeof rating !== "number" || Number.isNaN(rating)) {
     return null;
   }
   const normalized = Math.max(0, Math.min(100, Math.round(rating)));
   return `${normalized}/100`;
-}
-
-async function createSignedUrlMap(paths: string[]) {
-  const signedUrlByPath = new Map<string, string | null>();
-  await Promise.all(
-    paths.map(async (path) => {
-      const { data: signedUrl, error } = await supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(path, 60 * 60);
-      signedUrlByPath.set(path, error ? null : signedUrl.signedUrl);
-    })
-  );
-  return signedUrlByPath;
-}
-
-type FriendRequestPair = {
-  requester_id: string;
-  recipient_id: string;
-};
-
-type SocialAudience = {
-  socialAuthorIds: string[];
-  acceptedFriendIds: Set<string>;
-  friendsOfFriendsIds: Set<string>;
-};
-
-async function loadSocialAudience(viewerUserId: string): Promise<SocialAudience> {
-  const { data, error } = await supabase
-    .from("friend_requests")
-    .select("requester_id, recipient_id")
-    .eq("status", "accepted")
-    .or(`requester_id.eq.${viewerUserId},recipient_id.eq.${viewerUserId}`);
-
-  if (error || !data) {
-    return {
-      socialAuthorIds: [],
-      acceptedFriendIds: new Set<string>(),
-      friendsOfFriendsIds: new Set<string>(),
-    };
-  }
-
-  const acceptedFriendIds = new Set<string>();
-  (data as FriendRequestPair[]).forEach((row) => {
-    const friendId = row.requester_id === viewerUserId ? row.recipient_id : row.requester_id;
-    if (friendId !== viewerUserId) {
-      acceptedFriendIds.add(friendId);
-    }
-  });
-
-  const socialIds = new Set<string>(acceptedFriendIds);
-  const friendsOfFriendsIds = new Set<string>();
-  const directList = Array.from(acceptedFriendIds);
-  if (directList.length === 0) {
-    return {
-      socialAuthorIds: [],
-      acceptedFriendIds,
-      friendsOfFriendsIds,
-    };
-  }
-
-  // Best-effort friends-of-friends expansion. RLS can block this depending on policy.
-  const [
-    { data: foafRequesterRows, error: foafRequesterError },
-    { data: foafRecipientRows, error: foafRecipientError },
-  ] = await Promise.all([
-    supabase
-      .from("friend_requests")
-      .select("requester_id, recipient_id")
-      .eq("status", "accepted")
-      .in("requester_id", directList),
-    supabase
-      .from("friend_requests")
-      .select("requester_id, recipient_id")
-      .eq("status", "accepted")
-      .in("recipient_id", directList),
-  ]);
-
-  if (!foafRequesterError && foafRequesterRows) {
-    (foafRequesterRows as FriendRequestPair[]).forEach((row) => {
-      if (row.recipient_id !== viewerUserId) {
-        socialIds.add(row.recipient_id);
-        if (!acceptedFriendIds.has(row.recipient_id)) {
-          friendsOfFriendsIds.add(row.recipient_id);
-        }
-      }
-      if (row.requester_id !== viewerUserId) {
-        socialIds.add(row.requester_id);
-        if (!acceptedFriendIds.has(row.requester_id)) {
-          friendsOfFriendsIds.add(row.requester_id);
-        }
-      }
-    });
-  }
-  if (!foafRecipientError && foafRecipientRows) {
-    (foafRecipientRows as FriendRequestPair[]).forEach((row) => {
-      if (row.recipient_id !== viewerUserId) {
-        socialIds.add(row.recipient_id);
-        if (!acceptedFriendIds.has(row.recipient_id)) {
-          friendsOfFriendsIds.add(row.recipient_id);
-        }
-      }
-      if (row.requester_id !== viewerUserId) {
-        socialIds.add(row.requester_id);
-        if (!acceptedFriendIds.has(row.requester_id)) {
-          friendsOfFriendsIds.add(row.requester_id);
-        }
-      }
-    });
-  }
-
-  return {
-    socialAuthorIds: Array.from(socialIds),
-    acceptedFriendIds,
-    friendsOfFriendsIds,
-  };
-}
-
-async function fetchFeedPage({
-  viewerUserId,
-  scope,
-  cursor,
-  limit,
-}: {
-  viewerUserId: string;
-  scope: FeedScope;
-  cursor: string | null;
-  limit: number;
-}) {
-  const socialAudience = await loadSocialAudience(viewerUserId);
-  const socialAuthorIds = socialAudience.socialAuthorIds;
-
-  if (scope === "friends" && socialAuthorIds.length === 0) {
-    return {
-      entries: [] as MobileFeedEntry[],
-      nextCursor: null,
-      hasMore: false,
-      errorMessage: null as string | null,
-    };
-  }
-
-  const baseSelectFields =
-    "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
-  const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
-  const fetchLimit = Math.min(160, limit * 5 + 1);
-
-  const buildQuery = ({
-    fields,
-    withTastingSupport,
-  }: {
-    fields: string;
-    withTastingSupport: boolean;
-  }) => {
-    let query = supabase.from("wine_entries").select(fields);
-
-    if (scope === "friends") {
-      query = query
-        .in("user_id", socialAuthorIds)
-        .in("entry_privacy", ["public", "friends_of_friends", "friends"])
-        .neq("user_id", viewerUserId);
-    } else {
-      query = query.eq("entry_privacy", "public").neq("user_id", viewerUserId);
-    }
-
-    if (withTastingSupport) {
-      query = query.eq("is_feed_visible", true);
-    }
-
-    if (cursor) {
-      query = query.lt("created_at", cursor);
-    }
-
-    return query.order("created_at", { ascending: false }).limit(fetchLimit);
-  };
-
-  let feedRows: FeedEntryRow[] = [];
-  let hasSharedTastingColumns = false;
-
-  const firstAttempt = await buildQuery({
-    fields: extendedSelectFields,
-    withTastingSupport: true,
-  });
-
-  if (!firstAttempt.error) {
-    feedRows = (firstAttempt.data ?? []) as unknown as FeedEntryRow[];
-    hasSharedTastingColumns = true;
-  } else if (isMissingSharedTastingColumns(firstAttempt.error.message ?? "")) {
-    const fallbackAttempt = await buildQuery({
-      fields: baseSelectFields,
-      withTastingSupport: false,
-    });
-    if (fallbackAttempt.error) {
-      return {
-        entries: [] as MobileFeedEntry[],
-        nextCursor: null,
-        hasMore: false,
-        errorMessage: fallbackAttempt.error.message,
-      };
-    }
-    feedRows = (fallbackAttempt.data ?? []) as unknown as FeedEntryRow[];
-  } else {
-    return {
-      entries: [] as MobileFeedEntry[],
-      nextCursor: null,
-      hasMore: false,
-      errorMessage: firstAttempt.error.message,
-    };
-  }
-
-  const dedupedRows = hasSharedTastingColumns ? dedupeEntries(feedRows) : feedRows;
-  const pageRows =
-    dedupedRows.length > limit ? dedupedRows.slice(0, limit) : dedupedRows;
-  const hasMore = dedupedRows.length > limit;
-  const nextCursor = hasMore
-    ? pageRows[pageRows.length - 1]?.created_at ?? null
-    : null;
-
-  const entryIds = pageRows.map((entry) => entry.id);
-  const userIds = Array.from(
-    new Set(
-      pageRows.flatMap((entry) => [
-        entry.user_id,
-        ...(entry.tasted_with_user_ids ?? []),
-      ])
-    )
-  );
-
-  const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
-  if (entryIds.length > 0) {
-    const { data: primaryRows } = await supabase
-      .from("entry_primary_grapes")
-      .select("entry_id, position, grape_varieties(id, name)")
-      .in("entry_id", entryIds)
-      .order("position", { ascending: true });
-
-    (primaryRows ?? []).forEach((row) => {
-      const typedRow = row as EntryPrimaryGrapeRow;
-      const variety = normalizeVariety(typedRow.grape_varieties);
-      if (!variety) {
-        return;
-      }
-      const current = primaryGrapeMap.get(typedRow.entry_id) ?? [];
-      current.push({
-        id: variety.id,
-        name: variety.name,
-        position: typedRow.position,
-      });
-      primaryGrapeMap.set(typedRow.entry_id, current);
-    });
-  }
-
-  let profileRows: FeedProfileRow[] = [];
-  if (userIds.length > 0) {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, display_name, email, avatar_path")
-      .in("id", userIds);
-
-    if (error && isMissingAvatarColumn(error.message ?? "")) {
-      const fallback = await supabase
-        .from("profiles")
-        .select("id, display_name, email")
-        .in("id", userIds);
-      profileRows = (fallback.data ?? []).map((row) => ({
-        ...(row as FeedProfileRow),
-        avatar_path: null,
-      }));
-    } else if (error) {
-      return {
-        entries: [] as MobileFeedEntry[],
-        nextCursor: null,
-        hasMore: false,
-        errorMessage: error.message,
-      };
-    } else {
-      profileRows = (data ?? []) as FeedProfileRow[];
-    }
-  }
-
-  const profileMap = new Map(profileRows.map((row) => [row.id, row]));
-
-  const { data: entryPhotoRows } =
-    entryIds.length > 0
-      ? await supabase
-          .from("entry_photos")
-          .select("entry_id, type, path, position, created_at")
-          .in("type", [
-            "label",
-            "place",
-            "people",
-            "pairing",
-            "lineup",
-            "other_bottles",
-          ])
-          .in("entry_id", entryIds)
-          .order("position", { ascending: true })
-          .order("created_at", { ascending: true })
-      : { data: [] };
-
-  const interactionSettingsByEntryId = new Map<string, InteractionSettingsRow>();
-  if (entryIds.length > 0) {
-    const selectAttempts = [
-      "id, reaction_privacy, comments_privacy, comments_scope",
-      "id, comments_scope",
-      "id",
-    ];
-    let loaded = false;
-
-    for (let index = 0; index < selectAttempts.length; index += 1) {
-      const { data, error } = await supabase
-        .from("wine_entries")
-        .select(selectAttempts[index])
-        .in("id", entryIds);
-
-      if (!error) {
-        (data ?? []).forEach((row) => {
-          const typed = row as unknown as InteractionSettingsRow;
-          interactionSettingsByEntryId.set(typed.id, typed);
-        });
-        loaded = true;
-        break;
-      }
-
-      const missingReactionPrivacy = error.message.includes("reaction_privacy");
-      const missingCommentsPrivacy = error.message.includes("comments_privacy");
-      const missingCommentsScope = error.message.includes("comments_scope");
-
-      if (
-        index === 0 &&
-        (missingReactionPrivacy || missingCommentsPrivacy || missingCommentsScope)
-      ) {
-        continue;
-      }
-      if (index === 1 && missingCommentsScope) {
-        continue;
-      }
-    }
-
-    if (!loaded) {
-      entryIds.forEach((entryId) => {
-        interactionSettingsByEntryId.set(entryId, { id: entryId });
-      });
-    }
-  }
-
-  const reactionCountsMap = new Map<string, Record<string, number>>();
-  const myReactionsMap = new Map<string, string[]>();
-  if (entryIds.length > 0) {
-    const { data: reactions } = await supabase
-      .from("entry_reactions")
-      .select("entry_id, user_id, emoji")
-      .in("entry_id", entryIds);
-
-    (reactions ?? []).forEach((reaction) => {
-      const row = reaction as { entry_id: string; user_id: string; emoji: string };
-      const current = reactionCountsMap.get(row.entry_id) ?? {};
-      current[row.emoji] = (current[row.emoji] ?? 0) + 1;
-      reactionCountsMap.set(row.entry_id, current);
-
-      if (row.user_id === viewerUserId) {
-        const mine = myReactionsMap.get(row.entry_id) ?? [];
-        if (!mine.includes(row.emoji)) {
-          mine.push(row.emoji);
-          myReactionsMap.set(row.entry_id, mine);
-        }
-      }
-    });
-  }
-
-  const commentCountsMap = new Map<string, number>();
-  if (entryIds.length > 0) {
-    const { data: comments } = await supabase
-      .from("entry_comments")
-      .select("entry_id")
-      .in("entry_id", entryIds);
-
-    (comments ?? []).forEach((comment) => {
-      const row = comment as { entry_id: string };
-      commentCountsMap.set(row.entry_id, (commentCountsMap.get(row.entry_id) ?? 0) + 1);
-    });
-  }
-
-  const galleryRowsByEntryId = new Map<string, FeedPhotoRow[]>();
-  (entryPhotoRows ?? []).forEach((photo) => {
-    if (
-      photo.type !== "label" &&
-      photo.type !== "place" &&
-      photo.type !== "people" &&
-      photo.type !== "pairing" &&
-      photo.type !== "lineup" &&
-      photo.type !== "other_bottles"
-    ) {
-      return;
-    }
-
-    const current = galleryRowsByEntryId.get(photo.entry_id) ?? [];
-    current.push({
-      entry_id: photo.entry_id,
-      type: photo.type,
-      path: photo.path,
-      position: photo.position ?? 0,
-      created_at: photo.created_at ?? "",
-    });
-    galleryRowsByEntryId.set(photo.entry_id, current);
-  });
-
-  pageRows.forEach((entry) => {
-    const current = galleryRowsByEntryId.get(entry.id) ?? [];
-    const hasLabel = current.some((photo) => photo.type === "label");
-    const hasPlace = current.some((photo) => photo.type === "place");
-    const hasPairing = current.some((photo) => photo.type === "pairing");
-    const existingPaths = new Set(current.map((photo) => photo.path));
-
-    if (!hasLabel && entry.label_image_path && !existingPaths.has(entry.label_image_path)) {
-      current.push({
-        entry_id: entry.id,
-        type: "label",
-        path: entry.label_image_path,
-        position: 0,
-        created_at: entry.created_at,
-      });
-      existingPaths.add(entry.label_image_path);
-    }
-    if (!hasPlace && entry.place_image_path && !existingPaths.has(entry.place_image_path)) {
-      current.push({
-        entry_id: entry.id,
-        type: "place",
-        path: entry.place_image_path,
-        position: 0,
-        created_at: entry.created_at,
-      });
-      existingPaths.add(entry.place_image_path);
-    }
-    if (
-      !hasPairing &&
-      entry.pairing_image_path &&
-      !existingPaths.has(entry.pairing_image_path)
-    ) {
-      current.push({
-        entry_id: entry.id,
-        type: "pairing",
-        path: entry.pairing_image_path,
-        position: 0,
-        created_at: entry.created_at,
-      });
-      existingPaths.add(entry.pairing_image_path);
-    }
-
-    current.sort((left, right) => {
-      const posDiff = left.position - right.position;
-      if (posDiff !== 0) return posDiff;
-      const createdDiff = left.created_at.localeCompare(right.created_at);
-      if (createdDiff !== 0) return createdDiff;
-      return TYPE_ORDER[left.type] - TYPE_ORDER[right.type];
-    });
-    galleryRowsByEntryId.set(entry.id, current);
-  });
-
-  const pathsToSign = new Set<string>();
-  pageRows.forEach((entry) => {
-    const avatarPath = profileMap.get(entry.user_id)?.avatar_path ?? null;
-    if (avatarPath) {
-      pathsToSign.add(avatarPath);
-    }
-    (galleryRowsByEntryId.get(entry.id) ?? []).forEach((photo) => {
-      pathsToSign.add(photo.path);
-    });
-  });
-  const signedUrlByPath = await createSignedUrlMap(Array.from(pathsToSign));
-
-  const entries: MobileFeedEntry[] = pageRows.map((entry) => {
-    const authorProfile = profileMap.get(entry.user_id);
-    const avatarPath = authorProfile?.avatar_path ?? null;
-    const galleryRows = galleryRowsByEntryId.get(entry.id) ?? [];
-    const photoGallery = galleryRows
-      .map((row) => {
-        const url = signedUrlByPath.get(row.path) ?? null;
-        if (!url) {
-          return null;
-        }
-        return { type: row.type, url };
-      })
-      .filter((photo): photo is FeedPhoto => photo !== null);
-
-    const settings = interactionSettingsByEntryId.get(entry.id);
-    const entryPrivacy = normalizePrivacyValue(entry.entry_privacy, "public");
-    const legacyCommentsScope = settings?.comments_scope === "friends" ? "friends" : "viewers";
-    const reactionPrivacy = normalizePrivacyValue(
-      settings?.reaction_privacy,
-      entryPrivacy
-    );
-    const commentsPrivacy = normalizePrivacyValue(
-      settings?.comments_privacy ??
-        (legacyCommentsScope === "friends" && entryPrivacy !== "private"
-          ? "friends"
-          : entryPrivacy),
-      entryPrivacy
-    );
-    const canSeeReactions = canViewerAccessByPrivacy({
-      viewerUserId,
-      ownerUserId: entry.user_id,
-      privacy: reactionPrivacy,
-      acceptedFriendIds: socialAudience.acceptedFriendIds,
-      friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
-    });
-    const canSeeComments = canViewerAccessByPrivacy({
-      viewerUserId,
-      ownerUserId: entry.user_id,
-      privacy: commentsPrivacy,
-      acceptedFriendIds: socialAudience.acceptedFriendIds,
-      friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
-    });
-    const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id) => ({
-      id,
-      display_name: profileMap.get(id)?.display_name ?? null,
-      email: profileMap.get(id)?.email ?? null,
-    }));
-
-    return {
-      ...entry,
-      author_name:
-        authorProfile?.display_name ?? authorProfile?.email ?? "Unknown",
-      author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
-      primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
-      photo_gallery: photoGallery,
-      tasted_with_users: tastedWithUsers,
-      can_react: canSeeReactions,
-      can_comment: canSeeComments,
-      comments_privacy: commentsPrivacy,
-      my_reactions: canSeeReactions ? myReactionsMap.get(entry.id) ?? [] : [],
-      reaction_counts: canSeeReactions ? reactionCountsMap.get(entry.id) ?? {} : {},
-      comment_count: canSeeComments ? commentCountsMap.get(entry.id) ?? 0 : 0,
-    };
-  });
-
-  const entriesWithPhotos = entries.filter(
-    (entry) => (entry.photo_gallery?.length ?? 0) > 0
-  );
-
-  return {
-    entries: entriesWithPhotos,
-    nextCursor,
-    hasMore,
-    errorMessage: null as string | null,
-  };
 }
 
 function FeedCard({
@@ -1048,7 +270,7 @@ function FeedCard({
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
   const displayRating = getDisplayRating(item.rating);
-  const galleryPhotos = item.photo_gallery ?? [];
+  const galleryPhotos = useMemo(() => item.photo_gallery ?? [], [item.photo_gallery]);
   const notes = (item.notes ?? "").trim();
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
@@ -1074,16 +296,13 @@ function FeedCard({
   const hiddenReactionCount = Math.max(0, reactions.length - visibleReactions.length);
   const hasMultiplePhotos = galleryPhotos.length > 1;
   const showCommentsControl = item.can_comment;
+  const clampedActivePhotoIndex = Math.max(
+    0,
+    Math.min(galleryPhotos.length - 1, activePhotoIndex)
+  );
   const activePhoto =
-    galleryPhotos[Math.max(0, Math.min(galleryPhotos.length - 1, activePhotoIndex))] ?? null;
+    galleryPhotos[clampedActivePhotoIndex] ?? null;
   const canToggleNotes = notesExpanded || isNotesTruncated;
-
-  useEffect(() => {
-    setActivePhotoIndex(0);
-    if (galleryScrollRef.current) {
-      galleryScrollRef.current.scrollTo({ x: 0, animated: false });
-    }
-  }, [item.id]);
 
   const beginGallerySwipe = useCallback(() => {
     if (swipeActiveRef.current) {
@@ -1130,24 +349,6 @@ function FeedCard({
   );
 
   useEffect(() => {
-    setIsNotesTruncated(false);
-  }, [item.id, notes]);
-
-  useEffect(() => {
-    const maxIndex = Math.max(0, galleryPhotos.length - 1);
-    if (activePhotoIndex <= maxIndex) {
-      return;
-    }
-    setActivePhotoIndex(maxIndex);
-    if (galleryScrollRef.current && photoFrameWidth > 0) {
-      galleryScrollRef.current.scrollTo({
-        x: maxIndex * photoFrameWidth,
-        animated: false,
-      });
-    }
-  }, [activePhotoIndex, galleryPhotos.length, photoFrameWidth]);
-
-  useEffect(() => {
     if (galleryPhotos.length <= 1) {
       return;
     }
@@ -1177,18 +378,20 @@ function FeedCard({
       return;
     }
     const maxIndex = Math.max(0, galleryPhotos.length - 1);
-    const nextIndex = activePhotoIndex <= 0 ? maxIndex : activePhotoIndex - 1;
+    const nextIndex =
+      clampedActivePhotoIndex <= 0 ? maxIndex : clampedActivePhotoIndex - 1;
     scrollToPhotoIndex(nextIndex);
-  }, [activePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
+  }, [clampedActivePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
 
   const goToNextPhoto = useCallback(() => {
     if (!hasMultiplePhotos) {
       return;
     }
     const maxIndex = Math.max(0, galleryPhotos.length - 1);
-    const nextIndex = activePhotoIndex >= maxIndex ? 0 : activePhotoIndex + 1;
+    const nextIndex =
+      clampedActivePhotoIndex >= maxIndex ? 0 : clampedActivePhotoIndex + 1;
     scrollToPhotoIndex(nextIndex);
-  }, [activePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
+  }, [clampedActivePhotoIndex, galleryPhotos.length, hasMultiplePhotos, scrollToPhotoIndex]);
 
   const handleCardPress = useCallback(() => {
     if (Date.now() < blockCardOpenUntilRef.current || !canOpenEntry()) {
@@ -1273,7 +476,7 @@ function FeedCard({
             setPhotoFrameWidth(nextWidth);
             if (galleryScrollRef.current && hasMultiplePhotos) {
               galleryScrollRef.current.scrollTo({
-                x: activePhotoIndex * nextWidth,
+                x: clampedActivePhotoIndex * nextWidth,
                 animated: false,
               });
             }
@@ -1361,7 +564,7 @@ function FeedCard({
                     const rawIndex = Math.round(offsetX / photoFrameWidth);
                     const maxIndex = Math.max(0, galleryPhotos.length - 1);
                     const clampedIndex = Math.max(0, Math.min(maxIndex, rawIndex));
-                    if (clampedIndex !== activePhotoIndex) {
+                    if (clampedIndex !== clampedActivePhotoIndex) {
                       setActivePhotoIndex(clampedIndex);
                     }
                   }
@@ -1406,7 +609,9 @@ function FeedCard({
                     hitSlop={6}
                     style={[
                       styles.photoDot,
-                      dotIndex === activePhotoIndex ? styles.photoDotActive : null,
+                      dotIndex === clampedActivePhotoIndex
+                        ? styles.photoDotActive
+                        : null,
                     ]}
                   />
                 ))}
@@ -1815,15 +1020,9 @@ function FeedCard({
   );
 }
 
-function countComments(comments: FeedComment[] | undefined, fallback: number) {
-  if (!comments) {
-    return fallback;
-  }
-  return comments.reduce((total, comment) => total + 1 + comment.replies.length, 0);
-}
-
 export default function FeedScreen() {
   const { user } = useAuth();
+  const viewerUserId = user?.id ?? null;
   const [feedScope, setFeedScope] = useState<FeedScope>("public");
   const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
@@ -1838,43 +1037,32 @@ export default function FeedScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
-    Record<string, boolean>
-  >({});
-  const [reactionPopupEntryId, setReactionPopupEntryId] = useState<string | null>(
-    null
-  );
-  const [expandedCommentsByEntryId, setExpandedCommentsByEntryId] = useState<
-    Record<string, boolean>
-  >({});
-  const [commentsByEntryId, setCommentsByEntryId] = useState<
-    Record<string, FeedComment[]>
-  >({});
-  const [commentDraftByEntryId, setCommentDraftByEntryId] = useState<
-    Record<string, string>
-  >({});
   const [isGallerySwipeActive, setIsGallerySwipeActive] = useState(false);
-  const [replyTargetByEntryId, setReplyTargetByEntryId] = useState<
-    Record<string, string | null>
-  >({});
-  const [loadingCommentsByEntryId, setLoadingCommentsByEntryId] = useState<
-    Record<string, boolean>
-  >({});
-  const [postingCommentByEntryId, setPostingCommentByEntryId] = useState<
-    Record<string, boolean>
-  >({});
-  const [commentErrorByEntryId, setCommentErrorByEntryId] = useState<
-    Record<string, string | null>
-  >({});
-  const [reportMenuEntryId, setReportMenuEntryId] = useState<string | null>(null);
-  const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
-  const [commentMenuKey, setCommentMenuKey] = useState<string | null>(null);
-  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
-  const [pendingReport, setPendingReport] = useState<PendingReport | null>(null);
-  const [moderationNotice, setModerationNotice] = useState<{
-    kind: "success" | "error";
-    message: string;
-  } | null>(null);
+  const {
+    closePendingReport,
+    getEntryInteractionState,
+    moderationNotice,
+    openReportReasonSheet,
+    pendingReport,
+    resetFeedTransientUiState,
+    setCommentDraft,
+    setPendingReportReason,
+    setReplyTarget,
+    clearReplyTarget,
+    submitCommentForEntry,
+    submitPendingReport,
+    toggleCommentMenu,
+    toggleCommentsExpanded,
+    toggleNotes,
+    toggleReaction,
+    toggleReactionPicker,
+    toggleReportMenu,
+  } = useFeedInteractions({
+    userId: viewerUserId,
+    entries,
+    setEntries,
+    setErrorMessage,
+  });
   const isFeedScrollActiveRef = useRef(false);
   const feedOpenBlockUntilRef = useRef(0);
   const feedScrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1915,16 +1103,6 @@ export default function FeedScreen() {
     [clearFeedScrollIdleTimer]
   );
 
-  useEffect(() => {
-    if (!moderationNotice) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setModerationNotice(null);
-    }, 3200);
-    return () => clearTimeout(timer);
-  }, [moderationNotice]);
-
   const visibleEntries = useMemo(() => {
     if (!selectedFriendId) {
       return entries;
@@ -1933,16 +1111,12 @@ export default function FeedScreen() {
   }, [entries, selectedFriendId]);
 
   useEffect(() => {
-    if (!isFriendSearchOpen || !user?.id) {
-      setFriendSearchResults([]);
-      setIsFriendSearchLoading(false);
+    if (!isFriendSearchOpen || !viewerUserId) {
       return;
     }
 
     const trimmedQuery = friendSearchQuery.trim();
     if (!trimmedQuery) {
-      setFriendSearchResults([]);
-      setIsFriendSearchLoading(false);
       return;
     }
 
@@ -1972,7 +1146,7 @@ export default function FeedScreen() {
       const firstAttempt = await supabase
         .from("profiles")
         .select("id, display_name")
-        .neq("id", user.id)
+        .neq("id", viewerUserId)
         .or(baseFilters)
         .order("display_name", { ascending: true })
         .limit(25);
@@ -1998,7 +1172,7 @@ export default function FeedScreen() {
         const fallbackAttempt = await supabase
           .from("profiles")
           .select("id, display_name")
-          .neq("id", user.id)
+          .neq("id", viewerUserId)
           .or(fallbackFilters)
           .order("display_name", { ascending: true })
           .limit(25);
@@ -2022,316 +1196,23 @@ export default function FeedScreen() {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [friendSearchQuery, isFriendSearchOpen, user?.id]);
-
-  const loadCommentsForEntry = useCallback(
-    async (entryId: string, options?: { force?: boolean }) => {
-      if (!user?.id) {
-        return;
-      }
-      if (loadingCommentsByEntryId[entryId]) {
-        return;
-      }
-      if (!options?.force && commentsByEntryId[entryId]) {
-        return;
-      }
-
-      setLoadingCommentsByEntryId((current) => ({
-        ...current,
-        [entryId]: true,
-      }));
-      setCommentErrorByEntryId((current) => ({
-        ...current,
-        [entryId]: null,
-      }));
-
-      try {
-        const withDeletedAt = await supabase
-          .from("entry_comments")
-          .select("id, entry_id, user_id, parent_comment_id, body, created_at, deleted_at")
-          .eq("entry_id", entryId)
-          .order("created_at", { ascending: true });
-
-        let rows: Array<{
-          id: string;
-          entry_id: string;
-          user_id: string;
-          parent_comment_id: string | null;
-          body: string;
-          created_at: string;
-          deleted_at?: string | null;
-        }> = [];
-
-        if (!withDeletedAt.error) {
-          rows = (withDeletedAt.data ?? []) as typeof rows;
-        } else if (withDeletedAt.error.message.includes("deleted_at")) {
-          const fallback = await supabase
-            .from("entry_comments")
-            .select("id, entry_id, user_id, parent_comment_id, body, created_at")
-            .eq("entry_id", entryId)
-            .order("created_at", { ascending: true });
-          if (fallback.error) {
-            setCommentErrorByEntryId((current) => ({
-              ...current,
-              [entryId]: fallback.error.message,
-            }));
-            return;
-          }
-          rows = ((fallback.data ?? []) as Omit<(typeof rows)[number], "deleted_at">[]).map(
-            (row) => ({ ...row, deleted_at: null })
-          );
-        } else {
-          setCommentErrorByEntryId((current) => ({
-            ...current,
-            [entryId]: withDeletedAt.error.message,
-          }));
-          return;
-        }
-
-        const authorIds = Array.from(new Set(rows.map((row) => row.user_id)));
-        const authorNameById = new Map<string, string>();
-        if (authorIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, display_name, email")
-            .in("id", authorIds);
-          (profiles ?? []).forEach((profile) => {
-            authorNameById.set(
-              profile.id,
-              profile.display_name ?? profile.email ?? "Unknown"
-            );
-          });
-        }
-
-        const topLevelRows = rows.filter((row) => row.parent_comment_id === null);
-        const repliesByParentId = new Map<string, typeof rows>();
-        rows
-          .filter((row) => row.parent_comment_id !== null)
-          .forEach((reply) => {
-            const parentId = reply.parent_comment_id as string;
-            const list = repliesByParentId.get(parentId) ?? [];
-            list.push(reply);
-            repliesByParentId.set(parentId, list);
-          });
-
-        const serializeComment = (
-          row: (typeof rows)[number]
-        ): Omit<FeedReply, "parent_comment_id"> & { parent_comment_id: string | null } => {
-          const isDeleted = Boolean(row.deleted_at) || row.body.trim() === "[deleted]";
-          return {
-            id: row.id,
-            entry_id: row.entry_id,
-            user_id: row.user_id,
-            parent_comment_id: row.parent_comment_id,
-            body: isDeleted ? "[deleted]" : row.body,
-            created_at: row.created_at,
-            author_name: isDeleted ? null : authorNameById.get(row.user_id) ?? "Unknown",
-            is_deleted: isDeleted,
-          };
-        };
-
-        const comments = topLevelRows.map((row) => {
-          const serialized = serializeComment(row);
-          const replies = (repliesByParentId.get(row.id) ?? []).map((reply) => {
-            const replySerialized = serializeComment(reply);
-            return {
-              ...replySerialized,
-              parent_comment_id: replySerialized.parent_comment_id,
-            } as FeedReply;
-          });
-
-          return {
-            ...serialized,
-            parent_comment_id: null,
-            replies,
-          } as FeedComment;
-        });
-
-        setCommentsByEntryId((current) => ({
-          ...current,
-          [entryId]: comments,
-        }));
-        setEntries((current) =>
-          current.map((entry) =>
-            entry.id === entryId
-              ? {
-                  ...entry,
-                  comment_count: countComments(comments, entry.comment_count),
-                }
-              : entry
-          )
-        );
-      } finally {
-        setLoadingCommentsByEntryId((current) => ({
-          ...current,
-          [entryId]: false,
-        }));
-      }
-    },
-    [commentsByEntryId, loadingCommentsByEntryId, user?.id]
-  );
-
-  const toggleCommentsExpanded = (entryId: string) => {
-    setReactionPopupEntryId(null);
-    setCommentMenuKey(null);
-    setExpandedCommentsByEntryId((current) => {
-      const nextExpanded = !current[entryId];
-      if (nextExpanded) {
-        void loadCommentsForEntry(entryId);
-      }
-      return {
-        ...current,
-        [entryId]: nextExpanded,
-      };
-    });
-  };
-
-  const submitCommentForEntry = async (entryId: string) => {
-    if (!user?.id) {
-      return;
-    }
-    const body = (commentDraftByEntryId[entryId] ?? "").trim();
-    const replyTargetId = replyTargetByEntryId[entryId] ?? null;
-    const canComment = entries.find((entry) => entry.id === entryId)?.can_comment ?? false;
-    if (!body) {
-      return;
-    }
-    if (!canComment) {
-      setCommentErrorByEntryId((current) => ({
-        ...current,
-        [entryId]: null,
-      }));
-      return;
-    }
-    if (postingCommentByEntryId[entryId]) {
-      return;
-    }
-
-    setPostingCommentByEntryId((current) => ({
-      ...current,
-      [entryId]: true,
-    }));
-    setCommentErrorByEntryId((current) => ({
-      ...current,
-      [entryId]: null,
-    }));
-
-    const { error } = await supabase.from("entry_comments").insert({
-      entry_id: entryId,
-      user_id: user.id,
-      body,
-      parent_comment_id: replyTargetId,
-    });
-
-    if (error) {
-      setCommentErrorByEntryId((current) => ({
-        ...current,
-        [entryId]: error.message,
-      }));
-      setPostingCommentByEntryId((current) => ({
-        ...current,
-        [entryId]: false,
-      }));
-      return;
-    }
-
-    setCommentDraftByEntryId((current) => ({
-      ...current,
-      [entryId]: "",
-    }));
-    setReplyTargetByEntryId((current) => ({
-      ...current,
-      [entryId]: null,
-    }));
-    await loadCommentsForEntry(entryId, { force: true });
-
-    setPostingCommentByEntryId((current) => ({
-      ...current,
-      [entryId]: false,
-    }));
-  };
-
-  const toggleReaction = async (entryId: string, emoji: string) => {
-    if (!user?.id) {
-      return;
-    }
-    const target = entries.find((entry) => entry.id === entryId);
-    if (!target) {
-      return;
-    }
-
-    const hasMine = target.my_reactions.includes(emoji);
-    if (hasMine) {
-      const { error } = await supabase
-        .from("entry_reactions")
-        .delete()
-        .eq("entry_id", entryId)
-        .eq("user_id", user.id)
-        .eq("emoji", emoji);
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
-      setEntries((current) =>
-        current.map((entry) => {
-          if (entry.id !== entryId) {
-            return entry;
-          }
-          const nextCounts = { ...entry.reaction_counts };
-          const nextValue = Math.max(0, (nextCounts[emoji] ?? 1) - 1);
-          if (nextValue === 0) {
-            delete nextCounts[emoji];
-          } else {
-            nextCounts[emoji] = nextValue;
-          }
-          return {
-            ...entry,
-            reaction_counts: nextCounts,
-            my_reactions: entry.my_reactions.filter((value) => value !== emoji),
-          };
-        })
-      );
-    } else {
-      const { error } = await supabase.from("entry_reactions").insert({
-        entry_id: entryId,
-        user_id: user.id,
-        emoji,
-      });
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
-      setEntries((current) =>
-        current.map((entry) => {
-          if (entry.id !== entryId) {
-            return entry;
-          }
-          return {
-            ...entry,
-            reaction_counts: {
-              ...entry.reaction_counts,
-              [emoji]: (entry.reaction_counts[emoji] ?? 0) + 1,
-            },
-            my_reactions: [...entry.my_reactions, emoji],
-          };
-        })
-      );
-    }
-  };
+  }, [friendSearchQuery, isFriendSearchOpen, viewerUserId]);
 
   const loadFeed = useCallback(
     async (refresh = false) => {
-      if (!user?.id) {
+      if (!viewerUserId) {
         return;
       }
 
-      refresh ? setIsRefreshing(true) : setIsLoading(true);
+      if (refresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setErrorMessage(null);
 
       const result = await fetchFeedPage({
-        viewerUserId: user.id,
+        viewerUserId,
         scope: feedScope,
         cursor: null,
         limit: PAGE_SIZE,
@@ -2342,154 +1223,30 @@ export default function FeedScreen() {
         setEntries([]);
         setHasMore(false);
         setNextCursor(null);
-        setReportMenuEntryId(null);
-        setReportingEntryId(null);
-        setCommentMenuKey(null);
-        setReportingCommentId(null);
-        setPendingReport(null);
-        setExpandedNotesByEntryId({});
-        setReactionPopupEntryId(null);
-        setExpandedCommentsByEntryId({});
-        setCommentsByEntryId({});
-        setCommentDraftByEntryId({});
-        setReplyTargetByEntryId({});
-        setLoadingCommentsByEntryId({});
-        setPostingCommentByEntryId({});
-        setCommentErrorByEntryId({});
+        resetFeedTransientUiState();
       } else {
         setEntries(result.entries);
         setHasMore(result.hasMore);
         setNextCursor(result.nextCursor);
-        setReportMenuEntryId(null);
-        setReportingEntryId(null);
-        setCommentMenuKey(null);
-        setReportingCommentId(null);
-        setPendingReport(null);
-        setExpandedNotesByEntryId({});
-        setReactionPopupEntryId(null);
-        setExpandedCommentsByEntryId({});
-        setCommentsByEntryId({});
-        setCommentDraftByEntryId({});
-        setReplyTargetByEntryId({});
-        setLoadingCommentsByEntryId({});
-        setPostingCommentByEntryId({});
-        setCommentErrorByEntryId({});
+        resetFeedTransientUiState();
       }
 
       setIsLoading(false);
       setIsRefreshing(false);
     },
-    [feedScope, user?.id]
+    [feedScope, resetFeedTransientUiState, viewerUserId]
   );
-
-  const reportContent = useCallback(
-    async ({
-      targetType,
-      entryId,
-      targetUserId,
-      reason,
-      commentId,
-    }: {
-      targetType: "entry" | "comment";
-      entryId: string;
-      targetUserId: string;
-      reason: ReportReason;
-      commentId?: string;
-    }) => {
-      if (!user?.id || user.id === targetUserId) {
-        return;
-      }
-
-      if (targetType === "entry") {
-        setReportingEntryId(entryId);
-        setReportMenuEntryId(null);
-      } else if (commentId) {
-        setReportingCommentId(commentId);
-        setCommentMenuKey(null);
-      }
-      setModerationNotice(null);
-
-      const { error } = await supabase.from("content_reports").insert({
-        reporter_id: user.id,
-        target_type: targetType,
-        entry_id: entryId,
-        comment_id: commentId ?? null,
-        target_user_id: targetUserId,
-        reason,
-        details: null,
-      });
-
-      if (error) {
-        setModerationNotice({
-          kind: "error",
-          message: error.message.includes("content_reports")
-            ? "Reporting is temporarily unavailable."
-            : "Unable to report right now.",
-        });
-        if (targetType === "entry") {
-          setReportingEntryId(null);
-        } else if (commentId) {
-          setReportingCommentId(null);
-        }
-        return;
-      }
-
-      setModerationNotice({
-        kind: "success",
-        message: "Report submitted.",
-      });
-      if (targetType === "entry") {
-        setReportingEntryId(null);
-      } else if (commentId) {
-        setReportingCommentId(null);
-      }
-    },
-    [user?.id]
-  );
-
-  const openReportReasonSheet = useCallback(
-    ({
-      targetType,
-      entryId,
-      targetUserId,
-      commentId,
-    }: {
-      targetType: "entry" | "comment";
-      entryId: string;
-      targetUserId: string;
-      commentId?: string;
-    }) => {
-      if (!user?.id || user.id === targetUserId) {
-        return;
-      }
-      setReportMenuEntryId(null);
-      setCommentMenuKey(null);
-      setPendingReport({
-        targetType,
-        entryId,
-        commentId,
-        targetUserId,
-        reason: DEFAULT_REPORT_REASON,
-      });
-    },
-    [user?.id]
-  );
-
-  const submitPendingReport = useCallback(async () => {
-    if (!pendingReport) {
-      return;
-    }
-    const nextReport = pendingReport;
-    setPendingReport(null);
-    await reportContent(nextReport);
-  }, [pendingReport, reportContent]);
 
   useEffect(() => {
-    void loadFeed();
+    const timeoutId = setTimeout(() => {
+      void loadFeed();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [loadFeed]);
 
   const loadMore = async () => {
-    if (!user?.id || isLoadingMore || !hasMore || !nextCursor) {
+    if (!viewerUserId || isLoadingMore || !hasMore || !nextCursor) {
       return;
     }
 
@@ -2497,7 +1254,7 @@ export default function FeedScreen() {
     setErrorMessage(null);
 
     const result = await fetchFeedPage({
-      viewerUserId: user.id,
+      viewerUserId,
       scope: feedScope,
       cursor: nextCursor,
       limit: PAGE_SIZE,
@@ -2522,6 +1279,7 @@ export default function FeedScreen() {
   const clearFriendSearch = () => {
     setFriendSearchQuery("");
     setFriendSearchResults([]);
+    setIsFriendSearchLoading(false);
     setSelectedFriendId(null);
     setSelectedFriendName(null);
   };
@@ -2656,6 +1414,7 @@ export default function FeedScreen() {
                   setSelectedFriendName(null);
                   if (!value.trim()) {
                     setFriendSearchResults([]);
+                    setIsFriendSearchLoading(false);
                   }
                 }}
                 placeholder="Search by username..."
@@ -2736,28 +1495,18 @@ export default function FeedScreen() {
         ) : (
           <View style={styles.feedStack}>
             {visibleEntries.map((entry) => {
-              const entryComments = commentsByEntryId[entry.id] ?? [];
-              const replyTargetId = replyTargetByEntryId[entry.id] ?? null;
-              const replyTarget =
-                replyTargetId && entryComments.length > 0
-                  ? entryComments.find((comment) => comment.id === replyTargetId) ?? null
-                  : null;
+              const interaction = getEntryInteractionState(entry);
 
               return (
                 <FeedCard
                   key={entry.id}
                   item={entry}
-                  viewerUserId={user?.id ?? null}
-                  reportMenuOpen={reportMenuEntryId === entry.id}
-                  reportBusy={reportingEntryId === entry.id}
-                  notesExpanded={Boolean(expandedNotesByEntryId[entry.id])}
-                  onToggleNotes={() =>
-                    setExpandedNotesByEntryId((current) => ({
-                      ...current,
-                      [entry.id]: !current[entry.id],
-                    }))
-                  }
-                  commentsExpanded={Boolean(expandedCommentsByEntryId[entry.id])}
+                  viewerUserId={viewerUserId}
+                  reportMenuOpen={interaction.reportMenuOpen}
+                  reportBusy={interaction.reportBusy}
+                  notesExpanded={interaction.notesExpanded}
+                  onToggleNotes={() => toggleNotes(entry.id)}
+                  commentsExpanded={interaction.commentsExpanded}
                   onToggleComments={() => toggleCommentsExpanded(entry.id)}
                   onGallerySwipeStart={() =>
                     setIsGallerySwipeActive((current) => (current ? current : true))
@@ -2765,49 +1514,23 @@ export default function FeedScreen() {
                   onGallerySwipeEnd={() =>
                     setIsGallerySwipeActive((current) => (current ? false : current))
                   }
-                  replyTargetName={replyTarget?.author_name ?? null}
-                  onSetReplyTarget={(commentId) =>
-                    setReplyTargetByEntryId((current) => ({
-                      ...current,
-                      [entry.id]: current[entry.id] === commentId ? null : commentId,
-                    }))
-                  }
-                  onClearReplyTarget={() =>
-                    setReplyTargetByEntryId((current) => ({
-                      ...current,
-                      [entry.id]: null,
-                    }))
-                  }
-                  commentCount={countComments(
-                    commentsByEntryId[entry.id],
-                    entry.comment_count
-                  )}
-                  comments={entryComments}
-                  commentsLoading={Boolean(loadingCommentsByEntryId[entry.id])}
-                  commentDraft={commentDraftByEntryId[entry.id] ?? ""}
-                  onChangeCommentDraft={(value) =>
-                    setCommentDraftByEntryId((current) => ({
-                      ...current,
-                      [entry.id]: value,
-                    }))
-                  }
+                  replyTargetName={interaction.replyTargetName}
+                  onSetReplyTarget={(commentId) => setReplyTarget(entry.id, commentId)}
+                  onClearReplyTarget={() => clearReplyTarget(entry.id)}
+                  commentCount={interaction.commentCount}
+                  comments={interaction.comments}
+                  commentsLoading={interaction.commentsLoading}
+                  commentDraft={interaction.commentDraft}
+                  onChangeCommentDraft={(value) => setCommentDraft(entry.id, value)}
                   onSubmitComment={() => void submitCommentForEntry(entry.id)}
-                  postingComment={Boolean(postingCommentByEntryId[entry.id])}
-                  commentError={commentErrorByEntryId[entry.id] ?? null}
-                  commentMenuKey={commentMenuKey}
-                  reportingCommentId={reportingCommentId}
-                  reactionPickerOpen={reactionPopupEntryId === entry.id}
-                  onToggleReactionPicker={() =>
-                    setReactionPopupEntryId((current) =>
-                      current === entry.id ? null : entry.id
-                    )
-                  }
+                  postingComment={interaction.postingComment}
+                  commentError={interaction.commentError}
+                  commentMenuKey={interaction.commentMenuKey}
+                  reportingCommentId={interaction.reportingCommentId}
+                  reactionPickerOpen={interaction.reactionPickerOpen}
+                  onToggleReactionPicker={() => toggleReactionPicker(entry.id)}
                   onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
-                  onToggleReportMenu={() =>
-                    setReportMenuEntryId((current) =>
-                      current === entry.id ? null : entry.id
-                    )
-                  }
+                  onToggleReportMenu={() => toggleReportMenu(entry.id)}
                   onReportPost={() =>
                     openReportReasonSheet({
                       targetType: "entry",
@@ -2815,13 +1538,7 @@ export default function FeedScreen() {
                       targetUserId: entry.user_id,
                     })
                   }
-                  onToggleCommentMenu={(commentId) =>
-                    setCommentMenuKey((current) =>
-                      current === `${entry.id}:${commentId}`
-                        ? null
-                        : `${entry.id}:${commentId}`
-                    )
-                  }
+                  onToggleCommentMenu={(commentId) => toggleCommentMenu(entry.id, commentId)}
                   onReportComment={(commentId, targetUserId) =>
                     openReportReasonSheet({
                       targetType: "comment",
@@ -2831,7 +1548,7 @@ export default function FeedScreen() {
                     })
                   }
                   onOpenAuthorProfile={() =>
-                    entry.user_id === user?.id
+                    entry.user_id === viewerUserId
                       ? router.push("/(app)/profile")
                       : router.push(`/(app)/profile/${entry.user_id}`)
                   }
@@ -2862,12 +1579,12 @@ export default function FeedScreen() {
         visible={Boolean(pendingReport)}
         transparent
         animationType="fade"
-        onRequestClose={() => setPendingReport(null)}
+        onRequestClose={closePendingReport}
       >
         <View style={styles.reportModalBackdrop}>
           <Pressable
             style={StyleSheet.absoluteFillObject}
-            onPress={() => setPendingReport(null)}
+            onPress={closePendingReport}
           />
           <View style={styles.reportModalCard}>
             <AppText style={styles.reportModalTitle}>Report reason</AppText>
@@ -2881,11 +1598,7 @@ export default function FeedScreen() {
                 return (
                   <Pressable
                     key={option.value}
-                    onPress={() =>
-                      setPendingReport((current) =>
-                        current ? { ...current, reason: option.value } : current
-                      )
-                    }
+                    onPress={() => setPendingReportReason(option.value)}
                     style={[
                       styles.reportReasonRow,
                       selected ? styles.reportReasonRowActive : null,
@@ -2907,7 +1620,7 @@ export default function FeedScreen() {
             <View style={styles.reportModalActions}>
               <Pressable
                 style={styles.reportModalCancelButton}
-                onPress={() => setPendingReport(null)}
+                onPress={closePendingReport}
               >
                 <AppText style={styles.reportModalCancelText}>Cancel</AppText>
               </Pressable>

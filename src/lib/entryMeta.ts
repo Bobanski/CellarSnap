@@ -1,37 +1,25 @@
-export const PRICE_PAID_SOURCE_VALUES = ["retail", "restaurant"] as const;
-export type PricePaidSource = (typeof PRICE_PAID_SOURCE_VALUES)[number];
+import {
+  PRICE_PAID_CURRENCY_LABELS,
+  PRICE_PAID_CURRENCY_VALUES,
+  PRICE_PAID_SOURCE_LABELS,
+  PRICE_PAID_SOURCE_VALUES,
+  QPR_LEVEL_LABELS,
+  QPR_LEVEL_VALUES,
+  type PricePaidCurrency,
+  type PricePaidSource,
+  type QprLevel,
+} from "@shared";
 
-export const PRICE_PAID_CURRENCY_VALUES = [
-  "usd",
-  "eur",
-  "gbp",
-  "chf",
-  "aud",
-  "mxn",
-] as const;
-export type PricePaidCurrency = (typeof PRICE_PAID_CURRENCY_VALUES)[number];
-
-export const QPR_LEVEL_VALUES = [
-  "extortion",
-  "pricey",
-  "mid",
-  "good_value",
-  "absolute_steal",
-] as const;
-export type QprLevel = (typeof QPR_LEVEL_VALUES)[number];
-
-export const PRICE_PAID_SOURCE_LABELS: Record<PricePaidSource, string> = {
-  retail: "Retail",
-  restaurant: "Restaurant",
-};
-
-export const PRICE_PAID_CURRENCY_LABELS: Record<PricePaidCurrency, string> = {
-  usd: "USD",
-  eur: "EUR",
-  gbp: "GBP",
-  chf: "CHF",
-  aud: "AUD",
-  mxn: "MXN",
+export {
+  PRICE_PAID_CURRENCY_LABELS,
+  PRICE_PAID_CURRENCY_VALUES,
+  PRICE_PAID_SOURCE_LABELS,
+  PRICE_PAID_SOURCE_VALUES,
+  QPR_LEVEL_LABELS,
+  QPR_LEVEL_VALUES,
+  type PricePaidCurrency,
+  type PricePaidSource,
+  type QprLevel,
 };
 
 export const PRICE_PAID_CURRENCY_SYMBOLS: Record<PricePaidCurrency, string> = {
@@ -41,14 +29,6 @@ export const PRICE_PAID_CURRENCY_SYMBOLS: Record<PricePaidCurrency, string> = {
   chf: "CHF",
   aud: "A$",
   mxn: "MX$",
-};
-
-export const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
-  extortion: "Extortion",
-  pricey: "Pricey",
-  mid: "Spot on",
-  good_value: "Good Value",
-  absolute_steal: "Absolute Steal",
 };
 
 const PRICE_PAID_CURRENCY_INTL_CODES: Record<PricePaidCurrency, string> = {

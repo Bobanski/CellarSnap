@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import StandaloneHomeLaunchRedirect from "@/components/StandaloneHomeLaunchRedirect";
 import KeyboardDoneHint from "@/components/KeyboardDoneHint";
@@ -6,6 +6,12 @@ import KeyboardDoneHint from "@/components/KeyboardDoneHint";
 export const metadata: Metadata = {
   title: "CellarSnap",
   description: "Personal wine log with photos",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

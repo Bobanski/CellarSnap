@@ -1,3 +1,5 @@
+import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
+
 type MobileSupabaseClient = typeof import("@/src/lib/supabase").supabase;
 
 export type InsertEntryFallbackResult = {
@@ -141,13 +143,7 @@ export async function fetchComparisonCandidateForEntry({
     .maybeSingle();
 
   const labelPath = labelPhoto?.path ?? candidate.label_image_path ?? null;
-  let labelImageUrl: string | null = null;
-  if (labelPath) {
-    const { data: signedUrl, error: signedUrlError } = await supabase.storage
-      .from("wine-photos")
-      .createSignedUrl(labelPath, 60 * 60);
-    labelImageUrl = signedUrlError ? null : signedUrl.signedUrl;
-  }
+  const labelImageUrl = await signPhotoUrl(labelPath, { supabaseClient: supabase });
 
   return {
     id: candidate.id,

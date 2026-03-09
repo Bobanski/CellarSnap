@@ -7,6 +7,7 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
+import AppImage from "@/components/AppImage";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
@@ -1014,11 +1015,11 @@ export default function FeedPage() {
                         event.stopPropagation();
                         router.push(`/profile/${entry.user_id}`);
                       }}
-                      className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
+                        className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
                     >
                       <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/40 ring-1 ring-white/5">
                         {entry.author_avatar_url ? (
-                          <img
+                          <AppImage
                             src={entry.author_avatar_url}
                             alt=""
                             className="h-full w-full object-cover"

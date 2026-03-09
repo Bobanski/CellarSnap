@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useOverlayPresentation } from "@/lib/ui/overlayPresentation";
 
 export type ComparisonResponse = "more" | "less" | "same_or_not_sure";
 export type HowWasItResponse =
@@ -69,6 +70,7 @@ export default function EntryPostSaveSurveyModal({
   submitLabel = "Save feedback",
   onSubmit,
 }: EntryPostSaveSurveyModalProps) {
+  useOverlayPresentation(isOpen);
   const [howWasIt, setHowWasIt] = useState<HowWasItResponse | "">("");
   const [expectations, setExpectations] = useState<ExpectationsResponse | "">("");
   const [drinkAgain, setDrinkAgain] = useState<DrinkAgainResponse | "">("");
@@ -80,10 +82,10 @@ export default function EntryPostSaveSurveyModal({
   const canSubmit = Boolean(howWasIt && expectations && drinkAgain);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
       <div className="fixed inset-0 bg-black/75" aria-hidden />
-      <div className="relative flex min-h-full items-start justify-center sm:items-center">
-        <div className="relative h-[calc(100dvh-0.75rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:p-8">
+      <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
+        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-300/80">
               Required survey
@@ -99,7 +101,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setHowWasIt(event.target.value as HowWasItResponse | "")
                 }
-                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-amber-300/60"
+                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-base text-zinc-100 outline-none transition focus:border-amber-300/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {HOW_WAS_IT_OPTIONS.map((option) => (
@@ -119,7 +121,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setExpectations(event.target.value as ExpectationsResponse | "")
                 }
-                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-amber-300/60"
+                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-base text-zinc-100 outline-none transition focus:border-amber-300/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {EXPECTATIONS_OPTIONS.map((option) => (
@@ -139,7 +141,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setDrinkAgain(event.target.value as DrinkAgainResponse | "")
                 }
-                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-amber-300/60"
+                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-base text-zinc-100 outline-none transition focus:border-amber-300/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {DRINK_AGAIN_OPTIONS.map((option) => (
@@ -166,7 +168,7 @@ export default function EntryPostSaveSurveyModal({
                 })
               }
               disabled={!canSubmit || isSubmitting}
-              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-amber-400 px-5 py-2 text-base font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
             >
               {isSubmitting ? "Saving..." : submitLabel}
             </button>

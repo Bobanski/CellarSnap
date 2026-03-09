@@ -23,6 +23,7 @@ import {
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
+import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -55,13 +56,6 @@ type FallbackProfileRow = {
 type FriendRelationRow = {
   requester_id: string;
   recipient_id: string;
-};
-
-type EntryPhotoRow = {
-  entry_id: string;
-  path: string;
-  position: number;
-  created_at: string;
 };
 
 type FriendProfileRow = {
@@ -175,21 +169,6 @@ function getDisplayRating(rating: number | null): string | null {
   }
   const normalized = Math.max(0, Math.min(100, Math.round(rating)));
   return `${normalized}/100`;
-}
-
-async function createSignedUrlMap(paths: string[]) {
-  const signedUrlByPath = new Map<string, string | null>();
-
-  await Promise.all(
-    paths.map(async (path) => {
-      const { data, error } = await supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(path, 60 * 60);
-      signedUrlByPath.set(path, error ? null : data.signedUrl);
-    })
-  );
-
-  return signedUrlByPath;
 }
 
 function HomeEntryCard({
@@ -416,41 +395,9 @@ export default function HomeScreen() {
         }
 
         const allEntries = [...ownEntries, ...friendEntries];
-        const allEntryIds = allEntries.map((entry) => entry.id);
-
-        let labelPhotos: EntryPhotoRow[] = [];
-        if (allEntryIds.length > 0) {
-          const { data, error } = await supabase
-            .from("entry_photos")
-            .select("entry_id, path, position, created_at")
-            .eq("type", "label")
-            .in("entry_id", allEntryIds)
-            .order("position", { ascending: true })
-            .order("created_at", { ascending: true });
-
-          if (!error && data) {
-            labelPhotos = data as EntryPhotoRow[];
-          }
-        }
-
-        const labelPathByEntryId = new Map<string, string>();
-        labelPhotos.forEach((photo) => {
-          if (!labelPathByEntryId.has(photo.entry_id)) {
-            labelPathByEntryId.set(photo.entry_id, photo.path);
-          }
+        const labelByEntryId = await resolveEntryLabelPhotos(allEntries, {
+          supabaseClient: supabase,
         });
-
-        const labelPathsToSign = Array.from(
-          new Set(
-            allEntries
-              .map(
-                (entry) =>
-                  labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null
-              )
-              .filter((path): path is string => Boolean(path && path !== "pending"))
-          )
-        );
-        const signedUrlByPath = await createSignedUrlMap(labelPathsToSign);
 
         const friendUserIds = Array.from(new Set(friendEntries.map((entry) => entry.user_id)));
         let friendProfiles: FriendProfileRow[] = [];
@@ -472,8 +419,6 @@ export default function HomeScreen() {
         );
 
         const recent = ownEntries.map((entry) => {
-          const labelPath =
-            labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null;
           return {
             id: entry.id,
             wine_name: entry.wine_name,
@@ -482,15 +427,11 @@ export default function HomeScreen() {
             rating: entry.rating,
             qpr_level: entry.qpr_level,
             consumed_at: entry.consumed_at,
-            label_image_url: labelPath
-              ? signedUrlByPath.get(labelPath) ?? null
-              : null,
+            label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
           };
         });
 
         const circle = friendEntries.map((entry) => {
-          const labelPath =
-            labelPathByEntryId.get(entry.id) ?? entry.label_image_path ?? null;
           return {
             id: entry.id,
             user_id: entry.user_id,
@@ -501,9 +442,7 @@ export default function HomeScreen() {
             qpr_level: entry.qpr_level,
             consumed_at: entry.consumed_at,
             author_name: profileNameById.get(entry.user_id) ?? "Unknown",
-            label_image_url: labelPath
-              ? signedUrlByPath.get(labelPath) ?? null
-              : null,
+            label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
           };
         });
 

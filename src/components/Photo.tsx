@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AppImage from "@/components/AppImage";
 
 type PhotoProps = {
   src: string;
@@ -30,11 +31,10 @@ export default function Photo({
         }`}
         aria-hidden="true"
       />
-      <img
+      <AppImage
         src={src}
         alt={alt}
         loading={loading}
-        decoding="async"
         onLoad={() => setLoaded(true)}
         className={`${className ?? ""} transition-opacity duration-300 ${
           loaded ? "opacity-100" : "opacity-0"

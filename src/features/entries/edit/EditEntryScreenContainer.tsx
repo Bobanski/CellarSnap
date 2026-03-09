@@ -5,6 +5,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import AppImage from "@/components/AppImage";
 import NavBar from "@/components/NavBar";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
@@ -2542,7 +2543,7 @@ export default function EditEntryPage() {
                           >
                             {photo.signed_url ? (
                               <>
-                                <img
+                                <AppImage
                                   src={withCacheBust(photo.signed_url) ?? photo.signed_url}
                                   alt={`${PHOTO_TYPE_LABELS[photo.type]} photo ${index + 1}`}
                                   className="h-full w-full object-cover"
@@ -2694,18 +2695,18 @@ export default function EditEntryPage() {
                     ref={cropFrameRef}
                     className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
                   >
-                    {cropSourceLoading ? (
-                      <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-amber-200">
-                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
-                        <span>Loading original photo...</span>
-                      </div>
-                    ) : cropSourceUrl ? (
-                      <img
-                        src={
-                          withCacheBust(cropSourceUrl) ?? cropSourceUrl
-                        }
-                        alt="Photo crop preview"
-                        draggable={false}
+                  {cropSourceLoading ? (
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-amber-200">
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+                      <span>Loading original photo...</span>
+                    </div>
+                  ) : cropSourceUrl ? (
+                    <AppImage
+                      src={
+                        withCacheBust(cropSourceUrl) ?? cropSourceUrl
+                      }
+                      alt="Photo crop preview"
+                      draggable={false}
                         onLoad={(event) => {
                           const target = event.currentTarget;
                           setCropImageNaturalSize({
@@ -2718,11 +2719,11 @@ export default function EditEntryPage() {
                         }}
                         onPointerDown={onCropPointerDown}
                         onPointerMove={onCropPointerMove}
-                        onPointerUp={onCropPointerUp}
-                        onPointerCancel={onCropPointerUp}
-                        onTouchStart={onCropTouchStart}
-                        onTouchMove={onCropTouchMove}
-                        onTouchEnd={onCropTouchEnd}
+                      onPointerUp={onCropPointerUp}
+                      onPointerCancel={onCropPointerUp}
+                      onTouchStart={onCropTouchStart}
+                      onTouchMove={onCropTouchMove}
+                      onTouchEnd={onCropTouchEnd}
                         onTouchCancel={onCropTouchEnd}
                         style={(() => {
                           const geometry = getCropGeometry();
