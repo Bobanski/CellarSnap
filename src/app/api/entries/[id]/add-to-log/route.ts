@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { canUserViewEntry } from "@/lib/access/entryVisibility";
+import { buildOriginalPhotoPath } from "@/lib/entryFlow/web/photoPath";
 import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 import { executeWithColumnFallback, hasMissingAnyColumn } from "@/server/db/compat";
 
@@ -406,6 +407,14 @@ export async function POST(
       if (copyError) {
         // Skip photos we can't copy (e.g., missing object).
         continue;
+      }
+
+      if (sourcePhoto.type === "label") {
+        const sourceOriginalPath = buildOriginalPhotoPath(sourcePhoto.path);
+        const targetOriginalPath = buildOriginalPhotoPath(newPath);
+        await supabase.storage
+          .from("wine-photos")
+          .copy(sourceOriginalPath, targetOriginalPath);
       }
 
       copiedPhotos.push({

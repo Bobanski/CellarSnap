@@ -811,8 +811,14 @@ export default function EditEntryPage() {
     const fallbackSourceUrl = photo.signed_url ?? null;
     const fallbackSourcePath = photo.path ?? null;
     const hasSavedCrop = Boolean(savedCropByPhotoId[photo.id]);
+    const entryRootIdRaw = (entry as unknown as { root_entry_id?: unknown } | null)
+      ?.root_entry_id;
+    const isSharedCopy =
+      typeof entryRootIdRaw === "string" && entryRootIdRaw.length > 0;
 
-    if (!hasSavedCrop && photo.type === "label" && fallbackSourceUrl) {
+    // Shared cellar copies should prefer the uncropped original when available so
+    // the editor can zoom back out beyond the imported square crop.
+    if (!hasSavedCrop && photo.type === "label" && fallbackSourceUrl && !isSharedCopy) {
       setCropSourceUrl(fallbackSourceUrl);
       setCropSourcePath(fallbackSourcePath);
       setCropSourceLoading(false);
