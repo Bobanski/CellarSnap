@@ -22,6 +22,10 @@ type RecentEntry = {
   qpr_level: QprLevel | null;
   consumed_at: string;
   label_image_url: string | null;
+  can_react: boolean;
+  my_reactions: string[];
+  reaction_counts: Record<string, number>;
+  reaction_users: Record<string, string[]>;
 };
 
 type CircleEntry = RecentEntry & {
@@ -29,9 +33,159 @@ type CircleEntry = RecentEntry & {
   author_name: string;
 };
 
+const REACTION_EMOJIS = ["\u{1F377}", "\u{1F525}", "\u2764\uFE0F", "\u{1F440}", "\u{1F91D}"] as const;
+
+function HomeReactionControls({
+  entry,
+  onToggleReaction,
+}: {
+  entry: Pick<
+    RecentEntry,
+    "id" | "can_react" | "my_reactions" | "reaction_counts" | "reaction_users"
+  >;
+  onToggleReaction: (entryId: string, emoji: string) => Promise<void> | void;
+}) {
+  const [openEmoji, setOpenEmoji] = useState<string | null>(null);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const reactionSummary = Object.entries(entry.reaction_counts)
+    .filter(([, count]) => count > 0)
+    .sort((left, right) => right[1] - left[1]);
+
+  useEffect(() => {
+    if (!openEmoji) {
+      return;
+    }
+    if ((entry.reaction_counts[openEmoji] ?? 0) > 0) {
+      return;
+    }
+    setOpenEmoji(null);
+  }, [entry.reaction_counts, openEmoji]);
+
+  const visibleReactions = reactionSummary.slice(0, 3);
+  const hiddenReactionCount = Math.max(0, reactionSummary.length - visibleReactions.length);
+
+  return (
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {visibleReactions.map(([emoji, count]) => {
+          const names = entry.reaction_users[emoji] ?? [];
+          const popupKey = `${entry.id}-${emoji}`;
+          const showNames = openEmoji === popupKey;
+          return (
+            <span key={popupKey} className="group/reaction relative">
+              <button
+                type="button"
+                disabled={names.length === 0}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setOpenEmoji((current) => (current === popupKey ? null : popupKey));
+                }}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
+                  names.length > 0
+                    ? "border-white/15 bg-black/30 text-zinc-200 transition hover:border-amber-300/40"
+                    : "border-white/10 bg-black/20 text-zinc-400"
+                }`}
+              >
+                <span>{emoji}</span>
+                <span className="tabular-nums text-zinc-400">{count}</span>
+              </button>
+              {names.length > 0 ? (
+                <span
+                  className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#1a1412] px-2.5 py-1.5 text-[11px] text-zinc-200 shadow-lg transition-opacity ${
+                    showNames
+                      ? "pointer-events-auto opacity-100"
+                      : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"
+                  }`}
+                >
+                  {names.join(", ")}
+                </span>
+              ) : null}
+            </span>
+          );
+        })}
+        {hiddenReactionCount > 0 ? (
+          <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] text-zinc-400">
+            +{hiddenReactionCount}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setReactionPickerOpen((current) => !current);
+          }}
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-black/20 text-sm font-semibold leading-none transition ${
+            entry.can_react
+              ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
+              : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
+          }`}
+          aria-label={entry.can_react ? "Add reaction" : "View reaction options"}
+        >
+          +
+        </button>
+      </div>
+      {reactionPickerOpen ? (
+        <div
+          className="rounded-xl border border-white/10 bg-black/20 p-1.5"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            {REACTION_EMOJIS.map((emoji) => {
+              const count = entry.reaction_counts[emoji] ?? 0;
+              if (entry.can_react) {
+                return (
+                  <button
+                    key={`${entry.id}-picker-${emoji}`}
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setReactionPickerOpen(false);
+                      void onToggleReaction(entry.id, emoji);
+                    }}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${
+                      entry.my_reactions.includes(emoji) ? "bg-amber-400/20" : ""
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                );
+              }
+              return (
+                <span
+                  key={`${entry.id}-picker-${emoji}`}
+                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/10 bg-black/20 px-1 text-lg text-zinc-400"
+                >
+                  {emoji}
+                  {count > 0 ? (
+                    <span className="ml-0.5 text-[10px] font-medium text-zinc-500">
+                      {count}
+                    </span>
+                  ) : null}
+                </span>
+              );
+            })}
+          </div>
+          {!entry.can_react ? (
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Reactions are not available for this post.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
+  const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
   const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
   const [privacyConfirmedAt, setPrivacyConfirmedAt] = useState<string | null>(null);
   const [privacyOnboardingError, setPrivacyOnboardingError] = useState<string | null>(null);
@@ -68,6 +222,7 @@ export default function HomePage() {
             typeof data.firstName === "string" ? data.firstName.trim() : "";
           const username =
             typeof data.displayName === "string" ? data.displayName.trim() : "";
+          setViewerReactionName(username || firstName || null);
           setWelcomeName(firstName || username || null);
           setDefaultEntryPrivacy(data.defaultEntryPrivacy ?? "public");
           setPrivacyConfirmedAt(data.privacyConfirmedAt ?? null);
@@ -116,6 +271,85 @@ export default function HomePage() {
 
     const payload = await response.json().catch(() => ({}));
     setPrivacyConfirmedAt(payload.profile?.privacy_confirmed_at ?? new Date().toISOString());
+  };
+
+  const toggleHomeReaction = async (entryId: string, emoji: string) => {
+    const target =
+      recentEntries.find((entry) => entry.id === entryId) ??
+      circleEntries.find((entry) => entry.id === entryId);
+    if (!target || !target.can_react) {
+      return;
+    }
+
+    const hasMine = target.my_reactions.includes(emoji);
+    const response = hasMine
+      ? await fetch(`/api/entries/${entryId}/reactions?emoji=${encodeURIComponent(emoji)}`, {
+          method: "DELETE",
+        })
+      : await fetch(`/api/entries/${entryId}/reactions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emoji }),
+        });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const applyToEntry = <T extends RecentEntry | CircleEntry>(entry: T): T => {
+      if (entry.id !== entryId) {
+        return entry;
+      }
+
+      if (hasMine) {
+        const nextCount = Math.max(0, (entry.reaction_counts[emoji] ?? 1) - 1);
+        const nextCounts = { ...entry.reaction_counts };
+        if (nextCount === 0) {
+          delete nextCounts[emoji];
+        } else {
+          nextCounts[emoji] = nextCount;
+        }
+
+        const nextUsers = { ...entry.reaction_users };
+        const existingNames = nextUsers[emoji] ?? [];
+        const filteredNames = viewerReactionName
+          ? existingNames.filter((name) => name !== viewerReactionName)
+          : existingNames;
+        if (filteredNames.length === 0) {
+          delete nextUsers[emoji];
+        } else {
+          nextUsers[emoji] = filteredNames;
+        }
+
+        return {
+          ...entry,
+          reaction_counts: nextCounts,
+          reaction_users: nextUsers,
+          my_reactions: entry.my_reactions.filter((value) => value !== emoji),
+        };
+      }
+
+      const nextUsers = { ...entry.reaction_users };
+      const existingNames = nextUsers[emoji] ?? [];
+      if (viewerReactionName && !existingNames.includes(viewerReactionName)) {
+        nextUsers[emoji] = [...existingNames, viewerReactionName];
+      } else {
+        nextUsers[emoji] = existingNames;
+      }
+
+      return {
+        ...entry,
+        reaction_counts: {
+          ...entry.reaction_counts,
+          [emoji]: (entry.reaction_counts[emoji] ?? 0) + 1,
+        },
+        reaction_users: nextUsers,
+        my_reactions: [...entry.my_reactions, emoji],
+      };
+    };
+
+    setRecentEntries((current) => current.map((entry) => applyToEntry(entry)));
+    setCircleEntries((current) => current.map((entry) => applyToEntry(entry)));
   };
 
   if (loading) {
@@ -253,7 +487,7 @@ export default function HomePage() {
                 {recentEntries.map((entry) => (
                   <article
                     key={entry.id}
-                    className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    className="group flex h-full cursor-pointer flex-col rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                     role="button"
                     tabIndex={0}
                     onClick={() => router.push(`/entries/${entry.id}`)}
@@ -268,7 +502,7 @@ export default function HomePage() {
                       <span className="font-medium text-zinc-200">You</span>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
-                    <div className="mt-4 flex gap-4">
+                    <div className="mt-4 flex flex-1 gap-4">
                       <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                         {entry.label_image_url ? (
                           <Photo
@@ -318,6 +552,18 @@ export default function HomePage() {
                           {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                         </div>
                       </div>
+                    </div>
+                    <div
+                      className="mt-4 border-t border-white/10 pt-3"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                    >
+                      <HomeReactionControls
+                        entry={entry}
+                        onToggleReaction={toggleHomeReaction}
+                      />
                     </div>
                   </article>
                 ))}
@@ -375,7 +621,7 @@ export default function HomePage() {
                 {circleEntries.map((entry) => (
                   <article
                     key={entry.id}
-                    className="group cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    className="group flex h-full cursor-pointer flex-col rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
                     role="button"
                     tabIndex={0}
                     onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
@@ -399,7 +645,7 @@ export default function HomePage() {
                       </button>
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
-                    <div className="mt-4 flex gap-4">
+                    <div className="mt-4 flex flex-1 gap-4">
                       <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
                         {entry.label_image_url ? (
                           <Photo
@@ -441,6 +687,18 @@ export default function HomePage() {
                           {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                         </div>
                       </div>
+                    </div>
+                    <div
+                      className="mt-4 border-t border-white/10 pt-3"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                    >
+                      <HomeReactionControls
+                        entry={entry}
+                        onToggleReaction={toggleHomeReaction}
+                      />
                     </div>
                   </article>
                 ))}

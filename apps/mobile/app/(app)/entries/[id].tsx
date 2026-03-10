@@ -27,13 +27,19 @@ import {
   normalizeWineNameText,
   type PricePaidCurrency,
   type PricePaidSource,
+  type PrivacyLevel,
   type QprLevel,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+import {
+  canViewerAccessByPrivacy,
+  loadSocialAudience,
+} from "@/src/lib/feed/feedPage";
 import {
   AdaptiveFieldRow,
   Field,
@@ -82,6 +88,8 @@ type EntryDetailRow = {
   place_image_path: string | null;
   pairing_image_path: string | null;
   created_at: string;
+  entry_privacy: PrivacyLevel;
+  reaction_privacy?: PrivacyLevel | null;
 };
 
 type EntryPhotoRow = {
@@ -211,6 +219,7 @@ const ENTRY_PHOTO_TYPES: EntryPhotoType[] = [
 
 const MAX_ENTRY_PHOTOS_PER_TYPE = 10;
 const WEB_API_BASE_URL = getWebApiBaseUrl();
+const REACTION_EMOJIS = ["\u{1F377}", "\u{1F525}", "\u2764\uFE0F", "\u{1F440}", "\u{1F91D}"] as const;
 
 const ADVANCED_NOTE_FIELDS: Array<{ key: string; label: string }> = [
   { key: "acidity", label: "Acidity" },
@@ -660,6 +669,7 @@ export default function EntryDetailScreen() {
   );
   const [authorName, setAuthorName] = useState("Unknown");
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | null>(null);
+  const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
   const [tastedWithNames, setTastedWithNames] = useState<string[]>([]);
   const [photos, setPhotos] = useState<EntryPhotoItem[]>([]);
   const [failedPhotoIds, setFailedPhotoIds] = useState<Set<string>>(() => new Set());
@@ -744,6 +754,11 @@ export default function EntryDetailScreen() {
   });
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [canReact, setCanReact] = useState(false);
+  const [myReactions, setMyReactions] = useState<string[]>([]);
+  const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
+  const [reactionUsers, setReactionUsers] = useState<Record<string, string[]>>({});
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
 
@@ -760,7 +775,7 @@ export default function EntryDetailScreen() {
     const { data: entryData, error: entryError } = await supabase
       .from("wine_entries")
       .select(
-        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at"
+        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, entry_privacy, reaction_privacy"
       )
       .eq("id", entryId)
       .maybeSingle();
@@ -802,7 +817,11 @@ export default function EntryDetailScreen() {
       .filter((row): row is PrimaryGrape => Boolean(row));
 
     const profileIds = Array.from(
-      new Set([nextEntry.user_id, ...(nextEntry.tasted_with_user_ids ?? [])])
+      new Set([
+        nextEntry.user_id,
+        ...(nextEntry.tasted_with_user_ids ?? []),
+        ...(user?.id ? [user.id] : []),
+      ])
     );
 
     const profileResponse = profileIds.length
@@ -859,6 +878,67 @@ export default function EntryDetailScreen() {
 
     const profileMap = new Map(profileRows.map((row) => [row.id, row]));
     const authorProfile = profileMap.get(nextEntry.user_id);
+    const viewerProfile = user?.id ? profileMap.get(user.id) : null;
+    const socialAudience = user?.id
+      ? await loadSocialAudience(user.id, supabase)
+      : {
+          socialAuthorIds: [],
+          acceptedFriendIds: new Set<string>(),
+          friendsOfFriendsIds: new Set<string>(),
+        };
+    const resolvedReactionPrivacy = (nextEntry.reaction_privacy ??
+      nextEntry.entry_privacy ??
+      "public") as PrivacyLevel;
+    const canEntryReact = user?.id
+      ? canViewerAccessByPrivacy({
+          viewerUserId: user.id,
+          ownerUserId: nextEntry.user_id,
+          privacy: resolvedReactionPrivacy,
+          acceptedFriendIds: socialAudience.acceptedFriendIds,
+          friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
+        })
+      : false;
+    const nextReactionCounts: Record<string, number> = {};
+    const nextMyReactions: string[] = [];
+    const reactionUserIds: Record<string, string[]> = {};
+
+    const { data: reactionRows } = await supabase
+      .from("entry_reactions")
+      .select("user_id, emoji")
+      .eq("entry_id", entryId);
+
+    const reactorIds = new Set<string>();
+    (reactionRows ?? []).forEach((row) => {
+      nextReactionCounts[row.emoji] = (nextReactionCounts[row.emoji] ?? 0) + 1;
+      reactorIds.add(row.user_id);
+      if (user?.id === row.user_id && !nextMyReactions.includes(row.emoji)) {
+        nextMyReactions.push(row.emoji);
+      }
+      const list = reactionUserIds[row.emoji] ?? [];
+      if (!list.includes(row.user_id)) {
+        list.push(row.user_id);
+      }
+      reactionUserIds[row.emoji] = list;
+    });
+
+    const missingReactorIds = Array.from(reactorIds).filter((id) => !profileMap.has(id));
+    if (missingReactorIds.length > 0) {
+      const { data: reactorProfiles } = await supabase
+        .from("public_profiles")
+        .select("id, display_name, email")
+        .in("id", missingReactorIds);
+
+      (reactorProfiles ?? []).forEach((row) => {
+        const typedRow = row as ProfileRow;
+        profileMap.set(typedRow.id, typedRow);
+      });
+    }
+
+    const nextReactionUsers: Record<string, string[]> = {};
+    Object.entries(reactionUserIds).forEach(([emoji, ids]) => {
+      nextReactionUsers[emoji] = ids.map((id) => getPublicProfileName(profileMap.get(id)));
+    });
+
     setAuthorName(
       getPublicProfileName(authorProfile)
     );
@@ -874,6 +954,14 @@ export default function EntryDetailScreen() {
         return profile ? formatProfileName(profile) : "Unknown";
       })
     );
+    setViewerReactionName(
+      viewerProfile ? getPublicProfileName(viewerProfile) : user?.email ?? null
+    );
+    setCanReact(canEntryReact);
+    setMyReactions(canEntryReact ? nextMyReactions : []);
+    setReactionCounts(canEntryReact ? nextReactionCounts : {});
+    setReactionUsers(canEntryReact ? nextReactionUsers : {});
+    setReactionPickerOpen(false);
     setEntry({ ...nextEntry, primary_grapes: primaryGrapes });
     setSelectedPrimaryGrapes(primaryGrapes.map((grape) => ({ ...grape })));
     setSelectedTastedWithIds(nextEntry.tasted_with_user_ids ?? []);
@@ -942,6 +1030,81 @@ export default function EntryDetailScreen() {
   useEffect(() => {
     void loadEntry();
   }, [loadEntry]);
+
+  const toggleReaction = useCallback(
+    async (emoji: string) => {
+      if (!entryId || !user?.id) {
+        return;
+      }
+
+      const hasMine = myReactions.includes(emoji);
+      const viewerName = viewerReactionName ?? "You";
+
+      if (hasMine) {
+        const { error } = await supabase
+          .from("entry_reactions")
+          .delete()
+          .eq("entry_id", entryId)
+          .eq("user_id", user.id)
+          .eq("emoji", emoji);
+
+        if (error) {
+          setErrorMessage(error.message);
+          return;
+        }
+
+        setReactionCounts((current) => {
+          const next = { ...current };
+          const nextCount = Math.max(0, (next[emoji] ?? 1) - 1);
+          if (nextCount === 0) {
+            delete next[emoji];
+          } else {
+            next[emoji] = nextCount;
+          }
+          return next;
+        });
+        setReactionUsers((current) => {
+          const next = { ...current };
+          const filtered = (next[emoji] ?? []).filter((name) => name !== viewerName);
+          if (filtered.length > 0) {
+            next[emoji] = filtered;
+          } else {
+            delete next[emoji];
+          }
+          return next;
+        });
+        setMyReactions((current) => current.filter((value) => value !== emoji));
+      } else {
+        const { error } = await supabase.from("entry_reactions").insert({
+          entry_id: entryId,
+          user_id: user.id,
+          emoji,
+        });
+
+        if (error) {
+          setErrorMessage(error.message);
+          return;
+        }
+
+        setReactionCounts((current) => ({
+          ...current,
+          [emoji]: (current[emoji] ?? 0) + 1,
+        }));
+        setReactionUsers((current) => {
+          const next = { ...current };
+          const existing = next[emoji] ?? [];
+          next[emoji] = existing.includes(viewerName)
+            ? existing
+            : [...existing, viewerName];
+          return next;
+        });
+        setMyReactions((current) => [...current, emoji]);
+      }
+
+      setReactionPickerOpen(false);
+    },
+    [entryId, myReactions, user?.id, viewerReactionName]
+  );
 
   useEffect(() => {
     const maxIndex = Math.max(0, photos.length - 1);
@@ -3526,6 +3689,67 @@ export default function EntryDetailScreen() {
                 ) : null}
               </View>
 
+              <View style={styles.entryReactionSection}>
+                <View style={styles.entryReactionRight}>
+                  <ReactionSummaryPills
+                    entryId={entry.id}
+                    reactionCounts={reactionCounts}
+                    reactionUsers={reactionUsers}
+                  />
+                  <Pressable
+                    onPress={() => setReactionPickerOpen((current) => !current)}
+                    style={[
+                      styles.reactionAddButton,
+                      canReact ? null : styles.reactionAddButtonDisabled,
+                    ]}
+                  >
+                    <View style={styles.plusIcon}>
+                      <View
+                        style={[
+                          styles.plusLineHorizontal,
+                          canReact ? null : styles.plusLineDisabled,
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.plusLineVertical,
+                          canReact ? null : styles.plusLineDisabled,
+                        ]}
+                      />
+                    </View>
+                  </Pressable>
+                </View>
+
+                {reactionPickerOpen ? (
+                  <Pressable style={styles.reactionPickerCard}>
+                    <View style={styles.reactionPickerRow}>
+                      {REACTION_EMOJIS.map((emoji) => {
+                        const selected = myReactions.includes(emoji);
+                        return (
+                          <Pressable
+                            key={`${entry.id}-${emoji}`}
+                            disabled={!canReact}
+                            onPress={() => void toggleReaction(emoji)}
+                            style={[
+                              styles.reactionEmojiBtn,
+                              selected ? styles.reactionEmojiBtnActive : null,
+                              !canReact ? styles.reactionEmojiBtnDisabled : null,
+                            ]}
+                          >
+                            <AppText style={styles.reactionEmojiText}>{emoji}</AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    {!canReact ? (
+                      <AppText style={styles.reactionPrivateText}>
+                        Reactions are not available for this post.
+                      </AppText>
+                    ) : null}
+                  </Pressable>
+                ) : null}
+              </View>
+
               {advancedNoteRows.length > 0 ? (
                 <View style={styles.advancedNotesBlock}>
                   <Pressable
@@ -4600,6 +4824,91 @@ const styles = StyleSheet.create({
     borderColor: "rgba(34,197,94,0.4)",
     backgroundColor: "rgba(34,197,94,0.1)",
     color: "#86efac",
+  },
+  entryReactionSection: {
+    gap: 8,
+  },
+  entryReactionRight: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  reactionAddButton: {
+    width: 27,
+    height: 27,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  reactionAddButtonDisabled: {
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  plusIcon: {
+    width: 12,
+    height: 12,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plusLineHorizontal: {
+    position: "absolute",
+    width: 12,
+    height: 1.6,
+    borderRadius: 999,
+    backgroundColor: "#e4e4e7",
+  },
+  plusLineVertical: {
+    position: "absolute",
+    width: 1.6,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: "#e4e4e7",
+  },
+  plusLineDisabled: {
+    backgroundColor: "#71717a",
+  },
+  reactionPickerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.28)",
+    padding: 9,
+    gap: 8,
+  },
+  reactionPickerRow: {
+    flexDirection: "row",
+    gap: 7,
+    flexWrap: "wrap",
+  },
+  reactionEmojiBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reactionEmojiBtnActive: {
+    borderColor: "rgba(252,211,77,0.5)",
+    backgroundColor: "rgba(251,191,36,0.14)",
+  },
+  reactionEmojiBtnDisabled: {
+    opacity: 0.5,
+  },
+  reactionEmojiText: {
+    fontSize: 18,
+  },
+  reactionPrivateText: {
+    color: "#71717a",
+    fontSize: 11,
   },
   locationLinkText: {
     color: "#fde68a",

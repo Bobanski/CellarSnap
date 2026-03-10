@@ -4,10 +4,10 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   type KeyboardEvent,
   View,
 } from "react-native";
-import { AppText } from "@/src/components/AppText";
 
 type KeyboardVisibility = {
   visible: boolean;
@@ -68,7 +68,7 @@ export function KeyboardDoneAccessory() {
         ]}
       >
         <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
-          <AppText style={styles.doneText}>Done</AppText>
+          <Text style={styles.doneText}>Done</Text>
         </Pressable>
       </View>
     </View>
@@ -86,11 +86,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "flex-end",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.14)",
-    backgroundColor: "#f2f2f7",
+    backgroundColor: "transparent",
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
   doneText: {
     color: "#007aff",

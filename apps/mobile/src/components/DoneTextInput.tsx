@@ -5,11 +5,11 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   TextInput as ReactNativeTextInput,
   View,
   type TextInputProps,
 } from "react-native";
-import { AppText } from "@/src/components/AppText";
 import { APP_SANS_FONT_FAMILY } from "@/src/lib/typography";
 
 export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
@@ -64,7 +64,7 @@ export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
           <InputAccessoryView nativeID={autoAccessoryId}>
             <View style={styles.accessory}>
               <Pressable onPress={Keyboard.dismiss} hitSlop={8}>
-                <AppText style={styles.doneText}>Done</AppText>
+                <Text style={styles.doneText}>Done</Text>
               </Pressable>
             </View>
           </InputAccessoryView>
@@ -79,15 +79,14 @@ DoneTextInput.displayName = "DoneTextInput";
 const styles = StyleSheet.create({
   accessory: {
     alignItems: "flex-end",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.12)",
-    backgroundColor: "#18181b",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: "transparent",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
   doneText: {
-    color: "#fcd34d",
-    fontSize: 15,
+    color: "#007aff",
+    fontSize: 17,
     fontWeight: "700",
   },
 });

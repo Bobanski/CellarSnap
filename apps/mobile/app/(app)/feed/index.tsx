@@ -18,6 +18,7 @@ import {
 import { router } from "expo-router";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import type { FeedComment } from "@/src/lib/feed/comments";
 import {
   fetchFeedPage,
@@ -285,15 +286,6 @@ function FeedCard({
     timestamp: number;
     moved: boolean;
   } | null>(null);
-  const reactions = useMemo(
-    () =>
-      Object.entries(item.reaction_counts)
-        .filter(([, count]) => count > 0)
-        .sort((left, right) => right[1] - left[1]),
-    [item.reaction_counts]
-  );
-  const visibleReactions = reactions.slice(0, 3);
-  const hiddenReactionCount = Math.max(0, reactions.length - visibleReactions.length);
   const hasMultiplePhotos = galleryPhotos.length > 1;
   const showCommentsControl = item.can_comment;
   const clampedActivePhotoIndex = Math.max(
@@ -744,20 +736,11 @@ function FeedCard({
         </View>
 
         <View style={styles.reactionRight}>
-          <View style={styles.reactionPills}>
-            {visibleReactions.map(([emoji, count]) => (
-              <View key={`${item.id}-${emoji}`} style={styles.reactionPill}>
-                <AppText style={styles.reactionPillText}>
-                  {emoji} {count}
-                </AppText>
-              </View>
-            ))}
-            {hiddenReactionCount > 0 ? (
-              <View style={styles.reactionPill}>
-                <AppText style={styles.reactionPillText}>+{hiddenReactionCount}</AppText>
-              </View>
-            ) : null}
-          </View>
+          <ReactionSummaryPills
+            entryId={item.id}
+            reactionCounts={item.reaction_counts}
+            reactionUsers={item.reaction_users}
+          />
           <Pressable
             onPress={(event) => {
               event.stopPropagation();
@@ -2229,27 +2212,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexShrink: 1,
-  },
-  reactionPills: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    flexShrink: 1,
-  },
-  reactionPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.25)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  reactionPillText: {
-    color: "#d4d4d8",
-    fontSize: 11,
-    fontWeight: "600",
   },
   reactionAddButton: {
     width: 27,

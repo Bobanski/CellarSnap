@@ -1,7 +1,7 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -13,7 +13,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   PRIVACY_LEVEL_LABELS,
   QPR_LEVEL_LABELS,
@@ -22,6 +22,7 @@ import {
   type QprLevel,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import { AppText } from "@/src/components/AppText";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
@@ -39,6 +40,7 @@ type HomeEntryRow = {
   consumed_at: string;
   created_at: string;
   label_image_path: string | null;
+  entry_privacy: PrivacyLevel;
 };
 
 type ProfileWithPrivacyRow = {
@@ -65,6 +67,17 @@ type FriendProfileRow = {
   email: string | null;
 };
 
+type HomeReactionRow = {
+  entry_id: string;
+  user_id: string;
+  emoji: string;
+};
+
+type HomeInteractionSettingsRow = {
+  id: string;
+  reaction_privacy?: string | null;
+};
+
 type RecentEntry = {
   id: string;
   wine_name: string | null;
@@ -74,12 +87,44 @@ type RecentEntry = {
   qpr_level: QprLevel | null;
   consumed_at: string;
   label_image_url: string | null;
+  can_react: boolean;
+  my_reactions: string[];
+  reaction_counts: Record<string, number>;
+  reaction_users: Record<string, string[]>;
 };
 
 type CircleEntry = RecentEntry & {
   user_id: string;
   author_name: string;
 };
+
+const REACTION_EMOJIS = ["\u{1F377}", "\u{1F525}", "\u2764\uFE0F", "\u{1F440}", "\u{1F91D}"] as const;
+
+function canViewerAccessByHomePrivacy({
+  viewerUserId,
+  ownerUserId,
+  privacy,
+  acceptedFriendIds,
+}: {
+  viewerUserId: string;
+  ownerUserId: string;
+  privacy: PrivacyLevel;
+  acceptedFriendIds: Set<string>;
+}) {
+  if (viewerUserId === ownerUserId) {
+    return true;
+  }
+
+  const normalized = normalizePrivacyLevel(privacy, "public");
+  if (normalized === "public") {
+    return true;
+  }
+  if (normalized === "private") {
+    return false;
+  }
+
+  return acceptedFriendIds.has(ownerUserId);
+}
 
 const PRIVACY_OPTIONS: Array<{
   value: PrivacyLevel;
@@ -177,18 +222,21 @@ function HomeEntryCard({
   ownerLabel,
   ownerOnPress,
   onPress,
+  onToggleReaction,
   variant,
 }: {
   entry: RecentEntry | CircleEntry;
   ownerLabel: string;
   ownerOnPress?: () => void;
   onPress: () => void;
+  onToggleReaction: (emoji: string) => void;
   variant: "own" | "circle";
 }) {
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
   const producer = hideProducer ? null : entry.producer?.trim() || null;
   const vintage = entry.vintage?.trim() || null;
   const displayRating = getDisplayRating(entry.rating);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const subtitle =
     variant === "own"
       ? producer || vintage
@@ -247,6 +295,79 @@ function HomeEntryCard({
               </AppText>
             ) : null}
           </View>
+
+          <View style={styles.homeReactionSection}>
+            <View style={styles.homeReactionRight}>
+              <ReactionSummaryPills
+                entryId={entry.id}
+                reactionCounts={entry.reaction_counts}
+                reactionUsers={entry.reaction_users}
+              />
+              <Pressable
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setReactionPickerOpen((current) => !current);
+                }}
+                style={[
+                  styles.reactionAddButton,
+                  entry.can_react ? null : styles.reactionAddButtonDisabled,
+                ]}
+              >
+                <View style={styles.plusIcon}>
+                  <View
+                    style={[
+                      styles.plusLineHorizontal,
+                      entry.can_react ? null : styles.plusLineDisabled,
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.plusLineVertical,
+                      entry.can_react ? null : styles.plusLineDisabled,
+                    ]}
+                  />
+                </View>
+              </Pressable>
+            </View>
+
+            {reactionPickerOpen ? (
+              <Pressable
+                style={styles.reactionPickerCard}
+                onPress={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <View style={styles.reactionPickerRow}>
+                  {REACTION_EMOJIS.map((emoji) => {
+                    const selected = entry.my_reactions.includes(emoji);
+                    return (
+                      <Pressable
+                        key={`${entry.id}-${emoji}`}
+                        disabled={!entry.can_react}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          onToggleReaction(emoji);
+                          setReactionPickerOpen(false);
+                        }}
+                        style={[
+                          styles.reactionEmojiBtn,
+                          selected ? styles.reactionEmojiBtnActive : null,
+                          !entry.can_react ? styles.reactionEmojiBtnDisabled : null,
+                        ]}
+                      >
+                        <AppText style={styles.reactionEmojiText}>{emoji}</AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {!entry.can_react ? (
+                  <AppText style={styles.reactionPrivateText}>
+                    Reactions are not available for this post.
+                  </AppText>
+                ) : null}
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       </View>
     </Pressable>
@@ -255,7 +376,9 @@ function HomeEntryCard({
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const hasLoadedHomeRef = useRef(false);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
+  const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
   const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
   const [privacyConfirmedAt, setPrivacyConfirmedAt] = useState<string | null>(null);
   const [privacyOnboardingError, setPrivacyOnboardingError] = useState<string | null>(null);
@@ -334,7 +457,7 @@ export default function HomeScreen() {
         const { data: ownRows, error: ownRowsError } = await supabase
           .from("wine_entries")
           .select(
-            "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, label_image_path"
+            "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, label_image_path, entry_privacy"
           )
           .eq("user_id", user.id)
           .order("consumed_at", { ascending: false })
@@ -371,7 +494,7 @@ export default function HomeScreen() {
             supabase
               .from("wine_entries")
               .select(
-                "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, label_image_path"
+                "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, label_image_path, entry_privacy"
               )
               .in("user_id", friendIds)
               .in("entry_privacy", ["public", "friends_of_friends", "friends"])
@@ -396,17 +519,87 @@ export default function HomeScreen() {
         }
 
         const allEntries = [...ownEntries, ...friendEntries];
+        const allEntryIds = allEntries.map((entry) => entry.id);
         const labelByEntryId = await resolveEntryLabelPhotos(allEntries, {
           supabaseClient: supabase,
         });
 
-        const friendUserIds = Array.from(new Set(friendEntries.map((entry) => entry.user_id)));
+        const reactionCountsByEntryId = new Map<string, Record<string, number>>();
+        const myReactionsByEntryId = new Map<string, string[]>();
+        const reactionUserIdsByEntryId = new Map<string, Record<string, string[]>>();
+        const reactorUserIds = new Set<string>();
+        if (allEntryIds.length > 0) {
+          const { data: reactionRows, error: reactionsError } = await supabase
+            .from("entry_reactions")
+            .select("entry_id, user_id, emoji")
+            .in("entry_id", allEntryIds);
+
+          if (reactionsError) {
+            throw reactionsError;
+          }
+
+          (reactionRows ?? []).forEach((row) => {
+            const typedRow = row as HomeReactionRow;
+            const counts = reactionCountsByEntryId.get(typedRow.entry_id) ?? {};
+            counts[typedRow.emoji] = (counts[typedRow.emoji] ?? 0) + 1;
+            reactionCountsByEntryId.set(typedRow.entry_id, counts);
+
+            const emojiUsers = reactionUserIdsByEntryId.get(typedRow.entry_id) ?? {};
+            const list = emojiUsers[typedRow.emoji] ?? [];
+            if (!list.includes(typedRow.user_id)) {
+              list.push(typedRow.user_id);
+            }
+            emojiUsers[typedRow.emoji] = list;
+            reactionUserIdsByEntryId.set(typedRow.entry_id, emojiUsers);
+            reactorUserIds.add(typedRow.user_id);
+
+            if (typedRow.user_id === user.id) {
+              const mine = myReactionsByEntryId.get(typedRow.entry_id) ?? [];
+              if (!mine.includes(typedRow.emoji)) {
+                mine.push(typedRow.emoji);
+              }
+              myReactionsByEntryId.set(typedRow.entry_id, mine);
+            }
+          });
+        }
+
+        const interactionSettingsByEntryId = new Map<string, HomeInteractionSettingsRow>();
+        if (allEntryIds.length > 0) {
+          const selectAttempts = ["id, reaction_privacy", "id"];
+
+          for (let index = 0; index < selectAttempts.length; index += 1) {
+            const { data, error } = await supabase
+              .from("wine_entries")
+              .select(selectAttempts[index])
+              .in("id", allEntryIds);
+
+            if (!error) {
+              (data ?? []).forEach((row) => {
+                const typedRow = row as unknown as HomeInteractionSettingsRow;
+                interactionSettingsByEntryId.set(typedRow.id, typedRow);
+              });
+              break;
+            }
+
+            if (index === 0 && error.message.includes("reaction_privacy")) {
+              continue;
+            }
+          }
+        }
+
+        const profileLookupIds = Array.from(
+          new Set([
+            ...friendEntries.map((entry) => entry.user_id),
+            ...Array.from(reactorUserIds),
+          ])
+        );
+        const acceptedFriendIds = new Set(friendIds);
         let friendProfiles: FriendProfileRow[] = [];
-        if (friendUserIds.length > 0) {
+        if (profileLookupIds.length > 0) {
           const { data, error } = await supabase
             .from("public_profiles")
             .select("id, display_name, email")
-            .in("id", friendUserIds);
+            .in("id", profileLookupIds);
           if (!error && data) {
             friendProfiles = data as FriendProfileRow[];
           }
@@ -417,6 +610,16 @@ export default function HomeScreen() {
         );
 
         const recent = ownEntries.map((entry) => {
+          const reactionPrivacy = normalizePrivacyLevel(
+            interactionSettingsByEntryId.get(entry.id)?.reaction_privacy,
+            entry.entry_privacy
+          );
+          const canReact = canViewerAccessByHomePrivacy({
+            viewerUserId: user.id,
+            ownerUserId: entry.user_id,
+            privacy: reactionPrivacy,
+            acceptedFriendIds,
+          });
           return {
             id: entry.id,
             wine_name: entry.wine_name,
@@ -426,10 +629,30 @@ export default function HomeScreen() {
             qpr_level: entry.qpr_level,
             consumed_at: entry.consumed_at,
             label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
+            can_react: canReact,
+            my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
+            reaction_counts: canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
+            reaction_users: canReact
+              ? Object.fromEntries(
+              Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
+                ([emoji, ids]) => [emoji, ids.map((id) => profileNameById.get(id) ?? "Unknown")]
+              )
+              )
+              : {},
           };
         });
 
         const circle = friendEntries.map((entry) => {
+          const reactionPrivacy = normalizePrivacyLevel(
+            interactionSettingsByEntryId.get(entry.id)?.reaction_privacy,
+            entry.entry_privacy
+          );
+          const canReact = canViewerAccessByHomePrivacy({
+            viewerUserId: user.id,
+            ownerUserId: entry.user_id,
+            privacy: reactionPrivacy,
+            acceptedFriendIds,
+          });
           return {
             id: entry.id,
             user_id: entry.user_id,
@@ -441,6 +664,16 @@ export default function HomeScreen() {
             consumed_at: entry.consumed_at,
             author_name: profileNameById.get(entry.user_id) ?? "Unknown",
             label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
+            can_react: canReact,
+            my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
+            reaction_counts: canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
+            reaction_users: canReact
+              ? Object.fromEntries(
+              Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
+                ([emoji, ids]) => [emoji, ids.map((id) => profileNameById.get(id) ?? "Unknown")]
+              )
+              )
+              : {},
           };
         });
 
@@ -452,6 +685,7 @@ export default function HomeScreen() {
             : "";
 
         setWelcomeName(firstName || displayName || null);
+        setViewerReactionName(displayName || firstName || null);
         setDefaultEntryPrivacy(
           normalizePrivacyLevel(profile?.default_entry_privacy, "public")
         );
@@ -476,9 +710,110 @@ export default function HomeScreen() {
     [user]
   );
 
-  useEffect(() => {
-    void loadHome();
-  }, [loadHome]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasLoadedHomeRef.current) {
+        hasLoadedHomeRef.current = true;
+        void loadHome();
+        return;
+      }
+
+      void loadHome(true);
+    }, [loadHome])
+  );
+
+  const toggleHomeReaction = useCallback(
+    async (entryId: string, emoji: string) => {
+      if (!user?.id) {
+        return;
+      }
+
+      const target =
+        recentEntries.find((entry) => entry.id === entryId) ??
+        circleEntries.find((entry) => entry.id === entryId);
+      if (!target) {
+        return;
+      }
+
+      const hasMine = target.my_reactions.includes(emoji);
+      const viewerName = viewerReactionName ?? "You";
+      const applyToEntry = <T extends RecentEntry | CircleEntry>(entry: T): T => {
+        if (entry.id !== entryId) {
+          return entry;
+        }
+
+        if (hasMine) {
+          const nextCounts = { ...entry.reaction_counts };
+          const nextCount = Math.max(0, (nextCounts[emoji] ?? 1) - 1);
+          if (nextCount === 0) {
+            delete nextCounts[emoji];
+          } else {
+            nextCounts[emoji] = nextCount;
+          }
+
+          const nextUsers = { ...entry.reaction_users };
+          const filteredUsers = (nextUsers[emoji] ?? []).filter((name) => name !== viewerName);
+          if (filteredUsers.length > 0) {
+            nextUsers[emoji] = filteredUsers;
+          } else {
+            delete nextUsers[emoji];
+          }
+
+          return {
+            ...entry,
+            reaction_counts: nextCounts,
+            reaction_users: nextUsers,
+            my_reactions: entry.my_reactions.filter((value) => value !== emoji),
+          } as T;
+        }
+
+        const nextUsers = { ...entry.reaction_users };
+        const currentUsers = nextUsers[emoji] ?? [];
+        nextUsers[emoji] = currentUsers.includes(viewerName)
+          ? currentUsers
+          : [...currentUsers, viewerName];
+
+        return {
+          ...entry,
+          reaction_counts: {
+            ...entry.reaction_counts,
+            [emoji]: (entry.reaction_counts[emoji] ?? 0) + 1,
+          },
+          reaction_users: nextUsers,
+          my_reactions: [...entry.my_reactions, emoji],
+        } as T;
+      };
+
+      if (hasMine) {
+        const { error } = await supabase
+          .from("entry_reactions")
+          .delete()
+          .eq("entry_id", entryId)
+          .eq("user_id", user.id)
+          .eq("emoji", emoji);
+
+        if (error) {
+          setErrorMessage(error.message);
+          return;
+        }
+      } else {
+        const { error } = await supabase.from("entry_reactions").insert({
+          entry_id: entryId,
+          user_id: user.id,
+          emoji,
+        });
+
+        if (error) {
+          setErrorMessage(error.message);
+          return;
+        }
+      }
+
+      setRecentEntries((current) => current.map(applyToEntry));
+      setCircleEntries((current) => current.map(applyToEntry));
+    },
+    [circleEntries, recentEntries, user?.id, viewerReactionName]
+  );
 
   const confirmDefaultPrivacy = async () => {
     if (!user) {
@@ -682,6 +1017,7 @@ export default function HomeScreen() {
                     entry={entry}
                     ownerLabel="You"
                     onPress={() => router.push(`/(app)/entries/${entry.id}`)}
+                    onToggleReaction={(emoji) => void toggleHomeReaction(entry.id, emoji)}
                     variant="own"
                   />
                 ))
@@ -747,6 +1083,7 @@ export default function HomeScreen() {
                     ownerLabel={entry.author_name}
                     ownerOnPress={() => router.push("/(app)/feed")}
                     onPress={() => router.push(`/(app)/entries/${entry.id}`)}
+                    onToggleReaction={(emoji) => void toggleHomeReaction(entry.id, emoji)}
                     variant="circle"
                   />
                 ))}
@@ -1040,6 +1377,19 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
   },
+  homeReactionSection: {
+    marginTop: 4,
+    gap: 8,
+  },
+  homeReactionRight: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    justifyContent: "flex-end",
+    flexShrink: 1,
+  },
   ratingText: {
     color: "#fcd34d",
     fontSize: 13,
@@ -1079,6 +1429,80 @@ const styles = StyleSheet.create({
     borderColor: "rgba(34,197,94,0.4)",
     backgroundColor: "rgba(34,197,94,0.1)",
     color: "#86efac",
+  },
+  reactionAddButton: {
+    width: 27,
+    height: 27,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  reactionAddButtonDisabled: {
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  plusIcon: {
+    width: 12,
+    height: 12,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plusLineHorizontal: {
+    position: "absolute",
+    width: 12,
+    height: 1.6,
+    borderRadius: 999,
+    backgroundColor: "#e4e4e7",
+  },
+  plusLineVertical: {
+    position: "absolute",
+    width: 1.6,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: "#e4e4e7",
+  },
+  plusLineDisabled: {
+    backgroundColor: "#71717a",
+  },
+  reactionPickerCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.28)",
+    padding: 9,
+    gap: 8,
+  },
+  reactionPickerRow: {
+    flexDirection: "row",
+    gap: 7,
+    flexWrap: "wrap",
+  },
+  reactionEmojiBtn: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reactionEmojiBtnActive: {
+    borderColor: "rgba(252,211,77,0.5)",
+    backgroundColor: "rgba(251,191,36,0.14)",
+  },
+  reactionEmojiBtnDisabled: {
+    opacity: 0.5,
+  },
+  reactionEmojiText: {
+    fontSize: 18,
+  },
+  reactionPrivateText: {
+    color: "#71717a",
+    fontSize: 11,
   },
   inlineLink: {
     color: "#a1a1aa",

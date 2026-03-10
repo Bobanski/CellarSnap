@@ -94,6 +94,7 @@ export type MobileFeedEntry = FeedEntryRow & {
   comments_privacy: EntryPrivacy;
   my_reactions: string[];
   reaction_counts: Record<string, number>;
+  reaction_users: Record<string, string[]>;
   comment_count: number;
 };
 
@@ -109,7 +110,7 @@ type FriendRequestPair = {
   recipient_id: string;
 };
 
-type SocialAudience = {
+export type SocialAudience = {
   socialAuthorIds: string[];
   acceptedFriendIds: Set<string>;
   friendsOfFriendsIds: Set<string>;
@@ -152,7 +153,7 @@ function normalizePrivacyValue(
   return fallback;
 }
 
-function canViewerAccessByPrivacy({
+export function canViewerAccessByPrivacy({
   viewerUserId,
   ownerUserId,
   privacy,
@@ -220,7 +221,7 @@ function dedupeEntries(rows: FeedEntryRow[]) {
   );
 }
 
-async function loadSocialAudience(
+export async function loadSocialAudience(
   viewerUserId: string,
   supabaseClient: MobileSupabaseClient
 ): Promise<SocialAudience> {
@@ -545,6 +546,8 @@ export async function fetchFeedPage({
 
   const reactionCountsMap = new Map<string, Record<string, number>>();
   const myReactionsMap = new Map<string, string[]>();
+  const reactionUserIdsMap = new Map<string, Record<string, string[]>>();
+  const allReactorUserIds = new Set<string>();
   if (entryIds.length > 0) {
     const { data: reactions } = await supabaseClient
       .from("entry_reactions")
@@ -557,6 +560,15 @@ export async function fetchFeedPage({
       current[row.emoji] = (current[row.emoji] ?? 0) + 1;
       reactionCountsMap.set(row.entry_id, current);
 
+      const emojiUsers = reactionUserIdsMap.get(row.entry_id) ?? {};
+      const list = emojiUsers[row.emoji] ?? [];
+      if (!list.includes(row.user_id)) {
+        list.push(row.user_id);
+      }
+      emojiUsers[row.emoji] = list;
+      reactionUserIdsMap.set(row.entry_id, emojiUsers);
+      allReactorUserIds.add(row.user_id);
+
       if (row.user_id === viewerUserId) {
         const mine = myReactionsMap.get(row.entry_id) ?? [];
         if (!mine.includes(row.emoji)) {
@@ -564,6 +576,19 @@ export async function fetchFeedPage({
           myReactionsMap.set(row.entry_id, mine);
         }
       }
+    });
+  }
+
+  const missingReactorIds = Array.from(allReactorUserIds).filter((id) => !profileMap.has(id));
+  if (missingReactorIds.length > 0) {
+    const { data: reactorProfiles } = await supabaseClient
+      .from("public_profiles")
+      .select("id, display_name, email, avatar_path")
+      .in("id", missingReactorIds);
+
+    (reactorProfiles ?? []).forEach((row) => {
+      const typedRow = row as FeedProfileRow;
+      profileMap.set(typedRow.id, typedRow);
     });
   }
 
@@ -712,6 +737,13 @@ export async function fetchFeedPage({
       acceptedFriendIds: socialAudience.acceptedFriendIds,
       friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
     });
+    const rawReactionUsers = canSeeReactions
+      ? reactionUserIdsMap.get(entry.id) ?? {}
+      : {};
+    const reactionUsers: Record<string, string[]> = {};
+    Object.entries(rawReactionUsers).forEach(([emoji, ids]) => {
+      reactionUsers[emoji] = ids.map((id) => getPublicProfileName(profileMap.get(id)));
+    });
     const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id) => ({
       id,
       display_name: getPublicProfileName(profileMap.get(id)),
@@ -730,6 +762,7 @@ export async function fetchFeedPage({
       comments_privacy: commentsPrivacy,
       my_reactions: canSeeReactions ? myReactionsMap.get(entry.id) ?? [] : [],
       reaction_counts: canSeeReactions ? reactionCountsMap.get(entry.id) ?? {} : {},
+      reaction_users: reactionUsers,
       comment_count: canSeeComments ? commentCountsMap.get(entry.id) ?? 0 : 0,
     };
   });
