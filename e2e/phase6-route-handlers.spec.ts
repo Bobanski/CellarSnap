@@ -5,6 +5,8 @@ import { createUserEntriesGetHandler } from "../src/app/api/users/[id]/entries/r
 import { createTaggedEntriesGetHandler } from "../src/app/api/users/[id]/tagged/route";
 import { createEntryPutHandler } from "../src/app/api/entries/[id]/route";
 import { createAccountDeleteHandler } from "../src/app/api/account/route";
+import { createPasswordSignInHandler } from "../src/app/api/auth/password-sign-in/route";
+import { createRecoveryStartHandler } from "../src/app/api/auth/recovery-start/route";
 
 function makeAuthenticatedUser(id: string) {
   return {
@@ -195,7 +197,151 @@ function makeEntryPutSupabase({
   };
 }
 
+function makePasswordSignInClient() {
+  let lastCredential:
+    | { email: string; password: string }
+    | { phone: string; password: string }
+    | null = null;
+
+  return {
+    client: {
+      rpc(fn: string, args?: Record<string, unknown>) {
+        if (fn === "get_phone_for_username") {
+          return Promise.resolve({
+            data: args?.username === "user-name" ? "+15551234567" : null,
+            error: null,
+          });
+        }
+        if (fn === "get_email_for_username") {
+          return Promise.resolve({
+            data: args?.username === "user-name" ? "user@example.com" : null,
+            error: null,
+          });
+        }
+        throw new Error(`Unexpected rpc ${fn}`);
+      },
+      auth: {
+        signInWithPassword(credentials: { email?: string; phone?: string; password: string }) {
+          lastCredential = "phone" in credentials && credentials.phone
+            ? { phone: credentials.phone, password: credentials.password }
+            : { email: credentials.email!, password: credentials.password };
+
+          return Promise.resolve({
+            data: {
+              session: {
+                access_token: "access-token",
+                refresh_token: "refresh-token",
+              },
+            },
+            error: null,
+          });
+        },
+      },
+    },
+    getLastCredential() {
+      return lastCredential;
+    },
+  };
+}
+
+function makeRecoveryStartClient() {
+  let lastResetEmail: string | null = null;
+  let lastOtpPhone: string | null = null;
+
+  return {
+    client: {
+      rpc(fn: string, args?: Record<string, unknown>) {
+        if (fn === "get_phone_for_username") {
+          return Promise.resolve({ data: null, error: null });
+        }
+        if (fn === "get_email_for_username") {
+          return Promise.resolve({
+            data: args?.username === "user-name" ? "user@example.com" : null,
+            error: null,
+          });
+        }
+        throw new Error(`Unexpected rpc ${fn}`);
+      },
+      auth: {
+        signInWithOtp({ phone }: { phone: string }) {
+          lastOtpPhone = phone;
+          return Promise.resolve({ error: null });
+        },
+        resetPasswordForEmail(email: string) {
+          lastResetEmail = email;
+          return Promise.resolve({ error: null });
+        },
+      },
+    },
+    getLastResetEmail() {
+      return lastResetEmail;
+    },
+    getLastOtpPhone() {
+      return lastOtpPhone;
+    },
+  };
+}
+
 test.describe("Phase 6 route handler regressions", () => {
+  test("password sign-in route resolves username server-side and returns a session", async () => {
+    const authClient = makePasswordSignInClient();
+    const handler = createPasswordSignInHandler({
+      createAuthClient: () => authClient.client as never,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/auth/password-sign-in", {
+        method: "POST",
+        body: JSON.stringify({
+          identifier: "user-name",
+          password: "hunter2",
+          authMode: "phone",
+        }),
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(authClient.getLastCredential()).toEqual({
+      phone: "+15551234567",
+      password: "hunter2",
+    });
+    await expect(response.json()).resolves.toEqual({
+      session: {
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+      },
+    });
+  });
+
+  test("recovery start route resolves username to email without returning the address", async () => {
+    const recoveryClient = makeRecoveryStartClient();
+    const handler = createRecoveryStartHandler({
+      createAuthClient: () => recoveryClient.client as never,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/auth/recovery-start", {
+        method: "POST",
+        body: JSON.stringify({
+          identifier: "user-name",
+          redirectTo: "cellarsnap://auth/callback",
+        }),
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(recoveryClient.getLastResetEmail()).toBe("user@example.com");
+    await expect(response.json()).resolves.toEqual({
+      channel: "email",
+    });
+  });
+
   test("account deletion route deletes the authenticated account", async () => {
     const handler = createAccountDeleteHandler({
       requireRequestAuth: async () => ({

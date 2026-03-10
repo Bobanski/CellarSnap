@@ -12,16 +12,15 @@ import {
 import { Link, router } from "expo-router";
 import {
   getAuthMode,
-  resolveSignInIdentifier,
   type AuthMode,
 } from "@cellarsnap/shared";
-import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
+import { startPasswordRecovery } from "@/src/lib/api/auth";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 
 function getRecoveryHelperText(authMode: AuthMode) {
   if (authMode === "phone") {
-    return "Enter your username, phone number, or email. We will send a recovery code to your phone (or email if no phone is available).";
+    return "Enter your username, phone number, or email. Phone numbers receive a recovery code by SMS. Usernames and emails receive a recovery email.";
   }
   return "Enter your username, phone number, or email. We will send a recovery code to your email.";
 }
@@ -48,58 +47,28 @@ export default function ForgotPasswordScreen() {
     setInfoMessage(null);
 
     try {
-      const resolved = await resolveSignInIdentifier({
-        client: supabase,
-        identifier: normalizedIdentifier,
-        mode: "auto",
-      });
-      const email = resolved.email?.trim().toLowerCase() ?? "";
-      const phone = resolved.phone?.trim() ?? "";
-
-      if (!phone && !email) {
-        setErrorMessage("No account matches that identifier.");
+      const result = await startPasswordRecovery(normalizedIdentifier);
+      if (!result.ok) {
+        setErrorMessage(result.errorMessage);
         return;
       }
 
-      if (authMode === "phone" && phone) {
-        const { error } = await supabase.auth.signInWithOtp({
-          phone,
-          options: { shouldCreateUser: false },
-        });
-        if (error) {
-          setErrorMessage(error.message);
-          return;
-        }
-
+      if (result.channel === "phone") {
         setInfoMessage("Verification code sent to your phone number.");
         router.push({
           pathname: "/(auth)/verify-phone",
-          params: { phone, mode: "recovery" },
+          params: { phone: result.phone, mode: "recovery" },
         });
         return;
       }
-
-      if (!email) {
-        setErrorMessage(
-          authMode === "phone"
-            ? "This account does not have a phone number for recovery."
-            : "No account matches that identifier."
-        );
-        return;
-      }
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: buildAuthRedirectUrl(),
-      });
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
       setInfoMessage("Recovery email sent. Use the 6-digit code from that email to reset your password.");
       router.push({
         pathname: "/(auth)/reset-password",
-        params: { email },
+        params: {
+          email: normalizedIdentifier.includes("@")
+            ? normalizedIdentifier.toLowerCase()
+            : undefined,
+        },
       });
     } catch {
       setErrorMessage("Unable to start recovery. Check your connection and try again.");
@@ -281,4 +250,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

@@ -12,10 +12,9 @@ import {
 import { Link, router } from "expo-router";
 import {
   getAuthMode,
-  resolveSignInIdentifier,
   type AuthMode,
 } from "@cellarsnap/shared";
-import { supabase } from "@/src/lib/supabase";
+import { signInWithIdentifier } from "@/src/lib/api/auth";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 
@@ -56,36 +55,13 @@ export default function SignInScreen() {
         return;
       }
 
-      const resolved = await resolveSignInIdentifier({
-        client: supabase,
+      const result = await signInWithIdentifier({
         identifier: normalizedIdentifier,
-        mode: "auto",
+        password,
+        authMode,
       });
-
-      const phone = resolved.phone?.trim() ?? "";
-      const email = resolved.email?.trim().toLowerCase() ?? "";
-      if (!phone && !email) {
-        setErrorMessage("No account matches that sign-in identifier.");
-        setInfoMessage(null);
-        return;
-      }
-
-      const credential =
-        authMode === "phone" && phone
-          ? { phone, password }
-          : email
-            ? { email, password }
-            : null;
-
-      if (!credential) {
-        setErrorMessage("No account matches that sign-in identifier.");
-        setInfoMessage(null);
-        return;
-      }
-
-      const { error } = await supabase.auth.signInWithPassword(credential);
-      if (error) {
-        setErrorMessage(error.message);
+      if (!result.ok) {
+        setErrorMessage(result.errorMessage);
         setInfoMessage(null);
         return;
       }
@@ -114,9 +90,6 @@ export default function SignInScreen() {
               <AppText style={styles.brandSubtitle}>
                 A private cellar journal with a social pour.
               </AppText>
-            </View>
-            <View style={styles.betaChip}>
-              <AppText style={styles.betaText}>BETA</AppText>
             </View>
           </View>
 
@@ -194,9 +167,13 @@ export default function SignInScreen() {
           </View>
 
           <View style={styles.legalRow}>
-            <AppText style={styles.legalLink}>Privacy</AppText>
+            <Link href="/privacy" style={styles.legalLink}>
+              Privacy
+            </Link>
             <AppText style={styles.legalSeparator}> · </AppText>
-            <AppText style={styles.legalLink}>Terms</AppText>
+            <Link href="/terms" style={styles.legalLink}>
+              Terms
+            </Link>
           </View>
         </View>
       </ScrollView>
@@ -269,20 +246,6 @@ const styles = StyleSheet.create({
     color: "#d4d4d8",
     fontSize: 14,
     lineHeight: 20,
-  },
-  betaChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  betaText: {
-    color: "#e4e4e7",
-    fontSize: 10,
-    letterSpacing: 1.3,
-    fontWeight: "700",
   },
   formField: {
     gap: 6,
@@ -400,4 +363,3 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
 });
-

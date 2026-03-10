@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 
 const LAST_UPDATED = "February 12, 2026";
+const SUPPORT_EMAIL = "cellarsnap@gmail.com";
 
 export default function TermsScreen() {
   return (
@@ -16,8 +17,8 @@ export default function TermsScreen() {
 
         <View style={styles.section}>
           <AppText style={styles.paragraph}>
-            CellarSnap is currently provided as a friends-and-family test product.
-            Features may change quickly, and service availability is not guaranteed.
+            CellarSnap is provided as a consumer wine journal and sharing app.
+            Features may change over time, and service availability is not guaranteed.
           </AppText>
           <AppText style={styles.paragraph}>
             You are responsible for the content you upload and share. Do not upload
@@ -30,12 +31,13 @@ export default function TermsScreen() {
           </AppText>
           <AppText style={styles.paragraph}>
             We may suspend accounts or remove content to protect users, data integrity,
-            or platform security during testing.
+            or platform security.
           </AppText>
           <AppText style={styles.paragraph}>
             By using CellarSnap, you agree to these terms and the accompanying privacy
             policy.
           </AppText>
+          <AppText style={styles.paragraph}>Support contact: {SUPPORT_EMAIL}</AppText>
         </View>
 
         <View style={styles.footerRow}>

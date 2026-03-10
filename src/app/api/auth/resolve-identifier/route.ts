@@ -2,24 +2,28 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
-import { normalizePhone } from "@/lib/validation/phone";
 import { isMissingDbFunctionError } from "@/lib/supabase/errors";
+import { resolveIdentifierForAuth } from "@/server/auth/identifierResolution";
 
 const schema = z.object({
   identifier: z.string().trim().min(1),
   mode: z.enum(["auto", "username", "phone", "email"]).optional(),
 });
 
-const emailSchema = z.string().email();
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 120;
 
-function asNullableString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+function isFunctionLookupError(error: unknown, functionName: string) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    isMissingDbFunctionError(
+      error as { message: string; code?: string | null },
+      functionName
+    )
+  );
 }
 
 export async function POST(request: Request) {
@@ -55,84 +59,22 @@ export async function POST(request: Request) {
 
   const identifier = parsed.data.identifier.trim();
   const mode = parsed.data.mode ?? "auto";
-  const parsedEmail = emailSchema.safeParse(identifier.toLowerCase());
-  const normalizedPhone = normalizePhone(identifier);
+  let resolution;
 
-  const resolveByPhone = mode === "phone" || (mode === "auto" && !!normalizedPhone);
-  const resolveByEmail =
-    mode === "email" || (mode === "auto" && parsedEmail.success && !normalizedPhone);
-
-  if (resolveByPhone) {
-    if (!normalizedPhone) {
-      return NextResponse.json({ error: "Phone number required." }, { status: 400 });
-    }
-
-    const { data, error } = await supabase.rpc("get_email_for_phone", {
-      phone: normalizedPhone,
+  try {
+    resolution = await resolveIdentifierForAuth({
+      client: supabase,
+      identifier,
+      mode,
     });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Identifier resolution failed.";
 
-    if (error) {
-      if (isMissingDbFunctionError(error, "get_email_for_phone")) {
-        return NextResponse.json(
-          {
-            error:
-              "Phone login is temporarily unavailable. Please try again later. (PHONE_LOGIN_UNAVAILABLE)",
-            code: "PHONE_LOGIN_UNAVAILABLE",
-          },
-          { status: 503 }
-        );
-      }
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(
-      { phone: normalizedPhone, email: asNullableString(data) },
-      { headers: rateLimitHeaders(rateLimit) }
-    );
-  }
-
-  if (resolveByEmail) {
-    const normalizedEmail = parsedEmail.success ? parsedEmail.data : null;
-    if (!normalizedEmail) {
-      return NextResponse.json({ error: "Email required." }, { status: 400 });
-    }
-
-    const { data: phoneData, error: phoneError } = await supabase.rpc(
-      "get_phone_for_email",
-      {
-        email: normalizedEmail,
-      }
-    );
-
-    if (phoneError) {
-      if (isMissingDbFunctionError(phoneError, "get_phone_for_email")) {
-        return NextResponse.json(
-          {
-            error:
-              "Identifier resolution is temporarily unavailable. Please try again later. (IDENTIFIER_RESOLUTION_UNAVAILABLE)",
-            code: "IDENTIFIER_RESOLUTION_UNAVAILABLE",
-          },
-          { status: 503 }
-        );
-      }
-      return NextResponse.json({ error: phoneError.message }, { status: 500 });
-    }
-
-    return NextResponse.json(
-      { email: normalizedEmail, phone: asNullableString(phoneData) },
-      { headers: rateLimitHeaders(rateLimit) }
-    );
-  }
-
-  const { data: phoneData, error: phoneError } = await supabase.rpc(
-    "get_phone_for_username",
-    {
-      username: identifier,
-    }
-  );
-
-  if (phoneError) {
-    if (isMissingDbFunctionError(phoneError, "get_phone_for_username")) {
+    if (
+      isFunctionLookupError(error, "get_email_for_phone") ||
+      isFunctionLookupError(error, "get_phone_for_email") ||
+      isFunctionLookupError(error, "get_phone_for_username")
+    ) {
       return NextResponse.json(
         {
           error:
@@ -142,18 +84,8 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
-    return NextResponse.json({ error: phoneError.message }, { status: 500 });
-  }
 
-  const { data: emailData, error: emailError } = await supabase.rpc(
-    "get_email_for_username",
-    {
-      username: identifier,
-    }
-  );
-
-  if (emailError) {
-    if (isMissingDbFunctionError(emailError, "get_email_for_username")) {
+    if (isFunctionLookupError(error, "get_email_for_username")) {
       return NextResponse.json(
         {
           error:
@@ -163,13 +95,11 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
-    return NextResponse.json({ error: emailError.message }, { status: 500 });
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const resolvedPhone = asNullableString(phoneData);
-  const resolvedEmail = asNullableString(emailData);
-
-  if (!resolvedPhone && !resolvedEmail) {
+  if (!resolution.phone && !resolution.email) {
     return NextResponse.json(
       { error: "No account matches that email, phone number, or username." },
       { status: 404 }
@@ -177,7 +107,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { email: resolvedEmail, phone: resolvedPhone },
+    { email: resolution.email, phone: resolution.phone },
     { headers: rateLimitHeaders(rateLimit) }
   );
 }

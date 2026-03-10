@@ -30,6 +30,13 @@ const REPORT_REASON_OPTIONS = [
   { value: "misinfo", label: "False info" },
   { value: "other", label: "Other" },
 ] as const;
+
+function isDuplicateReportError(error: { code?: string | null; message?: string | null }) {
+  return (
+    error.code === "23505" ||
+    (error.message ?? "").includes("content_reports_unique_active_")
+  );
+}
 const DEFAULT_REPORT_REASON = REPORT_REASON_OPTIONS[0].value;
 const COLLAPSED_NOTES_STYLE: CSSProperties = {
   display: "-webkit-box",
@@ -753,7 +760,9 @@ export default function FeedPage() {
     if (error) {
       setModerationNotice({
         kind: "error",
-        message: error.message.includes("content_reports")
+        message: isDuplicateReportError(error)
+          ? "You've already reported this."
+          : error.message.includes("content_reports")
           ? "Reporting is temporarily unavailable."
           : "Unable to report right now.",
       });

@@ -40,3 +40,4 @@
 034_blocks_and_reports.sql
 035_entry_post_save_survey.sql
 036_apply_friend_transition.sql
+039_content_report_dedupe.sql

@@ -25,6 +25,13 @@ export const REPORT_REASON_OPTIONS = [
 export type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
 export const DEFAULT_REPORT_REASON: ReportReason = REPORT_REASON_OPTIONS[0].value;
 
+function isDuplicateReportError(error: { code?: string | null; message?: string | null }) {
+  return (
+    error.code === "23505" ||
+    (error.message ?? "").includes("content_reports_unique_active_")
+  );
+}
+
 type PendingReport = {
   targetType: "entry" | "comment";
   entryId: string;
@@ -436,7 +443,9 @@ export function useFeedInteractions({
       if (error) {
         setModerationNotice({
           kind: "error",
-          message: error.message.includes("content_reports")
+          message: isDuplicateReportError(error)
+            ? "You've already reported this."
+            : error.message.includes("content_reports")
             ? "Reporting is temporarily unavailable."
             : "Unable to report right now.",
         });

@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 
 const LAST_UPDATED = "February 12, 2026";
+const SUPPORT_EMAIL = "cellarsnap@gmail.com";
 
 export default function PrivacyScreen() {
   return (
@@ -29,12 +30,15 @@ export default function PrivacyScreen() {
             autofill and summary assistance. Do not upload sensitive personal images.
           </AppText>
           <AppText style={styles.paragraph}>
-            We use operational logs and error telemetry to keep the product reliable
-            during testing. Data is retained as needed for product operation and safety.
+            We use operational logs and error telemetry to keep the product reliable.
+            Data is retained as needed for product operation and safety.
           </AppText>
           <AppText style={styles.paragraph}>
-            For feedback-related requests during the friends-and-family phase, use the
-            in-app feedback page.
+            For support, feedback, or privacy-related requests, use the in-app feedback
+            page or contact us at the address below.
+          </AppText>
+          <AppText style={styles.paragraph}>
+            Privacy and support contact: {SUPPORT_EMAIL}
           </AppText>
         </View>
 

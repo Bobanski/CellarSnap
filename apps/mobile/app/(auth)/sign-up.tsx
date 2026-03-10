@@ -23,6 +23,7 @@ import {
   isUsernameFormatValid,
   normalizePhone,
 } from "@cellarsnap/shared";
+import { checkPhoneAvailable, checkUsernameAvailable } from "@/src/lib/api/auth";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
@@ -142,28 +143,22 @@ export default function SignUpScreen() {
     setInfoMessage(null);
 
     try {
-      const { data: isUsernameAvailable, error: usernameCheckError } = await supabase.rpc(
-        "is_username_available",
-        { username }
-      );
-      if (usernameCheckError) {
-        setErrorMessage(usernameCheckError.message);
+      const usernameCheck = await checkUsernameAvailable(username);
+      if (!usernameCheck.ok) {
+        setErrorMessage(usernameCheck.errorMessage);
         return;
       }
-      if (!isUsernameAvailable) {
+      if (!usernameCheck.available) {
         setErrorMessage("That username is already taken.");
         return;
       }
 
-      const { data: isPhoneAvailable, error: phoneCheckError } = await supabase.rpc(
-        "is_phone_available",
-        { phone: normalizedPhone }
-      );
-      if (phoneCheckError) {
-        setErrorMessage(phoneCheckError.message);
+      const phoneCheck = await checkPhoneAvailable(normalizedPhone);
+      if (!phoneCheck.ok) {
+        setErrorMessage(phoneCheck.errorMessage);
         return;
       }
-      if (!isPhoneAvailable) {
+      if (!phoneCheck.available) {
         setErrorMessage("That phone number is already in use.");
         return;
       }
@@ -344,9 +339,13 @@ export default function SignUpScreen() {
           </Link>
 
           <View style={styles.legalRow}>
-            <AppText style={styles.legalLink}>Privacy</AppText>
+            <Link href="/privacy" style={styles.legalLink}>
+              Privacy
+            </Link>
             <AppText style={styles.legalSeparator}> - </AppText>
-            <AppText style={styles.legalLink}>Terms</AppText>
+            <Link href="/terms" style={styles.legalLink}>
+              Terms
+            </Link>
           </View>
         </View>
       </ScrollView>
@@ -550,4 +549,3 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
 });
-
