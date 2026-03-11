@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getFriendsOfFriendsIds } from "@/lib/access/entryVisibility";
-import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import {
+  normalizePrivacyValue,
+  resolveInteractionAccessForViewer,
+} from "@/lib/access/interactionVisibility";
 import { isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
-import type { EntryPrivacy } from "@/lib/access/entryVisibility";
 
 type HomeEntryRow = Record<string, unknown> & {
   id: string;
@@ -45,18 +47,6 @@ function dedupeHomeEntries(entries: HomeEntryRow[]) {
   return Array.from(dedupedByKey.values());
 }
 
-function normalizeEntryPrivacy(value: unknown): EntryPrivacy {
-  if (
-    value === "public" ||
-    value === "friends_of_friends" ||
-    value === "friends" ||
-    value === "private"
-  ) {
-    return value;
-  }
-  return "public";
-}
-
 function normalizeNullableString(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -73,7 +63,6 @@ export async function GET() {
 
   const viewerIsTestAccount = await isTestAccount(supabase, user.id);
 
-  // ── Fetch user profile ──
   const profileSelectResult = await executeSelectWithFallback({
     attempts: [
       {
@@ -122,20 +111,21 @@ export async function GET() {
         }
     : null;
 
-  // ── Fetch user's total entry count (for first-time detection) ──
   const { count: totalEntryCount } = await supabase
     .from("wine_entries")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  // ── Fetch user's recent grouped/visible posts ──
   const ownEntriesResult = await executeSelectWithFallback({
     attempts: [
       {
         withFeedVisibilityFilter: true,
         missingColumns: ["is_feed_visible"] as const,
       },
-      { withFeedVisibilityFilter: false, missingColumns: [] as const },
+      {
+        withFeedVisibilityFilter: false,
+        missingColumns: [] as const,
+      },
     ],
     getFallbackColumns: (attempt) => attempt.missingColumns,
     fallbackOnAnyMissingColumn: true,
@@ -171,7 +161,6 @@ export async function GET() {
     ((ownEntriesResult.data ?? []) as HomeEntryRow[]).slice(0, 12)
   ).slice(0, 3);
 
-  // ── Fetch friends' recent entries (up to 6) ──
   const { data: friendRows } = await supabase
     .from("friend_requests")
     .select("requester_id, recipient_id")
@@ -205,6 +194,7 @@ export async function GET() {
       if (withFeedVisibilityFilter) {
         query = query.eq("is_feed_visible", true);
       }
+
       return query;
     };
 
@@ -214,7 +204,10 @@ export async function GET() {
           withFeedVisibilityFilter: true,
           missingColumns: ["is_feed_visible"] as const,
         },
-        { withFeedVisibilityFilter: false, missingColumns: [] as const },
+        {
+          withFeedVisibilityFilter: false,
+          missingColumns: [] as const,
+        },
       ],
       getFallbackColumns: (attempt) => attempt.missingColumns,
       fallbackOnAnyMissingColumn: true,
@@ -238,9 +231,8 @@ export async function GET() {
     friendEntries = dedupeHomeEntries(rawFriendEntries).slice(0, 6);
   }
 
-  // ── Resolve label photos for all entries ──
   const allEntries = [...ownEntries, ...friendEntries];
-  const allEntryIds = allEntries.map((e) => e.id);
+  const allEntryIds = allEntries.map((entry) => entry.id);
 
   const { data: labelPhotos } =
     allEntryIds.length > 0
@@ -273,6 +265,7 @@ export async function GET() {
   const myReactionsByEntryId = new Map<string, string[]>();
   const reactionUserIdsByEntryId = new Map<string, Record<string, string[]>>();
   const reactorUserIds = new Set<string>();
+
   if (allEntryIds.length > 0) {
     const { data: reactionRows, error: reactionsError } = await supabase
       .from("entry_reactions")
@@ -299,6 +292,7 @@ export async function GET() {
       emojiUsers[row.emoji] = list;
       reactionUserIdsByEntryId.set(row.entry_id, emojiUsers);
       reactorUserIds.add(row.user_id);
+
       if (row.user_id === user.id) {
         const mine = myReactionsByEntryId.get(row.entry_id) ?? [];
         if (!mine.includes(row.emoji)) {
@@ -309,10 +303,9 @@ export async function GET() {
     });
   }
 
-  // ── Resolve profiles for friend entries ──
   const friendUserIds = Array.from(
     new Set([
-      ...friendEntries.map((e) => e.user_id),
+      ...friendEntries.map((entry) => entry.user_id),
       ...Array.from(reactorUserIds),
     ])
   );
@@ -333,116 +326,104 @@ export async function GET() {
     ? new Set<string>()
     : await getFriendsOfFriendsIds(supabase, user.id, acceptedFriendIds);
 
-  // ── Build response for own entries ──
+  const resolveEntryAccess = (entry: HomeEntryRow) => {
+    const entryPrivacy = normalizePrivacyValue(entry.entry_privacy, "public");
+    return resolveInteractionAccessForViewer({
+      supabase,
+      viewerUserId: user.id,
+      ownerUserId: entry.user_id,
+      entryPrivacy,
+      reactionPrivacy: normalizePrivacyValue(
+        (entry as { reaction_privacy?: unknown }).reaction_privacy,
+        entryPrivacy
+      ),
+      commentsPrivacy: normalizePrivacyValue(
+        (entry as { comments_privacy?: unknown }).comments_privacy,
+        entryPrivacy
+      ),
+      commentsScope: normalizeNullableString(
+        (entry as { comments_scope?: unknown }).comments_scope
+      ),
+      acceptedFriendIds,
+      friendsOfFriendsIds,
+    });
+  };
+
+  const buildReactionUsers = (entryId: string) =>
+    Object.fromEntries(
+      Object.entries(reactionUserIdsByEntryId.get(entryId) ?? {}).map(([emoji, ids]) => [
+        emoji,
+        ids.map((id) => getPublicProfileName(profileMap.get(id))),
+      ])
+    );
+
   const recentEntries = await Promise.all(
     ownEntries.map(async (entry) => {
-      const interactionAccess = await resolveInteractionAccessForViewer({
-        supabase,
-        viewerUserId: user.id,
-        ownerUserId: entry.user_id,
-        entryPrivacy: normalizeEntryPrivacy(entry.entry_privacy),
-        reactionPrivacy: normalizeEntryPrivacy(
-          (entry as { reaction_privacy?: unknown }).reaction_privacy
-        ),
-        commentsPrivacy: normalizeEntryPrivacy(
-          (entry as { comments_privacy?: unknown }).comments_privacy
-        ),
-        commentsScope: normalizeNullableString(
-          (entry as { comments_scope?: unknown }).comments_scope
-        ),
-        acceptedFriendIds,
-        friendsOfFriendsIds,
-      });
-
+      const interactionAccess = await resolveEntryAccess(entry);
       const groupedPost = groupedPostByEntryId.get(entry.id);
 
       return {
-      id: entry.id,
-      wine_name: entry.wine_name,
-      producer: entry.producer,
-      vintage: entry.vintage,
-      rating: entry.rating,
-      qpr_level: entry.qpr_level,
-      consumed_at: entry.consumed_at,
-      label_image_url: await signPhotoUrl(
-        labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
-        supabase
-      ),
-      photo_gallery: groupedPost?.photo_gallery ?? [],
-      entry_group: groupedPost?.entry_group ?? null,
-      group_slides: groupedPost?.group_slides ?? [],
-      can_react: interactionAccess.canReact,
-      my_reactions: interactionAccess.canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
-      reaction_counts: interactionAccess.canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
-      reaction_users: interactionAccess.canReact
-        ? Object.fromEntries(
-            Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
-              ([emoji, ids]) => [
-                emoji,
-                ids.map((id) => getPublicProfileName(profileMap.get(id))),
-              ]
-            )
-          )
-        : {},
-    };
+        id: entry.id,
+        wine_name: normalizeNullableString(entry.wine_name),
+        producer: normalizeNullableString(entry.producer),
+        vintage: normalizeNullableString(entry.vintage),
+        rating: typeof entry.rating === "number" ? entry.rating : null,
+        qpr_level: normalizeNullableString(entry.qpr_level),
+        consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
+        created_at: normalizeNullableString(entry.created_at) ?? "",
+        drinking_now: (entry as { drinking_now?: unknown }).drinking_now === true,
+        label_image_url: await signPhotoUrl(
+          labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
+          supabase
+        ),
+        photo_gallery: groupedPost?.photo_gallery ?? [],
+        entry_group: groupedPost?.entry_group ?? null,
+        group_slides: groupedPost?.group_slides ?? [],
+        can_react: interactionAccess.canReact,
+        my_reactions: interactionAccess.canReact
+          ? myReactionsByEntryId.get(entry.id) ?? []
+          : [],
+        reaction_counts: interactionAccess.canReact
+          ? reactionCountsByEntryId.get(entry.id) ?? {}
+          : {},
+        reaction_users: interactionAccess.canReact ? buildReactionUsers(entry.id) : {},
+      };
     })
   );
 
-  // ── Build response for friend entries ──
-  const circlEntries = await Promise.all(
+  const circleEntries = await Promise.all(
     friendEntries.map(async (entry) => {
-      const interactionAccess = await resolveInteractionAccessForViewer({
-        supabase,
-        viewerUserId: user.id,
-        ownerUserId: entry.user_id,
-        entryPrivacy: normalizeEntryPrivacy(entry.entry_privacy),
-        reactionPrivacy: normalizeEntryPrivacy(
-          (entry as { reaction_privacy?: unknown }).reaction_privacy
-        ),
-        commentsPrivacy: normalizeEntryPrivacy(
-          (entry as { comments_privacy?: unknown }).comments_privacy
-        ),
-        commentsScope: normalizeNullableString(
-          (entry as { comments_scope?: unknown }).comments_scope
-        ),
-        acceptedFriendIds,
-        friendsOfFriendsIds,
-      });
-
+      const interactionAccess = await resolveEntryAccess(entry);
       const groupedPost = groupedPostByEntryId.get(entry.id);
 
       return {
-      id: entry.id,
-      user_id: entry.user_id,
-      wine_name: entry.wine_name,
-      producer: entry.producer,
-      vintage: entry.vintage,
-      rating: entry.rating,
-      qpr_level: entry.qpr_level,
-      consumed_at: entry.consumed_at,
-      author_name:
-        getPublicProfileName(profileMap.get(entry.user_id)),
-      label_image_url: await signPhotoUrl(
-        labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
-        supabase
-      ),
-      photo_gallery: groupedPost?.photo_gallery ?? [],
-      entry_group: groupedPost?.entry_group ?? null,
-      group_slides: groupedPost?.group_slides ?? [],
-      can_react: interactionAccess.canReact,
-      my_reactions: interactionAccess.canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
-      reaction_counts: interactionAccess.canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
-      reaction_users: interactionAccess.canReact
-        ? Object.fromEntries(
-            Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
-              ([emoji, ids]) => [
-                emoji,
-                ids.map((id) => getPublicProfileName(profileMap.get(id))),
-              ]
-            )
-          )
-        : {},
-    };
+        id: entry.id,
+        user_id: entry.user_id,
+        wine_name: normalizeNullableString(entry.wine_name),
+        producer: normalizeNullableString(entry.producer),
+        vintage: normalizeNullableString(entry.vintage),
+        rating: typeof entry.rating === "number" ? entry.rating : null,
+        qpr_level: normalizeNullableString(entry.qpr_level),
+        consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
+        created_at: normalizeNullableString(entry.created_at) ?? "",
+        drinking_now: (entry as { drinking_now?: unknown }).drinking_now === true,
+        author_name: getPublicProfileName(profileMap.get(entry.user_id)),
+        label_image_url: await signPhotoUrl(
+          labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
+          supabase
+        ),
+        photo_gallery: groupedPost?.photo_gallery ?? [],
+        entry_group: groupedPost?.entry_group ?? null,
+        group_slides: groupedPost?.group_slides ?? [],
+        can_react: interactionAccess.canReact,
+        my_reactions: interactionAccess.canReact
+          ? myReactionsByEntryId.get(entry.id) ?? []
+          : [],
+        reaction_counts: interactionAccess.canReact
+          ? reactionCountsByEntryId.get(entry.id) ?? {}
+          : {},
+        reaction_users: interactionAccess.canReact ? buildReactionUsers(entry.id) : {},
+      };
     })
   );
 
@@ -454,6 +435,6 @@ export async function GET() {
     totalEntryCount: totalEntryCount ?? 0,
     friendCount: friendIds.length,
     recentEntries,
-    circleEntries: circlEntries,
+    circleEntries,
   });
 }

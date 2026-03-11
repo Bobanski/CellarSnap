@@ -67,7 +67,10 @@ import {
 import {
   type LabelAutofillResponse,
 } from "@/src/lib/entryFlow/photoAnalysisClient";
-import { runBulkCreateWorkflow } from "@/src/lib/entryFlow/bulkCreateWorkflow";
+import {
+  runBulkCreateWorkflow,
+  type EntryGroupMode,
+} from "@/src/lib/entryFlow/bulkCreateWorkflow";
 import { styles } from "@/src/components/entries/newEntryStyles";
 import { PostSaveSurveyModal } from "@/src/components/entries/PostSaveSurveyModal";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
@@ -204,6 +207,11 @@ type SavedCropState = {
   zoom: number;
 };
 
+type GroupModeOption = {
+  value: EntryGroupMode;
+  label: string;
+};
+
 const DEFAULT_PRIVACY: PrivacyDefaults = {
   entry_privacy: "public",
   reaction_privacy: "public",
@@ -248,6 +256,11 @@ const EXPECTATIONS_OPTIONS: ChipOption[] = [
 const DRINK_AGAIN_OPTIONS: ChipOption[] = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
+];
+
+const BULK_GROUP_MODE_OPTIONS: GroupModeOption[] = [
+  { value: "event", label: "Event" },
+  { value: "catch_up", label: "Catch-up" },
 ];
 
 const ADVANCED_NOTE_FIELDS: Array<{
@@ -381,6 +394,9 @@ export default function NewEntryScreen() {
   const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
   const [isBulkCreating, setIsBulkCreating] = useState(false);
   const [bulkCreateMessage, setBulkCreateMessage] = useState<string | null>(null);
+  const [bulkEntryMode, setBulkEntryMode] = useState<EntryGroupMode>("event");
+  const [bulkEntryTitle, setBulkEntryTitle] = useState("");
+  const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
@@ -1499,8 +1515,15 @@ export default function NewEntryScreen() {
     );
   };
 
+  const resetBulkGroupConfig = () => {
+    setBulkEntryMode("event");
+    setBulkEntryTitle("");
+    setBulkEntryConfigError(null);
+  };
+
   const cancelBulkLineup = () => {
     setLineupWines([]);
+    resetBulkGroupConfig();
     setBulkCreateMessage(null);
     setUploadMessage("Bulk scan canceled. Continue with single entry details.");
   };
@@ -1519,7 +1542,7 @@ export default function NewEntryScreen() {
     ownerUserId: string,
     photosToUpload: UploadPhotoItem[]
   ) => {
-    await uploadPhotosToEntryWithFallback({
+    return uploadPhotosToEntryWithFallback({
       supabase,
       entryId,
       ownerUserId,
@@ -1532,6 +1555,7 @@ export default function NewEntryScreen() {
     setLastScanConfidence(null);
     setIsAutofillLoading(true);
     setLineupWines([]);
+    resetBulkGroupConfig();
     setBulkCreateMessage(null);
     setUploadMessage(
       photoCount === 1
@@ -1699,11 +1723,19 @@ export default function NewEntryScreen() {
       setBulkCreateMessage("Select at least one detected bottle first.");
       return;
     }
+    const normalizedBulkTitle = bulkEntryTitle.trim();
+    if (!normalizedBulkTitle) {
+      setBulkEntryConfigError(
+        "Add an event or catch-up title before creating the grouped post."
+      );
+      return;
+    }
     if (uploadPhotos.length === 0) {
       setBulkCreateMessage("Upload photos before creating bulk entries.");
       return;
     }
 
+    setBulkEntryConfigError(null);
     setIsBulkCreating(true);
     setBulkCreateMessage("Resolving grape varieties...");
     setErrorMessage(null);
@@ -1730,6 +1762,10 @@ export default function NewEntryScreen() {
         accessToken,
         normalizedBaseUrl,
         setBulkCreateMessage,
+        groupConfig: {
+          mode: bulkEntryMode,
+          title: normalizedBulkTitle,
+        },
         resolveSuggestedGrapes,
         insertEntryWithFallback,
         persistPrimaryGrapesByIds,
@@ -1762,8 +1798,13 @@ export default function NewEntryScreen() {
 
       if (result.createdEntryIds.length > 0) {
         const queue = encodeURIComponent(result.createdEntryIds.join(","));
-        const successMessage =
-          result.failedCount > 0
+        const successMessage = result.groupedPostErrorMessage
+          ? `Created ${result.createdEntryIds.length} entr${
+              result.createdEntryIds.length === 1 ? "y" : "ies"
+            }, but ${result.groupedPostErrorMessage}${
+              uncertaintySuffix ? uncertaintySuffix : ""
+            } Opening guided review...`
+          : result.failedCount > 0
             ? `Created ${result.createdEntryIds.length} entr${
                 result.createdEntryIds.length === 1 ? "y" : "ies"
               }. ${result.failedCount} could not be created.${
@@ -2115,6 +2156,75 @@ export default function NewEntryScreen() {
                     <AppText style={styles.bulkBackButtonText}>{"\u2190"} Back</AppText>
                   </Pressable>
                 </View>
+                <View style={styles.bulkGroupCard}>
+                  <View style={styles.bulkGroupHeader}>
+                    <AppText style={styles.bulkGroupTitle}>Group this bulk upload</AppText>
+                    <AppText style={styles.bulkGroupDescription}>
+                      Each wine stays separate in your cellar, but Home and Feed will show one
+                      grouped post.
+                    </AppText>
+                    <AppText style={styles.bulkGroupHint}>
+                      Event uses one shared tasting date. Catch-up is for logging bottles from
+                      different days after the fact.
+                    </AppText>
+                  </View>
+                  <View style={styles.bulkGroupModeWrap}>
+                    {BULK_GROUP_MODE_OPTIONS.map((option) => {
+                      const selectedOption = bulkEntryMode === option.value;
+                      return (
+                        <Pressable
+                          key={option.value}
+                          style={[
+                            styles.bulkGroupModeButton,
+                            selectedOption ? styles.bulkGroupModeButtonActive : null,
+                          ]}
+                          onPress={() => {
+                            setBulkEntryMode(option.value);
+                            setBulkEntryConfigError(null);
+                          }}
+                        >
+                          <AppText
+                            style={[
+                              styles.bulkGroupModeButtonText,
+                              selectedOption ? styles.bulkGroupModeButtonTextActive : null,
+                            ]}
+                          >
+                            {option.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.block}>
+                    <AppText style={styles.bulkGroupFieldLabel}>Group title</AppText>
+                    <DoneTextInput
+                      value={bulkEntryTitle}
+                      onChangeText={(value) => {
+                        setBulkEntryTitle(value);
+                        if (bulkEntryConfigError) {
+                          setBulkEntryConfigError(null);
+                        }
+                      }}
+                      placeholder={
+                        bulkEntryMode === "event" ? "Stuytown tasting" : "Past 2 weeks"
+                      }
+                      placeholderTextColor="#71717a"
+                      autoCorrect={false}
+                      style={[
+                        styles.input,
+                        bulkEntryConfigError ? styles.bulkGroupInputError : null,
+                      ]}
+                    />
+                    <AppText style={styles.bulkGroupFieldHint}>
+                      This title will be shown on the grouped post in Home and Feed.
+                    </AppText>
+                    {bulkEntryConfigError ? (
+                      <AppText style={styles.bulkGroupErrorText}>
+                        {bulkEntryConfigError}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </View>
                 {!isBulkCreating ? (
                   <View style={styles.bulkLineupList}>
                     {lineupWines.map((wine) => (
@@ -2283,6 +2393,7 @@ export default function NewEntryScreen() {
                     label="Vintage"
                     value={form.vintage}
                     onChange={(v) => updateField("vintage", v)}
+                    keyboardType="number-pad"
                   />
                   <Field
                     label="Country"

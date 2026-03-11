@@ -20,6 +20,8 @@ import {
   PHONE_FORMAT_MESSAGE,
 } from "@/lib/validation/phone";
 
+type NameDisplayPreference = "real_name" | "username";
+
 type Profile = {
   id: string;
   display_name: string | null;
@@ -28,6 +30,7 @@ type Profile = {
   email: string | null;
   phone: string | null;
   bio: string | null;
+  name_display_preference: NameDisplayPreference;
   default_entry_privacy: PrivacyLevel | null;
   default_reaction_privacy: PrivacyLevel | null;
   default_comments_privacy: PrivacyLevel | null;
@@ -64,6 +67,13 @@ const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
   { value: "friends_of_friends", label: "Friends of friends" },
   { value: "friends", label: "Friends only" },
   { value: "private", label: "Private" },
+];
+const NAME_DISPLAY_OPTIONS: {
+  value: NameDisplayPreference;
+  label: string;
+}[] = [
+  { value: "real_name", label: "Real name" },
+  { value: "username", label: "Username" },
 ];
 
 function formatMemberSince(dateString: string | null): string {
@@ -160,6 +170,8 @@ export default function ProfilePage() {
   const [reactionPrivacyValue, setReactionPrivacyValue] = useState<PrivacyLevel>("public");
   const [commentsPrivacyValue, setCommentsPrivacyValue] =
     useState<PrivacyLevel>("friends_of_friends");
+  const [nameDisplayPreferenceValue, setNameDisplayPreferenceValue] =
+    useState<NameDisplayPreference>("real_name");
   const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
@@ -305,6 +317,9 @@ export default function ProfilePage() {
         setEditPhone(formatPhoneForInput(initialEditPhone));
         setEditBio(initialEditBio);
         setEditEmail(profileEmail);
+        setNameDisplayPreferenceValue(
+          data.profile.name_display_preference === "username" ? "username" : "real_name"
+        );
         setEntryPrivacyValue(data.profile.default_entry_privacy ?? "public");
         setReactionPrivacyValue(data.profile.default_reaction_privacy ?? "public");
         setCommentsPrivacyValue(
@@ -673,6 +688,7 @@ export default function ProfilePage() {
       default_entry_privacy: PrivacyLevel;
       default_reaction_privacy: PrivacyLevel;
       default_comments_privacy: PrivacyLevel;
+      name_display_preference: NameDisplayPreference;
     }>
   ) => {
     setIsSavingPrivacy(true);
@@ -706,7 +722,12 @@ export default function ProfilePage() {
       setCommentsPrivacyValue(
         data.profile.default_comments_privacy ?? commentsPrivacyValue
       );
-      setPrivacyMessage("Default visibility settings updated.");
+      setNameDisplayPreferenceValue(
+        data.profile.name_display_preference === "username"
+          ? "username"
+          : "real_name"
+      );
+      setPrivacyMessage("Privacy settings updated.");
       setTimeout(() => setPrivacyMessage(null), 3000);
     }
   };
@@ -1768,10 +1789,42 @@ export default function ProfilePage() {
                       Privacy settings
                     </h3>
                     <p className="text-xs text-zinc-500">
-                      Choose defaults for new posts, reactions, and comments.
+                      Choose how your name appears across the app and set defaults for new posts,
+                      reactions, and comments.
                     </p>
 
-                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-3 md:col-span-2 xl:col-span-1">
+                        <label
+                          htmlFor="name-display-preference-select"
+                          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400"
+                        >
+                          Name used across app
+                        </label>
+                        <select
+                          id="name-display-preference-select"
+                          value={nameDisplayPreferenceValue}
+                          onChange={(e) => {
+                            const nextValue = e.target.value as NameDisplayPreference;
+                            setNameDisplayPreferenceValue(nextValue);
+                            void savePrivacyDefaults({
+                              name_display_preference: nextValue,
+                            });
+                          }}
+                          disabled={isSavingPrivacy}
+                          className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                        >
+                          {NAME_DISPLAY_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-2 text-[11px] text-zinc-500">
+                          Real name uses your first name and last initial when available.
+                          Otherwise your username is shown.
+                        </p>
+                      </div>
                       <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                         <label
                           htmlFor="default-entry-privacy-select"

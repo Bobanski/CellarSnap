@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { entryGroupModeSchema } from "@/server/entries/schema";
 
 const entryGroupSlideSchema = z.object({
@@ -37,16 +38,37 @@ function isMissingGroupedPostSchemaError(message: string) {
 export function createBulkGroupHandler(
   dependencies: {
     createSupabaseServerClient?: typeof createSupabaseServerClient;
+    requireRequestAuth?: typeof requireRequestAuth;
   } = {}
 ) {
   const createClient =
     dependencies.createSupabaseServerClient ?? createSupabaseServerClient;
+  const authenticateRequest =
+    dependencies.requireRequestAuth ??
+    (!dependencies.createSupabaseServerClient ? requireRequestAuth : null);
 
   return async function POST(request: Request) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    let supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+    let user: Awaited<ReturnType<typeof requireRequestAuth>>["user"] | null | undefined;
+
+    if (authenticateRequest) {
+      try {
+        const auth = await authenticateRequest(request);
+        supabase = auth.supabase;
+        user = auth.user;
+      } catch (error) {
+        if (error instanceof RequestAuthError) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        throw error;
+      }
+    } else {
+      supabase = await createClient();
+      const {
+        data: { user: cookieUser },
+      } = await supabase.auth.getUser();
+      user = cookieUser;
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

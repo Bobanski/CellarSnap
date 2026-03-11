@@ -294,6 +294,78 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
+  bulkGroupCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 0, 0, 0.22)",
+    padding: 10,
+    gap: 10,
+  },
+  bulkGroupHeader: {
+    gap: 4,
+  },
+  bulkGroupTitle: {
+    color: "#fef3c7",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  bulkGroupDescription: {
+    color: "#d4d4d8",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  bulkGroupHint: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  bulkGroupModeWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  bulkGroupModeButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: "rgba(0, 0, 0, 0.34)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  bulkGroupModeButtonActive: {
+    borderColor: "rgba(251, 191, 36, 0.78)",
+    backgroundColor: "#fbbf24",
+  },
+  bulkGroupModeButtonText: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  bulkGroupModeButtonTextActive: {
+    color: "#09090b",
+  },
+  bulkGroupFieldLabel: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  bulkGroupFieldHint: {
+    color: "#71717a",
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  bulkGroupInputError: {
+    borderColor: "rgba(251, 113, 133, 0.65)",
+  },
+  bulkGroupErrorText: {
+    color: "#fda4af",
+    fontSize: 11,
+    lineHeight: 15,
+  },
   bulkRetryButton: {
     alignSelf: "flex-start",
     borderRadius: 999,

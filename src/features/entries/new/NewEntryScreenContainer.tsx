@@ -81,6 +81,7 @@ type NewEntryForm = {
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
   notes: string;
+  drinking_now: boolean;
   location_text: string;
   location_place_id: string;
   consumed_at: string;
@@ -171,6 +172,7 @@ export default function NewEntryPage() {
       price_paid_source: "",
       qpr_level: "",
       classification: "",
+      drinking_now: false,
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
   });
@@ -1556,6 +1558,7 @@ export default function NewEntryPage() {
           price_paid_source: pricePaidSource ?? null,
           qpr_level: values.qpr_level || null,
           notes: values.notes || null,
+          drinking_now: values.drinking_now === true,
           location_text: values.location_text || null,
           location_place_id: values.location_place_id || null,
           consumed_at: values.consumed_at,
@@ -3545,6 +3548,36 @@ export default function NewEntryPage() {
             {/* Hide single-bottle form fields when lineup mode is active */}
             {showSingleBottleFields ? (
               <>
+                <div className="rounded-2xl border border-sky-300/20 bg-sky-950/20 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="drinking-now-toggle"
+                        className="block text-sm font-medium text-zinc-200"
+                      >
+                        Drinking Now
+                      </label>
+                      <p className="text-xs text-zinc-400">
+                        Friends see a light blue glow on Home and Feed for 2.5 hours after you
+                        post this pour.
+                      </p>
+                    </div>
+                    <Controller
+                      control={control}
+                      name="drinking_now"
+                      render={({ field }) => (
+                        <input
+                          id="drinking-now-toggle"
+                          type="checkbox"
+                          checked={field.value === true}
+                          onChange={(event) => field.onChange(event.target.checked)}
+                          className="h-5 w-5 rounded border-white/20 bg-black/40 text-sky-300 focus:ring-2 focus:ring-sky-300/40"
+                        />
+                      )}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-sm font-medium text-zinc-200">Notes</label>
                   <textarea

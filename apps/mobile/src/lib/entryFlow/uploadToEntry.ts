@@ -9,9 +9,17 @@ import {
 } from "./newEntryUtils";
 
 export type UploadPhotoInput = {
+  id: string;
   uri: string;
   mimeType: string;
   type: UploadPhotoType;
+};
+
+export type UploadedEntryPhotoRecord = {
+  photoId: string;
+  type: UploadPhotoType;
+  path: string;
+  position: number;
 };
 
 type SupabaseAnyClient = typeof import("@/src/lib/supabase").supabase;
@@ -28,7 +36,7 @@ async function uploadPhotoToEntryRecord({
   ownerUserId: string;
   photo: UploadPhotoInput;
   position: number;
-}) {
+}): Promise<UploadedEntryPhotoRecord> {
   let createdPhotoId: string | null = null;
   let uploadedPath: string | null = null;
 
@@ -74,6 +82,13 @@ async function uploadPhotoToEntryRecord({
     if (uploadResult.error) {
       throw new Error(uploadResult.error.message);
     }
+
+    return {
+      photoId: photo.id,
+      type: photo.type,
+      path: uploadedPath,
+      position,
+    };
   } catch (error) {
     if (uploadedPath) {
       await supabase.storage.from("wine-photos").remove([uploadedPath]);
@@ -99,7 +114,7 @@ async function uploadLegacyPhotoToEntryRecord({
   entryId: string;
   ownerUserId: string;
   photo: UploadPhotoInput;
-}) {
+}): Promise<UploadedEntryPhotoRecord> {
   if (!isLegacyUploadPhotoType(photo.type)) {
     throw new Error("Legacy upload fallback only supports label/place/pairing photos.");
   }
@@ -131,6 +146,13 @@ async function uploadLegacyPhotoToEntryRecord({
     await supabase.storage.from("wine-photos").remove([uploadedPath]);
     throw new Error(updateError.message);
   }
+
+  return {
+    photoId: photo.id,
+    type: photo.type,
+    path: uploadedPath,
+    position: 0,
+  };
 }
 
 export async function uploadPhotosToEntryWithFallback({
@@ -143,9 +165,9 @@ export async function uploadPhotosToEntryWithFallback({
   entryId: string;
   ownerUserId: string;
   photosToUpload: UploadPhotoInput[];
-}) {
+}): Promise<UploadedEntryPhotoRecord[]> {
   if (photosToUpload.length === 0) {
-    return;
+    return [];
   }
 
   const typeCount = new Map<UploadPhotoType, number>();
@@ -160,31 +182,36 @@ export async function uploadPhotosToEntryWithFallback({
   }
 
   const positionByType = new Map<UploadPhotoType, number>();
+  const uploadedRecords: UploadedEntryPhotoRecord[] = [];
   for (const photo of photosToUpload) {
     const position = positionByType.get(photo.type) ?? 0;
     try {
-      await uploadPhotoToEntryRecord({
+      const uploadedRecord = await uploadPhotoToEntryRecord({
         supabase,
         entryId,
         ownerUserId,
         photo,
         position,
       });
+      uploadedRecords.push(uploadedRecord);
     } catch (error) {
       if (
         isEntryPhotosSchemaCompatibilityError(error) &&
         isLegacyUploadPhotoType(photo.type)
       ) {
-        await uploadLegacyPhotoToEntryRecord({
+        const uploadedRecord = await uploadLegacyPhotoToEntryRecord({
           supabase,
           entryId,
           ownerUserId,
           photo,
         });
+        uploadedRecords.push(uploadedRecord);
       } else {
         throw error;
       }
     }
     positionByType.set(photo.type, position + 1);
   }
+
+  return uploadedRecords;
 }
