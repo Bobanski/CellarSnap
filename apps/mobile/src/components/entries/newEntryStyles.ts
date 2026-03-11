@@ -357,6 +357,32 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
+  drinkingNowCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.3)",
+    backgroundColor: "rgba(56, 189, 248, 0.08)",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  drinkingNowCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  drinkingNowTitle: {
+    color: "#e0f2fe",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  drinkingNowDescription: {
+    color: "#bae6fd",
+    fontSize: 12,
+    lineHeight: 17,
+  },
   adaptiveRow: {
     flexDirection: "row",
     flexWrap: "wrap",

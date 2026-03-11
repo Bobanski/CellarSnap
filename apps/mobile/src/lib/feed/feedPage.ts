@@ -20,6 +20,7 @@ export type FeedEntryRow = {
   user_id: string;
   root_entry_id?: string | null;
   is_feed_visible?: boolean | null;
+  drinking_now?: boolean | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
@@ -82,6 +83,7 @@ type FeedPhotoRow = {
 export type MobileFeedEntry = FeedEntryRow & {
   author_name: string;
   author_avatar_url: string | null;
+  viewer_is_direct_friend: boolean;
   primary_grapes: PrimaryGrape[];
   photo_gallery: FeedPhoto[];
   tasted_with_users: Array<{
@@ -127,6 +129,7 @@ const TYPE_ORDER: Record<FeedPhotoType, number> = {
 
 function isMissingSharedTastingColumns(message: string) {
   return (
+    message.includes("drinking_now") ||
     message.includes("root_entry_id") ||
     message.includes("is_feed_visible") ||
     message.includes("column") ||
@@ -342,7 +345,6 @@ export async function fetchFeedPage({
 
   const baseSelectFields =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
-  const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
   const fetchLimit = Math.min(160, limit * 5 + 1);
 
   const buildQuery = ({
@@ -377,34 +379,65 @@ export async function fetchFeedPage({
   let feedRows: FeedEntryRow[] = [];
   let hasSharedTastingColumns = false;
 
-  const firstAttempt = await buildQuery({
-    fields: extendedSelectFields,
-    withTastingSupport: true,
-  });
-
-  if (!firstAttempt.error) {
-    feedRows = (firstAttempt.data ?? []) as unknown as FeedEntryRow[];
-    hasSharedTastingColumns = true;
-  } else if (isMissingSharedTastingColumns(firstAttempt.error.message ?? "")) {
-    const fallbackAttempt = await buildQuery({
+  const feedSelectAttempts = [
+    {
+      fields: `${baseSelectFields}, drinking_now, root_entry_id, is_feed_visible`,
+      withTastingSupport: true,
+      hasSharedTastingColumns: true,
+      hasDrinkingNowColumn: true,
+    },
+    {
+      fields: `${baseSelectFields}, root_entry_id, is_feed_visible`,
+      withTastingSupport: true,
+      hasSharedTastingColumns: true,
+      hasDrinkingNowColumn: false,
+    },
+    {
+      fields: `${baseSelectFields}, drinking_now`,
+      withTastingSupport: false,
+      hasSharedTastingColumns: false,
+      hasDrinkingNowColumn: true,
+    },
+    {
       fields: baseSelectFields,
       withTastingSupport: false,
-    });
-    if (fallbackAttempt.error) {
+      hasSharedTastingColumns: false,
+      hasDrinkingNowColumn: false,
+    },
+  ] as const;
+
+  let lastAttemptError: string | null = null;
+  for (const attempt of feedSelectAttempts) {
+    const response = await buildQuery(attempt);
+    if (!response.error) {
+      feedRows = (response.data ?? []).map((row) => ({
+        ...(row as unknown as FeedEntryRow),
+        drinking_now: attempt.hasDrinkingNowColumn
+          ? (row as unknown as FeedEntryRow).drinking_now ?? false
+          : false,
+      }));
+      hasSharedTastingColumns = attempt.hasSharedTastingColumns;
+      lastAttemptError = null;
+      break;
+    }
+
+    lastAttemptError = response.error.message;
+    if (!isMissingSharedTastingColumns(response.error.message ?? "")) {
       return {
         entries: [] as MobileFeedEntry[],
         nextCursor: null,
         hasMore: false,
-        errorMessage: fallbackAttempt.error.message,
+        errorMessage: response.error.message,
       };
     }
-    feedRows = (fallbackAttempt.data ?? []) as unknown as FeedEntryRow[];
-  } else {
+  }
+
+  if (lastAttemptError) {
     return {
       entries: [] as MobileFeedEntry[],
       nextCursor: null,
       hasMore: false,
-      errorMessage: firstAttempt.error.message,
+      errorMessage: lastAttemptError,
     };
   }
 
@@ -752,8 +785,10 @@ export async function fetchFeedPage({
 
     return {
       ...entry,
+      drinking_now: entry.drinking_now === true,
       author_name: getPublicProfileName(authorProfile),
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
+      viewer_is_direct_friend: socialAudience.acceptedFriendIds.has(entry.user_id),
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
       photo_gallery: photoGallery,
       tasted_with_users: tastedWithUsers,

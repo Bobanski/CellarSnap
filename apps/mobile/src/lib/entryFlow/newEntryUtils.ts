@@ -1,4 +1,5 @@
 import { normalizeConfidence, type PrivacyLevel } from "@cellarsnap/shared";
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 
 export type UploadPhotoType =
   | "label"
@@ -230,9 +231,13 @@ export function getPrivacyBadgeTone(level: PrivacyLevel) {
 
 export function formatFriendName(user: {
   display_name: string | null;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  name_display_preference?: "real_name" | "username" | null;
   email: string | null;
 }) {
-  return user.display_name ?? "Unknown";
+  return getPublicProfileName(user);
 }
 
 export function formatSurveyWineTitle(wine: {

@@ -19,6 +19,10 @@ import { router } from "expo-router";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
+import {
+  DRINKING_NOW_REFRESH_INTERVAL_MS,
+  isDrinkingNowActive,
+} from "@/src/lib/drinkingNow";
 import type { FeedComment } from "@/src/lib/feed/comments";
 import {
   fetchFeedPage,
@@ -31,6 +35,7 @@ import {
   REPORT_REASON_OPTIONS,
   useFeedInteractions,
 } from "@/src/lib/feed/useFeedInteractions";
+import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
@@ -38,6 +43,10 @@ import { AppText } from "@/src/components/AppText";
 type UserOption = {
   id: string;
   display_name: string | null;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  name_display_preference?: "real_name" | "username" | null;
 };
 
 const PAGE_SIZE = 24;
@@ -200,6 +209,15 @@ function getDisplayRating(rating: number | null): string | null {
   return `${normalized}/100`;
 }
 
+function buildAuthorWithCompanionsLabel(item: MobileFeedEntry) {
+  const companionNames = item.tasted_with_users
+    .map((user) => user.display_name ?? "Unknown")
+    .filter((name) => name.trim().length > 0);
+  return companionNames.length > 0
+    ? `${item.author_name} + ${companionNames.join(", ")}`
+    : item.author_name;
+}
+
 function FeedCard({
   item,
   viewerUserId,
@@ -234,6 +252,7 @@ function FeedCard({
   onOpenAuthorProfile,
   canOpenEntry,
   onOpenEntry,
+  showDrinkingNowGlow,
 }: {
   item: MobileFeedEntry;
   viewerUserId: string | null;
@@ -268,6 +287,7 @@ function FeedCard({
   onOpenAuthorProfile: () => void;
   canOpenEntry: () => boolean;
   onOpenEntry: () => void;
+  showDrinkingNowGlow: boolean;
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
   const displayRating = getDisplayRating(item.rating);
@@ -295,6 +315,7 @@ function FeedCard({
   const activePhoto =
     galleryPhotos[clampedActivePhotoIndex] ?? null;
   const canToggleNotes = notesExpanded || isNotesTruncated;
+  const authorWithCompanionsLabel = useMemo(() => buildAuthorWithCompanionsLabel(item), [item]);
 
   const beginGallerySwipe = useCallback(() => {
     if (swipeActiveRef.current) {
@@ -394,7 +415,7 @@ function FeedCard({
   }, [canOpenEntry, onOpenEntry]);
 
   return (
-    <View style={styles.feedCard}>
+    <View style={[styles.feedCard, showDrinkingNowGlow ? styles.feedCardDrinkingNow : null]}>
       <View style={styles.feedAuthorRow}>
         <Pressable
           style={styles.feedAuthorStack}
@@ -416,7 +437,9 @@ function FeedCard({
               </AppText>
             )}
           </View>
-          <AppText style={styles.feedAuthorName}>{item.author_name}</AppText>
+          <AppText style={styles.feedAuthorName} numberOfLines={2}>
+            {authorWithCompanionsLabel}
+          </AppText>
         </Pressable>
         <View style={styles.feedAuthorRight}>
           <View style={styles.feedMetaRow}>
@@ -649,12 +672,6 @@ function FeedCard({
         {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
         {metaFields.length > 0 ? (
           <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
-        ) : null}
-        {item.tasted_with_users.length > 0 ? (
-          <AppText style={styles.feedTastedWithText}>
-            Tasted with:{" "}
-            {item.tasted_with_users.map((user) => user.display_name ?? "Unknown").join(", ")}
-          </AppText>
         ) : null}
       </Pressable>
 
@@ -1019,6 +1036,7 @@ export default function FeedScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isGallerySwipeActive, setIsGallerySwipeActive] = useState(false);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const {
     closePendingReport,
     getEntryInteractionState,
@@ -1047,6 +1065,16 @@ export default function FeedScreen() {
   const isFeedScrollActiveRef = useRef(false);
   const feedOpenBlockUntilRef = useRef(0);
   const feedScrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, DRINKING_NOW_REFRESH_INTERVAL_MS);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const clearFeedScrollIdleTimer = useCallback(() => {
     if (!feedScrollIdleTimerRef.current) {
@@ -1109,12 +1137,14 @@ export default function FeedScreen() {
       const tokens = search.split(" ").filter(Boolean);
       const tokenAndFilter = buildTokenAndFilter(tokens, [
         "display_name",
+        "username",
         "first_name",
         "last_name",
       ]);
 
       const baseFilters = [
         `display_name.ilike.${pattern}`,
+        `username.ilike.${pattern}`,
         `first_name.ilike.${pattern}`,
         `last_name.ilike.${pattern}`,
         tokenAndFilter,
@@ -1124,26 +1154,26 @@ export default function FeedScreen() {
 
       const firstAttempt = await supabase
         .from("public_profiles")
-        .select("id, display_name")
+        .select(
+          "id, display_name, username, first_name, last_name, name_display_preference"
+        )
         .neq("id", viewerUserId)
         .or(baseFilters)
         .order("display_name", { ascending: true })
         .limit(25);
 
-      let data = firstAttempt.data;
+      let data = firstAttempt.data as UserOption[] | null;
       let error = firstAttempt.error;
 
       if (
         error &&
-        (error.message.includes("first_name") || error.message.includes("last_name"))
+        (error.message.includes("username") ||
+          error.message.includes("first_name") ||
+          error.message.includes("last_name") ||
+          error.message.includes("name_display_preference"))
       ) {
-        const fallbackTokenAndFilter = buildTokenAndFilter(tokens, [
-          "display_name",
-        ]);
-        const fallbackFilters = [
-          `display_name.ilike.${pattern}`,
-          fallbackTokenAndFilter,
-        ]
+        const fallbackTokenAndFilter = buildTokenAndFilter(tokens, ["display_name"]);
+        const fallbackFilters = [`display_name.ilike.${pattern}`, fallbackTokenAndFilter]
           .filter(Boolean)
           .join(",");
         const fallbackAttempt = await supabase
@@ -1153,7 +1183,7 @@ export default function FeedScreen() {
           .or(fallbackFilters)
           .order("display_name", { ascending: true })
           .limit(25);
-        data = fallbackAttempt.data;
+        data = fallbackAttempt.data as UserOption[] | null;
         error = fallbackAttempt.error;
       }
 
@@ -1272,7 +1302,7 @@ export default function FeedScreen() {
   };
 
   const selectFriendFilter = (option: UserOption) => {
-    const displayName = option.display_name?.trim() || "Unknown";
+    const displayName = getPublicProfileName(option);
     setFeedScope("friends");
     setSelectedFriendId(option.id);
     setSelectedFriendName(displayName);
@@ -1394,7 +1424,7 @@ export default function FeedScreen() {
                     setIsFriendSearchLoading(false);
                   }
                 }}
-                placeholder="Search by username..."
+                placeholder="Search by username or name"
                 placeholderTextColor="#71717a"
                 style={styles.friendSearchInput}
                 autoCapitalize="none"
@@ -1426,7 +1456,7 @@ export default function FeedScreen() {
                   </AppText>
                 ) : (
                   friendSearchResults.map((option) => {
-                    const displayName = option.display_name?.trim() || "Unknown";
+                    const displayName = getPublicProfileName(option);
                     return (
                       <Pressable
                         key={option.id}
@@ -1531,6 +1561,14 @@ export default function FeedScreen() {
                   }
                   canOpenEntry={canOpenEntry}
                   onOpenEntry={() => router.push(`/(app)/entries/${entry.id}`)}
+                  showDrinkingNowGlow={
+                    entry.viewer_is_direct_friend &&
+                    isDrinkingNowActive({
+                      drinkingNow: entry.drinking_now,
+                      createdAt: entry.created_at,
+                      now: currentTimeMs,
+                    })
+                  }
                 />
               );
             })}
@@ -1891,6 +1929,15 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 10,
   },
+  feedCardDrinkingNow: {
+    borderColor: "rgba(125,211,252,0.72)",
+    backgroundColor: "rgba(8,47,73,0.62)",
+    shadowColor: "#7dd3fc",
+    shadowOpacity: 0.44,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 10,
+  },
   feedAuthorRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1927,6 +1974,7 @@ const styles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 11,
     fontWeight: "600",
+    lineHeight: 15,
     flexShrink: 1,
   },
   feedDate: {

@@ -27,6 +27,7 @@ const privacyLevelSchema = z.enum([
   "friends",
   "private",
 ]);
+const nameDisplayPreferenceSchema = z.enum(["real_name", "username"]);
 const NAME_MAX_LENGTH = 80;
 const BIO_MAX_LENGTH = 100;
 
@@ -104,6 +105,7 @@ const updateProfileSchema = z
       .max(BIO_MAX_LENGTH, `Bio must be ${BIO_MAX_LENGTH} characters or fewer.`)
       .nullable()
       .optional(),
+    name_display_preference: nameDisplayPreferenceSchema.optional(),
     default_entry_privacy: privacyLevelSchema.optional(),
     default_reaction_privacy: privacyLevelSchema.optional(),
     default_comments_privacy: privacyLevelSchema.optional(),
@@ -117,6 +119,7 @@ const updateProfileSchema = z
       value.email !== undefined ||
       value.phone !== undefined ||
       value.bio !== undefined ||
+      value.name_display_preference !== undefined ||
       value.default_entry_privacy !== undefined ||
       value.default_reaction_privacy !== undefined ||
       value.default_comments_privacy !== undefined ||
@@ -245,6 +248,7 @@ const PROFILE_OPTIONAL_UPDATE_COLUMNS = [
   "default_reaction_privacy",
   "default_comments_privacy",
   "privacy_confirmed_at",
+  "name_display_preference",
   "first_name",
   "last_name",
   "phone",
@@ -358,11 +362,40 @@ function normalizeProfileRow(
     normalized.default_reaction_privacy = "public";
     normalized.default_comments_privacy = "friends_of_friends";
   }
+  if (
+    normalized.name_display_preference !== "real_name" &&
+    normalized.name_display_preference !== "username"
+  ) {
+    normalized.name_display_preference = "real_name";
+  }
   if (!attempt.includesNames) {
     normalized.first_name = null;
     normalized.last_name = null;
   }
   return normalized;
+}
+
+async function selectNameDisplayPreference(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("name_display_preference")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error && !isMissingDbColumnError(error, "name_display_preference")) {
+    return {
+      value: "real_name" as const,
+      error: error.message,
+    };
+  }
+
+  return {
+    value: data?.name_display_preference === "username" ? "username" : "real_name",
+    error: null,
+  };
 }
 
 export async function GET() {
@@ -390,6 +423,17 @@ export async function GET() {
   }
 
   const profile = normalizeProfileRow(selected.data, selected.attempt);
+  const nameDisplayPreferenceResult = await selectNameDisplayPreference(
+    supabase,
+    user.id
+  );
+  if (nameDisplayPreferenceResult.error) {
+    return NextResponse.json(
+      { error: nameDisplayPreferenceResult.error },
+      { status: 500 }
+    );
+  }
+  profile.name_display_preference = nameDisplayPreferenceResult.value;
 
   let avatarPath =
     typeof profile.avatar_path === "string" ? profile.avatar_path : null;
@@ -438,7 +482,15 @@ export async function GET() {
   const bio = typeof bioRow?.bio === "string" ? bioRow.bio : null;
 
   return NextResponse.json(
-    { profile: { ...profile, phone, bio, avatar_path: avatarPath, avatar_url } },
+    {
+      profile: {
+        ...profile,
+        phone,
+        bio,
+        avatar_path: avatarPath,
+        avatar_url,
+      },
+    },
     {
       headers: {
         "Cache-Control": "private, no-store, max-age=0",
@@ -481,6 +533,7 @@ export async function PATCH(request: Request) {
       flattened.fieldErrors.email?.[0] ??
       flattened.fieldErrors.phone?.[0] ??
       flattened.fieldErrors.bio?.[0] ??
+      flattened.fieldErrors.name_display_preference?.[0] ??
       flattened.fieldErrors.default_entry_privacy?.[0] ??
       flattened.fieldErrors.default_reaction_privacy?.[0] ??
       flattened.fieldErrors.default_comments_privacy?.[0] ??
@@ -527,6 +580,10 @@ export async function PATCH(request: Request) {
 
   if (parsed.data.bio !== undefined) {
     updates.bio = parsed.data.bio?.trim() || null;
+  }
+
+  if (parsed.data.name_display_preference !== undefined) {
+    updates.name_display_preference = parsed.data.name_display_preference;
   }
 
   if (parsed.data.phone !== undefined) {
@@ -625,6 +682,17 @@ export async function PATCH(request: Request) {
   }
 
   const profile = normalizeProfileRow(selected.data, selected.attempt);
+  const nameDisplayPreferenceResult = await selectNameDisplayPreference(
+    supabase,
+    user.id
+  );
+  if (nameDisplayPreferenceResult.error) {
+    return NextResponse.json(
+      { error: nameDisplayPreferenceResult.error },
+      { status: 500 }
+    );
+  }
+  profile.name_display_preference = nameDisplayPreferenceResult.value;
   const { data: phoneRow, error: phoneError } = await supabase
     .from("profiles")
     .select("phone")
@@ -648,5 +716,7 @@ export async function PATCH(request: Request) {
   }
 
   const bio = typeof bioRowPatch?.bio === "string" ? bioRowPatch.bio : null;
-  return NextResponse.json({ profile: { ...profile, phone, bio } });
+  return NextResponse.json({
+    profile: { ...profile, phone, bio },
+  });
 }

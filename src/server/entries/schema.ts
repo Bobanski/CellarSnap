@@ -165,6 +165,7 @@ export const createEntrySchema = z
     location_text: nullableString,
     location_place_id: nullableString,
     consumed_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    drinking_now: z.boolean().optional(),
     tasted_with_user_ids: z.array(z.string().uuid()).optional(),
     entry_privacy: privacyLevelSchema.optional(),
     reaction_privacy: privacyLevelSchema.optional(),

@@ -43,3 +43,5 @@
 039_content_report_dedupe.sql
 040_test_account_helper.sql
 041_test_account_visibility.sql
+042_drinking_now.sql
+043_name_display_preference.sql

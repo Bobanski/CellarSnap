@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { executeSelectWithFallback } from "@/server/db/compat";
 
+type PublicProfileUserRow = {
+  id: string;
+  display_name: string | null;
+  username?: string | null;
+};
+
 function sanitizeUserSearch(search: string) {
   // Prevent PostgREST `.or()` filter syntax issues.
   return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
@@ -32,10 +38,16 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const search = sanitizeUserSearch(searchParams.get("search")?.trim() ?? "");
 
-  const buildProfileQuery = (includeNameColumns: boolean) => {
+  const buildProfileQuery = ({
+    includeNameColumns,
+    includeUsernameColumn,
+  }: {
+    includeNameColumns: boolean;
+    includeUsernameColumn: boolean;
+  }) => {
     const query = supabase
       .from("public_profiles")
-      .select("id, display_name")
+      .select(includeUsernameColumn ? "id, display_name, username" : "id, display_name")
       .neq("id", user.id)
       .order("display_name", { ascending: true });
 
@@ -46,35 +58,58 @@ export async function GET(request: Request) {
     const pattern = `%${search}%`;
     const tokens = search.split(" ").filter(Boolean);
     const searchableFields = includeNameColumns
-      ? ["display_name", "first_name", "last_name"]
-      : ["display_name"];
+      ? includeUsernameColumn
+        ? ["display_name", "username", "first_name", "last_name"]
+        : ["display_name", "first_name", "last_name"]
+      : includeUsernameColumn
+        ? ["display_name", "username"]
+        : ["display_name"];
     const tokenAndFilter = buildTokenAndFilter(tokens, searchableFields);
     const filters = includeNameColumns
       ? [
           `display_name.ilike.${pattern}`,
+          ...(includeUsernameColumn ? [`username.ilike.${pattern}`] : []),
           `first_name.ilike.${pattern}`,
           `last_name.ilike.${pattern}`,
           tokenAndFilter,
         ]
-      : [`display_name.ilike.${pattern}`, tokenAndFilter];
+      : [
+          `display_name.ilike.${pattern}`,
+          ...(includeUsernameColumn ? [`username.ilike.${pattern}`] : []),
+          tokenAndFilter,
+        ];
 
     return query.or(filters.filter(Boolean).join(",")).limit(25);
   };
 
-  let data: { id: string; display_name: string | null }[] | null;
+  let data: PublicProfileUserRow[] | null;
   let error: { message: string } | null;
 
   if (search) {
     const searchResult = await executeSelectWithFallback({
       attempts: [
-        { includeNameColumns: true, missingColumns: ["first_name", "last_name"] as const },
-        { includeNameColumns: false, missingColumns: [] as const },
+        {
+          includeNameColumns: true,
+          includeUsernameColumn: true,
+          missingColumns: ["username", "first_name", "last_name"] as const,
+        },
+        {
+          includeNameColumns: true,
+          includeUsernameColumn: false,
+          missingColumns: ["first_name", "last_name"] as const,
+        },
+        {
+          includeNameColumns: false,
+          includeUsernameColumn: true,
+          missingColumns: ["username"] as const,
+        },
+        { includeNameColumns: false, includeUsernameColumn: false, missingColumns: [] as const },
       ],
       getFallbackColumns: (attempt) => attempt.missingColumns,
       attempt: async (attempt) => {
-        const response = await buildProfileQuery(attempt.includeNameColumns);
+        const response = await buildProfileQuery(attempt);
         return {
-          data: response.data,
+          data: response.data as PublicProfileUserRow[] | null,
           error: response.error,
         };
       },
@@ -82,8 +117,11 @@ export async function GET(request: Request) {
     data = searchResult.data;
     error = searchResult.error;
   } else {
-    const response = await buildProfileQuery(false);
-    data = response.data;
+    const response = await buildProfileQuery({
+      includeNameColumns: false,
+      includeUsernameColumn: false,
+    });
+    data = response.data as PublicProfileUserRow[] | null;
     error = response.error;
   }
 
