@@ -3,17 +3,26 @@ import {
   getBlockedEitherWayUserIds,
   getFriendsOfFriendsIds,
 } from "@/lib/access/entryVisibility";
+import {
+  canViewTestAuthoredContent,
+  getTestAccountStatusMap,
+} from "@/lib/access/testAccounts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-export type ProfileEntryPrivacy = "public" | "friends_of_friends" | "friends";
+export type ProfileEntryPrivacy =
+  | "public"
+  | "friends_of_friends"
+  | "friends"
+  | "private";
 
 type ProfileEntryVisibilityParams = {
   isOwnProfile: boolean;
   isBlocked: boolean;
   isFriend: boolean;
   isFriendOfFriend: boolean;
+  isTestViewer: boolean;
 };
 
 export function resolveAllowedProfileEntryPrivacies({
@@ -21,9 +30,10 @@ export function resolveAllowedProfileEntryPrivacies({
   isBlocked,
   isFriend,
   isFriendOfFriend,
+  isTestViewer,
 }: ProfileEntryVisibilityParams): ProfileEntryPrivacy[] {
-  if (isOwnProfile) {
-    return ["public", "friends_of_friends", "friends"];
+  if (isOwnProfile || isTestViewer) {
+    return ["public", "friends_of_friends", "friends", "private"];
   }
   if (isBlocked) {
     return [];
@@ -56,7 +66,30 @@ export async function resolveProfileEntryAccess({
         isBlocked: false,
         isFriend: false,
         isFriendOfFriend: false,
+        isTestViewer: false,
       }),
+    };
+  }
+
+  const testAccountStatus = await getTestAccountStatusMap(supabase, [
+    viewerUserId,
+    targetUserId,
+  ]);
+  const viewerIsTestAccount = testAccountStatus.get(viewerUserId) ?? false;
+  const targetIsTestAccount = testAccountStatus.get(targetUserId) ?? false;
+
+  if (
+    !canViewTestAuthoredContent({
+      viewerUserId,
+      ownerUserId: targetUserId,
+      viewerIsTestAccount,
+      ownerIsTestAccount: targetIsTestAccount,
+    })
+  ) {
+    return {
+      blocked: true,
+      isOwnProfile,
+      allowedPrivacies: [],
     };
   }
 
@@ -71,6 +104,7 @@ export async function resolveProfileEntryAccess({
         isBlocked,
         isFriend: false,
         isFriendOfFriend: false,
+        isTestViewer: viewerIsTestAccount,
       }),
     };
   }
@@ -86,6 +120,7 @@ export async function resolveProfileEntryAccess({
         isBlocked: false,
         isFriend,
         isFriendOfFriend: false,
+        isTestViewer: viewerIsTestAccount,
       }),
     };
   }
@@ -105,6 +140,7 @@ export async function resolveProfileEntryAccess({
       isBlocked: false,
       isFriend: false,
       isFriendOfFriend,
+      isTestViewer: viewerIsTestAccount,
     }),
   };
 }

@@ -10,6 +10,7 @@ import {
   type EntryPrivacy,
 } from "@/lib/access/entryVisibility";
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import { isTestAccount } from "@/lib/access/testAccounts";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { signPhotoUrls } from "@/server/storage/signedUrls";
 
@@ -132,6 +133,7 @@ export async function GET(request: Request) {
     Number.isFinite(rawLimit) && rawLimit > 0
       ? Math.min(50, Math.max(1, rawLimit))
       : 30;
+  const viewerIsTestAccount = await isTestAccount(supabase, user.id);
 
   const blockedUserIdsSet = await getBlockedEitherWayUserIds(supabase, user.id);
   const acceptedFriendIdsSet = await getAcceptedFriendIds(supabase, user.id);
@@ -172,7 +174,9 @@ export async function GET(request: Request) {
   }) => {
     let query = supabase.from("wine_entries").select(fields);
 
-    if (scope === "friends") {
+    if (viewerIsTestAccount) {
+      query = query.neq("user_id", user.id);
+    } else if (scope === "friends") {
       query = query
         .in("user_id", socialAuthorIds)
         .in("entry_privacy", ["public", "friends_of_friends", "friends"])
@@ -196,7 +200,7 @@ export async function GET(request: Request) {
     return query;
   };
 
-  if (scope === "friends" && socialAuthorIds.length === 0) {
+  if (!viewerIsTestAccount && scope === "friends" && socialAuthorIds.length === 0) {
     return NextResponse.json({
       entries: [],
       next_cursor: null,

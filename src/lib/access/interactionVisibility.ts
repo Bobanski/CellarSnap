@@ -1,5 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry, type EntryPrivacy } from "@/lib/access/entryVisibility";
+import {
+  canViewTestAuthoredContent,
+  getTestAccountStatusMap,
+} from "@/lib/access/testAccounts";
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -87,6 +91,19 @@ export async function resolveInteractionAccessForViewer({
     commentsScope,
   });
 
+  const testAccountStatus = await getTestAccountStatusMap(supabase, [
+    viewerUserId,
+    ownerUserId,
+  ]);
+  const viewerIsTestAccount = testAccountStatus.get(viewerUserId) ?? false;
+  const ownerIsTestAccount = testAccountStatus.get(ownerUserId) ?? false;
+  const ownerCanSeeViewerContent = canViewTestAuthoredContent({
+    viewerUserId: ownerUserId,
+    ownerUserId: viewerUserId,
+    viewerIsTestAccount: ownerIsTestAccount,
+    ownerIsTestAccount: viewerIsTestAccount,
+  });
+
   const [canReact, canComment] = await Promise.all([
     canUserViewEntry({
       supabase,
@@ -96,6 +113,8 @@ export async function resolveInteractionAccessForViewer({
       acceptedFriendIds,
       friendsOfFriendsIds,
       blockedUserIds,
+      viewerIsTestAccount,
+      ownerIsTestAccount,
     }),
     canUserViewEntry({
       supabase,
@@ -105,12 +124,14 @@ export async function resolveInteractionAccessForViewer({
       acceptedFriendIds,
       friendsOfFriendsIds,
       blockedUserIds,
+      viewerIsTestAccount,
+      ownerIsTestAccount,
     }),
   ]);
 
   return {
     ...resolvedPrivacy,
-    canReact,
-    canComment,
+    canReact: ownerCanSeeViewerContent && canReact,
+    canComment: ownerCanSeeViewerContent && canComment,
   };
 }

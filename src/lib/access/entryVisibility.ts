@@ -1,4 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  canViewTestAuthoredContent,
+  getTestAccountStatusMap,
+} from "@/lib/access/testAccounts";
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -181,6 +185,9 @@ export async function canUserViewEntry({
   acceptedFriendIds,
   friendsOfFriendsIds,
   blockedUserIds,
+  viewerIsTestAccount,
+  ownerIsTestAccount,
+  allowTestViewerBypass = true,
 }: {
   supabase: SupabaseClient;
   viewerUserId: string;
@@ -189,6 +196,9 @@ export async function canUserViewEntry({
   acceptedFriendIds?: Set<string>;
   friendsOfFriendsIds?: Set<string>;
   blockedUserIds?: Set<string>;
+  viewerIsTestAccount?: boolean;
+  ownerIsTestAccount?: boolean;
+  allowTestViewerBypass?: boolean;
 }): Promise<boolean> {
   if (viewerUserId === ownerUserId) {
     return true;
@@ -198,6 +208,32 @@ export async function canUserViewEntry({
     await isBlockedEitherWay(supabase, viewerUserId, ownerUserId, blockedUserIds)
   ) {
     return false;
+  }
+
+  const needsTestStatus =
+    viewerIsTestAccount === undefined || ownerIsTestAccount === undefined;
+  const testAccountStatus =
+    needsTestStatus
+      ? await getTestAccountStatusMap(supabase, [viewerUserId, ownerUserId])
+      : null;
+  const resolvedViewerIsTestAccount =
+    viewerIsTestAccount ?? testAccountStatus?.get(viewerUserId) ?? false;
+  const resolvedOwnerIsTestAccount =
+    ownerIsTestAccount ?? testAccountStatus?.get(ownerUserId) ?? false;
+
+  if (
+    !canViewTestAuthoredContent({
+      viewerUserId,
+      ownerUserId,
+      viewerIsTestAccount: resolvedViewerIsTestAccount,
+      ownerIsTestAccount: resolvedOwnerIsTestAccount,
+    })
+  ) {
+    return false;
+  }
+
+  if (resolvedViewerIsTestAccount && allowTestViewerBypass) {
+    return true;
   }
 
   const privacy = normalizeEntryPrivacy(entryPrivacy);

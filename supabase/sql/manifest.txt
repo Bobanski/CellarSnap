@@ -41,3 +41,5 @@
 035_entry_post_save_survey.sql
 036_apply_friend_transition.sql
 039_content_report_dedupe.sql
+040_test_account_helper.sql
+041_test_account_visibility.sql

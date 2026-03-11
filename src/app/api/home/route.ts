@@ -1,45 +1,11 @@
 import { NextResponse } from "next/server";
+import { getFriendsOfFriendsIds } from "@/lib/access/entryVisibility";
+import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import { isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
-
-function normalizePrivacyLevel(
-  value: unknown
-): "public" | "friends_of_friends" | "friends" | "private" {
-  if (
-    value === "public" ||
-    value === "friends_of_friends" ||
-    value === "friends" ||
-    value === "private"
-  ) {
-    return value;
-  }
-  return "public";
-}
-
-function canViewerAccessByHomePrivacy({
-  viewerUserId,
-  ownerUserId,
-  privacy,
-  acceptedFriendIds,
-}: {
-  viewerUserId: string;
-  ownerUserId: string;
-  privacy: "public" | "friends_of_friends" | "friends" | "private";
-  acceptedFriendIds: Set<string>;
-}) {
-  if (viewerUserId === ownerUserId) {
-    return true;
-  }
-  if (privacy === "public") {
-    return true;
-  }
-  if (privacy === "private") {
-    return false;
-  }
-  return acceptedFriendIds.has(ownerUserId);
-}
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -50,6 +16,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const viewerIsTestAccount = await isTestAccount(supabase, user.id);
 
   // ── Fetch user profile ──
   const profileSelectResult = await executeSelectWithFallback({
@@ -134,15 +102,20 @@ export async function GET() {
 
   let friendEntries: typeof ownEntries = [];
 
-  if (friendIds.length > 0) {
+  if (viewerIsTestAccount || friendIds.length > 0) {
     const buildFriendQuery = (withFeedVisibilityFilter: boolean) => {
       let query = supabase
         .from("wine_entries")
         .select("*")
-        .in("user_id", friendIds)
-        .in("entry_privacy", ["public", "friends_of_friends", "friends"])
         .order("created_at", { ascending: false })
         .limit(6);
+
+      query = viewerIsTestAccount
+        ? query.neq("user_id", user.id)
+        : query
+            .in("user_id", friendIds)
+            .in("entry_privacy", ["public", "friends_of_friends", "friends"]);
+
       if (withFeedVisibilityFilter) {
         query = query.eq("is_feed_visible", true);
       }
@@ -285,18 +258,23 @@ export async function GET() {
     (friendProfiles ?? []).map((profile) => [profile.id, profile])
   );
   const acceptedFriendIds = new Set(friendIds);
+  const friendsOfFriendsIds = viewerIsTestAccount
+    ? new Set<string>()
+    : await getFriendsOfFriendsIds(supabase, user.id, acceptedFriendIds);
 
   // ── Build response for own entries ──
   const recentEntries = await Promise.all(
     ownEntries.map(async (entry) => {
-      const reactionPrivacy = normalizePrivacyLevel(
-        (entry as { reaction_privacy?: unknown }).reaction_privacy ?? entry.entry_privacy
-      );
-      const canReact = canViewerAccessByHomePrivacy({
+      const interactionAccess = await resolveInteractionAccessForViewer({
+        supabase,
         viewerUserId: user.id,
         ownerUserId: entry.user_id,
-        privacy: reactionPrivacy,
+        entryPrivacy: entry.entry_privacy,
+        reactionPrivacy: (entry as { reaction_privacy?: unknown }).reaction_privacy,
+        commentsPrivacy: (entry as { comments_privacy?: unknown }).comments_privacy,
+        commentsScope: (entry as { comments_scope?: string | null }).comments_scope,
         acceptedFriendIds,
+        friendsOfFriendsIds,
       });
 
       return {
@@ -311,10 +289,10 @@ export async function GET() {
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase
       ),
-      can_react: canReact,
-      my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
-      reaction_counts: canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
-      reaction_users: canReact
+      can_react: interactionAccess.canReact,
+      my_reactions: interactionAccess.canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
+      reaction_counts: interactionAccess.canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
+      reaction_users: interactionAccess.canReact
         ? Object.fromEntries(
             Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
               ([emoji, ids]) => [
@@ -331,14 +309,16 @@ export async function GET() {
   // ── Build response for friend entries ──
   const circlEntries = await Promise.all(
     friendEntries.map(async (entry) => {
-      const reactionPrivacy = normalizePrivacyLevel(
-        (entry as { reaction_privacy?: unknown }).reaction_privacy ?? entry.entry_privacy
-      );
-      const canReact = canViewerAccessByHomePrivacy({
+      const interactionAccess = await resolveInteractionAccessForViewer({
+        supabase,
         viewerUserId: user.id,
         ownerUserId: entry.user_id,
-        privacy: reactionPrivacy,
+        entryPrivacy: entry.entry_privacy,
+        reactionPrivacy: (entry as { reaction_privacy?: unknown }).reaction_privacy,
+        commentsPrivacy: (entry as { comments_privacy?: unknown }).comments_privacy,
+        commentsScope: (entry as { comments_scope?: string | null }).comments_scope,
         acceptedFriendIds,
+        friendsOfFriendsIds,
       });
 
       return {
@@ -356,10 +336,10 @@ export async function GET() {
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase
       ),
-      can_react: canReact,
-      my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
-      reaction_counts: canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
-      reaction_users: canReact
+      can_react: interactionAccess.canReact,
+      my_reactions: interactionAccess.canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
+      reaction_counts: interactionAccess.canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
+      reaction_users: interactionAccess.canReact
         ? Object.fromEntries(
             Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
               ([emoji, ids]) => [

@@ -42,7 +42,7 @@ export function createUserEntriesGetHandler(
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
 
-    let allowedPrivacies: ("public" | "friends_of_friends" | "friends")[] = [
+    let allowedPrivacies: ("public" | "friends_of_friends" | "friends" | "private")[] = [
       "public",
     ];
     if (user.id !== userId) {

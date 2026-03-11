@@ -81,6 +81,15 @@ Schema health:
   - blocks/reports
   - post-save survey
 
+Test accounts:
+
+- Run `040_test_account_helper.sql` in environments where you want quick manual test users.
+- Example in the Supabase SQL editor:
+  `select * from public.create_test_account('eric-test', 'supersecret123');`
+- The helper creates a confirmed email/password user with a generated `@test.cellarsnap.local` email, sets the profile username, and still leaves first-run privacy onboarding active.
+- Test accounts can view all app content, but any content they author is only visible to other test accounts.
+- Sign in with the username you chose plus the password you supplied.
+
 ## Getting Started
 
 Run the web app from the repo root:
