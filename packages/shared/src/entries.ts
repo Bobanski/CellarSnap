@@ -177,6 +177,7 @@ export const createEntryInputSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Consumed date must be YYYY-MM-DD.")
     .optional(),
+  drinking_now: z.boolean().optional(),
   entry_privacy: z
     .preprocess(
       (value) => (value === "" ? undefined : value),
@@ -282,6 +283,7 @@ export function toWineEntryInsertPayload(
     location_text: input.location_text ?? null,
     location_place_id: input.location_place_id ?? null,
     consumed_at: input.consumed_at ?? getTodayLocalYmd(),
+    drinking_now: input.drinking_now ?? false,
     tasted_with_user_ids: [],
     entry_privacy: entryPrivacy,
     reaction_privacy: reactionPrivacy,

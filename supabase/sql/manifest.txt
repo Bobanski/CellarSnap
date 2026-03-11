@@ -47,5 +47,8 @@
 041_test_account_visibility.sql
 042_drinking_now.sql
 043_name_display_preference.sql
+<<<<<<< HEAD
 044_content_report_delete_cascade.sql
 045_entry_groups.sql
+=======
+>>>>>>> 048a050 (Add drinking now highlights and name display preferences)

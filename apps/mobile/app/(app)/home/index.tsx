@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -25,7 +26,12 @@ import { AppTopBar } from "@/src/components/AppTopBar";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import { AppText } from "@/src/components/AppText";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
+import {
+  DRINKING_NOW_REFRESH_INTERVAL_MS,
+  isDrinkingNowActive,
+} from "@/src/lib/drinkingNow";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
+import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -39,8 +45,10 @@ type HomeEntryRow = {
   qpr_level: QprLevel | null;
   consumed_at: string;
   created_at: string;
+  tasted_with_user_ids: string[] | null;
   label_image_path: string | null;
   entry_privacy: PrivacyLevel;
+  drinking_now?: boolean | null;
 };
 
 type ProfileWithPrivacyRow = {
@@ -65,6 +73,7 @@ type FriendProfileRow = {
   id: string;
   display_name: string | null;
   email: string | null;
+  avatar_path?: string | null;
 };
 
 type HomeReactionRow = {
@@ -86,6 +95,9 @@ type RecentEntry = {
   rating: number | null;
   qpr_level: QprLevel | null;
   consumed_at: string;
+  created_at: string;
+  drinking_now: boolean;
+  tasted_with_names: string[];
   label_image_url: string | null;
   can_react: boolean;
   my_reactions: string[];
@@ -96,9 +108,14 @@ type RecentEntry = {
 type CircleEntry = RecentEntry & {
   user_id: string;
   author_name: string;
+  author_avatar_url: string | null;
 };
 
 const REACTION_EMOJIS = ["\u{1F377}", "\u{1F525}", "\u2764\uFE0F", "\u{1F440}", "\u{1F91D}"] as const;
+
+function isMissingAvatarColumn(message: string) {
+  return message.includes("avatar_path") || message.includes("column");
+}
 
 function canViewerAccessByHomePrivacy({
   viewerUserId,
@@ -217,19 +234,27 @@ function getDisplayRating(rating: number | null): string | null {
   return `${normalized}/100`;
 }
 
+function buildOwnerWithCompanionsLabel(ownerLabel: string, companionNames: string[]) {
+  return companionNames.length > 0 ? `${ownerLabel} + ${companionNames.join(", ")}` : ownerLabel;
+}
+
 function HomeEntryCard({
   entry,
   ownerLabel,
+  ownerAvatarUrl,
   ownerOnPress,
   onPress,
   onToggleReaction,
+  showDrinkingNowGlow,
   variant,
 }: {
   entry: RecentEntry | CircleEntry;
   ownerLabel: string;
+  ownerAvatarUrl?: string | null;
   ownerOnPress?: () => void;
   onPress: () => void;
   onToggleReaction: (emoji: string) => void;
+  showDrinkingNowGlow: boolean;
   variant: "own" | "circle";
 }) {
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
@@ -237,6 +262,10 @@ function HomeEntryCard({
   const vintage = entry.vintage?.trim() || null;
   const displayRating = getDisplayRating(entry.rating);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const ownerWithCompanionsLabel = buildOwnerWithCompanionsLabel(
+    ownerLabel,
+    entry.tasted_with_names
+  );
   const subtitle =
     variant === "own"
       ? producer || vintage
@@ -245,16 +274,62 @@ function HomeEntryCard({
       : producer;
 
   return (
-    <Pressable style={styles.entryCard} onPress={onPress}>
+    <Pressable
+      style={[styles.entryCard, showDrinkingNowGlow ? styles.entryCardDrinkingNow : null]}
+      onPress={onPress}
+    >
       <View style={styles.entryHeaderRow}>
         {ownerOnPress ? (
-          <Pressable onPress={ownerOnPress}>
-            <AppText style={[styles.entryOwner, styles.entryOwnerButton]}>
-              {ownerLabel}
+          <Pressable
+            style={styles.entryOwnerStack}
+            onPress={(event) => {
+              event.stopPropagation();
+              ownerOnPress();
+            }}
+          >
+            {variant === "circle" ? (
+              <View style={styles.entryOwnerAvatar}>
+                {ownerAvatarUrl ? (
+                  <Image
+                    source={{ uri: ownerAvatarUrl }}
+                    style={styles.entryOwnerAvatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <AppText style={styles.entryOwnerAvatarFallback}>
+                    {(ownerLabel || "?")[0]?.toUpperCase() ?? "?"}
+                  </AppText>
+                )}
+              </View>
+            ) : null}
+            <AppText
+              style={[styles.entryOwner, styles.entryOwnerButton]}
+              numberOfLines={2}
+            >
+              {ownerWithCompanionsLabel}
             </AppText>
           </Pressable>
         ) : (
-          <AppText style={styles.entryOwner}>{ownerLabel}</AppText>
+          <View style={styles.entryOwnerStack}>
+            {variant === "circle" ? (
+              <View style={styles.entryOwnerAvatar}>
+                {ownerAvatarUrl ? (
+                  <Image
+                    source={{ uri: ownerAvatarUrl }}
+                    style={styles.entryOwnerAvatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <AppText style={styles.entryOwnerAvatarFallback}>
+                    {(ownerLabel || "?")[0]?.toUpperCase() ?? "?"}
+                  </AppText>
+                )}
+              </View>
+            ) : null}
+            <AppText style={styles.entryOwner} numberOfLines={2}>
+              {ownerWithCompanionsLabel}
+            </AppText>
+          </View>
         )}
         <AppText style={styles.entryDate}>
           {formatConsumedDate(entry.consumed_at)}
@@ -390,8 +465,20 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const isFirstTime = useMemo(() => totalEntryCount === 0, [totalEntryCount]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, DRINKING_NOW_REFRESH_INTERVAL_MS);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
   const loadHome = useCallback(
     async (refresh = false) => {
       if (!user) {
@@ -454,21 +541,50 @@ export default function HomeScreen() {
           throw totalCountError;
         }
 
-        const { data: ownRows, error: ownRowsError } = await supabase
-          .from("wine_entries")
-          .select(
-            "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, label_image_path, entry_privacy"
-          )
-          .eq("user_id", user.id)
-          .order("consumed_at", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(3);
+        const baseHomeSelectFields =
+          "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, tasted_with_user_ids, label_image_path, entry_privacy";
+        const selectHomeRows = async ({
+          includeDrinkingNow,
+        }: {
+          includeDrinkingNow: boolean;
+        }) => {
+          const fields = includeDrinkingNow
+            ? `${baseHomeSelectFields}, drinking_now`
+            : baseHomeSelectFields;
+          const response = await supabase
+            .from("wine_entries")
+            .select(fields)
+            .eq("user_id", user.id)
+            .order("consumed_at", { ascending: false })
+            .order("created_at", { ascending: false })
+            .limit(3);
+          return {
+            data: (response.data ?? []).map((row) => ({
+              ...(row as unknown as HomeEntryRow),
+              drinking_now: includeDrinkingNow
+                ? (row as unknown as HomeEntryRow).drinking_now ?? false
+                : false,
+            })),
+            error: response.error,
+          };
+        };
 
-        if (ownRowsError) {
-          throw ownRowsError;
+        const ownAttempt = await selectHomeRows({ includeDrinkingNow: true });
+        let ownEntries = ownAttempt.data;
+        if (ownAttempt.error) {
+          if (
+            ownAttempt.error.message.includes("drinking_now") ||
+            ownAttempt.error.message.includes("column")
+          ) {
+            const fallback = await selectHomeRows({ includeDrinkingNow: false });
+            if (fallback.error) {
+              throw fallback.error;
+            }
+            ownEntries = fallback.data;
+          } else {
+            throw ownAttempt.error;
+          }
         }
-
-        const ownEntries = (ownRows ?? []) as HomeEntryRow[];
 
         const { data: friendRows, error: friendRowsError } = await supabase
           .from("friend_requests")
@@ -490,31 +606,65 @@ export default function HomeScreen() {
 
         let friendEntries: HomeEntryRow[] = [];
         if (friendIds.length > 0) {
-          const buildFriendQuery = () =>
-            supabase
+          const buildFriendQuery = ({
+            includeDrinkingNow,
+            includeFeedVisibility,
+          }: {
+            includeDrinkingNow: boolean;
+            includeFeedVisibility: boolean;
+          }) => {
+            const fields = includeDrinkingNow
+              ? `${baseHomeSelectFields}, drinking_now`
+              : baseHomeSelectFields;
+            let query = supabase
               .from("wine_entries")
-              .select(
-                "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, label_image_path, entry_privacy"
-              )
+              .select(fields)
               .in("user_id", friendIds)
               .in("entry_privacy", ["public", "friends_of_friends", "friends"])
               .order("created_at", { ascending: false })
               .limit(6);
 
-          const attempt = await buildFriendQuery().eq("is_feed_visible", true);
-          if (!attempt.error) {
-            friendEntries = (attempt.data ?? []) as HomeEntryRow[];
-          } else if (
-            attempt.error.message.includes("is_feed_visible") ||
-            attempt.error.message.includes("column")
-          ) {
-            const fallback = await buildFriendQuery();
-            if (fallback.error) {
-              throw fallback.error;
+            if (includeFeedVisibility) {
+              query = query.eq("is_feed_visible", true);
             }
-            friendEntries = (fallback.data ?? []) as HomeEntryRow[];
-          } else {
-            throw attempt.error;
+
+            return query;
+          };
+
+          const friendAttempts = [
+            { includeDrinkingNow: true, includeFeedVisibility: true },
+            { includeDrinkingNow: false, includeFeedVisibility: true },
+            { includeDrinkingNow: true, includeFeedVisibility: false },
+            { includeDrinkingNow: false, includeFeedVisibility: false },
+          ] as const;
+
+          let lastFriendError: Error | { message: string } | null = null;
+          for (const attempt of friendAttempts) {
+            const response = await buildFriendQuery(attempt);
+            if (!response.error) {
+              friendEntries = (response.data ?? []).map((row) => ({
+                ...(row as unknown as HomeEntryRow),
+                drinking_now: attempt.includeDrinkingNow
+                  ? (row as unknown as HomeEntryRow).drinking_now ?? false
+                  : false,
+              }));
+              lastFriendError = null;
+              break;
+            }
+
+            lastFriendError = response.error;
+            const message = response.error.message ?? "";
+            if (
+              !message.includes("drinking_now") &&
+              !message.includes("is_feed_visible") &&
+              !message.includes("column")
+            ) {
+              throw response.error;
+            }
+          }
+
+          if (lastFriendError) {
+            throw lastFriendError;
           }
         }
 
@@ -590,6 +740,7 @@ export default function HomeScreen() {
         const profileLookupIds = Array.from(
           new Set([
             ...friendEntries.map((entry) => entry.user_id),
+            ...allEntries.flatMap((entry) => entry.tasted_with_user_ids ?? []),
             ...Array.from(reactorUserIds),
           ])
         );
@@ -598,16 +749,36 @@ export default function HomeScreen() {
         if (profileLookupIds.length > 0) {
           const { data, error } = await supabase
             .from("public_profiles")
-            .select("id, display_name, email")
+            .select("id, display_name, email, avatar_path")
             .in("id", profileLookupIds);
           if (!error && data) {
             friendProfiles = data as FriendProfileRow[];
+          } else if (error && isMissingAvatarColumn(error.message)) {
+            const fallback = await supabase
+              .from("public_profiles")
+              .select("id, display_name, email")
+              .in("id", profileLookupIds);
+            if (!fallback.error && fallback.data) {
+              friendProfiles = fallback.data as FriendProfileRow[];
+            }
           }
         }
 
         const profileNameById = new Map(
           friendProfiles.map((row) => [row.id, getPublicProfileName(row)])
         );
+        const profileAvatarUrlById = new Map<string, string | null>();
+        const signedAvatarUrlByPath = await signPhotoUrls(
+          friendProfiles.map((row) => row.avatar_path ?? null),
+          { supabaseClient: supabase }
+        );
+        friendProfiles.forEach((row) => {
+          const avatarPath = row.avatar_path ?? null;
+          profileAvatarUrlById.set(
+            row.id,
+            avatarPath ? signedAvatarUrlByPath.get(avatarPath) ?? null : null
+          );
+        });
 
         const recent = ownEntries.map((entry) => {
           const reactionPrivacy = normalizePrivacyLevel(
@@ -628,6 +799,11 @@ export default function HomeScreen() {
             rating: entry.rating,
             qpr_level: entry.qpr_level,
             consumed_at: entry.consumed_at,
+            created_at: entry.created_at,
+            drinking_now: entry.drinking_now === true,
+            tasted_with_names: (entry.tasted_with_user_ids ?? []).map(
+              (id) => profileNameById.get(id) ?? "Unknown"
+            ),
             label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
             can_react: canReact,
             my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
@@ -662,7 +838,13 @@ export default function HomeScreen() {
             rating: entry.rating,
             qpr_level: entry.qpr_level,
             consumed_at: entry.consumed_at,
+            created_at: entry.created_at,
+            drinking_now: entry.drinking_now === true,
+            tasted_with_names: (entry.tasted_with_user_ids ?? []).map(
+              (id) => profileNameById.get(id) ?? "Unknown"
+            ),
             author_name: profileNameById.get(entry.user_id) ?? "Unknown",
+            author_avatar_url: profileAvatarUrlById.get(entry.user_id) ?? null,
             label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
             can_react: canReact,
             my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
@@ -1018,6 +1200,11 @@ export default function HomeScreen() {
                     ownerLabel="You"
                     onPress={() => router.push(`/(app)/entries/${entry.id}`)}
                     onToggleReaction={(emoji) => void toggleHomeReaction(entry.id, emoji)}
+                    showDrinkingNowGlow={isDrinkingNowActive({
+                      drinkingNow: entry.drinking_now,
+                      createdAt: entry.created_at,
+                      now: currentTimeMs,
+                    })}
                     variant="own"
                   />
                 ))
@@ -1081,9 +1268,15 @@ export default function HomeScreen() {
                     key={entry.id}
                     entry={entry}
                     ownerLabel={entry.author_name}
+                    ownerAvatarUrl={entry.author_avatar_url}
                     ownerOnPress={() => router.push("/(app)/feed")}
                     onPress={() => router.push(`/(app)/entries/${entry.id}`)}
                     onToggleReaction={(emoji) => void toggleHomeReaction(entry.id, emoji)}
+                    showDrinkingNowGlow={isDrinkingNowActive({
+                      drinkingNow: entry.drinking_now,
+                      createdAt: entry.created_at,
+                      now: currentTimeMs,
+                    })}
                     variant="circle"
                   />
                 ))}
@@ -1313,6 +1506,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.05)",
     padding: 13,
   },
+  entryCardDrinkingNow: {
+    borderColor: "rgba(125,211,252,0.72)",
+    backgroundColor: "rgba(8,47,73,0.62)",
+    shadowColor: "#7dd3fc",
+    shadowOpacity: 0.44,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 10,
+  },
   entryHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1323,6 +1525,36 @@ const styles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 12,
     fontWeight: "600",
+    flexShrink: 1,
+    lineHeight: 17,
+  },
+  entryOwnerStack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  entryOwnerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  entryOwnerAvatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  entryOwnerAvatarFallback: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "700",
   },
   entryOwnerButton: {
     color: "#e4e4e7",

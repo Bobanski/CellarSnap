@@ -14,6 +14,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   type GestureResponderEvent,
   type TextInput as ReactNativeTextInput,
   View
@@ -109,6 +110,7 @@ type EntryFormState = {
   price_paid_source: PricePaidSource | "";
   qpr_level: QprLevel | "";
   notes: string;
+  drinking_now: boolean;
   location_text: string;
   location_place_id: string;
   consumed_at: string;
@@ -335,6 +337,7 @@ export default function NewEntryScreen() {
     price_paid_source: "",
     qpr_level: "",
     notes: "",
+    drinking_now: false,
     location_text: "",
     location_place_id: "",
     consumed_at: defaultConsumedDate,
@@ -1812,6 +1815,7 @@ export default function NewEntryScreen() {
           : undefined,
       qpr_level: form.qpr_level,
       notes: form.notes,
+      drinking_now: form.drinking_now,
       location_text: form.location_text,
       location_place_id: form.location_place_id || undefined,
       consumed_at: form.consumed_at,
@@ -2213,6 +2217,25 @@ export default function NewEntryScreen() {
 
           {!isBulkLineupMode ? (
             <>
+              <View style={styles.drinkingNowCard}>
+                <View style={styles.drinkingNowCopy}>
+                  <AppText style={styles.drinkingNowTitle}>Drinking Now</AppText>
+                  <AppText style={styles.drinkingNowDescription}>
+                    Friends will see a light blue glow on Home and Feed for 2.5 hours.
+                  </AppText>
+                </View>
+                <Switch
+                  value={form.drinking_now}
+                  onValueChange={(value) => updateField("drinking_now", value)}
+                  trackColor={{
+                    false: "rgba(255,255,255,0.16)",
+                    true: "rgba(56, 189, 248, 0.38)",
+                  }}
+                  thumbColor={form.drinking_now ? "#e0f2fe" : "#f4f4f5"}
+                  ios_backgroundColor="rgba(255,255,255,0.16)"
+                />
+              </View>
+
               <Field
                 label="Notes"
                 value={form.notes}

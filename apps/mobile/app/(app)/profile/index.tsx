@@ -103,6 +103,7 @@ type ProfileData = {
   email: string | null;
   phone: string | null;
   bio: string | null;
+  name_display_preference: NameDisplayPreference;
   default_entry_privacy: PrivacyLevel;
   default_reaction_privacy: PrivacyLevel;
   default_comments_privacy: PrivacyLevel;
@@ -116,6 +117,8 @@ type SearchUser = {
   display_name: string | null;
   email: string | null;
 };
+
+type NameDisplayPreference = "real_name" | "username";
 
 type FriendRequestRow = {
   id: string;
@@ -208,6 +211,14 @@ const PRIVACY_OPTIONS: Array<{ value: PrivacyLevel; label: string }> = [
   { value: "private", label: PRIVACY_LEVEL_LABELS.private },
 ];
 
+const NAME_DISPLAY_OPTIONS: Array<{
+  value: NameDisplayPreference;
+  label: string;
+}> = [
+  { value: "real_name", label: "Real name" },
+  { value: "username", label: "Username" },
+];
+
 function displayFriendName(profile: FriendProfile | null) {
   return getPublicProfileName(profile);
 }
@@ -240,6 +251,7 @@ function hasKnownProfileColumnError(message: string) {
     isMissingColumn(message, "last_name") ||
     isMissingColumn(message, "phone") ||
     isMissingColumn(message, "bio") ||
+    isMissingColumn(message, "name_display_preference") ||
     isMissingColumn(message, "avatar_path") ||
     isMissingColumn(message, "default_reaction_privacy") ||
     isMissingColumn(message, "default_comments_privacy") ||
@@ -309,6 +321,8 @@ export default function ProfileScreen() {
   const [reactionPrivacyValue, setReactionPrivacyValue] = useState<PrivacyLevel>("public");
   const [commentsPrivacyValue, setCommentsPrivacyValue] =
     useState<PrivacyLevel>("friends_of_friends");
+  const [nameDisplayPreferenceValue, setNameDisplayPreferenceValue] =
+    useState<NameDisplayPreference>("real_name");
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
   const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
 
@@ -405,11 +419,12 @@ export default function ProfileScreen() {
       let includesBio = true;
       let includesAvatar = true;
       let includesInteractionDefaults = true;
+      let includesNameDisplayPreference = true;
 
       const fullAttempt = await supabase
         .from("profiles")
         .select(
-          "id, display_name, first_name, last_name, email, phone, bio, default_entry_privacy, default_reaction_privacy, default_comments_privacy, created_at, avatar_path"
+          "id, display_name, first_name, last_name, email, phone, bio, name_display_preference, default_entry_privacy, default_reaction_privacy, default_comments_privacy, created_at, avatar_path"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -445,6 +460,7 @@ export default function ProfileScreen() {
         includesBio = false;
         includesAvatar = false;
         includesInteractionDefaults = false;
+        includesNameDisplayPreference = false;
       }
 
       if (!profileRow) {
@@ -513,6 +529,19 @@ export default function ProfileScreen() {
         }
       }
 
+      if (!includesNameDisplayPreference) {
+        const namePreferenceAttempt = await supabase
+          .from("profiles")
+          .select("name_display_preference")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!namePreferenceAttempt.error && namePreferenceAttempt.data) {
+          profileRow.name_display_preference =
+            namePreferenceAttempt.data.name_display_preference;
+          includesNameDisplayPreference = true;
+        }
+      }
+
       const avatarPath =
         typeof profileRow.avatar_path === "string" ? profileRow.avatar_path : null;
       const avatarUrl = await signPhotoUrl(avatarPath, {
@@ -529,6 +558,8 @@ export default function ProfileScreen() {
         email: typeof profileRow.email === "string" ? profileRow.email : null,
         phone: typeof profileRow.phone === "string" ? profileRow.phone : null,
         bio: typeof profileRow.bio === "string" ? profileRow.bio : null,
+        name_display_preference:
+          profileRow.name_display_preference === "username" ? "username" : "real_name",
         default_entry_privacy: normalizePrivacyLevel(
           profileRow.default_entry_privacy,
           "public"
@@ -551,6 +582,7 @@ export default function ProfileScreen() {
       setEntryPrivacyValue(nextProfile.default_entry_privacy);
       setReactionPrivacyValue(nextProfile.default_reaction_privacy);
       setCommentsPrivacyValue(nextProfile.default_comments_privacy);
+      setNameDisplayPreferenceValue(nextProfile.name_display_preference);
 
       if (syncEditFields || !didHydrateEditFields.current) {
         setEditUsername(nextProfile.display_name ?? "");
@@ -1285,6 +1317,7 @@ export default function ProfileScreen() {
         default_entry_privacy: PrivacyLevel;
         default_reaction_privacy: PrivacyLevel;
         default_comments_privacy: PrivacyLevel;
+        name_display_preference: NameDisplayPreference;
       }>
     ) => {
       if (!user) {
@@ -1326,6 +1359,10 @@ export default function ProfileScreen() {
             delete updatesToApply.default_comments_privacy;
             removedUnsupportedColumn = true;
           }
+          if (isMissingColumn(message, "name_display_preference")) {
+            delete updatesToApply.name_display_preference;
+            removedUnsupportedColumn = true;
+          }
           if (isMissingColumn(message, "privacy_confirmed_at")) {
             delete updatesToApply.privacy_confirmed_at;
             removedUnsupportedColumn = true;
@@ -1346,10 +1383,12 @@ export default function ProfileScreen() {
                   updates.default_reaction_privacy ?? current.default_reaction_privacy,
                 default_comments_privacy:
                   updates.default_comments_privacy ?? current.default_comments_privacy,
+                name_display_preference:
+                  updates.name_display_preference ?? current.name_display_preference,
               }
             : current
         );
-        setPrivacyMessage("Default visibility settings updated.");
+        setPrivacyMessage("Privacy settings updated.");
       } catch (error) {
         setPrivacyMessage(
           error instanceof Error
@@ -1766,11 +1805,14 @@ export default function ProfileScreen() {
           const pattern = `%${search}%`;
           const primary = await supabase
             .from("public_profiles")
-            .select("id, display_name, email, first_name, last_name")
+            .select(
+              "id, display_name, username, email, first_name, last_name, name_display_preference"
+            )
             .neq("id", user.id)
             .or(
               [
                 `display_name.ilike.${pattern}`,
+                `username.ilike.${pattern}`,
                 `first_name.ilike.${pattern}`,
                 `last_name.ilike.${pattern}`,
               ].join(",")
@@ -1779,12 +1821,22 @@ export default function ProfileScreen() {
             .limit(25);
 
           let rows = primary.data as
-            | { id: string; display_name: string | null; email: string | null }[]
+            | {
+                id: string;
+                display_name: string | null;
+                username?: string | null;
+                email: string | null;
+                first_name?: string | null;
+                last_name?: string | null;
+                name_display_preference?: NameDisplayPreference | null;
+              }[]
             | null;
           if (
             primary.error &&
-            (primary.error.message.includes("first_name") ||
-              primary.error.message.includes("last_name"))
+            (primary.error.message.includes("username") ||
+              primary.error.message.includes("first_name") ||
+              primary.error.message.includes("last_name") ||
+              primary.error.message.includes("name_display_preference"))
           ) {
             const fallback = await supabase
               .from("public_profiles")
@@ -2514,9 +2566,18 @@ export default function ProfileScreen() {
               <View style={styles.sectionBlockTopBorder}>
                 <AppText style={styles.sectionTitle}>Privacy settings</AppText>
                 <AppText style={styles.hintText}>
-                  Choose defaults for new posts, reactions, and comments.
+                  Choose how your name appears across the app and set defaults for new posts,
+                  reactions, and comments.
                 </AppText>
 
+                <NameDisplayPreferenceSelector
+                  value={nameDisplayPreferenceValue}
+                  disabled={isSavingPrivacy}
+                  onChange={(value) => {
+                    setNameDisplayPreferenceValue(value);
+                    void savePrivacyDefaults({ name_display_preference: value });
+                  }}
+                />
                 <PrivacySelector
                   title="Post visibility"
                   value={entryPrivacyValue}
@@ -2756,6 +2817,47 @@ function LabeledInput({
         placeholderTextColor="#71717a"
         style={[styles.input, props.multiline ? styles.inputMultiline : null, props.style]}
       />
+    </View>
+  );
+}
+
+function NameDisplayPreferenceSelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: NameDisplayPreference;
+  onChange: (value: NameDisplayPreference) => void;
+  disabled: boolean;
+}) {
+  return (
+    <View style={styles.privacyBlock}>
+      <AppText style={styles.privacyLabel}>Name used across app</AppText>
+      <View style={styles.privacyOptionWrap}>
+        {NAME_DISPLAY_OPTIONS.map((option) => (
+          <Pressable
+            key={`name-display-${option.value}`}
+            onPress={() => onChange(option.value)}
+            disabled={disabled}
+            style={[
+              styles.privacyPill,
+              value === option.value ? styles.privacyPillActive : null,
+            ]}
+          >
+            <AppText
+              style={[
+                styles.privacyPillText,
+                value === option.value ? styles.privacyPillTextActive : null,
+              ]}
+            >
+              {option.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+      <AppText style={styles.hintText}>
+        Real name uses your first name and last initial when available. Otherwise your username is shown.
+      </AppText>
     </View>
   );
 }

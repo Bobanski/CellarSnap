@@ -57,6 +57,7 @@ function isPrimaryGrapeSchemaMissing(message: string) {
 const ENTRY_OPTIONAL_INSERT_COLUMNS = [
   "classification",
   "is_feed_visible",
+  "drinking_now",
   "location_place_id",
   "comments_scope",
   "reaction_privacy",
@@ -429,6 +430,7 @@ export async function POST(request: Request) {
     location_text: payload.data.location_text ?? null,
     location_place_id: payload.data.location_place_id ?? null,
     consumed_at: consumedAt,
+    drinking_now: payload.data.drinking_now ?? false,
     tasted_with_user_ids: payload.data.tasted_with_user_ids ?? [],
     label_image_path: null,
     place_image_path: null,

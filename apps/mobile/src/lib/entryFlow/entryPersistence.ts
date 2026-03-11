@@ -58,6 +58,7 @@ export async function insertEntryWithFallback({
     removeIfPresent("price_paid_source");
     removeIfPresent("qpr_level");
     removeIfPresent("advanced_notes");
+    removeIfPresent("drinking_now");
 
     if (!removed) {
       return { error: { message }, entryId: null };
