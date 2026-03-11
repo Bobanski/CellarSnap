@@ -17,6 +17,7 @@ import { signPhotoUrls } from "@/server/storage/signedUrls";
 type FeedEntryRow = {
   id: string;
   user_id: string;
+  drinking_now?: boolean | null;
   root_entry_id?: string | null;
   is_feed_visible?: boolean | null;
   wine_name: string | null;
@@ -147,9 +148,12 @@ export async function GET(request: Request) {
     new Set([...friendIds, ...Array.from(friendsOfFriendsIdsSet)])
   ).filter((id) => !blockedUserIdsSet.has(id));
 
-  const baseSelectFields =
+  const baseSelectFieldsWithoutDrinkingNow =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+  const baseSelectFields = `${baseSelectFieldsWithoutDrinkingNow}, drinking_now`;
   const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
+  const extendedSelectFieldsWithoutDrinkingNow =
+    `${baseSelectFieldsWithoutDrinkingNow}, root_entry_id, is_feed_visible`;
 
   const initialCursor = cursorV2
     ? {
@@ -225,11 +229,25 @@ export async function GET(request: Request) {
         {
           fields: extendedSelectFields,
           withTastingSupport: true,
+          hasDrinkingNowColumn: true,
+          missingColumns: ["drinking_now", "is_feed_visible", "root_entry_id"] as const,
+        },
+        {
+          fields: extendedSelectFieldsWithoutDrinkingNow,
+          withTastingSupport: true,
+          hasDrinkingNowColumn: false,
           missingColumns: ["is_feed_visible", "root_entry_id"] as const,
         },
         {
           fields: baseSelectFields,
           withTastingSupport: false,
+          hasDrinkingNowColumn: true,
+          missingColumns: ["drinking_now"] as const,
+        },
+        {
+          fields: baseSelectFieldsWithoutDrinkingNow,
+          withTastingSupport: false,
+          hasDrinkingNowColumn: false,
           missingColumns: [] as const,
         },
       ],
@@ -258,7 +276,12 @@ export async function GET(request: Request) {
       );
     }
 
-    const rawRows = (entrySelectResult.data ?? []) as unknown as FeedEntryRow[];
+    const rawRows = ((entrySelectResult.data ?? []) as unknown as FeedEntryRow[]).map((row) => ({
+      ...row,
+      drinking_now: entrySelectResult.usedAttempt?.hasDrinkingNowColumn
+        ? row.drinking_now ?? false
+        : false,
+    }));
     hasTastingSupport = Boolean(entrySelectResult.usedAttempt?.withTastingSupport);
 
     if (rawRows.length === 0) {
@@ -778,6 +801,8 @@ export async function GET(request: Request) {
     return {
       ...entry,
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
+      drinking_now: entry.drinking_now === true,
+      viewer_is_direct_friend: acceptedFriendIdsSet.has(entry.user_id),
       author_name: getPublicProfileName(authorProfile),
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
       label_image_url: labelPhoto,

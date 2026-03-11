@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
+import {
+  DRINKING_NOW_REFRESH_INTERVAL_MS,
+  isDrinkingNowActive,
+} from "@/lib/drinkingNow";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
@@ -55,6 +59,8 @@ type FeedPhoto = {
 type FeedEntry = WineEntryWithUrls & {
   author_name: string;
   author_avatar_url?: string | null;
+  drinking_now?: boolean | null;
+  viewer_is_direct_friend?: boolean;
   can_react?: boolean;
   can_comment?: boolean;
   comments_privacy?: PrivacyLevel;
@@ -373,6 +379,7 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
   >({});
@@ -422,6 +429,14 @@ export default function FeedPage() {
     const timer = window.setTimeout(() => setModerationNotice(null), 3200);
     return () => window.clearTimeout(timer);
   }, [moderationNotice]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, DRINKING_NOW_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const toggleNotesExpanded = (entryId: string) => {
     setExpandedNotesByEntryId((current) => ({
@@ -910,7 +925,7 @@ export default function FeedPage() {
           </label>
           <input
             type="search"
-            placeholder="Search by username..."
+            placeholder="Search by username or name"
             value={searchQuery}
             onChange={(e) => {
               const value = e.target.value;
@@ -1004,7 +1019,15 @@ export default function FeedPage() {
             {entries.map((entry) => (
               <article
                 key={entry.id}
-                className="group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                  isDrinkingNowActive({
+                    drinkingNow: entry.drinking_now,
+                    createdAt: entry.created_at,
+                    now: currentTimeMs,
+                  }) && entry.viewer_is_direct_friend === true
+                    ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
+                    : "border-white/10 bg-white/5 hover:border-amber-300/40"
+                }`}
                 role="button"
                 tabIndex={0}
                 onClick={() => router.push(`/entries/${entry.id}?from=feed`)}

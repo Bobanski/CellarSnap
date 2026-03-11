@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
+import {
+  DRINKING_NOW_REFRESH_INTERVAL_MS,
+  isDrinkingNowActive,
+} from "@/lib/drinkingNow";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
 import NavBar from "@/components/NavBar";
@@ -21,6 +25,8 @@ type RecentEntry = {
   rating: number | null;
   qpr_level: QprLevel | null;
   consumed_at: string;
+  created_at: string;
+  drinking_now: boolean;
   label_image_url: string | null;
   can_react: boolean;
   my_reactions: string[];
@@ -195,8 +201,17 @@ export default function HomePage() {
   const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([]);
   const [circleEntries, setCircleEntries] = useState<CircleEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const isFirstTime = totalEntryCount === 0;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, DRINKING_NOW_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -487,7 +502,15 @@ export default function HomePage() {
                 {recentEntries.map((entry) => (
                   <article
                     key={entry.id}
-                    className="group flex h-full cursor-pointer flex-col rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    className={`group flex h-full cursor-pointer flex-col rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                      isDrinkingNowActive({
+                        drinkingNow: entry.drinking_now,
+                        createdAt: entry.created_at,
+                        now: currentTimeMs,
+                      })
+                        ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
+                        : "border-white/10 bg-white/5 hover:border-amber-300/40"
+                    }`}
                     role="button"
                     tabIndex={0}
                     onClick={() => router.push(`/entries/${entry.id}`)}
@@ -621,7 +644,15 @@ export default function HomePage() {
                 {circleEntries.map((entry) => (
                   <article
                     key={entry.id}
-                    className="group flex h-full cursor-pointer flex-col rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                    className={`group flex h-full cursor-pointer flex-col rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                      isDrinkingNowActive({
+                        drinkingNow: entry.drinking_now,
+                        createdAt: entry.created_at,
+                        now: currentTimeMs,
+                      })
+                        ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
+                        : "border-white/10 bg-white/5 hover:border-amber-300/40"
+                    }`}
                     role="button"
                     tabIndex={0}
                     onClick={() => router.push(`/entries/${entry.id}?from=feed`)}

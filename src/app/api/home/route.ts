@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getFriendsOfFriendsIds } from "@/lib/access/entryVisibility";
-import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import {
+  normalizePrivacyValue,
+  resolveInteractionAccessForViewer,
+} from "@/lib/access/interactionVisibility";
 import { isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -270,8 +273,14 @@ export async function GET() {
         viewerUserId: user.id,
         ownerUserId: entry.user_id,
         entryPrivacy: entry.entry_privacy,
-        reactionPrivacy: (entry as { reaction_privacy?: unknown }).reaction_privacy,
-        commentsPrivacy: (entry as { comments_privacy?: unknown }).comments_privacy,
+        reactionPrivacy: normalizePrivacyValue(
+          (entry as { reaction_privacy?: unknown }).reaction_privacy,
+          entry.entry_privacy
+        ),
+        commentsPrivacy: normalizePrivacyValue(
+          (entry as { comments_privacy?: unknown }).comments_privacy,
+          entry.entry_privacy
+        ),
         commentsScope: (entry as { comments_scope?: string | null }).comments_scope,
         acceptedFriendIds,
         friendsOfFriendsIds,
@@ -285,6 +294,8 @@ export async function GET() {
       rating: entry.rating,
       qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
+      created_at: entry.created_at,
+      drinking_now: (entry as { drinking_now?: unknown }).drinking_now === true,
       label_image_url: await signPhotoUrl(
         labelMap.get(entry.id) ?? entry.label_image_path,
         supabase
@@ -314,8 +325,14 @@ export async function GET() {
         viewerUserId: user.id,
         ownerUserId: entry.user_id,
         entryPrivacy: entry.entry_privacy,
-        reactionPrivacy: (entry as { reaction_privacy?: unknown }).reaction_privacy,
-        commentsPrivacy: (entry as { comments_privacy?: unknown }).comments_privacy,
+        reactionPrivacy: normalizePrivacyValue(
+          (entry as { reaction_privacy?: unknown }).reaction_privacy,
+          entry.entry_privacy
+        ),
+        commentsPrivacy: normalizePrivacyValue(
+          (entry as { comments_privacy?: unknown }).comments_privacy,
+          entry.entry_privacy
+        ),
         commentsScope: (entry as { comments_scope?: string | null }).comments_scope,
         acceptedFriendIds,
         friendsOfFriendsIds,
@@ -330,6 +347,8 @@ export async function GET() {
       rating: entry.rating,
       qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
+      created_at: entry.created_at,
+      drinking_now: (entry as { drinking_now?: unknown }).drinking_now === true,
       author_name:
         getPublicProfileName(profileMap.get(entry.user_id)),
       label_image_url: await signPhotoUrl(
