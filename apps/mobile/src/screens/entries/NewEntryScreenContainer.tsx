@@ -2283,6 +2283,7 @@ export default function NewEntryScreen() {
                     label="Vintage"
                     value={form.vintage}
                     onChange={(v) => updateField("vintage", v)}
+                    keyboardType="number-pad"
                   />
                   <Field
                     label="Country"

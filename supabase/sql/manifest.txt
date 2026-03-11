@@ -45,3 +45,4 @@
 041_test_account_visibility.sql
 042_drinking_now.sql
 043_name_display_preference.sql
+044_content_report_delete_cascade.sql

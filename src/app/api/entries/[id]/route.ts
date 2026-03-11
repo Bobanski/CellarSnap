@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPublicProfileName } from "@/lib/publicProfiles";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
@@ -17,6 +18,7 @@ import {
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
 import { updateEntrySchema } from "@/server/entries/schema";
 import { executeWithColumnFallback } from "@/server/db/compat";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { resolvePersistedEntryRating } from "@/server/entries/updateValidation";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 
@@ -43,10 +45,20 @@ type EntryPutHandlerDependencies = {
   fetchPrimaryGrapesByEntryId: typeof fetchPrimaryGrapesByEntryId;
 };
 
+type EntryDeleteHandlerDependencies = {
+  requireRequestAuth: typeof requireRequestAuth;
+  createSupabaseAdminClient: typeof createSupabaseAdminClient;
+};
+
 const defaultEntryPutHandlerDependencies: EntryPutHandlerDependencies = {
   createSupabaseServerClient,
   executeWithColumnFallback,
   fetchPrimaryGrapesByEntryId,
+};
+
+const defaultEntryDeleteHandlerDependencies: EntryDeleteHandlerDependencies = {
+  requireRequestAuth,
+  createSupabaseAdminClient,
 };
 
 export async function GET(
@@ -551,63 +563,88 @@ export function createEntryPutHandler(
 
 export const PUT = createEntryPutHandler();
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+export function createEntryDeleteHandler(
+  dependencies: Partial<EntryDeleteHandlerDependencies> = {}
 ) {
-  const { id } = await params;
+  const resolvedDependencies = {
+    ...defaultEntryDeleteHandlerDependencies,
+    ...dependencies,
+  };
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  return async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+  ) {
+    const { id } = await params;
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+    let auth;
+    try {
+      auth = await resolvedDependencies.requireRequestAuth(request);
+    } catch (error) {
+      if (error instanceof RequestAuthError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
 
-  const { data: existing, error: fetchError } = await supabase
-    .from("wine_entries")
-    .select("label_image_path, place_image_path, pairing_image_path")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+      const message =
+        error instanceof Error ? error.message : "Unable to verify your session.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
 
-  if (fetchError || !existing) {
-    return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-  }
+    const { supabase, user } = auth;
+    let deleteClient = supabase;
 
-  const { data: photoRows, error: photoFetchError } = await supabase
-    .from("entry_photos")
-    .select("path")
-    .eq("entry_id", id);
+    try {
+      deleteClient =
+        resolvedDependencies.createSupabaseAdminClient() as unknown as typeof supabase;
+    } catch {
+      // Fall back to the user-scoped client when admin credentials are unavailable.
+    }
 
-  if (photoFetchError) {
-    return NextResponse.json({ error: photoFetchError.message }, { status: 500 });
-  }
+    const { data: existing, error: fetchError } = await supabase
+      .from("wine_entries")
+      .select("label_image_path, place_image_path, pairing_image_path")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  const paths = Array.from(
-    new Set([
-      existing.label_image_path,
-      existing.place_image_path,
-      existing.pairing_image_path,
-      ...(photoRows ?? []).map((photo) => photo.path),
-    ].filter((p): p is string => Boolean(p && p !== "pending")))
-  );
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+    }
 
-  const { error } = await supabase
-    .from("wine_entries")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
+    const { data: photoRows, error: photoFetchError } = await deleteClient
+      .from("entry_photos")
+      .select("path")
+      .eq("entry_id", id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    if (photoFetchError) {
+      return NextResponse.json({ error: photoFetchError.message }, { status: 500 });
+    }
 
-  if (paths.length > 0) {
-    await supabase.storage.from("wine-photos").remove(paths);
-  }
+    const paths = Array.from(
+      new Set([
+        existing.label_image_path,
+        existing.place_image_path,
+        existing.pairing_image_path,
+        ...(photoRows ?? []).map((photo) => photo.path),
+      ].filter((p): p is string => Boolean(p && p !== "pending")))
+    );
 
-  return NextResponse.json({ success: true });
+    const { error } = await deleteClient
+      .from("wine_entries")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (paths.length > 0) {
+      await deleteClient.storage.from("wine-photos").remove(paths);
+    }
+
+    return NextResponse.json({ success: true });
+  };
 }
+
+export const DELETE = createEntryDeleteHandler();

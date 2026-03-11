@@ -3,7 +3,10 @@ import type { User } from "@supabase/supabase-js";
 import { createSharePostHandler } from "../src/app/api/share/route";
 import { createUserEntriesGetHandler } from "../src/app/api/users/[id]/entries/route";
 import { createTaggedEntriesGetHandler } from "../src/app/api/users/[id]/tagged/route";
-import { createEntryPutHandler } from "../src/app/api/entries/[id]/route";
+import {
+  createEntryDeleteHandler,
+  createEntryPutHandler,
+} from "../src/app/api/entries/[id]/route";
 import { createAccountDeleteHandler } from "../src/app/api/account/route";
 import { createPasswordSignInHandler } from "../src/app/api/auth/password-sign-in/route";
 import { createRecoveryStartHandler } from "../src/app/api/auth/recovery-start/route";
@@ -193,6 +196,137 @@ function makeEntryPutSupabase({
     },
     getLastUpdatePayload() {
       return lastUpdatePayload;
+    },
+  };
+}
+
+function makeEntryDeleteClients({
+  viewerUserId,
+  ownerUserId = viewerUserId,
+  photoPaths,
+}: {
+  viewerUserId: string;
+  ownerUserId?: string;
+  photoPaths: Array<string | null>;
+}) {
+  let removedPaths: string[] | null = null;
+  let deletedEntryId: string | null = null;
+  let deletedUserId: string | null = null;
+
+  return {
+    authClient: {
+      from(table: string) {
+        if (table !== "wine_entries") {
+          throw new Error(`Unexpected table lookup: ${table}`);
+        }
+
+        return {
+          select(columns: string) {
+            expect(columns).toBe("label_image_path, place_image_path, pairing_image_path");
+
+            return {
+              eq(column: string, value: string) {
+                expect(column).toBe("id");
+                expect(value).toBe("entry-1");
+
+                return {
+                  eq(innerColumn: string, innerValue: string) {
+                    expect(innerColumn).toBe("user_id");
+                    expect(innerValue).toBe(viewerUserId);
+
+                    return {
+                      maybeSingle: async () => ({
+                        data:
+                          ownerUserId === viewerUserId
+                            ? {
+                                label_image_path: "labels/entry-1.jpg",
+                                place_image_path: null,
+                                pairing_image_path: "pending",
+                              }
+                            : null,
+                        error: null,
+                      }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+        };
+      },
+      storage: {
+        from() {
+          throw new Error("Unexpected storage access on auth client.");
+        },
+      },
+    },
+    adminClient: {
+      from(table: string) {
+        if (table === "entry_photos") {
+          return {
+            select(columns: string) {
+              expect(columns).toBe("path");
+
+              return {
+                eq(column: string, value: string) {
+                  expect(column).toBe("entry_id");
+                  expect(value).toBe("entry-1");
+
+                  return Promise.resolve({
+                    data: photoPaths.map((path) => ({ path })),
+                    error: null,
+                  });
+                },
+              };
+            },
+          };
+        }
+
+        if (table === "wine_entries") {
+          return {
+            delete() {
+              return {
+                eq(column: string, value: string) {
+                  expect(column).toBe("id");
+                  deletedEntryId = value;
+
+                  return {
+                    eq(innerColumn: string, innerValue: string) {
+                      expect(innerColumn).toBe("user_id");
+                      deletedUserId = innerValue;
+
+                      return Promise.resolve({ error: null });
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table lookup: ${table}`);
+      },
+      storage: {
+        from(bucket: string) {
+          expect(bucket).toBe("wine-photos");
+
+          return {
+            remove: async (paths: string[]) => {
+              removedPaths = paths;
+              return { data: [], error: null };
+            },
+          };
+        },
+      },
+    },
+    getRemovedPaths() {
+      return removedPaths;
+    },
+    getDeletedFilter() {
+      return {
+        entryId: deletedEntryId,
+        userId: deletedUserId,
+      };
     },
   };
 }
@@ -508,5 +642,41 @@ test.describe("Phase 6 route handler regressions", () => {
         },
       },
     });
+  });
+
+  test("entry delete route deletes via the admin client after confirming ownership", async () => {
+    const clients = makeEntryDeleteClients({
+      viewerUserId: "owner-1",
+      photoPaths: ["gallery/entry-1-1.jpg", "labels/entry-1.jpg", null, "pending"],
+    });
+    const handler = createEntryDeleteHandler({
+      requireRequestAuth: async () => ({
+        user: makeAuthenticatedUser("owner-1"),
+        supabase: clients.authClient as never,
+        authMode: "bearer",
+      }),
+      createSupabaseAdminClient: () => clients.adminClient as never,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/entries/entry-1", {
+        method: "DELETE",
+        headers: {
+          authorization: "Bearer token-1",
+        },
+      }),
+      { params: Promise.resolve({ id: "entry-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    expect(clients.getDeletedFilter()).toEqual({
+      entryId: "entry-1",
+      userId: "owner-1",
+    });
+    expect(clients.getRemovedPaths()).toEqual([
+      "labels/entry-1.jpg",
+      "gallery/entry-1-1.jpg",
+    ]);
+    await expect(response.json()).resolves.toEqual({ success: true });
   });
 });

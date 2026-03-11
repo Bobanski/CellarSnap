@@ -2267,6 +2267,49 @@ export default function EntryDetailScreen() {
         throw new Error("You must be signed in.");
       }
 
+      const webApiBaseUrl = getWebApiBaseUrl();
+      if (webApiBaseUrl) {
+        const accessToken = await getAccessTokenForApi();
+        if (accessToken) {
+          let response: Response | null = null;
+          const deleteRequest = fetch(`${webApiBaseUrl}/api/entries/${targetEntryId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          try {
+            response = await new Promise<Response | null>((resolve, reject) => {
+              const timeoutId = setTimeout(() => resolve(null), 1200);
+
+              deleteRequest
+                .then((nextResponse) => {
+                  clearTimeout(timeoutId);
+                  resolve(nextResponse);
+                })
+                .catch((error) => {
+                  clearTimeout(timeoutId);
+                  reject(error);
+                });
+            });
+          } catch {
+            response = null;
+          }
+
+          if (response) {
+            const payload = (await response.json().catch(() => ({}))) as {
+              error?: string;
+            };
+
+            if (!response.ok) {
+              throw new Error(payload.error ?? "Unable to delete entry.");
+            }
+
+            return;
+          }
+        }
+      }
+
       const { data: targetEntry, error: targetEntryError } = await supabase
         .from("wine_entries")
         .select("id, user_id, label_image_path, place_image_path, pairing_image_path")
