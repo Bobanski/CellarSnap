@@ -12,6 +12,7 @@ import {
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
 import { isTestAccount } from "@/lib/access/testAccounts";
 import { executeSelectWithFallback } from "@/server/db/compat";
+import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 type FeedEntryRow = {
@@ -19,6 +20,7 @@ type FeedEntryRow = {
   user_id: string;
   root_entry_id?: string | null;
   is_feed_visible?: boolean | null;
+  entry_group_id?: string | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
@@ -149,7 +151,7 @@ export async function GET(request: Request) {
 
   const baseSelectFields =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
-  const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible`;
+  const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible, entry_group_id`;
 
   const initialCursor = cursorV2
     ? {
@@ -225,7 +227,7 @@ export async function GET(request: Request) {
         {
           fields: extendedSelectFields,
           withTastingSupport: true,
-          missingColumns: ["is_feed_visible", "root_entry_id"] as const,
+          missingColumns: ["is_feed_visible", "root_entry_id", "entry_group_id"] as const,
         },
         {
           fields: baseSelectFields,
@@ -303,7 +305,9 @@ export async function GET(request: Request) {
     let reachedOverflow = false;
     for (const row of rawRows) {
       const dedupeKey =
-        hasTastingSupport ? row.root_entry_id ?? row.id : row.id;
+        hasTastingSupport
+          ? row.entry_group_id ?? row.root_entry_id ?? row.id
+          : row.id;
       const rowCursor: FeedCursorPosition = {
         createdAt: row.created_at,
         id: row.id,
@@ -369,7 +373,7 @@ export async function GET(request: Request) {
       createdAt: lastRawRow.created_at,
       id: lastRawRow.id,
       dedupeKey: hasTastingSupport
-        ? lastRawRow.root_entry_id ?? lastRawRow.id
+        ? lastRawRow.entry_group_id ?? lastRawRow.root_entry_id ?? lastRawRow.id
         : lastRawRow.id,
     };
 
@@ -393,6 +397,13 @@ export async function GET(request: Request) {
     : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);
+  const groupedPostByEntryId = await resolveGroupedPostData(
+    supabase,
+    pageEntries.map((entry) => ({
+      id: entry.id,
+      entry_group_id: entry.entry_group_id ?? null,
+    }))
+  );
   const primaryGrapeMap = await fetchPrimaryGrapesByEntryId(supabase, entryIds);
   const userIds = Array.from(
     new Set(
@@ -774,6 +785,7 @@ export async function GET(request: Request) {
     const commentCount = interactionAccess.canComment
       ? commentCountsMap.get(entry.id) ?? 0
       : 0;
+    const groupedPost = groupedPostByEntryId.get(entry.id);
 
     return {
       ...entry,
@@ -783,7 +795,9 @@ export async function GET(request: Request) {
       label_image_url: labelPhoto,
       place_image_url: placePhoto,
       pairing_image_url: pairingPhoto,
-      photo_gallery: photoGallery,
+      photo_gallery: groupedPost?.photo_gallery ?? photoGallery,
+      entry_group: groupedPost?.entry_group ?? null,
+      group_slides: groupedPost?.group_slides ?? [],
       tasted_with_users: tastedWithUsers,
       reaction_privacy: interactionAccess.reactionPrivacy,
       comments_privacy: interactionAccess.commentsPrivacy,

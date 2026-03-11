@@ -37,6 +37,30 @@ export type PrimaryGrape = {
   position: number;
 };
 
+export type EntryGroupMode = "event" | "catch_up";
+
+export type EntryGroup = {
+  id: string;
+  mode: EntryGroupMode;
+  title: string;
+  anchor_entry_id: string | null;
+};
+
+export type GroupedEntrySlide = {
+  id: string;
+  type: EntryPhotoType;
+  url: string;
+  entry_id: string | null;
+  label: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  consumed_at: string | null;
+};
+
 export type WineEntry = {
   id: string;
   user_id: string;
@@ -68,6 +92,9 @@ export type WineEntry = {
   comments_privacy: PrivacyLevel;
   label_photo_privacy: PrivacyLevel | null;
   place_photo_privacy: PrivacyLevel | null;
+  root_entry_id?: string | null;
+  is_feed_visible?: boolean | null;
+  entry_group_id?: string | null;
   created_at: string;
 };
 
@@ -76,6 +103,8 @@ export type WineEntryWithUrls = WineEntry & {
   place_image_url: string | null;
   pairing_image_url: string | null;
   tasted_with_users?: UserSummary[];
+  entry_group?: EntryGroup | null;
+  group_slides?: GroupedEntrySlide[];
 };
 
 export type WineEntryCreatePayload = {
@@ -103,6 +132,8 @@ export type WineEntryCreatePayload = {
   comments_privacy?: PrivacyLevel;
   label_photo_privacy?: PrivacyLevel | null;
   place_photo_privacy?: PrivacyLevel | null;
+  entry_group_mode?: EntryGroupMode;
+  entry_group_title?: string | null;
 };
 
 export type WineEntryUpdatePayload = Partial<{
@@ -133,4 +164,7 @@ export type WineEntryUpdatePayload = Partial<{
   comments_privacy: PrivacyLevel;
   label_photo_privacy: PrivacyLevel | null;
   place_photo_privacy: PrivacyLevel | null;
+  entry_group_mode: EntryGroupMode;
+  entry_group_title: string | null;
+  sync_group_consumed_at: boolean;
 }>;

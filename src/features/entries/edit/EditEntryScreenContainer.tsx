@@ -21,6 +21,7 @@ import EntryPostSaveSurveyModal, {
 import EntryWineComparisonModal from "@/components/EntryWineComparisonModal";
 import { extractGpsFromFile } from "@/lib/exifGps";
 import type {
+  EntryGroupMode,
   EntryPhoto,
   EntryPhotoType,
   PrimaryGrape,
@@ -65,6 +66,8 @@ type EditEntryForm = {
   location_text: string;
   location_place_id: string;
   consumed_at: string;
+  entry_group_mode: EntryGroupMode;
+  entry_group_title: string;
   entry_privacy: PrivacyLevel;
   reaction_privacy: PrivacyLevel;
   comments_privacy: PrivacyLevel;
@@ -163,6 +166,8 @@ export default function EditEntryPage() {
   } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: getTodayLocalYmd(),
+      entry_group_mode: "event",
+      entry_group_title: "",
       location_place_id: "",
       entry_privacy: "public",
       reaction_privacy: "public",
@@ -194,6 +199,11 @@ export default function EditEntryPage() {
       control,
       name: "wine_name",
     })?.trim() ?? "";
+  const selectedGroupMode =
+    useWatch({
+      control,
+      name: "entry_group_mode",
+    }) ?? "event";
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -347,6 +357,8 @@ export default function EditEntryPage() {
           location_text: data.entry.location_text ?? "",
           location_place_id: data.entry.location_place_id ?? "",
           consumed_at: data.entry.consumed_at,
+          entry_group_mode: data.entry.entry_group?.mode ?? "event",
+          entry_group_title: data.entry.entry_group?.title ?? "",
           entry_privacy: data.entry.entry_privacy ?? "public",
           reaction_privacy:
             data.entry.reaction_privacy ?? data.entry.entry_privacy ?? "public",
@@ -1698,7 +1710,7 @@ export default function EditEntryPage() {
     setPendingBulkSurvey(null);
     setBulkSurveyErrorMessage(null);
 
-    clearErrors(["rating", "price_paid", "price_paid_source"]);
+    clearErrors(["rating", "price_paid", "price_paid_source", "entry_group_title"]);
 
     const ratingRaw = values.rating?.trim() ?? "";
     const pricePaidRaw = values.price_paid?.trim() ?? "";
@@ -1721,6 +1733,22 @@ export default function EditEntryPage() {
       setError("price_paid", {
         type: "manual",
         message: "Enter a price paid amount when selecting retail or restaurant.",
+      });
+      return;
+    }
+
+    const entryGroupIdRawForValidation = (
+      entry as unknown as { entry_group_id?: unknown }
+    ).entry_group_id;
+    const entryHasGroupedPostForValidation =
+      typeof entryGroupIdRawForValidation === "string" &&
+      entryGroupIdRawForValidation.length > 0;
+
+    if (entryHasGroupedPostForValidation && !values.entry_group_title.trim()) {
+      setIsSubmitting(false);
+      setError("entry_group_title", {
+        type: "manual",
+        message: "Group title is required.",
       });
       return;
     }
@@ -1760,11 +1788,25 @@ export default function EditEntryPage() {
       typeof entryRootIdRaw === "string" && entryRootIdRaw.length > 0
         ? entryRootIdRaw
         : null;
+    const entryGroupIdRaw = (entry as unknown as { entry_group_id?: unknown })
+      .entry_group_id;
+    const entryGroupId =
+      typeof entryGroupIdRaw === "string" && entryGroupIdRaw.length > 0
+        ? entryGroupIdRaw
+        : null;
+    const entryHasGroupedPost = Boolean(entryGroupId);
+
+    if (entryHasGroupedPost) {
+      updatePayload.entry_group_mode = values.entry_group_mode;
+      updatePayload.entry_group_title = values.entry_group_title.trim();
+      updatePayload.sync_group_consumed_at = values.entry_group_mode === "event";
+    }
 
     // Bulk review entries are created as "not yet posted" (is_feed_visible=false).
     // Also publish if the user is saving a hidden canonical entry outside bulk review.
     const shouldPublishOnSave =
-      isBulkReview || (entryIsFeedVisible === false && !entryRootId);
+      !entryHasGroupedPost &&
+      (isBulkReview || (entryIsFeedVisible === false && !entryRootId));
     if (shouldPublishOnSave) {
       updatePayload.is_feed_visible = true;
     }
@@ -1823,7 +1865,8 @@ export default function EditEntryPage() {
           : nextBulkEntryId && currentBulkIndex >= 0
           ? buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1)
           : "/entries";
-      const shouldPublishQueueOnContinue = submitIntent === "exit";
+      const shouldPublishQueueOnContinue =
+        submitIntent === "exit" || !nextBulkEntryId;
       const currentLabelPhotoUrl =
         photos.find((photo) => photo.type === "label")?.signed_url ??
         entry.label_image_url ??
@@ -1925,6 +1968,9 @@ export default function EditEntryPage() {
     )
   );
   const hasLegacyGalleryPhoto = allDisplayPhotos.some((photo) => isLegacyPhoto(photo));
+  const currentEntryGroup = entry.entry_group ?? null;
+  const isSharedEventGroup =
+    currentEntryGroup !== null && selectedGroupMode === "event";
   const collapsibleSectionClassName =
     "group rounded-2xl border border-white/10 bg-black/30 p-4";
   const collapsibleSummaryClassName =
@@ -2257,12 +2303,80 @@ export default function EditEntryPage() {
             </div>
           </details>
 
+          {currentEntryGroup ? (
+            <details className={collapsibleSectionClassName} open={isBulkReview}>
+              <summary className={collapsibleSummaryClassName}>
+                Event / catch-up post
+              </summary>
+              <p className="mt-2 text-xs text-zinc-400">
+                Edit the grouped post title and whether this set represents one event or a catch-up log.
+              </p>
+              <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">Mode</label>
+                  <div className="mt-2 inline-flex rounded-full border border-white/10 bg-black/40 p-1">
+                    {[
+                      { value: "event", label: "Event" },
+                      { value: "catch_up", label: "Catch-up" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          selectedGroupMode === option.value
+                            ? "bg-amber-400 text-zinc-950"
+                            : "text-zinc-300 hover:text-zinc-100"
+                        }`}
+                        onClick={() =>
+                          setValue("entry_group_mode", option.value as EntryGroupMode, {
+                            shouldDirty: true,
+                          })
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">
+                    Group title
+                  </label>
+                  <input
+                    className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                      errors.entry_group_title
+                        ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                        : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                    }`}
+                    placeholder={
+                      selectedGroupMode === "event"
+                        ? "Stuytown tasting"
+                        : "Past 2 weeks"
+                    }
+                    {...register("entry_group_title")}
+                  />
+                  {errors.entry_group_title?.message ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-400">
+                      {errors.entry_group_title.message}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-zinc-500">
+                      This title is shown on the grouped post in Home and Feed.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </details>
+          ) : null}
+
           <details className={collapsibleSectionClassName}>
             <summary className={collapsibleSummaryClassName}>
               Location & date
             </summary>
             <p className="mt-2 text-xs text-zinc-400">
-              Where and when this bottle was consumed.
+              {isSharedEventGroup
+                ? "Where this event happened and the shared date for every wine in the group."
+                : "Where and when this bottle was consumed."}
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
@@ -2287,7 +2401,9 @@ export default function EditEntryPage() {
                 />
               </div>
               <div className="md:justify-self-start">
-                <label className="text-sm font-medium text-zinc-200">Consumed date</label>
+                <label className="text-sm font-medium text-zinc-200">
+                  {isSharedEventGroup ? "Shared event date" : "Consumed date"}
+                </label>
                 <Controller
                   control={control}
                   name="consumed_at"
@@ -2302,6 +2418,11 @@ export default function EditEntryPage() {
                     />
                   )}
                 />
+                {isSharedEventGroup ? (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Saving in Event mode will apply this date to every wine in the grouped post.
+                  </p>
+                ) : null}
               </div>
             </div>
           </details>

@@ -118,15 +118,17 @@ test.describe("Phase 6 entry/share access helpers", () => {
     expect(
       resolveAllowedProfileEntryPrivacies({
         isOwnProfile: true,
+        isTestViewer: false,
         isBlocked: false,
         isFriend: false,
         isFriendOfFriend: false,
       })
-    ).toEqual(["public", "friends_of_friends", "friends"]);
+    ).toEqual(["public", "friends_of_friends", "friends", "private"]);
 
     expect(
       resolveAllowedProfileEntryPrivacies({
         isOwnProfile: false,
+        isTestViewer: false,
         isBlocked: true,
         isFriend: true,
         isFriendOfFriend: true,
@@ -136,6 +138,7 @@ test.describe("Phase 6 entry/share access helpers", () => {
     expect(
       resolveAllowedProfileEntryPrivacies({
         isOwnProfile: false,
+        isTestViewer: false,
         isBlocked: false,
         isFriend: true,
         isFriendOfFriend: false,
@@ -145,6 +148,7 @@ test.describe("Phase 6 entry/share access helpers", () => {
     expect(
       resolveAllowedProfileEntryPrivacies({
         isOwnProfile: false,
+        isTestViewer: false,
         isBlocked: false,
         isFriend: false,
         isFriendOfFriend: true,
@@ -154,6 +158,7 @@ test.describe("Phase 6 entry/share access helpers", () => {
     expect(
       resolveAllowedProfileEntryPrivacies({
         isOwnProfile: false,
+        isTestViewer: false,
         isBlocked: false,
         isFriend: false,
         isFriendOfFriend: false,

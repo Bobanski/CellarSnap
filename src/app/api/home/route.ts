@@ -5,7 +5,61 @@ import { isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { executeSelectWithFallback } from "@/server/db/compat";
+import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
+import type { EntryPrivacy } from "@/lib/access/entryVisibility";
+
+type HomeEntryRow = Record<string, unknown> & {
+  id: string;
+  user_id: string;
+  root_entry_id?: string | null;
+  entry_group_id?: string | null;
+};
+
+function dedupeHomeEntries(entries: HomeEntryRow[]) {
+  const dedupedByKey = new Map<string, HomeEntryRow>();
+
+  entries.forEach((entry) => {
+    const dedupeKey =
+      (typeof entry.entry_group_id === "string" && entry.entry_group_id.length > 0
+        ? entry.entry_group_id
+        : null) ??
+      (typeof entry.root_entry_id === "string" && entry.root_entry_id.length > 0
+        ? entry.root_entry_id
+        : null) ??
+      entry.id;
+
+    const existing = dedupedByKey.get(dedupeKey);
+    if (!existing) {
+      dedupedByKey.set(dedupeKey, entry);
+      return;
+    }
+
+    const existingIsCanonical = !existing.root_entry_id;
+    const nextIsCanonical = !entry.root_entry_id;
+    if (nextIsCanonical && !existingIsCanonical) {
+      dedupedByKey.set(dedupeKey, entry);
+    }
+  });
+
+  return Array.from(dedupedByKey.values());
+}
+
+function normalizeEntryPrivacy(value: unknown): EntryPrivacy {
+  if (
+    value === "public" ||
+    value === "friends_of_friends" ||
+    value === "friends" ||
+    value === "private"
+  ) {
+    return value;
+  }
+  return "public";
+}
+
+function normalizeNullableString(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -74,16 +128,48 @@ export async function GET() {
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  // ── Fetch user's 3 most recent entries ──
-  const { data: ownRows } = await supabase
-    .from("wine_entries")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("consumed_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(3);
+  // ── Fetch user's recent grouped/visible posts ──
+  const ownEntriesResult = await executeSelectWithFallback({
+    attempts: [
+      {
+        withFeedVisibilityFilter: true,
+        missingColumns: ["is_feed_visible"] as const,
+      },
+      { withFeedVisibilityFilter: false, missingColumns: [] as const },
+    ],
+    getFallbackColumns: (attempt) => attempt.missingColumns,
+    fallbackOnAnyMissingColumn: true,
+    attempt: async (attempt) => {
+      let query = supabase
+        .from("wine_entries")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("consumed_at", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(12);
 
-  const ownEntries = ownRows ?? [];
+      if (attempt.withFeedVisibilityFilter) {
+        query = query.eq("is_feed_visible", true);
+      }
+
+      const response = await query;
+      return {
+        data: response.data,
+        error: response.error,
+      };
+    },
+  });
+
+  if (ownEntriesResult.error) {
+    return NextResponse.json(
+      { error: ownEntriesResult.error.message },
+      { status: 500 }
+    );
+  }
+
+  const ownEntries = dedupeHomeEntries(
+    ((ownEntriesResult.data ?? []) as HomeEntryRow[]).slice(0, 12)
+  ).slice(0, 3);
 
   // ── Fetch friends' recent entries (up to 6) ──
   const { data: friendRows } = await supabase
@@ -100,7 +186,7 @@ export async function GET() {
     )
   );
 
-  let friendEntries: typeof ownEntries = [];
+  let friendEntries: HomeEntryRow[] = [];
 
   if (viewerIsTestAccount || friendIds.length > 0) {
     const buildFriendQuery = (withFeedVisibilityFilter: boolean) => {
@@ -108,7 +194,7 @@ export async function GET() {
         .from("wine_entries")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(12);
 
       query = viewerIsTestAccount
         ? query.neq("user_id", user.id)
@@ -148,32 +234,8 @@ export async function GET() {
       );
     }
 
-    const rawFriendEntries = (friendEntriesResult.data ?? []) as Array<
-      Record<string, unknown> & { id: string; root_entry_id?: string | null }
-    >;
-    const dedupedByRoot = new Map<string, Record<string, unknown>>();
-
-    rawFriendEntries.forEach((entry) => {
-      const dedupeKey =
-        typeof entry.root_entry_id === "string" && entry.root_entry_id.length > 0
-          ? entry.root_entry_id
-          : entry.id;
-      const existing = dedupedByRoot.get(dedupeKey) as
-        | (Record<string, unknown> & { root_entry_id?: string | null })
-        | undefined;
-      if (!existing) {
-        dedupedByRoot.set(dedupeKey, entry);
-        return;
-      }
-
-      const existingIsCanonical = !existing.root_entry_id;
-      const nextIsCanonical = !entry.root_entry_id;
-      if (nextIsCanonical && !existingIsCanonical) {
-        dedupedByRoot.set(dedupeKey, entry);
-      }
-    });
-
-    friendEntries = Array.from(dedupedByRoot.values()) as typeof ownEntries;
+    const rawFriendEntries = (friendEntriesResult.data ?? []) as HomeEntryRow[];
+    friendEntries = dedupeHomeEntries(rawFriendEntries).slice(0, 6);
   }
 
   // ── Resolve label photos for all entries ──
@@ -197,6 +259,15 @@ export async function GET() {
       labelMap.set(photo.entry_id, photo.path);
     }
   });
+
+  const groupedPostByEntryId = await resolveGroupedPostData(
+    supabase,
+    allEntries.map((entry) => ({
+      id: entry.id,
+      entry_group_id:
+        typeof entry.entry_group_id === "string" ? entry.entry_group_id : null,
+    }))
+  );
 
   const reactionCountsByEntryId = new Map<string, Record<string, number>>();
   const myReactionsByEntryId = new Map<string, string[]>();
@@ -269,13 +340,21 @@ export async function GET() {
         supabase,
         viewerUserId: user.id,
         ownerUserId: entry.user_id,
-        entryPrivacy: entry.entry_privacy,
-        reactionPrivacy: (entry as { reaction_privacy?: unknown }).reaction_privacy,
-        commentsPrivacy: (entry as { comments_privacy?: unknown }).comments_privacy,
-        commentsScope: (entry as { comments_scope?: string | null }).comments_scope,
+        entryPrivacy: normalizeEntryPrivacy(entry.entry_privacy),
+        reactionPrivacy: normalizeEntryPrivacy(
+          (entry as { reaction_privacy?: unknown }).reaction_privacy
+        ),
+        commentsPrivacy: normalizeEntryPrivacy(
+          (entry as { comments_privacy?: unknown }).comments_privacy
+        ),
+        commentsScope: normalizeNullableString(
+          (entry as { comments_scope?: unknown }).comments_scope
+        ),
         acceptedFriendIds,
         friendsOfFriendsIds,
       });
+
+      const groupedPost = groupedPostByEntryId.get(entry.id);
 
       return {
       id: entry.id,
@@ -286,9 +365,12 @@ export async function GET() {
       qpr_level: entry.qpr_level,
       consumed_at: entry.consumed_at,
       label_image_url: await signPhotoUrl(
-        labelMap.get(entry.id) ?? entry.label_image_path,
+        labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
         supabase
       ),
+      photo_gallery: groupedPost?.photo_gallery ?? [],
+      entry_group: groupedPost?.entry_group ?? null,
+      group_slides: groupedPost?.group_slides ?? [],
       can_react: interactionAccess.canReact,
       my_reactions: interactionAccess.canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
       reaction_counts: interactionAccess.canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
@@ -313,13 +395,21 @@ export async function GET() {
         supabase,
         viewerUserId: user.id,
         ownerUserId: entry.user_id,
-        entryPrivacy: entry.entry_privacy,
-        reactionPrivacy: (entry as { reaction_privacy?: unknown }).reaction_privacy,
-        commentsPrivacy: (entry as { comments_privacy?: unknown }).comments_privacy,
-        commentsScope: (entry as { comments_scope?: string | null }).comments_scope,
+        entryPrivacy: normalizeEntryPrivacy(entry.entry_privacy),
+        reactionPrivacy: normalizeEntryPrivacy(
+          (entry as { reaction_privacy?: unknown }).reaction_privacy
+        ),
+        commentsPrivacy: normalizeEntryPrivacy(
+          (entry as { comments_privacy?: unknown }).comments_privacy
+        ),
+        commentsScope: normalizeNullableString(
+          (entry as { comments_scope?: unknown }).comments_scope
+        ),
         acceptedFriendIds,
         friendsOfFriendsIds,
       });
+
+      const groupedPost = groupedPostByEntryId.get(entry.id);
 
       return {
       id: entry.id,
@@ -333,9 +423,12 @@ export async function GET() {
       author_name:
         getPublicProfileName(profileMap.get(entry.user_id)),
       label_image_url: await signPhotoUrl(
-        labelMap.get(entry.id) ?? entry.label_image_path,
+        labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
         supabase
       ),
+      photo_gallery: groupedPost?.photo_gallery ?? [],
+      entry_group: groupedPost?.entry_group ?? null,
+      group_slides: groupedPost?.group_slides ?? [],
       can_react: interactionAccess.canReact,
       my_reactions: interactionAccess.canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
       reaction_counts: interactionAccess.canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},

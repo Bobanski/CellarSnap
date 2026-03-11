@@ -9,9 +9,15 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import AppImage from "@/components/AppImage";
 import NavBar from "@/components/NavBar";
+import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
-import type { PrivacyLevel, WineEntryWithUrls } from "@/types/wine";
+import type {
+  EntryGroup,
+  GroupedEntrySlide,
+  PrivacyLevel,
+  WineEntryWithUrls,
+} from "@/types/wine";
 
 const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
 const PHOTO_TYPE_LABELS = {
@@ -63,6 +69,8 @@ type FeedEntry = WineEntryWithUrls & {
   my_reactions?: string[];
   reaction_users?: Record<string, string[]>;
   photo_gallery?: FeedPhoto[];
+  entry_group?: EntryGroup | null;
+  group_slides?: GroupedEntrySlide[];
 };
 
 type FeedReply = {
@@ -1123,23 +1131,39 @@ export default function FeedPage() {
                   </div>
                 </div>
                 <div className="mt-4">
-                  <EntryPhotoGallery entry={entry} />
+                  {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
+                    <GroupedPostGallery
+                      title={entry.entry_group.title}
+                      slides={entry.group_slides ?? []}
+                    />
+                  ) : (
+                    <EntryPhotoGallery entry={entry} />
+                  )}
                 </div>
                 <div className="mt-4">
-                  <div className="min-w-0">
-                    {entry.wine_name ? (
-                      <h2 className="text-base font-semibold leading-snug text-zinc-50 break-words">
-                        {entry.wine_name}
-                      </h2>
-                    ) : null}
-                    {(() => {
-                      const meta = buildEntryMetaFields(entry).join(" · ");
+                  {entry.entry_group ? (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                      <span className="rounded-full border border-white/10 bg-black/30 px-2 py-1 font-semibold uppercase tracking-[0.14em] text-zinc-300">
+                        {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
+                      </span>
+                      <span>Grouped bulk post</span>
+                    </div>
+                  ) : (
+                    <div className="min-w-0">
+                      {entry.wine_name ? (
+                        <h2 className="text-base font-semibold leading-snug text-zinc-50 break-words">
+                          {entry.wine_name}
+                        </h2>
+                      ) : null}
+                      {(() => {
+                        const meta = buildEntryMetaFields(entry).join(" · ");
 
-                      return meta ? (
-                        <p className="text-sm text-zinc-400 break-words">{meta}</p>
-                      ) : null;
-                    })()}
-                  </div>
+                        return meta ? (
+                          <p className="text-sm text-zinc-400 break-words">{meta}</p>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
                   <div className="mt-3 break-words text-xs text-zinc-400">
@@ -1150,13 +1174,15 @@ export default function FeedPage() {
                   </div>
                 ) : null}
 
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  {typeof entry.rating === "number" &&
-                  !Number.isNaN(entry.rating) ? (
-                    <RatingBadge rating={entry.rating} variant="text" />
-                  ) : null}
-                  {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                </div>
+                {!entry.entry_group ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {typeof entry.rating === "number" &&
+                    !Number.isNaN(entry.rating) ? (
+                      <RatingBadge rating={entry.rating} variant="text" />
+                    ) : null}
+                    {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                  </div>
+                ) : null}
                 {(() => {
                   const notes = (entry.notes ?? "").trim();
                   if (!notes) {

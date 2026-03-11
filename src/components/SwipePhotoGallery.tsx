@@ -32,6 +32,7 @@ export default function SwipePhotoGallery({
   items,
   heightClassName = "h-80",
   wrapperClassName = "",
+  header,
   footer,
   empty,
   showOrderBadge = false,
@@ -40,6 +41,7 @@ export default function SwipePhotoGallery({
   items: SwipePhotoGalleryItem[];
   heightClassName?: string;
   wrapperClassName?: string;
+  header?: (active: SwipePhotoGalleryItem, activeIndex: number) => ReactNode;
   footer?: (active: SwipePhotoGalleryItem, activeIndex: number) => ReactNode;
   empty?: ReactNode;
   showOrderBadge?: boolean;
@@ -91,6 +93,11 @@ export default function SwipePhotoGallery({
     <div
       className={`overflow-hidden rounded-3xl border border-white/10 bg-black/40 ${wrapperClassName}`}
     >
+      {header ? (
+        <div className="border-b border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+          {header(active, activeIndex)}
+        </div>
+      ) : null}
       <div className="relative">
         <div
           className={`flex ${heightClassName} transition-transform duration-300`}

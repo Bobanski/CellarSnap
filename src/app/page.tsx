@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import GroupedPostGallery from "@/components/GroupedPostGallery";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
@@ -11,7 +12,7 @@ import PrivacyBadge from "@/components/PrivacyBadge";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { QprLevel } from "@/lib/entryMeta";
-import type { PrivacyLevel } from "@/types/wine";
+import type { EntryGroup, GroupedEntrySlide, PrivacyLevel } from "@/types/wine";
 
 type RecentEntry = {
   id: string;
@@ -26,6 +27,8 @@ type RecentEntry = {
   my_reactions: string[];
   reaction_counts: Record<string, number>;
   reaction_users: Record<string, string[]>;
+  entry_group?: EntryGroup | null;
+  group_slides?: GroupedEntrySlide[];
 };
 
 type CircleEntry = RecentEntry & {
@@ -51,15 +54,8 @@ function HomeReactionControls({
     .filter(([, count]) => count > 0)
     .sort((left, right) => right[1] - left[1]);
 
-  useEffect(() => {
-    if (!openEmoji) {
-      return;
-    }
-    if ((entry.reaction_counts[openEmoji] ?? 0) > 0) {
-      return;
-    }
-    setOpenEmoji(null);
-  }, [entry.reaction_counts, openEmoji]);
+  const normalizedOpenEmoji =
+    openEmoji && (entry.reaction_counts[openEmoji] ?? 0) > 0 ? openEmoji : null;
 
   const visibleReactions = reactionSummary.slice(0, 3);
   const hiddenReactionCount = Math.max(0, reactionSummary.length - visibleReactions.length);
@@ -70,7 +66,7 @@ function HomeReactionControls({
         {visibleReactions.map(([emoji, count]) => {
           const names = entry.reaction_users[emoji] ?? [];
           const popupKey = `${entry.id}-${emoji}`;
-          const showNames = openEmoji === popupKey;
+          const showNames = normalizedOpenEmoji === popupKey;
           return (
             <span key={popupKey} className="group/reaction relative">
               <button
@@ -503,55 +499,73 @@ export default function HomePage() {
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                     <div className="mt-4 flex flex-1 gap-4">
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
-                        {entry.label_image_url ? (
-                          <Photo
-                            src={entry.label_image_url}
-                            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
-                            containerClassName="h-full w-full"
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                            loading="lazy"
+                      {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
+                        <div className="w-full space-y-3">
+                          <GroupedPostGallery
+                            title={entry.entry_group.title}
+                            slides={entry.group_slides ?? []}
+                            heightClassName="h-56"
                           />
-                        ) : (
-                          "No photo"
-                        )}
-                      </div>
-                      <div className="flex flex-1 flex-col justify-between">
-                        <div>
-                          {entry.wine_name ? (
-                            <h3 className="text-base font-semibold text-zinc-50">
-                              {entry.wine_name}
-                            </h3>
-                          ) : null}
-                          {(() => {
-                            const hideProducer = shouldHideProducerInEntryTile(
-                              entry.wine_name,
-                              entry.producer
-                            );
-                            const producer = hideProducer ? null : entry.producer;
-                            if (!producer && !entry.vintage) {
-                              return null;
-                            }
-                            return (
-                              <p className="text-sm text-zinc-400">
-                                {producer ?? ""}
-                                {producer && entry.vintage
-                                  ? ` \u00b7 ${entry.vintage}`
-                                  : entry.vintage
-                                    ? entry.vintage
-                                    : ""}
-                              </p>
-                            );
-                          })()}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                            <span className="rounded-full border border-white/10 bg-black/30 px-2 py-1 font-semibold uppercase tracking-[0.14em] text-zinc-300">
+                              {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
+                            </span>
+                            <span>Grouped bulk post</span>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
-                          {typeof entry.rating === "number" &&
-                          !Number.isNaN(entry.rating) ? (
-                            <RatingBadge rating={entry.rating} variant="text" />
-                          ) : null}
-                          {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                        </div>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                            {entry.label_image_url ? (
+                              <Photo
+                                src={entry.label_image_url}
+                                alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                                containerClassName="h-full w-full"
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                loading="lazy"
+                              />
+                            ) : (
+                              "No photo"
+                            )}
+                          </div>
+                          <div className="flex flex-1 flex-col justify-between">
+                            <div>
+                              {entry.wine_name ? (
+                                <h3 className="text-base font-semibold text-zinc-50">
+                                  {entry.wine_name}
+                                </h3>
+                              ) : null}
+                              {(() => {
+                                const hideProducer = shouldHideProducerInEntryTile(
+                                  entry.wine_name,
+                                  entry.producer
+                                );
+                                const producer = hideProducer ? null : entry.producer;
+                                if (!producer && !entry.vintage) {
+                                  return null;
+                                }
+                                return (
+                                  <p className="text-sm text-zinc-400">
+                                    {producer ?? ""}
+                                    {producer && entry.vintage
+                                      ? ` \u00b7 ${entry.vintage}`
+                                      : entry.vintage
+                                        ? entry.vintage
+                                        : ""}
+                                  </p>
+                                );
+                              })()}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+                              {typeof entry.rating === "number" &&
+                              !Number.isNaN(entry.rating) ? (
+                                <RatingBadge rating={entry.rating} variant="text" />
+                              ) : null}
+                              {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div
                       className="mt-4 border-t border-white/10 pt-3"
@@ -646,47 +660,65 @@ export default function HomePage() {
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                     </div>
                     <div className="mt-4 flex flex-1 gap-4">
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
-                        {entry.label_image_url ? (
-                          <Photo
-                            src={entry.label_image_url}
-                            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
-                            containerClassName="h-full w-full"
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                            loading="lazy"
+                      {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
+                        <div className="w-full space-y-3">
+                          <GroupedPostGallery
+                            title={entry.entry_group.title}
+                            slides={entry.group_slides ?? []}
+                            heightClassName="h-56"
                           />
-                        ) : (
-                          "No photo"
-                        )}
-                      </div>
-                      <div className="flex flex-1 flex-col justify-between">
-                        <div>
-                          {entry.wine_name ? (
-                            <h3 className="text-base font-semibold text-zinc-50">
-                              {entry.wine_name}
-                            </h3>
-                          ) : null}
-                          {(() => {
-                            const hideProducer = shouldHideProducerInEntryTile(
-                              entry.wine_name,
-                              entry.producer
-                            );
-                            if (!entry.producer || hideProducer) {
-                              return null;
-                            }
-                            return (
-                              <p className="text-sm text-zinc-400">{entry.producer}</p>
-                            );
-                          })()}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                            <span className="rounded-full border border-white/10 bg-black/30 px-2 py-1 font-semibold uppercase tracking-[0.14em] text-zinc-300">
+                              {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
+                            </span>
+                            <span>Grouped bulk post</span>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
-                          {typeof entry.rating === "number" &&
-                          !Number.isNaN(entry.rating) ? (
-                            <RatingBadge rating={entry.rating} variant="text" />
-                          ) : null}
-                          {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                        </div>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                            {entry.label_image_url ? (
+                              <Photo
+                                src={entry.label_image_url}
+                                alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+                                containerClassName="h-full w-full"
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                loading="lazy"
+                              />
+                            ) : (
+                              "No photo"
+                            )}
+                          </div>
+                          <div className="flex flex-1 flex-col justify-between">
+                            <div>
+                              {entry.wine_name ? (
+                                <h3 className="text-base font-semibold text-zinc-50">
+                                  {entry.wine_name}
+                                </h3>
+                              ) : null}
+                              {(() => {
+                                const hideProducer = shouldHideProducerInEntryTile(
+                                  entry.wine_name,
+                                  entry.producer
+                                );
+                                if (!entry.producer || hideProducer) {
+                                  return null;
+                                }
+                                return (
+                                  <p className="text-sm text-zinc-400">{entry.producer}</p>
+                                );
+                              })()}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+                              {typeof entry.rating === "number" &&
+                              !Number.isNaN(entry.rating) ? (
+                                <RatingBadge rating={entry.rating} variant="text" />
+                              ) : null}
+                              {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div
                       className="mt-4 border-t border-white/10 pt-3"

@@ -20,6 +20,7 @@ export const privacyLevelSchema = z.enum([
 ]);
 
 export const commentScopeSchema = z.enum(["viewers", "friends"]);
+export const entryGroupModeSchema = z.enum(["event", "catch_up"]);
 
 const nullableString = z.preprocess(
   (value) => {
@@ -29,6 +30,17 @@ const nullableString = z.preprocess(
     return value;
   },
   z.string().nullable().optional()
+);
+
+const optionalTrimmedString = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  },
+  z.string().min(1).optional()
 );
 
 const nullableEnum = <T extends readonly [string, ...string[]]>(values: T) =>
@@ -174,6 +186,8 @@ export const createEntrySchema = z
     place_photo_privacy: privacyLevelSchema.nullable().optional(),
     is_feed_visible: z.boolean().optional(),
     skip_comparison_candidate: z.boolean().optional(),
+    entry_group_mode: entryGroupModeSchema.optional(),
+    entry_group_title: optionalTrimmedString.nullable().optional(),
   })
   .superRefine((data, ctx) => {
     const hasPrice = data.price_paid !== undefined;
@@ -246,6 +260,9 @@ export const updateEntrySchema = z
     label_photo_privacy: privacyLevelSchema.nullable().optional(),
     place_photo_privacy: privacyLevelSchema.nullable().optional(),
     is_feed_visible: z.boolean().optional(),
+    entry_group_mode: entryGroupModeSchema.optional(),
+    entry_group_title: optionalTrimmedString.nullable().optional(),
+    sync_group_consumed_at: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const providedPrice = data.price_paid !== undefined;

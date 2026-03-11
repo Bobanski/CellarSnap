@@ -40,6 +40,12 @@
 034_blocks_and_reports.sql
 035_entry_post_save_survey.sql
 036_apply_friend_transition.sql
+037_suppress_root_group_notifications_for_shared_copies.sql
+038_public_profile_privacy.sql
 039_content_report_dedupe.sql
 040_test_account_helper.sql
 041_test_account_visibility.sql
+042_drinking_now.sql
+043_name_display_preference.sql
+044_content_report_delete_cascade.sql
+045_entry_groups.sql

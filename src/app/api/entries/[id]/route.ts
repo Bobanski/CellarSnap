@@ -15,6 +15,7 @@ import {
   getFriendsOfFriendsIds,
 } from "@/lib/access/entryVisibility";
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
+import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { updateEntrySchema } from "@/server/entries/schema";
 import { executeWithColumnFallback } from "@/server/db/compat";
 import { resolvePersistedEntryRating } from "@/server/entries/updateValidation";
@@ -25,6 +26,16 @@ function isPrimaryGrapeSchemaMissing(message: string) {
     message.includes("grape_varieties") ||
     message.includes("grape_aliases") ||
     message.includes("entry_primary_grapes")
+  );
+}
+
+function isMissingGroupedPostSchemaError(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("entry_group") ||
+    lower.includes("column") ||
+    lower.includes("relation") ||
+    lower.includes("does not exist")
   );
 }
 
@@ -242,7 +253,26 @@ export async function GET(
     can_comment: interactionAccess.canComment,
   };
 
-  return NextResponse.json({ entry });
+  const groupedPostData = await resolveGroupedPostData(supabase, [
+    {
+      id: data.id,
+      entry_group_id:
+        typeof (data as { entry_group_id?: unknown }).entry_group_id === "string"
+          ? ((data as { entry_group_id: string }).entry_group_id as string)
+          : null,
+    },
+  ]);
+  const groupedPost = groupedPostData.get(data.id);
+
+  return NextResponse.json({
+    entry: groupedPost
+      ? {
+          ...entry,
+          entry_group: groupedPost.entry_group,
+          group_slides: groupedPost.group_slides,
+        }
+      : entry,
+  });
 }
 
 export function createEntryPutHandler(
@@ -306,14 +336,29 @@ export function createEntryPutHandler(
       normalizedData.primary_grape_ids === undefined
         ? undefined
         : normalizePrimaryGrapeIds(normalizedData.primary_grape_ids);
+    const entryGroupMode = normalizedData.entry_group_mode;
+    const entryGroupTitle = normalizedData.entry_group_title;
+    const syncGroupConsumedAt = normalizedData.sync_group_consumed_at === true;
     const entryFieldUpdates = { ...normalizedData };
     delete entryFieldUpdates.primary_grape_ids;
+    delete entryFieldUpdates.entry_group_mode;
+    delete entryFieldUpdates.entry_group_title;
+    delete entryFieldUpdates.sync_group_consumed_at;
 
     const updates = Object.fromEntries(
       Object.entries(entryFieldUpdates).filter(([, value]) => value !== undefined)
     );
 
-    if (Object.keys(updates).length === 0 && primaryGrapeIds === undefined) {
+    const hasGroupUpdates =
+      entryGroupMode !== undefined ||
+      entryGroupTitle !== undefined ||
+      syncGroupConsumedAt;
+
+    if (
+      Object.keys(updates).length === 0 &&
+      primaryGrapeIds === undefined &&
+      !hasGroupUpdates
+    ) {
       return NextResponse.json(
         { error: "No updates provided" },
         { status: 400 }
@@ -322,7 +367,7 @@ export function createEntryPutHandler(
 
     const { data: targetEntry, error: targetEntryError } = await supabase
       .from("wine_entries")
-      .select("id, user_id, rating")
+      .select("id, user_id, rating, entry_group_id")
       .eq("id", id)
       .maybeSingle();
 
@@ -533,6 +578,79 @@ export function createEntryPutHandler(
       }
     }
 
+    const targetEntryGroupId =
+      typeof targetEntry.entry_group_id === "string" &&
+      targetEntry.entry_group_id.length > 0
+        ? targetEntry.entry_group_id
+        : null;
+
+    if (hasGroupUpdates && !targetEntryGroupId) {
+      return NextResponse.json(
+        { error: "This entry is not part of a grouped bulk post." },
+        { status: 400 }
+      );
+    }
+
+    if (targetEntryGroupId && (entryGroupMode !== undefined || entryGroupTitle !== undefined)) {
+      const groupUpdatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (entryGroupMode !== undefined) {
+        groupUpdatePayload.mode = entryGroupMode;
+      }
+      if (entryGroupTitle !== undefined) {
+        groupUpdatePayload.title = entryGroupTitle;
+      }
+
+      const { error: groupUpdateError } = await supabase
+        .from("entry_groups")
+        .update(groupUpdatePayload)
+        .eq("id", targetEntryGroupId)
+        .eq("user_id", user.id);
+
+      if (groupUpdateError) {
+        if (isMissingGroupedPostSchemaError(groupUpdateError.message)) {
+          return NextResponse.json(
+            {
+              error:
+                "Grouped bulk posts are unavailable until `supabase/sql/045_entry_groups.sql` is applied.",
+              code: "ENTRY_GROUPS_UNAVAILABLE",
+            },
+            { status: 503 }
+          );
+        }
+        return NextResponse.json(
+          { error: groupUpdateError.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    if (targetEntryGroupId && syncGroupConsumedAt && typeof updates.consumed_at === "string") {
+      const { error: syncConsumedAtError } = await supabase
+        .from("wine_entries")
+        .update({ consumed_at: updates.consumed_at })
+        .eq("entry_group_id", targetEntryGroupId)
+        .eq("user_id", user.id);
+
+      if (syncConsumedAtError) {
+        if (isMissingGroupedPostSchemaError(syncConsumedAtError.message)) {
+          return NextResponse.json(
+            {
+              error:
+                "Grouped bulk posts are unavailable until `supabase/sql/045_entry_groups.sql` is applied.",
+              code: "ENTRY_GROUPS_UNAVAILABLE",
+            },
+            { status: 503 }
+          );
+        }
+        return NextResponse.json(
+          { error: syncConsumedAtError.message },
+          { status: 500 }
+        );
+      }
+    }
+
     const primaryGrapesByEntryId =
       await resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [id]);
 
@@ -540,11 +658,29 @@ export function createEntryPutHandler(
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
-    return NextResponse.json({
-      entry: {
-        ...updatedEntry,
-        primary_grapes: primaryGrapesByEntryId.get(id) ?? [],
+    const groupedPostData = await resolveGroupedPostData(supabase, [
+      {
+        id,
+        entry_group_id:
+          typeof ((updatedEntry as unknown as { entry_group_id?: unknown }).entry_group_id) === "string"
+            ? ((updatedEntry as unknown as { entry_group_id: string }).entry_group_id as string)
+            : null,
       },
+    ]);
+    const groupedPost = groupedPostData.get(id);
+
+    return NextResponse.json({
+      entry: groupedPost
+        ? {
+            ...updatedEntry,
+            primary_grapes: primaryGrapesByEntryId.get(id) ?? [],
+            entry_group: groupedPost.entry_group,
+            group_slides: groupedPost.group_slides,
+          }
+        : {
+            ...updatedEntry,
+            primary_grapes: primaryGrapesByEntryId.get(id) ?? [],
+          },
     });
   };
 }
@@ -568,7 +704,7 @@ export async function DELETE(
 
   const { data: existing, error: fetchError } = await supabase
     .from("wine_entries")
-    .select("label_image_path, place_image_path, pairing_image_path")
+    .select("id, label_image_path, place_image_path, pairing_image_path, entry_group_id")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -595,6 +731,91 @@ export async function DELETE(
     ].filter((p): p is string => Boolean(p && p !== "pending")))
   );
 
+  const existingEntryGroupId =
+    typeof existing.entry_group_id === "string" && existing.entry_group_id.length > 0
+      ? existing.entry_group_id
+      : null;
+
+  if (existingEntryGroupId) {
+    const { data: currentGroup, error: currentGroupError } = await supabase
+      .from("entry_groups")
+      .select("id, anchor_entry_id")
+      .eq("id", existingEntryGroupId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (currentGroupError && !isMissingGroupedPostSchemaError(currentGroupError.message)) {
+      return NextResponse.json({ error: currentGroupError.message }, { status: 500 });
+    }
+
+    const groupExists = Boolean(currentGroup?.id);
+    const isAnchor = currentGroup?.anchor_entry_id === id;
+
+    if (groupExists && isAnchor) {
+      const { data: remainingEntries, error: remainingEntriesError } = await supabase
+        .from("wine_entries")
+        .select("id")
+        .eq("entry_group_id", existingEntryGroupId)
+        .eq("user_id", user.id)
+        .neq("id", id)
+        .order("created_at", { ascending: true });
+
+      if (remainingEntriesError) {
+        return NextResponse.json(
+          { error: remainingEntriesError.message },
+          { status: 500 }
+        );
+      }
+
+      const nextAnchorId = remainingEntries?.[0]?.id ?? null;
+      if (nextAnchorId) {
+        const siblingIds = (remainingEntries ?? []).map((entry) => entry.id);
+        const hiddenSiblingIds = siblingIds.filter((entryId) => entryId !== nextAnchorId);
+
+        const { error: nextAnchorError } = await supabase
+          .from("wine_entries")
+          .update({ is_feed_visible: true })
+          .eq("id", nextAnchorId)
+          .eq("user_id", user.id);
+
+        if (nextAnchorError) {
+          return NextResponse.json({ error: nextAnchorError.message }, { status: 500 });
+        }
+
+        if (hiddenSiblingIds.length > 0) {
+          const { error: siblingHideError } = await supabase
+            .from("wine_entries")
+            .update({ is_feed_visible: false })
+            .in("id", hiddenSiblingIds)
+            .eq("user_id", user.id);
+
+          if (siblingHideError) {
+            return NextResponse.json(
+              { error: siblingHideError.message },
+              { status: 500 }
+            );
+          }
+        }
+
+        const { error: anchorUpdateError } = await supabase
+          .from("entry_groups")
+          .update({
+            anchor_entry_id: nextAnchorId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingEntryGroupId)
+          .eq("user_id", user.id);
+
+        if (anchorUpdateError) {
+          return NextResponse.json(
+            { error: anchorUpdateError.message },
+            { status: 500 }
+          );
+        }
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("wine_entries")
     .delete()
@@ -603,6 +824,36 @@ export async function DELETE(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (existingEntryGroupId) {
+    const { count: remainingGroupCount, error: remainingCountError } = await supabase
+      .from("wine_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("entry_group_id", existingEntryGroupId)
+      .eq("user_id", user.id);
+
+    if (remainingCountError) {
+      return NextResponse.json(
+        { error: remainingCountError.message },
+        { status: 500 }
+      );
+    }
+
+    if ((remainingGroupCount ?? 0) === 0) {
+      const { error: deleteGroupError } = await supabase
+        .from("entry_groups")
+        .delete()
+        .eq("id", existingEntryGroupId)
+        .eq("user_id", user.id);
+
+      if (deleteGroupError && !isMissingGroupedPostSchemaError(deleteGroupError.message)) {
+        return NextResponse.json(
+          { error: deleteGroupError.message },
+          { status: 500 }
+        );
+      }
+    }
   }
 
   if (paths.length > 0) {
