@@ -8,6 +8,7 @@ import {
   OpenAiImagePreparationError,
   prepareOpenAiImageDataUrl,
 } from "@/server/images/openAiImage";
+import { isValidWineType } from "@/server/algorithm/resolver";
 
 const responseSchema = z.object({
   wine_name: z.string().nullable().optional(),
@@ -17,6 +18,7 @@ const responseSchema = z.object({
   region: z.string().nullable().optional(),
   appellation: z.string().nullable().optional(),
   classification: z.string().nullable().optional(),
+  wine_type: z.string().nullable().optional(),
   primary_grape_suggestions: z.array(z.string()).optional(),
   primary_grape_confidence: z.number().min(0).max(1).nullable().optional(),
   confidence: z.number().min(0).max(1).nullable().optional(),
@@ -155,7 +157,7 @@ export async function POST(request: Request) {
       {
         model: "gpt-5-mini",
         reasoning: { effort: "minimal" },
-        max_output_tokens: 420,
+        max_output_tokens: 450,
         text: {
           format: {
             type: "json_schema",
@@ -172,6 +174,7 @@ export async function POST(request: Request) {
                 region: { type: ["string", "null"] },
                 appellation: { type: ["string", "null"] },
                 classification: { type: ["string", "null"] },
+                wine_type: { type: ["string", "null"] },
                 primary_grape_suggestions: {
                   type: "array",
                   items: { type: "string" },
@@ -191,6 +194,7 @@ export async function POST(request: Request) {
                 "region",
                 "appellation",
                 "classification",
+                "wine_type",
                 "primary_grape_suggestions",
                 "primary_grape_confidence",
                 "confidence",
@@ -207,10 +211,13 @@ export async function POST(request: Request) {
                 type: "input_text",
                 text:
                   "You are extracting wine label info from a bottle photo. Return ONLY JSON with keys: " +
-                  "wine_name, producer, vintage, country, region, appellation, classification, " +
+                  "wine_name, producer, vintage, country, region, appellation, classification, wine_type, " +
                   "primary_grape_suggestions, primary_grape_confidence, confidence, warnings. " +
                   "Appellation must be place-based only (for example Saint-Aubin, Pauillac, Barolo). " +
                   "Classification must hold quality tiers or legal quality markers (for example Premier Cru, Grand Cru Classe, DOCG). " +
+                  "For wine_type, classify as exactly one of: red, white, rose, sparkling, sweet, orange. " +
+                  "Use the label color, style, region, grape variety, and description to determine wine_type. " +
+                  "Return null for wine_type only if genuinely impossible to determine from the label. " +
                   "For primary_grape_suggestions, include canonical grape variety names and be conservative: prefer one grape by default, " +
                   "only return multiple grapes if the label explicitly shows a blend or the style implies a highly certain blend. " +
                   "Do not infer wine_name, producer, or vintage from bottle shape, capsule color, or scene context; require readable label evidence. " +
@@ -247,6 +254,9 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+    const rawWineType = normalize(data.wine_type);
+    const wine_type = isValidWineType(rawWineType) ? rawWineType : null;
+
     return NextResponse.json({
       wine_name:
         normalizeWineNameText(data.wine_name) ?? normalize(data.wine_name),
@@ -256,6 +266,7 @@ export async function POST(request: Request) {
       region: normalize(data.region),
       appellation: normalize(data.appellation),
       classification: normalize(data.classification),
+      wine_type,
       primary_grape_suggestions: normalizeGrapeSuggestions(
         data.primary_grape_suggestions
       ),

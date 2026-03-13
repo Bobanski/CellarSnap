@@ -13,6 +13,7 @@ import {
   executeWithColumnFallback,
 } from "@/server/db/compat";
 import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
+import { resolveEntryFields } from "@/server/algorithm/resolver";
 
 type RequestSupabaseClient = Awaited<ReturnType<typeof requireRequestAuth>>["supabase"];
 
@@ -56,6 +57,7 @@ function isPrimaryGrapeSchemaMissing(message: string) {
 
 const ENTRY_OPTIONAL_INSERT_COLUMNS = [
   "classification",
+  "wine_type",
   "is_feed_visible",
   "drinking_now",
   "location_place_id",
@@ -420,6 +422,7 @@ export async function POST(request: Request) {
     region: payload.data.region ?? null,
     appellation: payload.data.appellation ?? null,
     classification: payload.data.classification ?? null,
+    wine_type: payload.data.wine_type ?? null,
     rating: payload.data.rating ?? null,
     price_paid: payload.data.price_paid ?? null,
     price_paid_currency: payload.data.price_paid_currency ?? null,
@@ -534,6 +537,58 @@ export async function POST(request: Request) {
         );
       }
     }
+  }
+
+  // Resolution middleware: fire-and-forget (non-blocking).
+  // Captures raw values and resolves to canonical fields.
+  // Fully functional once WS1 alias tables are populated (migration 046+).
+  {
+    const rawRegion = payload.data.region ?? null;
+    const rawProducer = payload.data.producer ?? null;
+    const rawClassification = payload.data.classification ?? null;
+    const rawWineType = payload.data.wine_type ?? null;
+
+    const resolution = resolveEntryFields({
+      region: rawRegion,
+      producer: rawProducer,
+      classification: rawClassification,
+      wine_type: rawWineType,
+    });
+
+    // Update canonical fields (silent on column-not-found errors — migration may not be applied)
+    void supabase
+      .from("wine_entries")
+      .update({
+        raw_region: rawRegion,
+        raw_producer: rawProducer,
+        raw_classification: rawClassification,
+        raw_wine_type: rawWineType ? String(rawWineType) : null,
+        canonical_region: resolution.canonical_region,
+        canonical_producer: resolution.canonical_producer,
+        canonical_classification: resolution.canonical_classification,
+        resolution_confidence: resolution.resolution_confidence,
+        fallback_level: resolution.fallback_level,
+      })
+      .eq("id", data.id)
+      .eq("user_id", user.id);
+
+    // Log resolution outcome (silent on table-not-found errors)
+    void supabase.from("scan_resolution_log").insert({
+      entry_id: data.id,
+      user_id: user.id,
+      raw_region: rawRegion,
+      raw_producer: rawProducer,
+      raw_classification: rawClassification,
+      raw_wine_type: rawWineType ? String(rawWineType) : null,
+      canonical_region: resolution.canonical_region,
+      canonical_producer: resolution.canonical_producer,
+      canonical_classification: resolution.canonical_classification,
+      resolution_confidence: resolution.resolution_confidence,
+      fallback_level: resolution.fallback_level,
+      region_alias_matched: resolution.region_alias_matched,
+      producer_alias_matched: resolution.producer_alias_matched,
+      resolution_source: resolution.resolution_source,
+    });
   }
 
   const createdEntryPrimaryGrapes = await fetchPrimaryGrapesByEntryId(supabase, [
