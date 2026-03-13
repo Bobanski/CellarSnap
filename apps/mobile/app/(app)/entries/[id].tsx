@@ -752,6 +752,7 @@ export default function EntryDetailScreen() {
     advanced_notes: false,
     price: false,
   });
+  const [showBulkMoreDetails, setShowBulkMoreDetails] = useState(false);
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [canReact, setCanReact] = useState(false);
@@ -761,6 +762,10 @@ export default function EntryDetailScreen() {
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
+
+  useEffect(() => {
+    setShowBulkMoreDetails(false);
+  }, [entryId, isBulkReview]);
 
   const loadEntry = useCallback(async () => {
     if (!entryId) {
@@ -1025,7 +1030,7 @@ export default function EntryDetailScreen() {
       galleryScrollRef.current.scrollTo({ x: 0, animated: false });
     }
     setLoading(false);
-  }, [entryId]);
+  }, [entryId, user?.email, user?.id]);
 
   useEffect(() => {
     void loadEntry();
@@ -2688,71 +2693,6 @@ export default function EntryDetailScreen() {
     void saveBulkReview("next");
   }, [isBulkReview, saveBulkReview]);
 
-  const skipBulkReview = useCallback(() => {
-    void saveBulkReview("exit");
-  }, [saveBulkReview]);
-
-  const cancelBulkEntry = useCallback(() => {
-    if (
-      !isBulkReview ||
-      !entryId ||
-      deleting ||
-      isDeletingBulkQueue ||
-      isSavingBulkReview
-    ) {
-      return;
-    }
-
-    Alert.alert(
-      "Cancel this wine?",
-      "This removes the current entry and its photos from the bulk queue.",
-      [
-        { text: "Keep", style: "cancel" },
-        {
-          text: "Cancel wine",
-          style: "destructive",
-          onPress: () => {
-            void (async () => {
-              setDeleting(true);
-              setDeleteError(null);
-              try {
-                await deleteEntryById(entryId);
-                const nextQueue = bulkQueue.filter((id) => id !== entryId);
-                if (nextQueue.length === 0) {
-                  router.replace("/(app)/entries");
-                  return;
-                }
-                const targetNextEntryId =
-                  nextBulkEntryId && nextQueue.includes(nextBulkEntryId)
-                    ? nextBulkEntryId
-                    : nextQueue[0];
-                const targetIndex = Math.max(0, nextQueue.indexOf(targetNextEntryId));
-                router.replace(
-                  buildBulkEntryHref(targetNextEntryId, nextQueue, targetIndex) as never
-                );
-              } catch (error) {
-                setDeleteError(
-                  error instanceof Error ? error.message : "Unable to cancel this wine."
-                );
-              } finally {
-                setDeleting(false);
-              }
-            })();
-          },
-        },
-      ]
-    );
-  }, [
-    bulkQueue,
-    deleteEntryById,
-    deleting,
-    entryId,
-    isBulkReview,
-    isDeletingBulkQueue,
-    isSavingBulkReview,
-    nextBulkEntryId,
-  ]);
-
   const cancelEntireBulkQueue = useCallback(() => {
     if (
       !isBulkReview ||
@@ -2873,9 +2813,21 @@ export default function EntryDetailScreen() {
                 </View>
               </Pressable>
               <AppText style={styles.eyebrow}>Cellar entry</AppText>
-              <AppText style={styles.title}>
-                {entry.wine_name?.trim() || "Untitled wine"}
-              </AppText>
+              {isBulkReview ? (
+                <DoneTextInput
+                  value={bulkReviewForm.wine_name}
+                  onChangeText={(value) => updateBulkReviewField("wine_name", value)}
+                  placeholder="Wine name"
+                  placeholderTextColor="#71717a"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  style={styles.headerTitleInput}
+                />
+              ) : (
+                <AppText style={styles.title}>
+                  {entry.wine_name?.trim() || "Untitled wine"}
+                </AppText>
+              )}
               <AppText style={styles.subtitle}>
                 {entry.producer?.trim() || "Unknown producer"}
               </AppText>
@@ -3139,19 +3091,36 @@ export default function EntryDetailScreen() {
                   />
                 </AdaptiveFieldRow>
 
+                {isBulkReview ? (
+                  <View style={styles.bulkReviewActionRow}>
+                    <Pressable
+                      style={[styles.bulkSecondaryButton, styles.bulkMinorButton]}
+                      onPress={() => setShowBulkMoreDetails((current) => !current)}
+                    >
+                      <AppText style={styles.bulkMinorButtonText}>
+                        Add / edit details
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {!isBulkReview || showBulkMoreDetails ? (
+                  <>
                 <Accordion
                   title="Wine details"
                   description="Optional identity details for this bottle."
                   expanded={editExpanded.wine_details}
                   onToggle={() => toggleEditSection("wine_details")}
                 >
-                <Field
-                  label="Wine name"
-                  value={bulkReviewForm.wine_name}
-                  onChange={(value) => updateBulkReviewField("wine_name", value)}
-                  placeholder="Required"
-                  required
-                />
+                {!isBulkReview ? (
+                  <Field
+                    label="Wine name"
+                    value={bulkReviewForm.wine_name}
+                    onChange={(value) => updateBulkReviewField("wine_name", value)}
+                    placeholder="Required"
+                    required
+                  />
+                ) : null}
 
                 <AdaptiveFieldRow minColumnWidth={160}>
                   <Field
@@ -3596,6 +3565,43 @@ export default function EntryDetailScreen() {
                   </View>
                 </View>
                 </Accordion>
+                  </>
+                ) : null}
+                {isBulkReview ? (
+                  <View style={styles.bulkReviewFooterRow}>
+                    <Pressable
+                      style={[
+                        styles.bulkPrimaryButton,
+                        bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                      ]}
+                      onPress={goToNextBulkEntry}
+                      disabled={bulkActionsDisabled}
+                    >
+                      <AppText style={styles.bulkPrimaryButtonText}>
+                        {isSavingBulkReview
+                          ? "Saving..."
+                          : nextBulkEntryId
+                          ? "Next wine"
+                          : "Finish review"}
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.bulkDangerButton,
+                        bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                      ]}
+                      onPress={cancelEntireBulkQueue}
+                      disabled={bulkActionsDisabled}
+                    >
+                      <AppText style={styles.bulkDangerButtonText}>
+                        {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {isBulkReview && bulkReviewError ? (
+                  <AppText style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
+                ) : null}
               </View>
             ) : (
               <View style={styles.detailsCard}>
@@ -3846,65 +3852,6 @@ export default function EntryDetailScreen() {
               ) : null}
               </View>
             )}
-            {isBulkReview ? (
-              <View style={styles.bulkReviewControlsCard}>
-                <View style={styles.bulkReviewActionRow}>
-                  <Pressable
-                    style={[
-                      styles.bulkPrimaryButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={goToNextBulkEntry}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkPrimaryButtonText}>
-                      {isSavingBulkReview
-                        ? "Saving..."
-                        : nextBulkEntryId
-                        ? "Next wine"
-                        : "Finish review"}
-                    </AppText>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.bulkSecondaryButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={skipBulkReview}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkSecondaryButtonText}>
-                      Skip all and save
-                    </AppText>
-                  </Pressable>
-                </View>
-                <View style={styles.bulkReviewDangerRow}>
-                  <Pressable
-                    style={[
-                      styles.bulkDangerButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={cancelBulkEntry}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkDangerButtonText}>Cancel this wine</AppText>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.bulkDangerButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={cancelEntireBulkQueue}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkDangerButtonText}>Cancel bulk entry</AppText>
-                  </Pressable>
-                </View>
-                {bulkReviewError ? (
-                  <AppText style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
-                ) : null}
-              </View>
-            ) : null}
           </>
         )}
       </ScrollView>
@@ -4286,6 +4233,13 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
+  bulkReviewFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 6,
+  },
   bulkReviewDangerRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -4314,6 +4268,17 @@ const styles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 12,
     fontWeight: "700",
+  },
+  bulkMinorButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  bulkMinorButtonText: {
+    color: "#d4d4d8",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   bulkDangerButton: {
     borderRadius: 999,
@@ -4610,6 +4575,18 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
+    color: "#fafafa",
+    fontSize: 24,
+    fontWeight: "700",
+    lineHeight: 30,
+  },
+  headerTitleInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: "#fafafa",
     fontSize: 24,
     fontWeight: "700",

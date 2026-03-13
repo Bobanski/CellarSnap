@@ -72,6 +72,8 @@ export async function resolveInteractionAccessForViewer({
   acceptedFriendIds,
   friendsOfFriendsIds,
   blockedUserIds,
+  viewerIsTestAccount,
+  ownerIsTestAccount,
 }: {
   supabase: SupabaseClient;
   viewerUserId: string;
@@ -83,6 +85,8 @@ export async function resolveInteractionAccessForViewer({
   acceptedFriendIds?: Set<string>;
   friendsOfFriendsIds?: Set<string>;
   blockedUserIds?: Set<string>;
+  viewerIsTestAccount?: boolean;
+  ownerIsTestAccount?: boolean;
 }) {
   const resolvedPrivacy = resolveInteractionPrivacy({
     entryPrivacy,
@@ -91,17 +95,21 @@ export async function resolveInteractionAccessForViewer({
     commentsScope,
   });
 
-  const testAccountStatus = await getTestAccountStatusMap(supabase, [
-    viewerUserId,
-    ownerUserId,
-  ]);
-  const viewerIsTestAccount = testAccountStatus.get(viewerUserId) ?? false;
-  const ownerIsTestAccount = testAccountStatus.get(ownerUserId) ?? false;
+  const needsTestStatus =
+    viewerIsTestAccount === undefined || ownerIsTestAccount === undefined;
+  const testAccountStatus =
+    needsTestStatus
+      ? await getTestAccountStatusMap(supabase, [viewerUserId, ownerUserId])
+      : null;
+  const resolvedViewerIsTestAccount =
+    viewerIsTestAccount ?? testAccountStatus?.get(viewerUserId) ?? false;
+  const resolvedOwnerIsTestAccount =
+    ownerIsTestAccount ?? testAccountStatus?.get(ownerUserId) ?? false;
   const ownerCanSeeViewerContent = canViewTestAuthoredContent({
     viewerUserId: ownerUserId,
     ownerUserId: viewerUserId,
-    viewerIsTestAccount: ownerIsTestAccount,
-    ownerIsTestAccount: viewerIsTestAccount,
+    viewerIsTestAccount: resolvedOwnerIsTestAccount,
+    ownerIsTestAccount: resolvedViewerIsTestAccount,
   });
 
   const [canReact, canComment] = await Promise.all([
@@ -113,8 +121,8 @@ export async function resolveInteractionAccessForViewer({
       acceptedFriendIds,
       friendsOfFriendsIds,
       blockedUserIds,
-      viewerIsTestAccount,
-      ownerIsTestAccount,
+      viewerIsTestAccount: resolvedViewerIsTestAccount,
+      ownerIsTestAccount: resolvedOwnerIsTestAccount,
     }),
     canUserViewEntry({
       supabase,
@@ -124,8 +132,8 @@ export async function resolveInteractionAccessForViewer({
       acceptedFriendIds,
       friendsOfFriendsIds,
       blockedUserIds,
-      viewerIsTestAccount,
-      ownerIsTestAccount,
+      viewerIsTestAccount: resolvedViewerIsTestAccount,
+      ownerIsTestAccount: resolvedOwnerIsTestAccount,
     }),
   ]);
 

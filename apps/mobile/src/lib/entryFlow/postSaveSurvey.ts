@@ -14,7 +14,7 @@ export async function persistPostSaveSurveyAnswers<TValue extends string>({
     .from("wine_entries")
     .update({
       survey_how_was_it: answers.how_was_it,
-      survey_expectation_match: answers.expectations,
+      survey_expectation_match: answers.expectations ?? null,
       survey_drink_again: answers.drink_again,
     })
     .eq("id", entryId)

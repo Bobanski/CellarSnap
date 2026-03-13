@@ -10,7 +10,7 @@ import {
   type EntryPrivacy,
 } from "@/lib/access/entryVisibility";
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
-import { isTestAccount } from "@/lib/access/testAccounts";
+import { getTestAccountStatusMap, isTestAccount } from "@/lib/access/testAccounts";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrls } from "@/server/storage/signedUrls";
@@ -331,6 +331,11 @@ export async function GET(request: Request) {
     }
 
     let reachedOverflow = false;
+    const ownerTestAccountStatuses = await getTestAccountStatusMap(
+      supabase,
+      rawRows.map((row) => row.user_id)
+    );
+
     for (const row of rawRows) {
       const dedupeKey =
         hasTastingSupport
@@ -359,6 +364,8 @@ export async function GET(request: Request) {
         acceptedFriendIds: acceptedFriendIdsSet,
         friendsOfFriendsIds: friendsOfFriendsIdsSet,
         blockedUserIds: blockedUserIdsSet,
+        viewerIsTestAccount,
+        ownerIsTestAccount: ownerTestAccountStatuses.get(row.user_id) ?? false,
       });
 
       if (!canSeeEntry) {
@@ -425,6 +432,10 @@ export async function GET(request: Request) {
     : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);
+  const authorTestAccountStatuses = await getTestAccountStatusMap(
+    supabase,
+    pageEntries.map((entry) => entry.user_id)
+  );
   const groupedPostByEntryId = await resolveGroupedPostData(
     supabase,
     pageEntries.map((entry) => ({
@@ -792,6 +803,8 @@ export async function GET(request: Request) {
       acceptedFriendIds: acceptedFriendIdsSet,
       friendsOfFriendsIds: friendsOfFriendsIdsSet,
       blockedUserIds: blockedUserIdsSet,
+      viewerIsTestAccount,
+      ownerIsTestAccount: authorTestAccountStatuses.get(entry.user_id) ?? false,
     });
 
     const reactionCounts = interactionAccess.canReact

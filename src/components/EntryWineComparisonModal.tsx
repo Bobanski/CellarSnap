@@ -55,14 +55,17 @@ export default function EntryWineComparisonModal({
   onSelect,
   onSkip,
 }: EntryWineComparisonModalProps) {
-  useOverlayPresentation(isOpen);
+  useOverlayPresentation(isOpen, {
+    lockScroll: false,
+    snapToTop: false,
+  });
 
   if (!isOpen || !entry || !candidate) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
+    <div className="fixed inset-0 z-50 px-3 py-3 sm:px-4 sm:py-4">
       <div className="fixed inset-0 bg-black/75" aria-hidden />
       <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
         <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">

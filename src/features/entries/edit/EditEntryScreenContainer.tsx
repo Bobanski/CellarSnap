@@ -222,7 +222,7 @@ export default function EditEntryPage() {
   >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeletingEntry, setIsDeletingEntry] = useState(false);
+  const [isDeletingEntry] = useState(false);
   const [isDeletingBulkQueue, setIsDeletingBulkQueue] = useState(false);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const [cropEditorPhoto, setCropEditorPhoto] = useState<EntryPhoto | null>(null);
@@ -282,6 +282,7 @@ export default function EditEntryPage() {
     string | null
   >(null);
   const [isSubmittingBulkSurvey, setIsSubmittingBulkSurvey] = useState(false);
+  const [showBulkMoreDetails, setShowBulkMoreDetails] = useState(false);
 
   const scrollToTopForOverlay = useCallback(() => {
     if (typeof window === "undefined") {
@@ -296,6 +297,10 @@ export default function EditEntryPage() {
     if (!url) return null;
     return `${url}${url.includes("?") ? "&" : "?"}v=${photoRenderVersion}`;
   };
+
+  useEffect(() => {
+    setShowBulkMoreDetails(false);
+  }, [entryId, isBulkReview]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1393,59 +1398,6 @@ export default function EditEntryPage() {
     return `/entries/${targetEntryId}/edit?bulk=1&queue=${queue}&index=${targetIndex}`;
   };
 
-  const cancelBulkEntry = async () => {
-    if (!entry || !entryId || !isBulkReview) {
-      return;
-    }
-    if (isSubmitting || isDeletingEntry || isDeletingBulkQueue) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Cancel this wine from bulk review? This will delete the entry and its photos."
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setIsDeletingEntry(true);
-    setErrorMessage(null);
-    setPhotoError(null);
-
-    try {
-      const response = await fetch(`/api/entries/${entry.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "Unable to delete entry.");
-        return;
-      }
-
-      const nextQueue = bulkQueue.filter((id) => id !== entry.id);
-      if (nextQueue.length === 0) {
-        router.push("/entries");
-        return;
-      }
-
-      if (nextBulkEntryId && nextQueue.includes(nextBulkEntryId)) {
-        const queueParam = encodeURIComponent(nextQueue.join(","));
-        const nextIndex = Math.max(0, nextQueue.indexOf(nextBulkEntryId));
-        router.push(
-          `/entries/${nextBulkEntryId}/edit?bulk=1&queue=${queueParam}&index=${nextIndex}`
-        );
-        return;
-      }
-
-      router.push("/entries");
-    } catch {
-      setErrorMessage("Unable to delete entry.");
-    } finally {
-      setIsDeletingEntry(false);
-    }
-  };
-
   const cancelEntireBulkQueue = async () => {
     if (!isBulkReview || bulkQueue.length === 0) {
       return;
@@ -1999,36 +1951,6 @@ export default function EditEntryPage() {
                 : "Update tasting details or photos."}
             </p>
           </div>
-          {isBulkReview ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                form="entry-edit-form"
-                data-submit-intent="next"
-                className="rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
-                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
-              >
-                {nextBulkEntryId ? "Next wine" : "Finish review"}
-              </button>
-              <button
-                type="submit"
-                form="entry-edit-form"
-                data-submit-intent="exit"
-                className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
-              >
-                Skip all and save
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
-                onClick={cancelEntireBulkQueue}
-              >
-                {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
-              </button>
-            </div>
-          ) : null}
         </header>
 
         <form
@@ -2037,7 +1959,17 @@ export default function EditEntryPage() {
           className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
           onSubmit={onSubmit}
         >
-          {currentWineName ? (
+          {isBulkReview ? (
+            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+                Wine
+              </p>
+              <input
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-lg font-semibold text-zinc-50 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("wine_name")}
+              />
+            </div>
+          ) : currentWineName ? (
             <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
                 Wine
@@ -2234,6 +2166,20 @@ export default function EditEntryPage() {
             <input type="hidden" {...register("price_paid_source")} />
           </div>
 
+          {isBulkReview ? (
+            <div className="mt-4">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-amber-300/50 hover:text-amber-200"
+                onClick={() => setShowBulkMoreDetails((current) => !current)}
+              >
+                Add / edit details
+              </button>
+            </div>
+          ) : null}
+
+          {!isBulkReview || showBulkMoreDetails ? (
+            <>
           <details className={collapsibleSectionClassName}>
             <summary className={collapsibleSummaryClassName}>
               Wine details
@@ -2242,13 +2188,15 @@ export default function EditEntryPage() {
               Optional identity details for this bottle.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Wine name</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  {...register("wine_name")}
-                />
-              </div>
+              {!isBulkReview ? (
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">Wine name</label>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    {...register("wine_name")}
+                  />
+                </div>
+              ) : null}
               <div>
                 <label className="text-sm font-medium text-zinc-200">Producer</label>
                 <input
@@ -2303,7 +2251,7 @@ export default function EditEntryPage() {
             </div>
           </details>
 
-          {currentEntryGroup ? (
+          {currentEntryGroup && !isBulkReview ? (
             <details className={collapsibleSectionClassName} open={isBulkReview}>
               <summary className={collapsibleSummaryClassName}>
                 Event / catch-up post
@@ -2313,7 +2261,7 @@ export default function EditEntryPage() {
               </p>
               <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
                 <div>
-                  <label className="text-sm font-medium text-zinc-200">Mode</label>
+                  <label className="text-sm font-medium text-zinc-200">Group type</label>
                   <div className="mt-2 inline-flex rounded-full border border-white/10 bg-black/40 p-1">
                     {[
                       { value: "event", label: "Event" },
@@ -2607,6 +2555,8 @@ export default function EditEntryPage() {
               Privacy on reactions/comments controls both visibility and participation.
             </p>
           </details>
+            </>
+          ) : null}
 
           {showEditPhotosSection ? (
             <details className={collapsibleSectionClassName}>
@@ -2970,6 +2920,7 @@ export default function EditEntryPage() {
             entry={pendingBulkSurvey?.entry ?? null}
             errorMessage={bulkSurveyErrorMessage}
             isSubmitting={isSubmittingBulkSurvey}
+            includeExpectations={false}
             submitLabel={
               pendingBulkSurvey?.nextHref === "/entries"
                 ? "Save and finish"
@@ -3000,22 +2951,33 @@ export default function EditEntryPage() {
             <p className="text-sm text-rose-300">{photoError}</p>
           ) : null}
 
-          <div className="flex items-center gap-3">
+          <div
+            className={
+              isBulkReview
+                ? "flex items-center justify-between gap-3"
+                : "flex items-center gap-3"
+            }
+          >
             <button
               type="submit"
+              data-submit-intent={isBulkReview ? "next" : undefined}
               className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
             >
-              Save changes
+              {isBulkReview
+                ? nextBulkEntryId
+                  ? "Next wine"
+                  : "Finish review"
+                : "Save changes"}
             </button>
             {isBulkReview ? (
               <button
                 type="button"
-                className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={cancelBulkEntry}
+                className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={cancelEntireBulkQueue}
                 disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
               >
-                Cancel
+                {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
               </button>
             ) : (
               <Link
