@@ -21,6 +21,7 @@ export type ResolverInput = {
   producer: string | null;
   classification: string | null;
   wine_type: WineType | null;
+  country: string | null;
 };
 
 export type ResolverOutput = {
@@ -28,7 +29,7 @@ export type ResolverOutput = {
   canonical_producer: string | null;
   canonical_classification: string | null;
   resolution_confidence: number;
-  /** Fallback level 1–6 per D11 hierarchy. Level 6 = wine_type only (below confidence threshold). */
+  /** Fallback level 1–6 per D11 hierarchy. Level 6 = below confidence threshold (no score shown). */
   fallback_level: number;
   region_alias_matched: boolean;
   producer_alias_matched: boolean;
@@ -37,22 +38,38 @@ export type ResolverOutput = {
 
 /**
  * Resolves raw wine fields to canonical identities.
- * Stub implementation — returns raw values unchanged.
- * WS1 will replace this with real alias-map lookups.
+ *
+ * Fallback level is derived from input strength per the D11 hierarchy:
+ *   Level 4: region × wine_type          (confidence 0.6 — scoreable)
+ *   Level 5: country × wine_type         (confidence 0.5 — minimum scoreable per D8)
+ *   Level 6: wine_type only / no info    (confidence 0   — below threshold, no score shown)
+ *
+ * WS1 will unlock levels 1–3 (sub_region × varietal × wine_type etc.) via alias lookups.
  */
 export function resolveEntryFields(input: ResolverInput): ResolverOutput {
-  // Stub: pass-through until WS1 alias tables are populated.
-  // Minimum info required to score: (wine_type + region) or (region + producer) per D8.
-  const hasMinimumInfo =
-    (input.wine_type !== null && input.region !== null) ||
-    (input.region !== null && input.producer !== null);
+  let fallback_level: number;
+  let resolution_confidence: number;
+
+  if (input.wine_type !== null && input.region !== null) {
+    // Level 4: region × wine_type
+    fallback_level = 4;
+    resolution_confidence = 0.6;
+  } else if (input.wine_type !== null && input.country !== null) {
+    // Level 5: country × wine_type — minimum scoreable combination per D8
+    fallback_level = 5;
+    resolution_confidence = 0.5;
+  } else {
+    // Level 6: wine_type only, or no wine_type — below confidence threshold
+    fallback_level = 6;
+    resolution_confidence = 0;
+  }
 
   return {
     canonical_region: input.region,
     canonical_producer: input.producer,
     canonical_classification: input.classification,
-    resolution_confidence: hasMinimumInfo ? 0.5 : 0,
-    fallback_level: 6, // wine_type only — below confidence threshold per D11
+    resolution_confidence,
+    fallback_level,
     region_alias_matched: false,
     producer_alias_matched: false,
     resolution_source: "stub",

@@ -41,78 +41,128 @@ test.describe("WS2: Entry Normalization", () => {
     });
   });
 
-  test.describe("resolveEntryFields", () => {
-    test("stub: returns raw values as canonical values", () => {
+  test.describe("resolveEntryFields — fallback level derivation (D11)", () => {
+    test("level 4 (region × wine_type): confidence 0.6", () => {
+      const result = resolveEntryFields({
+        region: "Napa Valley",
+        producer: null,
+        classification: null,
+        wine_type: "red",
+        country: "United States",
+      });
+      expect(result.fallback_level).toBe(4);
+      expect(result.resolution_confidence).toBe(0.6);
+    });
+
+    test("level 4 takes priority over level 5 when region is present", () => {
+      const result = resolveEntryFields({
+        region: "Burgundy",
+        producer: "Leroy",
+        classification: "Grand Cru",
+        wine_type: "red",
+        country: "France",
+      });
+      expect(result.fallback_level).toBe(4);
+      expect(result.resolution_confidence).toBe(0.6);
+    });
+
+    test("level 5 (country × wine_type, no region): confidence 0.5", () => {
+      const result = resolveEntryFields({
+        region: null,
+        producer: null,
+        classification: null,
+        wine_type: "white",
+        country: "France",
+      });
+      expect(result.fallback_level).toBe(5);
+      expect(result.resolution_confidence).toBe(0.5);
+    });
+
+    test("level 6 (wine_type only, no region or country): confidence 0", () => {
+      const result = resolveEntryFields({
+        region: null,
+        producer: null,
+        classification: null,
+        wine_type: "red",
+        country: null,
+      });
+      expect(result.fallback_level).toBe(6);
+      expect(result.resolution_confidence).toBe(0);
+    });
+
+    test("level 6 (no wine_type): confidence 0 — cannot score without wine_type", () => {
+      const result = resolveEntryFields({
+        region: "Burgundy",
+        producer: "Leroy",
+        classification: null,
+        wine_type: null,
+        country: "France",
+      });
+      expect(result.fallback_level).toBe(6);
+      expect(result.resolution_confidence).toBe(0);
+    });
+
+    test("level 6 (all null): confidence 0", () => {
+      const result = resolveEntryFields({
+        region: null,
+        producer: null,
+        classification: null,
+        wine_type: null,
+        country: null,
+      });
+      expect(result.fallback_level).toBe(6);
+      expect(result.resolution_confidence).toBe(0);
+    });
+  });
+
+  test.describe("resolveEntryFields — stub pass-through", () => {
+    test("returns raw values as canonical values", () => {
       const result = resolveEntryFields({
         region: "Burgundy",
         producer: "Domaine de la Romanée-Conti",
         classification: "Grand Cru",
         wine_type: "red",
+        country: "France",
       });
       expect(result.canonical_region).toBe("Burgundy");
       expect(result.canonical_producer).toBe("Domaine de la Romanée-Conti");
       expect(result.canonical_classification).toBe("Grand Cru");
     });
 
-    test("stub: resolution_source is 'stub'", () => {
+    test("resolution_source is 'stub'", () => {
       const result = resolveEntryFields({
         region: "Napa Valley",
         producer: null,
         classification: null,
         wine_type: "red",
+        country: "United States",
       });
       expect(result.resolution_source).toBe("stub");
     });
 
-    test("stub: no alias matches", () => {
+    test("no alias matches in stub", () => {
       const result = resolveEntryFields({
         region: "Bordeaux",
         producer: "Château Margaux",
         classification: "Premier Grand Cru Classé",
         wine_type: "red",
+        country: "France",
       });
       expect(result.region_alias_matched).toBe(false);
       expect(result.producer_alias_matched).toBe(false);
     });
 
-    test("fallback_level is 6 (wine_type only — below confidence threshold)", () => {
-      const result = resolveEntryFields({
-        region: "Côte de Nuits",
-        producer: null,
-        classification: null,
-        wine_type: "red",
-      });
-      expect(result.fallback_level).toBe(6);
-    });
-
-    test("returns confidence 0.5 when wine_type + region provided", () => {
-      const result = resolveEntryFields({
-        region: "Napa Valley",
-        producer: null,
-        classification: null,
-        wine_type: "red",
-      });
-      expect(result.resolution_confidence).toBe(0.5);
-    });
-
-    test("returns confidence 0.5 when region + producer provided (no wine_type)", () => {
-      const result = resolveEntryFields({
-        region: "Burgundy",
-        producer: "Leroy",
-        classification: null,
-        wine_type: null,
-      });
-      expect(result.resolution_confidence).toBe(0.5);
-    });
-
-    test("returns confidence 0 when all fields are null", () => {
+    test("returns null canonical values when region/producer/classification are null", () => {
       const result = resolveEntryFields({
         region: null,
         producer: null,
         classification: null,
-        wine_type: null,
+        wine_type: "white",
+        country: "France",
       });
-      expect(result.resolution_confidence).toBe(0);
+      expect(result.canonical_region).toBeNull();
+      expect(result.canonical_producer).toBeNull();
+      expect(result.canonical_classification).toBeNull();
     });
 
     test("handles all-null inputs without throwing", () => {
@@ -122,20 +172,9 @@ test.describe("WS2: Entry Normalization", () => {
           producer: null,
           classification: null,
           wine_type: null,
+          country: null,
         })
       ).not.toThrow();
-    });
-
-    test("returns null canonical values when inputs are null", () => {
-      const result = resolveEntryFields({
-        region: null,
-        producer: null,
-        classification: null,
-        wine_type: "white",
-      });
-      expect(result.canonical_region).toBeNull();
-      expect(result.canonical_producer).toBeNull();
-      expect(result.canonical_classification).toBeNull();
     });
   });
 

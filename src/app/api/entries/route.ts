@@ -135,7 +135,7 @@ export async function GET(request: Request) {
   const { supabase, user } = auth;
 
   const url = new URL(request.url);
-  const cursor = url.searchParams.get("cursor"); // created_at or consumed_at (ISO)
+  const cursor = url.searchParams.get("cursor");
   const rawLimit = Number(url.searchParams.get("limit") ?? "");
   const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(100, Math.max(1, rawLimit)) : 50;
   const sortBy = url.searchParams.get("sort") === "consumed_at" ? "consumed_at" : "created_at";
@@ -248,7 +248,6 @@ export async function GET(request: Request) {
 
   const signedUrlByPath = await signPhotoUrls(labelPathsToSign, supabase);
 
-  // Comment counts per entry (batch query).
   const commentCountMap = new Map<string, number>();
   if (entryIds.length > 0) {
     const { data: commentRows } = await supabase
@@ -266,14 +265,12 @@ export async function GET(request: Request) {
       ...entry,
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
       label_image_url: labelPath ? signedUrlByPath.get(labelPath) ?? null : null,
-      // Not used by /entries list UI; avoid extra signing work
       place_image_url: null,
       pairing_image_url: null,
       comment_count: commentCountMap.get(entry.id) ?? 0,
     };
   });
 
-  // Lightweight total count (uses index on user_id)
   const { count: totalCount } = await supabase
     .from("wine_entries")
     .select("id", { count: "exact", head: true })
@@ -365,10 +362,8 @@ export async function POST(request: Request) {
     profileCommentsPrivacy === "private"
       ? profileCommentsPrivacy
       : "friends_of_friends";
-  const labelPhotoPrivacy =
-    payload.data.label_photo_privacy ?? null;
-  const placePhotoPrivacy =
-    payload.data.place_photo_privacy ?? null;
+  const labelPhotoPrivacy = payload.data.label_photo_privacy ?? null;
+  const placePhotoPrivacy = payload.data.place_photo_privacy ?? null;
   const commentsScope = payload.data.comments_scope ?? "viewers";
   const reactionPrivacy = payload.data.reaction_privacy ?? profileReactionDefault;
   const commentsPrivacyFromScope =
@@ -526,11 +521,11 @@ export async function POST(request: Request) {
       if (isPrimaryGrapeSchemaMissing(grapeInsertError.message)) {
         primaryGrapeIdsToPersist = [];
       } else {
-      await supabase
-        .from("wine_entries")
-        .delete()
-        .eq("id", data.id)
-        .eq("user_id", user.id);
+        await supabase
+          .from("wine_entries")
+          .delete()
+          .eq("id", data.id)
+          .eq("user_id", user.id);
         return NextResponse.json(
           { error: grapeInsertError.message },
           { status: 500 }
@@ -553,6 +548,7 @@ export async function POST(request: Request) {
       producer: rawProducer,
       classification: rawClassification,
       wine_type: rawWineType,
+      country: payload.data.country ?? null,
     });
 
     // Update canonical fields (silent on column-not-found errors — migration may not be applied)
