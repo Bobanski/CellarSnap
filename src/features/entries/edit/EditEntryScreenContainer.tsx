@@ -1923,6 +1923,7 @@ export default function EditEntryPage() {
   const currentEntryGroup = entry.entry_group ?? null;
   const isSharedEventGroup =
     currentEntryGroup !== null && selectedGroupMode === "event";
+  const showSharedEventBulkSummary = isBulkReview && isSharedEventGroup;
   const collapsibleSectionClassName =
     "group rounded-2xl border border-white/10 bg-black/30 p-4";
   const collapsibleSummaryClassName =
@@ -2317,150 +2318,185 @@ export default function EditEntryPage() {
             </details>
           ) : null}
 
-          <details className={collapsibleSectionClassName}>
-            <summary className={collapsibleSummaryClassName}>
-              Location & date
-            </summary>
-            <p className="mt-2 text-xs text-zinc-400">
-              {isSharedEventGroup
-                ? "Where this event happened and the shared date for every wine in the group."
-                : "Where and when this bottle was consumed."}
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Location</label>
-                <input type="hidden" {...register("location_place_id")} />
-                <Controller
-                  control={control}
-                  name="location_text"
-                  render={({ field }) => (
-                    <LocationAutocomplete
-                      value={field.value}
-                      onChange={field.onChange}
-                      onSelectPlaceId={(placeId) =>
-                        setValue("location_place_id", placeId ?? "", {
-                          shouldDirty: true,
-                        })
-                      }
-                      onBlur={field.onBlur}
-                      biasCoords={photoGps}
-                    />
-                  )}
-                />
-              </div>
-              <div className="md:justify-self-start">
-                <label className="text-sm font-medium text-zinc-200">
-                  {isSharedEventGroup ? "Shared event date" : "Consumed date"}
-                </label>
-                <Controller
-                  control={control}
-                  name="consumed_at"
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <DatePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                      required
-                    />
-                  )}
-                />
-                {isSharedEventGroup ? (
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Saving in Event mode will apply this date to every wine in the grouped post.
+          {showSharedEventBulkSummary ? (
+            <div className="rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4">
+              <p className="text-sm font-medium text-zinc-100">
+                Shared event details already applied
+              </p>
+              <p className="mt-2 text-sm text-zinc-300">
+                Event wines inherit the shared event name, location, date, and tasted-with
+                list, so you can focus on each bottle here.
+              </p>
+              <div className="mt-3 grid gap-2 text-sm text-zinc-300 sm:grid-cols-2">
+                <p>
+                  <span className="text-zinc-500">Event:</span>{" "}
+                  {currentEntryGroup?.title?.trim() || "Untitled event"}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Date:</span> {entry.consumed_at}
+                </p>
+                {entry.location_text ? (
+                  <p className="sm:col-span-2">
+                    <span className="text-zinc-500">Location:</span> {entry.location_text}
+                  </p>
+                ) : null}
+                {selectedUserIds.length > 0 ? (
+                  <p className="sm:col-span-2">
+                    <span className="text-zinc-500">Tasted with:</span>{" "}
+                    {selectedUserIds.length} friend
+                    {selectedUserIds.length === 1 ? "" : "s"}
                   </p>
                 ) : null}
               </div>
             </div>
-          </details>
-
-          <details className={collapsibleSectionClassName}>
-            <summary className={collapsibleSummaryClassName}>
-              Tasted with
-            </summary>
-            <p className="mt-2 text-xs text-zinc-400">
-              Tag friends who were with you.
-            </p>
-            {users.length === 0 ? (
-              <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
-            ) : (() => {
-              const topFriends = users.slice(0, 5);
-              const topFriendIds = new Set(topFriends.map((u) => u.id));
-              const extraSelected = users.filter(
-                (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
-              );
-              const trimmedSearch = friendSearch.trim().toLowerCase();
-              const searchResults = trimmedSearch.length >= 2
-                ? users.filter(
-                    (u) =>
-                      !topFriendIds.has(u.id) &&
-                      !selectedUserIds.includes(u.id) &&
-                      ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
-                        (u.email ?? "").toLowerCase().includes(trimmedSearch))
-                  )
-                : [];
-
-              const renderCheckbox = (user: typeof users[number]) => {
-                const label = user.display_name ?? "Unknown";
-                const isChecked = selectedUserIds.includes(user.id);
-                return (
-                  <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
-                      checked={isChecked}
-                      onChange={(event) => {
-                        setSelectedUserIds((prev) =>
-                          event.target.checked
-                            ? [...prev, user.id]
-                            : prev.filter((id) => id !== user.id)
-                        );
-                        if (event.target.checked) setFriendSearch("");
-                      }}
+          ) : (
+            <>
+              <details className={collapsibleSectionClassName}>
+                <summary className={collapsibleSummaryClassName}>
+                  Location & date
+                </summary>
+                <p className="mt-2 text-xs text-zinc-400">
+                  {isSharedEventGroup
+                    ? "Where this event happened and the shared date for every wine in the group."
+                    : "Where and when this bottle was consumed."}
+                </p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-200">Location</label>
+                    <input type="hidden" {...register("location_place_id")} />
+                    <Controller
+                      control={control}
+                      name="location_text"
+                      render={({ field }) => (
+                        <LocationAutocomplete
+                          value={field.value}
+                          onChange={field.onChange}
+                          onSelectPlaceId={(placeId) =>
+                            setValue("location_place_id", placeId ?? "", {
+                              shouldDirty: true,
+                            })
+                          }
+                          onBlur={field.onBlur}
+                          biasCoords={photoGps}
+                        />
+                      )}
                     />
-                    {label}
-                  </label>
-                );
-              };
-
-              return (
-                <div className="mt-3 space-y-2">
-                  <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                    {topFriends.map(renderCheckbox)}
-                    {extraSelected.map(renderCheckbox)}
                   </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={friendSearch}
-                      onChange={(e) => setFriendSearch(e.target.value)}
-                      placeholder="Search friends..."
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  <div className="md:justify-self-start">
+                    <label className="text-sm font-medium text-zinc-200">
+                      {isSharedEventGroup ? "Shared event date" : "Consumed date"}
+                    </label>
+                    <Controller
+                      control={control}
+                      name="consumed_at"
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          required
+                        />
+                      )}
                     />
-                    {searchResults.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
-                        {searchResults.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setSelectedUserIds((prev) => [...prev, user.id]);
-                              setFriendSearch("");
-                            }}
-                          >
-                            {user.display_name ?? "Unknown"}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {isSharedEventGroup ? (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Saving in Event mode will apply this date to every wine in the grouped post.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
-              );
-            })()}
-          </details>
+              </details>
+
+              <details className={collapsibleSectionClassName}>
+                <summary className={collapsibleSummaryClassName}>
+                  Tasted with
+                </summary>
+                <p className="mt-2 text-xs text-zinc-400">
+                  Tag friends who were with you.
+                </p>
+                {users.length === 0 ? (
+                  <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
+                ) : (() => {
+                  const topFriends = users.slice(0, 5);
+                  const topFriendIds = new Set(topFriends.map((u) => u.id));
+                  const extraSelected = users.filter(
+                    (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
+                  );
+                  const trimmedSearch = friendSearch.trim().toLowerCase();
+                  const searchResults = trimmedSearch.length >= 2
+                    ? users.filter(
+                        (u) =>
+                          !topFriendIds.has(u.id) &&
+                          !selectedUserIds.includes(u.id) &&
+                          ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
+                            (u.email ?? "").toLowerCase().includes(trimmedSearch))
+                      )
+                    : [];
+
+                  const renderCheckbox = (user: typeof users[number]) => {
+                    const label = user.display_name ?? "Unknown";
+                    const isChecked = selectedUserIds.includes(user.id);
+                    return (
+                      <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                          checked={isChecked}
+                          onChange={(event) => {
+                            setSelectedUserIds((prev) =>
+                              event.target.checked
+                                ? [...prev, user.id]
+                                : prev.filter((id) => id !== user.id)
+                            );
+                            if (event.target.checked) setFriendSearch("");
+                          }}
+                        />
+                        {label}
+                      </label>
+                    );
+                  };
+
+                  return (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                        {topFriends.map(renderCheckbox)}
+                        {extraSelected.map(renderCheckbox)}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={friendSearch}
+                          onChange={(e) => setFriendSearch(e.target.value)}
+                          placeholder="Search friends..."
+                          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        />
+                        {searchResults.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
+                            {searchResults.map((user) => (
+                              <button
+                                key={user.id}
+                                type="button"
+                                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setSelectedUserIds((prev) => [...prev, user.id]);
+                                  setFriendSearch("");
+                                }}
+                              >
+                                {user.display_name ?? "Unknown"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </details>
+            </>
+          )}
 
           <details className={collapsibleSectionClassName}>
             <summary className={collapsibleSummaryClassName}>

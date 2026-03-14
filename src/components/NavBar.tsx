@@ -98,72 +98,76 @@ export default function NavBar({
           CellarSnap
         </Link>
 
-        {/* ── Desktop nav (md+) ── */}
-        <div className="hidden items-center gap-2 md:flex">
-          {NAV_ITEMS.map(({ label, href }) => {
-            const active = isItemActive({ href, pathname, activeHrefOverride });
-            return active ? (
-              <span
-                key={href}
-                className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold"
-              >
-                {label}
+        <div className="flex items-center gap-2">
+          {/* ── Desktop nav (md+) ── */}
+          <div className="hidden items-center gap-2 md:flex">
+            {NAV_ITEMS.map(({ label, href }) => {
+              const active = isItemActive({ href, pathname, activeHrefOverride });
+              return active ? (
+                <span
+                  key={href}
+                  className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold"
+                >
+                  {label}
+                </span>
+              ) : (
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                >
+                  {label}
+                </Link>
+              );
+            })}
+            {isNewEntryActive ? (
+              <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
+                New entry
               </span>
             ) : (
               <Link
-                key={href}
-                href={href}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                href="/entries/new"
+                prefetch={false}
+                className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition"
               >
-                {label}
+                + New entry
               </Link>
-            );
-          })}
-          {isNewEntryActive ? (
-            <span className="accent-soft-chip rounded-full border px-4 py-2 text-sm font-semibold">
-              New entry
-            </span>
-          ) : (
-            <Link
-              href="/entries/new"
-              prefetch={false}
-              className="accent-solid-button rounded-full px-4 py-2 text-sm font-semibold transition"
-            >
-              + New entry
-            </Link>
-          )}
+            )}
+          </div>
+
+          {/* ── Mobile controls (<md) ── */}
+          <div className="flex items-center gap-2 md:hidden">
+            {isNewEntryActive ? (
+              <span className="accent-soft-chip rounded-full border px-3 py-1.5 text-sm font-semibold">
+                New entry
+              </span>
+            ) : (
+              <Link
+                href="/entries/new"
+                prefetch={false}
+                className="accent-solid-button rounded-full px-3 py-1.5 text-sm font-semibold transition"
+              >
+                + New
+              </Link>
+            )}
+          </div>
+
           <AlertsMenu />
+
           <button
-            className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+            className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 md:inline-flex"
             type="button"
             onClick={onSignOut}
           >
             Sign out
           </button>
-        </div>
 
-        {/* ── Mobile controls (<md) ── */}
-        <div className="flex items-center gap-2 md:hidden">
-          {isNewEntryActive ? (
-            <span className="accent-soft-chip rounded-full border px-3 py-1.5 text-sm font-semibold">
-              New entry
-            </span>
-          ) : (
-            <Link
-              href="/entries/new"
-              prefetch={false}
-              className="accent-solid-button rounded-full px-3 py-1.5 text-sm font-semibold transition"
-            >
-              + New
-            </Link>
-          )}
-          <AlertsMenu />
           <button
             type="button"
             onClick={() =>
               setMobileOpenPathname((prev) => (prev === pathname ? null : pathname))
             }
-            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-white/30"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-white/30 md:hidden"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
           >

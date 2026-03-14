@@ -88,8 +88,17 @@ type EntryDetailRow = {
   place_image_path: string | null;
   pairing_image_path: string | null;
   created_at: string;
+  entry_group_id?: string | null;
   entry_privacy: PrivacyLevel;
   reaction_privacy?: PrivacyLevel | null;
+};
+
+type EntryGroupMode = "event" | "catch_up";
+
+type EntryGroupSummary = {
+  id: string;
+  mode: EntryGroupMode;
+  title: string;
 };
 
 type EntryPhotoRow = {
@@ -708,6 +717,7 @@ export default function EntryDetailScreen() {
   const [bulkAdvancedNotes, setBulkAdvancedNotes] =
     useState<AdvancedNotesFormState>({ ...EMPTY_ADVANCED_NOTES });
   const [friendUsers, setFriendUsers] = useState<ProfileRow[]>([]);
+  const [entryGroup, setEntryGroup] = useState<EntryGroupSummary | null>(null);
   const [selectedTastedWithIds, setSelectedTastedWithIds] = useState<string[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
@@ -780,20 +790,25 @@ export default function EntryDetailScreen() {
     const { data: entryData, error: entryError } = await supabase
       .from("wine_entries")
       .select(
-        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, entry_privacy, reaction_privacy"
+        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, entry_group_id, entry_privacy, reaction_privacy"
       )
       .eq("id", entryId)
       .maybeSingle();
 
     if (entryError || !entryData) {
+      setEntryGroup(null);
       setErrorMessage(entryError?.message ?? "Entry unavailable.");
       setLoading(false);
       return;
     }
 
     const nextEntry = entryData as EntryDetailRow;
+    const nextEntryGroupId =
+      typeof nextEntry.entry_group_id === "string" && nextEntry.entry_group_id.length > 0
+        ? nextEntry.entry_group_id
+        : null;
 
-    const [{ data: photoRows }, { data: grapeRows }] = await Promise.all([
+    const [{ data: photoRows }, { data: grapeRows }, groupResponse] = await Promise.all([
       supabase
         .from("entry_photos")
         .select("id, entry_id, type, path, position, created_at")
@@ -805,7 +820,25 @@ export default function EntryDetailScreen() {
         .select("entry_id, position, grape_varieties(id, name)")
         .eq("entry_id", entryId)
         .order("position", { ascending: true }),
+      nextEntryGroupId
+        ? supabase
+            .from("entry_groups")
+            .select("id, mode, title")
+            .eq("id", nextEntryGroupId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
+    const nextEntryGroup =
+      groupResponse?.data &&
+      typeof groupResponse.data.id === "string" &&
+      (groupResponse.data.mode === "event" || groupResponse.data.mode === "catch_up")
+        ? {
+            id: groupResponse.data.id,
+            mode: groupResponse.data.mode as EntryGroupMode,
+            title:
+              typeof groupResponse.data.title === "string" ? groupResponse.data.title : "",
+          }
+        : null;
 
     const primaryGrapes: PrimaryGrape[] = ((grapeRows ?? []) as EntryPrimaryGrapeRow[])
       .map((row) => {
@@ -968,6 +1001,7 @@ export default function EntryDetailScreen() {
     setReactionUsers(canEntryReact ? nextReactionUsers : {});
     setReactionPickerOpen(false);
     setEntry({ ...nextEntry, primary_grapes: primaryGrapes });
+    setEntryGroup(nextEntryGroup);
     setSelectedPrimaryGrapes(primaryGrapes.map((grape) => ({ ...grape })));
     setSelectedTastedWithIds(nextEntry.tasted_with_user_ids ?? []);
     setBulkAdvancedNotes(toAdvancedNotesFormState(nextEntry.advanced_notes));
@@ -1548,6 +1582,7 @@ export default function EntryDetailScreen() {
     (profile) =>
       selectedTastedWithIds.includes(profile.id) && !topFriendIds.has(profile.id)
   );
+  const isSharedEventBulkReview = isBulkReview && entryGroup?.mode === "event";
   const normalizedFriendSearch = friendSearch.trim().toLowerCase();
   const friendSearchResults =
     normalizedFriendSearch.length >= 2
@@ -3104,6 +3139,43 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
+                {isSharedEventBulkReview ? (
+                  <View
+                    style={[
+                      styles.bulkEditCard,
+                      {
+                        borderColor: "rgba(251,191,36,0.24)",
+                        backgroundColor: "rgba(251,191,36,0.1)",
+                      },
+                    ]}
+                  >
+                    <AppText style={styles.bulkEditTitle}>
+                      Shared event details already applied
+                    </AppText>
+                    <AppText style={styles.bulkEditDescription}>
+                      Event wines inherit the shared event name, location, date, and
+                      tasted-with list, so this review stays focused on each bottle.
+                    </AppText>
+                    <AppText style={styles.bulkSectionHint}>
+                      Event: {entryGroup?.title?.trim() || "Untitled event"}
+                    </AppText>
+                    <AppText style={styles.bulkSectionHint}>
+                      Date: {bulkReviewForm.consumed_at || entry.consumed_at}
+                    </AppText>
+                    {bulkReviewForm.location_text.trim().length > 0 ? (
+                      <AppText style={styles.bulkSectionHint}>
+                        Location: {bulkReviewForm.location_text.trim()}
+                      </AppText>
+                    ) : null}
+                    {selectedTastedWithIds.length > 0 ? (
+                      <AppText style={styles.bulkSectionHint}>
+                        Tasted with: {selectedTastedWithIds.length} friend
+                        {selectedTastedWithIds.length === 1 ? "" : "s"}
+                      </AppText>
+                    ) : null}
+                  </View>
+                ) : null}
+
                 {!isBulkReview || showBulkMoreDetails ? (
                   <>
                 <Accordion
@@ -3241,6 +3313,7 @@ export default function EntryDetailScreen() {
                 </View>
                 </Accordion>
 
+                {!isSharedEventBulkReview ? (
                 <Accordion
                   title="Location & date"
                   description="Where and when this bottle was consumed."
@@ -3323,7 +3396,9 @@ export default function EntryDetailScreen() {
                   </View>
                 </View>
                 </Accordion>
+                ) : null}
 
+                {!isSharedEventBulkReview ? (
                 <Accordion
                   title="Tasted with"
                   description="Tag friends who were with you."
@@ -3404,6 +3479,7 @@ export default function EntryDetailScreen() {
                   </>
                 ) : null}
                 </Accordion>
+                ) : null}
 
                 <Accordion
                   title="Advanced notes"

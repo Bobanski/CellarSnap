@@ -170,6 +170,7 @@ export async function runBulkCreateWorkflow({
     typeof ratingValue === "number" && Number.isFinite(ratingValue)
       ? Math.max(1, Math.min(100, Math.round(ratingValue)))
       : null;
+  const isSharedEventGroup = groupConfig?.mode === "event";
 
   let started = 0;
   let fatalCreationError: string | null = null;
@@ -205,15 +206,18 @@ export async function runBulkCreateWorkflow({
               classification: wine.classification,
               notes: form.notes.trim().length > 0 ? form.notes.trim() : null,
               location_text:
-                form.location_text.trim().length > 0
+                isSharedEventGroup && form.location_text.trim().length > 0
                   ? form.location_text.trim()
                   : null,
               location_place_id:
-                form.location_place_id.trim().length > 0
+                isSharedEventGroup && form.location_place_id.trim().length > 0
                   ? form.location_place_id.trim()
                   : null,
-              consumed_at: form.consumed_at || defaultConsumedDate,
-              tasted_with_user_ids: selectedUserIds,
+              consumed_at:
+                isSharedEventGroup && form.consumed_at
+                  ? form.consumed_at
+                  : defaultConsumedDate,
+              tasted_with_user_ids: isSharedEventGroup ? selectedUserIds : [],
               entry_privacy: form.entry_privacy,
               reaction_privacy: form.reaction_privacy,
               comments_privacy: form.comments_privacy,
@@ -253,15 +257,18 @@ export async function runBulkCreateWorkflow({
                   rating: numericRating,
                   notes: form.notes.trim().length > 0 ? form.notes.trim() : null,
                   location_text:
-                    form.location_text.trim().length > 0
+                    isSharedEventGroup && form.location_text.trim().length > 0
                       ? form.location_text.trim()
                       : null,
                   location_place_id:
-                    form.location_place_id.trim().length > 0
+                    isSharedEventGroup && form.location_place_id.trim().length > 0
                       ? form.location_place_id.trim()
                       : null,
-                  consumed_at: form.consumed_at || defaultConsumedDate,
-                  tasted_with_user_ids: selectedUserIds,
+                  consumed_at:
+                    isSharedEventGroup && form.consumed_at
+                      ? form.consumed_at
+                      : defaultConsumedDate,
+                  tasted_with_user_ids: isSharedEventGroup ? selectedUserIds : [],
                   entry_privacy: form.entry_privacy,
                   reaction_privacy: form.reaction_privacy,
                   comments_privacy: form.comments_privacy,

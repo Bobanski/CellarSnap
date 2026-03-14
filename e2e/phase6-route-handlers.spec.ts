@@ -1,17 +1,15 @@
 import { expect, test } from "@playwright/test";
 import type { User } from "@supabase/supabase-js";
-import { createSharePostHandler } from "../src/app/api/share/route";
-import { createUserEntriesGetHandler } from "../src/app/api/users/[id]/entries/route";
-import { createTaggedEntriesGetHandler } from "../src/app/api/users/[id]/tagged/route";
-import {
-  createEntryDeleteHandler,
-  createEntryPutHandler,
-} from "../src/app/api/entries/[id]/route";
-import { createAccountDeleteHandler } from "../src/app/api/account/route";
-import { createPasswordSignInHandler } from "../src/app/api/auth/password-sign-in/route";
-import { createRecoveryStartHandler } from "../src/app/api/auth/recovery-start/route";
-import { createBulkGroupHandler } from "../src/app/api/entries/bulk-group/route";
-import { createBulkPublishHandler } from "../src/app/api/entries/bulk-publish/route";
+import { createSharePostHandler } from "../src/app/api/share/handler";
+import { createUserEntriesGetHandler } from "../src/app/api/users/[id]/entries/handler";
+import { createTaggedEntriesGetHandler } from "../src/app/api/users/[id]/tagged/handler";
+import { createEntryDeleteHandler } from "../src/app/api/entries/[id]/deleteHandler";
+import { createAccountDeleteHandler } from "../src/app/api/account/deleteHandler";
+import { createEntryPutHandler } from "../src/app/api/entries/[id]/putHandler";
+import { createPasswordSignInHandler } from "../src/app/api/auth/password-sign-in/handler";
+import { createRecoveryStartHandler } from "../src/app/api/auth/recovery-start/handler";
+import { createBulkGroupHandler } from "../src/app/api/entries/bulk-group/handler";
+import { createBulkPublishHandler } from "../src/app/api/entries/bulk-publish/handler";
 
 function makeAuthenticatedUser(id: string) {
   return {

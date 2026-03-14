@@ -5,7 +5,7 @@ import { useAuth } from "@/src/providers/AuthProvider";
 export default function AuthLayout() {
   const { isReady, session } = useAuth();
   const segments = useSegments();
-  const isResetPasswordScreen = segments[1] === "reset-password";
+  const isResetPasswordScreen = segments[segments.length - 1] === "reset-password";
 
   if (!isReady) {
     return (
