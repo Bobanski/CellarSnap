@@ -7,6 +7,28 @@
 
 `feature/algorithm-core` — new branch off `main`.
 
+## Git Safety (CRITICAL)
+
+Before EVERY commit and push, verify you are on the correct branch:
+
+```bash
+git branch --show-current
+# Must show: feature/algorithm-core
+```
+
+If you are not on the correct branch, switch before doing anything:
+
+```bash
+git checkout feature/algorithm-core
+```
+
+**Rules:**
+- Never commit to `main` directly
+- Never force-push
+- Always verify your branch before `git add`, `git commit`, or `git push`
+- If you see uncommitted changes from another branch, stash or discard them — do not mix work across branches
+- Open a PR against `main` when your work is complete
+
 ## Goal
 
 Build the deterministic wine scoring engine that assembles an effective wine profile from base profiles + modifier layers, then scores it against a user's per-type preference vector. This is the heart of the CellarSnap recommendation system.
