@@ -7,6 +7,28 @@
 
 `feature/entry-normalization` — PR #1 is already open against `main`.
 
+## Git Safety (CRITICAL)
+
+Before EVERY commit and push, verify you are on the correct branch:
+
+```bash
+git branch --show-current
+# Must show: feature/entry-normalization
+```
+
+If you are not on the correct branch, switch before doing anything:
+
+```bash
+git checkout feature/entry-normalization
+```
+
+**Rules:**
+- Never commit to `main` directly
+- Never force-push
+- Always verify your branch before `git add`, `git commit`, or `git push`
+- If you see uncommitted changes from another branch, stash or discard them — do not mix work across branches
+- Open a PR against `main` when your work is complete
+
 ## Goal
 
 Replace the stub resolver in `src/server/algorithm/resolver.ts` with a real implementation that resolves raw wine entry fields to canonical forms using the alias tables in Supabase. When a user creates or updates an entry, the resolver must look up the alias tables, populate canonical fields on `wine_entries`, and log the outcome to `scan_resolution_log`.
