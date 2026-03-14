@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import {
   PRICE_PAID_CURRENCY_LABELS,
   PRICE_PAID_CURRENCY_VALUES,
@@ -1519,7 +1520,7 @@ export default function EntryDetailScreen() {
       : activeCropPhoto?.url ?? null;
   const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
   const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
-  const getCropGeometry = () => {
+  const getCropGeometry = useCallback(() => {
     if (!cropImageNaturalSize || cropFrameSize <= 0) {
       return null;
     }
@@ -1544,7 +1545,7 @@ export default function EntryDetailScreen() {
       offsetX: centerPadX - overflowX * (cropCenterX / 100),
       offsetY: centerPadY - overflowY * (cropCenterY / 100),
     };
-  };
+  }, [cropCenterX, cropCenterY, cropFrameSize, cropImageNaturalSize, cropZoom]);
   const activePhotoFailed = activePhoto ? failedPhotoIds.has(activePhoto.id) : false;
   const canEditActivePhotoMeta = Boolean(
     isOwner && isEditFormVisible && activePhoto?.editable && !isUpdatingPhotoMeta
@@ -2087,54 +2088,106 @@ export default function EntryDetailScreen() {
     if (!entry || !activeCropPhoto?.url || !isOwner) {
       return;
     }
-    if (!WEB_API_BASE_URL) {
-      setPhotoEditError(
-        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable in-place crop editing."
-      );
-      return;
-    }
-
-    const accessToken = await getAccessTokenForApi();
-    if (!accessToken) {
-      setPhotoEditError("Session expired. Sign in again to save crop edits.");
-      return;
-    }
 
     setIsSavingCrop(true);
     setPhotoEditError(null);
     try {
       let sourceDataUrl = cropSourceDataUrlByPhotoId[activeCropPhoto.id] ?? null;
-      if (!sourceDataUrl) {
-        const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
-        const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
-        sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
-          sourceBytes
-        )}`;
-      }
+      let croppedDataUrl: string | null = null;
+      let croppedMimeType = "image/jpeg";
 
-      const formData = new FormData();
-      formData.append("photo_data_url", sourceDataUrl);
-      formData.append("center_x", String(cropCenterX));
-      formData.append("center_y", String(cropCenterY));
-      formData.append("zoom", String(cropZoom));
-
-      const response = await fetch(`${WEB_API_BASE_URL}/api/photo-crop`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        cropped_data_url?: string;
-        mime_type?: string;
-        error?: string;
-      };
-      if (!response.ok || !payload.cropped_data_url) {
-        if (response.status === 401) {
-          throw new Error("Session expired. Sign in again to save crop edits.");
+      if (WEB_API_BASE_URL) {
+        const accessToken = await getAccessTokenForApi();
+        if (!accessToken) {
+          setPhotoEditError("Session expired. Sign in again to save crop edits.");
+          return;
         }
-        throw new Error(payload.error ?? "Unable to crop this image.");
+
+        if (!sourceDataUrl) {
+          const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+          const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
+          sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
+            sourceBytes
+          )}`;
+        }
+
+        const formData = new FormData();
+        formData.append("photo_data_url", sourceDataUrl);
+        formData.append("center_x", String(cropCenterX));
+        formData.append("center_y", String(cropCenterY));
+        formData.append("zoom", String(cropZoom));
+
+        const response = await fetch(`${WEB_API_BASE_URL}/api/photo-crop`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          cropped_data_url?: string;
+          mime_type?: string;
+          error?: string;
+        };
+        if (!response.ok || !payload.cropped_data_url) {
+          if (response.status === 401) {
+            throw new Error("Session expired. Sign in again to save crop edits.");
+          }
+          throw new Error(payload.error ?? "Unable to crop this image.");
+        }
+        croppedDataUrl = payload.cropped_data_url;
+        croppedMimeType = payload.mime_type ?? croppedMimeType;
+      } else {
+        if (!sourceDataUrl) {
+          const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+          const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
+          sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
+            sourceBytes
+          )}`;
+        }
+        const geometry = getCropGeometry();
+        if (!geometry || !cropImageNaturalSize) {
+          throw new Error("Crop support unavailable for this image.");
+        }
+        const originX = Math.max(0, -geometry.offsetX);
+        const originY = Math.max(0, -geometry.offsetY);
+        const width = Math.min(cropFrameSize, geometry.renderedWidth);
+        const height = Math.min(cropFrameSize, geometry.renderedHeight);
+        const scaleX =
+          cropImageNaturalSize.width / Math.max(1, geometry.renderedWidth);
+        const scaleY =
+          cropImageNaturalSize.height / Math.max(1, geometry.renderedHeight);
+        const cropRect = {
+          originX: Math.max(
+            0,
+            Math.min(cropImageNaturalSize.width - 1, Math.round(originX * scaleX))
+          ),
+          originY: Math.max(
+            0,
+            Math.min(cropImageNaturalSize.height - 1, Math.round(originY * scaleY))
+          ),
+          width: Math.max(
+            1,
+            Math.min(cropImageNaturalSize.width, Math.round(width * scaleX))
+          ),
+          height: Math.max(
+            1,
+            Math.min(cropImageNaturalSize.height, Math.round(height * scaleY))
+          ),
+        };
+        const croppedImage = await manipulateAsync(
+          sourceDataUrl,
+          [{ crop: cropRect }],
+          {
+            compress: 0.92,
+            format: SaveFormat.JPEG,
+            base64: true,
+          }
+        );
+        if (!croppedImage.base64) {
+          throw new Error("Unable to crop this image.");
+        }
+        croppedDataUrl = `data:image/jpeg;base64,${croppedImage.base64}`;
       }
 
       const cropRowResult = await supabase
@@ -2151,12 +2204,12 @@ export default function EntryDetailScreen() {
         throw new Error("Photo record not found.");
       }
 
-      const croppedBytes = await readPhotoBytes(payload.cropped_data_url);
+      const croppedBytes = await readPhotoBytes(croppedDataUrl);
       const uploadResult = await supabase.storage
         .from("wine-photos")
         .upload(storagePath, croppedBytes, {
           upsert: true,
-          contentType: payload.mime_type ?? "image/jpeg",
+          contentType: croppedMimeType,
         });
       if (uploadResult.error) {
         throw new Error(uploadResult.error.message);
@@ -2198,6 +2251,9 @@ export default function EntryDetailScreen() {
     cropCenterX,
     cropCenterY,
     cropZoom,
+    cropFrameSize,
+    cropImageNaturalSize,
+    getCropGeometry,
     entry,
     isOwner,
     loadEntry,
@@ -3099,15 +3155,23 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
-                <Field
-                  label="Notes"
-                  value={bulkReviewForm.notes}
-                  onChange={(value) => updateBulkReviewField("notes", value)}
-                  placeholder="Optional tasting notes"
-                  multiline
-                />
+                <View style={styles.bulkFormField}>
+                  <AppText style={styles.bulkFormLabel}>Notes</AppText>
+                  <DoneTextInput
+                    value={bulkReviewForm.notes}
+                    onChangeText={(value) => updateBulkReviewField("notes", value)}
+                    placeholder="Optional tasting notes"
+                    placeholderTextColor="#71717a"
+                    multiline
+                    style={[
+                      styles.bulkFormInput,
+                      styles.bulkFormInputMultiline,
+                      { minHeight: 76 },
+                    ]}
+                  />
+                </View>
 
-                <AdaptiveFieldRow minColumnWidth={170}>
+                <AdaptiveFieldRow minColumnWidth={140}>
                   <Field
                     label="Rating (1-100)"
                     value={bulkReviewForm.rating}
@@ -3139,7 +3203,7 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
-                {isSharedEventBulkReview ? (
+                {isSharedEventBulkReview && showBulkMoreDetails ? (
                   <View
                     style={[
                       styles.bulkEditCard,

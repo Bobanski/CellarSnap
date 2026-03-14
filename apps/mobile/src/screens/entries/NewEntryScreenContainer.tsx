@@ -398,6 +398,7 @@ export default function NewEntryScreen() {
   const [bulkEntrySetupStep, setBulkEntrySetupStep] = useState<
     "group" | "event_details"
   >("group");
+  const [bulkGroupInfoOpen, setBulkGroupInfoOpen] = useState(false);
   const [bulkEntryTitle, setBulkEntryTitle] = useState("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
@@ -2153,10 +2154,19 @@ export default function NewEntryScreen() {
             {isBulkLineupMode ? (
               <View style={styles.bulkLineupCard}>
                 <View style={styles.bulkLineupHeader}>
-                  <AppText style={styles.bulkLineupTitle}>Lineup preview</AppText>
+                  <AppText style={styles.bulkLineupTitle}>
+                    {showBulkEventDetailsStep ? "Event details" : "Lineup preview"}
+                  </AppText>
                   <Pressable
                     style={styles.bulkBackButton}
-                    onPress={cancelBulkLineup}
+                    onPress={
+                      showBulkEventDetailsStep
+                        ? () => {
+                            setBulkEntrySetupStep("group");
+                            setBulkEntryConfigError(null);
+                          }
+                        : cancelBulkLineup
+                    }
                     disabled={isBulkCreating}
                   >
                     <AppText style={styles.bulkBackButtonText}>{"\u2190"} Back</AppText>
@@ -2164,46 +2174,20 @@ export default function NewEntryScreen() {
                 </View>
                 <View style={styles.bulkGroupCard}>
                   <View style={styles.bulkGroupHeader}>
-                    <AppText style={styles.bulkGroupTitle}>
-                      {showBulkEventDetailsStep ? "Event details" : "Group this bulk upload"}
-                    </AppText>
-                    <AppText style={styles.bulkGroupDescription}>
-                      {showBulkEventDetailsStep
-                        ? "These shared details will be copied to every wine in the event before review starts."
-                        : "Each wine stays separate in your cellar, but Home and Feed will show one grouped post."}
-                    </AppText>
-                    <AppText style={styles.bulkGroupHint}>
-                      Event uses one shared tasting date. Catch-up is for logging bottles from
-                      different days after the fact.
-                    </AppText>
-                  </View>
-                  <View style={styles.bulkGroupModeWrap}>
-                    {BULK_GROUP_MODE_OPTIONS.map((option) => {
-                      const selectedOption = bulkEntryMode === option.value;
-                      return (
+                    <View style={styles.bulkGroupHeaderRow}>
+                      <AppText style={styles.bulkGroupTitle}>
+                        {showBulkEventDetailsStep ? "Event details" : "Group this bulk upload"}
+                      </AppText>
+                      {!showBulkEventDetailsStep ? (
                         <Pressable
-                          key={option.value}
-                          style={[
-                            styles.bulkGroupModeButton,
-                            selectedOption ? styles.bulkGroupModeButtonActive : null,
-                          ]}
-                          onPress={() => {
-                            setBulkEntryMode(option.value);
-                            setBulkEntrySetupStep("group");
-                            setBulkEntryConfigError(null);
-                          }}
+                          style={styles.bulkInfoButton}
+                          onPress={() => setBulkGroupInfoOpen(true)}
+                          hitSlop={8}
                         >
-                          <AppText
-                            style={[
-                              styles.bulkGroupModeButtonText,
-                              selectedOption ? styles.bulkGroupModeButtonTextActive : null,
-                            ]}
-                          >
-                            {option.label}
-                          </AppText>
+                          <AppText style={styles.bulkInfoButtonText}>i</AppText>
                         </Pressable>
-                      );
-                    })}
+                      ) : null}
+                    </View>
                   </View>
                   {showBulkEventDetailsStep ? (
                     <View style={styles.block}>
@@ -2225,9 +2209,6 @@ export default function NewEntryScreen() {
                             bulkEntryConfigError ? styles.bulkGroupInputError : null,
                           ]}
                         />
-                        <AppText style={styles.bulkGroupFieldHint}>
-                          This name becomes the grouped event title in Home and Feed.
-                        </AppText>
                         {bulkEntryConfigError ? (
                           <AppText style={styles.bulkGroupErrorText}>
                             {bulkEntryConfigError}
@@ -2306,9 +2287,6 @@ export default function NewEntryScreen() {
 
                       <View style={styles.block}>
                         <AppText style={styles.bulkGroupFieldLabel}>Tasted with</AppText>
-                        <AppText style={styles.bulkGroupFieldHint}>
-                          These friends will be tagged on every wine in the event.
-                        </AppText>
                         {isLoadingFriends ? (
                           <AppText style={styles.hint}>Loading friends...</AppText>
                         ) : null}
@@ -2384,15 +2362,6 @@ export default function NewEntryScreen() {
 
                       <View style={{ flexDirection: "row", gap: 10 }}>
                         <Pressable
-                          style={[styles.bulkCancelButton, { flex: 1 }]}
-                          onPress={() => {
-                            setBulkEntrySetupStep("group");
-                            setBulkEntryConfigError(null);
-                          }}
-                        >
-                          <AppText style={styles.bulkCancelButtonText}>Back</AppText>
-                        </Pressable>
-                        <Pressable
                           style={[
                             styles.bulkCreateButton,
                             { flex: 1 },
@@ -2410,26 +2379,38 @@ export default function NewEntryScreen() {
                         </Pressable>
                       </View>
                     </View>
-                  ) : bulkEntryMode === "event" ? (
-                    <View style={styles.block}>
-                      <AppText style={styles.bulkGroupFieldHint}>
-                        Next you’ll add the event name, location, date, and who you tasted
-                        with once, and we’ll apply those details to every wine in the event.
-                      </AppText>
-                      <Pressable
-                        style={styles.bulkCreateButton}
-                        onPress={() => {
-                          setBulkEntrySetupStep("event_details");
-                          setBulkEntryConfigError(null);
-                        }}
-                      >
-                        <AppText style={styles.bulkCreateButtonText}>
-                          Continue to event details
-                        </AppText>
-                      </Pressable>
-                    </View>
                   ) : (
                     <View style={styles.block}>
+                      <View style={styles.bulkGroupModeWrap}>
+                        {BULK_GROUP_MODE_OPTIONS.map((option) => {
+                          const selectedOption = bulkEntryMode === option.value;
+                          return (
+                            <Pressable
+                              key={option.value}
+                              style={[
+                                styles.bulkGroupModeButton,
+                                selectedOption ? styles.bulkGroupModeButtonActive : null,
+                              ]}
+                              onPress={() => {
+                                setBulkEntryMode(option.value);
+                                setBulkEntrySetupStep("group");
+                                setBulkEntryConfigError(null);
+                              }}
+                            >
+                              <AppText
+                                style={[
+                                  styles.bulkGroupModeButtonText,
+                                  selectedOption ? styles.bulkGroupModeButtonTextActive : null,
+                                ]}
+                              >
+                                {option.label}
+                              </AppText>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      {bulkEntryMode === "catch_up" ? (
+                        <>
                       <AppText style={styles.bulkGroupFieldLabel}>Group title</AppText>
                       <DoneTextInput
                         value={bulkEntryTitle}
@@ -2447,18 +2428,29 @@ export default function NewEntryScreen() {
                           bulkEntryConfigError ? styles.bulkGroupInputError : null,
                         ]}
                       />
-                      <AppText style={styles.bulkGroupFieldHint}>
-                        This title will be shown on the grouped post in Home and Feed.
-                      </AppText>
                       {bulkEntryConfigError ? (
                         <AppText style={styles.bulkGroupErrorText}>
                           {bulkEntryConfigError}
                         </AppText>
                       ) : null}
+                        </>
+                      ) : (
+                        <Pressable
+                          style={styles.bulkCreateButton}
+                          onPress={() => {
+                            setBulkEntrySetupStep("event_details");
+                            setBulkEntryConfigError(null);
+                          }}
+                        >
+                          <AppText style={styles.bulkCreateButtonText}>
+                            Continue to event details
+                          </AppText>
+                        </Pressable>
+                      )}
                     </View>
                   )}
                 </View>
-                {!isBulkCreating ? (
+                {!isBulkCreating && !showBulkEventDetailsStep ? (
                   <View style={styles.bulkLineupList}>
                     {lineupWines.map((wine) => (
                       <View
@@ -2537,7 +2529,9 @@ export default function NewEntryScreen() {
                     <AppText style={styles.bulkRetryButtonText}>Retry bulk create</AppText>
                   </Pressable>
                 ) : null}
-                {!isBulkCreating && bulkEntryMode === "catch_up" ? (
+                {!isBulkCreating &&
+                !showBulkEventDetailsStep &&
+                bulkEntryMode === "catch_up" ? (
                   <Pressable
                     style={[
                       styles.bulkCreateButton,
@@ -2952,6 +2946,37 @@ export default function NewEntryScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <Modal
+        visible={bulkGroupInfoOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBulkGroupInfoOpen(false)}
+      >
+        <View style={styles.cropModalBackdrop}>
+          <View style={styles.bulkInfoModalCard}>
+            <View style={styles.cropModalHeader}>
+              <AppText style={styles.cropModalTitle}>Event vs Catch-up</AppText>
+              <Pressable onPress={() => setBulkGroupInfoOpen(false)} hitSlop={8}>
+                <AppText style={styles.cropModalCloseText}>Close</AppText>
+              </Pressable>
+            </View>
+            <View style={styles.block}>
+              <AppText style={styles.bulkGroupFieldLabel}>Event</AppText>
+              <AppText style={styles.hint}>
+                Use this for one tasting, dinner, or wine event. Every wine will share
+                the same event details.
+              </AppText>
+            </View>
+            <View style={styles.block}>
+              <AppText style={styles.bulkGroupFieldLabel}>Catch-up</AppText>
+              <AppText style={styles.hint}>
+                Use this when you are logging wines from different days after the fact.
+                Each wine keeps its own details in review.
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Modal
         visible={Boolean(activeCropPhoto)}
         transparent

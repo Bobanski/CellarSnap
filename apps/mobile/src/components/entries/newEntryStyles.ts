@@ -305,9 +305,30 @@ export const styles = StyleSheet.create({
   bulkGroupHeader: {
     gap: 4,
   },
+  bulkGroupHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
   bulkGroupTitle: {
     color: "#fef3c7",
     fontSize: 13,
+    fontWeight: "700",
+  },
+  bulkInfoButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.28)",
+  },
+  bulkInfoButtonText: {
+    color: "#fef3c7",
+    fontSize: 12,
     fontWeight: "700",
   },
   bulkGroupDescription: {
@@ -1034,6 +1055,14 @@ export const styles = StyleSheet.create({
     backgroundColor: "#18110f",
     padding: 14,
     gap: 12,
+  },
+  bulkInfoModalCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "#18110f",
+    padding: 16,
+    gap: 14,
   },
   cropModalHeader: {
     flexDirection: "row",
