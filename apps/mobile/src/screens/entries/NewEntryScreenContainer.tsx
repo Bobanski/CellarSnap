@@ -67,7 +67,10 @@ import {
 import {
   type LabelAutofillResponse,
 } from "@/src/lib/entryFlow/photoAnalysisClient";
-import { runBulkCreateWorkflow } from "@/src/lib/entryFlow/bulkCreateWorkflow";
+import {
+  runBulkCreateWorkflow,
+  type EntryGroupMode,
+} from "@/src/lib/entryFlow/bulkCreateWorkflow";
 import { styles } from "@/src/components/entries/newEntryStyles";
 import { PostSaveSurveyModal } from "@/src/components/entries/PostSaveSurveyModal";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
@@ -204,6 +207,11 @@ type SavedCropState = {
   zoom: number;
 };
 
+type GroupModeOption = {
+  value: EntryGroupMode;
+  label: string;
+};
+
 const DEFAULT_PRIVACY: PrivacyDefaults = {
   entry_privacy: "public",
   reaction_privacy: "public",
@@ -248,6 +256,11 @@ const EXPECTATIONS_OPTIONS: ChipOption[] = [
 const DRINK_AGAIN_OPTIONS: ChipOption[] = [
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
+];
+
+const BULK_GROUP_MODE_OPTIONS: GroupModeOption[] = [
+  { value: "event", label: "Event" },
+  { value: "catch_up", label: "Catch-up" },
 ];
 
 const ADVANCED_NOTE_FIELDS: Array<{
@@ -381,6 +394,13 @@ export default function NewEntryScreen() {
   const [lineupWines, setLineupWines] = useState<LineupWine[]>([]);
   const [isBulkCreating, setIsBulkCreating] = useState(false);
   const [bulkCreateMessage, setBulkCreateMessage] = useState<string | null>(null);
+  const [bulkEntryMode, setBulkEntryMode] = useState<EntryGroupMode>("event");
+  const [bulkEntrySetupStep, setBulkEntrySetupStep] = useState<
+    "group" | "event_details"
+  >("group");
+  const [bulkGroupInfoOpen, setBulkGroupInfoOpen] = useState(false);
+  const [bulkEntryTitle, setBulkEntryTitle] = useState("");
+  const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
@@ -412,6 +432,8 @@ export default function NewEntryScreen() {
     uploadPhotos.length > 0 && uploadAnalysisStatus !== "loading";
   const includedLineupWines = lineupWines.filter((wine) => wine.included);
   const isBulkLineupMode = lineupWines.length > 0;
+  const showBulkEventDetailsStep =
+    bulkEntryMode === "event" && bulkEntrySetupStep === "event_details";
   const hasLowScanConfidence =
     typeof lastScanConfidence === "number" &&
     Number.isFinite(lastScanConfidence) &&
@@ -1499,8 +1521,16 @@ export default function NewEntryScreen() {
     );
   };
 
+  const resetBulkGroupConfig = () => {
+    setBulkEntryMode("event");
+    setBulkEntrySetupStep("group");
+    setBulkEntryTitle("");
+    setBulkEntryConfigError(null);
+  };
+
   const cancelBulkLineup = () => {
     setLineupWines([]);
+    resetBulkGroupConfig();
     setBulkCreateMessage(null);
     setUploadMessage("Bulk scan canceled. Continue with single entry details.");
   };
@@ -1519,7 +1549,7 @@ export default function NewEntryScreen() {
     ownerUserId: string,
     photosToUpload: UploadPhotoItem[]
   ) => {
-    await uploadPhotosToEntryWithFallback({
+    return uploadPhotosToEntryWithFallback({
       supabase,
       entryId,
       ownerUserId,
@@ -1532,6 +1562,7 @@ export default function NewEntryScreen() {
     setLastScanConfidence(null);
     setIsAutofillLoading(true);
     setLineupWines([]);
+    resetBulkGroupConfig();
     setBulkCreateMessage(null);
     setUploadMessage(
       photoCount === 1
@@ -1699,11 +1730,19 @@ export default function NewEntryScreen() {
       setBulkCreateMessage("Select at least one detected bottle first.");
       return;
     }
+    const normalizedBulkTitle = bulkEntryTitle.trim();
+    if (!normalizedBulkTitle) {
+      setBulkEntryConfigError(
+        "Add an event or catch-up title before creating the grouped post."
+      );
+      return;
+    }
     if (uploadPhotos.length === 0) {
       setBulkCreateMessage("Upload photos before creating bulk entries.");
       return;
     }
 
+    setBulkEntryConfigError(null);
     setIsBulkCreating(true);
     setBulkCreateMessage("Resolving grape varieties...");
     setErrorMessage(null);
@@ -1730,6 +1769,10 @@ export default function NewEntryScreen() {
         accessToken,
         normalizedBaseUrl,
         setBulkCreateMessage,
+        groupConfig: {
+          mode: bulkEntryMode,
+          title: normalizedBulkTitle,
+        },
         resolveSuggestedGrapes,
         insertEntryWithFallback,
         persistPrimaryGrapesByIds,
@@ -1762,8 +1805,13 @@ export default function NewEntryScreen() {
 
       if (result.createdEntryIds.length > 0) {
         const queue = encodeURIComponent(result.createdEntryIds.join(","));
-        const successMessage =
-          result.failedCount > 0
+        const successMessage = result.groupedPostErrorMessage
+          ? `Created ${result.createdEntryIds.length} entr${
+              result.createdEntryIds.length === 1 ? "y" : "ies"
+            }, but ${result.groupedPostErrorMessage}${
+              uncertaintySuffix ? uncertaintySuffix : ""
+            } Opening guided review...`
+          : result.failedCount > 0
             ? `Created ${result.createdEntryIds.length} entr${
                 result.createdEntryIds.length === 1 ? "y" : "ies"
               }. ${result.failedCount} could not be created.${
@@ -2106,16 +2154,303 @@ export default function NewEntryScreen() {
             {isBulkLineupMode ? (
               <View style={styles.bulkLineupCard}>
                 <View style={styles.bulkLineupHeader}>
-                  <AppText style={styles.bulkLineupTitle}>Lineup preview</AppText>
+                  <AppText style={styles.bulkLineupTitle}>
+                    {showBulkEventDetailsStep ? "Event details" : "Lineup preview"}
+                  </AppText>
                   <Pressable
                     style={styles.bulkBackButton}
-                    onPress={cancelBulkLineup}
+                    onPress={
+                      showBulkEventDetailsStep
+                        ? () => {
+                            setBulkEntrySetupStep("group");
+                            setBulkEntryConfigError(null);
+                          }
+                        : cancelBulkLineup
+                    }
                     disabled={isBulkCreating}
                   >
                     <AppText style={styles.bulkBackButtonText}>{"\u2190"} Back</AppText>
                   </Pressable>
                 </View>
-                {!isBulkCreating ? (
+                <View style={styles.bulkGroupCard}>
+                  <View style={styles.bulkGroupHeader}>
+                    <View style={styles.bulkGroupHeaderRow}>
+                      <AppText style={styles.bulkGroupTitle}>
+                        {showBulkEventDetailsStep ? "Event details" : "Group this bulk upload"}
+                      </AppText>
+                      {!showBulkEventDetailsStep ? (
+                        <Pressable
+                          style={styles.bulkInfoButton}
+                          onPress={() => setBulkGroupInfoOpen(true)}
+                          hitSlop={8}
+                        >
+                          <AppText style={styles.bulkInfoButtonText}>i</AppText>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+                  {showBulkEventDetailsStep ? (
+                    <View style={styles.block}>
+                      <View style={styles.block}>
+                        <AppText style={styles.bulkGroupFieldLabel}>Event name</AppText>
+                        <DoneTextInput
+                          value={bulkEntryTitle}
+                          onChangeText={(value) => {
+                            setBulkEntryTitle(value);
+                            if (bulkEntryConfigError) {
+                              setBulkEntryConfigError(null);
+                            }
+                          }}
+                          placeholder="Stuytown tasting"
+                          placeholderTextColor="#71717a"
+                          autoCorrect={false}
+                          style={[
+                            styles.input,
+                            bulkEntryConfigError ? styles.bulkGroupInputError : null,
+                          ]}
+                        />
+                        {bulkEntryConfigError ? (
+                          <AppText style={styles.bulkGroupErrorText}>
+                            {bulkEntryConfigError}
+                          </AppText>
+                        ) : null}
+                      </View>
+
+                      <View style={styles.block}>
+                        <AppText style={styles.bulkGroupFieldLabel}>Event location</AppText>
+                        <View style={styles.locationInputWrap}>
+                          <DoneTextInput
+                            ref={locationInputRef}
+                            value={form.location_text}
+                            onChangeText={(value) => {
+                              updateField("location_text", value);
+                              if (form.location_place_id) {
+                                updateField("location_place_id", "");
+                              }
+                            }}
+                            onFocus={() => {
+                              setIsLocationFocused(true);
+                              ensureLocationInputVisible();
+                            }}
+                            onBlur={() => {
+                              setTimeout(() => {
+                                setIsLocationFocused(false);
+                                setLocationSuggestions([]);
+                              }, 120);
+                            }}
+                            autoCapitalize="words"
+                            autoCorrect={false}
+                            placeholder="Search places"
+                            placeholderTextColor="#71717a"
+                            style={styles.input}
+                          />
+                          {isLocationFocused && locationSuggestions.length > 0 ? (
+                            <View style={styles.suggestionOverlay}>
+                              <View style={styles.suggestionList}>
+                                {locationSuggestions.map((suggestion) => (
+                                  <Pressable
+                                    key={`bulk-event-location-${suggestion.place_id}`}
+                                    style={styles.suggestionItem}
+                                    onPress={() => {
+                                      updateField("location_text", suggestion.description);
+                                      updateField("location_place_id", suggestion.place_id);
+                                      setIsLocationFocused(false);
+                                      setLocationSuggestions([]);
+                                      setLocationApiMessage(null);
+                                      setLocationSessionToken(
+                                        `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+                                      );
+                                    }}
+                                  >
+                                    <AppText style={styles.suggestionText}>
+                                      {suggestion.description}
+                                    </AppText>
+                                  </Pressable>
+                                ))}
+                              </View>
+                            </View>
+                          ) : null}
+                        </View>
+                        {isLocationLoading ? (
+                          <AppText style={styles.hint}>Searching Google Maps...</AppText>
+                        ) : null}
+                        {locationApiMessage ? (
+                          <AppText style={styles.hint}>{locationApiMessage}</AppText>
+                        ) : null}
+                      </View>
+
+                      <DateField
+                        label="Event date"
+                        value={form.consumed_at}
+                        onChange={(value) => updateField("consumed_at", value)}
+                      />
+
+                      <View style={styles.block}>
+                        <AppText style={styles.bulkGroupFieldLabel}>Tasted with</AppText>
+                        {isLoadingFriends ? (
+                          <AppText style={styles.hint}>Loading friends...</AppText>
+                        ) : null}
+                        {!isLoadingFriends && users.length === 0 ? (
+                          <AppText style={styles.hint}>No other users yet.</AppText>
+                        ) : null}
+                        {users.length > 0 ? (
+                          <>
+                            <View style={styles.chipWrap}>
+                              {topFriends.map((friend) => {
+                                const selected = selectedUserIds.includes(friend.id);
+                                return (
+                                  <Pressable
+                                    key={`bulk-event-friend-top-${friend.id}`}
+                                    style={[
+                                      styles.friendChip,
+                                      selected ? styles.friendChipActive : null,
+                                    ]}
+                                    onPress={() => toggleFriend(friend.id)}
+                                  >
+                                    <AppText
+                                      style={[
+                                        styles.friendText,
+                                        selected ? styles.friendTextActive : null,
+                                      ]}
+                                    >
+                                      {formatFriendName(friend)}
+                                    </AppText>
+                                  </Pressable>
+                                );
+                              })}
+                              {extraSelected.map((friend) => (
+                                <Pressable
+                                  key={`bulk-event-friend-extra-${friend.id}`}
+                                  style={[styles.friendChip, styles.friendChipActive]}
+                                  onPress={() => toggleFriend(friend.id)}
+                                >
+                                  <AppText style={[styles.friendText, styles.friendTextActive]}>
+                                    {formatFriendName(friend)}
+                                  </AppText>
+                                </Pressable>
+                              ))}
+                            </View>
+                            <DoneTextInput
+                              value={friendSearch}
+                              onChangeText={setFriendSearch}
+                              placeholder="Search friends"
+                              placeholderTextColor="#71717a"
+                              autoCapitalize="none"
+                              autoCorrect={false}
+                              style={styles.input}
+                            />
+                            {searchResults.length > 0 ? (
+                              <View style={styles.inlineSuggestionList}>
+                                {searchResults.map((friend) => (
+                                  <Pressable
+                                    key={`bulk-event-friend-search-${friend.id}`}
+                                    style={styles.suggestionItem}
+                                    onPress={() => toggleFriend(friend.id)}
+                                  >
+                                    <AppText style={styles.suggestionText}>
+                                      {formatFriendName(friend)}
+                                    </AppText>
+                                  </Pressable>
+                                ))}
+                              </View>
+                            ) : friendSearch.trim().length >= 2 ? (
+                              <AppText style={styles.hint}>No matching friends found.</AppText>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </View>
+
+                      <View style={{ flexDirection: "row", gap: 10 }}>
+                        <Pressable
+                          style={[
+                            styles.bulkCreateButton,
+                            { flex: 1 },
+                            includedLineupWines.length === 0
+                              ? styles.submitButtonDisabled
+                              : null,
+                          ]}
+                          onPress={() => void createBulkEntriesFromLineup()}
+                          disabled={includedLineupWines.length === 0}
+                        >
+                          <AppText style={styles.bulkCreateButtonText}>
+                            Create {includedLineupWines.length} entr
+                            {includedLineupWines.length === 1 ? "y" : "ies"}
+                          </AppText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.block}>
+                      <View style={styles.bulkGroupModeWrap}>
+                        {BULK_GROUP_MODE_OPTIONS.map((option) => {
+                          const selectedOption = bulkEntryMode === option.value;
+                          return (
+                            <Pressable
+                              key={option.value}
+                              style={[
+                                styles.bulkGroupModeButton,
+                                selectedOption ? styles.bulkGroupModeButtonActive : null,
+                              ]}
+                              onPress={() => {
+                                setBulkEntryMode(option.value);
+                                setBulkEntrySetupStep("group");
+                                setBulkEntryConfigError(null);
+                              }}
+                            >
+                              <AppText
+                                style={[
+                                  styles.bulkGroupModeButtonText,
+                                  selectedOption ? styles.bulkGroupModeButtonTextActive : null,
+                                ]}
+                              >
+                                {option.label}
+                              </AppText>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      {bulkEntryMode === "catch_up" ? (
+                        <>
+                      <AppText style={styles.bulkGroupFieldLabel}>Group title</AppText>
+                      <DoneTextInput
+                        value={bulkEntryTitle}
+                        onChangeText={(value) => {
+                          setBulkEntryTitle(value);
+                          if (bulkEntryConfigError) {
+                            setBulkEntryConfigError(null);
+                          }
+                        }}
+                        placeholder="Past 2 weeks"
+                        placeholderTextColor="#71717a"
+                        autoCorrect={false}
+                        style={[
+                          styles.input,
+                          bulkEntryConfigError ? styles.bulkGroupInputError : null,
+                        ]}
+                      />
+                      {bulkEntryConfigError ? (
+                        <AppText style={styles.bulkGroupErrorText}>
+                          {bulkEntryConfigError}
+                        </AppText>
+                      ) : null}
+                        </>
+                      ) : (
+                        <Pressable
+                          style={styles.bulkCreateButton}
+                          onPress={() => {
+                            setBulkEntrySetupStep("event_details");
+                            setBulkEntryConfigError(null);
+                          }}
+                        >
+                          <AppText style={styles.bulkCreateButtonText}>
+                            Continue to event details
+                          </AppText>
+                        </Pressable>
+                      )}
+                    </View>
+                  )}
+                </View>
+                {!isBulkCreating && !showBulkEventDetailsStep ? (
                   <View style={styles.bulkLineupList}>
                     {lineupWines.map((wine) => (
                       <View
@@ -2194,7 +2529,9 @@ export default function NewEntryScreen() {
                     <AppText style={styles.bulkRetryButtonText}>Retry bulk create</AppText>
                   </Pressable>
                 ) : null}
-                {!isBulkCreating ? (
+                {!isBulkCreating &&
+                !showBulkEventDetailsStep &&
+                bulkEntryMode === "catch_up" ? (
                   <Pressable
                     style={[
                       styles.bulkCreateButton,
@@ -2609,6 +2946,37 @@ export default function NewEntryScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <Modal
+        visible={bulkGroupInfoOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBulkGroupInfoOpen(false)}
+      >
+        <View style={styles.cropModalBackdrop}>
+          <View style={styles.bulkInfoModalCard}>
+            <View style={styles.cropModalHeader}>
+              <AppText style={styles.cropModalTitle}>Event vs Catch-up</AppText>
+              <Pressable onPress={() => setBulkGroupInfoOpen(false)} hitSlop={8}>
+                <AppText style={styles.cropModalCloseText}>Close</AppText>
+              </Pressable>
+            </View>
+            <View style={styles.block}>
+              <AppText style={styles.bulkGroupFieldLabel}>Event</AppText>
+              <AppText style={styles.hint}>
+                Use this for one tasting, dinner, or wine event. Every wine will share
+                the same event details.
+              </AppText>
+            </View>
+            <View style={styles.block}>
+              <AppText style={styles.bulkGroupFieldLabel}>Catch-up</AppText>
+              <AppText style={styles.hint}>
+                Use this when you are logging wines from different days after the fact.
+                Each wine keeps its own details in review.
+              </AppText>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Modal
         visible={Boolean(activeCropPhoto)}
         transparent

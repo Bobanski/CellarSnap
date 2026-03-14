@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbopack": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "npm run lint:web && npm run lint:mobile",
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "supabase": "^2.78.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

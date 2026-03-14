@@ -1,6 +1,6 @@
 export type PostSaveSurveyAnswers<TValue extends string = string> = {
   how_was_it: TValue;
-  expectations: TValue;
+  expectations?: TValue;
   drink_again: TValue;
 };
 
@@ -16,7 +16,9 @@ export function toSurveySubmissionPayload<TValue extends string>(
 ) {
   return {
     how_was_it: answers.how_was_it,
-    expectations: answers.expectations,
+    ...(typeof answers.expectations === "string"
+      ? { expectations: answers.expectations }
+      : {}),
     drink_again: answers.drink_again,
   };
 }

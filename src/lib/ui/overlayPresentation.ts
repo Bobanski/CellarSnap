@@ -23,7 +23,18 @@ export function snapViewportToTop() {
   document.body.scrollTop = 0;
 }
 
-export function useOverlayPresentation(isOpen: boolean) {
+type OverlayPresentationOptions = {
+  lockScroll?: boolean;
+  snapToTop?: boolean;
+};
+
+export function useOverlayPresentation(
+  isOpen: boolean,
+  {
+    lockScroll = true,
+    snapToTop = true,
+  }: OverlayPresentationOptions = {}
+) {
   useLayoutEffect(() => {
     if (
       !isOpen ||
@@ -34,8 +45,20 @@ export function useOverlayPresentation(isOpen: boolean) {
     }
 
     blurActiveElement();
-    snapViewportToTop();
-    const rafId = window.requestAnimationFrame(snapViewportToTop);
+    if (snapToTop) {
+      snapViewportToTop();
+    }
+    const rafId = snapToTop
+      ? window.requestAnimationFrame(snapViewportToTop)
+      : null;
+
+    if (!lockScroll) {
+      return () => {
+        if (rafId !== null) {
+          window.cancelAnimationFrame(rafId);
+        }
+      };
+    }
 
     const { body, documentElement } = document;
     const previousBodyOverflow = body.style.overflow;
@@ -55,7 +78,9 @@ export function useOverlayPresentation(isOpen: boolean) {
     documentElement.style.overscrollBehavior = "none";
 
     return () => {
-      window.cancelAnimationFrame(rafId);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
       body.style.overflow = previousBodyOverflow;
       body.style.overscrollBehavior = previousBodyOverscroll;
       body.style.position = previousBodyPosition;
@@ -64,5 +89,5 @@ export function useOverlayPresentation(isOpen: boolean) {
       documentElement.style.overflow = previousHtmlOverflow;
       documentElement.style.overscrollBehavior = previousHtmlOverscroll;
     };
-  }, [isOpen]);
+  }, [isOpen, lockScroll, snapToTop]);
 }

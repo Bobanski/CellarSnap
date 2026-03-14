@@ -21,6 +21,7 @@ import EntryPostSaveSurveyModal, {
 import EntryWineComparisonModal from "@/components/EntryWineComparisonModal";
 import { extractGpsFromFile } from "@/lib/exifGps";
 import type {
+  EntryGroupMode,
   EntryPhoto,
   EntryPhotoType,
   PrimaryGrape,
@@ -65,6 +66,8 @@ type EditEntryForm = {
   location_text: string;
   location_place_id: string;
   consumed_at: string;
+  entry_group_mode: EntryGroupMode;
+  entry_group_title: string;
   entry_privacy: PrivacyLevel;
   reaction_privacy: PrivacyLevel;
   comments_privacy: PrivacyLevel;
@@ -163,6 +166,8 @@ export default function EditEntryPage() {
   } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: getTodayLocalYmd(),
+      entry_group_mode: "event",
+      entry_group_title: "",
       location_place_id: "",
       entry_privacy: "public",
       reaction_privacy: "public",
@@ -194,6 +199,11 @@ export default function EditEntryPage() {
       control,
       name: "wine_name",
     })?.trim() ?? "";
+  const selectedGroupMode =
+    useWatch({
+      control,
+      name: "entry_group_mode",
+    }) ?? "event";
   const [entry, setEntry] = useState<WineEntryWithUrls | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -212,7 +222,7 @@ export default function EditEntryPage() {
   >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeletingEntry, setIsDeletingEntry] = useState(false);
+  const [isDeletingEntry] = useState(false);
   const [isDeletingBulkQueue, setIsDeletingBulkQueue] = useState(false);
   const [photoGps, setPhotoGps] = useState<{ lat: number; lng: number } | null>(null);
   const [cropEditorPhoto, setCropEditorPhoto] = useState<EntryPhoto | null>(null);
@@ -272,6 +282,7 @@ export default function EditEntryPage() {
     string | null
   >(null);
   const [isSubmittingBulkSurvey, setIsSubmittingBulkSurvey] = useState(false);
+  const [showBulkMoreDetails, setShowBulkMoreDetails] = useState(false);
 
   const scrollToTopForOverlay = useCallback(() => {
     if (typeof window === "undefined") {
@@ -286,6 +297,10 @@ export default function EditEntryPage() {
     if (!url) return null;
     return `${url}${url.includes("?") ? "&" : "?"}v=${photoRenderVersion}`;
   };
+
+  useEffect(() => {
+    setShowBulkMoreDetails(false);
+  }, [entryId, isBulkReview]);
 
   useEffect(() => {
     let isMounted = true;
@@ -347,6 +362,8 @@ export default function EditEntryPage() {
           location_text: data.entry.location_text ?? "",
           location_place_id: data.entry.location_place_id ?? "",
           consumed_at: data.entry.consumed_at,
+          entry_group_mode: data.entry.entry_group?.mode ?? "event",
+          entry_group_title: data.entry.entry_group?.title ?? "",
           entry_privacy: data.entry.entry_privacy ?? "public",
           reaction_privacy:
             data.entry.reaction_privacy ?? data.entry.entry_privacy ?? "public",
@@ -1381,59 +1398,6 @@ export default function EditEntryPage() {
     return `/entries/${targetEntryId}/edit?bulk=1&queue=${queue}&index=${targetIndex}`;
   };
 
-  const cancelBulkEntry = async () => {
-    if (!entry || !entryId || !isBulkReview) {
-      return;
-    }
-    if (isSubmitting || isDeletingEntry || isDeletingBulkQueue) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Cancel this wine from bulk review? This will delete the entry and its photos."
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setIsDeletingEntry(true);
-    setErrorMessage(null);
-    setPhotoError(null);
-
-    try {
-      const response = await fetch(`/api/entries/${entry.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "Unable to delete entry.");
-        return;
-      }
-
-      const nextQueue = bulkQueue.filter((id) => id !== entry.id);
-      if (nextQueue.length === 0) {
-        router.push("/entries");
-        return;
-      }
-
-      if (nextBulkEntryId && nextQueue.includes(nextBulkEntryId)) {
-        const queueParam = encodeURIComponent(nextQueue.join(","));
-        const nextIndex = Math.max(0, nextQueue.indexOf(nextBulkEntryId));
-        router.push(
-          `/entries/${nextBulkEntryId}/edit?bulk=1&queue=${queueParam}&index=${nextIndex}`
-        );
-        return;
-      }
-
-      router.push("/entries");
-    } catch {
-      setErrorMessage("Unable to delete entry.");
-    } finally {
-      setIsDeletingEntry(false);
-    }
-  };
-
   const cancelEntireBulkQueue = async () => {
     if (!isBulkReview || bulkQueue.length === 0) {
       return;
@@ -1698,7 +1662,7 @@ export default function EditEntryPage() {
     setPendingBulkSurvey(null);
     setBulkSurveyErrorMessage(null);
 
-    clearErrors(["rating", "price_paid", "price_paid_source"]);
+    clearErrors(["rating", "price_paid", "price_paid_source", "entry_group_title"]);
 
     const ratingRaw = values.rating?.trim() ?? "";
     const pricePaidRaw = values.price_paid?.trim() ?? "";
@@ -1721,6 +1685,22 @@ export default function EditEntryPage() {
       setError("price_paid", {
         type: "manual",
         message: "Enter a price paid amount when selecting retail or restaurant.",
+      });
+      return;
+    }
+
+    const entryGroupIdRawForValidation = (
+      entry as unknown as { entry_group_id?: unknown }
+    ).entry_group_id;
+    const entryHasGroupedPostForValidation =
+      typeof entryGroupIdRawForValidation === "string" &&
+      entryGroupIdRawForValidation.length > 0;
+
+    if (entryHasGroupedPostForValidation && !values.entry_group_title.trim()) {
+      setIsSubmitting(false);
+      setError("entry_group_title", {
+        type: "manual",
+        message: "Group title is required.",
       });
       return;
     }
@@ -1760,11 +1740,25 @@ export default function EditEntryPage() {
       typeof entryRootIdRaw === "string" && entryRootIdRaw.length > 0
         ? entryRootIdRaw
         : null;
+    const entryGroupIdRaw = (entry as unknown as { entry_group_id?: unknown })
+      .entry_group_id;
+    const entryGroupId =
+      typeof entryGroupIdRaw === "string" && entryGroupIdRaw.length > 0
+        ? entryGroupIdRaw
+        : null;
+    const entryHasGroupedPost = Boolean(entryGroupId);
+
+    if (entryHasGroupedPost) {
+      updatePayload.entry_group_mode = values.entry_group_mode;
+      updatePayload.entry_group_title = values.entry_group_title.trim();
+      updatePayload.sync_group_consumed_at = values.entry_group_mode === "event";
+    }
 
     // Bulk review entries are created as "not yet posted" (is_feed_visible=false).
     // Also publish if the user is saving a hidden canonical entry outside bulk review.
     const shouldPublishOnSave =
-      isBulkReview || (entryIsFeedVisible === false && !entryRootId);
+      !entryHasGroupedPost &&
+      (isBulkReview || (entryIsFeedVisible === false && !entryRootId));
     if (shouldPublishOnSave) {
       updatePayload.is_feed_visible = true;
     }
@@ -1823,7 +1817,8 @@ export default function EditEntryPage() {
           : nextBulkEntryId && currentBulkIndex >= 0
           ? buildBulkEditHref(nextBulkEntryId, currentBulkIndex + 1)
           : "/entries";
-      const shouldPublishQueueOnContinue = submitIntent === "exit";
+      const shouldPublishQueueOnContinue =
+        submitIntent === "exit" || !nextBulkEntryId;
       const currentLabelPhotoUrl =
         photos.find((photo) => photo.type === "label")?.signed_url ??
         entry.label_image_url ??
@@ -1925,6 +1920,10 @@ export default function EditEntryPage() {
     )
   );
   const hasLegacyGalleryPhoto = allDisplayPhotos.some((photo) => isLegacyPhoto(photo));
+  const currentEntryGroup = entry.entry_group ?? null;
+  const isSharedEventGroup =
+    currentEntryGroup !== null && selectedGroupMode === "event";
+  const showSharedEventBulkSummary = isBulkReview && isSharedEventGroup;
   const collapsibleSectionClassName =
     "group rounded-2xl border border-white/10 bg-black/30 p-4";
   const collapsibleSummaryClassName =
@@ -1953,36 +1952,6 @@ export default function EditEntryPage() {
                 : "Update tasting details or photos."}
             </p>
           </div>
-          {isBulkReview ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                form="entry-edit-form"
-                data-submit-intent="next"
-                className="rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
-                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
-              >
-                {nextBulkEntryId ? "Next wine" : "Finish review"}
-              </button>
-              <button
-                type="submit"
-                form="entry-edit-form"
-                data-submit-intent="exit"
-                className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
-              >
-                Skip all and save
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
-                onClick={cancelEntireBulkQueue}
-              >
-                {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
-              </button>
-            </div>
-          ) : null}
         </header>
 
         <form
@@ -1991,7 +1960,17 @@ export default function EditEntryPage() {
           className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
           onSubmit={onSubmit}
         >
-          {currentWineName ? (
+          {isBulkReview ? (
+            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+                Wine
+              </p>
+              <input
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-lg font-semibold text-zinc-50 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                {...register("wine_name")}
+              />
+            </div>
+          ) : currentWineName ? (
             <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
                 Wine
@@ -2188,6 +2167,20 @@ export default function EditEntryPage() {
             <input type="hidden" {...register("price_paid_source")} />
           </div>
 
+          {isBulkReview ? (
+            <div className="mt-4">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-amber-300/50 hover:text-amber-200"
+                onClick={() => setShowBulkMoreDetails((current) => !current)}
+              >
+                Add / edit details
+              </button>
+            </div>
+          ) : null}
+
+          {!isBulkReview || showBulkMoreDetails ? (
+            <>
           <details className={collapsibleSectionClassName}>
             <summary className={collapsibleSummaryClassName}>
               Wine details
@@ -2196,13 +2189,15 @@ export default function EditEntryPage() {
               Optional identity details for this bottle.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Wine name</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                  {...register("wine_name")}
-                />
-              </div>
+              {!isBulkReview ? (
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">Wine name</label>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    {...register("wine_name")}
+                  />
+                </div>
+              ) : null}
               <div>
                 <label className="text-sm font-medium text-zinc-200">Producer</label>
                 <input
@@ -2257,141 +2252,251 @@ export default function EditEntryPage() {
             </div>
           </details>
 
-          <details className={collapsibleSectionClassName}>
-            <summary className={collapsibleSummaryClassName}>
-              Location & date
-            </summary>
-            <p className="mt-2 text-xs text-zinc-400">
-              Where and when this bottle was consumed.
-            </p>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-zinc-200">Location</label>
-                <input type="hidden" {...register("location_place_id")} />
-                <Controller
-                  control={control}
-                  name="location_text"
-                  render={({ field }) => (
-                    <LocationAutocomplete
-                      value={field.value}
-                      onChange={field.onChange}
-                      onSelectPlaceId={(placeId) =>
-                        setValue("location_place_id", placeId ?? "", {
-                          shouldDirty: true,
-                        })
-                      }
-                      onBlur={field.onBlur}
-                      biasCoords={photoGps}
-                    />
-                  )}
-                />
-              </div>
-              <div className="md:justify-self-start">
-                <label className="text-sm font-medium text-zinc-200">Consumed date</label>
-                <Controller
-                  control={control}
-                  name="consumed_at"
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <DatePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                      required
-                    />
-                  )}
-                />
-              </div>
-            </div>
-          </details>
-
-          <details className={collapsibleSectionClassName}>
-            <summary className={collapsibleSummaryClassName}>
-              Tasted with
-            </summary>
-            <p className="mt-2 text-xs text-zinc-400">
-              Tag friends who were with you.
-            </p>
-            {users.length === 0 ? (
-              <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
-            ) : (() => {
-              const topFriends = users.slice(0, 5);
-              const topFriendIds = new Set(topFriends.map((u) => u.id));
-              const extraSelected = users.filter(
-                (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
-              );
-              const trimmedSearch = friendSearch.trim().toLowerCase();
-              const searchResults = trimmedSearch.length >= 2
-                ? users.filter(
-                    (u) =>
-                      !topFriendIds.has(u.id) &&
-                      !selectedUserIds.includes(u.id) &&
-                      ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
-                        (u.email ?? "").toLowerCase().includes(trimmedSearch))
-                  )
-                : [];
-
-              const renderCheckbox = (user: typeof users[number]) => {
-                const label = user.display_name ?? "Unknown";
-                const isChecked = selectedUserIds.includes(user.id);
-                return (
-                  <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
-                      checked={isChecked}
-                      onChange={(event) => {
-                        setSelectedUserIds((prev) =>
-                          event.target.checked
-                            ? [...prev, user.id]
-                            : prev.filter((id) => id !== user.id)
-                        );
-                        if (event.target.checked) setFriendSearch("");
-                      }}
-                    />
-                    {label}
-                  </label>
-                );
-              };
-
-              return (
-                <div className="mt-3 space-y-2">
-                  <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
-                    {topFriends.map(renderCheckbox)}
-                    {extraSelected.map(renderCheckbox)}
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={friendSearch}
-                      onChange={(e) => setFriendSearch(e.target.value)}
-                      placeholder="Search friends..."
-                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
-                    />
-                    {searchResults.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
-                        {searchResults.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setSelectedUserIds((prev) => [...prev, user.id]);
-                              setFriendSearch("");
-                            }}
-                          >
-                            {user.display_name ?? "Unknown"}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+          {currentEntryGroup && !isBulkReview ? (
+            <details className={collapsibleSectionClassName} open={isBulkReview}>
+              <summary className={collapsibleSummaryClassName}>
+                Event / catch-up post
+              </summary>
+              <p className="mt-2 text-xs text-zinc-400">
+                Edit the grouped post title and whether this set represents one event or a catch-up log.
+              </p>
+              <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">Group type</label>
+                  <div className="mt-2 inline-flex rounded-full border border-white/10 bg-black/40 p-1">
+                    {[
+                      { value: "event", label: "Event" },
+                      { value: "catch_up", label: "Catch-up" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          selectedGroupMode === option.value
+                            ? "bg-amber-400 text-zinc-950"
+                            : "text-zinc-300 hover:text-zinc-100"
+                        }`}
+                        onClick={() =>
+                          setValue("entry_group_mode", option.value as EntryGroupMode, {
+                            shouldDirty: true,
+                          })
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              );
-            })()}
-          </details>
+                <div>
+                  <label className="text-sm font-medium text-zinc-200">
+                    Group title
+                  </label>
+                  <input
+                    className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                      errors.entry_group_title
+                        ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                        : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                    }`}
+                    placeholder={
+                      selectedGroupMode === "event"
+                        ? "Stuytown tasting"
+                        : "Past 2 weeks"
+                    }
+                    {...register("entry_group_title")}
+                  />
+                  {errors.entry_group_title?.message ? (
+                    <p className="mt-1 text-xs font-semibold text-rose-400">
+                      {errors.entry_group_title.message}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-zinc-500">
+                      This title is shown on the grouped post in Home and Feed.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </details>
+          ) : null}
+
+          {showSharedEventBulkSummary ? (
+            <div className="rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4">
+              <p className="text-sm font-medium text-zinc-100">
+                Shared event details already applied
+              </p>
+              <p className="mt-2 text-sm text-zinc-300">
+                Event wines inherit the shared event name, location, date, and tasted-with
+                list, so you can focus on each bottle here.
+              </p>
+              <div className="mt-3 grid gap-2 text-sm text-zinc-300 sm:grid-cols-2">
+                <p>
+                  <span className="text-zinc-500">Event:</span>{" "}
+                  {currentEntryGroup?.title?.trim() || "Untitled event"}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Date:</span> {entry.consumed_at}
+                </p>
+                {entry.location_text ? (
+                  <p className="sm:col-span-2">
+                    <span className="text-zinc-500">Location:</span> {entry.location_text}
+                  </p>
+                ) : null}
+                {selectedUserIds.length > 0 ? (
+                  <p className="sm:col-span-2">
+                    <span className="text-zinc-500">Tasted with:</span>{" "}
+                    {selectedUserIds.length} friend
+                    {selectedUserIds.length === 1 ? "" : "s"}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <>
+              <details className={collapsibleSectionClassName}>
+                <summary className={collapsibleSummaryClassName}>
+                  Location & date
+                </summary>
+                <p className="mt-2 text-xs text-zinc-400">
+                  {isSharedEventGroup
+                    ? "Where this event happened and the shared date for every wine in the group."
+                    : "Where and when this bottle was consumed."}
+                </p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-200">Location</label>
+                    <input type="hidden" {...register("location_place_id")} />
+                    <Controller
+                      control={control}
+                      name="location_text"
+                      render={({ field }) => (
+                        <LocationAutocomplete
+                          value={field.value}
+                          onChange={field.onChange}
+                          onSelectPlaceId={(placeId) =>
+                            setValue("location_place_id", placeId ?? "", {
+                              shouldDirty: true,
+                            })
+                          }
+                          onBlur={field.onBlur}
+                          biasCoords={photoGps}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="md:justify-self-start">
+                    <label className="text-sm font-medium text-zinc-200">
+                      {isSharedEventGroup ? "Shared event date" : "Consumed date"}
+                    </label>
+                    <Controller
+                      control={control}
+                      name="consumed_at"
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          required
+                        />
+                      )}
+                    />
+                    {isSharedEventGroup ? (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Saving in Event mode will apply this date to every wine in the grouped post.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </details>
+
+              <details className={collapsibleSectionClassName}>
+                <summary className={collapsibleSummaryClassName}>
+                  Tasted with
+                </summary>
+                <p className="mt-2 text-xs text-zinc-400">
+                  Tag friends who were with you.
+                </p>
+                {users.length === 0 ? (
+                  <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
+                ) : (() => {
+                  const topFriends = users.slice(0, 5);
+                  const topFriendIds = new Set(topFriends.map((u) => u.id));
+                  const extraSelected = users.filter(
+                    (u) => selectedUserIds.includes(u.id) && !topFriendIds.has(u.id)
+                  );
+                  const trimmedSearch = friendSearch.trim().toLowerCase();
+                  const searchResults = trimmedSearch.length >= 2
+                    ? users.filter(
+                        (u) =>
+                          !topFriendIds.has(u.id) &&
+                          !selectedUserIds.includes(u.id) &&
+                          ((u.display_name ?? "").toLowerCase().includes(trimmedSearch) ||
+                            (u.email ?? "").toLowerCase().includes(trimmedSearch))
+                      )
+                    : [];
+
+                  const renderCheckbox = (user: typeof users[number]) => {
+                    const label = user.display_name ?? "Unknown";
+                    const isChecked = selectedUserIds.includes(user.id);
+                    return (
+                      <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                          checked={isChecked}
+                          onChange={(event) => {
+                            setSelectedUserIds((prev) =>
+                              event.target.checked
+                                ? [...prev, user.id]
+                                : prev.filter((id) => id !== user.id)
+                            );
+                            if (event.target.checked) setFriendSearch("");
+                          }}
+                        />
+                        {label}
+                      </label>
+                    );
+                  };
+
+                  return (
+                    <div className="mt-3 space-y-2">
+                      <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                        {topFriends.map(renderCheckbox)}
+                        {extraSelected.map(renderCheckbox)}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={friendSearch}
+                          onChange={(e) => setFriendSearch(e.target.value)}
+                          placeholder="Search friends..."
+                          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        />
+                        {searchResults.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
+                            {searchResults.map((user) => (
+                              <button
+                                key={user.id}
+                                type="button"
+                                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setSelectedUserIds((prev) => [...prev, user.id]);
+                                  setFriendSearch("");
+                                }}
+                              >
+                                {user.display_name ?? "Unknown"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </details>
+            </>
+          )}
 
           <details className={collapsibleSectionClassName}>
             <summary className={collapsibleSummaryClassName}>
@@ -2486,6 +2591,8 @@ export default function EditEntryPage() {
               Privacy on reactions/comments controls both visibility and participation.
             </p>
           </details>
+            </>
+          ) : null}
 
           {showEditPhotosSection ? (
             <details className={collapsibleSectionClassName}>
@@ -2849,6 +2956,7 @@ export default function EditEntryPage() {
             entry={pendingBulkSurvey?.entry ?? null}
             errorMessage={bulkSurveyErrorMessage}
             isSubmitting={isSubmittingBulkSurvey}
+            includeExpectations={false}
             submitLabel={
               pendingBulkSurvey?.nextHref === "/entries"
                 ? "Save and finish"
@@ -2879,22 +2987,33 @@ export default function EditEntryPage() {
             <p className="text-sm text-rose-300">{photoError}</p>
           ) : null}
 
-          <div className="flex items-center gap-3">
+          <div
+            className={
+              isBulkReview
+                ? "flex items-center justify-between gap-3"
+                : "flex items-center gap-3"
+            }
+          >
             <button
               type="submit"
+              data-submit-intent={isBulkReview ? "next" : undefined}
               className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
             >
-              Save changes
+              {isBulkReview
+                ? nextBulkEntryId
+                  ? "Next wine"
+                  : "Finish review"
+                : "Save changes"}
             </button>
             {isBulkReview ? (
               <button
                 type="button"
-                className="text-sm font-medium text-zinc-300 transition hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={cancelBulkEntry}
+                className="rounded-full border border-rose-500/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={cancelEntireBulkQueue}
                 disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
               >
-                Cancel
+                {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
               </button>
             ) : (
               <Link

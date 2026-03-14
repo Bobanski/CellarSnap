@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 import type { User } from "@supabase/supabase-js";
-import { createSharePostHandler } from "../src/app/api/share/route";
-import { createUserEntriesGetHandler } from "../src/app/api/users/[id]/entries/route";
-import { createTaggedEntriesGetHandler } from "../src/app/api/users/[id]/tagged/route";
-import {
-  createEntryDeleteHandler,
-  createEntryPutHandler,
-} from "../src/app/api/entries/[id]/route";
-import { createAccountDeleteHandler } from "../src/app/api/account/route";
-import { createPasswordSignInHandler } from "../src/app/api/auth/password-sign-in/route";
-import { createRecoveryStartHandler } from "../src/app/api/auth/recovery-start/route";
+import { createSharePostHandler } from "../src/app/api/share/handler";
+import { createUserEntriesGetHandler } from "../src/app/api/users/[id]/entries/handler";
+import { createTaggedEntriesGetHandler } from "../src/app/api/users/[id]/tagged/handler";
+import { createEntryDeleteHandler } from "../src/app/api/entries/[id]/deleteHandler";
+import { createAccountDeleteHandler } from "../src/app/api/account/deleteHandler";
+import { createEntryPutHandler } from "../src/app/api/entries/[id]/putHandler";
+import { createPasswordSignInHandler } from "../src/app/api/auth/password-sign-in/handler";
+import { createRecoveryStartHandler } from "../src/app/api/auth/recovery-start/handler";
+import { createBulkGroupHandler } from "../src/app/api/entries/bulk-group/handler";
+import { createBulkPublishHandler } from "../src/app/api/entries/bulk-publish/handler";
 
 function makeAuthenticatedUser(id: string) {
   return {
@@ -98,7 +98,10 @@ function makeEntryPutSupabase({
 
         return {
           select(columns: string) {
-            if (columns === "id, user_id, rating") {
+            if (
+              columns === "id, user_id, rating" ||
+              columns === "id, user_id, rating, entry_group_id"
+            ) {
               return {
                 eq(column: string, value: string) {
                   expect(column).toBe("id");
@@ -109,6 +112,7 @@ function makeEntryPutSupabase({
                         id: value,
                         user_id: ownerUserId,
                         rating: existingRating,
+                        entry_group_id: null,
                       },
                       error: null,
                     }),
@@ -134,6 +138,7 @@ function makeEntryPutSupabase({
                             id: value,
                             user_id: ownerUserId,
                             rating: existingRating,
+                            entry_group_id: null,
                           },
                           error: null,
                         }),
@@ -142,6 +147,7 @@ function makeEntryPutSupabase({
                             id: value,
                             user_id: ownerUserId,
                             rating: existingRating,
+                            entry_group_id: null,
                           },
                           error: null,
                         }),
@@ -222,7 +228,9 @@ function makeEntryDeleteClients({
 
         return {
           select(columns: string) {
-            expect(columns).toBe("label_image_path, place_image_path, pairing_image_path");
+            expect(columns).toBe(
+              "id, label_image_path, place_image_path, pairing_image_path, entry_group_id"
+            );
 
             return {
               eq(column: string, value: string) {
@@ -239,9 +247,11 @@ function makeEntryDeleteClients({
                         data:
                           ownerUserId === viewerUserId
                             ? {
+                                id: "entry-1",
                                 label_image_path: "labels/entry-1.jpg",
                                 place_image_path: null,
                                 pairing_image_path: "pending",
+                                entry_group_id: null,
                               }
                             : null,
                         error: null,
@@ -413,6 +423,208 @@ function makeRecoveryStartClient() {
     getLastOtpPhone() {
       return lastOtpPhone;
     },
+  };
+}
+
+function makeBulkGroupSupabase(userId: string) {
+  const state = {
+    createdGroupPayload: null as Record<string, unknown> | null,
+    updatedEntryPayload: null as Record<string, unknown> | null,
+    insertedSlides: null as Record<string, unknown>[] | null,
+  };
+
+  return {
+    client: {
+      auth: {
+        getUser: async () => ({ data: { user: makeAuthenticatedUser(userId) } }),
+      },
+      from(table: string) {
+        if (table === "wine_entries") {
+          return {
+            select(columns: string) {
+              expect(columns).toBe("id");
+              return {
+                in(column: string, values: string[]) {
+                  expect(column).toBe("id");
+                  return {
+                    eq(innerColumn: string, innerValue: string) {
+                      expect(innerColumn).toBe("user_id");
+                      expect(innerValue).toBe(userId);
+                      return Promise.resolve({
+                        data: values.map((id) => ({ id })),
+                        error: null,
+                      });
+                    },
+                  };
+                },
+              };
+            },
+            update(payload: Record<string, unknown>) {
+              state.updatedEntryPayload = payload;
+              return {
+                in(column: string, values: string[]) {
+                  expect(column).toBe("id");
+                  expect(values.length).toBeGreaterThan(0);
+                  return {
+                    eq(innerColumn: string, innerValue: string) {
+                      expect(innerColumn).toBe("user_id");
+                      expect(innerValue).toBe(userId);
+                      return Promise.resolve({ error: null });
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === "entry_groups") {
+          return {
+            insert(payload: Record<string, unknown>) {
+              state.createdGroupPayload = payload;
+              return {
+                select(columns: string) {
+                  expect(columns).toBe("id, mode, title, anchor_entry_id");
+                  return {
+                    single: async () => ({
+                      data: {
+                        id: "group-1",
+                        mode: payload.mode,
+                        title: payload.title,
+                        anchor_entry_id: payload.anchor_entry_id,
+                      },
+                      error: null,
+                    }),
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === "entry_group_slides") {
+          return {
+            insert(rows: Record<string, unknown>[]) {
+              state.insertedSlides = rows;
+              return Promise.resolve({ error: null });
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    },
+    state,
+  };
+}
+
+function makeBulkPublishSupabase(userId: string) {
+  const state = {
+    hiddenIds: [] as string[],
+    publishedIds: [] as string[],
+  };
+
+  return {
+    client: {
+      auth: {
+        getUser: async () => ({ data: { user: makeAuthenticatedUser(userId) } }),
+      },
+      from(table: string) {
+        if (table === "wine_entries") {
+          return {
+            select(columns: string) {
+              if (columns === "id, entry_group_id") {
+                return {
+                  in(column: string, values: string[]) {
+                    expect(column).toBe("id");
+                    return {
+                      eq(innerColumn: string, innerValue: string) {
+                      expect(innerColumn).toBe("user_id");
+                      expect(innerValue).toBe(userId);
+                      return Promise.resolve({
+                        data: values.map((id) => ({
+                          id,
+                            entry_group_id:
+                              id === "33333333-3333-4333-8333-333333333333"
+                                ? null
+                                : "group-1",
+                        })),
+                        error: null,
+                      });
+                      },
+                    };
+                  },
+                };
+              }
+
+              throw new Error(`Unexpected wine_entries select ${columns}`);
+            },
+            update(payload: Record<string, unknown>) {
+              return {
+                in(column: string, values: string[]) {
+                  expect(column).toBe("id");
+                  return {
+                    eq(innerColumn: string, innerValue: string) {
+                      expect(innerColumn).toBe("user_id");
+                      expect(innerValue).toBe(userId);
+
+                      if (payload.is_feed_visible === false) {
+                        state.hiddenIds = values;
+                        return Promise.resolve({ error: null });
+                      }
+
+                      return {
+                        select(columns: string) {
+                          expect(columns).toBe("id");
+                          state.publishedIds.push(...values);
+                          return Promise.resolve({
+                            data: values.map((id) => ({ id })),
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === "entry_groups") {
+          return {
+            select(columns: string) {
+              expect(columns).toBe("id, anchor_entry_id");
+              return {
+                in(column: string, values: string[]) {
+                  expect(column).toBe("id");
+                  expect(values).toEqual(["group-1"]);
+                  return {
+                    eq(innerColumn: string, innerValue: string) {
+                      expect(innerColumn).toBe("user_id");
+                      expect(innerValue).toBe(userId);
+                      return Promise.resolve({
+                        data: [
+                          {
+                            id: "group-1",
+                            anchor_entry_id:
+                              "11111111-1111-4111-8111-111111111111",
+                          },
+                        ],
+                        error: null,
+                      });
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      },
+    },
+    state,
   };
 }
 
@@ -678,5 +890,100 @@ test.describe("Phase 6 route handler regressions", () => {
       "gallery/entry-1-1.jpg",
     ]);
     await expect(response.json()).resolves.toEqual({ success: true });
+  });
+
+  test("bulk group route creates one grouped post for bulk-created entries", async () => {
+    const supabase = makeBulkGroupSupabase("owner-1");
+    const handler = createBulkGroupHandler({
+      createSupabaseServerClient: async () => supabase.client as never,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/entries/bulk-group", {
+        method: "POST",
+        body: JSON.stringify({
+          anchor_entry_id: "11111111-1111-4111-8111-111111111111",
+          entry_ids: [
+            "11111111-1111-4111-8111-111111111111",
+            "22222222-2222-4222-8222-222222222222",
+          ],
+          mode: "event",
+          title: "Stuytown tasting",
+          slides: [
+            {
+              entry_id: "11111111-1111-4111-8111-111111111111",
+              photo_type: "label",
+              path: "entries/a/label.jpg",
+            },
+            {
+              entry_id: null,
+              photo_type: "pairing",
+              path: "entries/a/pairing.jpg",
+            },
+          ],
+        }),
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(supabase.state.createdGroupPayload).toMatchObject({
+      user_id: "owner-1",
+      mode: "event",
+      title: "Stuytown tasting",
+    });
+    expect(supabase.state.updatedEntryPayload).toEqual({
+      entry_group_id: "group-1",
+      is_feed_visible: false,
+    });
+    expect(supabase.state.insertedSlides).toHaveLength(2);
+    await expect(response.json()).resolves.toEqual({
+      group: {
+        id: "group-1",
+        mode: "event",
+        title: "Stuytown tasting",
+        anchor_entry_id: "11111111-1111-4111-8111-111111111111",
+      },
+    });
+  });
+
+  test("bulk publish route only publishes the anchor for grouped entries", async () => {
+    const supabase = makeBulkPublishSupabase("owner-1");
+    const handler = createBulkPublishHandler({
+      createSupabaseServerClient: async () => supabase.client as never,
+    });
+
+    const response = await handler(
+      new Request("http://localhost/api/entries/bulk-publish", {
+        method: "POST",
+        body: JSON.stringify({
+          entry_ids: [
+            "11111111-1111-4111-8111-111111111111",
+            "22222222-2222-4222-8222-222222222222",
+            "33333333-3333-4333-8333-333333333333",
+          ],
+        }),
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(supabase.state.hiddenIds).toEqual([
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+    ]);
+    expect(supabase.state.publishedIds).toEqual(
+      expect.arrayContaining([
+        "11111111-1111-4111-8111-111111111111",
+        "33333333-3333-4333-8333-333333333333",
+      ])
+    );
+    await expect(response.json()).resolves.toEqual({
+      success: true,
+      updated_ids: expect.arrayContaining([
+        "11111111-1111-4111-8111-111111111111",
+        "33333333-3333-4333-8333-333333333333",
+      ]),
+    });
   });
 });

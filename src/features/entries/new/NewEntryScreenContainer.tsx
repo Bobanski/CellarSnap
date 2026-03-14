@@ -35,7 +35,12 @@ import {
 import { getTodayLocalYmd } from "@/lib/dateYmd";
 import { MAX_ENTRY_PHOTOS_PER_TYPE } from "@/lib/photoLimits";
 import { isUnknownWineName } from "@/lib/wineText";
-import type { EntryPhotoType, PrimaryGrape, PrivacyLevel } from "@/types/wine";
+import type {
+  EntryGroupMode,
+  EntryPhotoType,
+  PrimaryGrape,
+  PrivacyLevel,
+} from "@/types/wine";
 import {
   buildResolvedPhotoTypeMap,
   hasDominantSingleBottleFrame,
@@ -354,6 +359,12 @@ export default function NewEntryPage() {
   const [lineupSourceAnalysis, setLineupSourceAnalysis] = useState<
     SourcePhotoAnalysis[]
   >([]);
+  const [bulkEntryMode, setBulkEntryMode] = useState<EntryGroupMode>("event");
+  const [bulkEntryConfigStep, setBulkEntryConfigStep] = useState<
+    "group" | "event_details"
+  >("group");
+  const [bulkEntryTitle, setBulkEntryTitle] = useState("");
+  const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
 
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
@@ -1123,14 +1134,19 @@ export default function NewEntryPage() {
         }
         options?.originalCopyByFile?.set(originalFile, originalPath);
       }
+
+      return {
+        path: createdPath,
+        sourceFile: photo.file,
+      };
     };
 
     const photoTasks = photos.map(
       (photo) => async () => {
-        await uploadSinglePhoto(photo);
+        return uploadSinglePhoto(photo);
       }
     );
-    await runWithConcurrency(photoTasks, PHOTO_UPLOAD_CONCURRENCY);
+    return runWithConcurrency(photoTasks, PHOTO_UPLOAD_CONCURRENCY);
   };
 
   const createEntryRecord = async (
@@ -1338,6 +1354,10 @@ export default function NewEntryPage() {
   const resetAutotagState = () => {
     clearLineupReviewState();
     setLineupSourceAnalysis([]);
+    setBulkEntryMode("event");
+    setBulkEntryConfigStep("group");
+    setBulkEntryTitle("");
+    setBulkEntryConfigError(null);
   };
 
   const resolveSuggestedGrapes = async (suggestions: string[]) => {
@@ -1636,7 +1656,7 @@ export default function NewEntryPage() {
         reserveFallbackLabel: true,
       });
 
-      const uploadJobs: Promise<void>[] = [];
+      const uploadJobs: Promise<unknown>[] = [];
       if (labelUploads.length > 0) {
         uploadJobs.push(uploadPhotos(entry.id, "label", labelUploads));
       }
@@ -1970,6 +1990,14 @@ export default function NewEntryPage() {
   const createLineupEntries = async () => {
     const selected = lineupWines.filter((w) => w.included);
     if (selected.length === 0) return;
+    const normalizedBulkTitle = bulkEntryTitle.trim();
+    if (!normalizedBulkTitle) {
+      setBulkEntryConfigError(
+        "Add an event or catch-up title before creating the grouped post."
+      );
+      return;
+    }
+    setBulkEntryConfigError(null);
 
     const included = selected.filter((wine) => hasLineupWineDetails(wine));
     if (included.length === 0) {
@@ -2044,7 +2072,14 @@ export default function NewEntryPage() {
     const privacy = getValues("entry_privacy") || "public";
     const reactionPrivacy = getValues("reaction_privacy") || privacy;
     const commentsPrivacy = getValues("comments_privacy") || privacy;
-    const consumedAt = getValues("consumed_at") || getTodayLocalYmd();
+    const isSharedEvent = bulkEntryMode === "event";
+    const consumedAt =
+      isSharedEvent && getValues("consumed_at")
+        ? getValues("consumed_at")
+        : getTodayLocalYmd();
+    const locationText = getValues("location_text")?.trim() ?? "";
+    const locationPlaceId = getValues("location_place_id")?.trim() ?? "";
+    const tastedWithUserIds = isSharedEvent ? Array.from(new Set(selectedUserIds)) : [];
     let created = 0;
     let started = 0;
     const contextCopyCaches = new Map<UploadPhotoType, WeakMap<File, string>>();
@@ -2060,8 +2095,16 @@ export default function NewEntryPage() {
     const labelOriginalCopyCache = new WeakMap<File, string>();
     let fatalCreationError: string | null = null;
 
+    type UploadedPhotoRecord = {
+      path: string;
+      sourceFile: File;
+    };
+
     type LineupCreationResult = {
       entryId: string | null;
+      photoIndex: number;
+      labelPath: string | null;
+      contextUploads: Array<UploadedPhotoRecord & { type: UploadPhotoType }>;
       rollbackFailed: boolean;
       errorMessage: string | null;
     };
@@ -2072,6 +2115,9 @@ export default function NewEntryPage() {
           if (fatalCreationError) {
             return {
               entryId: null,
+              photoIndex: wine.photoIndex,
+              labelPath: null,
+              contextUploads: [],
               rollbackFailed: false,
               errorMessage: fatalCreationError,
             };
@@ -2093,11 +2139,14 @@ export default function NewEntryPage() {
               classification: wine.classification || null,
               primary_grape_ids: grapeIdsByIndex.get(i) ?? [],
               consumed_at: consumedAt,
+              location_text: isSharedEvent && locationText ? locationText : null,
+              location_place_id:
+                isSharedEvent && locationPlaceId ? locationPlaceId : null,
               entry_privacy: privacy,
               reaction_privacy: reactionPrivacy,
               comments_privacy: commentsPrivacy,
               is_feed_visible: false,
-              tasted_with_user_ids: [],
+              tasted_with_user_ids: tastedWithUserIds,
               skip_comparison_candidate: true,
             });
             started += 1;
@@ -2110,39 +2159,43 @@ export default function NewEntryPage() {
             // Upload a per-bottle thumbnail (fallback to original source photo)
             const sourceFile = sourceFiles[wine.photoIndex];
             try {
+              let labelPath: string | null = null;
               const otherBottleContextFiles = sourceFiles.filter(
                 (_file, photoIndex) =>
                   photoIndex !== wine.photoIndex &&
                   resolvedPhotoTypeByIndex.get(photoIndex) === "other_bottles"
               );
-
-              const uploadJobs: Promise<void>[] = [];
+              const contextUploads: Array<
+                UploadedPhotoRecord & { type: UploadPhotoType }
+              > = [];
               if (sourceFile) {
-                uploadJobs.push(
-                  (async () => {
-                    const thumbnail = await createLineupBottleThumbnail(
-                      sourceFile,
-                      wine.bottle_bbox,
-                      wine.label_bbox,
-                      wine.label_anchor,
-                      i
-                    );
-                    await uploadPhotos(
-                      entryId,
-                      "label",
-                      [{ file: thumbnail, originalFile: sourceFile }],
-                      {
-                        originalCopyByFile: labelOriginalCopyCache,
-                      }
-                    );
-                  })()
+                const thumbnail = await createLineupBottleThumbnail(
+                  sourceFile,
+                  wine.bottle_bbox,
+                  wine.label_bbox,
+                  wine.label_anchor,
+                  i
                 );
+                const labelUploads = await uploadPhotos(
+                  entryId,
+                  "label",
+                  [{ file: thumbnail, originalFile: sourceFile }],
+                  {
+                    originalCopyByFile: labelOriginalCopyCache,
+                  }
+                );
+                labelPath = labelUploads[0]?.path ?? null;
               }
+              const uploadJobs: Array<
+                Promise<Array<UploadedPhotoRecord & { type: UploadPhotoType }>>
+              > = [];
               if (lineupContextFiles.length > 0) {
                 uploadJobs.push(
                   uploadPhotos(entryId, "lineup", toUploads(lineupContextFiles), {
                     copyByFile: getCopyCache("lineup"),
-                  })
+                  }).then((uploads) =>
+                    uploads.map((upload) => ({ ...upload, type: "lineup" as const }))
+                  )
                 );
               }
               if (otherBottleContextFiles.length > 0) {
@@ -2154,6 +2207,11 @@ export default function NewEntryPage() {
                     {
                       copyByFile: getCopyCache("other_bottles"),
                     }
+                  ).then((uploads) =>
+                    uploads.map((upload) => ({
+                      ...upload,
+                      type: "other_bottles" as const,
+                    }))
                   )
                 );
               }
@@ -2161,25 +2219,54 @@ export default function NewEntryPage() {
                 uploadJobs.push(
                   uploadPhotos(entryId, "place", toUploads(placeContextFiles), {
                     copyByFile: getCopyCache("place"),
-                  })
+                  }).then((uploads) =>
+                    uploads.map((upload) => ({ ...upload, type: "place" as const }))
+                  )
                 );
               }
               if (pairingContextFiles.length > 0) {
                 uploadJobs.push(
                   uploadPhotos(entryId, "pairing", toUploads(pairingContextFiles), {
                     copyByFile: getCopyCache("pairing"),
-                  })
+                  }).then((uploads) =>
+                    uploads.map((upload) => ({ ...upload, type: "pairing" as const }))
+                  )
                 );
               }
               if (peopleContextFiles.length > 0) {
                 uploadJobs.push(
                   uploadPhotos(entryId, "people", toUploads(peopleContextFiles), {
                     copyByFile: getCopyCache("people"),
-                  })
+                  }).then((uploads) =>
+                    uploads.map((upload) => ({ ...upload, type: "people" as const }))
+                  )
                 );
               }
 
-              await Promise.all(uploadJobs);
+              const uploadedContextGroups = await Promise.all(uploadJobs);
+              uploadedContextGroups.forEach((group) => {
+                contextUploads.push(...group);
+              });
+
+              if (!labelPath) {
+                throw new Error("Label upload failed to return a usable path.");
+              }
+
+              created += 1;
+              setLineupCreatedCount(created);
+              if (started >= included.length) {
+                setAutofillMessage(
+                  "All entries started. Finishing photo uploads..."
+                );
+              }
+              return {
+                entryId,
+                photoIndex: wine.photoIndex,
+                labelPath,
+                contextUploads,
+                rollbackFailed: false,
+                errorMessage: null,
+              };
             } catch (uploadError) {
               const rolledBack = await rollbackCreatedEntry(entryId);
               const uploadMessage =
@@ -2191,19 +2278,13 @@ export default function NewEntryPage() {
               }
               return {
                 entryId: null,
+                photoIndex: wine.photoIndex,
+                labelPath: null,
+                contextUploads: [],
                 rollbackFailed: !rolledBack,
                 errorMessage: uploadMessage,
               };
             }
-
-            created += 1;
-            setLineupCreatedCount(created);
-            if (started >= included.length) {
-              setAutofillMessage(
-                "All entries started. Finishing photo uploads..."
-              );
-            }
-            return { entryId, rollbackFailed: false, errorMessage: null };
           } catch (error) {
             const createMessage =
               error instanceof Error ? error.message : "Entry creation failed.";
@@ -2212,6 +2293,9 @@ export default function NewEntryPage() {
             }
             return {
               entryId: null,
+              photoIndex: wine.photoIndex,
+              labelPath: null,
+              contextUploads: [],
               rollbackFailed: false,
               errorMessage: createMessage,
             };
@@ -2226,7 +2310,14 @@ export default function NewEntryPage() {
 
     setLineupCreating(false);
 
-    const createdEntryIds = creationResults
+    const successfulCreationResults = creationResults.filter(
+      (result): result is LineupCreationResult & { entryId: string; labelPath: string } =>
+        typeof result.entryId === "string" &&
+        result.entryId.length > 0 &&
+        typeof result.labelPath === "string" &&
+        result.labelPath.length > 0
+    );
+    const createdEntryIds = successfulCreationResults
       .map((result) => result.entryId)
       .filter((value): value is string => typeof value === "string" && value.length > 0);
     const rollbackFailureCount = creationResults.filter(
@@ -2275,9 +2366,96 @@ export default function NewEntryPage() {
     const uncertaintySuffix =
       uncertaintyNotes.length > 0 ? ` Flagged uncertainty: ${uncertaintyNotes.join(" • ")}.` : "";
     if (createdEntryIds.length > 0) {
+      const anchorResult = successfulCreationResults[0] ?? null;
+      let groupedPostErrorMessage: string | null = null;
+      if (anchorResult) {
+        const wineSlidesBySourceIndex = new Map<
+          number,
+          Array<{
+            entry_id: string;
+            photo_type: "label";
+            path: string;
+          }>
+        >();
+        successfulCreationResults.forEach((result) => {
+          const current = wineSlidesBySourceIndex.get(result.photoIndex) ?? [];
+          current.push({
+            entry_id: result.entryId,
+            photo_type: "label",
+            path: result.labelPath,
+          });
+          wineSlidesBySourceIndex.set(result.photoIndex, current);
+        });
+
+        const contextUploadsByFile = new WeakMap<
+          File,
+          Partial<Record<UploadPhotoType, string>>
+        >();
+        anchorResult.contextUploads.forEach((upload) => {
+          const current = contextUploadsByFile.get(upload.sourceFile) ?? {};
+          current[upload.type] = upload.path;
+          contextUploadsByFile.set(upload.sourceFile, current);
+        });
+
+        const groupedSlides: Array<{
+          entry_id: string | null;
+          photo_type: UploadPhotoType;
+          path: string;
+        }> = [];
+
+        uploadGalleryItems.forEach((item) => {
+          const wineSlides = wineSlidesBySourceIndex.get(item.sourceIndex) ?? [];
+          groupedSlides.push(...wineSlides);
+
+          const sourceFile = sourceFiles[item.sourceIndex];
+          const contextPaths = sourceFile
+            ? contextUploadsByFile.get(sourceFile) ?? {}
+            : {};
+          const contextPath = sourceFile ? contextPaths[item.resolvedType] ?? null : null;
+          const shouldIncludeContextSlide =
+            item.resolvedType === "place" ||
+            item.resolvedType === "pairing" ||
+            item.resolvedType === "people" ||
+            ((item.resolvedType === "lineup" || item.resolvedType === "other_bottles") &&
+              wineSlides.length === 0);
+
+          if (contextPath && shouldIncludeContextSlide) {
+            groupedSlides.push({
+              entry_id: null,
+              photo_type: item.resolvedType,
+              path: contextPath,
+            });
+          }
+        });
+
+        if (groupedSlides.length > 0) {
+          const groupResponse = await fetch("/api/entries/bulk-group", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              anchor_entry_id: anchorResult.entryId,
+              entry_ids: createdEntryIds,
+              mode: bulkEntryMode,
+              title: normalizedBulkTitle,
+              slides: groupedSlides,
+            }),
+          });
+
+          if (!groupResponse.ok) {
+            const payload = await groupResponse.json().catch(() => ({}));
+            groupedPostErrorMessage =
+              typeof payload.error === "string"
+                ? payload.error
+                : "Grouped post setup failed, but the individual entries were created.";
+          }
+        }
+      }
+
       setAutofillStatus("success");
       setAutofillMessage(
-        rollbackFailureCount > 0
+        groupedPostErrorMessage
+          ? `${groupedPostErrorMessage}${uncertaintySuffix} Opening guided review...`
+          : rollbackFailureCount > 0
           ? `Created ${createdEntryIds.length} entr${
               createdEntryIds.length === 1 ? "y" : "ies"
             }. ${rollbackFailureCount} failed upload${
@@ -2296,7 +2474,7 @@ export default function NewEntryPage() {
       const queue = encodeURIComponent(createdEntryIds.join(","));
       setTimeout(() => {
         router.push(
-          `/entries/${createdEntryIds[0]}/edit?bulk=1&queue=${queue}&index=0`
+          `/entries/${anchorResult?.entryId ?? createdEntryIds[0]}/edit?bulk=1&queue=${queue}&index=0`
         );
       }, 900);
     } else {
@@ -2883,6 +3061,11 @@ export default function NewEntryPage() {
 
   const newlyLoggedWinePreviewUrl = labelPhotos[0]?.preview ?? null;
   const showSingleBottleFields = lineupWines.length === 0 && !lineupCreating;
+  const includedLineupWineCount = lineupWines.filter(
+    (wine) => wine.included && hasLineupWineDetails(wine)
+  ).length;
+  const showBulkEventDetailsStep =
+    bulkEntryMode === "event" && bulkEntryConfigStep === "event_details";
   const canAddLabelPhoto = labelPhotos.length < MAX_PHOTOS;
   const sourceAnalysisByPhotoIndex = useMemo(
     () =>
@@ -3191,98 +3374,409 @@ export default function NewEntryPage() {
               {/* Lineup review: shown when multiple bottles detected */}
               {lineupWines.length > 0 && !lineupCreating && lineupCreatedCount === 0 ? (
                 <div className="mt-4 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                    Lineup preview
-                  </p>
-                  <button
-                    type="button"
-                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-white/30"
-                    onClick={() => {
-                      resetAutotagState();
-                      setAutofillStatus("idle");
-                      setAutofillMessage(null);
-                    }}
-                  >
-                    ← Back
-                  </button>
-                </div>
-                {lineupWines.map((wine, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-start gap-3 rounded-xl border p-3 transition ${
-                      wine.included
-                        ? "border-white/10 bg-black/20"
-                        : "border-white/5 bg-black/10 opacity-50"
-                    }`}
-                  >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      Lineup preview
+                    </p>
                     <button
                       type="button"
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
-                        wine.included
-                          ? "border-amber-400 bg-amber-400/20 text-amber-300"
-                          : "border-zinc-600 text-zinc-600"
-                      }`}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-200 transition hover:border-white/30"
                       onClick={() => {
-                        setLineupWines((prev) =>
-                          prev.map((w, i) =>
-                            i === index ? { ...w, included: !w.included } : w
-                          )
-                        );
+                        resetAutotagState();
+                        setAutofillStatus("idle");
+                        setAutofillMessage(null);
                       }}
                     >
-                      {wine.included ? "\u2713" : ""}
+                      ← Back
                     </button>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-zinc-100 break-words">
-                        {wine.wine_name || "Unknown wine"}
-                      </p>
-                      <p className="text-xs text-zinc-400 break-words">
-                        {[
-                          wine.producer,
-                          wine.vintage,
-                          wine.region,
-                          ...(wine.primary_grape_suggestions?.length
-                            ? [wine.primary_grape_suggestions.join(", ")]
-                            : []),
-                        ]
-                          .filter(Boolean)
-                          .join(" \u00b7 ") || "No details detected"}
-                      </p>
-                      {wine.confidence !== null ? (
-                        <p className="mt-0.5 text-xs text-zinc-500">
-                          Confidence: {Math.round(wine.confidence * 100)}%
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-zinc-100">
+                          {showBulkEventDetailsStep
+                            ? "Event details"
+                            : "Group this bulk upload"}
                         </p>
-                      ) : null}
+                        <p className="text-xs text-zinc-400">
+                          {showBulkEventDetailsStep
+                            ? "These shared details will be copied to every wine in the event before review starts."
+                            : "Each wine stays separate in your library, but Home and Feed will show one grouped post."}
+                        </p>
+                      </div>
+                      <div className="group relative">
+                        <button
+                          type="button"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/40 text-xs font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                          aria-label="Explain Event and Catch-up"
+                        >
+                          i
+                        </button>
+                        <div className="pointer-events-none absolute right-0 top-9 z-20 hidden w-72 rounded-2xl border border-white/10 bg-[#181311] p-3 text-left text-xs text-zinc-300 shadow-2xl group-hover:block">
+                          <p className="font-semibold text-zinc-100">Event</p>
+                          <p className="mt-1">
+                            Use this for one tasting, dinner, or wine event. Every wine in the group shares the same consumed date.
+                          </p>
+                          <p className="mt-3 font-semibold text-zinc-100">Catch-up</p>
+                          <p className="mt-1">
+                            Use this when you are logging wines from different days after the fact. Each wine keeps its own consumed date.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                          Mode
+                        </p>
+                        <div className="mt-2 inline-flex rounded-full border border-white/10 bg-black/40 p-1">
+                          {[
+                            { value: "event", label: "Event" },
+                            { value: "catch_up", label: "Catch-up" },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                                bulkEntryMode === option.value
+                                  ? "bg-amber-400 text-zinc-950"
+                                  : "text-zinc-300 hover:text-zinc-100"
+                              }`}
+                              onClick={() => {
+                                setBulkEntryMode(option.value as EntryGroupMode);
+                                setBulkEntryConfigStep("group");
+                                setBulkEntryConfigError(null);
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {showBulkEventDetailsStep ? (
+                        <div className="md:col-span-2 space-y-4">
+                          <div>
+                            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                              Event name
+                            </label>
+                            <input
+                              type="text"
+                              value={bulkEntryTitle}
+                              onChange={(event) => {
+                                setBulkEntryTitle(event.target.value);
+                                if (bulkEntryConfigError) {
+                                  setBulkEntryConfigError(null);
+                                }
+                              }}
+                              placeholder="Stuytown tasting"
+                              className={`mt-2 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                                bulkEntryConfigError
+                                  ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                                  : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                              }`}
+                            />
+                            <p className="mt-2 text-xs text-zinc-500">
+                              This name becomes the grouped event title in Home and Feed.
+                            </p>
+                            {bulkEntryConfigError ? (
+                              <p className="mt-2 text-xs text-rose-300">
+                                {bulkEntryConfigError}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                              <label className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                                Event location
+                              </label>
+                              <input type="hidden" {...register("location_place_id")} />
+                              <div className="mt-2">
+                                <Controller
+                                  control={control}
+                                  name="location_text"
+                                  render={({ field }) => (
+                                    <LocationAutocomplete
+                                      value={field.value}
+                                      onChange={field.onChange}
+                                      onSelectPlaceId={(placeId) =>
+                                        setValue("location_place_id", placeId ?? "", {
+                                          shouldDirty: true,
+                                        })
+                                      }
+                                      onBlur={field.onBlur}
+                                      biasCoords={photoGps}
+                                    />
+                                  )}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                                Event date
+                              </label>
+                              <Controller
+                                control={control}
+                                name="consumed_at"
+                                rules={{ required: true }}
+                                render={({ field }) => (
+                                  <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                                    required
+                                  />
+                                )}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                              Tasted with
+                            </p>
+                            <p className="mt-2 text-xs text-zinc-500">
+                              These people will be tagged on every wine in the event.
+                            </p>
+                            {users.length === 0 ? (
+                              <p className="mt-3 text-sm text-zinc-400">
+                                No other users yet.
+                              </p>
+                            ) : (() => {
+                              const topFriends = users.slice(0, 5);
+                              const topFriendIds = new Set(topFriends.map((u) => u.id));
+                              const extraSelected = users.filter(
+                                (u) =>
+                                  selectedUserIds.includes(u.id) &&
+                                  !topFriendIds.has(u.id)
+                              );
+                              const trimmedSearch = friendSearch.trim().toLowerCase();
+                              const searchResults =
+                                trimmedSearch.length >= 2
+                                  ? users.filter(
+                                      (u) =>
+                                        !topFriendIds.has(u.id) &&
+                                        !selectedUserIds.includes(u.id) &&
+                                        ((u.display_name ?? "")
+                                          .toLowerCase()
+                                          .includes(trimmedSearch) ||
+                                          (u.email ?? "")
+                                            .toLowerCase()
+                                            .includes(trimmedSearch))
+                                    )
+                                  : [];
+
+                              const renderCheckbox = (user: (typeof users)[number]) => {
+                                const label = user.display_name ?? "Unknown";
+                                const isChecked = selectedUserIds.includes(user.id);
+                                return (
+                                  <label
+                                    key={user.id}
+                                    className="flex items-center gap-2 text-sm text-zinc-200"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                                      checked={isChecked}
+                                      onChange={(event) => {
+                                        setSelectedUserIds((prev) =>
+                                          event.target.checked
+                                            ? [...prev, user.id]
+                                            : prev.filter((id) => id !== user.id)
+                                        );
+                                      }}
+                                    />
+                                    <span>{label}</span>
+                                  </label>
+                                );
+                              };
+
+                              return (
+                                <div className="mt-3 space-y-3">
+                                  <div className="flex flex-wrap gap-2">
+                                    {topFriends.map(renderCheckbox)}
+                                    {extraSelected.map(renderCheckbox)}
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={friendSearch}
+                                      onChange={(event) =>
+                                        setFriendSearch(event.target.value)
+                                      }
+                                      placeholder="Search friends"
+                                      className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                                    />
+                                    {searchResults.length > 0 ? (
+                                      <div className="mt-2 space-y-2 rounded-xl border border-white/10 bg-black/20 p-3">
+                                        {searchResults.map((user) => (
+                                          <button
+                                            key={user.id}
+                                            type="button"
+                                            className="flex w-full items-center justify-between text-left text-sm text-zinc-200 transition hover:text-amber-200"
+                                            onClick={() => {
+                                              setSelectedUserIds((prev) => [
+                                                ...prev,
+                                                user.id,
+                                              ]);
+                                              setFriendSearch("");
+                                            }}
+                                          >
+                                            <span>
+                                              {user.display_name ?? user.email ?? "Unknown"}
+                                            </span>
+                                            <span className="text-xs text-zinc-500">Add</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          <div className="flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                              onClick={() => {
+                                setBulkEntryConfigStep("group");
+                                setBulkEntryConfigError(null);
+                              }}
+                            >
+                              Back
+                            </button>
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
+                              disabled={includedLineupWineCount === 0}
+                              onClick={createLineupEntries}
+                            >
+                              Create {includedLineupWineCount} entr
+                              {includedLineupWineCount === 1 ? "y" : "ies"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : bulkEntryMode === "event" ? (
+                        <div className="md:col-span-2 rounded-xl border border-amber-300/20 bg-amber-500/10 p-4">
+                          <p className="text-sm font-medium text-zinc-100">Event flow</p>
+                          <p className="mt-2 text-sm text-zinc-300">
+                            Next you’ll set the event name, location, date, and who you tasted
+                            with once, then we’ll apply those details to every wine in the
+                            event.
+                          </p>
+                          <button
+                            type="button"
+                            className="mt-4 inline-flex items-center justify-center rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400"
+                            onClick={() => {
+                              setBulkEntryConfigStep("event_details");
+                              setBulkEntryConfigError(null);
+                            }}
+                          >
+                            Continue to event details
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                            Group title
+                          </label>
+                          <input
+                            type="text"
+                            value={bulkEntryTitle}
+                            onChange={(event) => {
+                              setBulkEntryTitle(event.target.value);
+                              if (bulkEntryConfigError) {
+                                setBulkEntryConfigError(null);
+                              }
+                            }}
+                            placeholder="Past 2 weeks"
+                            className={`mt-2 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                              bulkEntryConfigError
+                                ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                                : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                            }`}
+                          />
+                          <p className="mt-2 text-xs text-zinc-500">
+                            This title will be shown on the grouped post in Home and Feed.
+                          </p>
+                          {bulkEntryConfigError ? (
+                            <p className="mt-2 text-xs text-rose-300">
+                              {bulkEntryConfigError}
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
+                  {lineupWines.map((wine, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+                        wine.included
+                          ? "border-white/10 bg-black/20"
+                          : "border-white/5 bg-black/10 opacity-50"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
+                          wine.included
+                            ? "border-amber-400 bg-amber-400/20 text-amber-300"
+                            : "border-zinc-600 text-zinc-600"
+                        }`}
+                        onClick={() => {
+                          setLineupWines((prev) =>
+                            prev.map((w, i) =>
+                              i === index ? { ...w, included: !w.included } : w
+                            )
+                          );
+                        }}
+                      >
+                        {wine.included ? "\u2713" : ""}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-zinc-100 break-words">
+                          {wine.wine_name || "Unknown wine"}
+                        </p>
+                        <p className="text-xs text-zinc-400 break-words">
+                          {[
+                            wine.producer,
+                            wine.vintage,
+                            wine.region,
+                            ...(wine.primary_grape_suggestions?.length
+                              ? [wine.primary_grape_suggestions.join(", ")]
+                              : []),
+                          ]
+                            .filter(Boolean)
+                            .join(" \u00b7 ") || "No details detected"}
+                        </p>
+                        {wine.confidence !== null ? (
+                          <p className="mt-0.5 text-xs text-zinc-500">
+                            Confidence: {Math.round(wine.confidence * 100)}%
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
 
-                <button
-                  type="button"
-                  className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-amber-500/90 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
-                  disabled={
-                    lineupWines.filter(
-                      (w) => w.included && hasLineupWineDetails(w)
-                    ).length === 0
-                  }
-                  onClick={createLineupEntries}
-                >
-                  Create{" "}
-                  {
-                    lineupWines.filter(
-                      (w) => w.included && hasLineupWineDetails(w)
-                    ).length
-                  }{" "}
-                  entr
-                  {lineupWines.filter(
-                    (w) => w.included && hasLineupWineDetails(w)
-                  ).length === 1
-                    ? "y"
-                    : "ies"}
-                </button>
-              </div>
-            ) : null}
+                  {bulkEntryMode === "catch_up" ? (
+                    <button
+                      type="button"
+                      className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-amber-500/90 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
+                      disabled={includedLineupWineCount === 0}
+                      onClick={createLineupEntries}
+                    >
+                      Create {includedLineupWineCount} entr
+                      {includedLineupWineCount === 1 ? "y" : "ies"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
 
               </div>
 

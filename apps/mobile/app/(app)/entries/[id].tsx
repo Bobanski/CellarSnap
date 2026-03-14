@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import {
   PRICE_PAID_CURRENCY_LABELS,
   PRICE_PAID_CURRENCY_VALUES,
@@ -88,8 +89,17 @@ type EntryDetailRow = {
   place_image_path: string | null;
   pairing_image_path: string | null;
   created_at: string;
+  entry_group_id?: string | null;
   entry_privacy: PrivacyLevel;
   reaction_privacy?: PrivacyLevel | null;
+};
+
+type EntryGroupMode = "event" | "catch_up";
+
+type EntryGroupSummary = {
+  id: string;
+  mode: EntryGroupMode;
+  title: string;
 };
 
 type EntryPhotoRow = {
@@ -708,6 +718,7 @@ export default function EntryDetailScreen() {
   const [bulkAdvancedNotes, setBulkAdvancedNotes] =
     useState<AdvancedNotesFormState>({ ...EMPTY_ADVANCED_NOTES });
   const [friendUsers, setFriendUsers] = useState<ProfileRow[]>([]);
+  const [entryGroup, setEntryGroup] = useState<EntryGroupSummary | null>(null);
   const [selectedTastedWithIds, setSelectedTastedWithIds] = useState<string[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
@@ -752,6 +763,7 @@ export default function EntryDetailScreen() {
     advanced_notes: false,
     price: false,
   });
+  const [showBulkMoreDetails, setShowBulkMoreDetails] = useState(false);
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [canReact, setCanReact] = useState(false);
@@ -761,6 +773,10 @@ export default function EntryDetailScreen() {
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
+
+  useEffect(() => {
+    setShowBulkMoreDetails(false);
+  }, [entryId, isBulkReview]);
 
   const loadEntry = useCallback(async () => {
     if (!entryId) {
@@ -775,20 +791,25 @@ export default function EntryDetailScreen() {
     const { data: entryData, error: entryError } = await supabase
       .from("wine_entries")
       .select(
-        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, entry_privacy, reaction_privacy"
+        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, entry_group_id, entry_privacy, reaction_privacy"
       )
       .eq("id", entryId)
       .maybeSingle();
 
     if (entryError || !entryData) {
+      setEntryGroup(null);
       setErrorMessage(entryError?.message ?? "Entry unavailable.");
       setLoading(false);
       return;
     }
 
     const nextEntry = entryData as EntryDetailRow;
+    const nextEntryGroupId =
+      typeof nextEntry.entry_group_id === "string" && nextEntry.entry_group_id.length > 0
+        ? nextEntry.entry_group_id
+        : null;
 
-    const [{ data: photoRows }, { data: grapeRows }] = await Promise.all([
+    const [{ data: photoRows }, { data: grapeRows }, groupResponse] = await Promise.all([
       supabase
         .from("entry_photos")
         .select("id, entry_id, type, path, position, created_at")
@@ -800,7 +821,25 @@ export default function EntryDetailScreen() {
         .select("entry_id, position, grape_varieties(id, name)")
         .eq("entry_id", entryId)
         .order("position", { ascending: true }),
+      nextEntryGroupId
+        ? supabase
+            .from("entry_groups")
+            .select("id, mode, title")
+            .eq("id", nextEntryGroupId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
+    const nextEntryGroup =
+      groupResponse?.data &&
+      typeof groupResponse.data.id === "string" &&
+      (groupResponse.data.mode === "event" || groupResponse.data.mode === "catch_up")
+        ? {
+            id: groupResponse.data.id,
+            mode: groupResponse.data.mode as EntryGroupMode,
+            title:
+              typeof groupResponse.data.title === "string" ? groupResponse.data.title : "",
+          }
+        : null;
 
     const primaryGrapes: PrimaryGrape[] = ((grapeRows ?? []) as EntryPrimaryGrapeRow[])
       .map((row) => {
@@ -963,6 +1002,7 @@ export default function EntryDetailScreen() {
     setReactionUsers(canEntryReact ? nextReactionUsers : {});
     setReactionPickerOpen(false);
     setEntry({ ...nextEntry, primary_grapes: primaryGrapes });
+    setEntryGroup(nextEntryGroup);
     setSelectedPrimaryGrapes(primaryGrapes.map((grape) => ({ ...grape })));
     setSelectedTastedWithIds(nextEntry.tasted_with_user_ids ?? []);
     setBulkAdvancedNotes(toAdvancedNotesFormState(nextEntry.advanced_notes));
@@ -1025,7 +1065,7 @@ export default function EntryDetailScreen() {
       galleryScrollRef.current.scrollTo({ x: 0, animated: false });
     }
     setLoading(false);
-  }, [entryId]);
+  }, [entryId, user?.email, user?.id]);
 
   useEffect(() => {
     void loadEntry();
@@ -1480,7 +1520,7 @@ export default function EntryDetailScreen() {
       : activeCropPhoto?.url ?? null;
   const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
   const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
-  const getCropGeometry = () => {
+  const getCropGeometry = useCallback(() => {
     if (!cropImageNaturalSize || cropFrameSize <= 0) {
       return null;
     }
@@ -1505,7 +1545,7 @@ export default function EntryDetailScreen() {
       offsetX: centerPadX - overflowX * (cropCenterX / 100),
       offsetY: centerPadY - overflowY * (cropCenterY / 100),
     };
-  };
+  }, [cropCenterX, cropCenterY, cropFrameSize, cropImageNaturalSize, cropZoom]);
   const activePhotoFailed = activePhoto ? failedPhotoIds.has(activePhoto.id) : false;
   const canEditActivePhotoMeta = Boolean(
     isOwner && isEditFormVisible && activePhoto?.editable && !isUpdatingPhotoMeta
@@ -1543,6 +1583,7 @@ export default function EntryDetailScreen() {
     (profile) =>
       selectedTastedWithIds.includes(profile.id) && !topFriendIds.has(profile.id)
   );
+  const isSharedEventBulkReview = isBulkReview && entryGroup?.mode === "event";
   const normalizedFriendSearch = friendSearch.trim().toLowerCase();
   const friendSearchResults =
     normalizedFriendSearch.length >= 2
@@ -2047,54 +2088,106 @@ export default function EntryDetailScreen() {
     if (!entry || !activeCropPhoto?.url || !isOwner) {
       return;
     }
-    if (!WEB_API_BASE_URL) {
-      setPhotoEditError(
-        "Set EXPO_PUBLIC_WEB_API_BASE_URL to enable in-place crop editing."
-      );
-      return;
-    }
-
-    const accessToken = await getAccessTokenForApi();
-    if (!accessToken) {
-      setPhotoEditError("Session expired. Sign in again to save crop edits.");
-      return;
-    }
 
     setIsSavingCrop(true);
     setPhotoEditError(null);
     try {
       let sourceDataUrl = cropSourceDataUrlByPhotoId[activeCropPhoto.id] ?? null;
-      if (!sourceDataUrl) {
-        const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
-        const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
-        sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
-          sourceBytes
-        )}`;
-      }
+      let croppedDataUrl: string | null = null;
+      let croppedMimeType = "image/jpeg";
 
-      const formData = new FormData();
-      formData.append("photo_data_url", sourceDataUrl);
-      formData.append("center_x", String(cropCenterX));
-      formData.append("center_y", String(cropCenterY));
-      formData.append("zoom", String(cropZoom));
-
-      const response = await fetch(`${WEB_API_BASE_URL}/api/photo-crop`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        cropped_data_url?: string;
-        mime_type?: string;
-        error?: string;
-      };
-      if (!response.ok || !payload.cropped_data_url) {
-        if (response.status === 401) {
-          throw new Error("Session expired. Sign in again to save crop edits.");
+      if (WEB_API_BASE_URL) {
+        const accessToken = await getAccessTokenForApi();
+        if (!accessToken) {
+          setPhotoEditError("Session expired. Sign in again to save crop edits.");
+          return;
         }
-        throw new Error(payload.error ?? "Unable to crop this image.");
+
+        if (!sourceDataUrl) {
+          const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+          const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
+          sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
+            sourceBytes
+          )}`;
+        }
+
+        const formData = new FormData();
+        formData.append("photo_data_url", sourceDataUrl);
+        formData.append("center_x", String(cropCenterX));
+        formData.append("center_y", String(cropCenterY));
+        formData.append("zoom", String(cropZoom));
+
+        const response = await fetch(`${WEB_API_BASE_URL}/api/photo-crop`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          cropped_data_url?: string;
+          mime_type?: string;
+          error?: string;
+        };
+        if (!response.ok || !payload.cropped_data_url) {
+          if (response.status === 401) {
+            throw new Error("Session expired. Sign in again to save crop edits.");
+          }
+          throw new Error(payload.error ?? "Unable to crop this image.");
+        }
+        croppedDataUrl = payload.cropped_data_url;
+        croppedMimeType = payload.mime_type ?? croppedMimeType;
+      } else {
+        if (!sourceDataUrl) {
+          const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+          const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
+          sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
+            sourceBytes
+          )}`;
+        }
+        const geometry = getCropGeometry();
+        if (!geometry || !cropImageNaturalSize) {
+          throw new Error("Crop support unavailable for this image.");
+        }
+        const originX = Math.max(0, -geometry.offsetX);
+        const originY = Math.max(0, -geometry.offsetY);
+        const width = Math.min(cropFrameSize, geometry.renderedWidth);
+        const height = Math.min(cropFrameSize, geometry.renderedHeight);
+        const scaleX =
+          cropImageNaturalSize.width / Math.max(1, geometry.renderedWidth);
+        const scaleY =
+          cropImageNaturalSize.height / Math.max(1, geometry.renderedHeight);
+        const cropRect = {
+          originX: Math.max(
+            0,
+            Math.min(cropImageNaturalSize.width - 1, Math.round(originX * scaleX))
+          ),
+          originY: Math.max(
+            0,
+            Math.min(cropImageNaturalSize.height - 1, Math.round(originY * scaleY))
+          ),
+          width: Math.max(
+            1,
+            Math.min(cropImageNaturalSize.width, Math.round(width * scaleX))
+          ),
+          height: Math.max(
+            1,
+            Math.min(cropImageNaturalSize.height, Math.round(height * scaleY))
+          ),
+        };
+        const croppedImage = await manipulateAsync(
+          sourceDataUrl,
+          [{ crop: cropRect }],
+          {
+            compress: 0.92,
+            format: SaveFormat.JPEG,
+            base64: true,
+          }
+        );
+        if (!croppedImage.base64) {
+          throw new Error("Unable to crop this image.");
+        }
+        croppedDataUrl = `data:image/jpeg;base64,${croppedImage.base64}`;
       }
 
       const cropRowResult = await supabase
@@ -2111,12 +2204,12 @@ export default function EntryDetailScreen() {
         throw new Error("Photo record not found.");
       }
 
-      const croppedBytes = await readPhotoBytes(payload.cropped_data_url);
+      const croppedBytes = await readPhotoBytes(croppedDataUrl);
       const uploadResult = await supabase.storage
         .from("wine-photos")
         .upload(storagePath, croppedBytes, {
           upsert: true,
-          contentType: payload.mime_type ?? "image/jpeg",
+          contentType: croppedMimeType,
         });
       if (uploadResult.error) {
         throw new Error(uploadResult.error.message);
@@ -2158,6 +2251,9 @@ export default function EntryDetailScreen() {
     cropCenterX,
     cropCenterY,
     cropZoom,
+    cropFrameSize,
+    cropImageNaturalSize,
+    getCropGeometry,
     entry,
     isOwner,
     loadEntry,
@@ -2688,71 +2784,6 @@ export default function EntryDetailScreen() {
     void saveBulkReview("next");
   }, [isBulkReview, saveBulkReview]);
 
-  const skipBulkReview = useCallback(() => {
-    void saveBulkReview("exit");
-  }, [saveBulkReview]);
-
-  const cancelBulkEntry = useCallback(() => {
-    if (
-      !isBulkReview ||
-      !entryId ||
-      deleting ||
-      isDeletingBulkQueue ||
-      isSavingBulkReview
-    ) {
-      return;
-    }
-
-    Alert.alert(
-      "Cancel this wine?",
-      "This removes the current entry and its photos from the bulk queue.",
-      [
-        { text: "Keep", style: "cancel" },
-        {
-          text: "Cancel wine",
-          style: "destructive",
-          onPress: () => {
-            void (async () => {
-              setDeleting(true);
-              setDeleteError(null);
-              try {
-                await deleteEntryById(entryId);
-                const nextQueue = bulkQueue.filter((id) => id !== entryId);
-                if (nextQueue.length === 0) {
-                  router.replace("/(app)/entries");
-                  return;
-                }
-                const targetNextEntryId =
-                  nextBulkEntryId && nextQueue.includes(nextBulkEntryId)
-                    ? nextBulkEntryId
-                    : nextQueue[0];
-                const targetIndex = Math.max(0, nextQueue.indexOf(targetNextEntryId));
-                router.replace(
-                  buildBulkEntryHref(targetNextEntryId, nextQueue, targetIndex) as never
-                );
-              } catch (error) {
-                setDeleteError(
-                  error instanceof Error ? error.message : "Unable to cancel this wine."
-                );
-              } finally {
-                setDeleting(false);
-              }
-            })();
-          },
-        },
-      ]
-    );
-  }, [
-    bulkQueue,
-    deleteEntryById,
-    deleting,
-    entryId,
-    isBulkReview,
-    isDeletingBulkQueue,
-    isSavingBulkReview,
-    nextBulkEntryId,
-  ]);
-
   const cancelEntireBulkQueue = useCallback(() => {
     if (
       !isBulkReview ||
@@ -2873,9 +2904,21 @@ export default function EntryDetailScreen() {
                 </View>
               </Pressable>
               <AppText style={styles.eyebrow}>Cellar entry</AppText>
-              <AppText style={styles.title}>
-                {entry.wine_name?.trim() || "Untitled wine"}
-              </AppText>
+              {isBulkReview ? (
+                <DoneTextInput
+                  value={bulkReviewForm.wine_name}
+                  onChangeText={(value) => updateBulkReviewField("wine_name", value)}
+                  placeholder="Wine name"
+                  placeholderTextColor="#71717a"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  style={styles.headerTitleInput}
+                />
+              ) : (
+                <AppText style={styles.title}>
+                  {entry.wine_name?.trim() || "Untitled wine"}
+                </AppText>
+              )}
               <AppText style={styles.subtitle}>
                 {entry.producer?.trim() || "Unknown producer"}
               </AppText>
@@ -3112,15 +3155,23 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
-                <Field
-                  label="Notes"
-                  value={bulkReviewForm.notes}
-                  onChange={(value) => updateBulkReviewField("notes", value)}
-                  placeholder="Optional tasting notes"
-                  multiline
-                />
+                <View style={styles.bulkFormField}>
+                  <AppText style={styles.bulkFormLabel}>Notes</AppText>
+                  <DoneTextInput
+                    value={bulkReviewForm.notes}
+                    onChangeText={(value) => updateBulkReviewField("notes", value)}
+                    placeholder="Optional tasting notes"
+                    placeholderTextColor="#71717a"
+                    multiline
+                    style={[
+                      styles.bulkFormInput,
+                      styles.bulkFormInputMultiline,
+                      { minHeight: 76 },
+                    ]}
+                  />
+                </View>
 
-                <AdaptiveFieldRow minColumnWidth={170}>
+                <AdaptiveFieldRow minColumnWidth={140}>
                   <Field
                     label="Rating (1-100)"
                     value={bulkReviewForm.rating}
@@ -3139,19 +3190,73 @@ export default function EntryDetailScreen() {
                   />
                 </AdaptiveFieldRow>
 
+                {isBulkReview ? (
+                  <View style={styles.bulkReviewActionRow}>
+                    <Pressable
+                      style={[styles.bulkSecondaryButton, styles.bulkMinorButton]}
+                      onPress={() => setShowBulkMoreDetails((current) => !current)}
+                    >
+                      <AppText style={styles.bulkMinorButtonText}>
+                        Add / edit details
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {isSharedEventBulkReview && showBulkMoreDetails ? (
+                  <View
+                    style={[
+                      styles.bulkEditCard,
+                      {
+                        borderColor: "rgba(251,191,36,0.24)",
+                        backgroundColor: "rgba(251,191,36,0.1)",
+                      },
+                    ]}
+                  >
+                    <AppText style={styles.bulkEditTitle}>
+                      Shared event details already applied
+                    </AppText>
+                    <AppText style={styles.bulkEditDescription}>
+                      Event wines inherit the shared event name, location, date, and
+                      tasted-with list, so this review stays focused on each bottle.
+                    </AppText>
+                    <AppText style={styles.bulkSectionHint}>
+                      Event: {entryGroup?.title?.trim() || "Untitled event"}
+                    </AppText>
+                    <AppText style={styles.bulkSectionHint}>
+                      Date: {bulkReviewForm.consumed_at || entry.consumed_at}
+                    </AppText>
+                    {bulkReviewForm.location_text.trim().length > 0 ? (
+                      <AppText style={styles.bulkSectionHint}>
+                        Location: {bulkReviewForm.location_text.trim()}
+                      </AppText>
+                    ) : null}
+                    {selectedTastedWithIds.length > 0 ? (
+                      <AppText style={styles.bulkSectionHint}>
+                        Tasted with: {selectedTastedWithIds.length} friend
+                        {selectedTastedWithIds.length === 1 ? "" : "s"}
+                      </AppText>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {!isBulkReview || showBulkMoreDetails ? (
+                  <>
                 <Accordion
                   title="Wine details"
                   description="Optional identity details for this bottle."
                   expanded={editExpanded.wine_details}
                   onToggle={() => toggleEditSection("wine_details")}
                 >
-                <Field
-                  label="Wine name"
-                  value={bulkReviewForm.wine_name}
-                  onChange={(value) => updateBulkReviewField("wine_name", value)}
-                  placeholder="Required"
-                  required
-                />
+                {!isBulkReview ? (
+                  <Field
+                    label="Wine name"
+                    value={bulkReviewForm.wine_name}
+                    onChange={(value) => updateBulkReviewField("wine_name", value)}
+                    placeholder="Required"
+                    required
+                  />
+                ) : null}
 
                 <AdaptiveFieldRow minColumnWidth={160}>
                   <Field
@@ -3272,6 +3377,7 @@ export default function EntryDetailScreen() {
                 </View>
                 </Accordion>
 
+                {!isSharedEventBulkReview ? (
                 <Accordion
                   title="Location & date"
                   description="Where and when this bottle was consumed."
@@ -3354,7 +3460,9 @@ export default function EntryDetailScreen() {
                   </View>
                 </View>
                 </Accordion>
+                ) : null}
 
+                {!isSharedEventBulkReview ? (
                 <Accordion
                   title="Tasted with"
                   description="Tag friends who were with you."
@@ -3435,6 +3543,7 @@ export default function EntryDetailScreen() {
                   </>
                 ) : null}
                 </Accordion>
+                ) : null}
 
                 <Accordion
                   title="Advanced notes"
@@ -3596,6 +3705,43 @@ export default function EntryDetailScreen() {
                   </View>
                 </View>
                 </Accordion>
+                  </>
+                ) : null}
+                {isBulkReview ? (
+                  <View style={styles.bulkReviewFooterRow}>
+                    <Pressable
+                      style={[
+                        styles.bulkPrimaryButton,
+                        bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                      ]}
+                      onPress={goToNextBulkEntry}
+                      disabled={bulkActionsDisabled}
+                    >
+                      <AppText style={styles.bulkPrimaryButtonText}>
+                        {isSavingBulkReview
+                          ? "Saving..."
+                          : nextBulkEntryId
+                          ? "Next wine"
+                          : "Finish review"}
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.bulkDangerButton,
+                        bulkActionsDisabled ? styles.bulkButtonDisabled : null,
+                      ]}
+                      onPress={cancelEntireBulkQueue}
+                      disabled={bulkActionsDisabled}
+                    >
+                      <AppText style={styles.bulkDangerButtonText}>
+                        {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {isBulkReview && bulkReviewError ? (
+                  <AppText style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
+                ) : null}
               </View>
             ) : (
               <View style={styles.detailsCard}>
@@ -3846,65 +3992,6 @@ export default function EntryDetailScreen() {
               ) : null}
               </View>
             )}
-            {isBulkReview ? (
-              <View style={styles.bulkReviewControlsCard}>
-                <View style={styles.bulkReviewActionRow}>
-                  <Pressable
-                    style={[
-                      styles.bulkPrimaryButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={goToNextBulkEntry}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkPrimaryButtonText}>
-                      {isSavingBulkReview
-                        ? "Saving..."
-                        : nextBulkEntryId
-                        ? "Next wine"
-                        : "Finish review"}
-                    </AppText>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.bulkSecondaryButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={skipBulkReview}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkSecondaryButtonText}>
-                      Skip all and save
-                    </AppText>
-                  </Pressable>
-                </View>
-                <View style={styles.bulkReviewDangerRow}>
-                  <Pressable
-                    style={[
-                      styles.bulkDangerButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={cancelBulkEntry}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkDangerButtonText}>Cancel this wine</AppText>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.bulkDangerButton,
-                      bulkActionsDisabled ? styles.bulkButtonDisabled : null,
-                    ]}
-                    onPress={cancelEntireBulkQueue}
-                    disabled={bulkActionsDisabled}
-                  >
-                    <AppText style={styles.bulkDangerButtonText}>Cancel bulk entry</AppText>
-                  </Pressable>
-                </View>
-                {bulkReviewError ? (
-                  <AppText style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
-                ) : null}
-              </View>
-            ) : null}
           </>
         )}
       </ScrollView>
@@ -4286,6 +4373,13 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
+  bulkReviewFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 6,
+  },
   bulkReviewDangerRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -4314,6 +4408,17 @@ const styles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 12,
     fontWeight: "700",
+  },
+  bulkMinorButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  bulkMinorButtonText: {
+    color: "#d4d4d8",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   bulkDangerButton: {
     borderRadius: 999,
@@ -4610,6 +4715,18 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
+    color: "#fafafa",
+    fontSize: 24,
+    fontWeight: "700",
+    lineHeight: 30,
+  },
+  headerTitleInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: "#fafafa",
     fontSize: 24,
     fontWeight: "700",

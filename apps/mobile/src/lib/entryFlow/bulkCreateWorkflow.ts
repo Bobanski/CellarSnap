@@ -12,6 +12,9 @@ import {
   normalizePhotoUploadErrorMessage,
   type UploadPhotoType,
 } from "./newEntryUtils";
+import type { UploadedEntryPhotoRecord } from "./uploadToEntry";
+
+export type EntryGroupMode = "event" | "catch_up";
 
 export type PrimaryGrapeSelection = {
   id: string;
@@ -57,9 +60,15 @@ export type BulkEntryFormSnapshot = {
 export type BulkCreationResult = {
   included: LineupWine[];
   createdEntryIds: string[];
+  createdEntries: Array<{
+    entryId: string;
+    photoIndex: number;
+    uploadedPhotos: UploadedEntryPhotoRecord[];
+  }>;
   failedCount: number;
   firstFailureMessage: string | null;
   lowConfidenceCount: number;
+  groupedPostErrorMessage: string | null;
 };
 
 type InsertEntryFallbackResult = {
@@ -69,6 +78,8 @@ type InsertEntryFallbackResult = {
 
 type BulkTaskResult = {
   entryId: string | null;
+  photoIndex: number;
+  uploadedPhotos: UploadedEntryPhotoRecord[];
   errorMessage: string | null;
 };
 
@@ -82,6 +93,7 @@ export async function runBulkCreateWorkflow({
   accessToken,
   normalizedBaseUrl,
   setBulkCreateMessage,
+  groupConfig,
   resolveSuggestedGrapes,
   insertEntryWithFallback,
   persistPrimaryGrapesByIds,
@@ -97,6 +109,12 @@ export async function runBulkCreateWorkflow({
   accessToken: string | null;
   normalizedBaseUrl: string | null;
   setBulkCreateMessage: (value: string) => void;
+  groupConfig?:
+    | {
+        mode: EntryGroupMode;
+        title: string;
+      }
+    | undefined;
   resolveSuggestedGrapes: (suggestions: string[]) => Promise<PrimaryGrapeSelection[]>;
   insertEntryWithFallback: (
     payload: Record<string, unknown>
@@ -106,7 +124,7 @@ export async function runBulkCreateWorkflow({
     entryId: string,
     ownerUserId: string,
     photosToUpload: UploadPhotoItem[]
-  ) => Promise<void>;
+  ) => Promise<UploadedEntryPhotoRecord[]>;
   rollbackEntry: (entryId: string, ownerUserId: string) => Promise<void>;
 }): Promise<BulkCreationResult> {
   const selected = lineupWines.filter((wine) => wine.included);
@@ -152,6 +170,7 @@ export async function runBulkCreateWorkflow({
     typeof ratingValue === "number" && Number.isFinite(ratingValue)
       ? Math.max(1, Math.min(100, Math.round(ratingValue)))
       : null;
+  const isSharedEventGroup = groupConfig?.mode === "event";
 
   let started = 0;
   let fatalCreationError: string | null = null;
@@ -160,7 +179,12 @@ export async function runBulkCreateWorkflow({
     (wine, index) =>
       async (): Promise<BulkTaskResult> => {
         if (fatalCreationError) {
-          return { entryId: null, errorMessage: fatalCreationError };
+          return {
+            entryId: null,
+            photoIndex: wine.photoIndex,
+            uploadedPhotos: [],
+            errorMessage: fatalCreationError,
+          };
         }
 
         try {
@@ -182,15 +206,18 @@ export async function runBulkCreateWorkflow({
               classification: wine.classification,
               notes: form.notes.trim().length > 0 ? form.notes.trim() : null,
               location_text:
-                form.location_text.trim().length > 0
+                isSharedEventGroup && form.location_text.trim().length > 0
                   ? form.location_text.trim()
                   : null,
               location_place_id:
-                form.location_place_id.trim().length > 0
+                isSharedEventGroup && form.location_place_id.trim().length > 0
                   ? form.location_place_id.trim()
                   : null,
-              consumed_at: form.consumed_at || defaultConsumedDate,
-              tasted_with_user_ids: selectedUserIds,
+              consumed_at:
+                isSharedEventGroup && form.consumed_at
+                  ? form.consumed_at
+                  : defaultConsumedDate,
+              tasted_with_user_ids: isSharedEventGroup ? selectedUserIds : [],
               entry_privacy: form.entry_privacy,
               reaction_privacy: form.reaction_privacy,
               comments_privacy: form.comments_privacy,
@@ -230,15 +257,18 @@ export async function runBulkCreateWorkflow({
                   rating: numericRating,
                   notes: form.notes.trim().length > 0 ? form.notes.trim() : null,
                   location_text:
-                    form.location_text.trim().length > 0
+                    isSharedEventGroup && form.location_text.trim().length > 0
                       ? form.location_text.trim()
                       : null,
                   location_place_id:
-                    form.location_place_id.trim().length > 0
+                    isSharedEventGroup && form.location_place_id.trim().length > 0
                       ? form.location_place_id.trim()
                       : null,
-                  consumed_at: form.consumed_at || defaultConsumedDate,
-                  tasted_with_user_ids: selectedUserIds,
+                  consumed_at:
+                    isSharedEventGroup && form.consumed_at
+                      ? form.consumed_at
+                      : defaultConsumedDate,
+                  tasted_with_user_ids: isSharedEventGroup ? selectedUserIds : [],
                   entry_privacy: form.entry_privacy,
                   reaction_privacy: form.reaction_privacy,
                   comments_privacy: form.comments_privacy,
@@ -329,20 +359,38 @@ export async function runBulkCreateWorkflow({
           );
 
           try {
-            await uploadSpecificPhotosToEntry(entryId, userId, photosForEntry);
+            const uploadedPhotos = await uploadSpecificPhotosToEntry(
+              entryId,
+              userId,
+              photosForEntry
+            );
+            return {
+              entryId,
+              photoIndex: wine.photoIndex,
+              uploadedPhotos,
+              errorMessage: null,
+            };
           } catch (uploadError) {
             await rollbackEntry(entryId, userId);
             const uploadMessage = normalizePhotoUploadErrorMessage(uploadError);
-            return { entryId: null, errorMessage: uploadMessage };
+            return {
+              entryId: null,
+              photoIndex: wine.photoIndex,
+              uploadedPhotos: [],
+              errorMessage: uploadMessage,
+            };
           }
-
-          return { entryId, errorMessage: null };
         } catch (error) {
           const message =
             error instanceof Error ? error.message : "Bulk entry creation failed.";
           fatalCreationError =
             fatalCreationError ?? (message.includes("Session expired") ? message : null);
-          return { entryId: null, errorMessage: message };
+          return {
+            entryId: null,
+            photoIndex: wine.photoIndex,
+            uploadedPhotos: [],
+            errorMessage: message,
+          };
         }
       }
   );
@@ -355,6 +403,22 @@ export async function runBulkCreateWorkflow({
   const createdEntryIds = creationResults
     .map((result) => result.entryId)
     .filter((id): id is string => typeof id === "string" && id.length > 0);
+  const createdEntries = creationResults
+    .filter(
+      (
+        result
+      ): result is {
+        entryId: string;
+        photoIndex: number;
+        uploadedPhotos: UploadedEntryPhotoRecord[];
+        errorMessage: string | null;
+      } => typeof result.entryId === "string" && result.entryId.length > 0
+    )
+    .map((result) => ({
+      entryId: result.entryId,
+      photoIndex: result.photoIndex,
+      uploadedPhotos: result.uploadedPhotos,
+    }));
   const failedCount = creationResults.length - createdEntryIds.length;
   const firstFailureMessage =
     creationResults.find(
@@ -363,15 +427,123 @@ export async function runBulkCreateWorkflow({
   const lowConfidenceCount = included.filter(
     (wine) =>
       typeof wine.confidence === "number" &&
-      Number.isFinite(wine.confidence) &&
-      wine.confidence < OTHER_BOTTLES_CONFIDENCE_THRESHOLD
+        Number.isFinite(wine.confidence) &&
+        wine.confidence < OTHER_BOTTLES_CONFIDENCE_THRESHOLD
   ).length;
+  let groupedPostErrorMessage: string | null = null;
+
+  if (groupConfig && createdEntries.length > 0) {
+    const anchorEntry = createdEntries[0] ?? null;
+    if (!normalizedBaseUrl || !accessToken) {
+      groupedPostErrorMessage =
+        "Grouped post setup skipped because the web API session is unavailable.";
+    } else if (!anchorEntry) {
+      groupedPostErrorMessage = "Grouped post setup failed: no anchor entry was created.";
+    } else {
+      const wineSlidesByPhotoIndex = new Map<
+        number,
+        Array<{
+          entry_id: string;
+          photo_type: "label";
+          path: string;
+        }>
+      >();
+      createdEntries.forEach((entry) => {
+        const labelUpload = entry.uploadedPhotos.find((photo) => photo.type === "label");
+        if (!labelUpload) {
+          return;
+        }
+        const current = wineSlidesByPhotoIndex.get(entry.photoIndex) ?? [];
+        current.push({
+          entry_id: entry.entryId,
+          photo_type: "label",
+          path: labelUpload.path,
+        });
+        wineSlidesByPhotoIndex.set(entry.photoIndex, current);
+      });
+
+      const contextPathByPhotoId = new Map<
+        string,
+        Partial<Record<UploadPhotoType, string>>
+      >();
+      anchorEntry.uploadedPhotos.forEach((photo) => {
+        const current = contextPathByPhotoId.get(photo.photoId) ?? {};
+        current[photo.type] = photo.path;
+        contextPathByPhotoId.set(photo.photoId, current);
+      });
+
+      const groupedSlides: Array<{
+        entry_id: string | null;
+        photo_type: UploadPhotoType;
+        path: string;
+      }> = [];
+
+      uploadPhotos.forEach((photo, photoIndex) => {
+        const wineSlides = wineSlidesByPhotoIndex.get(photoIndex) ?? [];
+        groupedSlides.push(...wineSlides);
+
+        const contextPath = contextPathByPhotoId.get(photo.id)?.[photo.type] ?? null;
+        const shouldIncludeContextSlide =
+          photo.type === "place" ||
+          photo.type === "pairing" ||
+          photo.type === "people" ||
+          ((photo.type === "lineup" || photo.type === "other_bottles") &&
+            wineSlides.length === 0);
+
+        if (contextPath && shouldIncludeContextSlide) {
+          groupedSlides.push({
+            entry_id: null,
+            photo_type: photo.type,
+            path: contextPath,
+          });
+        }
+      });
+
+      if (groupedSlides.length === 0) {
+        groupedPostErrorMessage =
+          "Grouped post setup failed because no grouped slides were available.";
+      } else {
+        try {
+          const response = await fetch(`${normalizedBaseUrl}/api/entries/bulk-group`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              anchor_entry_id: anchorEntry.entryId,
+              entry_ids: createdEntryIds,
+              mode: groupConfig.mode,
+              title: groupConfig.title,
+              slides: groupedSlides,
+            }),
+          });
+
+          if (!response.ok) {
+            const payload = (await response.json().catch(() => ({}))) as {
+              error?: string;
+            };
+            groupedPostErrorMessage =
+              payload.error ??
+              "Grouped post setup failed, but the individual entries were created.";
+          }
+        } catch (error) {
+          groupedPostErrorMessage =
+            error instanceof Error
+              ? error.message
+              : "Grouped post setup failed, but the individual entries were created.";
+        }
+      }
+    }
+  }
 
   return {
     included,
     createdEntryIds,
+    createdEntries,
     failedCount,
     firstFailureMessage,
     lowConfidenceCount,
+    groupedPostErrorMessage,
   };
 }
