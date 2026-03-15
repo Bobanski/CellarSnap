@@ -61,6 +61,7 @@ export type AssembledSommelierContext = {
   query: string;
   wineKnowledge: KnowledgeMatch[];
   generalKnowledge: KnowledgeMatch[];
+  entryMatches: KnowledgeMatch[];
   userContext: UserContext;
   contextText: string;
   sources: SommelierSource[];

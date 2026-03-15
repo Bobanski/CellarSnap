@@ -16,6 +16,7 @@ const SOMMELIER_TABLES = [
 const SOMMELIER_FUNCTIONS = [
   "match_wine_knowledge",
   "match_general_knowledge",
+  "match_user_entries",
 ] as const;
 
 export type SommelierSchemaHealth = {
@@ -33,7 +34,7 @@ export function isSommelierSchemaMissingError(error: SupabaseErrorLike) {
 
 export function toSommelierSchemaErrorMessage(error: unknown) {
   const fallback =
-    "Pocket Sommelier schema is missing. Apply migration 053_pocket_sommelier.sql before using this feature.";
+    "Pocket Sommelier schema is missing. Apply the latest Pocket Sommelier migrations before using this feature.";
 
   if (!error || typeof error !== "object" || !("message" in error)) {
     return fallback;
@@ -62,11 +63,20 @@ export async function runSommelierSchemaHealthChecks(
   }
 
   for (const fn of SOMMELIER_FUNCTIONS) {
-    const { error } = await supabase.rpc(fn, {
-      query_embedding: Array(1536).fill(0),
-      match_count: 1,
-      match_threshold: 0.72,
-    });
+    const args =
+      fn === "match_user_entries"
+        ? {
+            query_embedding: Array(1536).fill(0),
+            target_user_id: "00000000-0000-0000-0000-000000000000",
+            match_count: 1,
+            match_threshold: 0.72,
+          }
+        : {
+            query_embedding: Array(1536).fill(0),
+            match_count: 1,
+            match_threshold: 0.72,
+          };
+    const { error } = await supabase.rpc(fn, args);
 
     if (error) {
       if (isMissingDbFunctionError(error, fn)) {

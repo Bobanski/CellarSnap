@@ -1,4 +1,9 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  formatAdvancedNoteValue,
+  normalizeAdvancedNotes,
+} from "@/lib/advancedNotes";
+import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { chunkMarkdown, chunkText } from "@/server/sommelier/chunker";
 import { generateEmbeddings } from "@/server/sommelier/embeddings";
 import type {
@@ -8,6 +13,26 @@ import type {
 
 type DataRow = Record<string, unknown>;
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
+type EntryEmbeddingRow = {
+  id: string;
+  user_id: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  wine_type: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  classification: string | null;
+  rating: number | null;
+  price_paid: number | null;
+  price_paid_currency: string | null;
+  qpr_level: string | null;
+  notes: string | null;
+  ai_notes_summary: string | null;
+  advanced_notes: unknown;
+  consumed_at: string | null;
+};
 
 const STRUCTURED_TABLES = [
   "base_profiles",
@@ -71,6 +96,11 @@ function formatList(values: string[]) {
     return `${values[0]} and ${values[1]}`;
   }
   return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
+}
+
+function normalizeDate(value: unknown) {
+  const normalized = normalizeText(value);
+  return normalized ? normalized.slice(0, 10) : "";
 }
 
 function buildLocation(row: DataRow) {
@@ -272,6 +302,64 @@ function serializeGenericRow(table: string, row: DataRow) {
   return `${labelizeKey(table)} reference. ${fields.join(". ")}.`;
 }
 
+function serializeWineEntryRow(
+  row: EntryEmbeddingRow,
+  primaryGrapes: string[] = []
+) {
+  const headerParts = [
+    normalizeText(row.wine_name),
+    normalizeText(row.producer) ? `by ${normalizeText(row.producer)}` : "",
+    normalizeText(row.vintage),
+    normalizeText(row.wine_type),
+  ].filter(Boolean);
+  const originParts = [
+    normalizeText(row.country),
+    normalizeText(row.region),
+    normalizeText(row.appellation),
+  ].filter(Boolean);
+  const advancedNotes = normalizeAdvancedNotes(row.advanced_notes);
+  const structureParts = advancedNotes
+    ? [
+        advancedNotes.body ? `Body ${formatAdvancedNoteValue("body", advancedNotes.body)}` : null,
+        advancedNotes.acidity
+          ? `Acidity ${formatAdvancedNoteValue("acidity", advancedNotes.acidity)}`
+          : null,
+        advancedNotes.tannin
+          ? `Tannin ${formatAdvancedNoteValue("tannin", advancedNotes.tannin)}`
+          : null,
+        advancedNotes.alcohol
+          ? `Alcohol ${formatAdvancedNoteValue("alcohol", advancedNotes.alcohol)}`
+          : null,
+        advancedNotes.sweetness
+          ? `Sweetness ${formatAdvancedNoteValue("sweetness", advancedNotes.sweetness)}`
+          : null,
+      ].filter((value): value is string => Boolean(value))
+    : [];
+  const priceValue = toNumber(row.price_paid);
+  const priceParts = [
+    priceValue !== null ? String(priceValue) : "",
+    normalizeText(row.price_paid_currency).toUpperCase(),
+  ].filter(Boolean);
+
+  return [
+    headerParts.length > 0 ? `${headerParts.join(" ")}.` : null,
+    originParts.length > 0 ? `Origin: ${originParts.join(" / ")}.` : null,
+    normalizeText(row.classification) ? `Classification: ${normalizeText(row.classification)}.` : null,
+    toNumber(row.rating) !== null ? `Rating: ${toNumber(row.rating)}/100.` : null,
+    primaryGrapes.length > 0 ? `Primary grapes: ${formatList(primaryGrapes)}.` : null,
+    normalizeText(row.notes) ? `Tasting notes: ${normalizeText(row.notes)}.` : null,
+    normalizeText(row.ai_notes_summary)
+      ? `Summary: ${normalizeText(row.ai_notes_summary)}.`
+      : null,
+    structureParts.length > 0 ? `Structure: ${structureParts.join(", ")}.` : null,
+    priceParts.length > 0 ? `Price paid: ${priceParts.join(" ")}.` : null,
+    normalizeText(row.qpr_level) ? `QPR: ${labelizeKey(normalizeText(row.qpr_level))}.` : null,
+    normalizeDate(row.consumed_at) ? `Consumed: ${normalizeDate(row.consumed_at)}.` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function serializeStructuredRow(table: StructuredTable, row: DataRow) {
   switch (table) {
     case "base_profiles":
@@ -313,9 +401,19 @@ async function batchGenerateEmbeddings(contents: string[]) {
   return embeddings;
 }
 
+async function loadWineEntryPrimaryGrapes(
+  supabase: AdminClient,
+  entryIds: string[]
+) {
+  return fetchPrimaryGrapesByEntryId(
+    supabase as unknown as Parameters<typeof fetchPrimaryGrapesByEntryId>[0],
+    entryIds
+  );
+}
+
 async function replaceWineKnowledgeChunks(
   supabase: AdminClient,
-  sourceTable: StructuredTable,
+  sourceTable: string,
   rows: Array<{
     source_row_id: string;
     chunk_index: number;
@@ -421,6 +519,75 @@ export async function ingestStructuredWineKnowledge(
   }
 
   return summaries;
+}
+
+export async function ingestWineEntryEmbeddings(
+  dependencies: {
+    supabase?: AdminClient;
+  } = {}
+): Promise<StructuredIngestionSummary> {
+  const supabase = dependencies.supabase ?? createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("wine_entries")
+    .select(
+      "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, ai_notes_summary, advanced_notes, consumed_at"
+    );
+
+  if (error) {
+    throw new Error(`Failed to load wine_entries: ${error.message}`);
+  }
+
+  const rows = ((data ?? []) as EntryEmbeddingRow[]).filter(
+    (row) => normalizeText(row.user_id).length > 0
+  );
+  const primaryGrapesByEntryId = await loadWineEntryPrimaryGrapes(
+    supabase,
+    rows.map((row) => row.id)
+  );
+
+  const serializedRows = rows
+    .map((row) => {
+      const primaryGrapes =
+        primaryGrapesByEntryId.get(row.id)?.map((grape) => grape.name).filter(Boolean) ?? [];
+      const content = serializeWineEntryRow(row, primaryGrapes).trim();
+
+      return {
+        source_row_id: row.id,
+        chunk_index: 0,
+        content,
+        metadata: {
+          table: "wine_entries",
+          user_id: row.user_id,
+          entry_id: row.id,
+          wine_type: normalizeText(row.wine_type) || null,
+          rating: toNumber(row.rating),
+          vintage: normalizeText(row.vintage) || null,
+          title:
+            normalizeText(row.wine_name) ||
+            normalizeText(row.producer) ||
+            "Cellar entry",
+        } satisfies Record<string, unknown>,
+      };
+    })
+    .filter((row) => row.content.length > 0);
+
+  const embeddings = await batchGenerateEmbeddings(
+    serializedRows.map((row) => row.content)
+  );
+
+  await replaceWineKnowledgeChunks(
+    supabase,
+    "wine_entries",
+    serializedRows.map((row, index) => ({
+      ...row,
+      embedding: embeddings[index] ?? [],
+    }))
+  );
+
+  return {
+    sourceTable: "wine_entries",
+    insertedCount: serializedRows.length,
+  };
 }
 
 export async function extractDocumentTextFromFile(file: File) {
@@ -595,3 +762,7 @@ export async function createDocumentChunksPreview({
 }) {
   return chunkDocumentContent({ content, contentType });
 }
+
+export const __sommelierIngestTestUtils = {
+  serializeWineEntryRow,
+};

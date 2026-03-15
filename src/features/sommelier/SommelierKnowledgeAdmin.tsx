@@ -27,6 +27,7 @@ export default function SommelierKnowledgeAdmin() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [reingestingStructured, setReingestingStructured] = useState(false);
+  const [reingestingEntries, setReingestingEntries] = useState(false);
   const [reingestingDocumentId, setReingestingDocumentId] = useState<string | null>(
     null
   );
@@ -127,6 +128,36 @@ export default function SommelierKnowledgeAdmin() {
     }
   };
 
+  const reingestEntries = async () => {
+    setReingestingEntries(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/sommelier/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scope: "entries" }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to re-ingest cellar entry embeddings.");
+      }
+
+      await load();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to re-ingest cellar entry embeddings."
+      );
+    } finally {
+      setReingestingEntries(false);
+    }
+  };
+
   const reingestDocument = async (documentId: string) => {
     setReingestingDocumentId(documentId);
     setError(null);
@@ -169,7 +200,7 @@ export default function SommelierKnowledgeAdmin() {
             Manage the RAG knowledge base.
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-300">
-            Upload markdown, text, or PDF guides for the general knowledge layer, then re-ingest the structured wine dataset whenever the algorithm tables change.
+            Upload markdown, text, or PDF guides for the general knowledge layer, then re-ingest structured wine knowledge or cellar entry embeddings whenever the retrieval corpus changes.
           </p>
         </section>
 
@@ -199,14 +230,24 @@ export default function SommelierKnowledgeAdmin() {
                 The server will chunk the text, generate embeddings, and store the document for future chat retrieval.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void reingestStructured()}
-              disabled={reingestingStructured}
-              className="rounded-full border border-amber-300/35 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {reingestingStructured ? "Re-ingesting..." : "Re-ingest structured data"}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void reingestStructured()}
+                disabled={reingestingStructured}
+                className="rounded-full border border-amber-300/35 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {reingestingStructured ? "Re-ingesting..." : "Re-ingest structured data"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void reingestEntries()}
+                disabled={reingestingEntries}
+                className="rounded-full border border-white/12 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-amber-300/35 hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {reingestingEntries ? "Re-ingesting..." : "Re-ingest cellar entries"}
+              </button>
+            </div>
           </div>
 
           <form

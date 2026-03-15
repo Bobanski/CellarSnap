@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { assertSommelierAdminUser, SommelierAdminError } from "@/server/sommelier/admin";
 import {
+  ingestWineEntryEmbeddings,
   ingestStructuredWineKnowledge,
   reingestKnowledgeDocument,
 } from "@/server/sommelier/ingest";
@@ -12,6 +13,9 @@ import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth"
 const requestSchema = z.discriminatedUnion("scope", [
   z.object({
     scope: z.literal("structured"),
+  }),
+  z.object({
+    scope: z.literal("entries"),
   }),
   z.object({
     scope: z.literal("document"),
@@ -24,6 +28,7 @@ type SommelierIngestHandlerDependencies = {
   createAdminClient: typeof createSupabaseAdminClient;
   assertSommelierAdminUser: typeof assertSommelierAdminUser;
   ingestStructuredWineKnowledge: typeof ingestStructuredWineKnowledge;
+  ingestWineEntryEmbeddings: typeof ingestWineEntryEmbeddings;
   reingestKnowledgeDocument: typeof reingestKnowledgeDocument;
 };
 
@@ -32,6 +37,7 @@ const defaultDependencies: SommelierIngestHandlerDependencies = {
   createAdminClient: createSupabaseAdminClient,
   assertSommelierAdminUser,
   ingestStructuredWineKnowledge,
+  ingestWineEntryEmbeddings,
   reingestKnowledgeDocument,
 };
 
@@ -125,7 +131,7 @@ export function createSommelierIngestHandler(
       const parsed = requestSchema.safeParse(body);
       if (!parsed.success) {
         return NextResponse.json(
-          { error: "Provide scope='structured' or scope='document' with a documentId." },
+          { error: "Provide scope='structured', scope='entries', or scope='document' with a documentId." },
           { status: 400 }
         );
       }
@@ -138,6 +144,13 @@ export function createSommelierIngestHandler(
             supabase,
           });
           return NextResponse.json({ scope: "structured", summary });
+        }
+
+        if (parsed.data.scope === "entries") {
+          const summary = await resolvedDependencies.ingestWineEntryEmbeddings({
+            supabase,
+          });
+          return NextResponse.json({ scope: "entries", summary });
         }
 
         const summary = await resolvedDependencies.reingestKnowledgeDocument(
