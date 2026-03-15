@@ -259,7 +259,7 @@ export async function retrieveUserContext(
 
   const relevantEntries = [...rows]
     .sort((left, right) => scoreUserEntry(right, query) - scoreUserEntry(left, query))
-    .slice(0, 5);
+    .slice(0, 10);
 
   const recentFavorites = [...rows]
     .filter((entry) => typeof entry.rating === "number" && entry.rating >= 90)
