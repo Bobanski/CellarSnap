@@ -137,7 +137,8 @@ export default function SommelierChat() {
         throw new Error("Pocket Sommelier did not return a readable response stream.");
       }
 
-      const reader = response.body.getReader();
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      reader = response.body.getReader();
       const returnedConversationId = response.headers.get("x-sommelier-conversation-id");
       if (returnedConversationId) {
         setConversationId(returnedConversationId);
@@ -215,7 +216,7 @@ export default function SommelierChat() {
       }
     } catch (caughtError) {
       // Clean up the reader to prevent resource leaks
-      await reader.cancel();
+      await reader?.cancel();
 
       const message =
         caughtError instanceof Error
