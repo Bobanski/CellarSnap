@@ -478,7 +478,7 @@ export default function ListScanResultsScreen() {
                             selected ? styles.segmentButtonActive : null,
                           ]}
                           onPress={() =>
-                            setFilters((current: ListScanFilters) => ({
+                            setFilters((current) => ({
                               ...current,
                               price_mode: option.value as ListScanFilters["price_mode"],
                             }))
@@ -503,7 +503,7 @@ export default function ListScanResultsScreen() {
                         filters.price_mode === "under" ? filters.price_max : filters.price_min
                       )}
                       onChangeText={(value) =>
-                        setFilters((current: ListScanFilters) => ({
+                        setFilters((current) => ({
                           ...current,
                           [current.price_mode === "under" ? "price_max" : "price_min"]:
                             value.trim() === "" ? null : Number(value),
@@ -522,7 +522,7 @@ export default function ListScanResultsScreen() {
                         filters.price_mode === "over" ? filters.price_min : filters.price_max
                       )}
                       onChangeText={(value) =>
-                        setFilters((current: ListScanFilters) => ({
+                        setFilters((current) => ({
                           ...current,
                           [current.price_mode === "over" ? "price_min" : "price_max"]:
                             value.trim() === "" ? null : Number(value),
@@ -564,12 +564,10 @@ export default function ListScanResultsScreen() {
                           ]}
                           disabled={!available}
                           onPress={() =>
-                            setFilters((current: ListScanFilters) => ({
+                            setFilters((current) => ({
                               ...current,
                               included_wine_types: current.included_wine_types.includes(type)
-                                ? current.included_wine_types.filter(
-                                    (value: ListScanFilterableWineType) => value !== type
-                                  )
+                                ? current.included_wine_types.filter((value) => value !== type)
                                 : [...current.included_wine_types, type],
                             }))
                           }
@@ -595,7 +593,7 @@ export default function ListScanResultsScreen() {
                   options={derivedFacets?.varietals ?? []}
                   selected={filters.selected_varietals}
                   onChange={(selected_varietals) =>
-                    setFilters((current: ListScanFilters) => ({ ...current, selected_varietals }))
+                    setFilters((current) => ({ ...current, selected_varietals }))
                   }
                   getOptionTone={(option) =>
                     getListScanVarietalAccentTone(option, varietalAccentMap)
@@ -612,7 +610,7 @@ export default function ListScanResultsScreen() {
                   regionGroups={regionGroups}
                   selected={filters.selected_regions}
                   onChange={(selected_regions) =>
-                    setFilters((current: ListScanFilters) => ({ ...current, selected_regions }))
+                    setFilters((current) => ({ ...current, selected_regions }))
                   }
                   open={regionOpen}
                   onOpenChange={setRegionOpen}
@@ -637,7 +635,7 @@ export default function ListScanResultsScreen() {
                       onChangeText={(value) => {
                         const trimmed = value.trim();
                         const nextValue = trimmed === "" ? 0 : Number(trimmed);
-                        setFilters((current: ListScanFilters) => ({
+                        setFilters((current) => ({
                           ...current,
                           min_match_percent: Number.isFinite(nextValue)
                             ? Math.max(0, Math.min(100, Math.round(nextValue)))
@@ -657,10 +655,7 @@ export default function ListScanResultsScreen() {
                     <Switch
                       value={filters.show_match_column}
                       onValueChange={(show_match_column) =>
-                        setFilters((current: ListScanFilters) => ({
-                          ...current,
-                          show_match_column,
-                        }))
+                        setFilters((current) => ({ ...current, show_match_column }))
                       }
                       trackColor={{ false: "#3f3f46", true: "rgba(16,185,129,0.42)" }}
                       thumbColor={filters.show_match_column ? "#34d399" : "#f4f4f5"}
