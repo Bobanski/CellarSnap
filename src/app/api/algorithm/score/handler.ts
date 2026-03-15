@@ -67,8 +67,7 @@ type AlgorithmScoreHandlerDependencies = {
   ) => Promise<LoadedEntryForScoring | null>;
   loadUserPreferenceEntries: (
     supabase: RequestSupabaseClient,
-    userId: string,
-    wineType: WineType
+    userId: string
   ) => Promise<PreferenceSourceEntry[]>;
   assembleProfile: (input: AssembleWineProfileInput) => Promise<EffectiveWineProfile>;
   buildUserPreferenceVector: typeof buildUserPreferenceVector;
@@ -221,8 +220,7 @@ async function defaultLoadEntryForScoring(
 
 async function defaultLoadUserPreferenceEntries(
   supabase: RequestSupabaseClient,
-  userId: string,
-  wineType: WineType
+  userId: string
 ): Promise<PreferenceSourceEntry[]> {
   const selectAttempts = [
     {
@@ -241,15 +239,11 @@ async function defaultLoadUserPreferenceEntries(
     attempts: selectAttempts,
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
-      let query = supabase
+      const response = await supabase
         .from("wine_entries")
         .select(attempt.fields)
         .eq("user_id", userId)
         .not("rating", "is", null);
-      if (attempt.includesWineType) {
-        query = query.eq("wine_type", wineType);
-      }
-      const response = await query;
       return {
         data: response.data,
         error: response.error,
@@ -372,8 +366,7 @@ export function createAlgorithmScoreHandler(
     const preferenceEntries =
       await resolvedDependencies.loadUserPreferenceEntries(
         auth.supabase,
-        auth.user.id,
-        scoreInput.wine_type
+        auth.user.id
       );
     const userPreference = resolvedDependencies.buildUserPreferenceVector(
       preferenceEntries,

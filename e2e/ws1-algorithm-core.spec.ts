@@ -665,4 +665,39 @@ test.describe("WS1 algorithm core", () => {
     expect(score.confidence).toBeLessThan(0.5);
     expect(score.pre_balance_score).toBe(50);
   });
+
+  test("user preference shrinkage blends same-type and global history", () => {
+    const user = buildUserPreferenceVector(
+      [
+        {
+          rating: 95,
+          wine_type: "red",
+          advanced_notes: {
+            body: "full",
+            acidity: "medium",
+            tannin: "high",
+            alcohol: "medium",
+            sweetness: "dry",
+          },
+        },
+        {
+          rating: 95,
+          wine_type: "white",
+          advanced_notes: {
+            body: "light",
+            acidity: "high",
+            tannin: "low",
+            alcohol: "low",
+            sweetness: "dry",
+          },
+        },
+      ],
+      "red"
+    );
+
+    expect(user.event_count).toBe(1);
+    expect(user.sensory.body).toBeLessThan(5);
+    expect(user.sensory.body).toBeGreaterThan(1);
+    expect(user.sensory.acidity).toBeGreaterThan(3);
+  });
 });
