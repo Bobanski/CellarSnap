@@ -8,8 +8,8 @@ import type {
 export const WINE_TYPE_VALUES = [
   "red",
   "white",
-  "sparkling",
   "rose",
+  "sparkling",
   "sweet",
   "orange",
 ] as const;
@@ -82,6 +82,7 @@ export type WineEntry = {
   region: string | null;
   appellation: string | null;
   classification: string | null;
+  wine_type: WineType | null;
   primary_grapes?: PrimaryGrape[];
   rating: number | null;
   price_paid: number | null;
@@ -126,6 +127,7 @@ export type WineEntryCreatePayload = {
   region?: string | null;
   appellation?: string | null;
   classification?: string | null;
+  wine_type?: WineType | null;
   primary_grape_ids?: string[];
   rating?: number | null;
   price_paid?: number | null;
@@ -155,6 +157,7 @@ export type WineEntryUpdatePayload = Partial<{
   region: string | null;
   appellation: string | null;
   classification: string | null;
+  wine_type: WineType | null;
   primary_grape_ids: string[];
   rating: number | null;
   price_paid: number | null;
