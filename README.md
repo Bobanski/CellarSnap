@@ -7,6 +7,7 @@ Required environment variables (in `.env.local`):
 - `SUPABASE_SERVICE_ROLE_KEY` (required for public share page resolver and OG image generation)
 - `PUBLIC_SITE_URL` (absolute site URL used in generated share links/metadata)
 - `OPENAI_API_KEY` (for AI-assisted bottle count and autofill)
+- `POCKET_SOMMELIER_ADMIN_USER_IDS` or `CELLARSNAP_ADMIN_USER_IDS` (comma-separated user IDs allowed to upload/ingest sommelier knowledge)
 
 Supabase SQL steps:
 
@@ -42,6 +43,7 @@ Set these env vars in `apps/mobile/.env.local`:
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 - Optional: `EXPO_PUBLIC_AUTH_MODE` (`email` or `phone`)
+- Optional in local dev, required for Pocket Sommelier and other web-backed mobile features: `EXPO_PUBLIC_WEB_API_BASE_URL`
 
 Full mobile setup docs (including iOS/Android commands and Supabase redirect URLs):
 
@@ -80,6 +82,16 @@ Schema health:
   - interaction privacy/comments
   - blocks/reports
   - post-save survey
+- `GET /api/health/sommelier` verifies required sommelier tables and RPC functions
+
+Pocket Sommelier:
+
+- Apply `supabase/sql/053_pocket_sommelier.sql` before using `/sommelier`
+- Admin-only routes:
+  - `POST /api/sommelier/ingest`
+  - `POST /api/sommelier/upload-document`
+- Knowledge-base bulk ingest:
+  - `npm run sommelier:kb:ingest`
 
 Test accounts:
 

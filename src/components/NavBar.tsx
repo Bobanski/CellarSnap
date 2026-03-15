@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: "My library", href: "/entries" },
   { label: "Feed", href: "/feed" },
   { label: "Palate", href: "/palate" },
+  { label: "Sommelier", href: "/sommelier" },
   { label: "Profile", href: "/profile" },
   { label: "Feedback", href: "/feedback" },
 ];

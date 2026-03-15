@@ -1,0 +1,375 @@
+import { useEffect, useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
+import { AppTopBar } from "@/src/components/AppTopBar";
+import { AppText } from "@/src/components/AppText";
+import {
+  sendSommelierChat,
+  type MobileSommelierMessage,
+  type MobileSommelierSource,
+} from "@/src/lib/api/sommelier";
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources?: MobileSommelierSource[];
+};
+
+const DEFAULT_SUGGESTIONS = [
+  "What should I try next based on what I've liked lately?",
+  "Tell me about Barolo and what it usually tastes like.",
+  "What kind of wine would you pour with steak frites tonight?",
+];
+
+function createMessageId(prefix: "user" | "assistant") {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export default function SommelierScreen() {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "intro",
+      role: "assistant",
+      content:
+        "Ask about a bottle, a region, a pairing, or what you should try next. I’ll answer with your CellarSnap history plus the sommelier knowledge base.",
+    },
+  ]);
+  const [value, setValue] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
+
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages, pending, error]);
+
+  const sendMessage = async (content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed || pending) {
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: createMessageId("user"),
+      role: "user",
+      content: trimmed,
+    };
+
+    const priorMessages: MobileSommelierMessage[] = messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
+
+    setMessages((current) => [...current, userMessage]);
+    setValue("");
+    setError(null);
+    setPending(true);
+
+    const result = await sendSommelierChat({
+      messages: [...priorMessages, { role: "user", content: trimmed }],
+      conversationId,
+    });
+
+    if (!result.ok) {
+      setError(result.errorMessage);
+      setPending(false);
+      return;
+    }
+
+    setConversationId(result.conversationId);
+    setMessages((current) => [
+      ...current,
+      {
+        id: createMessageId("assistant"),
+        role: "assistant",
+        content: result.answer || "I couldn't finish that answer. Try again in a moment.",
+        sources: result.sources,
+      },
+    ]);
+    setPending(false);
+  };
+
+  const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
+
+  return (
+    <View style={styles.screen}>
+      <AppTopBar activeHref="/(app)/sommelier" />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.flex}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.hero}>
+            <AppText style={styles.eyebrow}>Pocket Sommelier</AppText>
+            <AppText style={styles.title}>A wine guide tuned to your palate.</AppText>
+            <AppText style={styles.subtitle}>
+              Ask for pairings, region explainers, producer notes, or what to open next.
+            </AppText>
+            {showSuggestions ? (
+              <View style={styles.suggestionWrap}>
+                {DEFAULT_SUGGESTIONS.map((suggestion) => (
+                  <Pressable
+                    key={suggestion}
+                    style={styles.suggestionChip}
+                    onPress={() => void sendMessage(suggestion)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ask: ${suggestion}`}
+                  >
+                    <AppText style={styles.suggestionText}>{suggestion}</AppText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.chatStack}>
+            {messages.map((message) => {
+              const isAssistant = message.role === "assistant";
+              return (
+                <View
+                  key={message.id}
+                  style={[
+                    styles.messageBubble,
+                    isAssistant ? styles.assistantBubble : styles.userBubble,
+                  ]}
+                >
+                  <AppText style={styles.messageLabel}>
+                    {isAssistant ? "Pocket Sommelier" : "You"}
+                  </AppText>
+                  <AppText style={styles.messageText}>{message.content}</AppText>
+                  {isAssistant && message.sources?.length ? (
+                    <View style={styles.sourcesWrap}>
+                      {message.sources.slice(0, 3).map((source) => (
+                        <View key={source.id} style={styles.sourceCard}>
+                          <AppText style={styles.sourceLabel}>{source.label}</AppText>
+                          <AppText style={styles.sourceExcerpt}>{source.excerpt}</AppText>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+
+            {pending ? (
+              <View style={[styles.messageBubble, styles.assistantBubble]}>
+                <AppText style={styles.messageLabel}>Pocket Sommelier</AppText>
+                <AppText style={styles.typingText}>Thinking...</AppText>
+              </View>
+            ) : null}
+          </View>
+
+          {error ? (
+            <View style={styles.errorCard}>
+              <AppText style={styles.errorText}>{error}</AppText>
+            </View>
+          ) : null}
+        </ScrollView>
+
+        <View style={styles.inputShell}>
+          <TextInput
+            value={value}
+            onChangeText={setValue}
+            placeholder="Ask about regions, pairings, or what you should try next..."
+            placeholderTextColor="#71717a"
+            multiline
+            maxLength={1200}
+            style={styles.input}
+            editable={!pending}
+            accessibilityLabel="Ask Pocket Sommelier a question"
+          />
+          <Pressable
+            style={[styles.sendButton, pending || !value.trim() ? styles.sendButtonDisabled : null]}
+            onPress={() => void sendMessage(value)}
+            disabled={pending || !value.trim()}
+            accessibilityRole="button"
+            accessibilityLabel={pending ? "Pocket Sommelier is responding" : "Send message"}
+          >
+            <AppText style={styles.sendButtonText}>{pending ? "Thinking..." : "Send"}</AppText>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#0f0a09",
+  },
+  flex: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    gap: 16,
+  },
+  hero: {
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    padding: 20,
+    gap: 8,
+  },
+  eyebrow: {
+    color: "#fde68a",
+    fontSize: 12,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  title: {
+    color: "#fafaf9",
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "700",
+  },
+  subtitle: {
+    color: "#d4d4d8",
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  suggestionWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 8,
+  },
+  suggestionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  suggestionText: {
+    color: "#e4e4e7",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  chatStack: {
+    gap: 12,
+  },
+  messageBubble: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  assistantBubble: {
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  userBubble: {
+    borderColor: "rgba(251,191,36,0.3)",
+    backgroundColor: "rgba(251,191,36,0.12)",
+  },
+  messageLabel: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  messageText: {
+    color: "#fafaf9",
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  typingText: {
+    color: "#fcd34d",
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  sourcesWrap: {
+    gap: 8,
+    marginTop: 12,
+  },
+  sourceCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.18)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  sourceLabel: {
+    color: "#f4f4f5",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  sourceExcerpt: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  errorCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(251,113,133,0.3)",
+    backgroundColor: "rgba(244,63,94,0.14)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorText: {
+    color: "#ffe4e6",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  inputShell: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#120d0c",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    gap: 12,
+  },
+  input: {
+    minHeight: 96,
+    maxHeight: 180,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    color: "#fafaf9",
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    textAlignVertical: "top",
+  },
+  sendButton: {
+    alignSelf: "flex-end",
+    borderRadius: 999,
+    backgroundColor: "#fbbf24",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  sendButtonDisabled: {
+    opacity: 0.55,
+  },
+  sendButtonText: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+});
