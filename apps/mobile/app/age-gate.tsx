@@ -8,9 +8,10 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { AppText } from "@/src/components/AppText";
-import { setAgeVerified } from "@/src/lib/ageVerification";
+import { useAgeVerification } from "@/src/lib/ageVerificationContext";
 
 export default function AgeGateScreen() {
+  const { confirmAgeVerification } = useAgeVerification();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [declineMessage, setDeclineMessage] = useState<string | null>(null);
@@ -21,7 +22,7 @@ export default function AgeGateScreen() {
     setDeclineMessage(null);
 
     try {
-      await setAgeVerified();
+      await confirmAgeVerification();
       router.replace("/(auth)/sign-in");
     } catch {
       setErrorMessage("We couldn't save your confirmation. Please try again.");

@@ -1,34 +1,23 @@
-import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Redirect, Stack, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/providers/AuthProvider";
 import { KeyboardDoneAccessory } from "@/src/components/KeyboardDoneAccessory";
-import { getAgeVerified } from "@/src/lib/ageVerification";
+import { AgeVerificationProvider, useAgeVerification } from "@/src/lib/ageVerificationContext";
 import { APP_SANS_FONT_FAMILY } from "@/src/lib/typography";
 
 export default function RootLayout() {
+  return (
+    <AgeVerificationProvider>
+      <RootNavigator />
+    </AgeVerificationProvider>
+  );
+}
+
+function RootNavigator() {
   const segments = useSegments();
-  const [ageChecked, setAgeChecked] = useState(false);
-  const [ageVerified, setAgeVerified] = useState(false);
+  const { ageChecked, ageVerified } = useAgeVerification();
   const isAgeGateRoute = segments[segments.length - 1] === "age-gate";
-
-  useEffect(() => {
-    let isMounted = true;
-
-    void (async () => {
-      const verified = await getAgeVerified();
-      if (!isMounted) {
-        return;
-      }
-      setAgeVerified(verified);
-      setAgeChecked(true);
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   if (!ageChecked) {
     return (
