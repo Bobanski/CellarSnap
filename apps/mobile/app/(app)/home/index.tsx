@@ -14,7 +14,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, type RelativePathString } from "expo-router";
 import {
   PRIVACY_LEVEL_LABELS,
   QPR_LEVEL_LABELS,
@@ -1176,14 +1176,30 @@ export default function HomeScreen() {
             >
               <AppText style={styles.primaryButtonText}>+ Record a new pour</AppText>
             </Pressable>
+            <Pressable
+              style={styles.secondaryCtaButton}
+              onPress={() => router.push("../list-scan" as RelativePathString)}
+            >
+              <AppText style={styles.secondaryCtaButtonText}>Scan/Upload a list</AppText>
+            </Pressable>
           </View>
         ) : (
-          <Pressable
-            style={styles.inlineCtaButton}
-            onPress={() => router.push("/(app)/entries/new")}
-          >
-            <AppText style={styles.inlineCtaButtonText}>+ Record a new pour</AppText>
-          </Pressable>
+          <View style={styles.inlineCtaRow}>
+            <Pressable
+              style={styles.inlineCtaButton}
+              onPress={() => router.push("/(app)/entries/new")}
+            >
+              <AppText style={styles.inlineCtaButtonText}>+ Record a new pour</AppText>
+            </Pressable>
+            <Pressable
+              style={styles.inlineSecondaryCtaButton}
+              onPress={() => router.push("../list-scan" as RelativePathString)}
+            >
+              <AppText style={styles.inlineSecondaryCtaButtonText}>
+                Scan/Upload a list
+              </AppText>
+            </Pressable>
+          </View>
         )}
 
         {!isFirstTime ? <View style={styles.sectionDivider} /> : null}
@@ -1466,8 +1482,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  inlineCtaButton: {
+  secondaryCtaButton: {
+    marginTop: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.34)",
+    backgroundColor: "rgba(16,185,129,0.12)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  secondaryCtaButtonText: {
+    color: "#d1fae5",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  inlineCtaRow: {
     alignSelf: "flex-start",
+    flexDirection: "column",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  inlineCtaButton: {
     borderRadius: 999,
     backgroundColor: "rgba(251,191,36,0.9)",
     paddingHorizontal: 14,
@@ -1475,6 +1510,19 @@ const styles = StyleSheet.create({
   },
   inlineCtaButtonText: {
     color: "#09090b",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  inlineSecondaryCtaButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.34)",
+    backgroundColor: "rgba(16,185,129,0.12)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  inlineSecondaryCtaButtonText: {
+    color: "#d1fae5",
     fontSize: 13,
     fontWeight: "700",
   },

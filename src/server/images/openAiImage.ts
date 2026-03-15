@@ -1,4 +1,7 @@
-type OpenAiImagePreparationCode = "input_too_large" | "output_too_large";
+type OpenAiImagePreparationCode =
+  | "input_too_large"
+  | "output_too_large"
+  | "unsupported_format";
 
 export class OpenAiImagePreparationError extends Error {
   code: OpenAiImagePreparationCode;
@@ -28,7 +31,7 @@ type SharpFactory = (
   input: Buffer,
   options?: Record<string, unknown>
 ) => {
-  metadata: () => Promise<{ width?: number; height?: number }>;
+  metadata: () => Promise<{ width?: number; height?: number; format?: string }>;
   rotate: () => {
     resize: (options: {
       width: number;
@@ -48,6 +51,11 @@ const DEFAULT_MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 const DEFAULT_MAX_DIMENSION = 1600;
 const DEFAULT_JPEG_QUALITY = 80;
 const FALLBACK_IMAGE_MIME = "image/jpeg";
+const OPENAI_SUPPORTED_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 let sharpFactoryPromise: Promise<SharpFactory | null> | null = null;
 
@@ -56,6 +64,29 @@ function normalizeMimeType(mimeType: string | null | undefined) {
     return mimeType;
   }
   return FALLBACK_IMAGE_MIME;
+}
+
+function mimeTypeForSharpFormat(format?: string) {
+  const normalized = format?.toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized === "jpeg" || normalized === "jpg") {
+    return "image/jpeg";
+  }
+  if (normalized === "png") {
+    return "image/png";
+  }
+  if (normalized === "webp") {
+    return "image/webp";
+  }
+  if (normalized === "heif" || normalized === "heic") {
+    return "image/heic";
+  }
+  if (normalized === "gif") {
+    return "image/gif";
+  }
+  return null;
 }
 
 async function loadSharpFactory(): Promise<SharpFactory | null> {
@@ -80,6 +111,12 @@ async function maybeResizeForAi(
 ): Promise<{ buffer: Buffer; mimeType: string; transformed: boolean }> {
   const sharpFactory = await loadSharpFactory();
   if (!sharpFactory) {
+    if (!OPENAI_SUPPORTED_IMAGE_MIMES.has(sourceMimeType)) {
+      throw new OpenAiImagePreparationError(
+        "unsupported_format",
+        "Image format is not supported for AI processing."
+      );
+    }
     return {
       buffer: sourceBuffer,
       mimeType: sourceMimeType,
@@ -91,11 +128,15 @@ async function maybeResizeForAi(
     const metadata = await sharpFactory(sourceBuffer, { failOn: "none" }).metadata();
     const width = metadata.width ?? 0;
     const height = metadata.height ?? 0;
-    if (Math.max(width, height) <= maxDimension) {
+    const detectedMimeType = mimeTypeForSharpFormat(metadata.format) ?? sourceMimeType;
+    const withinBounds = Math.max(width, height) <= maxDimension;
+    const supportsDirectUpload = OPENAI_SUPPORTED_IMAGE_MIMES.has(detectedMimeType);
+
+    if (supportsDirectUpload && withinBounds) {
       return {
         buffer: sourceBuffer,
-        mimeType: sourceMimeType,
-        transformed: false,
+        mimeType: detectedMimeType,
+        transformed: detectedMimeType !== sourceMimeType,
       };
     }
 
@@ -114,10 +155,16 @@ async function maybeResizeForAi(
       .toBuffer();
 
     if (!resized.length) {
+      if (!OPENAI_SUPPORTED_IMAGE_MIMES.has(detectedMimeType)) {
+        throw new OpenAiImagePreparationError(
+          "unsupported_format",
+          "Image format is not supported for AI processing."
+        );
+      }
       return {
         buffer: sourceBuffer,
-        mimeType: sourceMimeType,
-        transformed: false,
+        mimeType: detectedMimeType,
+        transformed: detectedMimeType !== sourceMimeType,
       };
     }
 
@@ -127,6 +174,12 @@ async function maybeResizeForAi(
       transformed: true,
     };
   } catch {
+    if (!OPENAI_SUPPORTED_IMAGE_MIMES.has(sourceMimeType)) {
+      throw new OpenAiImagePreparationError(
+        "unsupported_format",
+        "Image format is not supported for AI processing."
+      );
+    }
     return {
       buffer: sourceBuffer,
       mimeType: sourceMimeType,

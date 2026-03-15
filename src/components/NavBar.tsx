@@ -8,6 +8,7 @@ import AlertsMenu from "@/components/AlertsMenu";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
+  { label: "List scan", href: "/list-scan" },
   { label: "My library", href: "/entries" },
   { label: "Feed", href: "/feed" },
   { label: "Palate", href: "/palate" },
