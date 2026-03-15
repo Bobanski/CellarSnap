@@ -8,7 +8,12 @@ import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 
-type AppRoute = "/(app)/home" | "/(app)/entries" | "/(app)/feed" | "/(app)/profile";
+type AppRoute =
+  | "/(app)/home"
+  | "/(app)/entries"
+  | "/(app)/feed"
+  | "/(app)/profile"
+  | "/(app)/sommelier";
 
 type NavItem = {
   label: string;
@@ -37,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/(app)/home" },
   { label: "My library", href: "/(app)/entries" },
   { label: "Feed", href: "/(app)/feed" },
+  { label: "Sommelier", href: "/(app)/sommelier" },
   { label: "Profile", href: "/(app)/profile" },
 ];
 const WEB_API_BASE_URL = getWebApiBaseUrl();

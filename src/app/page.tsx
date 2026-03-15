@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  canDisplayAlgorithmMatch,
+  fetchAlgorithmScoreBatch,
+  type AlgorithmScoreResponse,
+} from "@/lib/algorithm/api";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
+import MatchBadge from "@/components/MatchBadge";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
@@ -16,13 +22,26 @@ import PrivacyBadge from "@/components/PrivacyBadge";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { QprLevel } from "@/lib/entryMeta";
-import type { EntryGroup, GroupedEntrySlide, PrivacyLevel } from "@/types/wine";
+import type {
+  EntryGroup,
+  GroupedEntrySlide,
+  PrivacyLevel,
+  WineType,
+} from "@/types/wine";
 
 type RecentEntry = {
   id: string;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
+  wine_type?: WineType | null;
+  classification?: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  canonical_country?: string | null;
+  region?: string | null;
+  appellation?: string | null;
+  country?: string | null;
   rating: number | null;
   qpr_level: QprLevel | null;
   consumed_at: string;
@@ -43,6 +62,38 @@ type CircleEntry = RecentEntry & {
 };
 
 const REACTION_EMOJIS = ["\u{1F377}", "\u{1F525}", "\u2764\uFE0F", "\u{1F440}", "\u{1F91D}"] as const;
+
+function buildScoreBatchItems(recentEntries: RecentEntry[], circleEntries: CircleEntry[]) {
+  const recent = recentEntries.map((entry) => ({
+    request_id: entry.id,
+    entry_id: entry.id,
+    wine_type: entry.wine_type ?? undefined,
+    canonical_region: entry.canonical_region ?? entry.region ?? null,
+    canonical_sub_region: entry.canonical_sub_region ?? entry.appellation ?? null,
+    canonical_country: entry.canonical_country ?? entry.country ?? null,
+    vintage: entry.vintage ? Number(entry.vintage) || null : null,
+    producer: entry.producer ?? null,
+    classification: entry.classification ?? null,
+    quality_tier: entry.classification ?? null,
+  }));
+
+  const circle = circleEntries
+    .filter((entry) => Boolean(entry.wine_type))
+    .map((entry) => ({
+      request_id: entry.id,
+      entry_id: entry.id,
+      wine_type: entry.wine_type ?? undefined,
+      canonical_region: entry.canonical_region ?? entry.region ?? null,
+      canonical_sub_region: entry.canonical_sub_region ?? entry.appellation ?? null,
+      canonical_country: entry.canonical_country ?? entry.country ?? null,
+      vintage: entry.vintage ? Number(entry.vintage) || null : null,
+      producer: entry.producer ?? null,
+      classification: entry.classification ?? null,
+      quality_tier: entry.classification ?? null,
+    }));
+
+  return [...recent, ...circle];
+}
 
 function HomeReactionControls({
   entry,
@@ -194,8 +245,11 @@ export default function HomePage() {
   const [savingPrivacyOnboarding, setSavingPrivacyOnboarding] = useState(false);
   const [totalEntryCount, setTotalEntryCount] = useState(0);
   const [friendCount, setFriendCount] = useState(0);
+  const [sortMode, setSortMode] = useState<"recent" | "best_match">("recent");
   const [recentEntries, setRecentEntries] = useState<RecentEntry[]>([]);
   const [circleEntries, setCircleEntries] = useState<CircleEntry[]>([]);
+  const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
+  const [matchScoresLoading, setMatchScoresLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
@@ -256,6 +310,50 @@ export default function HomePage() {
       isMounted = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMatchScores = async () => {
+      const items = buildScoreBatchItems(recentEntries, circleEntries);
+      if (items.length === 0) {
+        if (isMounted) {
+          setMatchScores({});
+        }
+        return;
+      }
+
+      setMatchScoresLoading(true);
+      try {
+        const results = await fetchAlgorithmScoreBatch(items);
+        if (!isMounted) {
+          return;
+        }
+
+        const nextScores: Record<string, AlgorithmScoreResponse> = {};
+        results.forEach((result) => {
+          if (result.ok && result.data && result.request_id) {
+            nextScores[result.request_id] = result.data;
+          }
+        });
+        setMatchScores(nextScores);
+      } catch {
+        if (isMounted) {
+          setMatchScores({});
+        }
+      } finally {
+        if (isMounted) {
+          setMatchScoresLoading(false);
+        }
+      }
+    };
+
+    void loadMatchScores();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [recentEntries, circleEntries]);
 
   const confirmDefaultPrivacy = async () => {
     setSavingPrivacyOnboarding(true);
@@ -363,6 +461,24 @@ export default function HomePage() {
     setCircleEntries((current) => current.map((entry) => applyToEntry(entry)));
   };
 
+  const sortedRecentEntries =
+    sortMode === "best_match"
+      ? [...recentEntries].sort((left, right) => {
+          const leftScore = canDisplayAlgorithmMatch(matchScores[left.id])
+            ? matchScores[left.id]?.score ?? -1
+            : -1;
+          const rightScore = canDisplayAlgorithmMatch(matchScores[right.id])
+            ? matchScores[right.id]?.score ?? -1
+            : -1;
+          return rightScore - leftScore;
+        })
+      : recentEntries;
+
+  const bestMatchEntries = [...recentEntries]
+    .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
+    .sort((left, right) => (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0))
+    .slice(0, 3);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -401,6 +517,36 @@ export default function HomePage() {
               : "What\u2019s happening in your wine world right now?"}
           </p>
         </header>
+
+        <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs uppercase tracking-[0.28em] text-amber-200/70">
+                New
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
+                Pocket Sommelier can now answer with your palate in mind.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-zinc-300">
+                Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history alongside the structured wine knowledge base.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/sommelier"
+                className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
+              >
+                Open Pocket Sommelier
+              </Link>
+              <Link
+                href="/sommelier/knowledge"
+                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              >
+                Knowledge base
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {!privacyConfirmedAt ? (
           <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-5">
@@ -502,16 +648,95 @@ export default function HomePage() {
           </div>
         )}
 
+        {!isFirstTime && bestMatchEntries.length > 0 ? (
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                  Best matches
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-zinc-50">
+                  Your strongest recent palate hits
+                </h2>
+              </div>
+              {matchScoresLoading ? (
+                <p className="text-xs text-zinc-500">Refreshing scores...</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              {bestMatchEntries.map((entry) => {
+                const score = matchScores[entry.id];
+                if (!score) {
+                  return null;
+                }
+
+                return (
+                  <Link
+                    key={`best-match-${entry.id}`}
+                    href={`/entries/${entry.id}`}
+                    className="rounded-3xl border border-amber-300/20 bg-gradient-to-br from-amber-400/12 to-transparent p-5 transition hover:border-amber-300/40"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          {formatConsumedDate(entry.consumed_at)}
+                        </p>
+                        <h3 className="mt-2 text-lg font-semibold text-zinc-50">
+                          {entry.wine_name || "Untitled wine"}
+                        </h3>
+                        <p className="mt-1 text-sm text-zinc-400">
+                          {entry.producer || "Unknown producer"}
+                        </p>
+                      </div>
+                      <MatchBadge score={score.score} band={score.band} />
+                    </div>
+                    <p className="mt-4 text-sm text-zinc-300">
+                      {score.score}% match to your palate
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
         {/* ── Section 1: Recent from you ── */}
         {!isFirstTime ? (
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Recent from you
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Recent from you
+              </h2>
+              <div className="inline-flex rounded-full border border-white/10 bg-black/20 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSortMode("recent")}
+                  className={`rounded-full px-3 py-1.5 font-semibold transition ${
+                    sortMode === "recent"
+                      ? "bg-white/10 text-zinc-100"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  Recent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortMode("best_match")}
+                  className={`rounded-full px-3 py-1.5 font-semibold transition ${
+                    sortMode === "best_match"
+                      ? "bg-white/10 text-zinc-100"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  Best match
+                </button>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div className="grid gap-5 md:grid-cols-2">
-                {recentEntries.map((entry) => (
+                {sortedRecentEntries.map((entry) => (
                   <article
                     key={entry.id}
                     className={`group flex h-full cursor-pointer flex-col rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
@@ -535,7 +760,16 @@ export default function HomePage() {
                   >
                     <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span className="font-medium text-zinc-200">You</span>
-                      <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      <div className="flex items-center gap-2">
+                        {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
+                          <MatchBadge
+                            score={matchScores[entry.id].score}
+                            band={matchScores[entry.id].band}
+                            compact
+                          />
+                        ) : null}
+                        <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      </div>
                     </div>
                     <div className="mt-4 flex flex-1 gap-4">
                       {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
@@ -704,7 +938,16 @@ export default function HomePage() {
                       >
                         {entry.author_name}
                       </button>
-                      <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      <div className="flex items-center gap-2">
+                        {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
+                          <MatchBadge
+                            score={matchScores[entry.id].score}
+                            band={matchScores[entry.id].band}
+                            compact
+                          />
+                        ) : null}
+                        <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      </div>
                     </div>
                     <div className="mt-4 flex flex-1 gap-4">
                       {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (

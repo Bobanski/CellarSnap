@@ -1,176 +1,153 @@
-# TASK: List Scan Enhancement (feature/list-scan-v2)
+# TASK: Algorithm UI (feature/algorithm-ui)
 
 > **Read this file at the start of every session and after every context compaction.**
 
 ## Branch Info
-- **Branch**: `feature/list-scan-v2`
+- **Branch**: `feature/algorithm-ui`
 - **Base**: `main` (includes entry normalization + algorithm core)
-- **Upstream reference**: `origin/list-scan` (friend's original work — cherry-pick the list-scan-specific files, do NOT merge the whole branch as it would regress algorithm/normalization code)
 
 ## Goal
-Enhance the existing list-scan feature by:
-1. Cherry-picking the list-scan code from `origin/list-scan` onto current `main`
-2. Wiring up DB-powered inference (replacing hardcoded regex maps with lookups against our Supabase algorithm tables)
-3. Connecting real algorithm scoring (replacing the hash-based `match_percent` stub)
-4. Persisting scan results to Supabase instead of sessionStorage
+Build the user-facing UI for the wine scoring algorithm. Users should see how well a wine matches their palate, understand why, and explore the sensory breakdown.
 
 ## Context
 
-### What exists on `origin/list-scan` (friend's work)
-A complete list-scan feature across web + Expo mobile:
+### Algorithm Core (already on main)
+The scoring engine is fully implemented in `src/server/algorithm/`:
 
-**Server** (`src/server/listScan/parse.ts` — 1,527 lines):
-- OpenAI GPT-5-mini structured output for parsing wine lists from images, PDFs, and URLs
-- Zod schema validation of AI response
-- Deterministic post-processing: varietal inference, wine type inference, non-wine filtering
-- URL source: HTML stripping, wine-section extraction, heuristic fallback parser
-- Image source: sharp-based resizing, multi-image support (up to 6)
-- PDF source: base64 encoding to OpenAI file input
-- Rate limiting (45 requests / 15 min per user)
+**Profile Assembly** (`profileAssembly.ts` — 969 lines):
+- Assembles a wine's expected sensory profile from Supabase reference data
+- Cascading resolution: exact region+grape match → region-only → grape-only → wine-type fallback
+- Applies modifiers: classification tier, vintage weather, producer, aging curve, grape sensitivity
+- Returns `EffectiveWineProfile` with 16 sensory axes + metadata
 
-**Shared types** (`packages/shared/src/listScan.ts` — 389 lines):
-- Full type system: ListScanResult, ListScanParsedWine, ListScanFilters, ListScanFacets
-- Filtering, ranking, grouping utilities
-- `createStableMatchPercent()` — **STUB**: deterministic hash producing 54–98%, NOT real scoring
+**Scoring Engine** (`scoringEngine.ts`):
+- Cosine similarity between wine profile vector and user preference vector
+- Axis-weighted scoring (user can weight axes they care about more)
+- Returns 0–100 match score + per-axis breakdown
 
-**Web UI**:
-- `ListScanIntakeScreen.tsx` (288 lines) — upload photos/PDF or paste URL
-- `ListScanResultsScreen.tsx` (608 lines) — filterable results with facet dropdowns, price filters, match % column
-- `FacetMultiSelect.tsx` (163 lines) — reusable multi-select dropdown
-- `storage.ts` — sessionStorage persistence (temporary)
-- API route at `POST /api/list-scan/parse`
-- Home page + NavBar updated with list-scan links
+**User Preferences** (`userPreferences.ts`):
+- Aggregates user's past entries (enjoyment ratings, re-drink, expectations) into a preference vector
+- Cross-category preference blending (e.g., liking French whites informs French red preferences)
+- Shrinkage toward population mean for sparse data
 
-**Mobile (Expo)**:
-- Mirrored intake + results screens in React Native
-- `MatchThresholdSlider.tsx` — native slider component
-- API client calling web backend
+**Types** (`types.ts`):
+- 16 sensory axes: body, acidity, tannin, alcohol_perception, fruit_ripeness, oak_presence, earthy, mineral, savory, aromatic_intensity, sweetness_perception, bitterness_phenolic_grip, finish_length, concentration, complexity, freshness
+- `AssembleWineProfileInput`, `EffectiveWineProfile`, `SensoryVector`
 
-### What's hardcoded that should use our DB
-The friend hardcoded ~200 regex patterns for inference. We have richer data in Supabase:
+**API endpoint**: `POST /api/algorithm/score` (handler.ts + route.ts)
 
-| Hardcoded in parse.ts | Should come from DB |
-|---|---|
-| `EXPLICIT_VARIETAL_PATTERNS` (18 varietals) | `base_profiles` table has all grape→wine_type mappings |
-| `APPELLATION_VARIETAL_INFERENCES` (30 appellations) | `base_profiles.region` + `base_profiles.primary_grapes` |
-| `WINE_TYPE_BY_VARIETAL` (45 entries) | `base_profiles.wine_type` grouped by grape |
-| `APPELLATION_INFERENCES` (30 entries) | `base_profiles` + `classification_tier_modifiers` |
-| `createStableMatchPercent()` | Real scoring via `POST /api/algorithm/score` |
+### Supabase Data
+- 13 algorithm tables with 5,909 total rows
+- `base_profiles` — region-grape-winetype sensory profiles
+- `wine_entries` — user entries with canonical_country, canonical_sub_region, wine_type enum
 
-### Supabase tables available for inference
-- `base_profiles` — 200+ rows: region, sub_region, country, wine_type, primary_grapes, blend_style, all 16 sensory axes
-- `classification_tier_modifiers` — classification systems (AOC, DOCG, etc.) with region mappings
-- `producer_modifiers` — 587 producers with region crosswalk
-- `grape_sensitivity_coefficients` — grape-specific sensory adjustments
-
-### Appellation → Grape Mapping CSV (primary inference source)
-A dedicated CSV has been generated with 700+ appellation→grape mappings, including standard blend compositions. This is far more comprehensive than `base_profiles` for inference:
-- **File**: `/home/user/workspace/wine_data_csvs/appellation_grape_map.csv`
-- **Schema**: appellation, country, region, sub_region, primary_grapes, secondary_grapes, wine_type, blend_style, classification, notes
-- **Usage**: This should be the PRIMARY inference source for the DB-powered inference service. Fall back to `base_profiles` only for appellations not covered here.
-- If the CSV doesn't exist yet, check with the user — it may still be in progress. The hardcoded regex patterns in parse.ts serve as the final fallback.
-
-### Known gap in base_profiles
-`base_profiles` covers major regions but is oriented around sensory profiles, not exhaustive appellation mapping. For example, Sancerre→Sauvignon Blanc is there, but Quincy, Reuilly, Menetou-Salon (all also Sauvignon Blanc, Loire) are not. The appellation CSV above fills this gap.
-
-### Algorithm on main (already merged)
-- `src/server/algorithm/profileAssembly.ts` (969 lines) — full profile assembly with cascading fallbacks
-- `src/server/algorithm/scoringEngine.ts` — cosine similarity + axis-weighted scoring
-- `src/server/algorithm/resolver.ts` — entry resolution with alias lookups
-- `POST /api/algorithm/score` endpoint ready to use
+### Design Language (from existing app)
+- Dark theme: `bg-[#0f0a09]`, zinc-100 text, amber-300/400 accents
+- Rounded corners: `rounded-2xl`, `rounded-3xl`
+- Glass cards: `border border-white/10 bg-white/5 backdrop-blur`
+- Amber accent chips: `accent-soft-chip`, `accent-solid-button`
+- Font: system sans-serif stack
+- Mobile-first responsive
 
 ## Step-by-Step Plan
 
-### Phase 1: Cherry-pick list-scan onto main
-1. From `origin/list-scan`, cherry-pick ONLY the list-scan-specific files:
-   - `src/server/listScan/parse.ts`
-   - `src/features/listScan/*` (3 files)
-   - `src/lib/listScan/storage.ts`
-   - `src/app/api/list-scan/parse/route.ts`
-   - `src/app/list-scan/page.tsx` + `results/page.tsx`
-   - `packages/shared/src/listScan.ts`
-   - Mobile files under `apps/mobile/src/screens/listScan/*`, `apps/mobile/app/(app)/list-scan/*`, `apps/mobile/src/lib/api/listScan.ts`, `apps/mobile/src/lib/listScan/storage.ts`
-   - Changes to `src/app/page.tsx` (list-scan link), `src/components/NavBar.tsx` (nav item)
-   - Changes to `src/server/images/openAiImage.ts` (unsupported_format error code + format helpers)
-   - Changes to `packages/shared/src/index.ts` (listScan re-export)
-2. Do NOT bring over: deleted algorithm files, deleted migrations, deleted docs, handler consolidation changes, or any non-list-scan modifications
-3. Verify build passes after cherry-pick
+### Phase 1: Score Display on Wine Entries
+1. On each wine entry card/detail page, show the match score:
+   - Large circular score indicator (0–100) with color coding:
+     - 90–100: Emerald/green — "Perfect match"
+     - 75–89: Amber — "Great match"
+     - 60–74: Zinc/neutral — "Decent match"
+     - Below 60: Rose/red — "Not your style"
+   - Label below: "XX% match to your palate"
+2. Call `POST /api/algorithm/score` when viewing entry detail
+3. Cache scores in component state (no re-fetch on tab switch)
+4. If user has < 5 entries, show "Build your palate profile" prompt instead of score
 
-### Phase 2: DB-powered inference service
-1. Create `src/server/listScan/inference.ts`:
-   - `loadInferenceMap()` — query `base_profiles` on startup/cache, build:
-     - `appellationToGrapes`: Map<string, { grapes: string[], wineType: string }> from region/sub_region → primary_grapes + wine_type
-     - `grapeToWineType`: Map<string, string> from primary_grapes → wine_type
-     - `regionAliases`: Map<string, string> for common name variants (e.g., "Burgundy" → "Bourgogne")
-   - `inferFromAppellation(appellation: string)` — returns { varietal?, wineType? }
-   - `inferFromGrape(grape: string)` — returns { wineType }
-   - Cache with 5-minute TTL (or per-request for serverless)
-2. In `parse.ts`, replace hardcoded maps:
-   - Keep the regex arrays as fast-path fallbacks
-   - After OpenAI parse, run DB inference as an enrichment pass: for any wine with regions but missing varietals, check the DB
-   - DB inference takes priority over hardcoded fallback when both match
-3. Add new appellation→grape mappings our DB has that the hardcoded list misses
+### Phase 2: Sensory Axis Breakdown
+1. Below the score, show a collapsible "Why this score?" section
+2. Radar/spider chart showing the wine's 16-axis profile vs. user preferences:
+   - Wine profile line (amber)
+   - User preference line (emerald)
+   - Overlap = match areas
+3. Below the chart, list the top 3 axes driving the score (positive) and top 2 dragging it down:
+   - "You love high acidity — this wine delivers (4/5)"
+   - "Lower oak than you usually prefer (2/5 vs your 4/5)"
+4. Use axis labels that are human-readable (per user instruction: "Most numeric scales should have labels associated"):
+   - 1 = "Very Low", 2 = "Low", 3 = "Moderate", 4 = "High", 5 = "Very High"
 
-### Phase 3: Real algorithm scoring
-1. After parse + inference, for each wine on the list:
-   - Build an `AssembleWineProfileInput` from the parsed wine data
-   - Call `assembleWineProfile()` to get the expected sensory profile
-   - Call `scoreWineAgainstPreferences()` against the user's preference vector
-   - Replace `match_percent` with the real score (0–100)
-2. The user's preference vector comes from `userPreferences.ts` (already on main) — it aggregates their past entries
-3. If no user preferences exist yet, fall back to the hash-based stub with a "personalized scores unlock after 5+ entries" message
+### Phase 3: Match Bands on Feed/Home
+1. On the home page wine feed, add a small match badge to each entry card:
+   - Pill-shaped: `92%` with color coding
+   - Only show for entries that have been scored
+2. Add a "Best Matches" section at the top of the feed showing top 3 highest-scored recent entries
+3. Add sort option: "Sort by: Recent | Best Match"
 
-### Phase 4: Persist to Supabase
-1. Create migration `051_list_scan_results.sql`:
-   - `list_scan_results` table: scan_id, user_id, source_type, source_label, venue_name, overall_confidence, scanned_at, raw_result (jsonb)
-   - `list_scan_wines` table: id, scan_id, user_id, source_order, menu_label, producer, wine_name, vintage, wine_type, price_display, price_value, varietals (text[]), regions (text[]), match_percent, parse_confidence, rationale
-   - RLS policies scoped to user_id
-2. Replace sessionStorage with Supabase persistence
-3. Add "My Scans" history page
+### Phase 4: Palate Profile Page
+1. New route: `/palate` or `/profile/palate`
+2. Shows the user's current preference vector as a full radar chart
+3. Summary cards:
+   - "Your style": top 3 style families they gravitate toward
+   - "Favorite regions": top regions by average enjoyment
+   - "Preference strength": how many entries inform the profile (confidence indicator)
+4. "Your palate is based on X entries" with progress bar toward richer profile
+5. Optional: compare your palate with a friend's (if friends feature exists)
 
-### Phase 5: Polish
-1. Add loading skeleton to results screen
-2. Add "Scan another" button on results
-3. Show warning banner when match scores are stub (< 5 entries)
-4. Handle edge case: user not logged in → still allow scan but skip scoring + persistence
+### Phase 5: Score API Enhancements
+1. Batch scoring endpoint: `POST /api/algorithm/score/batch` — score multiple wines at once (for feed)
+2. Response caching: store computed scores in a `wine_entry_scores` table:
+   - `wine_entry_id`, `user_id`, `match_score`, `axis_breakdown` (jsonb), `computed_at`
+   - Invalidate when user adds new entries (preference vector changes)
+3. Background recomputation: when a new entry is saved, queue re-scoring of recent entries
 
 ## Quality Checklist
-- [ ] No regressions to algorithm core or entry normalization
+- [ ] Score display works on entry detail page
+- [ ] Radar chart renders correctly on mobile and desktop
+- [ ] Graceful degradation when < 5 entries (no score, prompt to log more)
+- [ ] Batch scoring doesn't cause N+1 queries
 - [ ] Build passes (`npm run build`)
 - [ ] All existing tests pass
-- [ ] New tests for DB inference service
-- [ ] New tests for list-scan API with algorithm scoring
-- [ ] Mobile app compiles with new shared types
-- [ ] Rate limiting works correctly
-- [ ] RLS policies on new tables verified
+- [ ] New tests for score display components
+- [ ] New tests for batch scoring endpoint
+- [ ] Accessible: score colors have sufficient contrast, chart has aria labels
 
 ## Files to Create/Modify
 **New:**
-- `src/server/listScan/inference.ts`
-- `supabase/sql/051_list_scan_results.sql`
-- `src/app/list-scan/history/page.tsx` (optional)
-- `e2e/ws3-list-scan.spec.ts`
-
-**Cherry-pick from origin/list-scan:**
-- All files listed in Phase 1
+- `src/components/WineMatchScore.tsx` — circular score indicator component
+- `src/components/SensoryRadarChart.tsx` — radar chart (use canvas or SVG, no heavy chart lib)
+- `src/components/ScoreBreakdown.tsx` — "why this score" breakdown
+- `src/components/MatchBadge.tsx` — small pill for feed cards
+- `src/app/palate/page.tsx` — palate profile page
+- `src/app/api/algorithm/score/batch/route.ts` — batch endpoint
+- `supabase/sql/052_wine_entry_scores.sql` — score cache table
+- `e2e/ws3-algorithm-ui.spec.ts`
 
 **Modify:**
-- `src/server/listScan/parse.ts` — integrate DB inference
-- `packages/shared/src/listScan.ts` — add scoring-related types
-- `src/features/listScan/ListScanResultsScreen.tsx` — real scores, stub warning
+- Entry detail page — add score display + breakdown
+- Home page / feed — add match badges + "Best Matches" section
+- NavBar — add "Palate" link
+
+## Technical Notes
+- For the radar chart, prefer lightweight SVG over chart libraries (bundle size matters for mobile web)
+- The 16 sensory axes are a lot for a radar chart — consider grouping into 6–8 meta-categories for display:
+  - Structure: body, tannin, acidity, alcohol_perception
+  - Flavor: fruit_ripeness, sweetness_perception, bitterness_phenolic_grip
+  - Aromatics: aromatic_intensity, oak_presence
+  - Earth: earthy, mineral, savory
+  - Quality: finish_length, concentration, complexity, freshness
+- Axis labels must be human-readable (user instruction): "Very Low" through "Very High" on 1–5
 
 ## ⚠️ Branch Safety — READ THIS FIRST
 
-This branch may be running concurrently with `feature/algorithm-ui` and `feature/pocket-sommelier`. Mistakes here can silently corrupt other branches.
+This branch may be running concurrently with `feature/list-scan-v2` and `feature/pocket-sommelier`. Mistakes here can silently corrupt other branches.
 
 **MANDATORY checks — do ALL of these:**
-1. **At session start**: Run `git branch` and confirm you see `* feature/list-scan-v2`. If not, run `git checkout feature/list-scan-v2`.
+1. **At session start**: Run `git branch` and confirm you see `* feature/algorithm-ui`. If not, run `git checkout feature/algorithm-ui`.
 2. **After every context compaction**: Re-read this file AND re-run `git branch` to confirm you're still on the right branch.
-3. **Before every commit**: Run `git branch` again. Verify the output shows `* feature/list-scan-v2`.
+3. **Before every commit**: Run `git branch` again. Verify the output shows `* feature/algorithm-ui`.
 4. **Before every push**: Run `git branch` one more time. Then `git log --oneline -3` to confirm the commits look right.
 5. **Never run** `git checkout main` or switch branches unless you are explicitly told to by the user.
 6. **Never run** `git merge main` or `git rebase main` without explicit user approval — this can introduce conflicts with concurrent branches.
-7. **If using worktrees**: Confirm your working directory path includes `list-scan-v2` before any git operation.
+7. **If using worktrees**: Confirm your working directory path includes `algorithm-ui` before any git operation.
 
 **If you are unsure what branch you're on, STOP and check. Do not guess.**
 

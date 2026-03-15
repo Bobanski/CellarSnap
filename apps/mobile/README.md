@@ -71,6 +71,7 @@ If you later add OAuth providers (Google/Apple), use the same callback path and 
 - Auth: sign in, sign up, sign out, session restore
 - Identifier resolution parity with web (email/username/phone helpers via Supabase RPC)
 - Entries: list entries + create entry (`wine_entries`)
+- Pocket Sommelier: authenticated mobile chat powered by the web `/api/sommelier/chat` endpoint
 - Loading and error states on auth and entries screens
 
 ## Release Builds

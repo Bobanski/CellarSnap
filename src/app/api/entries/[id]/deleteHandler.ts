@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
+import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
+import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
 
 function isMissingGroupedPostSchemaError(message: string) {
   const lower = message.toLowerCase();
@@ -215,6 +217,13 @@ export function createEntryDeleteHandler(
 
     if (paths.length > 0) {
       await deleteClient.storage.from("wine-photos").remove(paths);
+    }
+
+    try {
+      await invalidateUserScoreCache(supabase, user.id);
+      await refreshRecentUserScoreCache(supabase, user.id);
+    } catch {
+      // Cache refresh is best-effort and should not block entry deletion.
     }
 
     return NextResponse.json({ success: true });

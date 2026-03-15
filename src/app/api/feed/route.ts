@@ -28,6 +28,11 @@ type FeedEntryRow = {
   country: string | null;
   region: string | null;
   appellation: string | null;
+  canonical_country?: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  classification?: string | null;
+  wine_type?: string | null;
   consumed_at: string;
   rating: number | null;
   qpr_level: string | null;
@@ -151,7 +156,7 @@ export async function GET(request: Request) {
   ).filter((id) => !blockedUserIdsSet.has(id));
 
   const baseSelectFieldsWithoutDrinkingNow =
-    "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, canonical_country, canonical_region, canonical_sub_region, classification, wine_type, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const baseSelectFields = `${baseSelectFieldsWithoutDrinkingNow}, drinking_now`;
   const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible, entry_group_id`;
   const extendedSelectFieldsWithoutDrinkingNow =
