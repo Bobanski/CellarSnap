@@ -1,3 +1,4 @@
+import { z } from "zod";
 import NavBar from "@/components/NavBar";
 import SensoryRadarChart from "@/components/SensoryRadarChart";
 import { requirePrivateBetaFeatureUser } from "@/lib/access/privateBetaFeatures";
@@ -29,6 +30,18 @@ type PalateEntryRow = {
   appellation?: string | null;
   country?: string | null;
 };
+
+const palateEntryRowSchema = z.object({
+  rating: z.union([z.number(), z.null()]),
+  advanced_notes: z.unknown(),
+  wine_type: z.union([z.string(), z.null()]).optional(),
+  canonical_region: z.union([z.string(), z.null()]).optional(),
+  canonical_sub_region: z.union([z.string(), z.null()]).optional(),
+  canonical_country: z.union([z.string(), z.null()]).optional(),
+  region: z.union([z.string(), z.null()]).optional(),
+  appellation: z.union([z.string(), z.null()]).optional(),
+  country: z.union([z.string(), z.null()]).optional(),
+});
 
 function isWineType(value: string | null | undefined): value is WineType {
   return WINE_TYPE_VALUES.includes(value as WineType);
@@ -110,7 +123,8 @@ async function loadPalateRows(userId: string) {
         .from("wine_entries")
         .select(attempt.fields)
         .eq("user_id", userId)
-        .not("rating", "is", null);
+        .not("rating", "is", null)
+        .limit(1000);
 
       return {
         data: response.data,
@@ -123,7 +137,14 @@ async function loadPalateRows(userId: string) {
     throw new Error(result.error.message);
   }
 
-  return ((result.data ?? []) as unknown) as PalateEntryRow[];
+  // Validate result data against schema before casting
+  const validated = z.array(palateEntryRowSchema).safeParse(result.data ?? []);
+  if (!validated.success) {
+    console.error("Invalid palate entry data:", validated.error);
+    throw new Error("Failed to validate palate entry data");
+  }
+
+  return validated.data;
 }
 
 export default async function PalatePage() {

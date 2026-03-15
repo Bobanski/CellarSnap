@@ -40,7 +40,7 @@ function computeConfidence(
   const wineConfidence =
     FALLBACK_LEVEL_CONFIDENCE[wine.metadata.fallback_level] ??
     FALLBACK_LEVEL_CONFIDENCE[6];
-  const preferenceCoverage = knownAxisCount / SENSORY_AXES.length;
+  const preferenceCoverage = knownAxisCount > 0 ? knownAxisCount / SENSORY_AXES.length : 0;
   const userHistoryConfidence =
     user.event_count / (user.event_count + SHRINKAGE_CONSTANT);
   const preferenceConfidence = (preferenceCoverage + userHistoryConfidence) / 2;

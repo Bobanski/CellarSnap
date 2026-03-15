@@ -151,7 +151,7 @@ export function buildRadarSeries(params: {
     label: group.label,
     wine: averageAxisValues(params.wine, group.axes),
     user: averageAxisValues(params.user, group.axes),
-  }));
+  })).filter((point) => point.wine !== null || point.user !== null);
 }
 
 function describeAlignment(axis: SensoryAxis, userValue: number, wineValue: number) {
@@ -302,8 +302,14 @@ export function buildPalateStyleFamilies(
     },
   ];
 
-  return styleScores
-    .sort((left, right) => right.score - left.score)
+  const sorted = styleScores.sort((left, right) => right.score - left.score);
+  
+  // If all scores are zero (no sensory signal), return empty array
+  if (sorted[0]?.score === 0) {
+    return [];
+  }
+  
+  return sorted
     .slice(0, 3)
     .map((item) => item.label);
 }
