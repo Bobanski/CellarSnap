@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { saveListScanResult } from "@/server/listScan/persistence";
@@ -66,6 +67,10 @@ export function createListScanParseHandler(
       if (!(error instanceof RequestAuthError)) {
         throw error;
       }
+    }
+
+    if (auth && !userHasPrivateBetaFeatureAccess(auth.user)) {
+      return createPrivateBetaFeatureDeniedResponse();
     }
 
     const rateLimit = resolvedDependencies.applyRateLimit({

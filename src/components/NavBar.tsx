@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import AlertsMenu from "@/components/AlertsMenu";
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Profile", href: "/profile" },
   { label: "Feedback", href: "/feedback" },
 ];
+const PRIVATE_BETA_NAV_HREFS = new Set(["/list-scan", "/palate", "/sommelier"]);
 
 function isItemActive({
   href,
@@ -53,8 +55,12 @@ export default function NavBar({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
+  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
   const [mobileOpenPathname, setMobileOpenPathname] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const navItems = hasPrivateBetaFeatureAccess
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter(({ href }) => !PRIVATE_BETA_NAV_HREFS.has(href));
 
   const mobileOpen = mobileOpenPathname === pathname;
   const isNewEntryActive = pathname === "/entries/new";
@@ -104,7 +110,7 @@ export default function NavBar({
         <div className="flex items-center gap-2">
           {/* ── Desktop nav (md+) ── */}
           <div className="hidden items-center gap-2 md:flex">
-            {NAV_ITEMS.map(({ label, href }) => {
+            {navItems.map(({ label, href }) => {
               const active = isItemActive({ href, pathname, activeHrefOverride });
               return active ? (
                 <span
@@ -214,7 +220,7 @@ export default function NavBar({
       {mobileOpen ? (
         <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-white/10 bg-[#14100f] p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:hidden">
           <div className="space-y-1">
-            {NAV_ITEMS.map(({ label, href }) => {
+            {navItems.map(({ label, href }) => {
               const active = isItemActive({ href, pathname, activeHrefOverride });
               return (
                 <Link

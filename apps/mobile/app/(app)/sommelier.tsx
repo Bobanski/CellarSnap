@@ -11,10 +11,15 @@ import {
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import {
+  Redirect,
+} from "expo-router";
+import { canAccessPrivateBetaFeatures } from "@cellarsnap/shared";
+import {
   sendSommelierChat,
   type MobileSommelierMessage,
   type MobileSommelierSource,
 } from "@/src/lib/api/sommelier";
+import { useAuth } from "@/src/providers/AuthProvider";
 
 type ChatMessage = {
   id: string;
@@ -34,6 +39,7 @@ function createMessageId(prefix: "user" | "assistant") {
 }
 
 export default function SommelierScreen() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "intro",
@@ -99,6 +105,10 @@ export default function SommelierScreen() {
   };
 
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
+
+  if (!canAccessPrivateBetaFeatures(user?.email)) {
+    return <Redirect href="/(app)/home" />;
+  }
 
   return (
     <View style={styles.screen}>

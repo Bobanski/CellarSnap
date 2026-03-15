@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { assertPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ListScanResultsScreen from "@/features/listScan/ListScanResultsScreen";
 
 function ListScanResultsPageFallback() {
@@ -15,7 +17,14 @@ function ListScanResultsPageFallback() {
   );
 }
 
-export default function ListScanResultsPage() {
+export default async function ListScanResultsPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  assertPrivateBetaFeatureAccess(user);
+
   return (
     <Suspense fallback={<ListScanResultsPageFallback />}>
       <ListScanResultsScreen />

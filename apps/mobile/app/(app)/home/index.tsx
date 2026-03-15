@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { router, useFocusEffect, type RelativePathString } from "expo-router";
 import {
+  canAccessPrivateBetaFeatures,
   PRIVACY_LEVEL_LABELS,
   QPR_LEVEL_LABELS,
   normalizePrivacyLevel,
@@ -451,6 +452,7 @@ function HomeEntryCard({
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const hasPrivateBetaFeatureAccess = canAccessPrivateBetaFeatures(user?.email);
   const hasLoadedHomeRef = useRef(false);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
@@ -1176,12 +1178,14 @@ export default function HomeScreen() {
             >
               <AppText style={styles.primaryButtonText}>+ Record a new pour</AppText>
             </Pressable>
-            <Pressable
-              style={styles.secondaryCtaButton}
-              onPress={() => router.push("../list-scan" as RelativePathString)}
-            >
-              <AppText style={styles.secondaryCtaButtonText}>Scan/Upload a list</AppText>
-            </Pressable>
+            {hasPrivateBetaFeatureAccess ? (
+              <Pressable
+                style={styles.secondaryCtaButton}
+                onPress={() => router.push("../list-scan" as RelativePathString)}
+              >
+                <AppText style={styles.secondaryCtaButtonText}>Scan/Upload a list</AppText>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
           <View style={styles.inlineCtaRow}>
@@ -1191,14 +1195,16 @@ export default function HomeScreen() {
             >
               <AppText style={styles.inlineCtaButtonText}>+ Record a new pour</AppText>
             </Pressable>
-            <Pressable
-              style={styles.inlineSecondaryCtaButton}
-              onPress={() => router.push("../list-scan" as RelativePathString)}
-            >
-              <AppText style={styles.inlineSecondaryCtaButtonText}>
-                Scan/Upload a list
-              </AppText>
-            </Pressable>
+            {hasPrivateBetaFeatureAccess ? (
+              <Pressable
+                style={styles.inlineSecondaryCtaButton}
+                onPress={() => router.push("../list-scan" as RelativePathString)}
+              >
+                <AppText style={styles.inlineSecondaryCtaButtonText}>
+                  Scan/Upload a list
+                </AppText>
+              </Pressable>
+            ) : null}
           </View>
         )}
 

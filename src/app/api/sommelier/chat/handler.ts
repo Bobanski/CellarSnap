@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { streamSommelierChat, chatWithSommelier } from "@/server/sommelier/chat";
 import {
   appendSommelierMessages,
@@ -63,6 +64,10 @@ export function createSommelierChatHandler(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       throw error;
+    }
+
+    if (!userHasPrivateBetaFeatureAccess(auth.user)) {
+      return createPrivateBetaFeatureDeniedResponse();
     }
 
     const rateLimit = applyRateLimit({

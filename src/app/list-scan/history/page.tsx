@@ -1,5 +1,14 @@
+import { assertPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ListScanHistoryScreen from "@/features/listScan/ListScanHistoryScreen";
 
-export default function ListScanHistoryPage() {
+export default async function ListScanHistoryPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  assertPrivateBetaFeatureAccess(user);
+
   return <ListScanHistoryScreen />;
 }

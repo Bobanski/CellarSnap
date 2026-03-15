@@ -15,6 +15,7 @@ import {
   fetchAlgorithmScore,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
+import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
@@ -114,6 +115,7 @@ export default function EntryDetailPage() {
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
+  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(true);
@@ -351,6 +353,15 @@ export default function EntryDetailPage() {
     let isMounted = true;
 
     const loadScore = async () => {
+      if (!hasPrivateBetaFeatureAccess) {
+        if (isMounted) {
+          setScoreResult(null);
+          setScoreError(null);
+          setScoreLoading(false);
+        }
+        return;
+      }
+
       if (!entry || !currentUserId) {
         return;
       }
@@ -390,7 +401,7 @@ export default function EntryDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [entry, currentUserId]);
+  }, [entry, currentUserId, hasPrivateBetaFeatureAccess]);
 
   const onDelete = async () => {
     if (!entryId) {
@@ -980,52 +991,58 @@ export default function EntryDetailPage() {
           </div>
 
           <div className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            {scoreLoading ? (
-              <div className="rounded-3xl border border-white/10 bg-black/25 p-5 text-sm text-zinc-400">
-                Calculating your palate match...
-              </div>
-            ) : scoreResult && !isScoreProfileBuilding && scoreResult.display_score ? (
-              <>
-                <WineMatchScore
-                  score={scoreResult.score}
-                  band={scoreResult.band}
-                  confidence={scoreResult.confidence}
-                />
-                <ScoreBreakdown result={scoreResult} defaultOpen />
-              </>
-            ) : (
-              <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
-                  Palate match
-                </p>
-                <h2 className="mt-2 text-lg font-semibold text-zinc-50">
-                  {isScoreProfileBuilding
-                    ? "Build your palate profile"
-                    : "Match score not ready yet"}
-                </h2>
-                <p className="mt-2 text-sm text-zinc-300">
-                  {isScoreProfileBuilding
-                    ? `We need at least 5 scored entries with sensory notes. You currently have ${scoreResult?.preference_event_count ?? 0}.`
-                    : scoreError ??
-                      scoreResult?.confidence_warning ??
-                      "We need a little more profile detail before showing a stable match score."}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Link
-                    href="/entries/new"
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
-                  >
-                    Log another wine
-                  </Link>
-                  <Link
-                    href="/palate"
-                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/50 hover:text-amber-200"
-                  >
-                    View palate profile
-                  </Link>
-                </div>
-              </div>
-            )}
+            {hasPrivateBetaFeatureAccess
+              ? scoreLoading
+                ? (
+                  <div className="rounded-3xl border border-white/10 bg-black/25 p-5 text-sm text-zinc-400">
+                    Calculating your palate match...
+                  </div>
+                )
+                : scoreResult && !isScoreProfileBuilding && scoreResult.display_score
+                  ? (
+                    <>
+                      <WineMatchScore
+                        score={scoreResult.score}
+                        band={scoreResult.band}
+                        confidence={scoreResult.confidence}
+                      />
+                      <ScoreBreakdown result={scoreResult} defaultOpen />
+                    </>
+                  )
+                  : (
+                    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+                      <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                        Palate match
+                      </p>
+                      <h2 className="mt-2 text-lg font-semibold text-zinc-50">
+                        {isScoreProfileBuilding
+                          ? "Build your palate profile"
+                          : "Match score not ready yet"}
+                      </h2>
+                      <p className="mt-2 text-sm text-zinc-300">
+                        {isScoreProfileBuilding
+                          ? `We need at least 5 scored entries with sensory notes. You currently have ${scoreResult?.preference_event_count ?? 0}.`
+                          : scoreError ??
+                            scoreResult?.confidence_warning ??
+                            "We need a little more profile detail before showing a stable match score."}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <Link
+                          href="/entries/new"
+                          className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+                        >
+                          Log another wine
+                        </Link>
+                        <Link
+                          href="/palate"
+                          className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/50 hover:text-amber-200"
+                        >
+                          View palate profile
+                        </Link>
+                      </div>
+                    </div>
+                  )
+              : null}
 
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">

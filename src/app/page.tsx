@@ -8,6 +8,7 @@ import {
   fetchAlgorithmScoreBatch,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
+import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import MatchBadge from "@/components/MatchBadge";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -237,6 +238,7 @@ function HomeReactionControls({
 
 export default function HomePage() {
   const router = useRouter();
+  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
   const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
@@ -315,6 +317,14 @@ export default function HomePage() {
     let isMounted = true;
 
     const loadMatchScores = async () => {
+      if (!hasPrivateBetaFeatureAccess) {
+        if (isMounted) {
+          setMatchScores({});
+          setMatchScoresLoading(false);
+        }
+        return;
+      }
+
       const items = buildScoreBatchItems(recentEntries, circleEntries);
       if (items.length === 0) {
         if (isMounted) {
@@ -353,7 +363,7 @@ export default function HomePage() {
     return () => {
       isMounted = false;
     };
-  }, [recentEntries, circleEntries]);
+  }, [hasPrivateBetaFeatureAccess, recentEntries, circleEntries]);
 
   const confirmDefaultPrivacy = async () => {
     setSavingPrivacyOnboarding(true);
@@ -461,8 +471,9 @@ export default function HomePage() {
     setCircleEntries((current) => current.map((entry) => applyToEntry(entry)));
   };
 
+  const activeSortMode = hasPrivateBetaFeatureAccess ? sortMode : "recent";
   const sortedRecentEntries =
-    sortMode === "best_match"
+    activeSortMode === "best_match"
       ? [...recentEntries].sort((left, right) => {
           const leftScore = canDisplayAlgorithmMatch(matchScores[left.id])
             ? matchScores[left.id]?.score ?? -1
@@ -471,13 +482,18 @@ export default function HomePage() {
             ? matchScores[right.id]?.score ?? -1
             : -1;
           return rightScore - leftScore;
-        })
+      })
       : recentEntries;
 
-  const bestMatchEntries = [...recentEntries]
-    .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
-    .sort((left, right) => (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0))
-    .slice(0, 3);
+  const bestMatchEntries = hasPrivateBetaFeatureAccess
+    ? [...recentEntries]
+        .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
+        .sort(
+          (left, right) =>
+            (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0)
+        )
+        .slice(0, 3)
+    : [];
 
   if (loading) {
     return (
@@ -518,35 +534,37 @@ export default function HomePage() {
           </p>
         </header>
 
-        <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs uppercase tracking-[0.28em] text-amber-200/70">
-                New
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
-                Pocket Sommelier can now answer with your palate in mind.
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-zinc-300">
-                Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history alongside the structured wine knowledge base.
-              </p>
+        {hasPrivateBetaFeatureAccess ? (
+          <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs uppercase tracking-[0.28em] text-amber-200/70">
+                  New
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
+                  Pocket Sommelier can now answer with your palate in mind.
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-zinc-300">
+                  Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history alongside the structured wine knowledge base.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/sommelier"
+                  className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
+                >
+                  Open Pocket Sommelier
+                </Link>
+                <Link
+                  href="/sommelier/knowledge"
+                  className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                >
+                  Knowledge base
+                </Link>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/sommelier"
-                className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
-              >
-                Open Pocket Sommelier
-              </Link>
-              <Link
-                href="/sommelier/knowledge"
-                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-              >
-                Knowledge base
-              </Link>
-            </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         {!privacyConfirmedAt ? (
           <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-5">
@@ -622,14 +640,16 @@ export default function HomePage() {
             >
               + Record a new pour
             </Link>
-            <div className="mt-3">
-              <Link
-                href="/list-scan"
-                className="inline-block rounded-full border border-emerald-300/30 bg-emerald-400/10 px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/16"
-              >
-                Scan/Upload a list
-              </Link>
-            </div>
+            {hasPrivateBetaFeatureAccess ? (
+              <div className="mt-3">
+                <Link
+                  href="/list-scan"
+                  className="inline-block rounded-full border border-emerald-300/30 bg-emerald-400/10 px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/16"
+                >
+                  Scan/Upload a list
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-col items-start gap-3">
@@ -639,16 +659,18 @@ export default function HomePage() {
             >
               + Record a new pour
             </Link>
-            <Link
-              href="/list-scan"
-              className="inline-block rounded-full border border-emerald-300/30 bg-emerald-400/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/16"
-            >
-              Scan/Upload a list
-            </Link>
+            {hasPrivateBetaFeatureAccess ? (
+              <Link
+                href="/list-scan"
+                className="inline-block rounded-full border border-emerald-300/30 bg-emerald-400/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/16"
+              >
+                Scan/Upload a list
+              </Link>
+            ) : null}
           </div>
         )}
 
-        {!isFirstTime && bestMatchEntries.length > 0 ? (
+        {hasPrivateBetaFeatureAccess && !isFirstTime && bestMatchEntries.length > 0 ? (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -713,24 +735,26 @@ export default function HomePage() {
                   type="button"
                   onClick={() => setSortMode("recent")}
                   className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                    sortMode === "recent"
+                    activeSortMode === "recent"
                       ? "bg-white/10 text-zinc-100"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   Recent
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSortMode("best_match")}
-                  className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                    sortMode === "best_match"
-                      ? "bg-white/10 text-zinc-100"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  Best match
-                </button>
+                {hasPrivateBetaFeatureAccess ? (
+                  <button
+                    type="button"
+                    onClick={() => setSortMode("best_match")}
+                    className={`rounded-full px-3 py-1.5 font-semibold transition ${
+                      activeSortMode === "best_match"
+                        ? "bg-white/10 text-zinc-100"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    Best match
+                  </button>
+                ) : null}
               </div>
             </div>
 

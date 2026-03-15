@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { normalizeAdvancedNotes } from "@/lib/advancedNotes";
 import type { AlgorithmScoreResponse } from "@/lib/algorithm/api";
+import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { MIN_DISPLAY_CONFIDENCE } from "@/server/algorithm/constants";
@@ -356,6 +357,10 @@ export function createAlgorithmScoreHandler(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       throw error;
+    }
+
+    if (!userHasPrivateBetaFeatureAccess(auth.user)) {
+      return createPrivateBetaFeatureDeniedResponse();
     }
 
     let body: unknown;

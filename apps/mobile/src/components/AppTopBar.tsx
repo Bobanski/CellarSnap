@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { canAccessPrivateBetaFeatures } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { supabase } from "@/src/lib/supabase";
@@ -65,6 +66,7 @@ function isMissingAvatarColumn(message: string) {
 export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const hasPrivateBetaFeatureAccess = canAccessPrivateBetaFeatures(user?.email);
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
@@ -76,6 +78,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
   );
   const [dismissingTagId, setDismissingTagId] = useState<string | null>(null);
   const [addingToCellarId, setAddingToCellarId] = useState<string | null>(null);
+  const navItems = hasPrivateBetaFeatureAccess
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter((item) => item.href !== "/(app)/sommelier");
 
   useEffect(() => {
     setMenuOpen(false);
@@ -589,14 +594,16 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       {menuOpen ? (
         <View style={[styles.panel, styles.floatingPanel]}>
           <View style={styles.menuList}>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Pressable
                 key={item.href}
                 style={[
                   styles.menuItem,
                   activeHref === item.href ? styles.menuItemActive : null,
                 ]}
-                onPress={() => router.push(item.href)}
+                onPress={() =>
+                  router.push(item.href as Parameters<typeof router.push>[0])
+                }
               >
                 <AppText
                   style={[

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { getSavedListScanResult } from "@/server/listScan/persistence";
 
@@ -14,6 +15,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     throw error;
+  }
+
+  if (!userHasPrivateBetaFeatureAccess(auth.user)) {
+    return createPrivateBetaFeatureDeniedResponse();
   }
 
   const { scanId } = await context.params;

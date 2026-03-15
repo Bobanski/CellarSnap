@@ -8,6 +8,7 @@ import {
   fetchAlgorithmScoreBatch,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
+import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
@@ -398,6 +399,7 @@ function formatCommentDate(value: string) {
 export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [feedSortMode, setFeedSortMode] = useState<"recent" | "best_match">("recent");
   const [searchQuery, setSearchQuery] = useState("");
@@ -514,6 +516,14 @@ export default function FeedPage() {
     let isMounted = true;
 
     const loadMatchScores = async () => {
+      if (!hasPrivateBetaFeatureAccess) {
+        if (isMounted) {
+          setMatchScores({});
+          setMatchScoresLoading(false);
+        }
+        return;
+      }
+
       const items = buildFeedScoreBatchItems(entries);
       if (items.length === 0) {
         if (isMounted) {
@@ -552,7 +562,7 @@ export default function FeedPage() {
     return () => {
       isMounted = false;
     };
-  }, [entries]);
+  }, [entries, hasPrivateBetaFeatureAccess]);
 
   const toggleReaction = async (entryId: string, emoji: string) => {
     const entry = entries.find((e) => e.id === entryId);
@@ -983,8 +993,9 @@ export default function FeedPage() {
     }
   };
 
+  const activeFeedSortMode = hasPrivateBetaFeatureAccess ? feedSortMode : "recent";
   const sortedEntries =
-    feedSortMode === "best_match"
+    activeFeedSortMode === "best_match"
       ? [...entries].sort((left, right) => {
           const leftScore = canDisplayAlgorithmMatch(matchScores[left.id])
             ? matchScores[left.id]?.score ?? -1
@@ -996,10 +1007,15 @@ export default function FeedPage() {
         })
       : entries;
 
-  const bestMatchEntries = [...entries]
-    .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
-    .sort((left, right) => (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0))
-    .slice(0, 3);
+  const bestMatchEntries = hasPrivateBetaFeatureAccess
+    ? [...entries]
+        .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
+        .sort(
+          (left, right) =>
+            (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0)
+        )
+        .slice(0, 3)
+    : [];
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -1090,24 +1106,26 @@ export default function FeedPage() {
               type="button"
               onClick={() => setFeedSortMode("recent")}
               className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                feedSortMode === "recent"
+                activeFeedSortMode === "recent"
                   ? "bg-white/10 text-zinc-100"
                   : "text-zinc-400 hover:text-zinc-200"
               }`}
             >
               Recent
             </button>
-            <button
-              type="button"
-              onClick={() => setFeedSortMode("best_match")}
-              className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                feedSortMode === "best_match"
-                  ? "bg-white/10 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Best match
-            </button>
+            {hasPrivateBetaFeatureAccess ? (
+              <button
+                type="button"
+                onClick={() => setFeedSortMode("best_match")}
+                className={`rounded-full px-3 py-1.5 font-semibold transition ${
+                  activeFeedSortMode === "best_match"
+                    ? "bg-white/10 text-zinc-100"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Best match
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -1137,7 +1155,7 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-          {bestMatchEntries.length > 0 ? (
+          {hasPrivateBetaFeatureAccess && bestMatchEntries.length > 0 ? (
             <section className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>

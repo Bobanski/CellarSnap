@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
 import NavBar from "@/components/NavBar";
 import SensoryRadarChart from "@/components/SensoryRadarChart";
+import { assertPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import {
   buildPalateStyleFamilies,
   buildRadarSeries,
@@ -132,9 +132,7 @@ export default async function PalatePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  assertPrivateBetaFeatureAccess(user);
 
   const rows = await loadPalateRows(user.id);
   const preferenceEntries: PreferenceSourceEntry[] = rows.map((row) => ({

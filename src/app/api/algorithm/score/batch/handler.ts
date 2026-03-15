@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AlgorithmBatchResult } from "@/lib/algorithm/api";
+import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import {
   buildUserPreferenceVector,
@@ -129,6 +130,10 @@ export function createAlgorithmScoreBatchHandler(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       throw error;
+    }
+
+    if (!userHasPrivateBetaFeatureAccess(auth.user)) {
+      return createPrivateBetaFeatureDeniedResponse();
     }
 
     let body: unknown;
