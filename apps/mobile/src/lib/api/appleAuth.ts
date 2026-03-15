@@ -1,12 +1,22 @@
 import * as AppleAuthentication from "expo-apple-authentication";
 import { supabase } from "@/src/lib/supabase";
 
+function createAppleNonce() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export async function signInWithApple() {
+  const nonce = createAppleNonce();
   const credential = await AppleAuthentication.signInAsync({
     requestedScopes: [
       AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
       AppleAuthentication.AppleAuthenticationScope.EMAIL,
     ],
+    nonce,
   });
 
   if (!credential.identityToken) {
@@ -16,6 +26,8 @@ export async function signInWithApple() {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: "apple",
     token: credential.identityToken,
+    access_token: credential.authorizationCode ?? undefined,
+    nonce,
   });
 
   if (error) {
