@@ -37,6 +37,13 @@ let cachedInferenceMap:
   | {
       loadedAt: number;
       value: ListScanInferenceMap;
+      isError: false;
+    }
+  | {
+      loadedAt: number;
+      value: null;
+      isError: true;
+      errorMessage: string;
     }
   | null = null;
 let inFlightInferenceMapPromise: Promise<ListScanInferenceMap> | null = null;
@@ -260,6 +267,12 @@ async function buildInferenceMap(): Promise<ListScanInferenceMap> {
 export async function loadInferenceMap(): Promise<ListScanInferenceMap> {
   const now = Date.now();
   if (cachedInferenceMap && now - cachedInferenceMap.loadedAt < CACHE_TTL_MS) {
+    if (cachedInferenceMap.isError) {
+      throw new Error(
+        "Inference map unavailable. " +
+        `Last error: ${cachedInferenceMap.errorMessage}`
+      );
+    }
     return cachedInferenceMap.value;
   }
 
@@ -269,8 +282,20 @@ export async function loadInferenceMap(): Promise<ListScanInferenceMap> {
         cachedInferenceMap = {
           loadedAt: Date.now(),
           value,
+          isError: false,
         };
         return value;
+      })
+      .catch((error) => {
+        // Cache the error for the same TTL period to prevent hammering DB
+        cachedInferenceMap = {
+          loadedAt: Date.now(),
+          value: null,
+          isError: true,
+          errorMessage: String(error),
+        };
+        // Re-throw so caller handles it
+        throw error;
       })
       .finally(() => {
         inFlightInferenceMapPromise = null;

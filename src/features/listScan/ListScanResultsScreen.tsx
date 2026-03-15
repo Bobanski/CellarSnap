@@ -325,18 +325,14 @@ export default function ListScanResultsScreen() {
   useEffect(() => {
     let isActive = true;
     const cachedResult = scanId ? readListScanResult(scanId) : null;
-    const initialStateTimer = window.setTimeout(() => {
-      if (!isActive) {
-        return;
-      }
-      setResult(scanId ? cachedResult ?? undefined : null);
-      setLoadError(null);
-    }, 0);
+    
+    // Set initial state synchronously before fetch
+    setResult(scanId ? cachedResult ?? undefined : null);
+    setLoadError(null);
 
     if (!scanId) {
       return () => {
         isActive = false;
-        window.clearTimeout(initialStateTimer);
       };
     }
 
@@ -620,11 +616,26 @@ export default function ListScanResultsScreen() {
                         filters.price_mode === "under" ? filters.price_max : filters.price_min
                       )}
                       onChange={(event) =>
-                        setFilters((current) => ({
-                          ...current,
-                          [current.price_mode === "under" ? "price_max" : "price_min"]:
-                            parseNonNegativePriceInput(event.target.value),
-                        }))
+                        setFilters((current) => {
+                          const newValue = parseNonNegativePriceInput(event.target.value);
+                          // Validate bounds in "between" mode
+                          if (current.price_mode === "between") {
+                            const isMinInput = true; // This is the min input
+                            const otherValue = current.price_max;
+                            // Swap if new min > current max (and max is non-zero)
+                            if (newValue > otherValue && otherValue > 0) {
+                              return {
+                                ...current,
+                                price_min: otherValue,
+                                price_max: newValue,
+                              };
+                            }
+                          }
+                          return {
+                            ...current,
+                            [current.price_mode === "under" ? "price_max" : "price_min"]: newValue,
+                          };
+                        })
                       }
                       className="rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
                     />
@@ -640,11 +651,26 @@ export default function ListScanResultsScreen() {
                         filters.price_mode === "over" ? filters.price_min : filters.price_max
                       )}
                       onChange={(event) =>
-                        setFilters((current) => ({
-                          ...current,
-                          [current.price_mode === "over" ? "price_min" : "price_max"]:
-                            parseNonNegativePriceInput(event.target.value),
-                        }))
+                        setFilters((current) => {
+                          const newValue = parseNonNegativePriceInput(event.target.value);
+                          // Validate bounds in "between" mode
+                          if (current.price_mode === "between") {
+                            const isMaxInput = true; // This is the max input
+                            const otherValue = current.price_min;
+                            // Swap if new max < current min (and new value is non-zero)
+                            if (newValue < otherValue && newValue > 0) {
+                              return {
+                                ...current,
+                                price_min: newValue,
+                                price_max: otherValue,
+                              };
+                            }
+                          }
+                          return {
+                            ...current,
+                            [current.price_mode === "over" ? "price_min" : "price_max"]: newValue,
+                          };
+                        })
                       }
                       className="rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
                     />
@@ -653,45 +679,47 @@ export default function ListScanResultsScreen() {
                 </FilterDropdown>
               </div>
 
-              <div className={wineTypeOpen ? "col-span-2 min-w-0" : "min-w-0"}>
-                <FilterDropdown
-                  label="Wine type"
-                  summary={buildWineTypeSummary(
-                    filters.included_wine_types,
-                    derivedFacets?.wine_types ?? []
-                  )}
-                  open={wineTypeOpen}
-                  onToggle={() => setWineTypeOpen((current) => !current)}
-                >
-                <div className="flex flex-wrap gap-2">
-                  {LIST_SCAN_FILTERABLE_WINE_TYPES.map((type) => {
-                    const available = derivedFacets?.wine_types.includes(type) ?? false;
-                    const selected = filters.included_wine_types.includes(type);
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        disabled={!available}
-                        onClick={() =>
-                          setFilters((current) => ({
-                            ...current,
-                            included_wine_types: current.included_wine_types.includes(type)
-                              ? current.included_wine_types.filter((value) => value !== type)
-                              : [...current.included_wine_types, type],
-                          }))
-                        }
-                        className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${getWineTypeButtonClasses(
-                          type,
-                          selected
-                        )} ${available ? "" : "cursor-not-allowed opacity-35"}`}
-                      >
-                        {listScanWineTypeLabels[type]}
-                      </button>
-                    );
-                  })}
+              {result ? (
+                <div className={wineTypeOpen ? "col-span-2 min-w-0" : "min-w-0"}>
+                  <FilterDropdown
+                    label="Wine type"
+                    summary={buildWineTypeSummary(
+                      filters.included_wine_types,
+                      derivedFacets?.wine_types ?? []
+                    )}
+                    open={wineTypeOpen}
+                    onToggle={() => setWineTypeOpen((current) => !current)}
+                  >
+                  <div className="flex flex-wrap gap-2">
+                    {LIST_SCAN_FILTERABLE_WINE_TYPES.map((type) => {
+                      const available = derivedFacets?.wine_types.includes(type) ?? false;
+                      const selected = filters.included_wine_types.includes(type);
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          disabled={!available}
+                          onClick={() =>
+                            setFilters((current) => ({
+                              ...current,
+                              included_wine_types: current.included_wine_types.includes(type)
+                                ? current.included_wine_types.filter((value) => value !== type)
+                                : [...current.included_wine_types, type],
+                            }))
+                          }
+                          className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${getWineTypeButtonClasses(
+                            type,
+                            selected
+                          )} ${available ? "" : "cursor-not-allowed opacity-35"}`}
+                        >
+                          {listScanWineTypeLabels[type]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  </FilterDropdown>
                 </div>
-                </FilterDropdown>
-              </div>
+              ) : null}
 
               <div className={varietalOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                 <FacetMultiSelect

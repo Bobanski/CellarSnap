@@ -127,6 +127,11 @@ export async function listSavedListScans(
   return ((data ?? []) as SavedListScanRow[])
     .map((row) => {
       const parsed = listScanResultSchema.safeParse(row.raw_result);
+      if (!parsed.success) {
+        // Log for ops/debugging
+        console.warn(`Failed to parse list scan ${row.scan_id}:`, parsed.error);
+        return null;
+      }
       return {
         scan_id: row.scan_id,
         source_type: row.source_type,
@@ -135,8 +140,8 @@ export async function listSavedListScans(
         list_title: row.list_title,
         overall_confidence: row.overall_confidence,
         scanned_at: row.scanned_at,
-        wine_count: parsed.success ? parsed.data.wines.length : 0,
+        wine_count: parsed.data.wines.length,
       } satisfies SavedListScanSummary;
     })
-    .filter((row) => row.scan_id);
+    .filter((row): row is SavedListScanSummary => row !== null);
 }
