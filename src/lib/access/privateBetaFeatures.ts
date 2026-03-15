@@ -4,18 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { canAccessPrivateBetaFeatures } from "@shared";
 
 type UserLike = User | null | undefined;
-type SupabaseWithPublicProfiles = {
-  from: (table: "public_profiles") => {
-    select: (columns: string) => {
-      eq: (column: "id", value: string) => {
-        maybeSingle: () => Promise<{
-          data: { is_test_account?: boolean | null } | null;
-          error: { message: string } | null;
-        }>;
-      };
-    };
-  };
-};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Accept any Supabase client variant to avoid deep type instantiation issues with generic SupabaseClient types
+type SupabaseLike = { from: (...args: any[]) => any };
 
 function isMissingTestAccountSchemaError(message: string) {
   const lower = message.toLowerCase();
@@ -27,7 +18,7 @@ function isMissingTestAccountSchemaError(message: string) {
 }
 
 export async function userHasPrivateBetaFeatureAccess(
-  supabase: SupabaseWithPublicProfiles,
+  supabase: SupabaseLike,
   user: UserLike
 ) {
   if (!user) {
@@ -55,7 +46,7 @@ export async function userHasPrivateBetaFeatureAccess(
 }
 
 export async function assertPrivateBetaFeatureAccessAsync(
-  supabase: SupabaseWithPublicProfiles,
+  supabase: SupabaseLike,
   user: UserLike
 ): Promise<void> {
   if (!user) {
@@ -68,7 +59,7 @@ export async function assertPrivateBetaFeatureAccessAsync(
 }
 
 export async function requirePrivateBetaFeatureUser(
-  supabase: SupabaseWithPublicProfiles,
+  supabase: SupabaseLike,
   user: UserLike
 ): Promise<User> {
   if (!user) {
