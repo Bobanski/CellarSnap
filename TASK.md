@@ -63,6 +63,9 @@ The friend hardcoded ~200 regex patterns for inference. We have richer data in S
 - `producer_modifiers` — 587 producers with region crosswalk
 - `grape_sensitivity_coefficients` — grape-specific sensory adjustments
 
+### Known gap: appellation→grape coverage
+`base_profiles` covers major regions but is oriented around sensory profiles, not exhaustive appellation mapping. For example, Sancerre→Sauvignon Blanc is there, but Quincy, Reuilly, Menetou-Salon (all also Sauvignon Blanc, Loire) are not. A dedicated `appellation_grape_map` CSV/table may be provided separately. If it exists at `/home/user/workspace/wine_data_csvs/appellation_grape_map.csv` or in Supabase as `appellation_grape_map`, use it as the primary inference source and fall back to `base_profiles` for anything it doesn't cover.
+
 ### Algorithm on main (already merged)
 - `src/server/algorithm/profileAssembly.ts` (969 lines) — full profile assembly with cascading fallbacks
 - `src/server/algorithm/scoringEngine.ts` — cosine similarity + axis-weighted scoring
@@ -149,7 +152,19 @@ The friend hardcoded ~200 regex patterns for inference. We have richer data in S
 - `packages/shared/src/listScan.ts` — add scoring-related types
 - `src/features/listScan/ListScanResultsScreen.tsx` — real scores, stub warning
 
-## Git Safety
+## ⚠️ Branch Safety — READ THIS FIRST
+
+This branch may be running concurrently with `feature/algorithm-ui` and `feature/pocket-sommelier`. Mistakes here can silently corrupt other branches.
+
+**MANDATORY checks — do ALL of these:**
+1. **At session start**: Run `git branch` and confirm you see `* feature/list-scan-v2`. If not, run `git checkout feature/list-scan-v2`.
+2. **After every context compaction**: Re-read this file AND re-run `git branch` to confirm you're still on the right branch.
+3. **Before every commit**: Run `git branch` again. Verify the output shows `* feature/list-scan-v2`.
+4. **Before every push**: Run `git branch` one more time. Then `git log --oneline -3` to confirm the commits look right.
+5. **Never run** `git checkout main` or switch branches unless you are explicitly told to by the user.
+6. **Never run** `git merge main` or `git rebase main` without explicit user approval — this can introduce conflicts with concurrent branches.
+7. **If using worktrees**: Confirm your working directory path includes `list-scan-v2` before any git operation.
+
+**If you are unsure what branch you're on, STOP and check. Do not guess.**
+
 - Never run `git commit` or `git push` without explicit user approval
-- Always verify you are on `feature/list-scan-v2` before committing
-- Run `git branch` at the start of every session
