@@ -390,7 +390,6 @@ export default function ListScanResultsScreen() {
 
     return () => {
       isActive = false;
-      window.clearTimeout(initialStateTimer);
     };
   }, [scanId]);
 
