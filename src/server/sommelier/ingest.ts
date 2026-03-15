@@ -46,6 +46,8 @@ const STRUCTURED_TABLES = [
 ] as const;
 
 type StructuredTable = (typeof STRUCTURED_TABLES)[number];
+const DB_READ_PAGE_SIZE = 500;
+const DB_WRITE_BATCH_SIZE = 200;
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -390,6 +392,16 @@ function getRowId(row: DataRow, fallbackIndex: number) {
   return String(fallbackIndex);
 }
 
+function chunkItems<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
 async function batchGenerateEmbeddings(contents: string[]) {
   const embeddings: number[][] = [];
 
@@ -412,6 +424,185 @@ async function loadWineEntryPrimaryGrapes(
   );
 }
 
+async function loadRowsWithFallback(
+  supabase: AdminClient,
+  table: string,
+  selectClauses: string[]
+) {
+  const rows: DataRow[] = [];
+  let offset = 0;
+
+  while (true) {
+    let pageData: DataRow[] | null = null;
+    let pageError: { message: string } | null = null;
+
+    for (const selectClause of selectClauses) {
+      const response = await supabase
+        .from(table)
+        .select(selectClause)
+        .range(offset, offset + DB_READ_PAGE_SIZE - 1);
+
+      if (!response.error) {
+        pageData = (response.data ?? []) as DataRow[];
+        pageError = null;
+        break;
+      }
+
+      if (isAnyMissingDbColumnError(response.error)) {
+        pageError = { message: response.error.message };
+        continue;
+      }
+
+      throw new Error(`Failed to load ${table}: ${response.error.message}`);
+    }
+
+    if (pageError) {
+      throw new Error(`Failed to load ${table}: ${pageError.message}`);
+    }
+
+    const batch = pageData ?? [];
+    rows.push(...batch);
+
+    if (batch.length < DB_READ_PAGE_SIZE) {
+      return rows;
+    }
+
+    offset += DB_READ_PAGE_SIZE;
+  }
+}
+
+async function syncWineKnowledgeChunks(
+  supabase: AdminClient,
+  sourceTable: string,
+  rows: Array<{
+    source_row_id: string;
+    chunk_index: number;
+    content: string;
+    embedding: number[];
+    metadata: Record<string, unknown>;
+  }>
+) {
+  if (rows.length === 0) {
+    const { error: deleteError } = await supabase
+      .from("wine_knowledge_chunks")
+      .delete()
+      .eq("source_table", sourceTable);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    return;
+  }
+
+  const payload = rows.map((row) => ({
+    source_table: sourceTable,
+    source_row_id: row.source_row_id,
+    chunk_index: row.chunk_index,
+    content: row.content,
+    embedding: row.embedding,
+    metadata: row.metadata,
+  }));
+
+  for (const batch of chunkItems(payload, DB_WRITE_BATCH_SIZE)) {
+    const { error: upsertError } = await supabase.from("wine_knowledge_chunks").upsert(batch, {
+      onConflict: "source_table,source_row_id,chunk_index",
+    });
+
+    if (upsertError) {
+      throw new Error(upsertError.message);
+    }
+  }
+
+  const existingRows = await loadRowsWithFallback(supabase, "wine_knowledge_chunks", [
+    "id, source_table, source_row_id, chunk_index",
+  ]);
+  const desiredKeys = new Set(rows.map((row) => `${row.source_row_id}:${row.chunk_index}`));
+  const staleIds = existingRows
+    .filter((row) => normalizeText(row.source_table) === sourceTable)
+    .filter((row) => {
+      const sourceRowId = normalizeText(row.source_row_id);
+      const chunkIndex = toNumber(row.chunk_index) ?? 0;
+      return !desiredKeys.has(`${sourceRowId}:${chunkIndex}`);
+    })
+    .map((row) => toNumber(row.id))
+    .filter((id): id is number => id !== null);
+
+  for (const batch of chunkItems(staleIds, DB_WRITE_BATCH_SIZE)) {
+    const { error: deleteError } = await supabase
+      .from("wine_knowledge_chunks")
+      .delete()
+      .in("id", batch);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+  }
+}
+
+async function replaceGeneralKnowledgeChunks(
+  supabase: AdminClient,
+  documentId: string,
+  rows: Array<{
+    chunk_index: number;
+    content: string;
+    embedding: number[];
+    metadata: Record<string, unknown>;
+  }>
+) {
+  if (rows.length === 0) {
+    const { error: deleteError } = await supabase
+      .from("general_knowledge_chunks")
+      .delete()
+      .eq("document_id", documentId);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    return;
+  }
+
+  const payload = rows.map((row) => ({
+    document_id: documentId,
+    chunk_index: row.chunk_index,
+    content: row.content,
+    embedding: row.embedding,
+    metadata: row.metadata,
+  }));
+
+  for (const batch of chunkItems(payload, DB_WRITE_BATCH_SIZE)) {
+    const { error: upsertError } = await supabase
+      .from("general_knowledge_chunks")
+      .upsert(batch, { onConflict: "document_id,chunk_index" });
+
+    if (upsertError) {
+      throw new Error(upsertError.message);
+    }
+  }
+
+  const existingRows = await loadRowsWithFallback(supabase, "general_knowledge_chunks", [
+    "id, document_id, chunk_index",
+  ]);
+  const desiredChunkIndexes = new Set(rows.map((row) => row.chunk_index));
+  const staleIds = existingRows
+    .filter((row) => normalizeText(row.document_id) === documentId)
+    .filter((row) => !desiredChunkIndexes.has(toNumber(row.chunk_index) ?? 0))
+    .map((row) => toNumber(row.id))
+    .filter((id): id is number => id !== null);
+
+  for (const batch of chunkItems(staleIds, DB_WRITE_BATCH_SIZE)) {
+    const { error: deleteError } = await supabase
+      .from("general_knowledge_chunks")
+      .delete()
+      .in("id", batch);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+  }
+}
+
 async function replaceWineKnowledgeChunks(
   supabase: AdminClient,
   sourceTable: string,
@@ -423,33 +614,7 @@ async function replaceWineKnowledgeChunks(
     metadata: Record<string, unknown>;
   }>
 ) {
-  const { error: deleteError } = await supabase
-    .from("wine_knowledge_chunks")
-    .delete()
-    .eq("source_table", sourceTable);
-
-  if (deleteError) {
-    throw new Error(deleteError.message);
-  }
-
-  if (rows.length === 0) {
-    return;
-  }
-
-  const { error: insertError } = await supabase.from("wine_knowledge_chunks").insert(
-    rows.map((row) => ({
-      source_table: sourceTable,
-      source_row_id: row.source_row_id,
-      chunk_index: row.chunk_index,
-      content: row.content,
-      embedding: row.embedding,
-      metadata: row.metadata,
-    }))
-  );
-
-  if (insertError) {
-    throw new Error(insertError.message);
-  }
+  await syncWineKnowledgeChunks(supabase, sourceTable, rows);
 }
 
 async function chunkDocumentContent({
@@ -474,12 +639,7 @@ export async function ingestStructuredWineKnowledge(
   const summaries: StructuredIngestionSummary[] = [];
 
   for (const table of STRUCTURED_TABLES) {
-    const { data, error } = await supabase.from(table).select("*");
-    if (error) {
-      throw new Error(`Failed to load ${table}: ${error.message}`);
-    }
-
-    const rows = (data ?? []) as DataRow[];
+    const rows = await loadRowsWithFallback(supabase, table, ["*"]);
     const serializedRows = rows
       .map((row, index) => ({
         source_row_id: getRowId(row, index),
@@ -534,31 +694,8 @@ export async function ingestWineEntryEmbeddings(
     "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, consumed_at",
   ];
 
-  let data: EntryEmbeddingRow[] | null = null;
-  let error: { message: string } | null = null;
-
-  for (const selectClause of attempts) {
-    const response = await supabase.from("wine_entries").select(selectClause);
-
-    if (!response.error) {
-      data = (response.data ?? []) as EntryEmbeddingRow[];
-      error = null;
-      break;
-    }
-
-    if (isAnyMissingDbColumnError(response.error)) {
-      error = { message: response.error.message };
-      continue;
-    }
-
-    throw new Error(`Failed to load wine_entries: ${response.error.message}`);
-  }
-
-  if (error) {
-    throw new Error(`Failed to load wine_entries: ${error.message}`);
-  }
-
-  const rows = (data ?? []).filter(
+  const rows = (await loadRowsWithFallback(supabase, "wine_entries", attempts) as EntryEmbeddingRow[])
+    .filter(
     (row) => normalizeText(row.user_id).length > 0
   );
   const primaryGrapesByEntryId = await loadWineEntryPrimaryGrapes(
@@ -693,35 +830,21 @@ export async function ingestKnowledgeDocument(
   });
   const embeddings = await batchGenerateEmbeddings(chunks.map((chunk) => chunk.content));
 
-  const { error: deleteError } = await supabase
-    .from("general_knowledge_chunks")
-    .delete()
-    .eq("document_id", documentResult.data.id);
-
-  if (deleteError) {
-    throw new Error(deleteError.message);
-  }
-
-  if (chunks.length > 0) {
-    const { error: insertError } = await supabase.from("general_knowledge_chunks").insert(
-      chunks.map((chunk, index) => ({
-        document_id: documentResult.data.id,
-        chunk_index: chunk.chunkIndex,
-        content: chunk.content,
-        embedding: embeddings[index] ?? [],
-        metadata: {
-          title: documentResult.data.title,
-          heading: chunk.heading ?? null,
-          approx_tokens: chunk.approxTokens,
-          source_filename: params.sourceFilename ?? null,
-        },
-      }))
-    );
-
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-  }
+  await replaceGeneralKnowledgeChunks(
+    supabase,
+    documentResult.data.id,
+    chunks.map((chunk, index) => ({
+      chunk_index: chunk.chunkIndex,
+      content: chunk.content,
+      embedding: embeddings[index] ?? [],
+      metadata: {
+        title: documentResult.data.title,
+        heading: chunk.heading ?? null,
+        approx_tokens: chunk.approxTokens,
+        source_filename: params.sourceFilename ?? null,
+      },
+    }))
+  );
 
   const { error: updateError } = await supabase
     .from("knowledge_documents")
