@@ -34,6 +34,12 @@ alter table public.wine_entries
   add column if not exists canonical_region text;
 
 alter table public.wine_entries
+  add column if not exists canonical_country text;
+
+alter table public.wine_entries
+  add column if not exists canonical_sub_region text;
+
+alter table public.wine_entries
   add column if not exists canonical_producer text;
 
 alter table public.wine_entries

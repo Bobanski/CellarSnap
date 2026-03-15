@@ -788,9 +788,29 @@ test.describe("Phase 6 route handler regressions", () => {
       viewerUserId: "owner-1",
       existingRating: 92,
     });
+    const persistCalls: Array<Record<string, unknown>> = [];
     const handler = createEntryPutHandler({
       createSupabaseServerClient: async () => supabase.client as never,
       fetchPrimaryGrapesByEntryId: async () => new Map([["entry-1", []]]),
+      persistEntryResolution: async ({ input }) => {
+        persistCalls.push(input as unknown as Record<string, unknown>);
+        return {
+          entry: null,
+          resolution: {
+            canonical_region: null,
+            canonical_country: null,
+            canonical_sub_region: null,
+            canonical_producer: "Domaine Test",
+            canonical_classification: null,
+            canonical_varietal: null,
+            resolution_confidence: 0,
+            fallback_level: 6,
+            region_alias_matched: false,
+            producer_alias_matched: false,
+            resolution_source: "stub" as const,
+          },
+        };
+      },
     });
 
     const response = await handler(
@@ -808,22 +828,24 @@ test.describe("Phase 6 route handler regressions", () => {
 
     expect(response.status).toBe(200);
     expect(supabase.getLastUpdatePayload()).toEqual({
-      raw_region: null,
-      raw_producer: "Domaine Test",
-      raw_classification: null,
-      raw_wine_type: null,
-      canonical_region: null,
-      canonical_producer: "Domaine Test",
-      canonical_classification: null,
-      resolution_confidence: 0,
-      fallback_level: 6,
+      producer: "Domaine Test",
     });
+    expect(persistCalls).toEqual([
+      {
+        region: null,
+        producer: "Domaine Test",
+        classification: null,
+        wine_type: null,
+        country: null,
+        varietal: null,
+      },
+    ]);
     await expect(response.json()).resolves.toMatchObject({
       entry: {
         id: "entry-1",
         user_id: "owner-1",
         rating: 92,
-        canonical_producer: "Domaine Test",
+        producer: "Domaine Test",
         primary_grapes: [],
       },
     });

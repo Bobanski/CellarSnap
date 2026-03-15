@@ -4,7 +4,7 @@ import {
   toComparisonSubmissionPayload,
   toSurveySubmissionPayload,
 } from "../packages/shared/src/entry-flow";
-import { createComparisonPostHandler } from "../src/app/api/entries/[id]/comparison/route";
+import { createComparisonPostHandler } from "../src/app/api/entries/[id]/comparison/handler";
 import { RequestAuthError } from "../src/server/auth/requestAuth";
 
 function makeAuthenticatedUser(id: string) {

@@ -17,6 +17,8 @@ create table if not exists public.scan_resolution_log (
 
   -- Canonical resolved values
   canonical_region text,
+  canonical_country text,
+  canonical_sub_region text,
   canonical_producer text,
   canonical_classification text,
 

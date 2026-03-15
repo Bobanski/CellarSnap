@@ -12,6 +12,7 @@ import { executeWithColumnFallback } from "@/server/db/compat";
 import { resolvePersistedEntryRating } from "@/server/entries/updateValidation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { persistEntryResolution } from "@/server/algorithm/persistEntryResolution";
+import { isValidWineType } from "@/server/algorithm/resolver";
 
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
@@ -445,6 +446,8 @@ export function createEntryPutHandler(
 
     if (shouldRerunResolution) {
       try {
+        const currentWineType =
+          typeof updatedEntry.wine_type === "string" ? updatedEntry.wine_type : null;
         const persistedResolution = await resolvedDependencies.persistEntryResolution({
           supabase,
           entryId: id,
@@ -458,15 +461,7 @@ export function createEntryPutHandler(
               typeof updatedEntry.classification === "string"
                 ? updatedEntry.classification
                 : null,
-            wine_type:
-              updatedEntry.wine_type === "red" ||
-              updatedEntry.wine_type === "white" ||
-              updatedEntry.wine_type === "rose" ||
-              updatedEntry.wine_type === "sparkling" ||
-              updatedEntry.wine_type === "sweet" ||
-              updatedEntry.wine_type === "orange"
-                ? updatedEntry.wine_type
-                : null,
+            wine_type: isValidWineType(currentWineType) ? currentWineType : null,
             country:
               typeof updatedEntry.country === "string" ? updatedEntry.country : null,
             varietal: currentPrimaryGrapes[0]?.name ?? null,
