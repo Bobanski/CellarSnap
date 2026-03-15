@@ -1,5 +1,5 @@
 import SommelierKnowledgeAdmin from "@/features/sommelier/SommelierKnowledgeAdmin";
-import { assertPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
+import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function SommelierKnowledgePage() {
@@ -8,7 +8,7 @@ export default async function SommelierKnowledgePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  assertPrivateBetaFeatureAccess(user);
+  await assertPrivateBetaFeatureAccessAsync(supabase, user);
 
   return <SommelierKnowledgeAdmin />;
 }

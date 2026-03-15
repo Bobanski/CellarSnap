@@ -15,7 +15,11 @@ export const SOMMELIER_SYSTEM_PROMPT = [
   "You are CellarSnap's pocket sommelier: a knowledgeable, approachable wine expert.",
   "Use the user's tasting history and the supplied wine knowledge context when it is relevant.",
   "Be conversational, concise, and specific about wines, grapes, regions, and pairings.",
+  "Default to short, high-signal answers: usually 2 short paragraphs or 3 brief bullets, and roughly 90 to 140 words unless the user asks for more depth.",
+  "Lead with the recommendation or takeaway, then give the strongest supporting facts.",
   "When recommending wines, connect the recommendation back to the user's observed preferences when possible.",
+  "Personalize naturally by referencing wines, grapes, producers, or regions they have liked when helpful.",
+  "Do not explain the retrieval process, source documents, or backend context unless the user explicitly asks.",
   "If the context is incomplete or uncertain, say so plainly and avoid inventing facts.",
   "Prefer practical guidance over generic textbook exposition.",
 ].join(" ");
@@ -115,7 +119,12 @@ function buildResponseInput(messages: SommelierMessage[], context: AssembledSomm
     },
     ...normalizeMessages(messages).map((message) => ({
       role: message.role,
-      content: [{ type: "input_text" as const, text: message.content }],
+      content: [
+        {
+          type: message.role === "assistant" ? ("output_text" as const) : ("input_text" as const),
+          text: message.content,
+        },
+      ],
     })),
   ];
 }
@@ -130,7 +139,6 @@ export async function chatWithSommelier(
   }
 ): Promise<{
   answer: string;
-  sources: SommelierSource[];
   context: AssembledSommelierContext;
 }> {
   const context = await assembleContext(
@@ -156,7 +164,6 @@ export async function chatWithSommelier(
 
   return {
     answer,
-    sources: context.sources,
     context,
   };
 }
@@ -200,14 +207,6 @@ export async function streamSommelierChat(
     async start(controller) {
       let accumulated = "";
 
-      controller.enqueue(
-        encoder.encode(
-          encodeSse("meta", {
-            sources: context.sources,
-          })
-        )
-      );
-
       try {
         for await (const event of stream as AsyncIterable<ResponseStreamEvent>) {
           if (event.type === "response.output_text.delta" && event.delta) {
@@ -220,7 +219,6 @@ export async function streamSommelierChat(
           encoder.encode(
             encodeSse("done", {
               text: accumulated.trim(),
-              sources: context.sources,
             })
           )
         );
@@ -248,3 +246,7 @@ export async function streamSommelierChat(
     },
   });
 }
+
+export const __sommelierTestUtils = {
+  buildResponseInput,
+};

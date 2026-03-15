@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { router, useFocusEffect, type RelativePathString } from "expo-router";
 import {
-  canAccessPrivateBetaFeatures,
   PRIVACY_LEVEL_LABELS,
   QPR_LEVEL_LABELS,
   normalizePrivacyLevel,
@@ -451,8 +450,7 @@ function HomeEntryCard({
 }
 
 export default function HomeScreen() {
-  const { user } = useAuth();
-  const hasPrivateBetaFeatureAccess = canAccessPrivateBetaFeatures(user?.email);
+  const { user, hasPrivateBetaFeatureAccess } = useAuth();
   const hasLoadedHomeRef = useRef(false);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);

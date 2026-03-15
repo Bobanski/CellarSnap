@@ -132,7 +132,7 @@ export function createAlgorithmScoreBatchHandler(
       throw error;
     }
 
-    if (!userHasPrivateBetaFeatureAccess(auth.user)) {
+    if (!(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
       return createPrivateBetaFeatureDeniedResponse();
     }
 

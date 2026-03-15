@@ -33,9 +33,9 @@ export default function SensoryRadarChart({
   wineLabel?: string;
   userLabel?: string;
 }) {
-  const size = 320;
+  const size = 380;
   const center = size / 2;
-  const radius = 112;
+  const radius = 102;
   const rings = [1, 2, 3, 4, 5];
 
   return (
@@ -61,7 +61,7 @@ export default function SensoryRadarChart({
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/5 bg-[#0c0807]">
+      <div className="mt-4 rounded-2xl border border-white/5 bg-[#0c0807] px-2 py-2">
         <svg
           viewBox={`0 0 ${size} ${size}`}
           role="img"
@@ -82,7 +82,7 @@ export default function SensoryRadarChart({
 
           {points.map((point, index) => {
             const angle = (Math.PI * 2 * index) / points.length - Math.PI / 2;
-            const labelRadius = radius + 26;
+            const labelRadius = radius + 34;
             const x = center + Math.cos(angle) * labelRadius;
             const y = center + Math.sin(angle) * labelRadius;
             return (
@@ -101,7 +101,7 @@ export default function SensoryRadarChart({
                   textAnchor={x < center - 12 ? "end" : x > center + 12 ? "start" : "middle"}
                   dominantBaseline="middle"
                   fill="rgba(228,228,231,0.92)"
-                  fontSize="12"
+                  fontSize="11"
                 >
                   {point.label}
                 </text>

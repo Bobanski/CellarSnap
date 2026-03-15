@@ -573,138 +573,6 @@ function buildUploadBlockTranscriptionPrompt(params: {
   );
 }
 
-function isLikelyProducerHeadingLine(value: string) {
-  const normalized = normalizeText(value);
-  if (!normalized || /\$/.test(normalized)) {
-    return false;
-  }
-
-  const lettersOnly = normalized.replace(/[^A-Za-z]/g, "");
-  if (lettersOnly.length < 4) {
-    return false;
-  }
-
-  return !/[a-z]/.test(normalized) && /[A-Z]/.test(normalized);
-}
-
-function findSuspiciousUploadBlockReasons(block: UploadBlock) {
-  const lines = splitTranscribedBlockLines(block.block_text);
-  const producerLineIndexes = lines.reduce<number[]>((indexes, line, index) => {
-    if (isLikelyProducerHeadingLine(line)) {
-      indexes.push(index);
-    }
-    return indexes;
-  }, []);
-  const reasons: string[] = [];
-
-  if (lines.length >= 4) {
-    reasons.push("4+ lines");
-  }
-  if (producerLineIndexes.length >= 2) {
-    reasons.push("multiple producer lines");
-  }
-  if (
-    producerLineIndexes.length >= 2 &&
-    producerLineIndexes.every((value, index) => index === 0 || value - producerLineIndexes[index - 1] <= 2)
-  ) {
-    reasons.push("adjacent producer/detail pairs");
-  }
-  if ((normalizeText(block.block_text)?.length ?? 0) > 140) {
-    reasons.push("long block text");
-  }
-
-  return reasons;
-}
-
-function summarizeSuspiciousUploadBlocks(transcription: UploadBlockResponse) {
-  return transcription.blocks
-    .map((block, index) => {
-      const reasons = findSuspiciousUploadBlockReasons(block);
-      if (reasons.length === 0) {
-        return null;
-      }
-
-      const lines = splitTranscribedBlockLines(block.block_text);
-      const excerpt = (lines[0] ?? normalizeText(block.block_text) ?? "Untitled block").slice(0, 88);
-      return `${index + 1}. "${excerpt}" (${reasons.join(", ")})`;
-    })
-    .filter((entry): entry is string => Boolean(entry))
-    .slice(0, 8);
-}
-
-function buildUploadBlockAuditPrompt(params: {
-  sourceHint: string;
-  sourceLabel: string;
-  continuityInstruction: string;
-  draft: UploadBlockResponse;
-}) {
-  const suspiciousBlocks = summarizeSuspiciousUploadBlocks(params.draft);
-  const suspiciousInstruction =
-    suspiciousBlocks.length > 0
-      ? `Double-check these likely merged draft blocks: ${suspiciousBlocks.join("; ")}. `
-      : "";
-
-  return (
-    `You audit wine entry blocks from ${params.sourceHint}. Return only strict JSON.\n\n` +
-    buildUploadRowBoundaryInstructions() +
-    "Re-read the source from scratch and return the full corrected block list, not a diff. " +
-    "An earlier block transcription may have merged adjacent blank-separated entries, attached the next block's price, or skipped a wine between similar entries. " +
-    "Preserve source order exactly and return one block per visual wine entry. " +
-    `The earlier draft found ${params.draft.blocks.length} blocks. Use that only as a rough check, never as a fixed target. ` +
-    suspiciousInstruction +
-    `${params.continuityInstruction.trim()} ` +
-    "If one block appears to contain producer A/details A and producer B/details B, split it into two blocks. " +
-    "If five blank-separated wine entries are visible, return five blocks in the same order. " +
-    `Source label: ${params.sourceLabel}`
-  );
-}
-
-function scoreUploadBlockTranscription(transcription: UploadBlockResponse) {
-  const suspiciousBlockCount = transcription.blocks.reduce((count, block) => {
-    return count + (findSuspiciousUploadBlockReasons(block).length > 0 ? 1 : 0);
-  }, 0);
-  const blockCount = transcription.blocks.length;
-  const overallConfidence =
-    typeof transcription.overall_confidence === "number" &&
-    Number.isFinite(transcription.overall_confidence)
-      ? transcription.overall_confidence
-      : 0;
-
-  return {
-    suspiciousBlockCount,
-    blockCount,
-    overallConfidence,
-    score: blockCount * 10 - suspiciousBlockCount * 12 + overallConfidence * 2,
-  };
-}
-
-function pickPreferredUploadBlockTranscription(
-  initial: UploadBlockResponse,
-  audited: UploadBlockResponse
-) {
-  const initialScore = scoreUploadBlockTranscription(initial);
-  const auditedScore = scoreUploadBlockTranscription(audited);
-
-  if (auditedScore.score !== initialScore.score) {
-    return auditedScore.score > initialScore.score ? audited : initial;
-  }
-  if (auditedScore.suspiciousBlockCount !== initialScore.suspiciousBlockCount) {
-    return auditedScore.suspiciousBlockCount < initialScore.suspiciousBlockCount
-      ? audited
-      : initial;
-  }
-  if (auditedScore.blockCount !== initialScore.blockCount) {
-    return auditedScore.blockCount > initialScore.blockCount ? audited : initial;
-  }
-  if (auditedScore.overallConfidence !== initialScore.overallConfidence) {
-    return auditedScore.overallConfidence > initialScore.overallConfidence
-      ? audited
-      : initial;
-  }
-
-  return audited;
-}
-
 function isLikelyNonWineEntry(params: {
   menuLabel: string;
   wineName: string | null;
@@ -713,6 +581,16 @@ function isLikelyNonWineEntry(params: {
   regions: string[];
   wineType: ListScanWineType;
 }) {
+  if (
+    WINE_SECTION_HEADING_PATTERN.test(params.menuLabel) &&
+    !params.wineName &&
+    !params.producer &&
+    params.varietals.length === 0 &&
+    params.regions.length === 0
+  ) {
+    return true;
+  }
+
   const context = [params.menuLabel, params.wineName, params.producer, ...params.varietals]
     .filter(Boolean)
     .join(" | ");
@@ -733,6 +611,17 @@ function hasLikelyWineEvidence(params: {
   regions: string[];
   wineType: ListScanWineType;
 }) {
+  if (
+    WINE_SECTION_HEADING_PATTERN.test(params.menuLabel) &&
+    !params.wineName &&
+    !params.producer &&
+    !params.vintage &&
+    params.varietals.length === 0 &&
+    params.regions.length === 0
+  ) {
+    return false;
+  }
+
   if (
     params.wineType === "sparkling" ||
     params.wineType === "white" ||
@@ -1145,6 +1034,12 @@ function applyInferenceToWine(
   inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>>
 ) {
   const inferred = resolveInferenceForWine(wine, inferenceMap);
+  const regions = uniqueValues([
+    ...wine.regions,
+    ...(inferred?.canonicalCountry ? [inferred.canonicalCountry] : []),
+    ...(inferred?.canonicalRegion ? [inferred.canonicalRegion] : []),
+    ...(inferred?.canonicalSubRegion ? [inferred.canonicalSubRegion] : []),
+  ]);
   const varietals = uniqueValues([
     ...wine.varietals,
     ...(inferred?.grapes.length ? inferred.grapes : []),
@@ -1164,12 +1059,13 @@ function applyInferenceToWine(
 
   return {
     ...wine,
+    regions,
     varietals,
     wine_type: wineType,
     rationale: buildListScanRationale({
       wine_type: wineType,
       varietals,
-      regions: wine.regions,
+      regions,
       price_display: wine.price_display,
     }),
   } satisfies ListScanParsedWine;
@@ -1894,7 +1790,7 @@ async function parseUploadedSourceFromVisualBlocks(params: {
     const initialTranscription = await createUploadBlockResponse({
       sourceHint: params.sourceHint,
       userId: params.userId,
-      reasoningEffort: "medium",
+      reasoningEffort: "low",
       input: [
         {
           role: "user",
@@ -1917,56 +1813,11 @@ async function parseUploadedSourceFromVisualBlocks(params: {
       throw new Error("No data returned from list scan");
     }
 
-    const auditedTranscription = await (async () => {
-      try {
-        return await createUploadBlockResponse({
-          sourceHint: params.sourceHint,
-          userId: params.userId,
-          reasoningEffort: "medium",
-          input: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: buildUploadBlockAuditPrompt({
-                    sourceHint: params.sourceHint,
-                    sourceLabel: params.sourceLabel,
-                    continuityInstruction: params.continuityInstruction,
-                    draft: initialTranscription,
-                  }),
-                },
-                ...params.content,
-              ],
-            },
-          ],
-        });
-      } catch (error) {
-        if (isAbortLikeError(error) || isStructuredParsePayloadError(error)) {
-          return {
-            ...initialTranscription,
-            warnings: mergeParsedWarnings(
-              initialTranscription.warnings,
-              [
-                "A follow-up entry-block audit could not complete, so this scan kept the initial block transcription.",
-              ]
-            ),
-          } satisfies UploadBlockResponse;
-        }
-        throw error;
-      }
-    })();
-
-    const preferredTranscription = pickPreferredUploadBlockTranscription(
-      initialTranscription,
-      auditedTranscription
-    );
+    // Keep list scans responsive by defaulting to a single visual transcription pass.
+    const preferredTranscription = initialTranscription;
     const mergedTranscription = {
       ...preferredTranscription,
-      warnings: mergeParsedWarnings(
-        initialTranscription.warnings,
-        auditedTranscription.warnings
-      ),
+      warnings: mergeParsedWarnings(initialTranscription.warnings),
     } satisfies UploadBlockResponse;
 
     if (mergedTranscription.blocks.length === 0) {
@@ -2101,6 +1952,74 @@ async function parseImageSource({
   });
 }
 
+async function extractTextFromPdfFile(file: File) {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
+  try {
+    const result = await parser.getText();
+    return result.text.trim();
+  } finally {
+    await parser.destroy();
+  }
+}
+
+async function parsePdfTextSource({
+  file,
+  sourceLabel,
+  userId,
+}: {
+  file: File;
+  sourceLabel: string | null;
+  userId: string;
+}) {
+  const extractedText = await extractTextFromPdfFile(file);
+  const focusedText = extractStrictWineSectionText(extractedText) || extractedText;
+  const compactedText = compactWineSectionTextForModel(focusedText);
+  const title = normalizeText(sourceLabel) ?? normalizeText(file.name);
+
+  const buildHeuristicFallback = () =>
+    buildHeuristicParsedResponse({
+      text: focusedText,
+      title,
+      fallbackWarning:
+        "This PDF was parsed from extracted text to preserve wine rows and improve normalization.",
+    });
+
+  if (!compactedText.trim()) {
+    const heuristicFallback = buildHeuristicFallback();
+    if (heuristicFallback.wines.length > 0) {
+      return heuristicFallback;
+    }
+    throw new Error("That PDF did not contain readable wine-list text.");
+  }
+
+  try {
+    return await createStructuredResponse({
+      sourceHint: "text extracted from a PDF wine list",
+      userId,
+      input:
+        `PDF label: ${title ?? "Unknown"}\n\n` +
+        "Extract every wine entry from this wine-list text. " +
+        "Each wine listing in the PDF must become exactly one wine object. " +
+        "Never merge adjacent wines into one object, even if they share a producer, region, or section. " +
+        "Preserve the original order from the PDF. " +
+        "Ignore section headers, page furniture, navigation, and non-wine beverages.\n\n" +
+        compactedText,
+    });
+  } catch (error) {
+    const heuristicFallback = buildHeuristicFallback();
+    if (heuristicFallback.wines.length > 0) {
+      return withWarning(
+        heuristicFallback,
+        isAbortLikeError(error) || isStructuredParsePayloadError(error)
+          ? "The live PDF parse did not complete, so this scan used extracted text instead."
+          : "This PDF used a fallback text parser for some entries; review the parsed text carefully."
+      );
+    }
+    throw error;
+  }
+}
+
 async function parsePdfSource({
   file,
   sourceLabel,
@@ -2112,6 +2031,16 @@ async function parsePdfSource({
 }) {
   if (file.size > MAX_FILE_INPUT_BYTES) {
     throw new Error("PDF is too large.");
+  }
+
+  try {
+    return await parsePdfTextSource({
+      file,
+      sourceLabel,
+      userId,
+    });
+  } catch {
+    // Fall back to the visual parser for image-like PDFs or extraction failures.
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -2130,7 +2059,7 @@ async function parsePdfSource({
       {
         type: "input_file",
         filename: file.name || "wine-list.pdf",
-        file_data: buffer.toString("base64"),
+        file_data: `data:application/pdf;base64,${buffer.toString("base64")}`,
       },
     ],
   });

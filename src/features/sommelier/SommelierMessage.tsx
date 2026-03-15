@@ -1,5 +1,4 @@
 import ReactMarkdown from "react-markdown";
-import type { SommelierSource } from "@/server/sommelier/types";
 
 function TypingIndicator() {
   return (
@@ -26,16 +25,12 @@ export default function SommelierMessage({
   role,
   content,
   isStreaming = false,
-  sources = [],
 }: {
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
-  sources?: SommelierSource[];
 }) {
   const isAssistant = role === "assistant";
-  const visibleSources = sources.slice(0, 4);
-  const hiddenSourceCount = Math.max(0, sources.length - visibleSources.length);
 
   return (
     <div className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}>
@@ -86,38 +81,6 @@ export default function SommelierMessage({
             </ReactMarkdown>
           </div>
         )}
-        {isAssistant && sources.length > 0 ? (
-          <div className="mt-4 border-t border-white/10 pt-3">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Context used</p>
-            <div className="mt-2 space-y-2">
-              {visibleSources.map((source) => (
-                <div
-                  key={source.id}
-                  className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold text-zinc-100">{source.label}</p>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-zinc-400">
-                      {source.kind.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-zinc-400">{source.excerpt}</p>
-                  {typeof source.metadata?.source_filename === "string" ? (
-                    <p className="mt-1 text-[11px] text-zinc-500">
-                      {source.metadata.source_filename}
-                      {typeof source.metadata?.heading === "string"
-                        ? ` · ${source.metadata.heading}`
-                        : ""}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-            {hiddenSourceCount > 0 ? (
-              <p className="mt-2 text-xs text-zinc-500">+{hiddenSourceCount} more sources</p>
-            ) : null}
-          </div>
-        ) : null}
       </div>
     </div>
   );

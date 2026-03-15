@@ -4,13 +4,11 @@ import { startTransition, useEffect, useRef, useState } from "react";
 import SommelierInput from "@/features/sommelier/SommelierInput";
 import SommelierMessage from "@/features/sommelier/SommelierMessage";
 import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
-import type { SommelierSource } from "@/server/sommelier/types";
 
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: SommelierSource[];
   isStreaming?: boolean;
 };
 
@@ -68,7 +66,7 @@ export default function SommelierChat() {
       id: "intro",
       role: "assistant",
       content:
-        "I’m ready. Ask about a bottle, a region, a pairing, or what you should try next and I’ll answer using your CellarSnap history plus the knowledge base.",
+        "I’m ready. Ask about a bottle, a region, a pairing, or what you should try next.",
     },
   ]);
   const [pending, setPending] = useState(false);
@@ -112,16 +110,18 @@ export default function SommelierChat() {
     setPending(true);
 
     try {
+      const payload = {
+        messages: [...priorMessages, { role: "user", content: trimmed }],
+        stream: true,
+        ...(conversationId ? { conversationId } : {}),
+      };
+
       const response = await fetch("/api/sommelier/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          messages: [...priorMessages, { role: "user", content: trimmed }],
-          conversationId,
-          stream: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -142,7 +142,6 @@ export default function SommelierChat() {
       }
       const decoder = new TextDecoder();
       let buffer = "";
-      let finalSources: SommelierSource[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -152,13 +151,6 @@ export default function SommelierChat() {
 
         buffer += decoder.decode(value, { stream: true });
         buffer = parseSseBuffer(buffer, (event, data) => {
-          if (event === "meta") {
-            finalSources = Array.isArray(data.sources)
-              ? (data.sources as SommelierSource[])
-              : finalSources;
-            return;
-          }
-
           if (event === "delta") {
             const delta = typeof data.text === "string" ? data.text : "";
             startTransition(() => {
@@ -168,7 +160,6 @@ export default function SommelierChat() {
                     ? {
                         ...message,
                         content: `${message.content}${delta}`,
-                        sources: finalSources,
                         isStreaming: true,
                       }
                     : message
@@ -179,9 +170,6 @@ export default function SommelierChat() {
           }
 
           if (event === "done") {
-            finalSources = Array.isArray(data.sources)
-              ? (data.sources as SommelierSource[])
-              : finalSources;
             startTransition(() => {
               setMessages((current) =>
                 current.map((message) =>
@@ -192,7 +180,6 @@ export default function SommelierChat() {
                           typeof data.text === "string" && data.text.trim().length > 0
                             ? data.text
                             : message.content,
-                        sources: finalSources,
                         isStreaming: false,
                       }
                     : message
@@ -243,22 +230,16 @@ export default function SommelierChat() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6">
-        <p className="text-xs uppercase tracking-[0.3em] text-amber-200/75">
-          Guided prompts
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
-          Ask about taste, regions, pairings, or your next bottle.
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm leading-7 text-zinc-300">
-          The chat blends your CellarSnap tasting history with structured wine-reference data and any uploaded knowledge documents.
-        </p>
-        {showSuggestions ? (
-          <div className="mt-5">
+      {showSuggestions ? (
+        <div className="rounded-[1.75rem] border border-amber-300/20 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_40%),linear-gradient(180deg,rgba(251,191,36,0.10),rgba(120,53,15,0.10))] p-5">
+          <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">
+            Try asking
+          </p>
+          <div className="mt-4">
             <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div
         role="log"
@@ -273,7 +254,6 @@ export default function SommelierChat() {
             role={message.role}
             content={message.content}
             isStreaming={Boolean(message.isStreaming)}
-            sources={message.sources}
           />
         ))}
         <div ref={messagesEndRef} aria-hidden="true" />

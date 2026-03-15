@@ -41,17 +41,19 @@ export async function sendSommelierChat(params: {
 
   let response: Response;
   try {
+    const payload = {
+      messages: params.messages,
+      stream: false,
+      ...(params.conversationId ? { conversationId: params.conversationId } : {}),
+    };
+
     response = await fetch(`${baseUrl}/api/sommelier/chat`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        messages: params.messages,
-        conversationId: params.conversationId,
-        stream: false,
-      }),
+      body: JSON.stringify(payload),
     });
   } catch {
     return {

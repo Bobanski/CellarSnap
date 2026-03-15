@@ -66,7 +66,7 @@ export function createSommelierChatHandler(
       throw error;
     }
 
-    if (!userHasPrivateBetaFeatureAccess(auth.user)) {
+    if (!(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
       return createPrivateBetaFeatureDeniedResponse();
     }
 
@@ -168,7 +168,6 @@ export function createSommelierChatHandler(
         {
           answer: result.answer,
           conversationId,
-          sources: result.sources,
         },
         { headers }
       );

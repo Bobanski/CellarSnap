@@ -1,6 +1,6 @@
 import NavBar from "@/components/NavBar";
 import SensoryRadarChart from "@/components/SensoryRadarChart";
-import { assertPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
+import { requirePrivateBetaFeatureUser } from "@/lib/access/privateBetaFeatures";
 import {
   buildPalateStyleFamilies,
   buildRadarSeries,
@@ -132,30 +132,41 @@ export default async function PalatePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  assertPrivateBetaFeatureAccess(user);
+  const viewer = await requirePrivateBetaFeatureUser(supabase, user);
 
-  const rows = await loadPalateRows(user.id);
+  const rows = await loadPalateRows(viewer.id);
   const preferenceEntries: PreferenceSourceEntry[] = rows.map((row) => ({
     rating: row.rating ?? null,
     advanced_notes: normalizeAdvancedNotes(row.advanced_notes),
     wine_type: isWineType(row.wine_type) ? row.wine_type : null,
   }));
+  const detailedEntries = preferenceEntries.filter((entry) => entry.advanced_notes);
+  const detailedWineTypes = new Set(
+    detailedEntries
+      .map((entry) => entry.wine_type)
+      .filter((wineType): wineType is WineType => Boolean(wineType))
+  );
 
-  const typeProfiles = WINE_TYPE_VALUES.map((wineType) => ({
-    wineType,
-    profile: buildUserPreferenceVector(preferenceEntries, wineType),
-  }))
-    .filter(
-      (item) =>
-        item.profile.event_count > 0 || Object.keys(item.profile.sensory).length > 0
-    )
+  const typeProfiles = WINE_TYPE_VALUES.filter((wineType) => detailedWineTypes.has(wineType))
+    .map((wineType) => ({
+      wineType,
+      profile: buildUserPreferenceVector(preferenceEntries, wineType),
+    }))
+    .filter((item) => item.profile.event_count > 0)
     .sort((left, right) => right.profile.event_count - left.profile.event_count);
 
-  const primaryProfile = typeProfiles[0] ?? null;
+  const fallbackOverallProfile =
+    typeProfiles.length === 0 && detailedEntries.length > 0
+      ? {
+          wineType: null as WineType | null,
+          profile: buildUserPreferenceVector(preferenceEntries, WINE_TYPE_VALUES[0]),
+        }
+      : null;
+  const primaryProfile = typeProfiles[0] ?? fallbackOverallProfile;
   const preferenceStrength = describePreferenceStrength(primaryProfile?.profile.event_count ?? 0);
   const favoriteRegions = aggregateFavoriteRegions(rows);
   const totalRatedEntries = rows.length;
-  const totalDetailedEntries = preferenceEntries.filter((entry) => entry.advanced_notes).length;
+  const totalDetailedEntries = detailedEntries.length;
   const leadingAxes = primaryProfile
     ? Object.entries(primaryProfile.profile.sensory)
         .sort((left, right) => (right[1] ?? 0) - (left[1] ?? 0))
@@ -178,26 +189,26 @@ export default async function PalatePage() {
 
         <header className="space-y-3">
           <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
-            Palate profile
+            Your palate
           </span>
           <h1 className="text-3xl font-semibold text-zinc-50">
-            Your taste profile, grounded in what you have actually logged.
+            A snapshot of the wines you naturally gravitate toward.
           </h1>
           <p className="max-w-3xl text-sm text-zinc-300">
-            This view reflects the same structured algorithm used for match scoring:
-            sensory notes, per-type preferences, and confidence from your tasting history.
+            Based on the wines you have rated and the tasting details you have added,
+            here is a simple read on your style right now.
           </p>
         </header>
 
         {!primaryProfile ? (
           <section className="rounded-3xl border border-white/10 bg-white/5 p-8">
             <h2 className="text-xl font-semibold text-zinc-50">
-              Build your palate profile
+              Give us a little more to work with
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-300">
-              Start rating wines and add a few sensory notes like body, acidity, tannin,
-              alcohol, or sweetness. The profile becomes much more useful once we can see
-              several detailed entries across your tastings.
+              Rate a few wines and add taste details like body, acidity, tannin,
+              alcohol, or sweetness. Once you have a handful of detailed entries,
+              this page becomes much more personal and specific.
             </p>
           </section>
         ) : (
@@ -244,7 +255,7 @@ export default async function PalatePage() {
 
               <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Preference strength
+                  How dialed in this is
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold text-zinc-50">
                   {preferenceStrength.label}
@@ -257,8 +268,8 @@ export default async function PalatePage() {
                   />
                 </div>
                 <p className="mt-3 text-sm text-zinc-400">
-                  Your palate is based on {primaryProfile.profile.event_count} entries with sensory notes,
-                  from {totalRatedEntries} rated entries overall.
+                  This read is based on {primaryProfile.profile.event_count} detailed tasting entries,
+                  from {totalRatedEntries} rated wines overall.
                 </p>
               </article>
             </section>
@@ -266,22 +277,27 @@ export default async function PalatePage() {
             <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.9fr)]">
               <SensoryRadarChart
                 points={radarPoints}
-                wineLabel="Neutral midpoint"
-                userLabel={`${primaryProfile.wineType} palate`}
+                wineLabel="Baseline"
+                userLabel={
+                  primaryProfile.wineType
+                    ? `${primaryProfile.wineType} palate`
+                    : "Overall palate"
+                }
               />
 
               <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
-                    Primary profile
+                    Your clearest signal
                   </p>
                   <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
-                    {primaryProfile.wineType[0]?.toUpperCase()}
-                    {primaryProfile.wineType.slice(1)} palate
+                    {primaryProfile.wineType
+                      ? `${primaryProfile.wineType[0]?.toUpperCase()}${primaryProfile.wineType.slice(1)} palate`
+                      : "Overall palate"}
                   </h2>
                   <p className="mt-2 text-sm text-zinc-300">
-                    The chart compares your strongest current profile against a neutral midpoint,
-                    so peaks show where your preferences stand out most clearly.
+                    This chart shows where your tastes stand out most right now.
+                    Bigger peaks mean stronger preferences.
                   </p>
                 </div>
 
@@ -295,7 +311,7 @@ export default async function PalatePage() {
                         {SENSORY_AXIS_LABELS[axis as keyof typeof SENSORY_AXIS_LABELS]}
                       </p>
                       <p className="mt-1 text-sm text-zinc-200">
-                        {formatSensoryLevel(value)} leaning
+                        {formatSensoryLevel(value)} right now
                       </p>
                     </div>
                   ))}
@@ -303,18 +319,19 @@ export default async function PalatePage() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            {typeProfiles.length > 0 ? (
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    By wine type
+                    Your taste by style
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-zinc-50">
-                    Profile coverage across your cellar
+                    Where we have the clearest read
                   </h2>
                 </div>
                 <p className="text-sm text-zinc-400">
-                  {totalDetailedEntries} entries currently include usable sensory notes.
+                  {totalDetailedEntries} wines include enough tasting detail to break this out by style.
                 </p>
               </div>
 
@@ -349,7 +366,8 @@ export default async function PalatePage() {
                   </article>
                 ))}
               </div>
-            </section>
+              </section>
+            ) : null}
           </>
         )}
       </div>

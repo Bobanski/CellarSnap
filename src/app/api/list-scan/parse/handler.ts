@@ -69,7 +69,7 @@ export function createListScanParseHandler(
       }
     }
 
-    if (auth && !userHasPrivateBetaFeatureAccess(auth.user)) {
+    if (auth && !(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
       return createPrivateBetaFeatureDeniedResponse();
     }
 

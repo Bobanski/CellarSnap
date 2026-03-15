@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { resolveListScanWineType, type ListScanResult } from "@shared";
 import { createListScanParseHandler } from "../src/app/api/list-scan/parse/handler";
+import { userHasPrivateBetaFeatureAccess } from "../src/lib/access/privateBetaFeatures";
 import { RequestAuthError } from "../src/server/auth/requestAuth";
 import {
   __listScanTestUtils,
@@ -57,7 +58,7 @@ test.describe("WS3 list scan parse handler", () => {
       requireRequestAuth: async () =>
         ({
           supabase: { from: () => ({}) } as never,
-          user: { id: "user-1" } as never,
+          user: { id: "user-1", email: "eitansneider1@gmail.com" } as never,
           authMode: "bearer",
         }) as never,
       parseWineListSource: async (params) => {
@@ -154,7 +155,37 @@ test.describe("WS3 list scan parse handler", () => {
     );
 
     expect(enriched.varietals).toEqual(["Sauvignon Blanc", "Semillon"]);
+    expect(enriched.regions).toEqual(["Graves", "France", "Bordeaux"]);
     expect(enriched.wine_type).toBe("white");
+  });
+
+  test("test accounts automatically receive private beta access", async () => {
+    const hasAccess = await userHasPrivateBetaFeatureAccess(
+      {
+        from() {
+          return {
+            select() {
+              return {
+                eq() {
+                  return {
+                    maybeSingle: async () => ({
+                      data: { is_test_account: true },
+                      error: null,
+                    }),
+                  };
+                },
+              };
+            },
+          };
+        },
+      },
+      {
+        id: "user-2",
+        email: "someone@example.com",
+      } as never
+    );
+
+    expect(hasAccess).toBeTruthy();
   });
 
   test("truncated structured output is marked as recovered", () => {

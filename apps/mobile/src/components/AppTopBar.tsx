@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { canAccessPrivateBetaFeatures } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { supabase } from "@/src/lib/supabase";
@@ -65,8 +64,7 @@ function isMissingAvatarColumn(message: string) {
 
 export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
-  const hasPrivateBetaFeatureAccess = canAccessPrivateBetaFeatures(user?.email);
+  const { user, signOut, hasPrivateBetaFeatureAccess } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);

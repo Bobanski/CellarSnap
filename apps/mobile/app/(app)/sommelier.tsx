@@ -13,11 +13,9 @@ import { AppText } from "@/src/components/AppText";
 import {
   Redirect,
 } from "expo-router";
-import { canAccessPrivateBetaFeatures } from "@cellarsnap/shared";
 import {
   sendSommelierChat,
   type MobileSommelierMessage,
-  type MobileSommelierSource,
 } from "@/src/lib/api/sommelier";
 import { useAuth } from "@/src/providers/AuthProvider";
 
@@ -25,7 +23,6 @@ type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: MobileSommelierSource[];
 };
 
 const DEFAULT_SUGGESTIONS = [
@@ -39,13 +36,13 @@ function createMessageId(prefix: "user" | "assistant") {
 }
 
 export default function SommelierScreen() {
-  const { user } = useAuth();
+  const { hasPrivateBetaFeatureAccess } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "intro",
       role: "assistant",
       content:
-        "Ask about a bottle, a region, a pairing, or what you should try next. I’ll answer with your CellarSnap history plus the sommelier knowledge base.",
+        "Ask about a bottle, a region, a pairing, or what you should try next.",
     },
   ]);
   const [value, setValue] = useState("");
@@ -98,7 +95,6 @@ export default function SommelierScreen() {
         id: createMessageId("assistant"),
         role: "assistant",
         content: result.answer || "I couldn't finish that answer. Try again in a moment.",
-        sources: result.sources,
       },
     ]);
     setPending(false);
@@ -106,7 +102,7 @@ export default function SommelierScreen() {
 
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
-  if (!canAccessPrivateBetaFeatures(user?.email)) {
+  if (!hasPrivateBetaFeatureAccess) {
     return <Redirect href="/(app)/home" />;
   }
 
@@ -123,29 +119,6 @@ export default function SommelierScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.hero}>
-            <AppText style={styles.eyebrow}>Pocket Sommelier</AppText>
-            <AppText style={styles.title}>A wine guide tuned to your palate.</AppText>
-            <AppText style={styles.subtitle}>
-              Ask for pairings, region explainers, producer notes, or what to open next.
-            </AppText>
-            {showSuggestions ? (
-              <View style={styles.suggestionWrap}>
-                {DEFAULT_SUGGESTIONS.map((suggestion) => (
-                  <Pressable
-                    key={suggestion}
-                    style={styles.suggestionChip}
-                    onPress={() => void sendMessage(suggestion)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ask: ${suggestion}`}
-                  >
-                    <AppText style={styles.suggestionText}>{suggestion}</AppText>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </View>
-
           <View style={styles.chatStack}>
             {messages.map((message) => {
               const isAssistant = message.role === "assistant";
@@ -161,16 +134,6 @@ export default function SommelierScreen() {
                     {isAssistant ? "Pocket Sommelier" : "You"}
                   </AppText>
                   <AppText style={styles.messageText}>{message.content}</AppText>
-                  {isAssistant && message.sources?.length ? (
-                    <View style={styles.sourcesWrap}>
-                      {message.sources.slice(0, 3).map((source) => (
-                        <View key={source.id} style={styles.sourceCard}>
-                          <AppText style={styles.sourceLabel}>{source.label}</AppText>
-                          <AppText style={styles.sourceExcerpt}>{source.excerpt}</AppText>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
                 </View>
               );
             })}
@@ -182,6 +145,25 @@ export default function SommelierScreen() {
               </View>
             ) : null}
           </View>
+
+          {showSuggestions ? (
+            <View style={styles.suggestionSection}>
+              <AppText style={styles.suggestionEyebrow}>Try asking</AppText>
+              <View style={styles.suggestionWrap}>
+                {DEFAULT_SUGGESTIONS.map((suggestion) => (
+                  <Pressable
+                    key={suggestion}
+                    style={styles.suggestionChip}
+                    onPress={() => void sendMessage(suggestion)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ask: ${suggestion}`}
+                  >
+                    <AppText style={styles.suggestionText}>{suggestion}</AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {error ? (
             <View style={styles.errorCard}>
@@ -230,36 +212,19 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 16,
   },
-  hero: {
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    padding: 20,
-    gap: 8,
+  suggestionSection: {
+    gap: 10,
   },
-  eyebrow: {
-    color: "#fde68a",
-    fontSize: 12,
-    letterSpacing: 2,
+  suggestionEyebrow: {
+    color: "#71717a",
+    fontSize: 11,
+    letterSpacing: 1.8,
     textTransform: "uppercase",
-  },
-  title: {
-    color: "#fafaf9",
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "700",
-  },
-  subtitle: {
-    color: "#d4d4d8",
-    fontSize: 15,
-    lineHeight: 24,
   },
   suggestionWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginTop: 8,
   },
   suggestionChip: {
     borderRadius: 999,
@@ -307,29 +272,6 @@ const styles = StyleSheet.create({
     color: "#fcd34d",
     fontSize: 15,
     lineHeight: 24,
-  },
-  sourcesWrap: {
-    gap: 8,
-    marginTop: 12,
-  },
-  sourceCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.18)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  sourceLabel: {
-    color: "#f4f4f5",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  sourceExcerpt: {
-    color: "#a1a1aa",
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
   },
   errorCard: {
     borderRadius: 18,

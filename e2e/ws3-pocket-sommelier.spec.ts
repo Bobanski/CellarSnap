@@ -3,15 +3,16 @@ import type { User } from "@supabase/supabase-js";
 import { createSommelierChatHandler } from "../src/app/api/sommelier/chat/handler";
 import { createSommelierIngestHandler } from "../src/app/api/sommelier/ingest/handler";
 import { createSommelierUploadDocumentHandler } from "../src/app/api/sommelier/upload-document/handler";
+import { __sommelierTestUtils } from "../src/server/sommelier/chat";
 import { chunkMarkdown, chunkText } from "../src/server/sommelier/chunker";
 import { RequestAuthError } from "../src/server/auth/requestAuth";
 
-function makeUser(id: string): User {
+function makeUser(id: string, email = `${id}@example.com`): User {
   return {
     id,
     aud: "authenticated",
     role: "authenticated",
-    email: `${id}@example.com`,
+    email,
     app_metadata: {},
     user_metadata: {},
     identities: [],
@@ -43,7 +44,7 @@ test.describe("WS3 pocket sommelier", () => {
     const handler = createSommelierChatHandler({
       requireRequestAuth: async () =>
         ({
-          user: makeUser("user-1"),
+          user: makeUser("user-1", "eitansneider1@gmail.com"),
           supabase: {} as never,
           authMode: "bearer",
         }) as never,
@@ -77,14 +78,14 @@ test.describe("WS3 pocket sommelier", () => {
     const payload = await response.json();
     expect(payload.answer).toContain("nebbiolo");
     expect(payload.conversationId).toBe("11111111-1111-4111-8111-111111111111");
-    expect(payload.sources).toHaveLength(1);
+    expect(payload.sources).toBeUndefined();
   });
 
   test("chat handler returns event stream payload when stream=true", async () => {
     const handler = createSommelierChatHandler({
       requireRequestAuth: async () =>
         ({
-          user: makeUser("user-1"),
+          user: makeUser("user-1", "eitansneider1@gmail.com"),
           supabase: {} as never,
           authMode: "bearer",
         }) as never,
@@ -131,6 +132,26 @@ test.describe("WS3 pocket sommelier", () => {
     const payload = await response.text();
     expect(payload).toContain("event: delta");
     expect(payload).toContain("Barolo works well.");
+  });
+
+  test("assistant history is encoded as output_text for Responses API", () => {
+    const input = __sommelierTestUtils.buildResponseInput(
+      [
+        { role: "user", content: "Recommend something from Piedmont." },
+        { role: "assistant", content: "Try nebbiolo with truffle pasta." },
+        { role: "user", content: "What about white options?" },
+      ],
+      {
+        contextText: "User likes savory, high-acid wines.",
+        sources: [],
+      }
+    );
+
+    const assistantTurn = input.find((message) => message.role === "assistant");
+    const userTurns = input.filter((message) => message.role === "user");
+
+    expect(assistantTurn?.content[0]?.type).toBe("output_text");
+    expect(userTurns.every((message) => message.content[0]?.type === "input_text")).toBeTruthy();
   });
 
   test("chat handler returns 401 when auth fails", async () => {
