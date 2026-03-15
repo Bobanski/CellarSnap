@@ -14,6 +14,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.cellarsnap.mobile",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
         "NSCameraUsageDescription": "CellarSnap uses your camera to scan wine labels for quick and accurate entry creation."
@@ -31,6 +32,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-asset",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {

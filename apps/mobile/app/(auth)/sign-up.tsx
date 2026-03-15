@@ -1,6 +1,9 @@
 import {
+  useEffect,
   useMemo,
-  useState } from "react";
+  useState,
+} from "react";
+import * as AppleAuthentication from "expo-apple-authentication";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -24,6 +27,7 @@ import {
   normalizePhone,
 } from "@cellarsnap/shared";
 import { checkPhoneAvailable, checkUsernameAvailable } from "@/src/lib/api/auth";
+import { signInWithApple } from "@/src/lib/api/appleAuth";
 import { buildAuthRedirectUrl, supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
@@ -51,8 +55,36 @@ export default function SignUpScreen() {
     email: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (Platform.OS !== "ios") {
+      setIsAppleAuthAvailable(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    void AppleAuthentication.isAvailableAsync()
+      .then((isAvailable) => {
+        if (isMounted) {
+          setIsAppleAuthAvailable(isAvailable);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsAppleAuthAvailable(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const submitEmailSignup = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -220,6 +252,41 @@ export default function SignUpScreen() {
     await submitEmailSignup();
   };
 
+  const submitAppleSignIn = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    setInfoMessage(null);
+
+    try {
+      await signInWithApple();
+      router.replace("/(app)/home");
+    } catch (error) {
+      const errorCode =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : null;
+
+      if (errorCode === "ERR_REQUEST_CANCELED") {
+        return;
+      }
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in with Apple right now."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -329,6 +396,27 @@ export default function SignUpScreen() {
               <AppText style={styles.primaryButtonText}>Create Account</AppText>
             )}
           </Pressable>
+
+          {Platform.OS === "ios" && isAppleAuthAvailable ? (
+            <>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <AppText style={styles.dividerText}>or</AppText>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                cornerRadius={12}
+                onPress={() => void submitAppleSignIn()}
+                style={[
+                  styles.appleButton,
+                  isSubmitting ? styles.disabledButton : null,
+                ]}
+              />
+            </>
+          ) : null}
 
           <AppText style={styles.termsText}>
             By selecting Create Account, you agree to our privacy and terms policies.
@@ -516,6 +604,27 @@ const styles = StyleSheet.create({
     color: "#09090b",
     fontSize: 14,
     fontWeight: "700",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  dividerText: {
+    color: "#71717a",
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  appleButton: {
+    width: "100%",
+    height: 46,
   },
   termsText: {
     color: "#a1a1aa",
