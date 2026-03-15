@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-type FacetOptionTone = "neutral" | "white" | "red";
+import type { ListScanFilterAccentTone as FacetOptionTone } from "@shared";
 
 type FacetMultiSelectProps = {
   label: string;
@@ -77,6 +76,12 @@ export default function FacetMultiSelect({
   };
 
   const getTokenClasses = (tone: FacetOptionTone) => {
+    if (tone === "rose") {
+      return "border-[#C76886]/45 bg-[#C76886]/16 text-[#fde5ec]";
+    }
+    if (tone === "orange") {
+      return "border-[#D17A2A]/45 bg-[#D17A2A]/16 text-[#fde6c7]";
+    }
     if (tone === "white") {
       return "border-[#C9A84C]/45 bg-[#C9A84C]/16 text-[#f5e8bc]";
     }
@@ -87,6 +92,12 @@ export default function FacetMultiSelect({
   };
 
   const getSuggestionClasses = (tone: FacetOptionTone) => {
+    if (tone === "rose") {
+      return "border-[#C76886]/30 bg-[#C76886]/8 text-[#f1bfd0] hover:border-[#C76886]/55 hover:bg-[#C76886]/14";
+    }
+    if (tone === "orange") {
+      return "border-[#D17A2A]/30 bg-[#D17A2A]/8 text-[#f2c78f] hover:border-[#D17A2A]/55 hover:bg-[#D17A2A]/14";
+    }
     if (tone === "white") {
       return "border-[#C9A84C]/30 bg-[#C9A84C]/8 text-[#e7d491] hover:border-[#C9A84C]/55 hover:bg-[#C9A84C]/14";
     }

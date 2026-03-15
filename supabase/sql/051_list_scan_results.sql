@@ -34,7 +34,7 @@ create table if not exists public.list_scan_wines (
   vintage text,
   wine_type text not null
     constraint list_scan_wines_wine_type_check
-    check (wine_type in ('sparkling', 'white', 'red', 'dessert_fortified', 'unknown')),
+    check (wine_type in ('sparkling', 'white', 'rose', 'orange', 'red', 'dessert_fortified', 'unknown')),
   price_display text,
   price_value numeric(10,2),
   varietals text[] not null default '{}',

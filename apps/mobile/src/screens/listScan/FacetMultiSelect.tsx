@@ -88,6 +88,8 @@ export default function FacetMultiSelect({
                     style={[
                       styles.token,
                       tone === "white" ? styles.tokenWhite : null,
+                      tone === "rose" ? styles.tokenRose : null,
+                      tone === "orange" ? styles.tokenOrange : null,
                       tone === "red" ? styles.tokenRed : null,
                     ]}
                   >
@@ -95,6 +97,8 @@ export default function FacetMultiSelect({
                       style={[
                         styles.tokenText,
                         tone === "white" ? styles.tokenTextWhite : null,
+                        tone === "rose" ? styles.tokenTextRose : null,
+                        tone === "orange" ? styles.tokenTextOrange : null,
                         tone === "red" ? styles.tokenTextRed : null,
                       ]}
                     >
@@ -136,6 +140,8 @@ export default function FacetMultiSelect({
                           style={[
                             styles.suggestionButton,
                             tone === "white" ? styles.suggestionButtonWhite : null,
+                            tone === "rose" ? styles.suggestionButtonRose : null,
+                            tone === "orange" ? styles.suggestionButtonOrange : null,
                             tone === "red" ? styles.suggestionButtonRed : null,
                           ]}
                           onPress={() => {
@@ -148,6 +154,8 @@ export default function FacetMultiSelect({
                             style={[
                               styles.suggestionText,
                               tone === "white" ? styles.suggestionTextWhite : null,
+                              tone === "rose" ? styles.suggestionTextRose : null,
+                              tone === "orange" ? styles.suggestionTextOrange : null,
                               tone === "red" ? styles.suggestionTextRed : null,
                             ]}
                           >
@@ -241,6 +249,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(201,168,76,0.45)",
     backgroundColor: "rgba(201,168,76,0.16)",
   },
+  tokenRose: {
+    borderColor: "rgba(199,104,134,0.45)",
+    backgroundColor: "rgba(199,104,134,0.16)",
+  },
+  tokenOrange: {
+    borderColor: "rgba(209,122,42,0.45)",
+    backgroundColor: "rgba(209,122,42,0.16)",
+  },
   tokenRed: {
     borderColor: "rgba(74,48,96,0.60)",
     backgroundColor: "rgba(74,48,96,0.72)",
@@ -252,6 +268,12 @@ const styles = StyleSheet.create({
   },
   tokenTextWhite: {
     color: "#f5e8bc",
+  },
+  tokenTextRose: {
+    color: "#fde5ec",
+  },
+  tokenTextOrange: {
+    color: "#fde6c7",
   },
   tokenTextRed: {
     color: "#f3eef8",
@@ -299,6 +321,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(201,168,76,0.30)",
     backgroundColor: "rgba(201,168,76,0.08)",
   },
+  suggestionButtonRose: {
+    borderColor: "rgba(199,104,134,0.30)",
+    backgroundColor: "rgba(199,104,134,0.08)",
+  },
+  suggestionButtonOrange: {
+    borderColor: "rgba(209,122,42,0.30)",
+    backgroundColor: "rgba(209,122,42,0.08)",
+  },
   suggestionButtonRed: {
     borderColor: "rgba(74,48,96,0.45)",
     backgroundColor: "rgba(74,48,96,0.15)",
@@ -309,6 +339,12 @@ const styles = StyleSheet.create({
   },
   suggestionTextWhite: {
     color: "#e7d491",
+  },
+  suggestionTextRose: {
+    color: "#f1bfd0",
+  },
+  suggestionTextOrange: {
+    color: "#f2c78f",
   },
   suggestionTextRed: {
     color: "#dbcfe7",

@@ -221,9 +221,13 @@ const SPARKLING_WINE_PATTERN =
   /\b(?:sparkling|champagne|prosecco|cava|cr(?:e|\u00e9)mant|pet[\s-]?nat|franciacorta|corpinnat|sekt|m(?:e|\u00e9)thode champenoise|metodo classico|blanc de blancs|blanc de noirs|moscato d[' ]asti|lambrusco)\b/i;
 const DESSERT_FORTIFIED_WINE_PATTERN =
   /\b(?:dessert|fortified|port|sherry|madeira|marsala|vin santo|sauternes|tokaji|ice wine|eiswein|banyuls|rutherglen)\b/i;
+const ROSE_WINE_PATTERN =
+  /\b(?:rose|ros\u00e9|rosado|rosato|vin gris|provence rose|provence ros\u00e9|tavel|bandol rose|bandol ros\u00e9|cerasuolo)\b/i;
+const ORANGE_WINE_PATTERN =
+  /\b(?:orange|skin contact|amber wine|ramato|vino bianco macerato)\b/i;
 const RED_WINE_PATTERN = /\b(?:red|rosso|rouge|tinto)\b/i;
 const WHITE_WINE_PATTERN =
-  /\b(?:white|ros(?:e|\u00e9)|orange|skin contact|bianco|blanc|blanco)\b/i;
+  /\b(?:white|bianco|blanc|blanco)\b/i;
 
 const responseSchema = z.object({
   venue_name: z.string().nullable().optional(),
@@ -237,7 +241,15 @@ const responseSchema = z.object({
       wine_name: z.string().nullable().optional(),
       vintage: z.string().nullable().optional(),
       wine_type: z
-        .enum(["sparkling", "white", "red", "dessert_fortified", "unknown"])
+        .enum([
+          "sparkling",
+          "white",
+          "rose",
+          "orange",
+          "red",
+          "dessert_fortified",
+          "unknown",
+        ])
         .nullable()
         .optional(),
       price_display: z.string().nullable().optional(),
@@ -399,13 +411,41 @@ function normalizeFacetValues(values?: string[] | null) {
 }
 
 function normalizeWineType(value?: string | null): ListScanWineType {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return "unknown";
+  }
   if (
-    value === "sparkling" ||
-    value === "white" ||
-    value === "red" ||
-    value === "dessert_fortified"
+    normalized === "rosé" ||
+    normalized === "rose" ||
+    normalized === "rosado" ||
+    normalized === "rosato"
   ) {
-    return value;
+    return "rose";
+  }
+  if (
+    normalized === "orange wine" ||
+    normalized === "orange" ||
+    normalized === "skin contact"
+  ) {
+    return "orange";
+  }
+  if (
+    normalized === "dessert" ||
+    normalized === "sweet" ||
+    normalized === "fortified"
+  ) {
+    return "dessert_fortified";
+  }
+  if (
+    normalized === "sparkling" ||
+    normalized === "white" ||
+    normalized === "rose" ||
+    normalized === "orange" ||
+    normalized === "red" ||
+    normalized === "dessert_fortified"
+  ) {
+    return normalized as ListScanWineType;
   }
   return "unknown";
 }
@@ -774,6 +814,12 @@ function inferWineTypeFromContext(params: {
   if (DESSERT_FORTIFIED_WINE_PATTERN.test(context)) {
     return "dessert_fortified";
   }
+  if (ROSE_WINE_PATTERN.test(context)) {
+    return "rose";
+  }
+  if (ORANGE_WINE_PATTERN.test(context)) {
+    return "orange";
+  }
 
   const appellationType = APPELLATION_INFERENCES.find(
     (entry) => entry.wineType && entry.pattern.test(context)
@@ -785,6 +831,8 @@ function inferWineTypeFromContext(params: {
   if (
     params.wineType === "sparkling" ||
     params.wineType === "dessert_fortified" ||
+    params.wineType === "rose" ||
+    params.wineType === "orange" ||
     params.wineType === "red" ||
     params.wineType === "white"
   ) {
@@ -798,6 +846,12 @@ function inferWineTypeFromContext(params: {
 
   if (RED_WINE_PATTERN.test(context) && !WHITE_WINE_PATTERN.test(context)) {
     return "red";
+  }
+  if (ROSE_WINE_PATTERN.test(context)) {
+    return "rose";
+  }
+  if (ORANGE_WINE_PATTERN.test(context)) {
+    return "orange";
   }
   if (WHITE_WINE_PATTERN.test(context)) {
     return "white";
@@ -1019,7 +1073,13 @@ function toListScanWineType(wineType: WineType | null): ListScanWineType | null 
   if (wineType === "sweet") {
     return "dessert_fortified";
   }
-  if (wineType === "red" || wineType === "white" || wineType === "sparkling") {
+  if (
+    wineType === "red" ||
+    wineType === "white" ||
+    wineType === "rose" ||
+    wineType === "orange" ||
+    wineType === "sparkling"
+  ) {
     return wineType;
   }
   return null;
@@ -1404,7 +1464,7 @@ function baseInstructions(sourceHint: string) {
     "When a wine has both by-the-glass and by-the-bottle pricing, keep both prices in price_display in source order, formatted like $22/$110, and do not leave either price in menu_label. " +
     "Treat each wine entry block as exactly one wine object. A single wine may span multiple stacked rows, but blank space before the next item is a strong boundary between wines. Only merge lines when they clearly belong to the same entry, and never combine adjacent wines or borrow details from a neighboring row. " +
     "Use section headers and visual layout to infer wine_type whenever possible; for example, wines listed under a Red section should be red even if the grape is omitted. " +
-    "wine_type must be one of sparkling, white, red, dessert_fortified, or unknown. " +
+    "wine_type must be one of sparkling, white, rose, orange, red, dessert_fortified, or unknown. " +
     "varietals must contain canonical grape or blend names only when there is enough evidence. " +
     "regions must include any place-based identifiers found or strongly implied by the wine listing, from broad to specific, such as country, region, AVA, village, appellation, or area. " +
     "Exclude anything that is not a wine listing. Never return food, beer, cocktails, coffee, tea, water, juice, soda, or other non-wine beverages. " +
@@ -1469,6 +1529,8 @@ async function createStructuredResponse(params: {
                         enum: [
                           "sparkling",
                           "white",
+                          "rose",
+                          "orange",
                           "red",
                           "dessert_fortified",
                           "unknown",
@@ -2147,7 +2209,7 @@ function extractLikelyWineSectionText(text: string) {
 
   const headingPatterns = [
     /^##\s*wines?\b/i,
-    /^##\s*(sparkling|white|red|rose|rosé|dessert|fortified|sweet)\b/i,
+    /^##\s*(sparkling|white|red|rose|rosé|orange|skin contact|dessert|fortified|sweet)\b/i,
   ];
   const stopPattern =
     /^##\s*(beer|beers|cocktail|cocktails|soft beverage|soft beverages|spirits?|coffee|tea|desserts?)\b/i;
@@ -2304,13 +2366,13 @@ function detectWineTypeFromText(
   if (normalized.includes("red")) {
     return "red";
   }
-  if (
-    normalized.includes("white") ||
-    normalized.includes("rosé") ||
-    normalized.includes("rose") ||
-    normalized.includes("orange") ||
-    normalized.includes("skin contact")
-  ) {
+  if (normalized.includes("rosé") || normalized.includes("rose")) {
+    return "rose";
+  }
+  if (normalized.includes("orange") || normalized.includes("skin contact")) {
+    return "orange";
+  }
+  if (normalized.includes("white")) {
     return "white";
   }
   return currentType;
@@ -2326,6 +2388,12 @@ function detectWineTypeFromSignals(
   if (DESSERT_FORTIFIED_WINE_PATTERN.test(value)) {
     return "dessert_fortified";
   }
+  if (ROSE_WINE_PATTERN.test(value)) {
+    return "rose";
+  }
+  if (ORANGE_WINE_PATTERN.test(value)) {
+    return "orange";
+  }
 
   const appellationType = APPELLATION_INFERENCES.find(
     (entry) => entry.wineType && entry.pattern.test(value)
@@ -2336,6 +2404,12 @@ function detectWineTypeFromSignals(
 
   if (RED_WINE_PATTERN.test(value) && !WHITE_WINE_PATTERN.test(value)) {
     return "red";
+  }
+  if (ROSE_WINE_PATTERN.test(value)) {
+    return "rose";
+  }
+  if (ORANGE_WINE_PATTERN.test(value)) {
+    return "orange";
   }
   if (WHITE_WINE_PATTERN.test(value)) {
     return "white";
@@ -2654,7 +2728,9 @@ export async function parseWineListSource(
 export const __listScanTestUtils = {
   applyInferenceToWine,
   applyStubMatchPercents,
+  detectWineTypeFromSignals,
   extractJson,
+  normalizeWineType,
 };
 
 export function detectListScanSourceType(params: {

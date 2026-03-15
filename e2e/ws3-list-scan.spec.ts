@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { ListScanResult } from "@shared";
+import { resolveListScanWineType, type ListScanResult } from "@shared";
 import { createListScanParseHandler } from "../src/app/api/list-scan/parse/handler";
 import { RequestAuthError } from "../src/server/auth/requestAuth";
 import {
@@ -171,5 +171,40 @@ test.describe("WS3 list scan parse handler", () => {
     expect(Array.isArray(extracted.value.wines)).toBeTruthy();
     expect(extracted.value.wines).toHaveLength(1);
     expect(extracted.value.wines[0]?.menu_label).toBe("Wine A");
+  });
+
+  test("shared wine-type resolution keeps rose and orange distinct", () => {
+    expect(
+      resolveListScanWineType({
+        wine_type: "unknown",
+        menu_label: "Skin Contact Ribolla Gialla",
+        wine_name: null,
+        producer: null,
+        regions: [],
+        varietals: [],
+      })
+    ).toBe("orange");
+
+    expect(
+      resolveListScanWineType({
+        wine_type: "unknown",
+        menu_label: "Cotes de Provence Rose",
+        wine_name: null,
+        producer: null,
+        regions: [],
+        varietals: [],
+      })
+    ).toBe("rose");
+  });
+
+  test("parser normalization accepts rose aliases and section signals", () => {
+    expect(__listScanTestUtils.normalizeWineType("rosé")).toBe("rose");
+    expect(__listScanTestUtils.normalizeWineType("orange")).toBe("orange");
+    expect(__listScanTestUtils.normalizeWineType("dessert")).toBe("dessert_fortified");
+
+    expect(__listScanTestUtils.detectWineTypeFromSignals("## Orange / Skin Contact", "unknown")).toBe(
+      "orange"
+    );
+    expect(__listScanTestUtils.detectWineTypeFromSignals("## Rose", "unknown")).toBe("rose");
   });
 });

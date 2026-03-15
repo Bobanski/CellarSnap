@@ -4,6 +4,8 @@ export const LIST_SCAN_SOURCE_TYPES = ["image", "pdf", "url"] as const;
 export const LIST_SCAN_FILTERABLE_WINE_TYPES = [
   "sparkling",
   "white",
+  "rose",
+  "orange",
   "red",
   "dessert_fortified",
 ] as const;
@@ -12,8 +14,17 @@ export const LIST_SCAN_ALL_WINE_TYPES = [
   "unknown",
 ] as const;
 export const LIST_SCAN_PRICE_MODES = ["any", "under", "between", "over"] as const;
-export const LIST_SCAN_FILTER_ACCENT_TONES = ["neutral", "white", "red"] as const;
+export const LIST_SCAN_FILTER_ACCENT_TONES = [
+  "neutral",
+  "white",
+  "rose",
+  "orange",
+  "red",
+] as const;
+export const LIST_SCAN_MAX_IMAGE_COUNT = 6;
 export const LIST_SCAN_WHITE_ACCENT_HEX = "#C9A84C";
+export const LIST_SCAN_ROSE_ACCENT_HEX = "#C76886";
+export const LIST_SCAN_ORANGE_ACCENT_HEX = "#D17A2A";
 export const LIST_SCAN_RED_ACCENT_HEX = "#4A3060";
 export const LIST_SCAN_SCORE_MODES = ["personalized", "stub"] as const;
 
@@ -29,6 +40,8 @@ export type ListScanScoreMode = (typeof LIST_SCAN_SCORE_MODES)[number];
 export const listScanWineTypeLabels: Record<ListScanWineType, string> = {
   sparkling: "Sparkling",
   white: "White",
+  rose: "Rose",
+  orange: "Orange",
   red: "Red",
   dessert_fortified: "Dessert/Fortified",
   unknown: "Unknown",
@@ -86,10 +99,14 @@ const LIST_SCAN_SPARKLING_CONTEXT_PATTERN =
   /\b(?:sparkling|champagne|prosecco|cava|cr(?:e|é)mant|pet[\s-]?nat|franciacorta|corpinnat|sekt|m(?:e|é)thode champenoise|metodo classico|blanc de blancs|blanc de noirs|moscato d[' ]asti|lambrusco)\b/i;
 const LIST_SCAN_DESSERT_CONTEXT_PATTERN =
   /\b(?:dessert|fortified|port|sherry|madeira|marsala|vin santo|sauternes|tokaji|ice wine|eiswein|banyuls|rutherglen)\b/i;
+const LIST_SCAN_ROSE_CONTEXT_PATTERN =
+  /\b(?:rose|rosé|rosado|rosato|vin gris|provence rose|provence rosé|tavel|bandol rose|bandol rosé|cerasuolo)\b/i;
+const LIST_SCAN_ORANGE_CONTEXT_PATTERN =
+  /\b(?:orange|skin contact|amber wine|ramato|vino bianco macerato)\b/i;
 const LIST_SCAN_RED_CONTEXT_PATTERN =
   /\b(?:red|rosso|rouge|tinto|bordeaux(?: style)? blend|left bank|right bank|claret|rhone(?: style)? blend|c(?:ô|o)?tes? du rh(?:ô|o)ne|ch(?:â|a)teauneuf[- ]du[- ]pape|gigondas|vacqueyras|c(?:ô|o)te r(?:ô|o)tie|cornas|crozes[- ]hermitage|hermitage|saint[- ]joseph|rioja|barolo|barbaresco|chianti(?: classico)?|brunello|rosso di montalcino|vino nobile di montepulciano|morellino di scansano|etna rosso|priorat|bandol|m(?:é|e)doc|pauillac|margaux|saint[- ]julien|saint[- ]est(?:è|e)phe|saint[- ](?:é|e)milion|pomerol|fronsac|super tuscan)\b/i;
 const LIST_SCAN_WHITE_CONTEXT_PATTERN =
-  /\b(?:white|bianco|blanc|blanco|orange|skin contact|bordeaux blanc|white bordeaux|white rhone|rhone blanc|sancerre|pouilly[\s-]?fum(?:é|e)|chablis|meursault|puligny[\s-]montrachet|chassagne[\s-]montrachet|pouilly[\s-]fuiss(?:é|e)|saint[\s-]v(?:é|e)ran|m[aâ]con|savenni(?:è|e)res|vouvray|montlouis|muscadet|greco di tufo|etna bianco|roero arneis|soave|verdicchio|vermentino|vernaccia)\b/i;
+  /\b(?:white|bianco|blanc|blanco|bordeaux blanc|white bordeaux|white rhone|rhone blanc|sancerre|pouilly[\s-]?fum(?:é|e)|chablis|meursault|puligny[\s-]montrachet|chassagne[\s-]montrachet|pouilly[\s-]fuiss(?:é|e)|saint[\s-]v(?:é|e)ran|m[aâ]con|savenni(?:è|e)res|vouvray|montlouis|muscadet|greco di tufo|etna bianco|roero arneis|soave|verdicchio|vermentino|vernaccia)\b/i;
 const LIST_SCAN_BLEND_CONTEXT_PATTERN =
   /\b(?:blend|assemblage|field blend|cuv(?:e|é)e)\b/i;
 
@@ -167,6 +184,12 @@ export function getListScanFilterAccentTone(
   if (wineType === "red") {
     return "red";
   }
+  if (wineType === "rose") {
+    return "rose";
+  }
+  if (wineType === "orange") {
+    return "orange";
+  }
   if (wineType === "white" || wineType === "sparkling") {
     return "white";
   }
@@ -221,6 +244,12 @@ export function resolveListScanWineType(
   }
   if (LIST_SCAN_DESSERT_CONTEXT_PATTERN.test(context)) {
     return "dessert_fortified";
+  }
+  if (LIST_SCAN_ROSE_CONTEXT_PATTERN.test(context)) {
+    return "rose";
+  }
+  if (LIST_SCAN_ORANGE_CONTEXT_PATTERN.test(context)) {
+    return "orange";
   }
 
   const hasRedSignal = LIST_SCAN_RED_CONTEXT_PATTERN.test(context);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LIST_SCAN_MAX_IMAGE_COUNT } from "@cellarsnap/shared";
 import {
   ActivityIndicator,
   Image,
@@ -17,8 +18,6 @@ import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 import { requestListScan, type MobileListScanUpload } from "@/src/lib/api/listScan";
 import { saveListScanResult } from "@/src/lib/listScan/storage";
-
-const MAX_IMAGE_COUNT = 6;
 
 type SelectedImage = {
   uri: string;
@@ -65,9 +64,9 @@ export default function ListScanIntakeScreen() {
       [...current, ...incomingImages].forEach((image) => {
         deduped.set(createImageKey(image), image);
       });
-      const merged = Array.from(deduped.values()).slice(0, MAX_IMAGE_COUNT);
-      if (deduped.size > MAX_IMAGE_COUNT) {
-        setErrorMessage(`Upload up to ${MAX_IMAGE_COUNT} images at a time.`);
+      const merged = Array.from(deduped.values()).slice(0, LIST_SCAN_MAX_IMAGE_COUNT);
+      if (deduped.size > LIST_SCAN_MAX_IMAGE_COUNT) {
+        setErrorMessage(`Upload up to ${LIST_SCAN_MAX_IMAGE_COUNT} images at a time.`);
       }
       return merged;
     });

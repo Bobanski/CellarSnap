@@ -13,16 +13,29 @@ function getStorageAreas() {
     return [];
   }
 
-  return [window.localStorage, window.sessionStorage];
+  return [
+    { storage: window.localStorage, fallback: window.sessionStorage },
+    { storage: window.sessionStorage, fallback: null },
+  ];
 }
 
 export function saveListScanResult(result: ListScanResult) {
   const serialized = JSON.stringify(result);
-  getStorageAreas().forEach((storage) => {
+  getStorageAreas().some(({ storage, fallback }) => {
     try {
       storage.setItem(getStorageKey(result.scan_id), serialized);
+      return true;
     } catch {
-      // Ignore storage quota or privacy-mode failures and keep the flow usable.
+      if (!fallback) {
+        return false;
+      }
+
+      try {
+        fallback.setItem(getStorageKey(result.scan_id), serialized);
+        return true;
+      } catch {
+        return false;
+      }
     }
   });
 }
@@ -31,7 +44,7 @@ export function readListScanResult(scanId: string) {
   const storageKey = getStorageKey(scanId);
   const storageAreas = getStorageAreas();
 
-  for (const [index, storage] of storageAreas.entries()) {
+  for (const { storage, fallback } of storageAreas) {
     try {
       const raw = storage.getItem(storageKey);
       if (!raw) {
@@ -39,8 +52,12 @@ export function readListScanResult(scanId: string) {
       }
 
       const parsed = JSON.parse(raw) as ListScanResult;
-      if (index > 0) {
-        saveListScanResult(parsed);
+      if (fallback) {
+        try {
+          fallback.removeItem(storageKey);
+        } catch {
+          // Ignore cleanup failures.
+        }
       }
       return parsed;
     } catch {
@@ -52,11 +69,18 @@ export function readListScanResult(scanId: string) {
 }
 
 export function clearListScanResult(scanId: string) {
-  getStorageAreas().forEach((storage) => {
+  getStorageAreas().forEach(({ storage, fallback }) => {
     try {
       storage.removeItem(getStorageKey(scanId));
     } catch {
       // Ignore storage cleanup failures.
+    }
+    if (fallback) {
+      try {
+        fallback.removeItem(getStorageKey(scanId));
+      } catch {
+        // Ignore storage cleanup failures.
+      }
     }
   });
 }

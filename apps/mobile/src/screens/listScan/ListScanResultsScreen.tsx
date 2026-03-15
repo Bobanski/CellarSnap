@@ -56,6 +56,12 @@ function formatWineListSubLabel(
   wineType: ListScanWineType
 ) {
   if (varietals.length > 1) {
+    if (wineType === "rose") {
+      return "Rose blend";
+    }
+    if (wineType === "orange") {
+      return "Orange blend";
+    }
     if (wineType === "red") {
       return "Red blend";
     }
@@ -69,6 +75,12 @@ function formatWineListSubLabel(
   }
   if (varietals[0] === "White Blend") {
     return "White blend";
+  }
+  if (varietals[0] === "Rose Blend") {
+    return "Rose blend";
+  }
+  if (varietals[0] === "Orange Blend") {
+    return "Orange blend";
   }
   return varietals[0] || "Varietal not parsed";
 }
@@ -133,6 +145,20 @@ function getSegmentToneStyles(
   tone: ListScanFilterAccentTone,
   selected: boolean
 ) {
+  if (tone === "rose") {
+    return {
+      button: selected ? styles.segmentButtonRoseActive : styles.segmentButtonRose,
+      text: selected ? styles.segmentButtonTextRoseActive : styles.segmentButtonTextRose,
+    };
+  }
+  if (tone === "orange") {
+    return {
+      button: selected ? styles.segmentButtonOrangeActive : styles.segmentButtonOrange,
+      text: selected
+        ? styles.segmentButtonTextOrangeActive
+        : styles.segmentButtonTextOrange,
+    };
+  }
   if (tone === "white") {
     return {
       button: selected ? styles.segmentButtonWhiteActive : styles.segmentButtonWhite,
@@ -1065,6 +1091,22 @@ const styles = StyleSheet.create({
     borderColor: "rgba(201,168,76,0.70)",
     backgroundColor: "rgba(201,168,76,0.18)",
   },
+  segmentButtonRose: {
+    borderColor: "rgba(199,104,134,0.35)",
+    backgroundColor: "rgba(199,104,134,0.10)",
+  },
+  segmentButtonRoseActive: {
+    borderColor: "rgba(199,104,134,0.72)",
+    backgroundColor: "rgba(199,104,134,0.18)",
+  },
+  segmentButtonOrange: {
+    borderColor: "rgba(209,122,42,0.35)",
+    backgroundColor: "rgba(209,122,42,0.10)",
+  },
+  segmentButtonOrangeActive: {
+    borderColor: "rgba(209,122,42,0.75)",
+    backgroundColor: "rgba(209,122,42,0.18)",
+  },
   segmentButtonRed: {
     borderColor: "rgba(74,48,96,0.45)",
     backgroundColor: "rgba(74,48,96,0.15)",
@@ -1089,6 +1131,18 @@ const styles = StyleSheet.create({
   },
   segmentButtonTextWhiteActive: {
     color: "#f5e8bc",
+  },
+  segmentButtonTextRose: {
+    color: "#f1bfd0",
+  },
+  segmentButtonTextRoseActive: {
+    color: "#fde5ec",
+  },
+  segmentButtonTextOrange: {
+    color: "#f2c78f",
+  },
+  segmentButtonTextOrangeActive: {
+    color: "#fde6c7",
   },
   segmentButtonTextRed: {
     color: "#dbcfe7",

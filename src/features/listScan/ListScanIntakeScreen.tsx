@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ListScanResult } from "@shared";
+import { LIST_SCAN_MAX_IMAGE_COUNT, type ListScanResult } from "@shared";
 import NavBar from "@/components/NavBar";
 import { saveListScanResult } from "@/lib/listScan/storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
-const MAX_IMAGE_COUNT = 6;
 
 function createFileKey(file: File) {
   return `${file.name}-${file.size}-${file.lastModified}`;
@@ -81,9 +79,9 @@ export default function ListScanIntakeScreen() {
       [...current, ...imageFiles].forEach((file) => {
         deduped.set(createFileKey(file), file);
       });
-      const merged = Array.from(deduped.values()).slice(0, MAX_IMAGE_COUNT);
-      if (deduped.size > MAX_IMAGE_COUNT) {
-        setErrorMessage(`Upload up to ${MAX_IMAGE_COUNT} images at a time.`);
+      const merged = Array.from(deduped.values()).slice(0, LIST_SCAN_MAX_IMAGE_COUNT);
+      if (deduped.size > LIST_SCAN_MAX_IMAGE_COUNT) {
+        setErrorMessage(`Upload up to ${LIST_SCAN_MAX_IMAGE_COUNT} images at a time.`);
       }
       return merged;
     });
@@ -187,7 +185,7 @@ export default function ListScanIntakeScreen() {
                 Upload
               </p>
               <p className="text-sm text-zinc-400">
-                Use up to {MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
+                Use up to {LIST_SCAN_MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
               </p>
             </div>
 

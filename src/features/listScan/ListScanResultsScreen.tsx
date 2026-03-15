@@ -64,6 +64,12 @@ function formatWineListSubLabel(
   wineType: ListScanWineType
 ) {
   if (varietals.length > 1) {
+    if (wineType === "rose") {
+      return "Rose blend";
+    }
+    if (wineType === "orange") {
+      return "Orange blend";
+    }
     if (wineType === "red") {
       return "Red blend";
     }
@@ -77,6 +83,12 @@ function formatWineListSubLabel(
   }
   if (varietals[0] === "White Blend") {
     return "White blend";
+  }
+  if (varietals[0] === "Rose Blend") {
+    return "Rose blend";
+  }
+  if (varietals[0] === "Orange Blend") {
+    return "Orange blend";
   }
   return varietals[0] || "Varietal not parsed";
 }
@@ -141,6 +153,16 @@ function getAccentPillClasses(
   tone: ListScanFilterAccentTone,
   selected: boolean
 ) {
+  if (tone === "rose") {
+    return selected
+      ? "border border-[#C76886]/70 bg-[#C76886]/18 text-[#fde5ec]"
+      : "border border-[#C76886]/35 bg-[#C76886]/10 text-[#f1bfd0] hover:border-[#C76886]/60";
+  }
+  if (tone === "orange") {
+    return selected
+      ? "border border-[#D17A2A]/75 bg-[#D17A2A]/18 text-[#fde6c7]"
+      : "border border-[#D17A2A]/35 bg-[#D17A2A]/10 text-[#f2c78f] hover:border-[#D17A2A]/60";
+  }
   if (tone === "white") {
     return selected
       ? "border border-[#C9A84C]/70 bg-[#C9A84C]/18 text-[#f5e8bc]"
