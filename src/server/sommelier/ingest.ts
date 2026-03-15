@@ -4,6 +4,7 @@ import {
   normalizeAdvancedNotes,
 } from "@/lib/advancedNotes";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
+import { isAnyMissingDbColumnError } from "@/lib/supabase/errors";
 import { chunkMarkdown, chunkText } from "@/server/sommelier/chunker";
 import { generateEmbeddings } from "@/server/sommelier/embeddings";
 import type {
@@ -527,17 +528,37 @@ export async function ingestWineEntryEmbeddings(
   } = {}
 ): Promise<StructuredIngestionSummary> {
   const supabase = dependencies.supabase ?? createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("wine_entries")
-    .select(
-      "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, ai_notes_summary, advanced_notes, consumed_at"
-    );
+  const attempts = [
+    "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, ai_notes_summary, advanced_notes, consumed_at",
+    "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, advanced_notes, consumed_at",
+    "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, consumed_at",
+  ];
+
+  let data: EntryEmbeddingRow[] | null = null;
+  let error: { message: string } | null = null;
+
+  for (const selectClause of attempts) {
+    const response = await supabase.from("wine_entries").select(selectClause);
+
+    if (!response.error) {
+      data = (response.data ?? []) as EntryEmbeddingRow[];
+      error = null;
+      break;
+    }
+
+    if (isAnyMissingDbColumnError(response.error)) {
+      error = { message: response.error.message };
+      continue;
+    }
+
+    throw new Error(`Failed to load wine_entries: ${response.error.message}`);
+  }
 
   if (error) {
     throw new Error(`Failed to load wine_entries: ${error.message}`);
   }
 
-  const rows = ((data ?? []) as EntryEmbeddingRow[]).filter(
+  const rows = (data ?? []).filter(
     (row) => normalizeText(row.user_id).length > 0
   );
   const primaryGrapesByEntryId = await loadWineEntryPrimaryGrapes(
