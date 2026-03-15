@@ -181,6 +181,19 @@ export function createListScanParseHandler(
 
       return NextResponse.json(result);
     } catch (error) {
+      // Check for missing OpenAI API key and return 503 for infrastructure issues
+      if (
+        error instanceof Error &&
+        error.message.includes("OPENAI_API_KEY")
+      ) {
+        return NextResponse.json(
+          {
+            error: "List scanning service is temporarily unavailable. Please try again in a few moments.",
+          },
+          { status: 503 }
+        );
+      }
+
       return NextResponse.json(
         {
           error: normalizeListScanErrorMessage(error),

@@ -24,42 +24,59 @@ export default function ListScanHistoryScreen() {
     let isActive = true;
 
     const load = async () => {
+      let response: Response;
       try {
-        const response = await fetch("/api/list-scan/scans", {
+        response = await fetch("/api/list-scan/scans", {
           cache: "no-store",
         });
-
+      } catch (error) {
+        // Network error (timeout, DNS failure, etc.)
         if (!isActive) {
           return;
         }
+        setErrorMessage("Unable to load saved scans. Please check your connection.");
+        setItems([]);
+        setIsLoading(false);
+        return;
+      }
 
-        const payload = (await response.json().catch(() => ({}))) as
-          | { scans?: ListScanHistoryItem[]; error?: string }
-          | undefined;
+      if (!isActive) {
+        return;
+      }
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            setErrorMessage("Sign in to revisit saved wine-list scans.");
-          } else {
-            setErrorMessage(payload?.error ?? "Unable to load saved scans right now.");
-          }
-          setItems([]);
-          return;
+      if (!response.ok) {
+        if (response.status === 401) {
+          setErrorMessage("Sign in to revisit saved wine-list scans.");
+        } else if (response.status >= 500) {
+          setErrorMessage("Service error. Please try again in a moment.");
+        } else {
+          setErrorMessage("Unable to load saved scans right now.");
         }
+        setItems([]);
+        setIsLoading(false);
+        return;
+      }
 
-        setItems(payload?.scans ?? []);
+      // Parse JSON separately
+      let payload: { scans?: ListScanHistoryItem[]; error?: string } | undefined;
+      try {
+        payload = (await response.json()) as { scans?: ListScanHistoryItem[]; error?: string };
       } catch {
         if (!isActive) {
           return;
         }
-
-        setErrorMessage("Unable to load saved scans right now.");
+        setErrorMessage("Error reading scan data. Please refresh the page.");
         setItems([]);
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
+        return;
       }
+
+      if (!isActive) {
+        return;
+      }
+
+      setItems(payload?.scans ?? []);
+      setIsLoading(false);
     };
 
     void load();

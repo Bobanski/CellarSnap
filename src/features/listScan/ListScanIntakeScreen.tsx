@@ -263,33 +263,62 @@ export default function ListScanIntakeScreen() {
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/list-scan/parse", {
-        method: "POST",
-        body: formData,
-      });
-      const payload = (await response.json().catch(() => ({}))) as
-        | ListScanResult
-        | { error?: string };
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 100_000); // 100 seconds (10s buffer above backend)
+
+      try {
+        const response = await fetch("/api/list-scan/parse", {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+        const payload = (await response.json().catch(() => ({}))) as
+          | ListScanResult
+          | { error?: string };
 
       if (!response.ok) {
-        setErrorMessage(
+        const errorFromPayload =
           typeof payload === "object" && payload && "error" in payload
-            ? payload.error || "Unable to scan this wine list."
-            : "Unable to scan this wine list."
-        );
+            ? payload.error
+            : null;
+
+        const fallback =
+          response.status >= 500
+            ? `Service error (${response.status}). Please try again later.`
+            : response.status === 429
+            ? "Too many scans. Please wait a moment and try again."
+            : `Unable to scan (error: ${response.status}).`;
+
+        setErrorMessage(errorFromPayload || fallback);
+
+        // Log full error for debugging
+        console.warn("Scan failed:", {
+          status: response.status,
+          error: errorFromPayload,
+          payload,
+        });
         return;
       }
 
-      const result = payload as ListScanResult;
-      setScanProgress({
-        percent: 100,
-        label: "Opening results",
-        detail: "Your wine list is ready.",
-      });
-      saveListScanResult(result);
-      router.push(`/list-scan/results?scanId=${encodeURIComponent(result.scan_id)}`);
-    } catch {
-      setErrorMessage("Unable to scan this wine list right now.");
+        const result = payload as ListScanResult;
+        setScanProgress({
+          percent: 100,
+          label: "Opening results",
+          detail: "Your wine list is ready.",
+        });
+        saveListScanResult(result);
+        router.push(`/list-scan/results?scanId=${encodeURIComponent(result.scan_id)}`);
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        setErrorMessage(
+          "Scan is taking too long. Please try with fewer or shorter wine entries."
+        );
+      } else {
+        setErrorMessage("Unable to scan this wine list right now.");
+      }
     } finally {
       setIsSubmitting(false);
     }

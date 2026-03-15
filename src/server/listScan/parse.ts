@@ -2610,6 +2610,14 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
 export async function parseWineListSource(
   params: ParseSourceParams
 ): Promise<ListScanResult> {
+  // Early validation: Check OpenAI API key availability
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error(
+      "OPENAI_API_KEY not configured. This error should be caught by the handler and returned as 503."
+    );
+  }
+
   const parsed =
     params.sourceType === "url"
       ? await parseUrlSource({ url: params.url, userId: params.requesterId })
