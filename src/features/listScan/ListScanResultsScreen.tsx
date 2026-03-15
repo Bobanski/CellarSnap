@@ -622,7 +622,7 @@ export default function ListScanResultsScreen() {
                             const isMinInput = true; // This is the min input
                             const otherValue = current.price_max;
                             // Swap if new min > current max (and max is non-zero)
-                            if (newValue > otherValue && otherValue > 0) {
+                            if (newValue !== null && newValue > otherValue && otherValue > 0) {
                               return {
                                 ...current,
                                 price_min: otherValue,
@@ -657,7 +657,7 @@ export default function ListScanResultsScreen() {
                             const isMaxInput = true; // This is the max input
                             const otherValue = current.price_min;
                             // Swap if new max < current min (and new value is non-zero)
-                            if (newValue < otherValue && newValue > 0) {
+                            if (newValue !== null && newValue < otherValue && newValue > 0) {
                               return {
                                 ...current,
                                 price_min: newValue,
