@@ -403,7 +403,13 @@ export function createAlgorithmScoreHandler(
       );
 
       if (!loaded) {
-        return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+        console.warn(
+          `[score/handler] Entry not found for user: ${auth.user.id}, entry_id: ${payload.data.entry_id}`
+        );
+        return NextResponse.json(
+          { error: "This entry could not be found or is not accessible to you." },
+          { status: 404 }
+        );
       }
 
       scoreInput = {
