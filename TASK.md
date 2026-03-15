@@ -63,8 +63,15 @@ The friend hardcoded ~200 regex patterns for inference. We have richer data in S
 - `producer_modifiers` — 587 producers with region crosswalk
 - `grape_sensitivity_coefficients` — grape-specific sensory adjustments
 
-### Known gap: appellation→grape coverage
-`base_profiles` covers major regions but is oriented around sensory profiles, not exhaustive appellation mapping. For example, Sancerre→Sauvignon Blanc is there, but Quincy, Reuilly, Menetou-Salon (all also Sauvignon Blanc, Loire) are not. A dedicated `appellation_grape_map` CSV/table may be provided separately. If it exists at `/home/user/workspace/wine_data_csvs/appellation_grape_map.csv` or in Supabase as `appellation_grape_map`, use it as the primary inference source and fall back to `base_profiles` for anything it doesn't cover.
+### Appellation → Grape Mapping CSV (primary inference source)
+A dedicated CSV has been generated with 700+ appellation→grape mappings, including standard blend compositions. This is far more comprehensive than `base_profiles` for inference:
+- **File**: `/home/user/workspace/wine_data_csvs/appellation_grape_map.csv`
+- **Schema**: appellation, country, region, sub_region, primary_grapes, secondary_grapes, wine_type, blend_style, classification, notes
+- **Usage**: This should be the PRIMARY inference source for the DB-powered inference service. Fall back to `base_profiles` only for appellations not covered here.
+- If the CSV doesn't exist yet, check with the user — it may still be in progress. The hardcoded regex patterns in parse.ts serve as the final fallback.
+
+### Known gap in base_profiles
+`base_profiles` covers major regions but is oriented around sensory profiles, not exhaustive appellation mapping. For example, Sancerre→Sauvignon Blanc is there, but Quincy, Reuilly, Menetou-Salon (all also Sauvignon Blanc, Loire) are not. The appellation CSV above fills this gap.
 
 ### Algorithm on main (already merged)
 - `src/server/algorithm/profileAssembly.ts` (969 lines) — full profile assembly with cascading fallbacks
