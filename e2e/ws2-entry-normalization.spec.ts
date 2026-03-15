@@ -9,7 +9,7 @@ import {
   lookupProducerAlias,
   lookupRegionAlias,
 } from "../src/server/algorithm/aliasLookup";
-import { createEntryPostHandler } from "../src/app/api/entries/route";
+import { createEntryPostHandler } from "../src/app/api/entries/handler";
 import { createEntryPutHandler } from "../src/app/api/entries/[id]/putHandler";
 import { createEntrySchema, updateEntrySchema } from "../src/server/entries/schema";
 import { WINE_TYPE_VALUES } from "../src/types/wine";

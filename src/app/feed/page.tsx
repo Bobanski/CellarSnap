@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  canDisplayAlgorithmMatch,
+  fetchAlgorithmScoreBatch,
+  type AlgorithmScoreResponse,
+} from "@/lib/algorithm/api";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
@@ -12,6 +17,7 @@ import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import AppImage from "@/components/AppImage";
+import MatchBadge from "@/components/MatchBadge";
 import NavBar from "@/components/NavBar";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
@@ -170,6 +176,25 @@ function buildEntryMetaFields(entry: FeedEntry) {
   }
 
   return fields.slice(0, 2);
+}
+
+function buildFeedScoreBatchItems(entries: FeedEntry[]) {
+  return entries
+    .filter((entry) => Boolean(entry.wine_type))
+    .map((entry) => ({
+      request_id: entry.id,
+      entry_id: entry.id,
+      wine_type: entry.wine_type ?? undefined,
+      canonical_region: entry.canonical_region ?? entry.region ?? null,
+      canonical_sub_region: entry.canonical_sub_region ?? entry.appellation ?? null,
+      canonical_country: entry.canonical_country ?? entry.country ?? null,
+      primary_grapes:
+        entry.primary_grapes?.map((grape) => grape.name).filter(Boolean).join(", ") || null,
+      vintage: entry.vintage ? Number(entry.vintage) || null : null,
+      producer: entry.producer ?? null,
+      classification: entry.classification ?? null,
+      quality_tier: entry.classification ?? null,
+    }));
 }
 
 function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
@@ -374,6 +399,7 @@ export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
+  const [feedSortMode, setFeedSortMode] = useState<"recent" | "best_match">("recent");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserOption[]>([]);
   const [searching, setSearching] = useState(false);
@@ -387,6 +413,8 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
+  const [matchScoresLoading, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
@@ -481,6 +509,50 @@ export default function FeedPage() {
     }, 200);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMatchScores = async () => {
+      const items = buildFeedScoreBatchItems(entries);
+      if (items.length === 0) {
+        if (isMounted) {
+          setMatchScores({});
+        }
+        return;
+      }
+
+      setMatchScoresLoading(true);
+      try {
+        const results = await fetchAlgorithmScoreBatch(items);
+        if (!isMounted) {
+          return;
+        }
+
+        const nextScores: Record<string, AlgorithmScoreResponse> = {};
+        results.forEach((result) => {
+          if (result.ok && result.data && result.request_id) {
+            nextScores[result.request_id] = result.data;
+          }
+        });
+        setMatchScores(nextScores);
+      } catch {
+        if (isMounted) {
+          setMatchScores({});
+        }
+      } finally {
+        if (isMounted) {
+          setMatchScoresLoading(false);
+        }
+      }
+    };
+
+    void loadMatchScores();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [entries]);
 
   const toggleReaction = async (entryId: string, emoji: string) => {
     const entry = entries.find((e) => e.id === entryId);
@@ -911,6 +983,24 @@ export default function FeedPage() {
     }
   };
 
+  const sortedEntries =
+    feedSortMode === "best_match"
+      ? [...entries].sort((left, right) => {
+          const leftScore = canDisplayAlgorithmMatch(matchScores[left.id])
+            ? matchScores[left.id]?.score ?? -1
+            : -1;
+          const rightScore = canDisplayAlgorithmMatch(matchScores[right.id])
+            ? matchScores[right.id]?.score ?? -1
+            : -1;
+          return rightScore - leftScore;
+        })
+      : entries;
+
+  const bestMatchEntries = [...entries]
+    .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
+    .sort((left, right) => (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0))
+    .slice(0, 3);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#0f0a09] px-6 py-10 text-zinc-100">
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
@@ -995,6 +1085,30 @@ export default function FeedPage() {
           >
             Friends only
           </button>
+          <div className="ml-auto inline-flex rounded-full border border-white/10 bg-black/20 p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setFeedSortMode("recent")}
+              className={`rounded-full px-3 py-1.5 font-semibold transition ${
+                feedSortMode === "recent"
+                  ? "bg-white/10 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Recent
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeedSortMode("best_match")}
+              className={`rounded-full px-3 py-1.5 font-semibold transition ${
+                feedSortMode === "best_match"
+                  ? "bg-white/10 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Best match
+            </button>
+          </div>
         </div>
 
         {moderationNotice ? (
@@ -1023,8 +1137,58 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
+          {bestMatchEntries.length > 0 ? (
+            <section className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                    Best matches
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold text-zinc-50">
+                    Standout palate matches from this feed
+                  </h2>
+                </div>
+                {matchScoresLoading ? (
+                  <p className="text-xs text-zinc-500">Refreshing scores...</p>
+                ) : null}
+              </div>
+              <div className="grid gap-4 lg:grid-cols-3">
+                {bestMatchEntries.map((entry) => {
+                  const score = matchScores[entry.id];
+                  if (!score) {
+                    return null;
+                  }
+
+                  return (
+                    <button
+                      key={`feed-best-match-${entry.id}`}
+                      type="button"
+                      onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
+                      className="rounded-3xl border border-amber-300/20 bg-gradient-to-br from-amber-400/12 to-transparent p-5 text-left transition hover:border-amber-300/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                            {entry.author_name}
+                          </p>
+                          <h3 className="mt-2 text-lg font-semibold text-zinc-50">
+                            {entry.wine_name || "Untitled wine"}
+                          </h3>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            {entry.producer || "Unknown producer"}
+                          </p>
+                        </div>
+                        <MatchBadge score={score.score} band={score.band} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           <div className="grid min-w-0 items-start gap-5 md:grid-cols-2">
-            {entries.map((entry) => (
+            {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
                 className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
@@ -1077,6 +1241,13 @@ export default function FeedPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
+                        <MatchBadge
+                          score={matchScores[entry.id].score}
+                          band={matchScores[entry.id].band}
+                          compact
+                        />
+                      ) : null}
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
