@@ -157,10 +157,21 @@ export async function chatWithSommelier(
     input: buildResponseInput(params.messages, context) as ResponseInput,
   });
 
-  const answer =
-    "output_text" in response && typeof response.output_text === "string"
-      ? response.output_text.trim()
-      : "";
+  // Explicit validation: ensure output_text field exists and is a string
+  if (!("output_text" in response)) {
+    throw new Error(
+      `Unexpected OpenAI Responses API format. Expected 'output_text' field. ` +
+      `Got: ${JSON.stringify(Object.keys(response)).slice(0, 200)}`
+    );
+  }
+
+  if (typeof response.output_text !== "string") {
+    throw new Error(
+      `Invalid 'output_text' type. Expected string, got ${typeof response.output_text}`
+    );
+  }
+
+  const answer = response.output_text.trim();
 
   return {
     answer,

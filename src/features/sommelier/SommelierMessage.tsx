@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 function TypingIndicator() {
   return (
@@ -49,6 +50,7 @@ export default function SommelierMessage({
         ) : (
           <div className="text-sm leading-7 text-current">
             <ReactMarkdown
+              rehypePlugins={[rehypeSanitize]}
               components={{
                 p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
                 ul: ({ children }) => (

@@ -102,6 +102,14 @@ export function createSommelierChatHandler(
       );
     }
 
+    // Explicit validation: ensure messages array is not empty (schema requires min(1))
+    if (parsed.data.messages.length === 0) {
+      return NextResponse.json(
+        { error: "Messages array cannot be empty." },
+        { status: 400 }
+      );
+    }
+
     const headers = rateLimitHeaders(rateLimit);
 
     try {
