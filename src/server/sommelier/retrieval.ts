@@ -1,5 +1,8 @@
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
-import { isAnyMissingDbColumnError } from "@/lib/supabase/errors";
+import {
+  isAnyMissingDbColumnError,
+  isMissingDbFunctionError,
+} from "@/lib/supabase/errors";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { buildUserPreferenceVector } from "@/server/algorithm/userPreferences";
 import type { PreferenceSourceEntry } from "@/server/algorithm/userPreferences";
@@ -19,6 +22,7 @@ type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 // Structured data is denser and noisier than curated docs, so it benefits from a stricter floor.
 const WINE_KNOWLEDGE_MATCH_THRESHOLD = 0.6;
 const GENERAL_KNOWLEDGE_MATCH_THRESHOLD = 0.55;
+const USER_ENTRY_MATCH_THRESHOLD = 0.55;
 
 type RequestScopedSupabase = {
   from: AdminClient["from"];
@@ -100,15 +104,14 @@ async function rpcKnowledgeSearch(
   }));
 }
 
-export async function retrieveWineKnowledge(
-  query: string,
+async function retrieveWineKnowledgeByEmbedding(
+  queryEmbedding: number[],
   limit = 5,
   dependencies: {
     supabase?: AdminClient;
   } = {}
 ) {
   const supabase = dependencies.supabase ?? createSupabaseAdminClient();
-  const queryEmbedding = await generateEmbedding(query);
   return dedupeKnowledgeMatches(
     await rpcKnowledgeSearch(
       supabase,
@@ -120,15 +123,14 @@ export async function retrieveWineKnowledge(
   );
 }
 
-export async function retrieveGeneralKnowledge(
-  query: string,
+async function retrieveGeneralKnowledgeByEmbedding(
+  queryEmbedding: number[],
   limit = 5,
   dependencies: {
     supabase?: AdminClient;
   } = {}
 ) {
   const supabase = dependencies.supabase ?? createSupabaseAdminClient();
-  const queryEmbedding = await generateEmbedding(query);
   return dedupeKnowledgeMatches(
     await rpcKnowledgeSearch(
       supabase,
@@ -138,6 +140,28 @@ export async function retrieveGeneralKnowledge(
       GENERAL_KNOWLEDGE_MATCH_THRESHOLD
     )
   );
+}
+
+export async function retrieveWineKnowledge(
+  query: string,
+  limit = 5,
+  dependencies: {
+    supabase?: AdminClient;
+  } = {}
+) {
+  const queryEmbedding = await generateEmbedding(query);
+  return retrieveWineKnowledgeByEmbedding(queryEmbedding, limit, dependencies);
+}
+
+export async function retrieveGeneralKnowledge(
+  query: string,
+  limit = 5,
+  dependencies: {
+    supabase?: AdminClient;
+  } = {}
+) {
+  const queryEmbedding = await generateEmbedding(query);
+  return retrieveGeneralKnowledgeByEmbedding(queryEmbedding, limit, dependencies);
 }
 
 function scoreUserEntry(entry: UserHistoryEntry, query: string) {
@@ -316,6 +340,40 @@ export async function retrieveUserContext(
   };
 }
 
+async function retrieveUserEntryMatchesByEmbedding(
+  queryEmbedding: number[],
+  userId: string,
+  limit = 5,
+  dependencies: {
+    supabase?: AdminClient;
+  } = {}
+) {
+  const supabase = dependencies.supabase ?? createSupabaseAdminClient();
+  const { data, error } = await supabase.rpc("match_user_entries", {
+    query_embedding: queryEmbedding,
+    target_user_id: userId,
+    match_threshold: USER_ENTRY_MATCH_THRESHOLD,
+    match_count: limit,
+  });
+
+  if (error) {
+    if (isMissingDbFunctionError(error, "match_user_entries")) {
+      return [] as KnowledgeMatch[];
+    }
+    throw new Error(error.message);
+  }
+
+  return dedupeKnowledgeMatches(
+    ((data ?? []) as DataRow[]).map((row) => ({
+      id: String(row.id ?? ""),
+      content: normalizeText(row.content),
+      similarity:
+        typeof row.similarity === "number" ? row.similarity : Number(row.similarity ?? 0),
+      metadata: asRecord(row.metadata),
+    }))
+  );
+}
+
 function formatUserContext(userContext: UserContext) {
   const sections: string[] = [];
 
@@ -383,9 +441,28 @@ function formatKnowledgeSection(title: string, matches: KnowledgeMatch[]) {
   ].join("\n");
 }
 
+function filterDuplicateEntryMatches(
+  matches: KnowledgeMatch[],
+  userContext: UserContext
+) {
+  const existingEntryIds = new Set(userContext.relevantEntries.map((entry) => entry.id));
+
+  return matches.filter((match) => {
+    const sourceRowId =
+      typeof match.metadata.source_row_id === "string"
+        ? match.metadata.source_row_id
+        : typeof match.metadata.entry_id === "string"
+          ? match.metadata.entry_id
+          : null;
+
+    return sourceRowId ? !existingEntryIds.has(sourceRowId) : true;
+  });
+}
+
 function buildSources(
   wineKnowledge: KnowledgeMatch[],
   generalKnowledge: KnowledgeMatch[],
+  entryMatches: KnowledgeMatch[],
   userContext: UserContext
 ) {
   const sources: SommelierSource[] = [
@@ -409,6 +486,17 @@ function buildSources(
         typeof match.metadata.title === "string"
           ? match.metadata.title
           : "Knowledge document",
+      excerpt: excerpt(match.content),
+      similarity: match.similarity,
+      metadata: match.metadata,
+    })),
+    ...entryMatches.slice(0, 4).map((match) => ({
+      id: `entry-match-${match.id}`,
+      kind: "user_history" as const,
+      label:
+        typeof match.metadata.title === "string"
+          ? match.metadata.title
+          : "Cellar entry",
       excerpt: excerpt(match.content),
       similarity: match.similarity,
       metadata: match.metadata,
@@ -456,14 +544,20 @@ export async function assembleContext(
   }
 ): Promise<AssembledSommelierContext> {
   const adminSupabase = dependencies.adminSupabase ?? createSupabaseAdminClient();
-  const [wineKnowledge, generalKnowledge, userContext] = await Promise.all([
-    retrieveWineKnowledge(query, 5, { supabase: adminSupabase }),
-    retrieveGeneralKnowledge(query, 5, { supabase: adminSupabase }),
+  const queryEmbedding = await generateEmbedding(query);
+  const [wineKnowledge, generalKnowledge, userContext, rawEntryMatches] = await Promise.all([
+    retrieveWineKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
+    retrieveGeneralKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
     retrieveUserContext(dependencies.requestSupabase, userId, query),
+    retrieveUserEntryMatchesByEmbedding(queryEmbedding, userId, 5, {
+      supabase: adminSupabase,
+    }),
   ]);
+  const entryMatches = filterDuplicateEntryMatches(rawEntryMatches, userContext);
 
   const contextText = [
     formatUserContext(userContext),
+    formatKnowledgeSection("Matched cellar entries", entryMatches),
     formatKnowledgeSection("Structured wine knowledge", wineKnowledge),
     formatKnowledgeSection("General wine knowledge documents", generalKnowledge),
   ]
@@ -474,8 +568,9 @@ export async function assembleContext(
     query,
     wineKnowledge,
     generalKnowledge,
+    entryMatches,
     userContext,
     contextText,
-    sources: buildSources(wineKnowledge, generalKnowledge, userContext),
+    sources: buildSources(wineKnowledge, generalKnowledge, entryMatches, userContext),
   };
 }

@@ -4,6 +4,7 @@ import { createSommelierChatHandler } from "../src/app/api/sommelier/chat/handle
 import { createSommelierIngestHandler } from "../src/app/api/sommelier/ingest/handler";
 import { createSommelierUploadDocumentHandler } from "../src/app/api/sommelier/upload-document/handler";
 import { __sommelierTestUtils } from "../src/server/sommelier/chat";
+import { __sommelierIngestTestUtils } from "../src/server/sommelier/ingest";
 import { chunkMarkdown, chunkText } from "../src/server/sommelier/chunker";
 import { RequestAuthError } from "../src/server/auth/requestAuth";
 
@@ -154,6 +155,43 @@ test.describe("WS3 pocket sommelier", () => {
     expect(userTurns.every((message) => message.content[0]?.type === "input_text")).toBeTruthy();
   });
 
+  test("entry serializer produces natural cellar text for embeddings", () => {
+    const content = __sommelierIngestTestUtils.serializeWineEntryRow(
+      {
+        id: "entry-1",
+        user_id: "user-1",
+        wine_name: "Pegau Cuvee Reservee",
+        producer: "Domaine du Pegau",
+        vintage: "1998",
+        wine_type: "red",
+        country: "France",
+        region: "Rhone",
+        appellation: "Chateauneuf-du-Pape",
+        classification: "AOC",
+        rating: 95,
+        price_paid: 180,
+        price_paid_currency: "usd",
+        qpr_level: "good_value",
+        notes: "Savory and spicy with a long finish",
+        ai_notes_summary: "Layered and resolved with earthy depth.",
+        advanced_notes: {
+          body: "full",
+          acidity: "medium_plus",
+          tannin: "medium",
+          alcohol: "high",
+          sweetness: "dry",
+        },
+        consumed_at: "2025-01-14T20:15:00.000Z",
+      },
+      ["Grenache", "Syrah", "Mourvedre"]
+    );
+
+    expect(content).toContain("Pegau Cuvee Reservee by Domaine du Pegau 1998 red.");
+    expect(content).toContain("Primary grapes: Grenache, Syrah, and Mourvedre.");
+    expect(content).toContain("Rating: 95/100.");
+    expect(content).toContain("Structure:");
+  });
+
   test("chat handler returns 401 when auth fails", async () => {
     const handler = createSommelierChatHandler({
       requireRequestAuth: async () => {
@@ -253,5 +291,37 @@ test.describe("WS3 pocket sommelier", () => {
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(payload.summary[0]?.sourceTable).toBe("base_profiles");
+  });
+
+  test("ingest handler triggers entry embedding ingestion for admins", async () => {
+    const handler = createSommelierIngestHandler({
+      requireRequestAuth: async () =>
+        ({
+          user: makeUser("admin-1"),
+          supabase: {} as never,
+          authMode: "bearer",
+        }) as never,
+      assertSommelierAdminUser: () => undefined,
+      createAdminClient: () => ({}) as never,
+      ingestWineEntryEmbeddings: async () => ({
+        sourceTable: "wine_entries",
+        insertedCount: 12,
+      }),
+    });
+
+    const response = await handler.POST(
+      new Request("http://localhost/api/sommelier/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scope: "entries" }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.scope).toBe("entries");
+    expect(payload.summary?.sourceTable).toBe("wine_entries");
   });
 });
