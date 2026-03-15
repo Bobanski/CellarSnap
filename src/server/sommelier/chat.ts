@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { ResponseStreamEvent } from "openai/resources/responses/responses";
+import type { ResponseInput, ResponseStreamEvent } from "openai/resources/responses/responses";
 import { assembleContext } from "@/server/sommelier/retrieval";
 import type {
   AssembledSommelierContext,
@@ -154,7 +154,7 @@ export async function chatWithSommelier(
     model: SOMMELIER_MODEL,
     reasoning: { effort: "minimal" },
     max_output_tokens: 700,
-    input: buildResponseInput(params.messages, context),
+    input: buildResponseInput(params.messages, context) as ResponseInput,
   });
 
   const answer =
@@ -199,7 +199,7 @@ export async function streamSommelierChat(
     model: SOMMELIER_MODEL,
     reasoning: { effort: "minimal" },
     max_output_tokens: 700,
-    input: buildResponseInput(params.messages, context),
+    input: buildResponseInput(params.messages, context) as ResponseInput,
   });
   const encoder = new TextEncoder();
 
