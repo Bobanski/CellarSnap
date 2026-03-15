@@ -5,8 +5,6 @@ import type {
   QprLevel,
 } from "@/lib/entryMeta";
 
-export type WineType = "red" | "white" | "rose" | "sparkling" | "sweet" | "orange";
-
 export const WINE_TYPE_VALUES = [
   "red",
   "white",
@@ -14,7 +12,9 @@ export const WINE_TYPE_VALUES = [
   "sparkling",
   "sweet",
   "orange",
-] as const satisfies readonly WineType[];
+] as const;
+
+export type WineType = (typeof WINE_TYPE_VALUES)[number];
 
 export type PrivacyLevel = "public" | "friends_of_friends" | "friends" | "private";
 
