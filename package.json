@@ -22,7 +22,6 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "exifreader": "^4.36.1",
-    "expo": "^55.0.6",
     "next": "16.1.6",
     "openai": "^6.18.0",
     "pdf-parse": "^2.4.5",
@@ -30,7 +29,7 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
     "react-markdown": "^10.1.0",
-    "rehype-sanitize": "^6.2.0",
+    "rehype-sanitize": "^6.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
