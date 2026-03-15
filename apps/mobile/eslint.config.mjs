@@ -5,7 +5,12 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 
-const mobileFileGlobs = ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"];
+const mobileFileGlobs = [
+  "app/**/*.{ts,tsx}",
+  "components/**/*.{ts,tsx}",
+  "lib/**/*.{ts,tsx}",
+  "src/**/*.{ts,tsx}",
+];
 
 export default defineConfig([
   globalIgnores([

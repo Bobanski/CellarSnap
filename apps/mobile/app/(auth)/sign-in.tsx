@@ -1,6 +1,9 @@
 import {
+  useEffect,
   useMemo,
-  useState } from "react";
+  useState,
+} from "react";
+import * as AppleAuthentication from "expo-apple-authentication";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +18,7 @@ import {
   type AuthMode,
 } from "@cellarsnap/shared";
 import { signInWithIdentifier } from "@/src/lib/api/auth";
+import { signInWithApple } from "@/src/lib/api/appleAuth";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 
@@ -33,10 +37,38 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const canSubmit = !isSubmitting;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (Platform.OS !== "ios") {
+      setIsAppleAuthAvailable(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    void AppleAuthentication.isAvailableAsync()
+      .then((isAvailable) => {
+        if (isMounted) {
+          setIsAppleAuthAvailable(isAvailable);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsAppleAuthAvailable(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const submitPasswordSignIn = async () => {
     setIsSubmitting(true);
@@ -69,6 +101,43 @@ export default function SignInScreen() {
       router.replace("/(app)/home");
     } catch {
       setErrorMessage("Unable to sign in. Check your connection and try again.");
+      setInfoMessage(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitAppleSignIn = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    setInfoMessage("Signing in...");
+
+    try {
+      await signInWithApple();
+      router.replace("/(app)/home");
+    } catch (error) {
+      const errorCode =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : null;
+
+      if (errorCode === "ERR_REQUEST_CANCELED") {
+        setInfoMessage(null);
+        return;
+      }
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in with Apple right now."
+      );
       setInfoMessage(null);
     } finally {
       setIsSubmitting(false);
@@ -153,6 +222,27 @@ export default function SignInScreen() {
           >
             <AppText style={styles.primaryButtonText}>{isSubmitting ? "Signing in..." : "Sign In"}</AppText>
           </Pressable>
+
+          {Platform.OS === "ios" && isAppleAuthAvailable ? (
+            <>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <AppText style={styles.dividerText}>or</AppText>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                cornerRadius={12}
+                onPress={() => void submitAppleSignIn()}
+                style={[
+                  styles.appleButton,
+                  isSubmitting ? styles.disabledButton : null,
+                ]}
+              />
+            </>
+          ) : null}
 
           <Link href="/(auth)/sign-up" asChild>
             <Pressable style={styles.secondaryButton}>
@@ -321,6 +411,27 @@ const styles = StyleSheet.create({
     color: "#09090b",
     fontSize: 14,
     fontWeight: "700",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  dividerText: {
+    color: "#71717a",
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  appleButton: {
+    width: "100%",
+    height: 46,
   },
   secondaryButton: {
     borderRadius: 12,
