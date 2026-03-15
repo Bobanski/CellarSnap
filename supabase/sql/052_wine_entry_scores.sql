@@ -55,3 +55,9 @@ create policy "Owners can update their cached entry scores"
   for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+drop policy if exists "Owners can delete their cached entry scores" on public.wine_entry_scores;
+create policy "Owners can delete their cached entry scores"
+  on public.wine_entry_scores
+  for delete
+  using (auth.uid() = user_id);
