@@ -476,14 +476,30 @@ export default function HomePage() {
             >
               + Record a new pour
             </Link>
+            <div className="mt-3">
+              <Link
+                href="/list-scan"
+                className="inline-block rounded-full border border-emerald-300/30 bg-emerald-400/10 px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/16"
+              >
+                Scan/Upload a list
+              </Link>
+            </div>
           </div>
         ) : (
-          <Link
-            href="/entries/new"
-            className="inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
-          >
-            + Record a new pour
-          </Link>
+          <div className="flex flex-col items-start gap-3">
+            <Link
+              href="/entries/new"
+              className="inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+            >
+              + Record a new pour
+            </Link>
+            <Link
+              href="/list-scan"
+              className="inline-block rounded-full border border-emerald-300/30 bg-emerald-400/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/16"
+            >
+              Scan/Upload a list
+            </Link>
+          </div>
         )}
 
         {/* ── Section 1: Recent from you ── */}

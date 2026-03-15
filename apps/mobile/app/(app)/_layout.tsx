@@ -27,6 +27,8 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="home/index" />
+      <Stack.Screen name="list-scan/index" />
+      <Stack.Screen name="list-scan/results" />
       <Stack.Screen name="entries/index" />
       <Stack.Screen name="entries/[id]" />
       <Stack.Screen name="feed/index" />
