@@ -1,0 +1,298 @@
+"use client";
+
+import { startTransition, useEffect, useRef, useState } from "react";
+import SommelierInput from "@/features/sommelier/SommelierInput";
+import SommelierMessage from "@/features/sommelier/SommelierMessage";
+import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
+import type { SommelierSource } from "@/server/sommelier/types";
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources?: SommelierSource[];
+  isStreaming?: boolean;
+};
+
+function createMessageId(prefix: "user" | "assistant") {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function parseSseBuffer(
+  buffer: string,
+  onEvent: (event: string, data: Record<string, unknown>) => void
+) {
+  let remainder = buffer;
+
+  while (remainder.includes("\n\n")) {
+    const separatorIndex = remainder.indexOf("\n\n");
+    const rawEvent = remainder.slice(0, separatorIndex);
+    remainder = remainder.slice(separatorIndex + 2);
+
+    const eventLine = rawEvent
+      .split("\n")
+      .find((line) => line.startsWith("event:"))
+      ?.slice("event:".length)
+      .trim();
+    const dataLine = rawEvent
+      .split("\n")
+      .find((line) => line.startsWith("data:"))
+      ?.slice("data:".length)
+      .trim();
+
+    if (!eventLine || !dataLine) {
+      continue;
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(dataLine) as Record<string, unknown>;
+    } catch {
+      // Ignore malformed frames so the client can keep streaming.
+      continue;
+    }
+
+    onEvent(eventLine, payload);
+  }
+
+  return remainder;
+}
+
+export default function SommelierChat() {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "intro",
+      role: "assistant",
+      content:
+        "I’m ready. Ask about a bottle, a region, a pairing, or what you should try next and I’ll answer using your CellarSnap history plus the knowledge base.",
+    },
+  ]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "auto",
+      block: "end",
+    });
+  }, [messages, pending, error]);
+
+  const sendMessage = async (content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed || pending) {
+      return;
+    }
+
+    const assistantId = createMessageId("assistant");
+    const userMessage: ChatMessage = {
+      id: createMessageId("user"),
+      role: "user",
+      content: trimmed,
+    };
+
+    const priorMessages = messages.map(({ role, content: messageContent }) => ({
+      role,
+      content: messageContent,
+    }));
+
+    startTransition(() => {
+      setMessages((current) => [
+        ...current,
+        userMessage,
+        { id: assistantId, role: "assistant", content: "", isStreaming: true },
+      ]);
+      setError(null);
+    });
+    setPending(true);
+
+    try {
+      const response = await fetch("/api/sommelier/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [...priorMessages, { role: "user", content: trimmed }],
+          conversationId,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error ?? "Pocket Sommelier is temporarily unavailable.");
+      }
+
+      if (!response.body) {
+        throw new Error("Pocket Sommelier did not return a readable response stream.");
+      }
+
+      const reader = response.body.getReader();
+      const returnedConversationId = response.headers.get("x-sommelier-conversation-id");
+      if (returnedConversationId) {
+        setConversationId(returnedConversationId);
+      }
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalSources: SommelierSource[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        buffer = parseSseBuffer(buffer, (event, data) => {
+          if (event === "meta") {
+            finalSources = Array.isArray(data.sources)
+              ? (data.sources as SommelierSource[])
+              : finalSources;
+            return;
+          }
+
+          if (event === "delta") {
+            const delta = typeof data.text === "string" ? data.text : "";
+            startTransition(() => {
+              setMessages((current) =>
+                current.map((message) =>
+                  message.id === assistantId
+                    ? {
+                        ...message,
+                        content: `${message.content}${delta}`,
+                        sources: finalSources,
+                        isStreaming: true,
+                      }
+                    : message
+                )
+              );
+            });
+            return;
+          }
+
+          if (event === "done") {
+            finalSources = Array.isArray(data.sources)
+              ? (data.sources as SommelierSource[])
+              : finalSources;
+            startTransition(() => {
+              setMessages((current) =>
+                current.map((message) =>
+                  message.id === assistantId
+                    ? {
+                        ...message,
+                        content:
+                          typeof data.text === "string" && data.text.trim().length > 0
+                            ? data.text
+                            : message.content,
+                        sources: finalSources,
+                        isStreaming: false,
+                      }
+                    : message
+                )
+              );
+            });
+            return;
+          }
+
+          if (event === "error") {
+            throw new Error(
+              typeof data.message === "string"
+                ? data.message
+                : "Pocket Sommelier hit an unexpected error."
+            );
+          }
+        });
+      }
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Pocket Sommelier hit an unexpected error.";
+
+      setError(message);
+      startTransition(() => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantId
+              ? {
+                  ...message,
+                  content:
+                    message.content.trim().length > 0
+                      ? message.content
+                      : "I couldn’t finish that answer. Try again in a moment.",
+                  isStreaming: false,
+                }
+              : message
+          )
+        );
+      });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6">
+        <p className="text-xs uppercase tracking-[0.3em] text-amber-200/75">
+          Guided prompts
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
+          Ask about taste, regions, pairings, or your next bottle.
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-7 text-zinc-300">
+          The chat blends your CellarSnap tasting history with structured wine-reference data and any uploaded knowledge documents.
+        </p>
+        {showSuggestions ? (
+          <div className="mt-5">
+            <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        role="log"
+        aria-live="polite"
+        aria-label="Pocket Sommelier conversation"
+        aria-relevant="additions text"
+        className="space-y-4"
+      >
+        {messages.map((message) => (
+          <SommelierMessage
+            key={message.id}
+            role={message.role}
+            content={message.content}
+            isStreaming={Boolean(message.isStreaming)}
+            sources={message.sources}
+          />
+        ))}
+        <div ref={messagesEndRef} aria-hidden="true" />
+      </div>
+
+      {error ? (
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-100 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
+      <SommelierInput disabled={pending} onSend={sendMessage} />
+    </div>
+  );
+}

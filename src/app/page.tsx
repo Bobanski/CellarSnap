@@ -518,6 +518,36 @@ export default function HomePage() {
           </p>
         </header>
 
+        <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs uppercase tracking-[0.28em] text-amber-200/70">
+                New
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
+                Pocket Sommelier can now answer with your palate in mind.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-zinc-300">
+                Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history alongside the structured wine knowledge base.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/sommelier"
+                className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
+              >
+                Open Pocket Sommelier
+              </Link>
+              <Link
+                href="/sommelier/knowledge"
+                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              >
+                Knowledge base
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {!privacyConfirmedAt ? (
           <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
