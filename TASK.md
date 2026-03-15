@@ -136,7 +136,19 @@ The scoring engine is fully implemented in `src/server/algorithm/`:
   - Quality: finish_length, concentration, complexity, freshness
 - Axis labels must be human-readable (user instruction): "Very Low" through "Very High" on 1–5
 
-## Git Safety
+## ⚠️ Branch Safety — READ THIS FIRST
+
+This branch may be running concurrently with `feature/list-scan-v2` and `feature/pocket-sommelier`. Mistakes here can silently corrupt other branches.
+
+**MANDATORY checks — do ALL of these:**
+1. **At session start**: Run `git branch` and confirm you see `* feature/algorithm-ui`. If not, run `git checkout feature/algorithm-ui`.
+2. **After every context compaction**: Re-read this file AND re-run `git branch` to confirm you're still on the right branch.
+3. **Before every commit**: Run `git branch` again. Verify the output shows `* feature/algorithm-ui`.
+4. **Before every push**: Run `git branch` one more time. Then `git log --oneline -3` to confirm the commits look right.
+5. **Never run** `git checkout main` or switch branches unless you are explicitly told to by the user.
+6. **Never run** `git merge main` or `git rebase main` without explicit user approval — this can introduce conflicts with concurrent branches.
+7. **If using worktrees**: Confirm your working directory path includes `algorithm-ui` before any git operation.
+
+**If you are unsure what branch you're on, STOP and check. Do not guess.**
+
 - Never run `git commit` or `git push` without explicit user approval
-- Always verify you are on `feature/algorithm-ui` before committing
-- Run `git branch` at the start of every session
