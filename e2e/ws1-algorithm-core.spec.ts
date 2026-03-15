@@ -27,6 +27,7 @@ const BASE_VECTOR: SensoryVector = {
   bitterness_phenolic_grip: 2,
   finish_length: 4,
   concentration: 4,
+  complexity: 4,
   freshness: 3,
 };
 
@@ -589,6 +590,22 @@ test.describe("WS1 algorithm core", () => {
     expect(score.axis_contributions.body.contribution).toBeCloseTo(1.2, 5);
     expect(score.axis_contributions.acidity.contribution).toBeCloseTo(1.2, 5);
     expect(score.axis_contributions.tannin.contribution).toBeCloseTo(1.2, 5);
+  });
+
+  test("complexity participates in scoring when the user vector includes it", () => {
+    const user = buildDenseUserPreferenceVector({
+      complexity: 5,
+    });
+    const wine = buildProfileWithSensory({
+      complexity: 1,
+    });
+
+    const score = computeMatchScore(wine, user);
+
+    expect(score.axis_contributions.complexity.user_value).toBe(5);
+    expect(score.axis_contributions.complexity.wine_value).toBe(1);
+    expect(score.axis_contributions.complexity.weight).toBe(1);
+    expect(score.axis_contributions.complexity.contribution).toBeCloseTo(16, 5);
   });
 
   test("score bands classify strong and decent results correctly", () => {

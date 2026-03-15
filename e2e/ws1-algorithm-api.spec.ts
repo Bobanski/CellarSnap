@@ -34,6 +34,7 @@ function makeProfile(): EffectiveWineProfile {
       bitterness_phenolic_grip: 2,
       finish_length: 4,
       concentration: 4,
+      complexity: 4,
       freshness: 3,
     },
     balance: {

@@ -70,10 +70,7 @@ type AlgorithmScoreHandlerDependencies = {
     userId: string,
     wineType: WineType
   ) => Promise<PreferenceSourceEntry[]>;
-  assembleProfile: (
-    input: AssembleWineProfileInput,
-    authSupabase: RequestSupabaseClient
-  ) => Promise<EffectiveWineProfile>;
+  assembleProfile: (input: AssembleWineProfileInput) => Promise<EffectiveWineProfile>;
   buildUserPreferenceVector: typeof buildUserPreferenceVector;
   computeMatchScore: typeof computeMatchScore;
 };
@@ -224,7 +221,8 @@ async function defaultLoadEntryForScoring(
 
 async function defaultLoadUserPreferenceEntries(
   supabase: RequestSupabaseClient,
-  userId: string
+  userId: string,
+  wineType: WineType
 ): Promise<PreferenceSourceEntry[]> {
   const selectAttempts = [
     {
@@ -243,11 +241,15 @@ async function defaultLoadUserPreferenceEntries(
     attempts: selectAttempts,
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
-      const response = await supabase
+      let query = supabase
         .from("wine_entries")
         .select(attempt.fields)
         .eq("user_id", userId)
         .not("rating", "is", null);
+      if (attempt.includesWineType) {
+        query = query.eq("wine_type", wineType);
+      }
+      const response = await query;
       return {
         data: response.data,
         error: response.error,
@@ -291,7 +293,7 @@ function buildDirectInput(
     vintage: payload.vintage ?? null,
     producer: payload.producer ?? null,
     classification: payload.classification ?? null,
-    quality_tier: payload.quality_tier ?? payload.classification ?? null,
+      quality_tier: payload.quality_tier ?? payload.classification ?? null,
   };
 }
 
@@ -355,20 +357,17 @@ export function createAlgorithmScoreHandler(
       );
     }
 
-    const effectiveProfile = await resolvedDependencies.assembleProfile(
-      {
-        wine_type: scoreInput.wine_type,
-        canonical_region: scoreInput.canonical_region,
-        canonical_sub_region: scoreInput.canonical_sub_region,
-        canonical_country: scoreInput.canonical_country,
-        primary_grapes: scoreInput.primary_grapes,
-        vintage: scoreInput.vintage,
-        producer: scoreInput.producer,
-        classification: scoreInput.classification,
-        quality_tier: scoreInput.quality_tier,
-      },
-      auth.supabase
-    );
+    const effectiveProfile = await resolvedDependencies.assembleProfile({
+      wine_type: scoreInput.wine_type,
+      canonical_region: scoreInput.canonical_region,
+      canonical_sub_region: scoreInput.canonical_sub_region,
+      canonical_country: scoreInput.canonical_country,
+      primary_grapes: scoreInput.primary_grapes,
+      vintage: scoreInput.vintage,
+      producer: scoreInput.producer,
+      classification: scoreInput.classification,
+      quality_tier: scoreInput.quality_tier,
+    });
 
     const preferenceEntries =
       await resolvedDependencies.loadUserPreferenceEntries(

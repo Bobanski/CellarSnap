@@ -438,8 +438,21 @@ function applyRelativeClamp(baseValue: number, totalDelta: number) {
   return roundValue(Math.max(unclamped, floor));
 }
 
-function isRedFamilyWineType(wineType: WineType) {
+function isRedWineType(wineType: WineType) {
   return wineType === "red";
+}
+
+function buildWineTypeOrFilter(columns: string[], wineType: WineType) {
+  const patterns = [...new Set(DATASET_WINE_TYPE_LABELS[wineType])]
+    .map((label) => label.trim())
+    .filter(Boolean)
+    .map((label) => label.replace(/\s+/g, "%"));
+
+  return columns
+    .flatMap((column) =>
+      patterns.map((pattern) => `${column}.ilike.%${pattern}%`)
+    )
+    .join(",");
 }
 
 function resolveWeatherRow(
@@ -524,6 +537,9 @@ function buildWeatherSensitivityMultiplier(
           ? toNumber(row.rain_sensitivity) ?? 1
           : toNumber(row.drought_sensitivity) ?? 1;
 
+      // Sensitivity tables are centered at 1.0, so we only amplify the weather
+      // delta above that baseline. The 0.12 factor keeps strong vintages
+      // noticeable without letting climate sensitivity swamp the base profile.
       const weatherIntensity =
         Math.abs(tempScore) * (heatOrColdSensitivity - 1) * 0.12 +
         Math.abs(rainScore) * (rainOrDroughtSensitivity - 1) * 0.12;
@@ -760,7 +776,10 @@ export function createSupabaseProfileAssemblyDataSource(
 ): ProfileAssemblyDataSource {
   return {
     async listBaseProfiles(wineType) {
-      const { data, error } = await supabase.from("base_profiles").select("*");
+      const { data, error } = await supabase
+        .from("base_profiles")
+        .select("*")
+        .or(buildWineTypeOrFilter(["wine_type"], wineType));
       if (error) {
         throw error;
       }
@@ -769,7 +788,10 @@ export function createSupabaseProfileAssemblyDataSource(
       );
     },
     async listAgingCurves(wineType) {
-      const { data, error } = await supabase.from("aging_curve_baselines").select("*");
+      const { data, error } = await supabase
+        .from("aging_curve_baselines")
+        .select("*")
+        .or(buildWineTypeOrFilter(["wine_type"], wineType));
       if (error) {
         throw error;
       }
@@ -891,7 +913,7 @@ export async function assembleWineProfileWithDataSource(
   }
 
   if (weatherRow) {
-    const weatherPrefix = isRedFamilyWineType(input.wine_type) ? "red_delta_" : "white_delta_";
+    const weatherPrefix = isRedWineType(input.wine_type) ? "red_delta_" : "white_delta_";
     const weatherDelta = buildModifierDelta(weatherRow, [weatherPrefix]);
     const sensitivityMultiplier = buildWeatherSensitivityMultiplier(
       grapeSensitivityRows,

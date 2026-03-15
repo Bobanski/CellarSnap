@@ -15,6 +15,7 @@ export const SENSORY_AXES = [
   "bitterness_phenolic_grip",
   "finish_length",
   "concentration",
+  "complexity",
   "freshness",
 ] as const;
 

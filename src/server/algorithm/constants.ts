@@ -7,6 +7,7 @@ export const DEFAULT_AXIS_WEIGHTS: Record<SensoryAxis, number> = {
   fruit_ripeness: 1.2,
   oak_presence: 1.0,
   concentration: 1.0,
+  complexity: 1.0,
   aromatic_intensity: 1.0,
   finish_length: 1.0,
   freshness: 1.0,
