@@ -443,7 +443,7 @@ async function loadRowsWithFallback(
         .range(offset, offset + DB_READ_PAGE_SIZE - 1);
 
       if (!response.error) {
-        pageData = (response.data ?? []) as DataRow[];
+        pageData = ((response.data ?? []) as unknown) as DataRow[];
         pageError = null;
         break;
       }
