@@ -11,15 +11,24 @@ import {
   normalizeAdvancedNotes,
   type AdvancedNotes,
 } from "@/lib/advancedNotes";
+import {
+  fetchAlgorithmScore,
+  type AlgorithmScoreResponse,
+} from "@/lib/algorithm/api";
 import NavBar from "@/components/NavBar";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
+import ScoreBreakdown from "@/components/ScoreBreakdown";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
-import type { EntryPhoto, WineEntryWithUrls } from "@/types/wine";
+import WineMatchScore from "@/components/WineMatchScore";
+import type { EntryPhoto, WineEntryWithUrls, WineType } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
   viewer_log_entry_id?: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  canonical_country?: string | null;
 };
 
 type AdvancedNoteField = (typeof ADVANCED_NOTE_FIELDS)[number];
@@ -83,6 +92,22 @@ function buildGoogleMapsLocationUrl(locationText: string): string {
   )}`;
 }
 
+function buildScorePayload(entry: EntryDetail, isOwner: boolean) {
+  return {
+    entry_id: isOwner ? entry.id : undefined,
+    wine_type: (entry.wine_type ?? undefined) as WineType | undefined,
+    canonical_region: entry.canonical_region ?? entry.region ?? null,
+    canonical_sub_region: entry.canonical_sub_region ?? entry.appellation ?? null,
+    canonical_country: entry.canonical_country ?? entry.country ?? null,
+    primary_grapes:
+      entry.primary_grapes?.map((grape) => grape.name).filter(Boolean).join(", ") || null,
+    vintage: entry.vintage ? Number(entry.vintage) || null : null,
+    producer: entry.producer ?? null,
+    classification: entry.classification ?? null,
+    quality_tier: entry.classification ?? null,
+  };
+}
+
 export default function EntryDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -107,6 +132,9 @@ export default function EntryDetailPage() {
   const [addToLogError, setAddToLogError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scoreResult, setScoreResult] = useState<AlgorithmScoreResponse | null>(null);
+  const [scoreLoading, setScoreLoading] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareToast, setShareToast] = useState<ShareToast | null>(null);
@@ -318,6 +346,51 @@ export default function EntryDetailPage() {
 
     return () => window.clearTimeout(timer);
   }, [shareToast]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadScore = async () => {
+      if (!entry || !currentUserId) {
+        return;
+      }
+
+      const payload = buildScorePayload(entry, currentUserId === entry.user_id);
+      if (!payload.entry_id && !payload.wine_type) {
+        if (isMounted) {
+          setScoreResult(null);
+          setScoreError("We need more wine detail before we can score this bottle.");
+          setScoreLoading(false);
+        }
+        return;
+      }
+
+      setScoreLoading(true);
+      setScoreError(null);
+
+      try {
+        const result = await fetchAlgorithmScore(payload);
+        if (isMounted) {
+          setScoreResult(result);
+        }
+      } catch {
+        if (isMounted) {
+          setScoreError("Unable to load the palate match right now.");
+          setScoreResult(null);
+        }
+      } finally {
+        if (isMounted) {
+          setScoreLoading(false);
+        }
+      }
+    };
+
+    void loadScore();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [entry, currentUserId]);
 
   const onDelete = async () => {
     if (!entryId) {
@@ -653,6 +726,9 @@ export default function EntryDetailPage() {
   const locationMapsUrl = hasGoogleMapsLocation
     ? buildGoogleMapsLocationUrl(locationText)
     : "";
+  const isScoreProfileBuilding =
+    typeof scoreResult?.preference_event_count === "number" &&
+    scoreResult.preference_event_count < 5;
 
   return (
     <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
@@ -904,6 +980,53 @@ export default function EntryDetailPage() {
           </div>
 
           <div className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+            {scoreLoading ? (
+              <div className="rounded-3xl border border-white/10 bg-black/25 p-5 text-sm text-zinc-400">
+                Calculating your palate match...
+              </div>
+            ) : scoreResult && !isScoreProfileBuilding && scoreResult.display_score ? (
+              <>
+                <WineMatchScore
+                  score={scoreResult.score}
+                  band={scoreResult.band}
+                  confidence={scoreResult.confidence}
+                />
+                <ScoreBreakdown result={scoreResult} defaultOpen />
+              </>
+            ) : (
+              <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                  Palate match
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-zinc-50">
+                  {isScoreProfileBuilding
+                    ? "Build your palate profile"
+                    : "Match score not ready yet"}
+                </h2>
+                <p className="mt-2 text-sm text-zinc-300">
+                  {isScoreProfileBuilding
+                    ? `We need at least 5 scored entries with sensory notes. You currently have ${scoreResult?.preference_event_count ?? 0}.`
+                    : scoreError ??
+                      scoreResult?.confidence_warning ??
+                      "We need a little more profile detail before showing a stable match score."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    href="/entries/new"
+                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+                  >
+                    Log another wine
+                  </Link>
+                  <Link
+                    href="/palate"
+                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/50 hover:text-amber-200"
+                  >
+                    View palate profile
+                  </Link>
+                </div>
+              </div>
+            )}
+
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
                 Date consumed

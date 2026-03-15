@@ -13,6 +13,8 @@ import { resolvePersistedEntryRating } from "@/server/entries/updateValidation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { persistEntryResolution } from "@/server/algorithm/persistEntryResolution";
 import { isValidWineType } from "@/server/algorithm/resolver";
+import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
+import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
 
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
@@ -486,6 +488,13 @@ export function createEntryPutHandler(
       },
     ]);
     const groupedPost = groupedPostData.get(id);
+
+    try {
+      await invalidateUserScoreCache(supabase, user.id);
+      await refreshRecentUserScoreCache(supabase, user.id);
+    } catch {
+      // Cache refresh is best-effort and should not block entry updates.
+    }
 
     return NextResponse.json({
       entry: groupedPost

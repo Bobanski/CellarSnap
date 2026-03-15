@@ -5,6 +5,8 @@ import { buildOriginalPhotoPath } from "@/lib/entryFlow/web/photoPath";
 import { resolveSharedTastingCopyTastedWithUserIds } from "@/server/entries/sharedTastings";
 import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
 import { executeWithColumnFallback, hasMissingAnyColumn } from "@/server/db/compat";
+import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
+import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
 
 type WineEntryRow = {
   id: string;
@@ -487,6 +489,13 @@ export async function POST(
     }
   } catch {
     // Ignore primary grape copy failures.
+  }
+
+  try {
+    await invalidateUserScoreCache(supabase, user.id);
+    await refreshRecentUserScoreCache(supabase, user.id);
+  } catch {
+    // Cache refresh is best-effort and should not block add-to-log success.
   }
 
   return NextResponse.json({ entry_id: insertedId, already_exists: false });

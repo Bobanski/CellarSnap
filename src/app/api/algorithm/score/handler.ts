@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { normalizeAdvancedNotes } from "@/lib/advancedNotes";
+import type { AlgorithmScoreResponse } from "@/lib/algorithm/api";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { MIN_DISPLAY_CONFIDENCE } from "@/server/algorithm/constants";
@@ -15,16 +16,20 @@ import {
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import {
+  readCachedEntryScore,
+  writeCachedEntryScore,
+} from "@/server/algorithm/scoreCache";
+import {
   RequestAuthError,
   requireRequestAuth,
 } from "@/server/auth/requestAuth";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { WINE_TYPE_VALUES, type WineType } from "@/types/wine";
 
-type RequestAuthResult = Awaited<ReturnType<typeof requireRequestAuth>>;
-type RequestSupabaseClient = RequestAuthResult["supabase"];
+export type RequestAuthResult = Awaited<ReturnType<typeof requireRequestAuth>>;
+export type RequestSupabaseClient = RequestAuthResult["supabase"];
 
-type LoadedEntryForScoring = Omit<AssembleWineProfileInput, "wine_type"> & {
+export type LoadedEntryForScoring = Omit<AssembleWineProfileInput, "wine_type"> & {
   wine_type: WineType | null;
 };
 
@@ -72,6 +77,8 @@ type AlgorithmScoreHandlerDependencies = {
   assembleProfile: (input: AssembleWineProfileInput) => Promise<EffectiveWineProfile>;
   buildUserPreferenceVector: typeof buildUserPreferenceVector;
   computeMatchScore: typeof computeMatchScore;
+  readCachedEntryScore: typeof readCachedEntryScore;
+  writeCachedEntryScore: typeof writeCachedEntryScore;
 };
 
 const nullableString = z.preprocess(
@@ -135,7 +142,7 @@ function isWineType(value: string | null | undefined): value is WineType {
   return WINE_TYPE_VALUES.includes(value as WineType);
 }
 
-async function defaultLoadEntryForScoring(
+export async function defaultLoadEntryForScoring(
   supabase: RequestSupabaseClient,
   userId: string,
   entryId: string
@@ -200,7 +207,7 @@ async function defaultLoadEntryForScoring(
       vintage: row.vintage ? Number.parseInt(row.vintage, 10) || null : null,
       producer: row.producer ?? null,
       classification: row.classification ?? null,
-      quality_tier: row.quality_tier ?? null,
+      quality_tier: row.quality_tier ?? row.classification ?? null,
     };
   }
 
@@ -218,7 +225,7 @@ async function defaultLoadEntryForScoring(
   };
 }
 
-async function defaultLoadUserPreferenceEntries(
+export async function defaultLoadUserPreferenceEntries(
   supabase: RequestSupabaseClient,
   userId: string
 ): Promise<PreferenceSourceEntry[]> {
@@ -263,7 +270,7 @@ async function defaultLoadUserPreferenceEntries(
   }));
 }
 
-const defaultDependencies: AlgorithmScoreHandlerDependencies = {
+export const defaultAlgorithmScoreDependencies: AlgorithmScoreHandlerDependencies = {
   requireRequestAuth,
   loadEntryForScoring: defaultLoadEntryForScoring,
   loadUserPreferenceEntries: defaultLoadUserPreferenceEntries,
@@ -273,9 +280,11 @@ const defaultDependencies: AlgorithmScoreHandlerDependencies = {
   },
   buildUserPreferenceVector,
   computeMatchScore,
+  readCachedEntryScore,
+  writeCachedEntryScore,
 };
 
-function buildDirectInput(
+export function buildDirectInput(
   payload: z.infer<typeof scoreRequestSchema>
 ): LoadedEntryForScoring {
   return {
@@ -287,7 +296,46 @@ function buildDirectInput(
     vintage: payload.vintage ?? null,
     producer: payload.producer ?? null,
     classification: payload.classification ?? null,
-      quality_tier: payload.quality_tier ?? payload.classification ?? null,
+    quality_tier: payload.quality_tier ?? payload.classification ?? null,
+  };
+}
+
+export function hasDirectScoreOverrides(
+  payload: z.infer<typeof scoreRequestSchema>
+) {
+  return [
+    payload.wine_type,
+    payload.canonical_region,
+    payload.canonical_sub_region,
+    payload.canonical_country,
+    payload.primary_grapes,
+    payload.vintage,
+    payload.producer,
+    payload.classification,
+    payload.quality_tier,
+  ].some((value) => value !== undefined);
+}
+
+export function buildAlgorithmScoreResponse(params: {
+  effectiveProfile: EffectiveWineProfile;
+  match: ReturnType<typeof computeMatchScore>;
+  preferenceEventCount: number;
+}): AlgorithmScoreResponse {
+  return {
+    score: Math.round(params.match.score),
+    band: params.match.band,
+    confidence: params.match.confidence,
+    balance_factor: params.match.balance_factor,
+    pre_balance_score: params.match.pre_balance_score,
+    effective_profile: params.effectiveProfile,
+    axis_contributions: params.match.axis_contributions,
+    modifiers_applied: params.effectiveProfile.metadata.modifiers_applied,
+    display_score: params.match.confidence >= MIN_DISPLAY_CONFIDENCE,
+    confidence_warning:
+      params.match.confidence >= MIN_DISPLAY_CONFIDENCE
+        ? null
+        : "Confidence is below the display threshold for this score.",
+    preference_event_count: params.preferenceEventCount,
   };
 }
 
@@ -295,7 +343,7 @@ export function createAlgorithmScoreHandler(
   dependencies: Partial<AlgorithmScoreHandlerDependencies> = {}
 ) {
   const resolvedDependencies = {
-    ...defaultDependencies,
+    ...defaultAlgorithmScoreDependencies,
     ...dependencies,
   };
 
@@ -325,7 +373,22 @@ export function createAlgorithmScoreHandler(
       );
     }
 
-    let scoreInput = buildDirectInput(payload.data);
+    const directInput = buildDirectInput(payload.data);
+    const hasOverrides = hasDirectScoreOverrides(payload.data);
+    let scoreInput = directInput;
+    const cacheEntryId =
+      payload.data.entry_id && !hasOverrides ? payload.data.entry_id : null;
+
+    if (cacheEntryId) {
+      const cached = await resolvedDependencies.readCachedEntryScore(
+        auth.supabase,
+        auth.user.id,
+        cacheEntryId
+      );
+      if (cached) {
+        return NextResponse.json(cached);
+      }
+    }
 
     if (payload.data.entry_id) {
       const loaded = await resolvedDependencies.loadEntryForScoring(
@@ -338,7 +401,23 @@ export function createAlgorithmScoreHandler(
         return NextResponse.json({ error: "Entry not found" }, { status: 404 });
       }
 
-      scoreInput = loaded;
+      scoreInput = {
+        wine_type: directInput.wine_type ?? loaded.wine_type,
+        canonical_region: directInput.canonical_region ?? loaded.canonical_region,
+        canonical_sub_region:
+          directInput.canonical_sub_region ?? loaded.canonical_sub_region,
+        canonical_country: directInput.canonical_country ?? loaded.canonical_country,
+        primary_grapes: directInput.primary_grapes ?? loaded.primary_grapes,
+        vintage: directInput.vintage ?? loaded.vintage,
+        producer: directInput.producer ?? loaded.producer,
+        classification: directInput.classification ?? loaded.classification,
+        quality_tier:
+          directInput.quality_tier ??
+          directInput.classification ??
+          loaded.quality_tier ??
+          loaded.classification ??
+          null,
+      };
     }
 
     if (!scoreInput.wine_type) {
@@ -377,20 +456,21 @@ export function createAlgorithmScoreHandler(
       userPreference
     );
 
-    return NextResponse.json({
-      score: Math.round(match.score),
-      band: match.band,
-      confidence: match.confidence,
-      balance_factor: match.balance_factor,
-      pre_balance_score: match.pre_balance_score,
-      effective_profile: effectiveProfile,
-      axis_contributions: match.axis_contributions,
-      modifiers_applied: effectiveProfile.metadata.modifiers_applied,
-      display_score: match.confidence >= MIN_DISPLAY_CONFIDENCE,
-      confidence_warning:
-        match.confidence >= MIN_DISPLAY_CONFIDENCE
-          ? null
-          : "Confidence is below the display threshold for this score.",
+    const responsePayload = buildAlgorithmScoreResponse({
+      effectiveProfile,
+      match,
+      preferenceEventCount: userPreference.event_count,
     });
+
+    if (cacheEntryId) {
+      await resolvedDependencies.writeCachedEntryScore(
+        auth.supabase,
+        auth.user.id,
+        cacheEntryId,
+        responsePayload
+      );
+    }
+
+    return NextResponse.json(responsePayload);
   };
 }

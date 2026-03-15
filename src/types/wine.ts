@@ -83,6 +83,9 @@ export type WineEntry = {
   appellation: string | null;
   classification: string | null;
   wine_type: WineType | null;
+  canonical_country?: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
   primary_grapes?: PrimaryGrape[];
   rating: number | null;
   price_paid: number | null;
