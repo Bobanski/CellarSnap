@@ -73,6 +73,8 @@ export default function SommelierChat() {
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // Track content version for each message to prevent race conditions in streaming updates
+  const contentVersionRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -108,6 +110,7 @@ export default function SommelierChat() {
       setError(null);
     });
     setPending(true);
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
 
     try {
       const payload = {
@@ -135,7 +138,7 @@ export default function SommelierChat() {
         throw new Error("Pocket Sommelier did not return a readable response stream.");
       }
 
-      const reader = response.body.getReader();
+      reader = response.body.getReader();
       const returnedConversationId = response.headers.get("x-sommelier-conversation-id");
       if (returnedConversationId) {
         setConversationId(returnedConversationId);
@@ -146,6 +149,13 @@ export default function SommelierChat() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
+          // Warn if there's an incomplete SSE frame at stream end
+          if (buffer.trim().length > 0) {
+            console.warn(
+              "[Sommelier] Incomplete SSE frame discarded at stream end:",
+              buffer.slice(0, 100)
+            );
+          }
           break;
         }
 
@@ -153,6 +163,9 @@ export default function SommelierChat() {
         buffer = parseSseBuffer(buffer, (event, data) => {
           if (event === "delta") {
             const delta = typeof data.text === "string" ? data.text : "";
+            // Increment version to ensure atomicity of delta updates
+            const currentVersion = (contentVersionRef.current[assistantId] ?? 0) + 1;
+            contentVersionRef.current[assistantId] = currentVersion;
             startTransition(() => {
               setMessages((current) =>
                 current.map((message) =>
@@ -170,6 +183,9 @@ export default function SommelierChat() {
           }
 
           if (event === "done") {
+            // Increment version for done event to ensure it's processed after all deltas
+            const currentVersion = (contentVersionRef.current[assistantId] ?? 0) + 1;
+            contentVersionRef.current[assistantId] = currentVersion;
             startTransition(() => {
               setMessages((current) =>
                 current.map((message) =>
@@ -199,6 +215,9 @@ export default function SommelierChat() {
         });
       }
     } catch (caughtError) {
+      // Clean up the reader to prevent resource leaks
+      await reader?.cancel();
+
       const message =
         caughtError instanceof Error
           ? caughtError.message

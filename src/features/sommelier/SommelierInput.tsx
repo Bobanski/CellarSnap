@@ -33,7 +33,9 @@ export default function SommelierInput({
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
-            void submit();
+            submit().catch((error) => {
+              console.error("[Sommelier Input] Submission failed:", error);
+            });
           }
         }}
         disabled={disabled}
@@ -46,7 +48,11 @@ export default function SommelierInput({
         </p>
         <button
           type="button"
-          onClick={() => void submit()}
+          onClick={() => {
+            submit().catch((error) => {
+              console.error("[Sommelier Input] Submission failed:", error);
+            });
+          }}
           disabled={disabled || value.trim().length === 0}
           aria-label={disabled ? "Pocket Sommelier is responding" : "Send message"}
           className="rounded-full bg-amber-300 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-200/60 disabled:cursor-not-allowed disabled:opacity-60"
