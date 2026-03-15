@@ -11,6 +11,7 @@ import {
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_VALUES,
 } from "@/lib/entryMeta";
+import { WINE_TYPE_VALUES } from "@/types/wine";
 
 export const privacyLevelSchema = z.enum([
   "public",
@@ -166,6 +167,7 @@ export const createEntrySchema = z
     region: nullableString,
     appellation: nullableString,
     classification: nullableString,
+    wine_type: nullableEnum(WINE_TYPE_VALUES),
     primary_grape_ids: primaryGrapeIdsSchema,
     rating: optionalRatingSchema,
     price_paid: optionalPricePaidSchema,
@@ -239,6 +241,7 @@ export const updateEntrySchema = z
     region: nullableString,
     appellation: nullableString,
     classification: nullableString,
+    wine_type: nullableEnum(WINE_TYPE_VALUES),
     primary_grape_ids: primaryGrapeIdsSchema,
     rating: optionalRequiredRatingSchema,
     price_paid: nullablePricePaidSchema,

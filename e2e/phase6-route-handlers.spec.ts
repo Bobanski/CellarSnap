@@ -808,14 +808,22 @@ test.describe("Phase 6 route handler regressions", () => {
 
     expect(response.status).toBe(200);
     expect(supabase.getLastUpdatePayload()).toEqual({
-      producer: "Domaine Test",
+      raw_region: null,
+      raw_producer: "Domaine Test",
+      raw_classification: null,
+      raw_wine_type: null,
+      canonical_region: null,
+      canonical_producer: "Domaine Test",
+      canonical_classification: null,
+      resolution_confidence: 0,
+      fallback_level: 6,
     });
     await expect(response.json()).resolves.toMatchObject({
       entry: {
         id: "entry-1",
         user_id: "owner-1",
         rating: 92,
-        producer: "Domaine Test",
+        canonical_producer: "Domaine Test",
         primary_grapes: [],
       },
     });

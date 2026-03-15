@@ -11,6 +11,7 @@ import { updateEntrySchema } from "@/server/entries/schema";
 import { executeWithColumnFallback } from "@/server/db/compat";
 import { resolvePersistedEntryRating } from "@/server/entries/updateValidation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { persistEntryResolution } from "@/server/algorithm/persistEntryResolution";
 
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
@@ -43,12 +44,14 @@ type EntryPutHandlerDependencies = {
   createSupabaseServerClient: typeof createSupabaseServerClient;
   executeWithColumnFallback: typeof executeWithColumnFallback;
   fetchPrimaryGrapesByEntryId: typeof fetchPrimaryGrapesByEntryId;
+  persistEntryResolution: typeof persistEntryResolution;
 };
 
 const defaultEntryPutHandlerDependencies: EntryPutHandlerDependencies = {
   createSupabaseServerClient,
   executeWithColumnFallback,
   fetchPrimaryGrapesByEntryId,
+  persistEntryResolution,
 };
 
 export function createEntryPutHandler(
@@ -427,11 +430,55 @@ export function createEntryPutHandler(
       }
     }
 
-    const primaryGrapesByEntryId =
-      await resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [id]);
-
     if (!updatedEntry) {
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+    }
+
+    const primaryGrapesByEntryId =
+      await resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [id]);
+    const currentPrimaryGrapes = primaryGrapesByEntryId.get(id) ?? [];
+    const shouldRerunResolution =
+      primaryGrapeIds !== undefined ||
+      ["region", "producer", "classification", "wine_type", "country"].some(
+        (field) => Object.prototype.hasOwnProperty.call(updates, field)
+      );
+
+    if (shouldRerunResolution) {
+      try {
+        const persistedResolution = await resolvedDependencies.persistEntryResolution({
+          supabase,
+          entryId: id,
+          userId: user.id,
+          input: {
+            region:
+              typeof updatedEntry.region === "string" ? updatedEntry.region : null,
+            producer:
+              typeof updatedEntry.producer === "string" ? updatedEntry.producer : null,
+            classification:
+              typeof updatedEntry.classification === "string"
+                ? updatedEntry.classification
+                : null,
+            wine_type:
+              updatedEntry.wine_type === "red" ||
+              updatedEntry.wine_type === "white" ||
+              updatedEntry.wine_type === "rose" ||
+              updatedEntry.wine_type === "sparkling" ||
+              updatedEntry.wine_type === "sweet" ||
+              updatedEntry.wine_type === "orange"
+                ? updatedEntry.wine_type
+                : null,
+            country:
+              typeof updatedEntry.country === "string" ? updatedEntry.country : null,
+            varietal: currentPrimaryGrapes[0]?.name ?? null,
+          },
+        });
+
+        if (persistedResolution.entry) {
+          updatedEntry = persistedResolution.entry;
+        }
+      } catch {
+        // Resolution is best-effort and should not block entry updates.
+      }
     }
 
     const groupedPostData = await resolveGroupedPostData(supabase, [
