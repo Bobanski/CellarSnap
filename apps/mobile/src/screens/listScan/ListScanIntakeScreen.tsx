@@ -229,7 +229,7 @@ export default function ListScanIntakeScreen() {
         <View style={styles.card}>
           <AppText style={styles.cardEyebrow}>Upload</AppText>
           <AppText style={styles.cardBody}>
-            Use up to {MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
+            Use up to {LIST_SCAN_MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
           </AppText>
 
           <View style={styles.buttonStack}>
