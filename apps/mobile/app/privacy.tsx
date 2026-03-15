@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 
-const LAST_UPDATED = "February 12, 2026";
+const LAST_UPDATED = "March 2026";
 const SUPPORT_EMAIL = "cellarsnap@gmail.com";
 
 export default function PrivacyScreen() {
@@ -16,30 +16,159 @@ export default function PrivacyScreen() {
         </View>
 
         <View style={styles.section}>
-          <AppText style={styles.paragraph}>
-            CellarSnap stores account details and wine-log content needed to run the app,
-            including profile info, entries, photos, social relationships, and feedback
-            submissions.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            Photos and entry metadata are access-controlled by your privacy settings
-            (public, friends, or private). Signed URLs are used for photo delivery.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            AI features process uploaded images and notes through OpenAI APIs to provide
-            autofill and summary assistance. Do not upload sensitive personal images.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            We use operational logs and error telemetry to keep the product reliable.
-            Data is retained as needed for product operation and safety.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            For support, feedback, or privacy-related requests, use the in-app feedback
-            page or contact us at the address below.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            Privacy and support contact: {SUPPORT_EMAIL}
-          </AppText>
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>1. Introduction</AppText>
+            <AppText style={styles.paragraph}>
+              CellarSnap is a wine journal and social sharing app that helps you log
+              bottles, capture tasting notes, share entries, and explore AI-powered wine
+              tools.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              This Privacy Policy explains what information we collect, how we use it,
+              when we share it, and the choices you have when using CellarSnap.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>2. Information We Collect</AppText>
+            <AppText style={styles.paragraph}>
+              We collect account information such as your email address, phone number
+              when phone authentication is used, username, and display name. You may
+              also provide profile information like an avatar image and bio.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              We collect the content you create in the app, including wine photos,
+              tasting notes, ratings, bottle details, and location information if you
+              choose to add it.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              We also collect social data such as follows, friends, likes, comments,
+              and shared entries, along with usage data like app interactions, feature
+              usage, crash reports, and error telemetry.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              When you use AI-powered features, we collect the images and text you
+              submit to support label scanning, autofill, and Pocket Sommelier
+              experiences.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>3. How We Use Information</AppText>
+            <AppText style={styles.paragraph}>
+              We use your information to provide, maintain, and improve CellarSnap,
+              including saving entries, personalizing the app, and supporting social
+              discovery features.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              We use submitted text and images to process wine entries and power AI
+              features like label scanning, autofill, and Pocket Sommelier responses.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              We also use information to send service messages such as verification
+              emails and password resets, maintain security, prevent abuse, and produce
+              aggregated or anonymized analytics.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>4. Third-Party Services</AppText>
+            <AppText style={styles.paragraph}>
+              We use third-party providers to operate CellarSnap. Supabase provides
+              authentication, database services, and file storage on AWS
+              infrastructure.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              OpenAI provides AI services for image analysis and text generation, which
+              means images and text you submit to AI features are sent to OpenAI&apos;s
+              API for processing.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              We also rely on Vercel for web hosting and Expo or EAS for app build and
+              distribution infrastructure. These providers maintain their own privacy
+              policies and handling practices.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>5. Data Storage and Security</AppText>
+            <AppText style={styles.paragraph}>
+              CellarSnap data is stored through Supabase on AWS infrastructure in the
+              US-West-2 region. Photos are stored in Supabase Storage and served using
+              signed URLs where applicable.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              Passwords are hashed and are not stored in plaintext. We use row-level
+              security on database tables and HTTPS or TLS to protect data in transit.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              No system is perfectly secure, but we use reasonable safeguards designed
+              to protect your information from unauthorized access, loss, misuse, or
+              disclosure.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>6. Your Privacy Controls</AppText>
+            <AppText style={styles.paragraph}>
+              You can choose whether entries are public, friends-only, or private, and
+              you can update profile details at any time from within the app.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              You can delete individual entries, remove your entire account and
+              associated data, and use in-app tools to block or report other users.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>7. Data Retention</AppText>
+            <AppText style={styles.paragraph}>
+              We keep account information and app content for as long as your account
+              remains active or as needed to provide the service.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              Deleted content is removed from active systems, but limited copies may
+              remain in backups for a short period. Anonymized or aggregated analytics
+              may be retained indefinitely.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>8. Children&apos;s Privacy</AppText>
+            <AppText style={styles.paragraph}>
+              CellarSnap is not intended for anyone under 21 years old or under the
+              legal drinking age in their jurisdiction. We do not knowingly collect
+              personal information from minors.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              If we learn that we collected personal data from someone who is under the
+              applicable legal age, we will take steps to delete that information.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>9. Changes to This Policy</AppText>
+            <AppText style={styles.paragraph}>
+              We may update this Privacy Policy from time to time to reflect changes in
+              our practices, the app, or applicable law.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              If we make material changes, we will communicate them through the app or
+              by other reasonable means. Continued use of CellarSnap after an update
+              means you accept the revised policy.
+            </AppText>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <AppText style={styles.sectionTitle}>10. Contact</AppText>
+            <AppText style={styles.paragraph}>
+              Privacy and support requests can be sent to {SUPPORT_EMAIL}.
+            </AppText>
+            <AppText style={styles.paragraph}>
+              For privacy-related requests, including access or deletion requests,
+              contact us at the email above or use the in-app feedback feature.
+            </AppText>
+          </View>
         </View>
 
         <View style={styles.footerRow}>
@@ -90,6 +219,15 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 10,
+  },
+  sectionBlock: {
+    gap: 6,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    color: "#fafafa",
+    fontSize: 15,
+    fontWeight: "700",
   },
   paragraph: {
     color: "#d4d4d8",
