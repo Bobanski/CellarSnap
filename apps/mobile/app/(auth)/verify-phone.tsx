@@ -182,7 +182,7 @@ export default function VerifyPhoneScreen() {
             style={[styles.primaryButton, isSubmitting ? styles.disabledButton : null]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.champagne} />
+              <ActivityIndicator color={colors.textPrimary} />
             ) : (
               <AppText style={styles.primaryButtonText}>Confirm code</AppText>
             )}
@@ -221,7 +221,7 @@ function Field({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
-        placeholderTextColor={colors.fog}
+        placeholderTextColor={colors.textTertiary}
         style={styles.input}
       />
     </View>
@@ -253,7 +253,7 @@ function LinkText({ mode }: { mode: VerifyMode }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   blobTop: {
     position: "absolute",
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: "rgba(74, 48, 96, 0.08)",
+    backgroundColor: colors.accentSoft,
   },
   scrollContent: {
     flexGrow: 1,
@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 20,
     paddingVertical: 22,
     shadowColor: colors.shadowColor,
@@ -308,12 +308,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: "700",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBg,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -356,19 +356,19 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.12)",
+    borderColor: colors.borderStrong,
     alignItems: "center",
     paddingVertical: 12,
   },
   secondaryButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -378,14 +378,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   legalMuted: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
     fontWeight: "600",
   },
   legalLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",

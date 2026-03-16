@@ -13,7 +13,7 @@ export default function AuthLayout() {
       <View
         style={{
           flex: 1,
-          backgroundColor: colors.champagne,
+          backgroundColor: colors.screenBg,
           alignItems: "center",
           justifyContent: "center",
         }}
