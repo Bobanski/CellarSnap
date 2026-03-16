@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(209,122,42,0.16)",
   },
   tokenRed: {
-    borderColor: "rgba(74,48,96,0.60)",
-    backgroundColor: "rgba(74,48,96,0.72)",
+    borderColor: colors.error,
+    backgroundColor: "rgba(192,57,43,0.15)",
   },
   tokenText: {
     color: colors.success,
@@ -331,8 +331,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(209,122,42,0.08)",
   },
   suggestionButtonRed: {
-    borderColor: "rgba(74,48,96,0.45)",
-    backgroundColor: "rgba(74,48,96,0.15)",
+    borderColor: "rgba(192,57,43,0.45)",
+    backgroundColor: "rgba(192,57,43,0.08)",
   },
   suggestionText: {
     color: colors.textPrimary,
