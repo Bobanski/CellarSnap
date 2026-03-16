@@ -292,7 +292,7 @@ export default function ListScanIntakeScreen() {
                 setErrorMessage(null);
               }}
               placeholder="https://restaurant.com/wine-list"
-              placeholderTextColor={colors.fog}
+              placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -314,7 +314,7 @@ export default function ListScanIntakeScreen() {
           >
             {isSubmitting ? (
               <View style={styles.loadingRow}>
-                <ActivityIndicator color={colors.champagne} />
+                <ActivityIndicator color={colors.screenBg} />
                 <AppText style={styles.submitButtonText}>Scanning...</AppText>
               </View>
             ) : (
@@ -330,7 +330,7 @@ export default function ListScanIntakeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   content: {
     paddingHorizontal: 20,
@@ -342,20 +342,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    color: colors.grenache,
+    color: colors.accentPrimary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 29,
     lineHeight: 34,
     fontWeight: "700",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -368,14 +368,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardEyebrow: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.4,
     textTransform: "uppercase",
   },
   cardBody: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   secondaryButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
   },
   thumbnailImage: {
     width: "100%",
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(44, 26, 14, 0.5)",
   },
   thumbnailRemoveText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   pdfBadgeText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.2,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   pdfName: {
     flex: 1,
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBg,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 14,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     borderRadius: 999,
-    backgroundColor: colors.grenache,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: 18,
     paddingVertical: 14,
     alignItems: "center",
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
   submitButtonText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 16,
     fontWeight: "700",
   },

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_deployments",
+      "mcp__claude_ai_Vercel__get_deployment_build_logs",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "mcp__github__create_pull_request",
+      "mcp__github__merge_pull_request",
+      "Bash(git checkout:*)"
+    ]
+  }
+}
