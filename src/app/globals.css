@@ -1,47 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  /* ─── MIDNIGHT NOIR — SCREENS & SURFACES ──────────────── */
-  /* Deep editorial theme with purple-wine undertones */
-  --color-screen-bg:       #0C0810;
-  --color-surface-primary: #151020;
-  --color-surface-raised:  #1E1830;
-  --color-surface-hover:   #261E3A;
-  --color-surface-tinted:  rgba(74, 48, 96, 0.12);
-  --color-surface-muted:   #1E1830;
+  /* ─── SMOKE & STONE — SCREENS & SURFACES ──────────────── */
+  /* Matte, textural, architectural. Neutral charcoal-stone. */
+  --color-screen-bg:       #141312;
+  --color-surface-primary: #1C1B19;
+  --color-surface-raised:  #252422;
+  --color-surface-hover:   #2E2D2A;
+  --color-surface-muted:   #1F1E1C;
 
   /* ─── TEXT HIERARCHY ────────────────────────────────────– */
-  --color-text-primary:    #F0ECE4;
-  --color-text-secondary:  #9B93A8;
-  --color-text-tertiary:   #5D5570;
-  --color-text-on-accent:  #F0ECE4;
-  --color-text-highlight:  #C4607A;
+  --color-text-primary:    #E8E2D9;
+  --color-text-secondary:  #A89B8A;
+  --color-text-tertiary:   #6B6358;
+  --color-text-on-accent:  #F5EDD6;
 
-  /* ─── ACCENTS & ACTION ──────────────────────────────– */
+  /* ─── ACCENTS (Restrained) ──────────────────────────– */
   --color-accent-primary:  #7B1D3A;
   --color-accent-hover:    #9B2449;
-  --color-accent-soft:     rgba(123, 29, 58, 0.18);
-  --color-accent-secondary: #C4607A;
-  --color-accent-rose:     rgba(196, 96, 122, 0.12);
+  --color-accent-soft:     rgba(123, 29, 58, 0.10);
+  --color-accent-secondary: #A89B8A;
+  --color-accent-rose:     rgba(196, 96, 122, 0.08);
   --color-accent-gold:     #C9A84C;
-  --color-accent-purple:   #6B4D8A;
 
-  /* ─── BORDERS & EFFECTS ────────────────────────────── */
-  --color-border:          rgba(196, 96, 122, 0.10);
-  --color-border-strong:   rgba(196, 96, 122, 0.22);
-  --color-border-accent:   rgba(196, 96, 122, 0.18);
-  --color-purple-glow:     rgba(74, 48, 96, 0.25);
+  /* ─── BORDERS ────────────────────────────────────── */
+  --color-border:          rgba(168, 155, 138, 0.10);
+  --color-border-strong:   rgba(168, 155, 138, 0.20);
+  --color-border-accent:   rgba(123, 29, 58, 0.18);
 
-  /* ─── SEMANTIC ────────────────────────────────────── */
-  --color-success:         #2D7D46;
-  --color-error:           #C0392B;
-  --color-warning:         #C4607A;
-  --color-info:            #7C8FE6;
+  /* ─── SEMANTIC (Muted) ────────────────────────────── */
+  --color-success:         #5A8A62;
+  --color-error:           #A85444;
+  --color-warning:         #B8860B;
+  --color-info:            #6B89A8;
 
   /* ─── OVERLAYS & SHADOWS ──────────────────────────– */
-  --color-overlay:         rgba(12, 8, 16, 0.75);
-  --color-shadow:          rgba(74, 48, 96, 0.3);
-  --color-shadow-warm:     rgba(74, 48, 96, 0.25);
+  --color-overlay:         rgba(20, 19, 18, 0.75);
+  --color-shadow:          rgba(0, 0, 0, 0.25);
 
   /* ─── TYPOGRAPHY ──────────────────────────────────– */
   --font-serif:            "Cormorant Garamond", serif;
@@ -58,8 +53,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-screen-bg:      #0C0810;
-    --color-text-primary:   #F0ECE4;
+    --color-screen-bg:      #141312;
+    --color-text-primary:   #E8E2D9;
   }
 }
 
@@ -111,9 +106,6 @@ html {
   color: var(--color-accent-primary);
 }
 
-/* Native <select> dropdown menus are rendered by the OS and can look wildly
-   different (especially on Windows). Keep the option list readable and aligned
-   with the app's dark UI. */
 select {
   color-scheme: dark;
   background-color: var(--color-surface-raised);
@@ -129,7 +121,6 @@ select optgroup {
   color: var(--color-text-primary);
 }
 
-/* Custom select arrow to adjust right padding */
 .select-field {
   appearance: none;
   -webkit-appearance: none;
@@ -138,14 +129,13 @@ select optgroup {
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='rgb(240,236,228)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 8 10 12 14 8'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='rgb(232,226,217)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 8 10 12 14 8'/></svg>");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 0.6rem 0.6rem;
   padding-right: 2.25rem;
 }
 
-/* Prevent iOS Safari form-focus auto-zoom on small-font inputs */
 @media (hover: none) and (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select,

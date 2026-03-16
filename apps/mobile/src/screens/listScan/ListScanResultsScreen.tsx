@@ -1109,8 +1109,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(209,122,42,0.18)",
   },
   segmentButtonRed: {
-    borderColor: "rgba(74,48,96,0.45)",
-    backgroundColor: "rgba(74,48,96,0.15)",
+    borderColor: colors.error,
+    backgroundColor: "rgba(168,84,68,0.08)",
   },
   segmentButtonRedActive: {
     borderColor: colors.accentPurple,
