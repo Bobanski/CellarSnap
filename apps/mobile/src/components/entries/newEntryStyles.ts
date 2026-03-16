@@ -381,7 +381,7 @@ export const styles = StyleSheet.create({
     lineHeight: 15,
   },
   bulkGroupInputError: {
-    borderColor: "rgba(168, 84, 68, 0.65)",
+    borderColor: colors.error,
   },
   bulkGroupErrorText: {
     color: colors.accentSecondary,
@@ -901,7 +901,7 @@ export const styles = StyleSheet.create({
     minWidth: 98,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(20, 19, 18, 0.15)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
