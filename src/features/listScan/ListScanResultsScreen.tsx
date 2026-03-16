@@ -175,7 +175,7 @@ function getAccentPillClasses(
   }
   return selected
     ? "border border-emerald-400 bg-emerald-400 text-emerald-950"
-    : "border border-white/10 text-zinc-200 hover:border-white/30";
+    : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]";
 }
 
 function getWineTypeButtonClasses(
@@ -242,7 +242,7 @@ function FilterDropdown({
   children,
 }: FilterDropdownProps) {
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -250,14 +250,14 @@ function FilterDropdown({
         aria-expanded={open}
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
             {label}
           </span>
-          <span className="mt-1 block truncate text-sm font-semibold text-zinc-100">
+          <span className="mt-1 block truncate text-sm font-semibold text-[var(--color-text-primary)]">
             {summary}
           </span>
         </span>
-        <span className="text-sm font-semibold text-zinc-300">{open ? "v" : ">"}</span>
+        <span className="text-sm font-semibold text-[var(--color-text-secondary)]">{open ? "v" : ">"}</span>
       </button>
 
       {open ? (
@@ -266,7 +266,7 @@ function FilterDropdown({
           <div className="flex justify-end">
             <button
               type="button"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               onClick={onDone ?? onToggle}
             >
               Done
@@ -281,25 +281,25 @@ function FilterDropdown({
 function ResultsLoadingSkeleton() {
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-        <div className="h-3 w-24 animate-pulse rounded-full bg-white/10" />
-        <div className="mt-4 h-8 w-72 animate-pulse rounded-full bg-white/10" />
-        <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-white/10" />
+      <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8">
+        <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+        <div className="mt-4 h-8 w-72 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+        <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
         <div className="mt-6 flex gap-3">
-          <div className="h-10 w-32 animate-pulse rounded-full bg-white/10" />
-          <div className="h-10 w-28 animate-pulse rounded-full bg-white/10" />
+          <div className="h-10 w-32 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+          <div className="h-10 w-28 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+            className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6"
           >
-            <div className="h-3 w-24 animate-pulse rounded-full bg-white/10" />
-            <div className="mt-4 h-6 w-40 animate-pulse rounded-full bg-white/10" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/10" />
-            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-white/10" />
+            <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+            <div className="mt-4 h-6 w-40 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
           </div>
         ))}
       </div>
@@ -438,7 +438,7 @@ export default function ListScanResultsScreen() {
 
   if (result === undefined) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
           <ResultsLoadingSkeleton />
@@ -449,10 +449,10 @@ export default function ListScanResultsScreen() {
 
   if (!result) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             {loadError ?? "This scan result is no longer available in the current session."}
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
@@ -463,7 +463,7 @@ export default function ListScanResultsScreen() {
               </Link>
               <Link
                 href="/list-scan/history"
-                className="inline-flex rounded-full border border-white/10 px-4 py-2 font-semibold text-zinc-100 transition hover:border-white/30"
+                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               >
                 My scans
               </Link>
@@ -475,18 +475,18 @@ export default function ListScanResultsScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
 
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
             List results
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             {result.venue_name || result.list_title || "Scanned wine list"}
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Filter the scanned list, review the current top 3, and browse the full
             list in its original order.
           </p>
@@ -499,7 +499,7 @@ export default function ListScanResultsScreen() {
             </Link>
             <Link
               href="/list-scan/history"
-              className="inline-flex rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-white/30"
+              className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
             >
               My scans
             </Link>
@@ -507,14 +507,14 @@ export default function ListScanResultsScreen() {
         </header>
 
         {loadError ? (
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-200 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
             {loadError}
           </section>
         ) : null}
 
         {result.score_summary.warning ? (
-          <section className="rounded-3xl border border-amber-300/25 bg-amber-400/10 p-5 text-sm text-amber-50 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80">
+          <section className="rounded-3xl border border-[var(--color-accent-gold)]/25 bg-amber-400/10 p-5 text-sm text-amber-50 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
               Match scoring
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-50">
@@ -523,13 +523,13 @@ export default function ListScanResultsScreen() {
           </section>
         ) : null}
 
-        <section className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+        <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Filters
               </p>
-              <h2 className="text-xl font-semibold text-zinc-50">
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
                 Narrow the scanned list
               </h2>
             </div>
@@ -538,9 +538,9 @@ export default function ListScanResultsScreen() {
               type="button"
               onClick={toggleFiltersVisibility}
               aria-expanded={filtersVisible}
-              className="inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-black/25 px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:border-white/25 hover:bg-black/35"
+              className="inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-black/25 px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/25 hover:bg-black/35"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-100">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-primary)]">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -558,7 +558,7 @@ export default function ListScanResultsScreen() {
               </span>
               <span>{filtersVisible ? "Hide filters" : "Show filters"}</span>
               {activeFilterCount > 0 ? (
-                <span className="rounded-full border border-white/10 bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-zinc-100">
+                <span className="rounded-full border border-[var(--color-border)] bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)]">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -595,7 +595,7 @@ export default function ListScanResultsScreen() {
                         className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                           selected
                             ? "bg-amber-400 text-zinc-950"
-                            : "border border-white/10 text-zinc-200 hover:border-white/30"
+                            : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                         }`}
                       >
                         {option.label}
@@ -636,7 +636,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
                     />
                   ) : null}
 
@@ -671,7 +671,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
                     />
                   ) : null}
                 </div>
@@ -757,7 +757,7 @@ export default function ListScanResultsScreen() {
                   onToggle={() => setMatchOpen((current) => !current)}
                 >
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm text-zinc-300">Show wines over</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">Show wines over</span>
                   <input
                     type="number"
                     inputMode="numeric"
@@ -777,12 +777,12 @@ export default function ListScanResultsScreen() {
                           : current.min_match_percent,
                       }));
                     }}
-                    className="w-24 rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-center text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-300/60 focus:outline-none"
+                    className="w-24 rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-center text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-emerald-300/60 focus:outline-none"
                   />
-                  <span className="text-sm text-zinc-300">%</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">%</span>
                 </div>
 
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
+                <label className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
                   <input
                     type="checkbox"
                     checked={filters.show_match_column}
@@ -800,7 +800,7 @@ export default function ListScanResultsScreen() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/8 bg-black/15 px-4 py-4 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-white/8 bg-black/15 px-4 py-4 text-sm text-[var(--color-text-tertiary)]">
               {activeFilterCount > 0
                 ? `${activeFilterCount} filter ${
                     activeFilterCount === 1 ? "setting is" : "settings are"
@@ -812,10 +812,10 @@ export default function ListScanResultsScreen() {
 
         <section className="space-y-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Top 3
             </p>
-            <h2 className="text-xl font-semibold text-zinc-50">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
               Current recommendations
             </h2>
           </div>
@@ -845,11 +845,11 @@ export default function ListScanResultsScreen() {
 
                       <div className="mt-3 flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <h3 className="text-lg font-semibold text-zinc-50">
+                          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
                             {display.title}
                           </h3>
                           {subLabel ? (
-                            <p className="mt-1 text-sm leading-6 text-zinc-300">
+                            <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
                               {subLabel}
                             </p>
                           ) : null}
@@ -859,14 +859,14 @@ export default function ListScanResultsScreen() {
                         </span>
                       </div>
 
-                      <p className="mt-4 text-sm leading-6 text-zinc-200">{wine.rationale}</p>
+                      <p className="mt-4 text-sm leading-6 text-[var(--color-text-primary)]">{wine.rationale}</p>
                     </article>
                   );
                 })()
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-secondary)]">
               No wines match the current filters.
             </div>
           )}
@@ -874,20 +874,20 @@ export default function ListScanResultsScreen() {
 
         <section className="space-y-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Full list
             </p>
-            <h2 className="text-xl font-semibold text-zinc-50">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
               Filtered wines in uploaded list order
             </h2>
-            <p className="mt-1 text-sm text-zinc-400">
+            <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
               {filteredWines.length} of {result.wines.length} shown
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#120f0e]">
+          <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[#120f0e]">
             <div
-              className={`grid gap-3 border-b border-white/10 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 ${
+              className={`grid gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)] ${
                 filters.show_match_column
                   ? "grid-cols-[minmax(0,1fr)_120px_110px]"
                   : "grid-cols-[minmax(0,1fr)_120px]"
@@ -919,7 +919,7 @@ export default function ListScanResultsScreen() {
                       <div key={wine.id}>
                         {showSectionHeader ? (
                           <div className="border-b border-white/8 bg-white/4 px-5 py-2">
-                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                               {getListScanSectionTitle(resolvedType)}
                             </span>
                           </div>
@@ -936,18 +936,18 @@ export default function ListScanResultsScreen() {
                               className={`truncate ${
                                 highlighted
                                   ? "font-bold text-emerald-300"
-                                  : "font-medium text-zinc-100"
+                                  : "font-medium text-[var(--color-text-primary)]"
                               }`}
                             >
                               {display.title}
                             </p>
-                            <p className="mt-1 truncate text-xs text-zinc-500">
+                            <p className="mt-1 truncate text-xs text-[var(--color-text-tertiary)]">
                               {subLabel}
                             </p>
                           </div>
                           <span
                             className={`text-right font-medium ${
-                              highlighted ? "text-emerald-300" : "text-zinc-200"
+                              highlighted ? "text-emerald-300" : "text-[var(--color-text-primary)]"
                             }`}
                           >
                             {formatPriceDisplay(wine.price_display, wine.menu_label)}
@@ -955,7 +955,7 @@ export default function ListScanResultsScreen() {
                           {filters.show_match_column ? (
                             <span
                               className={`text-right font-semibold ${
-                                highlighted ? "text-emerald-300" : "text-zinc-400"
+                                highlighted ? "text-emerald-300" : "text-[var(--color-text-tertiary)]"
                               }`}
                             >
                               {wine.match_percent}%
@@ -967,7 +967,7 @@ export default function ListScanResultsScreen() {
                   });
                 })()
               ) : (
-                <div className="px-5 py-6 text-sm text-zinc-400">
+                <div className="px-5 py-6 text-sm text-[var(--color-text-tertiary)]">
                   No wines match the current filter set.
                 </div>
               )}

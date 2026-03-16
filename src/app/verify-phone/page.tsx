@@ -20,8 +20,8 @@ export default function VerifyPhonePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-          <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+        <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
             Loading...
           </div>
         </div>
@@ -128,19 +128,19 @@ function VerifyPhoneInner() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+      <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">Verify phone</span>
-          <h1 className="text-2xl font-semibold text-zinc-50">Enter your confirmation code</h1>
-          <p className="text-sm text-zinc-300">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">Verify phone</span>
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Enter your confirmation code</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
             We sent a verification code to your phone number.
           </p>
         </div>
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
+            <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="phone">
               Phone number
             </label>
             <Controller
@@ -153,7 +153,7 @@ function VerifyPhoneInner() {
                   id="phone"
                   type="tel"
                   autoComplete="tel"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   placeholder="(555) 123-4567"
                   value={field.value ?? ""}
                   onChange={(event) => {
@@ -165,7 +165,7 @@ function VerifyPhoneInner() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="code">
+            <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="code">
               Verification code
             </label>
             <input
@@ -173,7 +173,7 @@ function VerifyPhoneInner() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="6-digit code"
               {...register("code", { required: true })}
             />
@@ -193,7 +193,7 @@ function VerifyPhoneInner() {
         <div className="text-center">
           <Link
             href="/signup"
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-amber-200"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
           >
             Back to create account
           </Link>

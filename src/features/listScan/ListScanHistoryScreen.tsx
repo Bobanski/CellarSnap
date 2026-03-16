@@ -87,16 +87,16 @@ export default function ListScanHistoryScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
 
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
             List scan
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">My scans</h1>
-          <p className="text-sm text-zinc-300">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">My scans</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Revisit previously scanned wine lists across devices.
           </p>
           <Link
@@ -108,15 +108,15 @@ export default function ListScanHistoryScreen() {
         </header>
 
         {isLoading ? (
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             Loading saved scans...
           </section>
         ) : errorMessage ? (
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             {errorMessage}
           </section>
         ) : items.length === 0 ? (
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             No saved scans yet. Scan a wine list while signed in and it will show up here.
           </section>
         ) : (
@@ -125,21 +125,21 @@ export default function ListScanHistoryScreen() {
               <Link
                 key={item.scan_id}
                 href={`/list-scan/results?scanId=${encodeURIComponent(item.scan_id)}`}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6 transition hover:border-amber-300/40 hover:bg-white/7"
+                className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 transition hover:border-[var(--color-accent-gold)]/40 hover:bg-white/7"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   {item.source_type}
                 </p>
-                <h2 className="mt-3 text-xl font-semibold text-zinc-50">
+                <h2 className="mt-3 text-xl font-semibold text-[var(--color-text-primary)]">
                   {item.venue_name || item.list_title || item.source_label || "Saved scan"}
                 </h2>
-                <p className="mt-2 text-sm text-zinc-300">
+                <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                   {item.wine_count} wine{item.wine_count === 1 ? "" : "s"} scanned
                   {typeof item.overall_confidence === "number"
                     ? `, ${item.overall_confidence}% confidence`
                     : ""}
                 </p>
-                <p className="mt-3 text-xs text-zinc-500">
+                <p className="mt-3 text-xs text-[var(--color-text-tertiary)]">
                   {new Date(item.scanned_at).toLocaleString()}
                 </p>
               </Link>

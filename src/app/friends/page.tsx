@@ -243,10 +243,10 @@ export default function FriendsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             Loading friends...
           </div>
         </div>
@@ -255,29 +255,29 @@ export default function FriendsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
             Friends
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             Keep your cellar circle close.
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Review requests, add friends, and see who you&rsquo;re connected with.
           </p>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold text-zinc-200">Your friends</h2>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Your friends</h2>
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               People you&rsquo;re connected with.
             </p>
             {friends.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-[var(--color-text-tertiary)]">
                 No friends yet. Search to add someone.
               </p>
             ) : (
@@ -285,11 +285,11 @@ export default function FriendsPage() {
                 {friends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                    className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                   >
                     <Link
                       href={`/profile/${friend.id}`}
-                      className="text-sm font-medium text-zinc-100 underline-offset-2 hover:underline hover:text-amber-200"
+                      className="text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-gold)]"
                     >
                       {displayName(friend)}
                     </Link>
@@ -297,7 +297,7 @@ export default function FriendsPage() {
                     {friend.request_id ? (
                       confirmingRemove === friend.request_id ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-zinc-400">Remove?</span>
+                          <span className="text-xs text-[var(--color-text-tertiary)]">Remove?</span>
                           <button
                             type="button"
                             disabled={isMutating}
@@ -310,7 +310,7 @@ export default function FriendsPage() {
                             type="button"
                             disabled={isMutating}
                             onClick={() => setConfirmingRemove(null)}
-                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-white/20 disabled:opacity-50"
                           >
                             No
                           </button>
@@ -320,7 +320,7 @@ export default function FriendsPage() {
                           type="button"
                           disabled={isMutating}
                           onClick={() => setConfirmingRemove(friend.request_id!)}
-                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
                         >
                           Remove
                         </button>
@@ -333,22 +333,22 @@ export default function FriendsPage() {
 
             {outgoingRequests.length > 0 ? (
               <div className="mt-6">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Pending invites
                 </h3>
                 <div className="mt-2 space-y-2">
                   {outgoingRequests.map((request) => (
                     <div
                       key={request.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                     >
-                      <span className="text-sm text-zinc-200">
+                      <span className="text-sm text-[var(--color-text-primary)]">
                         {displayName(request.recipient)}
                       </span>
 
                       {confirmingCancel === request.id ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-zinc-400">Cancel?</span>
+                          <span className="text-xs text-[var(--color-text-tertiary)]">Cancel?</span>
                           <button
                             type="button"
                             disabled={isMutating}
@@ -361,7 +361,7 @@ export default function FriendsPage() {
                             type="button"
                             disabled={isMutating}
                             onClick={() => setConfirmingCancel(null)}
-                            className="rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/20 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-white/20 disabled:opacity-50"
                           >
                             No
                           </button>
@@ -371,7 +371,7 @@ export default function FriendsPage() {
                           type="button"
                           disabled={isMutating}
                           onClick={() => setConfirmingCancel(request.id)}
-                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-400 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -383,9 +383,9 @@ export default function FriendsPage() {
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-zinc-200">
+              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
                 Incoming requests
               </h2>
               {incomingRequests.length > 0 ? (
@@ -394,11 +394,11 @@ export default function FriendsPage() {
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               Accept or decline new friend requests.
             </p>
             {incomingRequests.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-[var(--color-text-tertiary)]">
                 No new requests right now.
               </p>
             ) : (
@@ -406,9 +406,9 @@ export default function FriendsPage() {
                 {incomingRequests.map((request) => (
                   <div
                     key={request.id}
-                    className="rounded-xl border border-white/10 bg-black/20 p-3"
+                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"
                   >
-                    <p className="text-sm font-medium text-zinc-100">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)]">
                       {displayName(request.requester)}
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -435,16 +435,16 @@ export default function FriendsPage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold text-zinc-200">Find friends</h2>
-            <p className="mt-1 text-xs text-zinc-400">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Find friends</h2>
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               Search by username or name. Results show usernames only.
             </p>
             <input
               value={friendSearch}
               onChange={(event) => setFriendSearch(event.target.value)}
               placeholder="Search by username or name"
-              className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
             />
             {friendError ? (
               <p className="mt-2 text-sm text-rose-200">{friendError}</p>
@@ -453,7 +453,7 @@ export default function FriendsPage() {
               <p className="mt-2 text-sm text-rose-200">{searchError}</p>
             ) : null}
             {searchLoading ? (
-              <p className="mt-2 text-sm text-zinc-400">Searching...</p>
+              <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">Searching...</p>
             ) : null}
             {searchResults.length > 0 ? (
               <div className="mt-3 space-y-2">
@@ -465,10 +465,10 @@ export default function FriendsPage() {
                   return (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                     >
                       <div>
-                        <p className="text-sm font-medium text-zinc-100">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {label}
                         </p>
                         {isFriend ? (
@@ -476,11 +476,11 @@ export default function FriendsPage() {
                             Already friends
                           </p>
                         ) : isOutgoing ? (
-                          <p className="text-xs text-amber-200">
+                          <p className="text-xs text-[var(--color-accent-gold)]">
                             Request sent
                           </p>
                         ) : isIncoming ? (
-                          <p className="text-xs text-amber-200">
+                          <p className="text-xs text-[var(--color-accent-gold)]">
                             Requested you
                           </p>
                         ) : null}
@@ -489,7 +489,7 @@ export default function FriendsPage() {
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(user.id)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                       </button>
@@ -498,19 +498,19 @@ export default function FriendsPage() {
                 })}
               </div>
             ) : friendSearch.trim() && !searchLoading && !searchError ? (
-              <p className="mt-2 text-sm text-zinc-400">No matches.</p>
+              <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">No matches.</p>
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <h2 className="text-sm font-semibold text-zinc-200">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
               People you may know
             </h2>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               Suggested based on mutual friends.
             </p>
             {suggestions.length === 0 ? (
-              <p className="mt-4 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-[var(--color-text-tertiary)]">
                 No suggestions right now. Add more friends to see recommendations.
               </p>
             ) : (
@@ -525,19 +525,19 @@ export default function FriendsPage() {
                   return (
                     <div
                       key={person.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                      className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                     >
                       <div>
-                        <p className="text-sm font-medium text-zinc-100">
+                        <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {displayName(person)}
                         </p>
-                        <p className="text-xs text-amber-200">{mutualLabel}</p>
+                        <p className="text-xs text-[var(--color-accent-gold)]">{mutualLabel}</p>
                       </div>
                       <button
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(person.id)}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                       </button>

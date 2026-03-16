@@ -4,7 +4,7 @@ import rehypeSanitize from "rehype-sanitize";
 function TypingIndicator() {
   return (
     <div
-      className="flex items-center gap-2 text-sm text-zinc-300"
+      className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]"
       role="status"
       aria-label="Pocket Sommelier is responding"
     >
@@ -38,11 +38,11 @@ export default function SommelierMessage({
       <div
         className={`max-w-3xl rounded-[1.75rem] border px-5 py-4 shadow-[0_18px_60px_-38px_rgba(0,0,0,0.9)] ${
           isAssistant
-            ? "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] text-zinc-100"
-            : "border-amber-300/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.20),rgba(146,64,14,0.20))] text-amber-50"
+            ? "border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] text-[var(--color-text-primary)]"
+            : "border-[var(--color-accent-gold)]/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.20),rgba(146,64,14,0.20))] text-amber-50"
         }`}
       >
-        <p className="mb-2 text-[11px] uppercase tracking-[0.28em] text-zinc-400">
+        <p className="mb-2 text-[11px] uppercase tracking-[0.28em] text-[var(--color-text-tertiary)]">
           {isAssistant ? "Pocket Sommelier" : "You"}
         </p>
         {isAssistant && isStreaming && content.trim().length === 0 ? (
@@ -60,10 +60,10 @@ export default function SommelierMessage({
                   <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>
                 ),
                 li: ({ children }) => <li className="pl-1">{children}</li>,
-                strong: ({ children }) => <strong className="font-semibold text-zinc-50">{children}</strong>,
-                em: ({ children }) => <em className="italic text-zinc-100">{children}</em>,
+                strong: ({ children }) => <strong className="font-semibold text-[var(--color-text-primary)]">{children}</strong>,
+                em: ({ children }) => <em className="italic text-[var(--color-text-primary)]">{children}</em>,
                 code: ({ children }) => (
-                  <code className="rounded-md bg-black/30 px-1.5 py-0.5 text-[0.9em] text-amber-100">
+                  <code className="rounded-md bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[0.9em] text-[var(--color-accent-gold)]">
                     {children}
                   </code>
                 ),
@@ -72,7 +72,7 @@ export default function SommelierMessage({
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-amber-200 underline decoration-amber-200/40 underline-offset-4 transition hover:text-amber-100"
+                    className="text-[var(--color-accent-gold)] underline decoration-amber-200/40 underline-offset-4 transition hover:text-[var(--color-accent-gold)]"
                   >
                     {children}
                   </a>

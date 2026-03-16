@@ -189,17 +189,17 @@ export default function SommelierKnowledgeAdmin() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <main className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar activeHrefOverride="/sommelier" />
-        <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-7">
-          <p className="text-xs uppercase tracking-[0.32em] text-amber-200/70">
+        <section className="rounded-[2rem] border border-[var(--color-border)] bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-7">
+          <p className="text-xs uppercase tracking-[0.32em] text-[var(--color-accent-gold)]/70">
             Sommelier Knowledge
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-zinc-50">
+          <h1 className="mt-3 text-3xl font-semibold text-[var(--color-text-primary)]">
             Manage the RAG knowledge base.
           </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-300">
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--color-text-secondary)]">
             Upload markdown, text, or PDF guides for the general knowledge layer, then re-ingest structured wine knowledge or cellar entry embeddings whenever the retrieval corpus changes.
           </p>
         </section>
@@ -213,20 +213,20 @@ export default function SommelierKnowledgeAdmin() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5"
+                className="rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5"
               >
-                <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">{item.label}</p>
-                <p className="mt-3 text-3xl font-semibold text-zinc-50">{item.value}</p>
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-tertiary)]">{item.label}</p>
+                <p className="mt-3 text-3xl font-semibold text-[var(--color-text-primary)]">{item.value}</p>
               </div>
             ))}
           </section>
         ) : null}
 
-        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+        <section className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-zinc-50">Upload a document</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-zinc-300">
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Upload a document</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--color-text-secondary)]">
                 The server will chunk the text, generate embeddings, and store the document for future chat retrieval.
               </p>
             </div>
@@ -235,7 +235,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="button"
                 onClick={() => void reingestStructured()}
                 disabled={reingestingStructured}
-                className="rounded-full border border-amber-300/35 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-accent-gold)]/35 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {reingestingStructured ? "Re-ingesting..." : "Re-ingest structured data"}
               </button>
@@ -243,7 +243,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="button"
                 onClick={() => void reingestEntries()}
                 disabled={reingestingEntries}
-                className="rounded-full border border-white/12 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-amber-300/35 hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-white/12 bg-[var(--color-surface-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/35 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {reingestingEntries ? "Re-ingesting..." : "Re-ingest cellar entries"}
               </button>
@@ -260,30 +260,30 @@ export default function SommelierKnowledgeAdmin() {
             }}
           >
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-500">
+              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
                 Title
               </span>
               <input
                 type="text"
                 name="title"
                 required
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-amber-300/40"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/40"
                 placeholder="Old World Regions Primer"
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-500">
+              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
                 Optional source URL
               </span>
               <input
                 type="url"
                 name="source_url"
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-100 outline-none transition focus:border-amber-300/40"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/40"
                 placeholder="https://..."
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-zinc-500">
+              <span className="mb-2 block text-xs uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
                 File
               </span>
               <input
@@ -291,7 +291,7 @@ export default function SommelierKnowledgeAdmin() {
                 name="file"
                 accept=".md,.txt,.pdf,text/markdown,text/plain,application/pdf"
                 required
-                className="block w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-300"
+                className="block w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-secondary)]"
               />
             </label>
             <div className="md:col-span-3">
@@ -312,18 +312,18 @@ export default function SommelierKnowledgeAdmin() {
           </div>
         ) : null}
 
-        <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
-          <h2 className="text-xl font-semibold text-zinc-50">Uploaded documents</h2>
-          <p className="mt-2 text-sm leading-7 text-zinc-300">
+        <section className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6">
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Uploaded documents</h2>
+          <p className="mt-2 text-sm leading-7 text-[var(--color-text-secondary)]">
             Review chunk counts and ingest status at a glance.
           </p>
 
           {loading ? (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 px-4 py-6 text-sm text-zinc-400">
+            <div className="mt-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-tertiary)]">
               Loading knowledge documents...
             </div>
           ) : documents.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-white/12 bg-black/20 px-4 py-6 text-sm text-zinc-400">
+            <div className="mt-5 rounded-2xl border border-dashed border-white/12 bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-tertiary)]">
               No documents uploaded yet.
             </div>
           ) : (
@@ -331,21 +331,21 @@ export default function SommelierKnowledgeAdmin() {
               {documents.map((document) => (
                 <div
                   key={document.id}
-                  className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-base font-semibold text-zinc-50">{document.title}</p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.16em] text-zinc-500">
+                      <p className="text-base font-semibold text-[var(--color-text-primary)]">{document.title}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                         {document.content_type}
                         {document.source_filename ? ` • ${document.source_filename}` : ""}
                       </p>
                     </div>
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-300">
+                    <span className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-secondary)]">
                       {document.ingest_status}
                     </span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-4 text-sm text-zinc-400">
+                  <div className="mt-3 flex flex-wrap gap-4 text-sm text-[var(--color-text-tertiary)]">
                     <span>{document.chunk_count} chunks</span>
                     <span>
                       Last ingested: {document.last_ingested_at ?? "Not ingested yet"}
@@ -354,7 +354,7 @@ export default function SommelierKnowledgeAdmin() {
                       type="button"
                       onClick={() => void reingestDocument(document.id)}
                       disabled={reingestingDocumentId === document.id}
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-200 transition hover:border-amber-300/35 hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/35 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {reingestingDocumentId === document.id ? "Re-ingesting..." : "Re-ingest"}
                     </button>

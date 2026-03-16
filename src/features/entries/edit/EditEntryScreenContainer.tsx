@@ -1858,12 +1858,12 @@ export default function EditEntryPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
         </div>
         <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             Loading entry...
           </div>
         </div>
@@ -1873,7 +1873,7 @@ export default function EditEntryPage() {
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
         </div>
@@ -1888,13 +1888,13 @@ export default function EditEntryPage() {
 
   if (currentUserId && entry.user_id !== currentUserId) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
         </div>
         <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
           <Link
-            className="text-sm font-medium text-zinc-300 hover:text-zinc-50"
+            className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             href={`/entries/${entry.id}`}
           >
             ← Back to entry
@@ -1925,28 +1925,28 @@ export default function EditEntryPage() {
     currentEntryGroup !== null && selectedGroupMode === "event";
   const showSharedEventBulkSummary = isBulkReview && isSharedEventGroup;
   const collapsibleSectionClassName =
-    "group rounded-2xl border border-white/10 bg-black/30 p-4";
+    "group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4";
   const collapsibleSummaryClassName =
-    "cursor-pointer list-none select-none text-sm font-medium text-zinc-200 [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
+    "cursor-pointer list-none select-none text-sm font-medium text-[var(--color-text-primary)] [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
   const showEditPhotosSection = false;
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
       </div>
       <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
               {isBulkReview ? "Bulk review" : "Edit entry"}
             </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
+            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
               {isBulkReview
                 ? "Review this wine before posting."
                 : "Refine your tasting notes."}
             </h1>
-            <p className="text-sm text-zinc-300">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               {isBulkReview
                 ? `Wine ${bulkProgressLabel ?? "1/1"} in your bulk queue.`
                 : "Update tasting details or photos."}
@@ -1957,30 +1957,30 @@ export default function EditEntryPage() {
         <form
           id="entry-edit-form"
           noValidate
-          className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
+          className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
           onSubmit={onSubmit}
         >
           {isBulkReview ? (
-            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+            <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-amber-300/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
                 Wine
               </p>
               <input
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-lg font-semibold text-zinc-50 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-lg font-semibold text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("wine_name")}
               />
             </div>
           ) : currentWineName ? (
-            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/5 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+            <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-amber-300/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
                 Wine
               </p>
-              <p className="mt-1 text-lg font-semibold text-zinc-50">{currentWineName}</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{currentWineName}</p>
             </div>
           ) : null}
 
           <div>
-            <p className="text-sm font-medium text-zinc-200">Current photos</p>
+            <p className="text-sm font-medium text-[var(--color-text-primary)]">Current photos</p>
             <div className="mt-2">
               <SwipePhotoGallery
                 items={allDisplayPhotos.map((photo, index) => ({
@@ -1991,7 +1991,7 @@ export default function EditEntryPage() {
                     <label className="relative block">
                       <select
                         value={photo.type}
-                        className="max-w-[9rem] appearance-none rounded-full border border-white/10 bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-zinc-300 outline-none transition hover:border-white/20 focus:border-amber-300/50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-gold)]/50 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={isLegacyPhoto(photo) || savingPhotoId === photo.id}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={(event) => event.stopPropagation()}
@@ -2006,7 +2006,7 @@ export default function EditEntryPage() {
                           </option>
                         ))}
                       </select>
-                      <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+                      <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--color-text-tertiary)]">
                         ▾
                       </span>
                     </label>
@@ -2016,7 +2016,7 @@ export default function EditEntryPage() {
                       <label className="relative block">
                         <select
                           value={index}
-                          className="max-w-[4.5rem] appearance-none rounded-full border border-white/15 bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-zinc-200 outline-none transition hover:border-white/30 focus:border-amber-300/50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-primary)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-gold)]/50 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={
                             hasLegacyGalleryPhoto ||
                             isLegacyPhoto(photo) ||
@@ -2040,7 +2040,7 @@ export default function EditEntryPage() {
                             </option>
                           ))}
                         </select>
-                        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-zinc-400">
+                        <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] text-[var(--color-text-tertiary)]">
                           ▾
                         </span>
                       </label>
@@ -2065,7 +2065,7 @@ export default function EditEntryPage() {
                         {activePhoto?.signed_url ? (
                           <button
                             type="button"
-                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
                             onClick={() => openCropEditor(activePhoto)}
                             disabled={!canCrop || savingPhotoId === activePhoto.id}
                           >
@@ -2076,7 +2076,7 @@ export default function EditEntryPage() {
                           <a
                             href={activePhoto.signed_url}
                             download
-                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
                           >
                             Download
                           </a>
@@ -2084,7 +2084,7 @@ export default function EditEntryPage() {
                         {activePhoto ? (
                           <button
                             type="button"
-                            className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-200 transition hover:border-rose-300 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
                             onClick={() => {
                               void deletePhotoItem(activePhoto);
                             }}
@@ -2102,23 +2102,23 @@ export default function EditEntryPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-200">Notes</label>
+            <label className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
             <textarea
-              className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 min-h-[120px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               {...register("notes")}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-zinc-200">Rating (1-100) <span className="text-rose-400">*</span></label>
+              <label className="text-sm font-medium text-[var(--color-text-primary)]">Rating (1-100) <span className="text-rose-400">*</span></label>
               <input
                 type="text"
                 inputMode="numeric"
-                className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 ${
+                className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 ${
                   errors.rating
                     ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                    : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                    : "border-[var(--color-border)] focus:border-[var(--color-accent-gold)] focus:ring-amber-300/30"
                 }`}
                 {...register("rating", {
                   validate: (value) => {
@@ -2140,17 +2140,17 @@ export default function EditEntryPage() {
                   {errors.rating.message}
                 </p>
               ) : (
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                   Whole number between 1 and 100.
                 </p>
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-zinc-200">
+              <label className="text-sm font-medium text-[var(--color-text-primary)]">
                 QPR (Quality : Price Ratio)
               </label>
               <select
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 {...register("qpr_level")}
               >
                 <option value="">Not set</option>
@@ -2171,7 +2171,7 @@ export default function EditEntryPage() {
             <div className="mt-4">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-amber-300/50 hover:text-amber-200"
+                className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
                 onClick={() => setShowBulkMoreDetails((current) => !current)}
               >
                 Add / edit details
@@ -2185,60 +2185,60 @@ export default function EditEntryPage() {
             <summary className={collapsibleSummaryClassName}>
               Wine details
             </summary>
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
               Optional identity details for this bottle.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {!isBulkReview ? (
                 <div>
-                  <label className="text-sm font-medium text-zinc-200">Wine name</label>
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Wine name</label>
                   <input
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                     {...register("wine_name")}
                   />
                 </div>
               ) : null}
               <div>
-                <label className="text-sm font-medium text-zinc-200">Producer</label>
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">Producer</label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("producer")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-200">Vintage</label>
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">Vintage</label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("vintage")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-200">Country</label>
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">Country</label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("country")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-200">Region</label>
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">Region</label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("region")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-200">Appellation</label>
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">Appellation</label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("appellation")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-zinc-200">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">
                   Classification
                 </label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   placeholder="Optional (e.g. Premier Cru, DOCG)"
                   {...register("classification")}
                 />
@@ -2257,13 +2257,13 @@ export default function EditEntryPage() {
               <summary className={collapsibleSummaryClassName}>
                 Event / catch-up post
               </summary>
-              <p className="mt-2 text-xs text-zinc-400">
+              <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
                 Edit the grouped post title and whether this set represents one event or a catch-up log.
               </p>
               <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
                 <div>
-                  <label className="text-sm font-medium text-zinc-200">Group type</label>
-                  <div className="mt-2 inline-flex rounded-full border border-white/10 bg-black/40 p-1">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Group type</label>
+                  <div className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-black/40 p-1">
                     {[
                       { value: "event", label: "Event" },
                       { value: "catch_up", label: "Catch-up" },
@@ -2274,7 +2274,7 @@ export default function EditEntryPage() {
                         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                           selectedGroupMode === option.value
                             ? "bg-amber-400 text-zinc-950"
-                            : "text-zinc-300 hover:text-zinc-100"
+                            : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                         }`}
                         onClick={() =>
                           setValue("entry_group_mode", option.value as EntryGroupMode, {
@@ -2288,14 +2288,14 @@ export default function EditEntryPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-zinc-200">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
                     Group title
                   </label>
                   <input
-                    className={`mt-1 w-full rounded-xl border bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                    className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
                       errors.entry_group_title
                         ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                        : "border-white/10 focus:border-amber-300 focus:ring-amber-300/30"
+                        : "border-[var(--color-border)] focus:border-[var(--color-accent-gold)] focus:ring-amber-300/30"
                     }`}
                     placeholder={
                       selectedGroupMode === "event"
@@ -2309,7 +2309,7 @@ export default function EditEntryPage() {
                       {errors.entry_group_title.message}
                     </p>
                   ) : (
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                       This title is shown on the grouped post in Home and Feed.
                     </p>
                   )}
@@ -2319,30 +2319,30 @@ export default function EditEntryPage() {
           ) : null}
 
           {showSharedEventBulkSummary ? (
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4">
-              <p className="text-sm font-medium text-zinc-100">
+            <div className="rounded-2xl border border-[var(--color-accent-gold)]/20 bg-amber-500/10 p-4">
+              <p className="text-sm font-medium text-[var(--color-text-primary)]">
                 Shared event details already applied
               </p>
-              <p className="mt-2 text-sm text-zinc-300">
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 Event wines inherit the shared event name, location, date, and tasted-with
                 list, so you can focus on each bottle here.
               </p>
-              <div className="mt-3 grid gap-2 text-sm text-zinc-300 sm:grid-cols-2">
+              <div className="mt-3 grid gap-2 text-sm text-[var(--color-text-secondary)] sm:grid-cols-2">
                 <p>
-                  <span className="text-zinc-500">Event:</span>{" "}
+                  <span className="text-[var(--color-text-tertiary)]">Event:</span>{" "}
                   {currentEntryGroup?.title?.trim() || "Untitled event"}
                 </p>
                 <p>
-                  <span className="text-zinc-500">Date:</span> {entry.consumed_at}
+                  <span className="text-[var(--color-text-tertiary)]">Date:</span> {entry.consumed_at}
                 </p>
                 {entry.location_text ? (
                   <p className="sm:col-span-2">
-                    <span className="text-zinc-500">Location:</span> {entry.location_text}
+                    <span className="text-[var(--color-text-tertiary)]">Location:</span> {entry.location_text}
                   </p>
                 ) : null}
                 {selectedUserIds.length > 0 ? (
                   <p className="sm:col-span-2">
-                    <span className="text-zinc-500">Tasted with:</span>{" "}
+                    <span className="text-[var(--color-text-tertiary)]">Tasted with:</span>{" "}
                     {selectedUserIds.length} friend
                     {selectedUserIds.length === 1 ? "" : "s"}
                   </p>
@@ -2355,14 +2355,14 @@ export default function EditEntryPage() {
                 <summary className={collapsibleSummaryClassName}>
                   Location & date
                 </summary>
-                <p className="mt-2 text-xs text-zinc-400">
+                <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
                   {isSharedEventGroup
                     ? "Where this event happened and the shared date for every wine in the group."
                     : "Where and when this bottle was consumed."}
                 </p>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-zinc-200">Location</label>
+                    <label className="text-sm font-medium text-[var(--color-text-primary)]">Location</label>
                     <input type="hidden" {...register("location_place_id")} />
                     <Controller
                       control={control}
@@ -2383,7 +2383,7 @@ export default function EditEntryPage() {
                     />
                   </div>
                   <div className="md:justify-self-start">
-                    <label className="text-sm font-medium text-zinc-200">
+                    <label className="text-sm font-medium text-[var(--color-text-primary)]">
                       {isSharedEventGroup ? "Shared event date" : "Consumed date"}
                     </label>
                     <Controller
@@ -2395,13 +2395,13 @@ export default function EditEntryPage() {
                           value={field.value}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                           required
                         />
                       )}
                     />
                     {isSharedEventGroup ? (
-                      <p className="mt-1 text-xs text-zinc-500">
+                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                         Saving in Event mode will apply this date to every wine in the grouped post.
                       </p>
                     ) : null}
@@ -2413,11 +2413,11 @@ export default function EditEntryPage() {
                 <summary className={collapsibleSummaryClassName}>
                   Tasted with
                 </summary>
-                <p className="mt-2 text-xs text-zinc-400">
+                <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
                   Tag friends who were with you.
                 </p>
                 {users.length === 0 ? (
-                  <p className="mt-3 text-sm text-zinc-400">No other users yet.</p>
+                  <p className="mt-3 text-sm text-[var(--color-text-tertiary)]">No other users yet.</p>
                 ) : (() => {
                   const topFriends = users.slice(0, 5);
                   const topFriendIds = new Set(topFriends.map((u) => u.id));
@@ -2439,7 +2439,7 @@ export default function EditEntryPage() {
                     const label = user.display_name ?? "Unknown";
                     const isChecked = selectedUserIds.includes(user.id);
                     return (
-                      <label key={user.id} className="flex items-center gap-2 text-sm text-zinc-200">
+                      <label key={user.id} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
@@ -2460,7 +2460,7 @@ export default function EditEntryPage() {
 
                   return (
                     <div className="mt-3 space-y-2">
-                      <div className="grid gap-2 rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <div className="grid gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
                         {topFriends.map(renderCheckbox)}
                         {extraSelected.map(renderCheckbox)}
                       </div>
@@ -2470,15 +2470,15 @@ export default function EditEntryPage() {
                           value={friendSearch}
                           onChange={(e) => setFriendSearch(e.target.value)}
                           placeholder="Search friends..."
-                          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                         />
                         {searchResults.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
+                          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
                             {searchResults.map((user) => (
                               <button
                                 key={user.id}
                                 type="button"
-                                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
+                                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
                                   setSelectedUserIds((prev) => [...prev, user.id]);
@@ -2502,17 +2502,17 @@ export default function EditEntryPage() {
             <summary className={collapsibleSummaryClassName}>
               Advanced notes
             </summary>
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
               Optional structure for deeper tasting notes.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {ADVANCED_NOTE_FIELDS.map((field) => (
                 <div key={field.key}>
-                  <label className="text-sm font-medium text-zinc-200">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
                     {field.label}
                   </label>
                   <select
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                     {...register(`advanced_notes.${field.key}` as const)}
                   >
                     <option value="">Not set</option>
@@ -2531,20 +2531,20 @@ export default function EditEntryPage() {
             <summary className={collapsibleSummaryClassName}>
               Visibility & interaction
             </summary>
-            <p className="mt-2 text-xs text-zinc-400">
+            <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
               Set who can view the post, view/react to reactions, and view/comment on
               comments.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <label className="text-sm font-medium text-zinc-200">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
                     Post visibility
                   </label>
                   <PrivacyBadge level={selectedEntryPrivacy} compact />
                 </div>
                 <select
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("entry_privacy")}
                 >
                   {PRIVACY_OPTIONS.map((option) => (
@@ -2556,11 +2556,11 @@ export default function EditEntryPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <label className="text-sm font-medium text-zinc-200">Reactions</label>
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Reactions</label>
                   <PrivacyBadge level={selectedReactionPrivacy} compact />
                 </div>
                 <select
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("reaction_privacy")}
                 >
                   {PRIVACY_OPTIONS.map((option) => (
@@ -2572,11 +2572,11 @@ export default function EditEntryPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <label className="text-sm font-medium text-zinc-200">Comments</label>
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Comments</label>
                   <PrivacyBadge level={selectedCommentsPrivacy} compact />
                 </div>
                 <select
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   {...register("comments_privacy")}
                 >
                   {PRIVACY_OPTIONS.map((option) => (
@@ -2587,7 +2587,7 @@ export default function EditEntryPage() {
                 </select>
               </div>
             </div>
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
               Privacy on reactions/comments controls both visibility and participation.
             </p>
           </details>
@@ -2599,7 +2599,7 @@ export default function EditEntryPage() {
               <summary className={collapsibleSummaryClassName}>
                 Edit photos
               </summary>
-              <p className="mt-2 text-xs text-zinc-400">
+              <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
                 Edit category and order, delete photos, and tap any image to crop.
               </p>
 
@@ -2618,7 +2618,7 @@ export default function EditEntryPage() {
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => addPhotoInputRef.current?.click()}
                   disabled={uploadingType !== null}
                 >
@@ -2634,7 +2634,7 @@ export default function EditEntryPage() {
               </div>
 
               {allDisplayPhotos.length === 0 ? (
-                <p className="mt-3 text-sm text-zinc-500">No photos yet.</p>
+                <p className="mt-3 text-sm text-[var(--color-text-tertiary)]">No photos yet.</p>
               ) : (
                 <div className="mt-4 space-y-3">
                   {allDisplayPhotos.map((photo, index) => {
@@ -2643,12 +2643,12 @@ export default function EditEntryPage() {
                     return (
                       <div
                         key={photo.id}
-                        className="rounded-xl border border-white/10 bg-black/40 p-3"
+                        className="rounded-xl border border-[var(--color-border)] bg-black/40 p-3"
                       >
                         <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
                           <button
                             type="button"
-                            className="relative block h-28 overflow-hidden rounded-lg border border-white/10 bg-black/50 text-left disabled:cursor-not-allowed disabled:opacity-70"
+                            className="relative block h-28 overflow-hidden rounded-lg border border-[var(--color-border)] bg-black/50 text-left disabled:cursor-not-allowed disabled:opacity-70"
                             onClick={() => openCropEditor(photo)}
                             disabled={!photo.signed_url || saving}
                             aria-label={`Crop ${PHOTO_TYPE_LABELS[photo.type].toLowerCase()} photo`}
@@ -2661,12 +2661,12 @@ export default function EditEntryPage() {
                                   alt={`${PHOTO_TYPE_LABELS[photo.type]} photo ${index + 1}`}
                                   className="h-full w-full object-cover"
                                 />
-                                <span className="absolute bottom-1 left-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-zinc-200">
+                                <span className="absolute bottom-1 left-1 rounded-full border border-[var(--color-border)] bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)]">
                                   Crop
                                 </span>
                               </>
                             ) : (
-                              <span className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
+                              <span className="flex h-full w-full items-center justify-center text-xs text-[var(--color-text-tertiary)]">
                                 Photo unavailable
                               </span>
                             )}
@@ -2675,10 +2675,10 @@ export default function EditEntryPage() {
                           <div className="space-y-3">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
-                                <p className="text-xs uppercase tracking-[0.12em] text-zinc-400">
+                                <p className="text-xs uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">
                                   Photo {index + 1}
                                 </p>
-                                <p className="text-sm text-zinc-200">
+                                <p className="text-sm text-[var(--color-text-primary)]">
                                   {PHOTO_TYPE_LABELS[photo.type]}
                                 </p>
                               </div>
@@ -2693,10 +2693,10 @@ export default function EditEntryPage() {
                             </div>
 
                             <div className="grid gap-3 sm:grid-cols-2">
-                              <label className="text-xs text-zinc-300">
+                              <label className="text-xs text-[var(--color-text-secondary)]">
                                 Category
                                 <select
-                                  className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-2 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-70"
+                                  className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:cursor-not-allowed disabled:opacity-70"
                                   value={photo.type}
                                   disabled={legacy || saving}
                                   onChange={(event) =>
@@ -2714,15 +2714,15 @@ export default function EditEntryPage() {
                                 </select>
                               </label>
 
-                              <div className="text-xs text-zinc-300">
+                              <div className="text-xs text-[var(--color-text-secondary)]">
                                 Order
-                                <div className="mt-1 flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2 py-2">
-                                  <span className="w-8 text-center text-sm text-zinc-100">
+                                <div className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-2">
+                                  <span className="w-8 text-center text-sm text-[var(--color-text-primary)]">
                                     {index + 1}
                                   </span>
                                   <button
                                     type="button"
-                                    className="rounded-full border border-white/10 px-2 py-1 text-xs transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-full border border-[var(--color-border)] px-2 py-1 text-xs transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                                     disabled={
                                       legacy ||
                                       saving ||
@@ -2737,7 +2737,7 @@ export default function EditEntryPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    className="rounded-full border border-white/10 px-2 py-1 text-xs transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-full border border-[var(--color-border)] px-2 py-1 text-xs transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                                     disabled={
                                       legacy ||
                                       saving ||
@@ -2755,7 +2755,7 @@ export default function EditEntryPage() {
                             </div>
 
                             {legacy ? (
-                              <p className="text-[11px] text-zinc-500">
+                              <p className="text-[11px] text-[var(--color-text-tertiary)]">
                                 Saved from an older entry format. Category/order edits and crop
                                 are unavailable for this photo.
                               </p>
@@ -2780,16 +2780,16 @@ export default function EditEntryPage() {
                 disabled={savingCrop}
               />
               <div className="relative h-full overflow-y-auto p-3 pt-4 sm:flex sm:items-center sm:justify-center sm:p-4">
-                <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/15 bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+                <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
                       Photo crop
                     </p>
-                    <h3 className="mt-1 text-lg font-semibold text-zinc-50">
+                    <h3 className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
                       Adjust photo framing
                     </h3>
-                    <p className="mt-1 text-sm text-zinc-400">
+                    <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
                       This rewrites the displayed image. Drag to frame it, then save.
                     </p>
                   </div>
@@ -2797,19 +2797,19 @@ export default function EditEntryPage() {
                     type="button"
                     onClick={closeCropEditor}
                     disabled={savingCrop}
-                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                    className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
                   >
                     Close
                   </button>
                 </div>
 
-                <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-black/40">
                   <div
                     ref={cropFrameRef}
                     className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
                   >
                   {cropSourceLoading ? (
-                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-amber-200">
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-gold)]">
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
                       <span>Loading original photo...</span>
                     </div>
@@ -2873,7 +2873,7 @@ export default function EditEntryPage() {
                         }`}
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
+                      <div className="flex h-full w-full items-center justify-center text-sm text-[var(--color-text-tertiary)]">
                         Photo unavailable
                       </div>
                     )}
@@ -2882,7 +2882,7 @@ export default function EditEntryPage() {
 
                 <div className="mt-4 space-y-3">
                   <div className="hidden sm:block">
-                    <div className="mb-1 flex items-center justify-between text-xs text-zinc-400">
+                    <div className="mb-1 flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
                       <span>Zoom</span>
                       <span>{cropZoom.toFixed(2)}x</span>
                     </div>
@@ -2902,10 +2902,10 @@ export default function EditEntryPage() {
                       className="w-full accent-amber-300"
                     />
                   </div>
-                  <p className="hidden text-xs text-zinc-400 sm:block">
+                  <p className="hidden text-xs text-[var(--color-text-tertiary)] sm:block">
                     At 1.00x the full image fits. Zoom in and drag to frame the crop.
                   </p>
-                  <p className="text-xs text-zinc-400 sm:hidden">
+                  <p className="text-xs text-[var(--color-text-tertiary)] sm:hidden">
                     Pinch to zoom, then drag to frame the crop.
                   </p>
                 </div>
@@ -2922,7 +2922,7 @@ export default function EditEntryPage() {
                       cropTouchRef.current = null;
                     }}
                     disabled={savingCrop}
-                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                    className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
                   >
                     Reset
                   </button>
@@ -2931,7 +2931,7 @@ export default function EditEntryPage() {
                       type="button"
                       onClick={closeCropEditor}
                       disabled={savingCrop}
-                      className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                      className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
                     >
                       Cancel
                     </button>
@@ -3017,7 +3017,7 @@ export default function EditEntryPage() {
               </button>
             ) : (
               <Link
-                className="text-sm font-medium text-zinc-300"
+                className="text-sm font-medium text-[var(--color-text-secondary)]"
                 href={`/entries/${entry.id}`}
               >
                 Cancel

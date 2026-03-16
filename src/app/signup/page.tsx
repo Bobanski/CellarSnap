@@ -266,18 +266,18 @@ export default function SignupPage() {
   const isPhoneMode = authMode === "phone";
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f0a09] px-6">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--color-screen-bg)] px-6">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute -bottom-40 left-0 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl" />
       </div>
-      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+      <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
             Create account
           </span>
-          <h1 className="text-2xl font-semibold text-zinc-50">Join CellarSnap</h1>
-          <p className="text-sm text-zinc-300">
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Join CellarSnap</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
             {isPhoneMode
               ? "Create your account with username, phone, email, and password."
               : "Enter your email to get started. We'll send a confirmation code, then you'll set your password."}
@@ -291,49 +291,49 @@ export default function SignupPage() {
           {isPhoneMode ? (
             <>
               <div>
-                <label className="text-sm font-medium text-zinc-200" htmlFor="username">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="username">
                   Username
                 </label>
                 <input
                   id="username"
                   type="text"
                   autoComplete="username"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   placeholder="At least 3 characters"
                   {...phoneForm.register("username", { required: true })}
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-zinc-200" htmlFor="phone">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="phone">
                   Phone number
                 </label>
                 <input
                   id="phone"
                   type="tel"
                   autoComplete="tel"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   placeholder="(555) 123-4567"
                   {...phoneForm.register("phone", { required: true })}
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="email">
                   Email address
                 </label>
                 <input
                   id="email"
                   type="email"
                   autoComplete="email"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                   placeholder="you@example.com"
                   {...phoneForm.register("email", { required: true })}
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-zinc-200" htmlFor="password">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="password">
                   Password
                 </label>
                 <div className="relative mt-1">
@@ -341,33 +341,33 @@ export default function SignupPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-20 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                     placeholder="********"
                     {...phoneForm.register("password", { required: true })}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:text-amber-200"
+                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-gold)]"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-zinc-500">Must be at least 8 characters.</p>
+                <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Must be at least 8 characters.</p>
               </div>
 
             </>
           ) : (
             <div>
-              <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+              <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="email">
                 Email address
               </label>
               <input
                 id="email"
                 type="email"
                 autoComplete="email"
-                className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 placeholder="you@example.com"
                 {...emailForm.register("email", { required: true })}
               />
@@ -386,41 +386,41 @@ export default function SignupPage() {
           </button>
 
           {isPhoneMode ? (
-            <p className="text-xs leading-5 text-zinc-400">
+            <p className="text-xs leading-5 text-[var(--color-text-tertiary)]">
               By entering your phone number and selecting Send confirmation code, you
               consent to receive transactional SMS verification codes for login and
               account security. Message frequency varies. Message and data rates may
               apply. Reply STOP to opt out and HELP for help. See{" "}
               <Link
                 href="/privacy/more"
-                className="text-amber-200 transition hover:text-amber-100"
+                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
               >
                 Privacy
               </Link>{" "}
               and{" "}
               <Link
                 href="/terms"
-                className="text-amber-200 transition hover:text-amber-100"
+                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
               >
                 Terms
               </Link>
               .
             </p>
           ) : (
-            <p className="text-xs leading-5 text-zinc-400">
+            <p className="text-xs leading-5 text-[var(--color-text-tertiary)]">
               This button sends an email confirmation code. For phone-based signup, users
               opt in to transactional SMS by entering a phone number and selecting Send
               confirmation code. Reply STOP to opt out and HELP for help. See{" "}
               <Link
                 href="/privacy/more"
-                className="text-amber-200 transition hover:text-amber-100"
+                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
               >
                 Privacy
               </Link>{" "}
               and{" "}
               <Link
                 href="/terms"
-                className="text-amber-200 transition hover:text-amber-100"
+                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
               >
                 Terms
               </Link>
@@ -429,7 +429,7 @@ export default function SignupPage() {
           )}
 
           {!isPhoneMode && emailCooldownSeconds > 0 ? (
-            <p className="text-center text-xs text-zinc-500">
+            <p className="text-center text-xs text-[var(--color-text-tertiary)]">
               You can request another email in {emailCooldownSeconds}s.
             </p>
           ) : null}
@@ -437,18 +437,18 @@ export default function SignupPage() {
           <div className="text-center">
             <Link
               href="/login"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-amber-200"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
             >
               Back to sign in
             </Link>
           </div>
 
-          <div className="text-center text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-            <Link href="/privacy" className="transition hover:text-amber-200">
+          <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
               Privacy
             </Link>
             {" · "}
-            <Link href="/terms" className="transition hover:text-amber-200">
+            <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
               Terms
             </Link>
           </div>

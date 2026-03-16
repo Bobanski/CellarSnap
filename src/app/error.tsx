@@ -10,16 +10,16 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0f0a09] px-6 text-zinc-100">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-screen-bg)] px-6 text-[var(--color-text-primary)]">
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="space-y-2">
           <span className="block text-xs uppercase tracking-[0.3em] text-rose-300/70">
             Something went wrong
           </span>
-          <h1 className="text-2xl font-semibold text-zinc-50">
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
             We hit an unexpected error.
           </h1>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[var(--color-text-tertiary)]">
             {error.message || "An unknown error occurred."}
           </p>
         </div>
@@ -34,7 +34,7 @@ export default function GlobalError({
           </button>
           <Link
             href="/"
-            className="rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+            className="rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
           >
             Go home
           </Link>
