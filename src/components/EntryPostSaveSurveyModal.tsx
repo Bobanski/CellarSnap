@@ -108,7 +108,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setHowWasIt(event.target.value as HowWasItResponse | "")
                 }
-                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/60 sm:text-sm"
+                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {HOW_WAS_IT_OPTIONS.map((option) => (
@@ -129,7 +129,7 @@ export default function EntryPostSaveSurveyModal({
                   onChange={(event) =>
                     setExpectations(event.target.value as ExpectationsResponse | "")
                   }
-                  className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/60 sm:text-sm"
+                  className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
                 >
                   <option value="">Select one</option>
                   {EXPECTATIONS_OPTIONS.map((option) => (
@@ -150,7 +150,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setDrinkAgain(event.target.value as DrinkAgainResponse | "")
                 }
-                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/60 sm:text-sm"
+                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {DRINK_AGAIN_OPTIONS.map((option) => (
@@ -179,7 +179,7 @@ export default function EntryPostSaveSurveyModal({
                 })
               }
               disabled={!canSubmit || isSubmitting}
-              className="rounded-full bg-amber-400 px-5 py-2 text-base font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+              className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2 text-base font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
             >
               {isSubmitting ? "Saving..." : submitLabel}
             </button>

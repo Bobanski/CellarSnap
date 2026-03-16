@@ -323,7 +323,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
                 type="button"
                 aria-label={`Go to photo ${dotIndex + 1}`}
                 className={`h-1.5 w-1.5 rounded-full transition ${
-                  dotIndex === activeIndex ? "bg-amber-300" : "bg-zinc-400/70"
+                  dotIndex === activeIndex ? "bg-[var(--color-accent-primary)]" : "bg-zinc-400/70"
                 }`}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -1048,7 +1048,7 @@ export default function FeedPage() {
                 setSearchResults([]);
               }
             }}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
             aria-describedby="search-results-desc"
           />
           <p id="search-results-desc" className="sr-only">
@@ -1084,7 +1084,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("public")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "public"
-                ? "border border-[var(--color-accent-gold)]/60 bg-amber-400/10 text-[var(--color-accent-gold)]"
+                ? "border border-[var(--color-accent-gold)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
@@ -1095,7 +1095,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("friends")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "friends"
-                ? "border border-[var(--color-accent-gold)]/60 bg-amber-400/10 text-[var(--color-accent-gold)]"
+                ? "border border-[var(--color-accent-gold)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
@@ -1182,7 +1182,7 @@ export default function FeedPage() {
                       key={`feed-best-match-${entry.id}`}
                       type="button"
                       onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
-                      className="rounded-3xl border border-[var(--color-accent-gold)]/20 bg-gradient-to-br from-amber-400/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-gold)]/40"
+                      className="rounded-3xl border border-[var(--color-accent-gold)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-gold)]/40"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -1237,7 +1237,7 @@ export default function FeedPage() {
                         event.stopPropagation();
                         router.push(`/profile/${entry.user_id}`);
                       }}
-                        className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
+                        className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/50"
                     >
                       <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
                         {entry.author_avatar_url ? (
@@ -1307,7 +1307,7 @@ export default function FeedPage() {
                                       [entry.id]: event.target.value as ReportReason,
                                     }))
                                   }
-                                  className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                                  className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                 >
                                   {REPORT_REASON_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>
@@ -1460,7 +1460,7 @@ export default function FeedPage() {
                                 }}
                                 className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                                   commentsExpanded
-                                    ? "border-[var(--color-accent-gold)]/50 bg-amber-400/10 text-[var(--color-accent-gold)]"
+                                    ? "border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
                                     : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
                                 }`}
                                 aria-label={`Toggle comments (${getCommentCount(entry)})`}
@@ -1546,7 +1546,7 @@ export default function FeedPage() {
                                         }}
                                         className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${
                                           (entry.my_reactions ?? []).includes(emoji)
-                                            ? "bg-amber-400/20"
+                                            ? "bg-[var(--color-accent-primary)]/20"
                                             : ""
                                         }`}
                                       >
@@ -1716,7 +1716,7 @@ export default function FeedPage() {
                                                         })
                                                       )
                                                     }
-                                                    className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                                                    className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                                   >
                                                     {REPORT_REASON_OPTIONS.map((option) => (
                                                       <option key={option.value} value={option.value}>
@@ -1895,7 +1895,7 @@ export default function FeedPage() {
                                                                   })
                                                                 )
                                                               }
-                                                              className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                                                              className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                                             >
                                                               {REPORT_REASON_OPTIONS.map((option) => (
                                                                 <option key={option.value} value={option.value}>
@@ -1982,7 +1982,7 @@ export default function FeedPage() {
                               placeholder={
                                 replyTarget ? "Write a reply..." : "Write a comment..."
                               }
-                              className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                              className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                               disabled={!canComment || postingComment}
                             />
                             <div className="mt-2 flex items-center justify-between">
@@ -1997,7 +1997,7 @@ export default function FeedPage() {
                                   void submitCommentForEntry(entry.id);
                                 }}
                                 disabled={!commentDraft.trim() || !canComment || postingComment}
-                                className="inline-flex rounded-full border border-[var(--color-accent-gold)]/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-gold)] transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex rounded-full border border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-gold)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {postingComment
                                   ? "Posting..."
@@ -2021,7 +2021,7 @@ export default function FeedPage() {
                 type="button"
                 onClick={loadMoreFeed}
                 disabled={loadingMore}
-                className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
               >
                 {loadingMore ? "Loading…" : "Load more"}
               </button>

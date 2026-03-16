@@ -608,7 +608,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: 6,
   },
-  selectTriggerAmber: {
+  selectTriggerAccent: {
     borderColor: colors.accentRose,
     backgroundColor: colors.accentSoft,
   },
@@ -623,13 +623,13 @@ export const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
-  selectTriggerTextAmber: {
+  selectTriggerTextAccent: {
     color: colors.accentSecondary,
     fontWeight: "600",
   },
   selectChevron: { color: colors.textSecondary, fontSize: 12, fontWeight: "700" },
   selectChevronCompact: { fontSize: 9 },
-  selectChevronAmber: {
+  selectChevronAccent: {
     color: colors.accentPrimary,
   },
   selectPopoverCard: {
@@ -647,7 +647,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 20,
   },
-  selectPopoverCardAmber: {
+  selectPopoverCardAccent: {
     borderColor: colors.accentRose,
     backgroundColor: colors.surfaceRaised,
   },
@@ -663,7 +663,7 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-  selectModalTitleAmber: {
+  selectModalTitleAccent: {
     color: colors.accentSecondary,
   },
   selectModalCloseText: {

@@ -284,7 +284,7 @@ export default async function PalatePage() {
                 <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{preferenceStrength.detail}</p>
                 <div className="mt-4 h-2 rounded-full bg-[var(--color-surface-hover)]">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-300 to-emerald-300"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-primary)] to-emerald-300"
                     style={{ width: `${preferenceStrength.progress}%` }}
                   />
                 </div>

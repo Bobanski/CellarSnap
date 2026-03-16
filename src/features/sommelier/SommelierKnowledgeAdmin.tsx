@@ -235,7 +235,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="button"
                 onClick={() => void reingestStructured()}
                 disabled={reingestingStructured}
-                className="rounded-full border border-[var(--color-accent-gold)]/35 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-accent-gold)]/35 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {reingestingStructured ? "Re-ingesting..." : "Re-ingest structured data"}
               </button>
@@ -267,7 +267,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="text"
                 name="title"
                 required
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/40"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/40"
                 placeholder="Old World Regions Primer"
               />
             </label>
@@ -278,7 +278,7 @@ export default function SommelierKnowledgeAdmin() {
               <input
                 type="url"
                 name="source_url"
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/40"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/40"
                 placeholder="https://..."
               />
             </label>
@@ -298,7 +298,7 @@ export default function SommelierKnowledgeAdmin() {
               <button
                 type="submit"
                 disabled={uploading}
-                className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {uploading ? "Uploading..." : "Upload and ingest"}
               </button>

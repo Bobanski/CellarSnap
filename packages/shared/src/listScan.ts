@@ -22,7 +22,7 @@ export const LIST_SCAN_FILTER_ACCENT_TONES = [
   "red",
 ] as const;
 export const LIST_SCAN_MAX_IMAGE_COUNT = 6;
-export const LIST_SCAN_WHITE_ACCENT_HEX = "#C9A84C";
+export const LIST_SCAN_WHITE_ACCENT_HEX = "#7B1D3A";
 export const LIST_SCAN_ROSE_ACCENT_HEX = "#C76886";
 export const LIST_SCAN_ORANGE_ACCENT_HEX = "#D17A2A";
 export const LIST_SCAN_RED_ACCENT_HEX = "#4A3060";

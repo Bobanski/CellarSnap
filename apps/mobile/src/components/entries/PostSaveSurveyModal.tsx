@@ -87,7 +87,7 @@ export function PostSaveSurveyModal({
                   onSurveyHowWasItChange(value as SurveyHowWasItResponse | "")
                 }
                 placeholderLabel="Select one"
-                tone="amber"
+                tone="accent"
                 hideModalCloseAction
               />
               <SelectField
@@ -98,7 +98,7 @@ export function PostSaveSurveyModal({
                   onSurveyExpectationsChange(value as SurveyExpectationsResponse | "")
                 }
                 placeholderLabel="Select one"
-                tone="amber"
+                tone="accent"
                 hideModalCloseAction
               />
               <SelectField
@@ -109,7 +109,7 @@ export function PostSaveSurveyModal({
                   onSurveyDrinkAgainChange(value as SurveyDrinkAgainResponse | "")
                 }
                 placeholderLabel="Select one"
-                tone="amber"
+                tone="accent"
                 hideModalCloseAction
               />
 

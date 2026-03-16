@@ -203,7 +203,7 @@ function HomeReactionControls({
                       void onToggleReaction(entry.id, emoji);
                     }}
                     className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${
-                      entry.my_reactions.includes(emoji) ? "bg-amber-400/20" : ""
+                      entry.my_reactions.includes(emoji) ? "bg-[var(--color-accent-primary)]/20" : ""
                     }`}
                   >
                     {emoji}
@@ -551,7 +551,7 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/sommelier"
-                  className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
+                  className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
                 >
                   Open Pocket Sommelier
                 </Link>
@@ -567,7 +567,7 @@ export default function HomePage() {
         ) : null}
 
         {!privacyConfirmedAt ? (
-          <section className="rounded-2xl border border-[var(--color-accent-gold)]/30 bg-amber-500/10 p-5">
+          <section className="rounded-2xl border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-primary)]/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-gold)]">
               Onboarding privacy check
             </p>
@@ -598,7 +598,7 @@ export default function HomePage() {
                     onClick={() => setDefaultEntryPrivacy(option.value)}
                     className={`rounded-xl border px-3 py-2 text-left transition ${
                       selected
-                        ? "border-[var(--color-accent-gold)]/60 bg-amber-400/10"
+                        ? "border-[var(--color-accent-gold)]/60 bg-[var(--color-accent-primary)]/10"
                         : "border-[var(--color-border)] bg-[var(--color-surface-muted)] hover:border-[var(--color-border-strong)]"
                     }`}
                   >
@@ -615,7 +615,7 @@ export default function HomePage() {
               type="button"
               onClick={confirmDefaultPrivacy}
               disabled={savingPrivacyOnboarding}
-              className="mt-4 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-4 rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {savingPrivacyOnboarding
                 ? "Saving..."
@@ -626,7 +626,7 @@ export default function HomePage() {
 
         {/* ── First-time hero CTA ── */}
         {isFirstTime ? (
-          <div className="rounded-3xl border border-[var(--color-accent-gold)]/30 bg-amber-400/5 p-8 text-center backdrop-blur">
+          <div className="rounded-3xl border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-primary)]/5 p-8 text-center backdrop-blur">
             <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
               Record your first pour
             </h2>
@@ -636,7 +636,7 @@ export default function HomePage() {
             </p>
             <Link
               href="/entries/new"
-              className="mt-5 inline-block rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="mt-5 inline-block rounded-full bg-[var(--color-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               + Record a new pour
             </Link>
@@ -655,7 +655,7 @@ export default function HomePage() {
           <div className="flex flex-col items-start gap-3">
             <Link
               href="/entries/new"
-              className="inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="inline-block rounded-full bg-[var(--color-accent-primary)]/90 px-5 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               + Record a new pour
             </Link>
@@ -697,7 +697,7 @@ export default function HomePage() {
                   <Link
                     key={`best-match-${entry.id}`}
                     href={`/entries/${entry.id}`}
-                    className="rounded-3xl border border-[var(--color-accent-gold)]/20 bg-gradient-to-br from-amber-400/12 to-transparent p-5 transition hover:border-[var(--color-accent-gold)]/40"
+                    className="rounded-3xl border border-[var(--color-accent-gold)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 transition hover:border-[var(--color-accent-gold)]/40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>

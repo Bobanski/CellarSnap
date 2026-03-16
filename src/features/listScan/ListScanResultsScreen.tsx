@@ -457,7 +457,7 @@ export default function ListScanResultsScreen() {
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href="/list-scan"
-                className="inline-flex rounded-full bg-amber-400 px-4 py-2 font-semibold text-zinc-950 transition hover:bg-amber-300"
+                className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
               >
                 Scan another
               </Link>
@@ -493,7 +493,7 @@ export default function ListScanResultsScreen() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/list-scan"
-              className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               Scan another
             </Link>
@@ -513,11 +513,11 @@ export default function ListScanResultsScreen() {
         ) : null}
 
         {result.score_summary.warning ? (
-          <section className="rounded-3xl border border-[var(--color-accent-gold)]/25 bg-amber-400/10 p-5 text-sm text-amber-50 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+          <section className="rounded-3xl border border-[var(--color-accent-gold)]/25 bg-[var(--color-accent-primary)]/10 p-5 text-sm text-[var(--color-text-on-accent)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
               Match scoring
             </p>
-            <p className="mt-2 text-sm leading-6 text-amber-50">
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-on-accent)]">
               {result.score_summary.warning}
             </p>
           </section>
@@ -594,7 +594,7 @@ export default function ListScanResultsScreen() {
                         }
                         className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                           selected
-                            ? "bg-amber-400 text-zinc-950"
+                            ? "bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
                             : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                         }`}
                       >
@@ -636,7 +636,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                     />
                   ) : null}
 
@@ -671,7 +671,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                     />
                   ) : null}
                 </div>
