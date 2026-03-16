@@ -1146,16 +1146,16 @@ export default function ProfilePage() {
                                   {isFriend ? (
                                     <p className="text-xs text-emerald-200">Already friends</p>
                                   ) : isOutgoing ? (
-                                    <p className="text-xs text-[var(--color-accent-gold)]">Request sent</p>
+                                    <p className="text-xs text-[var(--color-accent-secondary)]">Request sent</p>
                                   ) : isIncoming ? (
-                                    <p className="text-xs text-[var(--color-accent-gold)]">Requested you</p>
+                                    <p className="text-xs text-[var(--color-accent-secondary)]">Requested you</p>
                                   ) : null}
                                 </div>
                                 <button
                                   type="button"
                                   disabled={isFriend || isOutgoing || isMutating}
                                   onClick={() => sendRequest(user.id)}
-                                  className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                                 </button>
@@ -1179,7 +1179,7 @@ export default function ProfilePage() {
                               Incoming requests
                             </h3>
                             {incomingRequests.length > 0 ? (
-                              <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[var(--color-accent-primary)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-accent-gold)]">
+                              <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[var(--color-accent-primary)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-accent-secondary)]">
                                 {incomingRequests.length > 99
                                   ? "99+"
                                   : incomingRequests.length}
@@ -1353,7 +1353,7 @@ export default function ProfilePage() {
                                       <p className="text-sm font-medium text-[var(--color-text-primary)]">
                                         {displayFriendName(person)}
                                       </p>
-                                      <p className="text-xs text-[var(--color-accent-gold)]">
+                                      <p className="text-xs text-[var(--color-accent-secondary)]">
                                         {mutualLabel}
                                       </p>
                                     </div>
@@ -1362,7 +1362,7 @@ export default function ProfilePage() {
                                     type="button"
                                     disabled={isFriend || isOutgoing || isMutating}
                                     onClick={() => sendRequest(person.id)}
-                                    className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     {isFriend
                                       ? "Friends"
@@ -1410,7 +1410,7 @@ export default function ProfilePage() {
                                 </div>
                                 <Link
                                   href={`/profile/${friend.id}`}
-                                  className="text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-gold)]"
+                                  className="text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
                                 >
                                   {displayFriendName(friend)}
                                 </Link>
@@ -1498,7 +1498,7 @@ export default function ProfilePage() {
                   </h3>
 
                   {requiresUsernameSetup && isEditing ? (
-                    <p className="rounded-xl border border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-2 text-sm text-[var(--color-accent-gold)]">
+                    <p className="rounded-xl border border-[var(--color-accent-secondary)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-2 text-sm text-[var(--color-accent-secondary)]">
                       Set a username to continue using CellarSnap.
                     </p>
                   ) : null}
@@ -1535,7 +1535,7 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => avatarInputRef.current?.click()}
-                        className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                        className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                       >
                         Choose picture
                       </button>
@@ -1706,7 +1706,7 @@ export default function ProfilePage() {
                         const baseClass =
                           "rounded-xl border px-3 py-4 text-center transition";
                         const visualClass = badge.earned
-                          ? "border-[var(--color-accent-gold)]/55 bg-[var(--color-accent-primary)]/10 ring-1 ring-[var(--color-accent-primary)]/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
+                          ? "border-[var(--color-accent-secondary)]/55 bg-[var(--color-accent-primary)]/10 ring-1 ring-[var(--color-accent-primary)]/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
                           : badge.count > 0
                             ? "border-[var(--color-border)] bg-[var(--color-surface-muted)] opacity-80 saturate-50"
                             : "border-white/5 bg-[var(--color-surface-muted)] opacity-45 grayscale";
@@ -1733,12 +1733,12 @@ export default function ProfilePage() {
                                   <span className="text-2xl drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]">
                                     {badge.symbol}
                                   </span>
-                                  <span className="text-xs font-semibold leading-tight text-[var(--color-accent-gold)]">
+                                  <span className="text-xs font-semibold leading-tight text-[var(--color-accent-secondary)]">
                                     {badge.name}
                                   </span>
                                 </div>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
-                                  <p className="text-xs font-semibold leading-snug text-[var(--color-accent-gold)]">
+                                  <p className="text-xs font-semibold leading-snug text-[var(--color-accent-secondary)]">
                                     {requirement}
                                   </p>
                                 </div>
@@ -1769,7 +1769,7 @@ export default function ProfilePage() {
                             <span
                               className={`text-[10px] tabular-nums ${
                                 badge.count > 0
-                                  ? "font-medium text-[var(--color-accent-gold)]/80"
+                                  ? "font-medium text-[var(--color-accent-secondary)]/80"
                                   : "text-[var(--color-text-tertiary)]"
                               }`}
                             >
@@ -1972,7 +1972,7 @@ export default function ProfilePage() {
                           <button
                             type="button"
                             onClick={() => setShowCurrentPassword((p) => !p)}
-                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                             aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                           >
                             {showCurrentPassword ? "Hide" : "Show"}
@@ -2001,7 +2001,7 @@ export default function ProfilePage() {
                           <button
                             type="button"
                             onClick={() => setShowNewPassword((p) => !p)}
-                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                             aria-label={showNewPassword ? "Hide password" : "Show password"}
                           >
                             {showNewPassword ? "Hide" : "Show"}
@@ -2030,7 +2030,7 @@ export default function ProfilePage() {
                           <button
                             type="button"
                             onClick={() => setShowConfirmPassword((p) => !p)}
-                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                             aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                           >
                             {showConfirmPassword ? "Hide" : "Show"}

@@ -273,7 +273,7 @@ export default function SignupPage() {
       </div>
       <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Create account
           </span>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Join CellarSnap</h1>
@@ -348,7 +348,7 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-gold)]"
+                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "Hide" : "Show"}
@@ -393,14 +393,14 @@ export default function SignupPage() {
               apply. Reply STOP to opt out and HELP for help. See{" "}
               <Link
                 href="/privacy/more"
-                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
+                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 Privacy
               </Link>{" "}
               and{" "}
               <Link
                 href="/terms"
-                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
+                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 Terms
               </Link>
@@ -413,14 +413,14 @@ export default function SignupPage() {
               confirmation code. Reply STOP to opt out and HELP for help. See{" "}
               <Link
                 href="/privacy/more"
-                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
+                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 Privacy
               </Link>{" "}
               and{" "}
               <Link
                 href="/terms"
-                className="text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
+                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 Terms
               </Link>
@@ -437,18 +437,18 @@ export default function SignupPage() {
           <div className="text-center">
             <Link
               href="/login"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
             >
               Back to sign in
             </Link>
           </div>
 
           <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-            <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
+            <Link href="/privacy" className="transition hover:text-[var(--color-accent-secondary)]">
               Privacy
             </Link>
             {" · "}
-            <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
+            <Link href="/terms" className="transition hover:text-[var(--color-accent-secondary)]">
               Terms
             </Link>
           </div>

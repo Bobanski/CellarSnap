@@ -83,7 +83,7 @@ export default function FacetMultiSelect({
       return "border-[#D17A2A]/45 bg-[#D17A2A]/16 text-[#fde6c7]";
     }
     if (tone === "white") {
-      return "border-[#C9A84C]/45 bg-[#C9A84C]/16 text-[#f5e8bc]";
+      return "border-[var(--color-accent-secondary)]/45 bg-[var(--color-accent-secondary)]/16 text-[var(--color-text-on-accent)]";
     }
     if (tone === "red") {
       return "border-[#4A3060]/60 bg-[#4A3060]/70 text-[#f3eef8]";
@@ -99,7 +99,7 @@ export default function FacetMultiSelect({
       return "border-[#D17A2A]/30 bg-[#D17A2A]/8 text-[#f2c78f] hover:border-[#D17A2A]/55 hover:bg-[#D17A2A]/14";
     }
     if (tone === "white") {
-      return "border-[#C9A84C]/30 bg-[#C9A84C]/8 text-[#e7d491] hover:border-[#C9A84C]/55 hover:bg-[#C9A84C]/14";
+      return "border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-secondary)]/8 text-[var(--color-text-on-accent)] hover:border-[var(--color-accent-secondary)]/55 hover:bg-[var(--color-accent-secondary)]/14";
     }
     if (tone === "red") {
       return "border-[#4A3060]/45 bg-[#4A3060]/15 text-[#dbcfe7] hover:border-[#4A3060]/75 hover:bg-[#4A3060]/26";

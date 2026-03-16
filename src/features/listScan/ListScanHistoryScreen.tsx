@@ -92,7 +92,7 @@ export default function ListScanHistoryScreen() {
         <NavBar />
 
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             List scan
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">My scans</h1>
@@ -125,7 +125,7 @@ export default function ListScanHistoryScreen() {
               <Link
                 key={item.scan_id}
                 href={`/list-scan/results?scanId=${encodeURIComponent(item.scan_id)}`}
-                className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 transition hover:border-[var(--color-accent-gold)]/40 hover:bg-white/7"
+                className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-white/7"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   {item.source_type}

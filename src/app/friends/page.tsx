@@ -259,7 +259,7 @@ export default function FriendsPage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Friends
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -289,7 +289,7 @@ export default function FriendsPage() {
                   >
                     <Link
                       href={`/profile/${friend.id}`}
-                      className="text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-gold)]"
+                      className="text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
                     >
                       {displayName(friend)}
                     </Link>
@@ -476,11 +476,11 @@ export default function FriendsPage() {
                             Already friends
                           </p>
                         ) : isOutgoing ? (
-                          <p className="text-xs text-[var(--color-accent-gold)]">
+                          <p className="text-xs text-[var(--color-accent-secondary)]">
                             Request sent
                           </p>
                         ) : isIncoming ? (
-                          <p className="text-xs text-[var(--color-accent-gold)]">
+                          <p className="text-xs text-[var(--color-accent-secondary)]">
                             Requested you
                           </p>
                         ) : null}
@@ -489,7 +489,7 @@ export default function FriendsPage() {
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(user.id)}
-                        className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                       </button>
@@ -531,13 +531,13 @@ export default function FriendsPage() {
                         <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {displayName(person)}
                         </p>
-                        <p className="text-xs text-[var(--color-accent-gold)]">{mutualLabel}</p>
+                        <p className="text-xs text-[var(--color-accent-secondary)]">{mutualLabel}</p>
                       </div>
                       <button
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}
                         onClick={() => sendRequest(person.id)}
-                        className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
                       </button>

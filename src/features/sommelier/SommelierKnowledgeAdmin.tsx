@@ -193,7 +193,7 @@ export default function SommelierKnowledgeAdmin() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar activeHrefOverride="/sommelier" />
         <section className="rounded-[2rem] border border-[var(--color-border)] bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-7">
-          <p className="text-xs uppercase tracking-[0.32em] text-[var(--color-accent-gold)]/70">
+          <p className="text-xs uppercase tracking-[0.32em] text-[var(--color-accent-secondary)]/70">
             Sommelier Knowledge
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -235,7 +235,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="button"
                 onClick={() => void reingestStructured()}
                 disabled={reingestingStructured}
-                className="rounded-full border border-[var(--color-accent-gold)]/35 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-accent-secondary)]/35 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {reingestingStructured ? "Re-ingesting..." : "Re-ingest structured data"}
               </button>
@@ -243,7 +243,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="button"
                 onClick={() => void reingestEntries()}
                 disabled={reingestingEntries}
-                className="rounded-full border border-white/12 bg-[var(--color-surface-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/35 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-white/12 bg-[var(--color-surface-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/35 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {reingestingEntries ? "Re-ingesting..." : "Re-ingest cellar entries"}
               </button>
@@ -354,7 +354,7 @@ export default function SommelierKnowledgeAdmin() {
                       type="button"
                       onClick={() => void reingestDocument(document.id)}
                       disabled={reingestingDocumentId === document.id}
-                      className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/35 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/35 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {reingestingDocumentId === document.id ? "Re-ingesting..." : "Re-ingest"}
                     </button>

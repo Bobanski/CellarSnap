@@ -17,6 +17,7 @@
 
   /* ─── ACCENTS (Restrained) ──────────────────────────– */
   --color-accent-primary:  #7B1D3A;
+  --accent-rgb:            123,29,58;        /* Accent primary as RGB for gradients */
   --color-accent-hover:    #9B2449;
   --color-accent-soft:     rgba(123, 29, 58, 0.10);
   --color-accent-secondary: #A89B8A;

@@ -107,7 +107,7 @@ export default async function SharePage({ params }: SharePageProps) {
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-screen-bg)] px-6 py-12 text-[var(--color-text-primary)]">
         <div className="w-full max-w-xl space-y-8 rounded-3xl border border-[var(--color-border)] bg-black/25 p-8 text-center backdrop-blur">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-gold)]/70">
+            <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
               CellarSnap share
             </p>
             <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">Link expired</h1>
@@ -177,7 +177,7 @@ export default async function SharePage({ params }: SharePageProps) {
     <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-gold)]/70">
+          <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
             CellarSnap share
           </p>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">{displayTitle}</h1>
@@ -201,7 +201,7 @@ export default async function SharePage({ params }: SharePageProps) {
           <div className="space-y-5 p-6">
             <div className="flex flex-wrap items-center gap-3">
               {typeof share.rating === "number" ? (
-                <span className="rounded-full border border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-1 text-sm font-semibold text-[var(--color-accent-gold)]">
+                <span className="rounded-full border border-[var(--color-accent-secondary)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-1 text-sm font-semibold text-[var(--color-accent-secondary)]">
                   Rating {share.rating}/100
                 </span>
               ) : (
