@@ -39,7 +39,7 @@ export default function SommelierMessage({
         className={`max-w-3xl rounded-[1.75rem] border px-5 py-4 shadow-[0_18px_60px_-38px_rgba(0,0,0,0.9)] ${
           isAssistant
             ? "border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] text-[var(--color-text-primary)]"
-            : "border-[var(--color-accent-gold)]/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.20),rgba(146,64,14,0.20))] text-[var(--color-text-on-accent)]"
+            : "border-[var(--color-accent-secondary)]/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.20),rgba(146,64,14,0.20))] text-[var(--color-text-on-accent)]"
         }`}
       >
         <p className="mb-2 text-[11px] uppercase tracking-[0.28em] text-[var(--color-text-tertiary)]">
@@ -63,7 +63,7 @@ export default function SommelierMessage({
                 strong: ({ children }) => <strong className="font-semibold text-[var(--color-text-primary)]">{children}</strong>,
                 em: ({ children }) => <em className="italic text-[var(--color-text-primary)]">{children}</em>,
                 code: ({ children }) => (
-                  <code className="rounded-md bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[0.9em] text-[var(--color-accent-gold)]">
+                  <code className="rounded-md bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[0.9em] text-[var(--color-accent-secondary)]">
                     {children}
                   </code>
                 ),
@@ -72,7 +72,7 @@ export default function SommelierMessage({
                     href={href}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[var(--color-accent-gold)] underline decoration-[var(--color-accent-secondary)]/40 underline-offset-4 transition hover:text-[var(--color-accent-gold)]"
+                    className="text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/40 underline-offset-4 transition hover:text-[var(--color-accent-secondary)]"
                   >
                     {children}
                   </a>

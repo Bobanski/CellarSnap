@@ -253,11 +253,11 @@ export default function NavBar({
               Sign out
             </button>
             <div className="px-4 pt-2 text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-              <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
+              <Link href="/privacy" className="transition hover:text-[var(--color-accent-secondary)]">
                 Privacy
               </Link>
               {" · "}
-              <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
+              <Link href="/terms" className="transition hover:text-[var(--color-accent-secondary)]">
                 Terms
               </Link>
             </div>

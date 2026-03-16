@@ -748,12 +748,12 @@ export default function EntryDetailPage() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Link
-              className="text-sm font-medium text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-gold)]"
+              className="text-sm font-medium text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-secondary)]"
               href={backHref}
             >
               {backLabel}
             </Link>
-            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               Cellar entry
             </span>
             <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -766,7 +766,7 @@ export default function EntryDetailPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="rounded-full border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:border-[var(--color-accent-gold)]/60 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={sharing}
               onClick={onShare}
             >
@@ -803,8 +803,8 @@ export default function EntryDetailPage() {
                     }}
                     className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                       commentsExpanded
-                        ? "border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
+                        ? "border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                     }`}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
@@ -822,7 +822,7 @@ export default function EntryDetailPage() {
                         <button
                           type="button"
                           onClick={() => setReactionUsersPopup((prev) => prev === popupKey ? null : popupKey)}
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/40"
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                         >
                           <span>{emoji}</span>
                           <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
@@ -840,7 +840,7 @@ export default function EntryDetailPage() {
                     onClick={() => setReactionPopupOpen((prev) => !prev)}
                     className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
                       canReact
-                        ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                        ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                         : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
                     }`}
                     aria-label={canReact ? "Add reaction" : "View reaction options"}
@@ -876,7 +876,7 @@ export default function EntryDetailPage() {
               {commentsExpanded ? (
                 <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">Comments</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">Comments</p>
                     <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Collapse</button>
                   </div>
                   {loadingComments ? (
@@ -913,7 +913,7 @@ export default function EntryDetailPage() {
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
                               {!isDeleted ? (
-                                <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-gold)]">Reply</button>
+                                <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]">Reply</button>
                               ) : null}
                               {comment.replies.length > 0 ? (
                                 <button type="button" onClick={() => setExpandedReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))} className="text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">
@@ -979,7 +979,7 @@ export default function EntryDetailPage() {
                         type="button"
                         onClick={() => void submitComment()}
                         disabled={!commentDraft.trim() || !canComment || postingComment}
-                        className="inline-flex rounded-full border border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-gold)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
                       </button>
@@ -1011,7 +1011,7 @@ export default function EntryDetailPage() {
                   )
                   : (
                     <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5">
-                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                         Palate match
                       </p>
                       <h2 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
@@ -1035,7 +1035,7 @@ export default function EntryDetailPage() {
                         </Link>
                         <Link
                           href="/palate"
-                          className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
+                          className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                         >
                           View palate profile
                         </Link>
@@ -1064,7 +1064,7 @@ export default function EntryDetailPage() {
                       <details className="text-sm text-[var(--color-text-primary)]">
                         <summary
                           className={`cursor-pointer list-none ${
-                            hasGoogleMapsLocation ? "hover:text-[var(--color-accent-gold)]" : ""
+                            hasGoogleMapsLocation ? "hover:text-[var(--color-accent-secondary)]" : ""
                           }`}
                         >
                           {hasGoogleMapsLocation ? (
@@ -1072,7 +1072,7 @@ export default function EntryDetailPage() {
                               href={locationMapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[var(--color-accent-gold)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-gold)]"
+                              className="text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-secondary)]"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {locationDisplayLabel}
@@ -1088,7 +1088,7 @@ export default function EntryDetailPage() {
                         href={locationMapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-[var(--color-accent-gold)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-gold)]"
+                        className="text-sm text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-secondary)]"
                       >
                         {locationDisplayLabel}
                       </a>
@@ -1283,10 +1283,10 @@ export default function EntryDetailPage() {
             <div className="rounded-2xl border border-[var(--color-border-accent)] bg-[var(--color-accent-primary)]/10 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--color-accent-gold)]">
+                  <h2 className="text-sm font-semibold text-[var(--color-accent-secondary)]">
                     You were tagged in this tasting
                   </h2>
-                  <p className="mt-1 text-xs text-[var(--color-accent-gold)]/70">
+                  <p className="mt-1 text-xs text-[var(--color-accent-secondary)]/70">
                     Add it to your cellar without creating a duplicate post in the feed.
                   </p>
                 </div>

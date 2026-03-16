@@ -3219,7 +3219,7 @@ export default function NewEntryPage() {
       </div>
       <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             New entry
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -3252,7 +3252,7 @@ export default function NewEntryPage() {
                   {showRescanButton ? (
                     <button
                       type="button"
-                      className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] sm:text-xs"
+                      className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] sm:text-xs"
                       onClick={() => {
                         if (labelPhotos.length > 0) {
                           runAnalysis(labelPhotos.map((photo) => photo.file));
@@ -3264,7 +3264,7 @@ export default function NewEntryPage() {
                   ) : null}
                   <button
                     type="button"
-                    className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
+                    className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
                     onClick={() => labelInputRef.current?.click()}
                     disabled={!canAddLabelPhoto || autofillStatus === "loading"}
                   >
@@ -3316,7 +3316,7 @@ export default function NewEntryPage() {
                             {activePhoto ? (
                               <button
                                 type="button"
-                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
+                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                                 onClick={() => openCropEditor(activePhotoIndex)}
                                 disabled={savingCrop || cropSourceLoading}
                               >
@@ -3349,11 +3349,11 @@ export default function NewEntryPage() {
               {autofillMessage ? (
                 autofillStatus === "loading" ? (
                   <div
-                    className="mt-3 flex items-center gap-2 text-sm text-[var(--color-accent-gold)]"
+                    className="mt-3 flex items-center gap-2 text-sm text-[var(--color-accent-secondary)]"
                     role="status"
                     aria-live="polite"
                   >
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-accent-gold)] border-t-transparent" />
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-accent-secondary)] border-t-transparent" />
                     <span>{autofillMessage}</span>
                   </div>
                 ) : (
@@ -3407,7 +3407,7 @@ export default function NewEntryPage() {
                       <div className="group relative">
                         <button
                           type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-black/40 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-black/40 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                           aria-label="Explain Event and Catch-up"
                         >
                           i
@@ -3616,7 +3616,7 @@ export default function NewEntryPage() {
                                           <button
                                             key={user.id}
                                             type="button"
-                                            className="flex w-full items-center justify-between text-left text-sm text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-gold)]"
+                                            className="flex w-full items-center justify-between text-left text-sm text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-secondary)]"
                                             onClick={() => {
                                               setSelectedUserIds((prev) => [
                                                 ...prev,
@@ -3662,7 +3662,7 @@ export default function NewEntryPage() {
                           </div>
                         </div>
                       ) : bulkEntryMode === "event" ? (
-                        <div className="md:col-span-2 rounded-xl border border-[var(--color-accent-gold)]/20 bg-[var(--color-accent-primary)]/10 p-4">
+                        <div className="md:col-span-2 rounded-xl border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)]/10 p-4">
                           <p className="text-sm font-medium text-[var(--color-text-primary)]">Event flow</p>
                           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                             Next you’ll set the event name, location, date, and who you tasted
@@ -3726,7 +3726,7 @@ export default function NewEntryPage() {
                         type="button"
                         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
                           wine.included
-                            ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-gold)]"
+                            ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-secondary)]"
                             : "border-zinc-600 text-zinc-600"
                         }`}
                         onClick={() => {
@@ -4225,7 +4225,7 @@ export default function NewEntryPage() {
             <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                     Photo crop
                   </p>
                   <h3 className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
@@ -4251,7 +4251,7 @@ export default function NewEntryPage() {
                   className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
                 >
                   {cropSourceLoading ? (
-                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-gold)]">
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-secondary)]">
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-accent-secondary)] border-t-transparent" />
                       <span>Loading photo...</span>
                     </div>

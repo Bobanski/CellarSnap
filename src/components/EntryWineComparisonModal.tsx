@@ -75,7 +75,7 @@ export default function EntryWineComparisonModal({
             </h2>
             <button
               type="button"
-              className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:opacity-50"
+              className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:opacity-50"
               onClick={onSkip}
               disabled={isSubmitting}
             >
@@ -92,7 +92,7 @@ export default function EntryWineComparisonModal({
               type="button"
               onClick={() => onSelect("more")}
               disabled={isSubmitting}
-              className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-left transition hover:border-[var(--color-accent-gold)]/60 disabled:cursor-not-allowed disabled:opacity-70"
+              className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-left transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               aria-label="Select the wine you just logged"
             >
               <div className="h-32 w-full bg-black/40 sm:h-40">
@@ -109,7 +109,7 @@ export default function EntryWineComparisonModal({
                 )}
               </div>
               <div className="space-y-1 border-t border-[var(--color-border)] p-3 sm:p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                   Wine you just logged
                 </p>
                 <p className="text-sm font-semibold text-[var(--color-text-primary)]">
@@ -123,7 +123,7 @@ export default function EntryWineComparisonModal({
               type="button"
               onClick={() => onSelect("less")}
               disabled={isSubmitting}
-              className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-left transition hover:border-[var(--color-accent-gold)]/60 disabled:cursor-not-allowed disabled:opacity-70"
+              className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-left transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               aria-label="Select the previous wine"
             >
               <div className="h-32 w-full bg-black/40 sm:h-40">

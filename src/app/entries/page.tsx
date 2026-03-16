@@ -141,7 +141,7 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
   return (
     <Link
       href={`/entries/${entry.id}`}
-      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-gold)]/40"
+      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
     >
       <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
         {entry.label_image_url ? (
@@ -517,7 +517,7 @@ export default function EntriesPage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             My library
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -536,7 +536,7 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("sort")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "sort"
-                    ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                     : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "sort"}
@@ -561,7 +561,7 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("filter")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "filter"
-                    ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                     : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "filter"}
@@ -586,7 +586,7 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("organize")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "organize"
-                    ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                     : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "organize"}
@@ -655,7 +655,7 @@ export default function EntriesPage() {
                           onClick={() => setSortBy(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             sortBy === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -677,7 +677,7 @@ export default function EntriesPage() {
                           onClick={() => setSortOrder(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             sortOrder === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -708,7 +708,7 @@ export default function EntriesPage() {
                           onClick={() => updateFilterType(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             filterType === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -783,7 +783,7 @@ export default function EntriesPage() {
                           onClick={() => setLibraryViewMode(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             libraryViewMode === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -813,7 +813,7 @@ export default function EntriesPage() {
                             }}
                             className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                               groupScheme === option.value
-                                ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
+                                ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
                                 : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                             }`}
                           >
@@ -893,7 +893,7 @@ export default function EntriesPage() {
                                 [group.id]: !prev[group.id],
                               }))
                             }
-                            className="rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                            className="rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                           >
                             {expanded ? "Show less" : "See all"}
                           </button>

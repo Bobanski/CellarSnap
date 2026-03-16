@@ -94,7 +94,7 @@ export default function EntryPostSaveSurveyModal({
       <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
         <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
               Required survey
             </p>
             <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">Quick check-in</h2>

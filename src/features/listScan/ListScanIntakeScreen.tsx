@@ -331,7 +331,7 @@ export default function ListScanIntakeScreen() {
 
         <div className="mx-auto w-full max-w-3xl space-y-5">
           <header className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               List scan
             </span>
             <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -345,8 +345,8 @@ export default function ListScanIntakeScreen() {
 
           <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
             {isSignedIn === false ? (
-              <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-[var(--color-accent-primary)]/10 px-4 py-4 text-sm text-[var(--color-text-on-accent)]">
-                <p className="font-semibold text-[var(--color-accent-gold)]">
+              <div className="rounded-2xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 px-4 py-4 text-sm text-[var(--color-text-on-accent)]">
+                <p className="font-semibold text-[var(--color-accent-secondary)]">
                   Signed-out scans stay local to this browser.
                 </p>
                 <p className="mt-1 leading-6 text-[var(--color-text-on-accent)]/90">
@@ -489,7 +489,7 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {isSubmitting && scanProgress ? (
-              <div className="rounded-2xl border border-[var(--color-accent-gold)]/20 bg-[var(--color-accent-primary)]/10 px-4 py-4">
+              <div className="rounded-2xl border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)]/10 px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-[var(--color-text-on-accent)]">

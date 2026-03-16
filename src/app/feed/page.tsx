@@ -296,7 +296,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
         <>
           <button
             type="button"
-            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] md:inline-flex"
+            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
             aria-label="Previous photo"
             onClick={(event) => {
               event.stopPropagation();
@@ -307,7 +307,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
           </button>
           <button
             type="button"
-            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] md:inline-flex"
+            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
             aria-label="Next photo"
             onClick={(event) => {
               event.stopPropagation();
@@ -1022,7 +1022,7 @@ export default function FeedPage() {
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Social feed
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -1084,7 +1084,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("public")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "public"
-                ? "border border-[var(--color-accent-gold)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
+                ? "border border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
@@ -1095,7 +1095,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("friends")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "friends"
-                ? "border border-[var(--color-accent-gold)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
+                ? "border border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
@@ -1159,7 +1159,7 @@ export default function FeedPage() {
             <section className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                     Best matches
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">
@@ -1182,7 +1182,7 @@ export default function FeedPage() {
                       key={`feed-best-match-${entry.id}`}
                       type="button"
                       onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
-                      className="rounded-3xl border border-[var(--color-accent-gold)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-gold)]/40"
+                      className="rounded-3xl border border-[var(--color-accent-secondary)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-secondary)]/40"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -1216,7 +1216,7 @@ export default function FeedPage() {
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
                     ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                    : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-gold)]/40"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
@@ -1252,7 +1252,7 @@ export default function FeedPage() {
                           </span>
                         )}
                       </span>
-                      <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-gold)]">
+                      <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
                         {entry.author_name}
                       </span>
                     </button>
@@ -1460,8 +1460,8 @@ export default function FeedPage() {
                                 }}
                                 className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                                   commentsExpanded
-                                    ? "border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
-                                    : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
+                                    ? "border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                                    : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                                 }`}
                                 aria-label={`Toggle comments (${getCommentCount(entry)})`}
                               >
@@ -1491,7 +1491,7 @@ export default function FeedPage() {
                                               prev === popupKey ? null : popupKey
                                             );
                                           }}
-                                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/40"
+                                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                                         >
                                           <span>{emoji}</span>
                                           <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
@@ -1521,7 +1521,7 @@ export default function FeedPage() {
                                 }}
                                 className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
                                   canReact
-                                    ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                                    ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                                     : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
                                 }`}
                                 aria-label={canReact ? "Add reaction" : "View reaction options"}
@@ -1584,7 +1584,7 @@ export default function FeedPage() {
                           onClick={(event) => event.stopPropagation()}
                         >
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                               Comments
                             </p>
                             <button
@@ -1762,7 +1762,7 @@ export default function FeedPage() {
                                               [entry.id]: comment.id,
                                             }))
                                           }
-                                          className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-gold)]"
+                                          className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
                                         >
                                           Reply
                                         </button>
@@ -1997,7 +1997,7 @@ export default function FeedPage() {
                                   void submitCommentForEntry(entry.id);
                                 }}
                                 disabled={!commentDraft.trim() || !canComment || postingComment}
-                                className="inline-flex rounded-full border border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-gold)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {postingComment
                                   ? "Posting..."

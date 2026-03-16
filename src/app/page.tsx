@@ -137,7 +137,7 @@ function HomeReactionControls({
                 }}
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
                   names.length > 0
-                    ? "border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/40"
+                    ? "border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                     : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-tertiary)]"
                 }`}
               >
@@ -172,7 +172,7 @@ function HomeReactionControls({
           }}
           className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
             entry.can_react
-              ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+              ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
               : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
           }`}
           aria-label={entry.can_react ? "Add reaction" : "View reaction options"}
@@ -515,7 +515,7 @@ export default function HomePage() {
 
         {/* ── Header ── */}
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             {isFirstTime ? "Getting started" : "Home"}
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -538,7 +538,7 @@ export default function HomePage() {
           <section className="rounded-[2rem] border border-[var(--color-border)] bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent-gold)]/70">
+                <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent-secondary)]/70">
                   New
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">
@@ -567,8 +567,8 @@ export default function HomePage() {
         ) : null}
 
         {!privacyConfirmedAt ? (
-          <section className="rounded-2xl border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-primary)]/10 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-gold)]">
+          <section className="rounded-2xl border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
               Onboarding privacy check
             </p>
             <h2 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
@@ -598,7 +598,7 @@ export default function HomePage() {
                     onClick={() => setDefaultEntryPrivacy(option.value)}
                     className={`rounded-xl border px-3 py-2 text-left transition ${
                       selected
-                        ? "border-[var(--color-accent-gold)]/60 bg-[var(--color-accent-primary)]/10"
+                        ? "border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10"
                         : "border-[var(--color-border)] bg-[var(--color-surface-muted)] hover:border-[var(--color-border-strong)]"
                     }`}
                   >
@@ -626,7 +626,7 @@ export default function HomePage() {
 
         {/* ── First-time hero CTA ── */}
         {isFirstTime ? (
-          <div className="rounded-3xl border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-primary)]/5 p-8 text-center backdrop-blur">
+          <div className="rounded-3xl border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/5 p-8 text-center backdrop-blur">
             <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
               Record your first pour
             </h2>
@@ -674,7 +674,7 @@ export default function HomePage() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                   Best matches
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">
@@ -697,7 +697,7 @@ export default function HomePage() {
                   <Link
                     key={`best-match-${entry.id}`}
                     href={`/entries/${entry.id}`}
-                    className="rounded-3xl border border-[var(--color-accent-gold)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 transition hover:border-[var(--color-accent-gold)]/40"
+                    className="rounded-3xl border border-[var(--color-accent-secondary)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 transition hover:border-[var(--color-accent-secondary)]/40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -770,7 +770,7 @@ export default function HomePage() {
                         now: currentTimeMs,
                       })
                         ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                        : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-gold)]/40"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                     }`}
                     role="button"
                     tabIndex={0}
@@ -882,7 +882,7 @@ export default function HomePage() {
 
               <Link
                 href="/entries"
-                className="inline-block text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                className="inline-block text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 View my library &rarr;
               </Link>
@@ -907,7 +907,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     href="/friends"
-                    className="mt-3 inline-block rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                    className="mt-3 inline-block rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                   >
                     Find friends
                   </Link>
@@ -919,7 +919,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     href="/feed"
-                    className="mt-3 inline-block text-sm font-medium text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]"
+                    className="mt-3 inline-block text-sm font-medium text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
                   >
                     Browse the public feed &rarr;
                   </Link>
@@ -939,7 +939,7 @@ export default function HomePage() {
                         now: currentTimeMs,
                       })
                         ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                        : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-gold)]/40"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                     }`}
                     role="button"
                     tabIndex={0}
@@ -958,7 +958,7 @@ export default function HomePage() {
                           e.stopPropagation();
                           router.push(`/profile/${entry.user_id}`);
                         }}
-                        className="font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-gold)]"
+                        className="font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]"
                       >
                         {entry.author_name}
                       </button>
@@ -1052,7 +1052,7 @@ export default function HomePage() {
 
               <Link
                 href="/feed"
-                className="inline-block text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                className="inline-block text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 View full feed &rarr;
               </Link>

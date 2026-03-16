@@ -165,8 +165,8 @@ function getAccentPillClasses(
   }
   if (tone === "white") {
     return selected
-      ? "border border-[#C9A84C]/70 bg-[#C9A84C]/18 text-[#f5e8bc]"
-      : "border border-[#C9A84C]/30 bg-[#C9A84C]/8 text-[#e7d491] hover:border-[#C9A84C]/55";
+      ? "border border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-secondary)]/18 text-[var(--color-text-on-accent)]"
+      : "border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-secondary)]/8 text-[var(--color-text-on-accent)] hover:border-[var(--color-accent-secondary)]/55";
   }
   if (tone === "red") {
     return selected
@@ -480,7 +480,7 @@ export default function ListScanResultsScreen() {
         <NavBar />
 
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             List results
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -513,8 +513,8 @@ export default function ListScanResultsScreen() {
         ) : null}
 
         {result.score_summary.warning ? (
-          <section className="rounded-3xl border border-[var(--color-accent-gold)]/25 bg-[var(--color-accent-primary)]/10 p-5 text-sm text-[var(--color-text-on-accent)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
+          <section className="rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 p-5 text-sm text-[var(--color-text-on-accent)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
               Match scoring
             </p>
             <p className="mt-2 text-sm leading-6 text-[var(--color-text-on-accent)]">

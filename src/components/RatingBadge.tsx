@@ -5,7 +5,7 @@ type RatingBadgeProps = {
 };
 
 function getRatingToneClasses(): string {
-  return "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-gold)]";
+  return "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-secondary)]";
 }
 
 export default function RatingBadge({
@@ -15,7 +15,7 @@ export default function RatingBadge({
 }: RatingBadgeProps) {
   const baseClasses =
     variant === "text"
-      ? "inline-flex items-center text-sm font-bold leading-none tabular-nums text-[var(--color-accent-gold)]"
+      ? "inline-flex items-center text-sm font-bold leading-none tabular-nums text-[var(--color-accent-secondary)]"
       : "inline-flex items-center rounded-full border px-2.5 py-1 text-sm font-semibold leading-none tabular-nums";
 
   if (typeof rating !== "number" || Number.isNaN(rating)) {

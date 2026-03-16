@@ -8,12 +8,12 @@ export default function TermsPage() {
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2">
           <div className="flex items-center justify-between gap-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-gold)]/70">
+            <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]/70">
               Legal
             </p>
             <Link
               href="/"
-              className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-accent-gold)]"
+              className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-accent-secondary)]"
             >
               Home
             </Link>
@@ -47,11 +47,11 @@ export default function TermsPage() {
         </section>
 
         <footer className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-          <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
+          <Link href="/privacy" className="transition hover:text-[var(--color-accent-secondary)]">
             Privacy
           </Link>
           {" · "}
-          <Link href="/feedback" className="transition hover:text-[var(--color-accent-gold)]">
+          <Link href="/feedback" className="transition hover:text-[var(--color-accent-secondary)]">
             Feedback
           </Link>
         </footer>
