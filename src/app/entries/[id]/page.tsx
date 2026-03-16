@@ -766,7 +766,7 @@ export default function EntryDetailPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="rounded-full border border-[var(--color-accent-gold)]/30 bg-amber-300/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:border-[var(--color-accent-gold)]/60 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-gold)] transition hover:border-[var(--color-accent-gold)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={sharing}
               onClick={onShare}
             >
@@ -803,7 +803,7 @@ export default function EntryDetailPage() {
                     }}
                     className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                       commentsExpanded
-                        ? "border-[var(--color-accent-gold)]/50 bg-amber-400/10 text-[var(--color-accent-gold)]"
+                        ? "border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-gold)]"
                         : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
                     }`}
                   >
@@ -855,7 +855,7 @@ export default function EntryDetailPage() {
                     {REACTION_EMOJIS.map((emoji) => {
                       if (canReact) {
                         return (
-                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${myReactions.includes(emoji) ? "bg-amber-400/20" : ""}`}>
+                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${myReactions.includes(emoji) ? "bg-[var(--color-accent-primary)]/20" : ""}`}>
                             {emoji}
                           </button>
                         );
@@ -971,7 +971,7 @@ export default function EntryDetailPage() {
                       }}
                       rows={2}
                       placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
-                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       disabled={!canComment || postingComment}
                     />
                     <div className="mt-2 flex items-center justify-end">
@@ -979,7 +979,7 @@ export default function EntryDetailPage() {
                         type="button"
                         onClick={() => void submitComment()}
                         disabled={!commentDraft.trim() || !canComment || postingComment}
-                        className="inline-flex rounded-full border border-[var(--color-accent-gold)]/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-gold)] transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex rounded-full border border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-gold)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
                       </button>
@@ -1029,7 +1029,7 @@ export default function EntryDetailPage() {
                       <div className="mt-4 flex flex-wrap gap-3">
                         <Link
                           href="/entries/new"
-                          className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+                          className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
                         >
                           Log another wine
                         </Link>
@@ -1072,7 +1072,7 @@ export default function EntryDetailPage() {
                               href={locationMapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[var(--color-accent-gold)] underline decoration-amber-300/60 underline-offset-2 hover:text-[var(--color-accent-gold)]"
+                              className="text-[var(--color-accent-gold)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-gold)]"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {locationDisplayLabel}
@@ -1088,7 +1088,7 @@ export default function EntryDetailPage() {
                         href={locationMapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-[var(--color-accent-gold)] underline decoration-amber-300/60 underline-offset-2 hover:text-[var(--color-accent-gold)]"
+                        className="text-sm text-[var(--color-accent-gold)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-gold)]"
                       >
                         {locationDisplayLabel}
                       </a>
@@ -1280,7 +1280,7 @@ export default function EntryDetailPage() {
               ) : null}
             </div>
           ) : (
-            <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
+            <div className="rounded-2xl border border-[var(--color-border-accent)] bg-[var(--color-accent-primary)]/10 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--color-accent-gold)]">
@@ -1293,7 +1293,7 @@ export default function EntryDetailPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={addingToLog}
                     onClick={async () => {
                       if (!entryId) return;
@@ -1389,7 +1389,7 @@ export default function EntryDetailPage() {
               </button>
               <button
                 type="button"
-                className="rounded-full bg-rose-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-rose-300"
+                className="rounded-full bg-rose-400 px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-rose-300"
                 onClick={async () => {
                   setShowDeleteConfirm(false);
                   await onDelete();

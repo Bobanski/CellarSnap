@@ -101,7 +101,7 @@ export default function ListScanHistoryScreen() {
           </p>
           <Link
             href="/list-scan"
-            className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+            className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
           >
             Scan another
           </Link>

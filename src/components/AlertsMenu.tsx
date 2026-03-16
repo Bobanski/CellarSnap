@@ -692,7 +692,7 @@ export default function AlertsMenu() {
                               setAddToCellarId(null);
                             }
                           }}
-                          className="rounded-full bg-amber-400 px-3 py-1 text-[11px] font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="rounded-full bg-[var(--color-accent-primary)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {addToCellarId === item.id
                             ? "Adding..."

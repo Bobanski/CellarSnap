@@ -172,7 +172,7 @@ export default function FacetMultiSelect({
                     removeOption(selected[selected.length - 1]);
                   }
                 }}
-                className="w-full rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
               />
 
               {filteredOptions.length > 0 ? (

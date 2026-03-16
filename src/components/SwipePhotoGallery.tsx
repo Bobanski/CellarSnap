@@ -194,7 +194,7 @@ export default function SwipePhotoGallery({
                   type="button"
                   aria-label={`Go to photo ${dotIndex + 1}`}
                   className={`h-1.5 w-1.5 rounded-full transition ${
-                    dotIndex === activeIndex ? "bg-amber-300" : "bg-zinc-400/70"
+                    dotIndex === activeIndex ? "bg-[var(--color-accent-primary)]" : "bg-zinc-400/70"
                   }`}
                   onClick={() => setActiveByIndex(dotIndex)}
                 />

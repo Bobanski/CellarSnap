@@ -3095,7 +3095,7 @@ export default function NewEntryPage() {
           <label className="relative block">
             <select
               value={resolvedType}
-              className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-gold)]/50"
+              className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-primary)]/50"
               onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
               onTouchStart={(event) => event.stopPropagation()}
@@ -3178,7 +3178,7 @@ export default function NewEntryPage() {
         <label className="relative block">
           <select
             value={index}
-            className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-primary)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-gold)]/50"
+            className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-primary)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)]/50"
             onClick={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
@@ -3440,7 +3440,7 @@ export default function NewEntryPage() {
                               type="button"
                               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                                 bulkEntryMode === option.value
-                                  ? "bg-amber-400 text-zinc-950"
+                                  ? "bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
                                   : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                               }`}
                               onClick={() => {
@@ -3474,7 +3474,7 @@ export default function NewEntryPage() {
                               className={`mt-2 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
                                 bulkEntryConfigError
                                   ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                                  : "border-[var(--color-border)] focus:border-[var(--color-accent-gold)] focus:ring-amber-300/30"
+                                  : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                               }`}
                             />
                             <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
@@ -3526,7 +3526,7 @@ export default function NewEntryPage() {
                                     value={field.value}
                                     onChange={field.onChange}
                                     onBlur={field.onBlur}
-                                    className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                                    className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                                     required
                                   />
                                 )}
@@ -3579,7 +3579,7 @@ export default function NewEntryPage() {
                                   >
                                     <input
                                       type="checkbox"
-                                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-[var(--color-accent-primary)]"
                                       checked={isChecked}
                                       onChange={(event) => {
                                         setSelectedUserIds((prev) =>
@@ -3608,7 +3608,7 @@ export default function NewEntryPage() {
                                         setFriendSearch(event.target.value)
                                       }
                                       placeholder="Search friends"
-                                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                                     />
                                     {searchResults.length > 0 ? (
                                       <div className="mt-2 space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
@@ -3652,7 +3652,7 @@ export default function NewEntryPage() {
                             </button>
                             <button
                               type="button"
-                              className="inline-flex items-center justify-center rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
+                              className="inline-flex items-center justify-center rounded-full bg-[var(--color-accent-primary)]/90 px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                               disabled={includedLineupWineCount === 0}
                               onClick={createLineupEntries}
                             >
@@ -3662,7 +3662,7 @@ export default function NewEntryPage() {
                           </div>
                         </div>
                       ) : bulkEntryMode === "event" ? (
-                        <div className="md:col-span-2 rounded-xl border border-[var(--color-accent-gold)]/20 bg-amber-500/10 p-4">
+                        <div className="md:col-span-2 rounded-xl border border-[var(--color-accent-gold)]/20 bg-[var(--color-accent-primary)]/10 p-4">
                           <p className="text-sm font-medium text-[var(--color-text-primary)]">Event flow</p>
                           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                             Next you’ll set the event name, location, date, and who you tasted
@@ -3671,7 +3671,7 @@ export default function NewEntryPage() {
                           </p>
                           <button
                             type="button"
-                            className="mt-4 inline-flex items-center justify-center rounded-full bg-amber-500/90 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400"
+                            className="mt-4 inline-flex items-center justify-center rounded-full bg-[var(--color-accent-primary)]/90 px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
                             onClick={() => {
                               setBulkEntryConfigStep("event_details");
                               setBulkEntryConfigError(null);
@@ -3698,7 +3698,7 @@ export default function NewEntryPage() {
                             className={`mt-2 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
                               bulkEntryConfigError
                                 ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                                : "border-[var(--color-border)] focus:border-[var(--color-accent-gold)] focus:ring-amber-300/30"
+                                : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                             }`}
                           />
                           <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
@@ -3726,7 +3726,7 @@ export default function NewEntryPage() {
                         type="button"
                         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs transition ${
                           wine.included
-                            ? "border-amber-400 bg-amber-400/20 text-[var(--color-accent-gold)]"
+                            ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-gold)]"
                             : "border-zinc-600 text-zinc-600"
                         }`}
                         onClick={() => {
@@ -3767,7 +3767,7 @@ export default function NewEntryPage() {
                   {bulkEntryMode === "catch_up" ? (
                     <button
                       type="button"
-                      className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-amber-500/90 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-50"
+                      className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-[var(--color-accent-primary)]/90 px-4 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                       disabled={includedLineupWineCount === 0}
                       onClick={createLineupEntries}
                     >
@@ -3816,7 +3816,7 @@ export default function NewEntryPage() {
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
                   <textarea
-                    className="mt-1 min-h-[120px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="mt-1 min-h-[120px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     {...register("notes")}
                   />
                 </div>
@@ -3832,7 +3832,7 @@ export default function NewEntryPage() {
                       className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 ${
                         errors.rating
                           ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                          : "border-[var(--color-border)] focus:border-[var(--color-accent-gold)] focus:ring-amber-300/30"
+                          : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                       }`}
                       {...register("rating", {
                         validate: (value) => {
@@ -3864,7 +3864,7 @@ export default function NewEntryPage() {
                       QPR (Quality : Price Ratio)
                     </label>
                     <select
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       {...register("qpr_level")}
                     >
                       <option value="">Not set</option>
@@ -3891,7 +3891,7 @@ export default function NewEntryPage() {
                     <div>
                       <label className="text-sm font-medium text-[var(--color-text-primary)]">Wine name</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("wine_name")}
                       />
                       {errors.wine_name ? (
@@ -3901,28 +3901,28 @@ export default function NewEntryPage() {
                     <div>
                       <label className="text-sm font-medium text-[var(--color-text-primary)]">Producer</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("producer")}
                       />
                     </div>
                     <div>
                       <label className="text-sm font-medium text-[var(--color-text-primary)]">Vintage</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("vintage")}
                       />
                     </div>
                     <div>
                       <label className="text-sm font-medium text-[var(--color-text-primary)]">Country</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("country")}
                       />
                     </div>
                     <div>
                       <label className="text-sm font-medium text-[var(--color-text-primary)]">Region</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("region")}
                       />
                     </div>
@@ -3931,7 +3931,7 @@ export default function NewEntryPage() {
                         Appellation
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("appellation")}
                       />
                     </div>
@@ -3940,7 +3940,7 @@ export default function NewEntryPage() {
                         Classification
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         placeholder="Optional (e.g. Premier Cru, DOCG)"
                         {...register("classification")}
                       />
@@ -3996,7 +3996,7 @@ export default function NewEntryPage() {
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                             required
                           />
                         )}
@@ -4039,7 +4039,7 @@ export default function NewEntryPage() {
                         <label key={user.id} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                           <input
                             type="checkbox"
-                            className="h-4 w-4 rounded border-white/20 bg-black/40 text-amber-400"
+                            className="h-4 w-4 rounded border-white/20 bg-black/40 text-[var(--color-accent-primary)]"
                             checked={isChecked}
                             onChange={(event) => {
                               setSelectedUserIds((prev) =>
@@ -4067,7 +4067,7 @@ export default function NewEntryPage() {
                             value={friendSearch}
                             onChange={(e) => setFriendSearch(e.target.value)}
                             placeholder="Search friends..."
-                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           {searchResults.length > 0 && (
                             <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
@@ -4107,7 +4107,7 @@ export default function NewEntryPage() {
                           {field.label}
                         </label>
                         <select
-                          className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                          className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           {...register(`advanced_notes.${field.key}` as const)}
                         >
                           <option value="">Not set</option>
@@ -4139,7 +4139,7 @@ export default function NewEntryPage() {
                         <PrivacyBadge level={selectedEntryPrivacy} compact />
                       </div>
                       <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("entry_privacy")}
                       >
                         {PRIVACY_OPTIONS.map((option) => (
@@ -4155,7 +4155,7 @@ export default function NewEntryPage() {
                         <PrivacyBadge level={selectedReactionPrivacy} compact />
                       </div>
                       <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("reaction_privacy")}
                       >
                         {PRIVACY_OPTIONS.map((option) => (
@@ -4171,7 +4171,7 @@ export default function NewEntryPage() {
                         <PrivacyBadge level={selectedCommentsPrivacy} compact />
                       </div>
                       <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("comments_privacy")}
                       >
                         {PRIVACY_OPTIONS.map((option) => (
@@ -4194,7 +4194,7 @@ export default function NewEntryPage() {
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
-                    className="rounded-full bg-amber-400 px-5 py-2 text-base font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
+                    className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2 text-base font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
                     disabled={isSubmitting}
                   >
                     Save entry
@@ -4252,7 +4252,7 @@ export default function NewEntryPage() {
                 >
                   {cropSourceLoading ? (
                     <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-gold)]">
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-accent-secondary)] border-t-transparent" />
                       <span>Loading photo...</span>
                     </div>
                   ) : cropSourceUrl ? (
@@ -4339,7 +4339,7 @@ export default function NewEntryPage() {
                       setCropCenterX(centered.x);
                       setCropCenterY(centered.y);
                     }}
-                    className="w-full accent-amber-300"
+                    className="w-full accent-[var(--color-accent-primary)]"
                   />
                 </div>
                 <p className="hidden text-xs text-[var(--color-text-tertiary)] sm:block">
@@ -4379,7 +4379,7 @@ export default function NewEntryPage() {
                     type="button"
                     onClick={saveCrop}
                     disabled={savingCrop || cropSourceLoading || !cropSourceUrl}
-                    className="rounded-full bg-amber-400 px-4 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-60"
+                    className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-60"
                   >
                     {savingCrop ? "Saving..." : "Save crop"}
                   </button>

@@ -124,7 +124,7 @@ export function SelectField({
   hideLabel?: boolean;
   compact?: boolean;
   placeholderLabel?: string;
-  tone?: "default" | "amber";
+  tone?: "default" | "accent";
   hideModalCloseAction?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -182,8 +182,8 @@ export function SelectField({
         style={[
           styles.selectTrigger,
           compact ? styles.selectTriggerCompact : null,
-          tone === "amber" && hasSelection ? styles.selectTriggerAmber : null,
-          compact && tone === "amber" && hasSelection
+          tone === "accent" && hasSelection ? styles.selectTriggerAccent : null,
+          compact && tone === "accent" && hasSelection
             ? styles.selectTriggerCompactAmber
             : null,
         ]}
@@ -193,7 +193,7 @@ export function SelectField({
           style={[
             styles.selectTriggerText,
             compact ? styles.selectTriggerTextCompact : null,
-            tone === "amber" && hasSelection ? styles.selectTriggerTextAmber : null,
+            tone === "accent" && hasSelection ? styles.selectTriggerTextAccent : null,
           ]}
           numberOfLines={1}
         >
@@ -203,7 +203,7 @@ export function SelectField({
           style={[
             styles.selectChevron,
             compact ? styles.selectChevronCompact : null,
-            tone === "amber" && hasSelection ? styles.selectChevronAmber : null,
+            tone === "accent" && hasSelection ? styles.selectChevronAccent : null,
           ]}
         >
           v
@@ -221,7 +221,7 @@ export function SelectField({
             <View
               style={[
                 styles.selectPopoverCard,
-                tone === "amber" ? styles.selectPopoverCardAmber : null,
+                tone === "accent" ? styles.selectPopoverCardAccent : null,
                 {
                   top: popoverLayout.top,
                   left: popoverLayout.left,
@@ -234,7 +234,7 @@ export function SelectField({
                 <AppText
                   style={[
                     styles.selectModalTitle,
-                    tone === "amber" ? styles.selectModalTitleAmber : null,
+                    tone === "accent" ? styles.selectModalTitleAccent : null,
                   ]}
                 >
                   {label}
@@ -259,7 +259,7 @@ export function SelectField({
                       style={[
                         styles.selectOption,
                         selected ? styles.selectOptionSelected : null,
-                        selected && tone === "amber"
+                        selected && tone === "accent"
                           ? styles.selectOptionSelectedAmber
                           : null,
                       ]}
@@ -272,7 +272,7 @@ export function SelectField({
                         style={[
                           styles.selectOptionText,
                           selected ? styles.selectOptionTextSelected : null,
-                          selected && tone === "amber"
+                          selected && tone === "accent"
                             ? styles.selectOptionTextSelectedAmber
                             : null,
                         ]}

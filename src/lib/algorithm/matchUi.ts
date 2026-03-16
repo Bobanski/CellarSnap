@@ -56,11 +56,11 @@ export const MATCH_BAND_COPY: Record<
   strong: {
     title: "Great match",
     pillLabel: "Great match",
-    scoreColorClassName: "text-amber-100",
+    scoreColorClassName: "text-[var(--color-text-on-accent)]",
     ringColor: "#fbbf24",
     glowColor: "rgba(251, 191, 36, 0.24)",
     chipClassName:
-      "border border-amber-300/35 bg-amber-400/15 text-amber-100",
+      "border border-[var(--color-accent-primary)]/35 bg-[var(--color-accent-primary)]/15 text-[var(--color-text-on-accent)]",
   },
   decent: {
     title: "Decent match",
