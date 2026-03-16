@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   body: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.08)",
+    borderTopColor: colors.border,
     padding: 14,
   },
   tokenWrap: {
@@ -312,8 +312,8 @@ const styles = StyleSheet.create({
   suggestionButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 7,
     width: 130,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   doneButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },

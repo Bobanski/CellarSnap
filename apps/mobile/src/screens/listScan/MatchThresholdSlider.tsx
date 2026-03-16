@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceTinted,
     padding: 14,
     gap: 10,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(44,26,14,0.10)",
+    backgroundColor: colors.border,
   },
   fill: {
     position: "absolute",
