@@ -519,14 +519,14 @@ export default function EntriesScreen() {
               <Feather
                 name="search"
                 size={14}
-                color={isSearchOpen ? colors.rose : colors.fog}
+                color={isSearchOpen ? colors.rose : colors.textSecondary}
               />
             </Pressable>
           </View>
           {isSearchOpen ? (
             <View style={styles.searchPanel}>
               <View style={styles.searchRow}>
-                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor={colors.fog} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
+                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
                 {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
               </View>
             </View>
@@ -546,7 +546,7 @@ export default function EntriesScreen() {
               <AppText style={styles.panelLabel}>Filter by</AppText>
               <View style={styles.pills}><Pill label="None" active={filterType === ""} onPress={() => updateFilterType("")} /><Pill label="Country" active={filterType === "country"} onPress={() => updateFilterType("country")} /><Pill label="Vintage range" active={filterType === "vintage"} onPress={() => updateFilterType("vintage")} /><Pill label="Rating range" active={filterType === "rating"} onPress={() => updateFilterType("rating")} /></View>
               {filterType === "country" ? <View style={styles.pills}><Pill label="All countries" active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
-              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor={colors.fog} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor={colors.fog} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
+              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
             </View>
           ) : null}
 
@@ -596,27 +596,27 @@ export default function EntriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.champagne },
-  loadingScreen: { flex: 1, backgroundColor: colors.champagne, alignItems: "center", justifyContent: "center" },
+  screen: { flex: 1, backgroundColor: colors.screenBg },
+  loadingScreen: { flex: 1, backgroundColor: colors.screenBg, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
-  secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.14)", paddingHorizontal: 10, paddingVertical: 7 },
-  secondaryBtnText: { color: colors.terroir, fontSize: 12, fontWeight: "700" },
+  secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 10, paddingVertical: 7 },
+  secondaryBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
   header: { gap: 6 },
   eyebrow: { color: colors.rose, fontSize: 11, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
-  title: { color: colors.terroir, fontSize: 24, fontWeight: "700" },
-  subtitle: { color: colors.fog, fontSize: 13, lineHeight: 18 },
-  controls: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", padding: 12, gap: 9 },
+  title: { color: colors.textPrimary, fontSize: 24, fontWeight: "700" },
+  subtitle: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  controls: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 12, gap: 9 },
   controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap", alignItems: "center" },
-  controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.14)", paddingHorizontal: 11, paddingVertical: 8 },
+  controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 11, paddingVertical: 8 },
   controlBtnActive: { borderColor: "rgba(123,29,58,0.7)", backgroundColor: "rgba(123,29,58,0.15)" },
-  controlBtnLabel: { color: colors.terroir, fontSize: 12, fontWeight: "700" },
+  controlBtnLabel: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
   searchToggleButton: {
     width: 32,
     height: 32,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -627,38 +627,38 @@ const styles = StyleSheet.create({
   searchPanel: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 10,
     gap: 8,
   },
   searchRow: { flexDirection: "row", gap: 8, alignItems: "center" },
-  searchInput: { flex: 1, minWidth: 0, borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: colors.inputBg, color: colors.terroir, paddingHorizontal: 12, paddingVertical: 9, fontSize: 12 },
-  panel: { borderRadius: 12, borderWidth: 1, borderColor: "rgba(44,26,14,0.08)", backgroundColor: "rgba(44,26,14,0.06)", padding: 10, gap: 8 },
-  panelLabel: { color: colors.fog, fontSize: 11, fontWeight: "700", letterSpacing: 1.3, textTransform: "uppercase" },
+  searchInput: { flex: 1, minWidth: 0, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary, paddingHorizontal: 12, paddingVertical: 9, fontSize: 12 },
+  panel: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 10, gap: 8 },
+  panelLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.3, textTransform: "uppercase" },
   pills: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  pill: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.15)", paddingHorizontal: 12, paddingVertical: 7 },
+  pill: { borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 12, paddingVertical: 7 },
   pillActive: { borderColor: "rgba(123,29,58,0.7)", backgroundColor: "rgba(123,29,58,0.15)" },
-  pillText: { color: colors.fog, fontSize: 12, fontWeight: "700" },
+  pillText: { color: colors.textSecondary, fontSize: 12, fontWeight: "700" },
   pillTextActive: { color: colors.rose },
   rangeRow: { flexDirection: "row", gap: 8 },
-  rangeInput: { width: 96, borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: colors.inputBg, color: colors.terroir, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13 },
-  countText: { color: colors.fog, fontSize: 12 },
+  rangeInput: { width: 96, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.inputBg, color: colors.textPrimary, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13 },
+  countText: { color: colors.textSecondary, fontSize: 12 },
   errorText: { color: colors.error, fontSize: 13 },
-  emptyCard: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", paddingHorizontal: 16, paddingVertical: 14 },
-  emptyText: { color: colors.fog, fontSize: 14, lineHeight: 20 },
+  emptyCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, paddingHorizontal: 16, paddingVertical: 14 },
+  emptyText: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   stack: { gap: 10 },
-  groupCard: { borderRadius: 14, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", padding: 10, gap: 8 },
+  groupCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 10, gap: 8 },
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  groupTitle: { color: colors.terroir, fontSize: 17, fontWeight: "700" },
-  groupCount: { color: colors.fog, fontSize: 11, marginTop: 2 },
-  entryCard: { flexDirection: "row", gap: 14, borderRadius: 18, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", padding: 14 },
-  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: "rgba(44,26,14,0.08)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  groupTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: "700" },
+  groupCount: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+  entryCard: { flexDirection: "row", gap: 14, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 14 },
+  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: colors.surfacePrimary, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   photoImage: { width: "100%", height: "100%" },
-  photoText: { color: colors.fog, fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
+  photoText: { color: colors.textSecondary, fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
   entryMain: { flex: 1, justifyContent: "space-between", gap: 8 },
-  entryTitle: { color: colors.terroir, fontSize: 14, fontWeight: "700" },
-  entrySubtitle: { marginTop: 3, color: colors.fog, fontSize: 12 },
+  entryTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "700" },
+  entrySubtitle: { marginTop: 3, color: colors.textSecondary, fontSize: 12 },
   ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
   ratingStack: { flex: 1, minWidth: 0, gap: 4 },
   qprTag: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden", fontSize: 8, fontWeight: "700", letterSpacing: 0.25, textTransform: "uppercase" },
@@ -669,5 +669,5 @@ const styles = StyleSheet.create({
   qpr_absolute_steal: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
   entryMeta: { marginTop: 6, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
   ratingText: { color: colors.rose, fontSize: 12, fontWeight: "800" },
-  entryDate: { color: colors.fog, fontSize: 12, flexShrink: 0, textAlign: "right" },
+  entryDate: { color: colors.textSecondary, fontSize: 12, flexShrink: 0, textAlign: "right" },
 });

@@ -2570,7 +2570,7 @@ export default function NewEntryScreen() {
                     true: "rgba(123,29,58,0.38)",
                   }}
                   thumbColor={form.drinking_now ? colors.info : colors.surfaceRaised}
-                  ios_backgroundColor=colors.borderStrong
+                  ios_backgroundColor={colors.borderStrong}
                 />
               </View>
 

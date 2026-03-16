@@ -23,7 +23,7 @@ import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 
-const INPUT_SELECTION_COLOR = colors.fog;
+const INPUT_SELECTION_COLOR = colors.textSecondary;
 
 function getCredentialText(authMode: AuthMode) {
   return authMode === "phone" ? "Username or phone number" : "Email or username";
@@ -178,7 +178,7 @@ export default function SignInScreen() {
                   ? "username or (555) 123-4567"
                   : "you@example.com or username"
               }
-              placeholderTextColor={colors.fog}
+              placeholderTextColor={colors.textTertiary}
               style={styles.input}
             />
             <AppText style={styles.helperText}>
@@ -201,7 +201,7 @@ export default function SignInScreen() {
                 textContentType="password"
                 selectionColor={INPUT_SELECTION_COLOR}
                 placeholder="********"
-                placeholderTextColor={colors.fog}
+                placeholderTextColor={colors.textTertiary}
                 style={styles.passwordInput}
               />
               <Pressable
@@ -275,7 +275,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   blobTop: {
     position: "absolute",
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: "rgba(74, 48, 96, 0.08)",
+    backgroundColor: colors.accentSoft,
   },
   scrollContent: {
     flexGrow: 1,
@@ -307,8 +307,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 20,
     paddingVertical: 22,
     shadowColor: colors.shadowColor,
@@ -329,12 +329,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   brandName: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 28,
     fontWeight: "700",
   },
   brandSubtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -342,12 +342,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
   },
   helperText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBg,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingVertical: 10,
     fontSize: 14,
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   passwordToggleText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 0.8,
     fontWeight: "700",
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -422,10 +422,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(44, 26, 14, 0.1)",
+    backgroundColor: colors.surfacePrimary,
   },
   dividerText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -437,12 +437,12 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.1)",
+    borderColor: colors.border,
     alignItems: "center",
     paddingVertical: 12,
   },
   secondaryButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   forgotPasswordLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
@@ -463,14 +463,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   legalLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
     fontWeight: "600",
   },
   legalSeparator: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
   },

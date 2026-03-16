@@ -37,14 +37,14 @@ export default function AuthCallbackScreen() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.champagne,
+        backgroundColor: colors.screenBg,
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
       }}
     >
       <ActivityIndicator color={colors.grenache} />
-      <AppText style={{ color: colors.terroir, marginTop: 16 }}>Completing sign in...</AppText>
+      <AppText style={{ color: colors.textPrimary, marginTop: 16 }}>Completing sign in...</AppText>
       {error ? (
         <AppText style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>{error}</AppText>
       ) : null}

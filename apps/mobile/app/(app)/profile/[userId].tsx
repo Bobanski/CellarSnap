@@ -491,11 +491,11 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -509,13 +509,13 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44,26,14,0.04)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   backButtonText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -534,8 +534,8 @@ const styles = StyleSheet.create({
   profileCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 12,
     gap: 10,
   },
@@ -557,8 +557,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   avatarFallback: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -576,12 +576,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   username: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "700",
   },
   fullName: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   blockUnavailable: {
@@ -615,18 +615,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   blockActionButton: {
-    borderColor: "rgba(44,26,14,0.2)",
-    backgroundColor: "rgba(44,26,14,0.04)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
   },
   unblockButton: {
-    borderColor: "rgba(44,26,14,0.2)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
   },
   blockButtonDisabled: {
     opacity: 0.6,
   },
   blockButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -639,20 +639,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
   emptyCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   emptyText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   entryGrid: {
@@ -661,8 +661,8 @@ const styles = StyleSheet.create({
   entryCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.04)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 10,
     gap: 6,
   },
@@ -671,9 +671,9 @@ const styles = StyleSheet.create({
     aspectRatio: 7 / 5,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
+    borderColor: colors.border,
     overflow: "hidden",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -682,16 +682,16 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   entryImageFallback: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   entryName: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "600",
   },
   entryDate: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
 });

@@ -185,7 +185,7 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   content: {
     paddingHorizontal: 16,
@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 16,
     gap: 14,
   },
@@ -210,12 +210,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 26,
     fontWeight: "700",
   },
   updated: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   section: {
@@ -226,23 +226,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
   paragraph: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
   footerRow: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.1)",
+    borderTopColor: colors.border,
     paddingTop: 10,
     alignItems: "center",
   },
   footerLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
