@@ -17,7 +17,8 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
-        "NSCameraUsageDescription": "CellarSnap uses your camera to scan wine labels for quick and accurate entry creation."
+        "NSCameraUsageDescription": "CellarSnap uses your camera to scan wine labels for quick and accurate entry creation.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -44,7 +45,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures."
+          "photosPermission": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
+          "cameraPermission": "CellarSnap uses your camera to scan wine labels for quick and accurate entry creation."
         }
       ]
     ],
