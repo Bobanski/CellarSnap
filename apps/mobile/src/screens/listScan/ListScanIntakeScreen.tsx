@@ -362,8 +362,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     padding: 18,
     gap: 12,
   },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 18,
     paddingVertical: 12,
     alignItems: "center",
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
   },
   thumbnailImage: {
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(44, 26, 14, 0.5)",
+    backgroundColor: colors.shadowColor,
   },
   thumbnailRemoveText: {
     color: colors.textPrimary,
@@ -436,14 +436,14 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceRaised,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   pdfBadge: {
     borderRadius: 999,
-    backgroundColor: "rgba(44,26,14,0.08)",
+    backgroundColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
+    borderColor: colors.borderStrong,
   },
   urlSection: {
     gap: 8,

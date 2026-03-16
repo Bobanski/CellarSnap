@@ -659,7 +659,7 @@ export default function ListScanResultsScreen() {
                         setFilters((current) => ({ ...current, show_match_column }))
                       }
                       trackColor={{ false: colors.surfaceRaised, true: "rgba(45,125,70,0.42)" }}
-                      thumbColor={filters.show_match_column ? colors.success : colors.white}
+                      thumbColor={filters.show_match_column ? colors.success : colors.surfaceRaised}
                     />
                   </View>
                 </FilterDropdown>
@@ -883,8 +883,8 @@ const styles = StyleSheet.create({
   sectionCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     padding: 18,
     gap: 14,
   },
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surfaceTinted,
     paddingLeft: 10,
     paddingRight: 14,
@@ -935,8 +935,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -949,8 +949,8 @@ const styles = StyleSheet.create({
     minWidth: 22,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44,26,14,0.08)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     paddingHorizontal: 7,
     paddingVertical: 3,
     alignItems: "center",
@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
   filterCollapsedNote: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceTinted,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -999,8 +999,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 2,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.06)",
-    backgroundColor: "rgba(44,26,14,0.03)",
+    borderBottomColor: colors.border,
+    backgroundColor: colors.border,
   },
   tableSectionHeaderText: {
     color: colors.textSecondary,
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
   filterDropdown: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
@@ -1049,7 +1049,7 @@ const styles = StyleSheet.create({
   filterDropdownBody: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.08)",
+    borderTopColor: colors.border,
     padding: 14,
   },
   filterDoneRow: {
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
   filterDoneButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
   segmentButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
   filterInput: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.screenBg,
     color: colors.textPrimary,
     paddingHorizontal: 12,
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     minWidth: 72,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     backgroundColor: colors.screenBg,
     color: colors.textPrimary,
     paddingHorizontal: 12,
@@ -1272,7 +1272,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.08)",
+    borderBottomColor: colors.border,
   },
   tableHeadText: {
     color: colors.textSecondary,
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.05)",
+    borderBottomColor: colors.border,
   },
   tableWineColumn: {
     flex: 1.55,
@@ -1344,8 +1344,8 @@ const styles = StyleSheet.create({
   infoCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     padding: 18,
     gap: 14,
   },

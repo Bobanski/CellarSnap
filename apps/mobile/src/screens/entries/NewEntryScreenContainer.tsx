@@ -2566,11 +2566,11 @@ export default function NewEntryScreen() {
                   value={form.drinking_now}
                   onValueChange={(value) => updateField("drinking_now", value)}
                   trackColor={{
-                    false: "rgba(44,26,14,0.16)",
+                    false: colors.borderStrong,
                     true: "rgba(123,29,58,0.38)",
                   }}
-                  thumbColor={form.drinking_now ? colors.info : colors.white}
-                  ios_backgroundColor="rgba(44,26,14,0.16)"
+                  thumbColor={form.drinking_now ? colors.info : colors.surfaceRaised}
+                  ios_backgroundColor=colors.borderStrong
                 />
               </View>
 
