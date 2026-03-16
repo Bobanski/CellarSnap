@@ -658,7 +658,7 @@ export default function ListScanResultsScreen() {
                       onValueChange={(show_match_column) =>
                         setFilters((current) => ({ ...current, show_match_column }))
                       }
-                      trackColor={{ false: colors.limestone, true: "rgba(45,125,70,0.42)" }}
+                      trackColor={{ false: colors.surfaceRaised, true: "rgba(45,125,70,0.42)" }}
                       thumbColor={filters.show_match_column ? colors.success : colors.white}
                     />
                   </View>
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(232, 226, 217, 0.04)",
+    backgroundColor: colors.surfaceTinted,
     paddingLeft: 10,
     paddingRight: 14,
     paddingVertical: 8,
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(20, 19, 18, 0.04)",
+    backgroundColor: colors.surfaceTinted,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(232, 226, 217, 0.04)",
+    backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
   filterDropdownHeader: {

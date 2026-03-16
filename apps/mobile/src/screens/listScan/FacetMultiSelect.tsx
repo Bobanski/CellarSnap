@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(232, 226, 217, 0.04)",
+    backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
   header: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.inputBorder,
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
   },
   suggestionScrollContent: {
     padding: 6,

@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
   },
   thumbnailImage: {
     width: "100%",
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },

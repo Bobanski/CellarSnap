@@ -218,7 +218,7 @@ export function getPrivacyBadgeTone(level: PrivacyLevel) {
   }
   if (level === "friends") {
     return {
-      backgroundColor: "rgba(123, 29, 58, 0.14)",
+      backgroundColor: colors.accentSoft,
       borderColor: "rgba(196, 96, 122, 0.7)",
       textColor: colors.screenBg,
     };
