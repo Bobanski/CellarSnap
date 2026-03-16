@@ -1,0 +1,42 @@
+import { ActivityIndicator, View } from "react-native";
+import { Redirect, Stack } from "expo-router";
+import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
+
+export default function AppLayout() {
+  const { isReady, session } = useAuth();
+
+  if (!isReady) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.champagne,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator color={colors.grenache} />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="home/index" />
+      <Stack.Screen name="list-scan/index" />
+      <Stack.Screen name="list-scan/results" />
+      <Stack.Screen name="entries/index" />
+      <Stack.Screen name="entries/[id]" />
+      <Stack.Screen name="feed/index" />
+      <Stack.Screen name="sommelier" />
+      <Stack.Screen name="profile/index" />
+      <Stack.Screen name="profile/[userId]" />
+      <Stack.Screen name="entries/new" />
+    </Stack>
+  );
+}

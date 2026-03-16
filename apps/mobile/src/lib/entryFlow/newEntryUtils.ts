@@ -220,13 +220,13 @@ export function getPrivacyBadgeTone(level: PrivacyLevel) {
     return {
       backgroundColor: "rgba(123, 29, 58, 0.14)",
       borderColor: "rgba(196, 96, 122, 0.7)",
-      textColor: colors.champagne,
+      textColor: colors.screenBg,
     };
   }
   return {
     backgroundColor: "rgba(192, 57, 43, 0.14)",
     borderColor: "rgba(192, 57, 43, 0.7)",
-    textColor: colors.rose,
+    textColor: colors.accentSecondary,
   };
 }
 

@@ -1,0 +1,1 @@
+export const MAX_ENTRY_PHOTOS_PER_TYPE = 10;

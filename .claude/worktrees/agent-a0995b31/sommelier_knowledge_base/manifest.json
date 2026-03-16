@@ -1,0 +1,74 @@
+{
+  "name": "CellarSnap Sommelier Knowledge Base",
+  "version": "2.0.0",
+  "generated": "2026-03-15",
+  "description": "Prose wine knowledge corpus for RAG-powered Pocket Sommelier AI chat feature. Designed for ~500-token chunking with 50-token overlap, embedded via text-embedding-3-small (1536 dims) into Supabase pgvector.",
+  "total_words": 66348,
+  "files": [
+    {
+      "filename": "france.md",
+      "words": 5574,
+      "topics": ["Bordeaux", "Burgundy", "Rhône", "Loire", "Alsace", "Champagne", "Languedoc-Roussillon", "Provence", "Jura", "Savoie", "French wine law (AOC/AOP)"]
+    },
+    {
+      "filename": "italy.md",
+      "words": 4459,
+      "topics": ["Piedmont", "Tuscany", "Veneto", "Alto Adige", "Friuli", "Southern Italy", "Sicily", "Sardinia", "Italian wine law (DOCG/DOC/IGT)"]
+    },
+    {
+      "filename": "iberia-greece.md",
+      "words": 4465,
+      "topics": ["Rioja", "Ribera del Duero", "Priorat", "Sherry", "Cava", "Port", "Madeira", "Vinho Verde", "Santorini Assyrtiko", "Naoussa Xinomavro", "Nemea"]
+    },
+    {
+      "filename": "central-europe.md",
+      "words": 4175,
+      "topics": ["Germany (Prädikat, VDP, Mosel, Rheingau, Pfalz)", "Austria (Wachau, Grüner Veltliner)", "Hungary (Tokaji)", "Georgia (qvevri)", "Slovenia", "Croatia"]
+    },
+    {
+      "filename": "americas.md",
+      "words": 3086,
+      "topics": ["Napa Valley", "Sonoma", "Central Coast", "Oregon", "Washington", "Argentina", "Chile", "Uruguay", "Canada", "Finger Lakes"]
+    },
+    {
+      "filename": "southern-hemisphere.md",
+      "words": 4714,
+      "topics": ["Barossa Valley", "Margaret River", "Hunter Valley", "Tasmania", "Marlborough", "Central Otago", "Stellenbosch", "Swartland", "Pinotage", "Cape Blends"]
+    },
+    {
+      "filename": "winemaking-and-tasting.md",
+      "words": 4829,
+      "topics": ["Winemaking fundamentals", "Tasting methodology", "Service temperatures", "Decanting", "Glassware", "Aging potential", "Common misconceptions"]
+    },
+    {
+      "filename": "grapes-and-styles.md",
+      "words": 7905,
+      "topics": ["13 red grape varieties", "12 white grape varieties", "Natural wine", "Orange wine", "Pét-nat", "Biodynamic", "Sparkling methods", "Dessert and fortified wines", "Food pairing principles"]
+    },
+    {
+      "filename": "producers.md",
+      "words": 9296,
+      "topics": ["110+ iconic and emerging producers", "Bordeaux First Growths", "Burgundy domaines (DRC, Leroy, Coche-Dury)", "Italian legends (Conterno, Gaja, Sassicaia)", "Champagne houses", "German/Austrian estates", "Napa cult wines", "New World pioneers", "Producer philosophy and flagship wines"]
+    },
+    {
+      "filename": "vintages.md",
+      "words": 5753,
+      "topics": ["Storied vintages (1945, 1947, 1961, 1982, 1990, 2005, 2009/2010, 2015, 2016, 2019)", "Recent vintage guide 2004-2024 by region", "Vintage variation explained", "Climate change impact", "Off-vintage value", "Drinking windows"]
+    },
+    {
+      "filename": "wine-lore.md",
+      "words": 5100,
+      "topics": ["Judgment of Paris 1976", "Phylloxera crisis", "Monks of Burgundy", "Dom Pérignon myth", "Champagne widows", "Austrian antifreeze scandal", "Rudy Kurniawan fraud", "Brunellopoli", "Jefferson Bottles", "Sassicaia origin", "Napa Valley birth", "Carménère rediscovery", "Robert Parker's influence"]
+    },
+    {
+      "filename": "wine-faults.md",
+      "words": 3548,
+      "topics": ["Cork taint (TCA)", "Oxidation", "Reduction", "Volatile acidity", "Brettanomyces", "Heat damage", "Refermentation", "Light strike", "Sulfur issues", "Tartrate crystals", "Sediment", "Restaurant wine service", "When to send back a bottle"]
+    },
+    {
+      "filename": "cellar-and-value.md",
+      "words": 3444,
+      "topics": ["Storage conditions (temp, humidity, light, vibration)", "Wine fridges vs cellars", "Building a balanced collection", "Drinking windows by category", "Value regions (Languedoc, Portugal, Southern Italy, South Africa, Spain)", "Insider picks", "Wine as investment"]
+    }
+  ]
+}
