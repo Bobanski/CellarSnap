@@ -439,7 +439,7 @@ export default function ListScanResultsScreen() {
               onPress={toggleFiltersVisibility}
             >
               <View style={styles.filterToggleIconWrap}>
-                <Feather name="sliders" size={16} color={colors.terroir} />
+                <Feather name="sliders" size={16} color={colors.textPrimary} />
               </View>
               <AppText style={styles.filterToggleButtonText}>
                 {filtersVisible ? "Hide filters" : "Show filters"}
@@ -511,7 +511,7 @@ export default function ListScanResultsScreen() {
                         }))
                       }
                       placeholder={filters.price_mode === "under" ? "Max price" : "Min price"}
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textSecondary}
                       keyboardType="decimal-pad"
                       style={styles.filterInput}
                     />
@@ -530,7 +530,7 @@ export default function ListScanResultsScreen() {
                         }))
                       }
                       placeholder={filters.price_mode === "over" ? "Min price" : "Max price"}
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textSecondary}
                       keyboardType="decimal-pad"
                       style={styles.filterInput}
                     />
@@ -644,7 +644,7 @@ export default function ListScanResultsScreen() {
                         }));
                       }}
                       placeholder="0"
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textSecondary}
                       keyboardType="number-pad"
                       style={styles.matchInput}
                     />
@@ -658,7 +658,7 @@ export default function ListScanResultsScreen() {
                       onValueChange={(show_match_column) =>
                         setFilters((current) => ({ ...current, show_match_column }))
                       }
-                      trackColor={{ false: colors.limestone, true: "rgba(45,125,70,0.42)" }}
+                      trackColor={{ false: colors.surfaceRaised, true: "rgba(45,125,70,0.42)" }}
                       thumbColor={filters.show_match_column ? colors.success : colors.white}
                     />
                   </View>
@@ -831,7 +831,7 @@ export default function ListScanResultsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   content: {
     paddingHorizontal: 20,
@@ -843,20 +843,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eyebrow: {
-    color: colors.rose,
+    color: colors.accentSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 28,
     lineHeight: 34,
     fontWeight: "700",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -869,14 +869,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   warningEyebrow: {
-    color: colors.rose,
+    color: colors.accentSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   warningText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -889,14 +889,14 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   sectionEyebrow: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.2,
     textTransform: "uppercase",
   },
   sectionTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 22,
     lineHeight: 28,
     fontWeight: "700",
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    backgroundColor: colors.surfaceTinted,
     paddingLeft: 10,
     paddingRight: 14,
     paddingVertical: 8,
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   filterToggleButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   filterToggleBadgeText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -964,12 +964,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44, 26, 14, 0.04)",
+    backgroundColor: colors.surfaceTinted,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   filterCollapsedNoteText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -985,12 +985,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   sectionCounter: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   sectionCounterBelow: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "600",
     marginTop: 4,
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(44,26,14,0.03)",
   },
   tableSectionHeaderText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.2,
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
   filterDropdownHeader: {
@@ -1029,20 +1029,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   filterLabel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   filterSummary: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   filterChevron: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -1064,7 +1064,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   filterDoneButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1081,8 +1081,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   segmentButtonActive: {
-    borderColor: colors.grenache,
-    backgroundColor: colors.grenache,
+    borderColor: colors.accentPrimary,
+    backgroundColor: colors.accentPrimary,
   },
   segmentButtonWhite: {
     borderColor: "rgba(201,168,76,0.30)",
@@ -1113,25 +1113,25 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,48,96,0.15)",
   },
   segmentButtonRedActive: {
-    borderColor: colors.nebbiolo,
-    backgroundColor: colors.nebbiolo,
+    borderColor: colors.accentPurple,
+    backgroundColor: colors.accentPurple,
   },
   segmentButtonDisabled: {
     opacity: 0.35,
   },
   segmentButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
   segmentButtonTextActive: {
-    color: colors.champagne,
+    color: colors.screenBg,
   },
   segmentButtonTextWhite: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   segmentButtonTextWhiteActive: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   segmentButtonTextRose: {
     color: "#f1bfd0",
@@ -1140,7 +1140,7 @@ const styles = StyleSheet.create({
     color: "#fde5ec",
   },
   segmentButtonTextOrange: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   segmentButtonTextOrangeActive: {
     color: "#fde6c7",
@@ -1155,8 +1155,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.champagne,
-    color: colors.terroir,
+    backgroundColor: colors.screenBg,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -1167,7 +1167,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   matchHelperText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1176,8 +1176,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.champagne,
-    color: colors.terroir,
+    backgroundColor: colors.screenBg,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -1191,7 +1191,7 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     flex: 1,
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
@@ -1230,13 +1230,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   recommendationTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 18,
     lineHeight: 24,
     fontWeight: "700",
   },
   recommendationSubtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1262,7 +1262,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   recommendationBody: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(44,26,14,0.08)",
   },
   tableHeadText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
@@ -1317,7 +1317,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   tableWineText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: "600",
@@ -1327,17 +1327,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   tableSubText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 3,
   },
   tableCellText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "600",
   },
   tableMatchText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1353,19 +1353,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   infoText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   primaryButton: {
     alignSelf: "flex-start",
     borderRadius: 999,
-    backgroundColor: colors.grenache,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 15,
     fontWeight: "700",
   },

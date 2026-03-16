@@ -128,7 +128,7 @@ export function PostSaveSurveyModal({
                 disabled={!canSubmitPostSaveSurvey || isSubmittingSurvey}
               >
                 {isSubmittingSurvey ? (
-                  <ActivityIndicator color={colors.champagne} />
+                  <ActivityIndicator color={colors.screenBg} />
                 ) : (
                   <AppText style={styles.submitButtonText}>Save and continue</AppText>
                 )}

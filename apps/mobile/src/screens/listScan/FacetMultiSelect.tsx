@@ -122,7 +122,7 @@ export default function FacetMultiSelect({
                 value={query}
                 onChangeText={setQuery}
                 placeholder={placeholder}
-                placeholderTextColor={colors.fog}
+                placeholderTextColor={colors.textSecondary}
                 style={styles.input}
               />
               {filteredOptions.length > 0 ? (
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
   header: {
@@ -207,20 +207,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   summary: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   chevron: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -268,19 +268,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   tokenTextWhite: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   tokenTextRose: {
-    color: colors.rose,
+    color: colors.accentSecondary,
   },
   tokenTextOrange: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   tokenTextRed: {
-    color: colors.nebbiolo,
+    color: colors.accentPurple,
   },
   tokenRemove: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBg,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.inputBorder,
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
   },
   suggestionScrollContent: {
     padding: 6,
@@ -335,23 +335,23 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,48,96,0.15)",
   },
   suggestionText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
   },
   suggestionTextWhite: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   suggestionTextRose: {
-    color: colors.rose,
+    color: colors.accentSecondary,
   },
   suggestionTextOrange: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   suggestionTextRed: {
-    color: colors.nebbiolo,
+    color: colors.accentPurple,
   },
   emptyText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   doneButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },

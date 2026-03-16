@@ -4,7 +4,7 @@ import StandaloneHomeLaunchRedirect from "@/components/StandaloneHomeLaunchRedir
 import KeyboardDoneHint from "@/components/KeyboardDoneHint";
 
 export const metadata: Metadata = {
-  title: "CellarSnap",
+  title: "Cluster",
   description: "Personal wine log with photos",
 };
 

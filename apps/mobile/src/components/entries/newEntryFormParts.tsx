@@ -58,7 +58,7 @@ export function Field({
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
         placeholder={placeholder}
-        placeholderTextColor={colors.fog}
+        placeholderTextColor={colors.textSecondary}
         multiline={multiline}
         style={[styles.input, multiline ? styles.inputMultiline : null]}
       />

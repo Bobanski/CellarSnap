@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
   header: {
@@ -226,20 +226,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   summaryText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   chevron: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   countryChipText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.inputBorder,
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.surfaceRaised,
   },
   subRegionScrollContent: {
     padding: 6,
@@ -321,14 +321,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(45,125,70,0.12)",
   },
   subRegionText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   subRegionTextActive: {
     color: colors.success,
   },
   emptyText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   doneButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },

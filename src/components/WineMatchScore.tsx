@@ -32,7 +32,7 @@ export default function WineMatchScore({
             boxShadow: `0 24px 60px -32px ${copy.glowColor}`,
           }}
         >
-          <div className="flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full bg-[#0f0a09]">
+          <div className="flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full bg-[var(--color-screen-bg)]">
             <span className={`font-semibold ${copy.scoreColorClassName} ${valueClassName}`}>
               {clampedScore}%
             </span>
