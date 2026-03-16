@@ -65,7 +65,7 @@ export default function FeedbackPage() {
     <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-2xl space-y-8">
         <header className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-gold)]/70">
+          <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]/70">
             Feedback
           </p>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -163,11 +163,11 @@ export default function FeedbackPage() {
         </form>
 
         <footer className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-          <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
+          <Link href="/privacy" className="transition hover:text-[var(--color-accent-secondary)]">
             Privacy
           </Link>
           {" · "}
-          <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
+          <Link href="/terms" className="transition hover:text-[var(--color-accent-secondary)]">
             Terms
           </Link>
         </footer>

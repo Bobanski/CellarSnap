@@ -42,7 +42,7 @@ export default function SensoryRadarChart({
     <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
             Sensory map
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">

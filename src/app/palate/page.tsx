@@ -209,7 +209,7 @@ export default async function PalatePage() {
         <NavBar activeHrefOverride="/palate" />
 
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Your palate
           </span>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -308,7 +308,7 @@ export default async function PalatePage() {
 
               <div className="space-y-4 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                     Your clearest signal
                   </p>
                   <h2 className="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">

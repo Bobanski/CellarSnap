@@ -313,7 +313,7 @@ export default function FinishSignupPage() {
     <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Finish signup
           </span>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
@@ -363,7 +363,7 @@ export default function FinishSignupPage() {
                     Need a new code?{" "}
                     <Link
                       href="/signup"
-                      className="font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-gold)]"
+                      className="font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-secondary)]"
                     >
                       Go back and resend.
                     </Link>
@@ -405,7 +405,7 @@ export default function FinishSignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? "Hide" : "Show"}
@@ -429,7 +429,7 @@ export default function FinishSignupPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirm((p) => !p)}
-                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                   aria-label={showConfirm ? "Hide password" : "Show password"}
                 >
                   {showConfirm ? "Hide" : "Show"}
@@ -451,7 +451,7 @@ export default function FinishSignupPage() {
             <p className="text-center text-sm text-[var(--color-text-tertiary)]">
               <Link
                 href="/login"
-                className="font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-gold)]"
+                className="font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 ← Back to login
               </Link>

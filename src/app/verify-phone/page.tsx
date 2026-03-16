@@ -131,7 +131,7 @@ function VerifyPhoneInner() {
     <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">Verify phone</span>
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">Verify phone</span>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Enter your confirmation code</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
             We sent a verification code to your phone number.
@@ -193,7 +193,7 @@ function VerifyPhoneInner() {
         <div className="text-center">
           <Link
             href="/signup"
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
           >
             Back to create account
           </Link>

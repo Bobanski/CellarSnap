@@ -74,7 +74,7 @@ export default function PriceCurrencySelect({
                   aria-selected={selected}
                   className={`flex w-full items-center justify-between px-3 py-2 text-sm transition ${
                     selected
-                      ? "bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-gold)]"
+                      ? "bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-secondary)]"
                       : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
                   }`}
                   onClick={() => {

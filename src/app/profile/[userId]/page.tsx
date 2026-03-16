@@ -379,7 +379,7 @@ export default function FriendProfilePage() {
           >
             ← Back to Friends
           </Link>
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             {isOwnProfile ? "Your profile" : "Profile"}
           </span>
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -556,7 +556,7 @@ export default function FriendProfilePage() {
                     <Link
                       key={entry.id}
                       href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-gold)]/40"
+                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
                     >
                       <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
                         {entry.label_image_url ? (
@@ -646,7 +646,7 @@ export default function FriendProfilePage() {
                     <Link
                       key={entry.id}
                       href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-gold)]/40"
+                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
                     >
                       <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
                         {entry.label_image_url ? (

@@ -1938,7 +1938,7 @@ export default function EditEntryPage() {
       <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
+            <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               {isBulkReview ? "Bulk review" : "Edit entry"}
             </span>
             <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
@@ -1961,8 +1961,8 @@ export default function EditEntryPage() {
           onSubmit={onSubmit}
         >
           {isBulkReview ? (
-            <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-[var(--color-accent-primary)]/5 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
+            <div className="rounded-2xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
                 Wine
               </p>
               <input
@@ -1971,8 +1971,8 @@ export default function EditEntryPage() {
               />
             </div>
           ) : currentWineName ? (
-            <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-[var(--color-accent-primary)]/5 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
+            <div className="rounded-2xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/5 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
                 Wine
               </p>
               <p className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{currentWineName}</p>
@@ -2065,7 +2065,7 @@ export default function EditEntryPage() {
                         {activePhoto?.signed_url ? (
                           <button
                             type="button"
-                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                             onClick={() => openCropEditor(activePhoto)}
                             disabled={!canCrop || savingPhotoId === activePhoto.id}
                           >
@@ -2076,7 +2076,7 @@ export default function EditEntryPage() {
                           <a
                             href={activePhoto.signed_url}
                             download
-                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)]"
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                           >
                             Download
                           </a>
@@ -2171,7 +2171,7 @@ export default function EditEntryPage() {
             <div className="mt-4">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-gold)]/50 hover:text-[var(--color-accent-gold)]"
+                className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                 onClick={() => setShowBulkMoreDetails((current) => !current)}
               >
                 Add / edit details
@@ -2319,7 +2319,7 @@ export default function EditEntryPage() {
           ) : null}
 
           {showSharedEventBulkSummary ? (
-            <div className="rounded-2xl border border-[var(--color-accent-gold)]/20 bg-[var(--color-accent-primary)]/10 p-4">
+            <div className="rounded-2xl border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)]/10 p-4">
               <p className="text-sm font-medium text-[var(--color-text-primary)]">
                 Shared event details already applied
               </p>
@@ -2618,7 +2618,7 @@ export default function EditEntryPage() {
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => addPhotoInputRef.current?.click()}
                   disabled={uploadingType !== null}
                 >
@@ -2783,7 +2783,7 @@ export default function EditEntryPage() {
                 <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/70">
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                       Photo crop
                     </p>
                     <h3 className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
@@ -2809,7 +2809,7 @@ export default function EditEntryPage() {
                     className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
                   >
                   {cropSourceLoading ? (
-                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-gold)]">
+                    <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-secondary)]">
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-accent-secondary)] border-t-transparent" />
                       <span>Loading original photo...</span>
                     </div>

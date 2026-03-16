@@ -168,7 +168,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-gold)]"
+                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
@@ -199,18 +199,18 @@ export default function LoginPage() {
           <div className="text-center">
             <Link
               href="/forgot-password"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
             >
               Forgot password?
             </Link>
           </div>
 
           <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-            <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
+            <Link href="/privacy" className="transition hover:text-[var(--color-accent-secondary)]">
               Privacy
             </Link>
             {" · "}
-            <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
+            <Link href="/terms" className="transition hover:text-[var(--color-accent-secondary)]">
               Terms
             </Link>
           </div>

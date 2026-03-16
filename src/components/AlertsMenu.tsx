@@ -502,7 +502,7 @@ export default function AlertsMenu() {
                         <div className="min-w-0">
                           <Link
                             href={`/profile/${item.requester_id}`}
-                            className="underline-offset-2 hover:underline hover:text-[var(--color-accent-gold)]"
+                            className="underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
                             onClick={() => setOpenPathname(null)}
                           >
                             <span className="accent-text font-semibold">
