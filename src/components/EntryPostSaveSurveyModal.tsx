@@ -92,23 +92,23 @@ export default function EntryPostSaveSurveyModal({
     <div className="fixed inset-0 z-50 px-3 py-3 sm:px-4 sm:py-4">
       <div className="fixed inset-0 bg-black/75" aria-hidden />
       <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
-        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-white/10 bg-[#14100f] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
+        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-300/80">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-gold)]/80">
               Required survey
             </p>
-            <h2 className="text-2xl font-semibold text-zinc-50">Quick check-in</h2>
+            <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">Quick check-in</h2>
           </div>
 
           <div className="mt-5 space-y-4 sm:mt-6">
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-zinc-200">How was it?</span>
+              <span className="text-sm font-medium text-[var(--color-text-primary)]">How was it?</span>
               <select
                 value={howWasIt}
                 onChange={(event) =>
                   setHowWasIt(event.target.value as HowWasItResponse | "")
                 }
-                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-base text-zinc-100 outline-none transition focus:border-amber-300/60 sm:text-sm"
+                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {HOW_WAS_IT_OPTIONS.map((option) => (
@@ -121,7 +121,7 @@ export default function EntryPostSaveSurveyModal({
 
             {includeExpectations ? (
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-zinc-200">
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">
                   How did it compare to your expectations?
                 </span>
                 <select
@@ -129,7 +129,7 @@ export default function EntryPostSaveSurveyModal({
                   onChange={(event) =>
                     setExpectations(event.target.value as ExpectationsResponse | "")
                   }
-                  className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-base text-zinc-100 outline-none transition focus:border-amber-300/60 sm:text-sm"
+                  className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/60 sm:text-sm"
                 >
                   <option value="">Select one</option>
                   {EXPECTATIONS_OPTIONS.map((option) => (
@@ -142,7 +142,7 @@ export default function EntryPostSaveSurveyModal({
             ) : null}
 
             <label className="block space-y-2">
-              <span className="text-sm font-medium text-zinc-200">
+              <span className="text-sm font-medium text-[var(--color-text-primary)]">
                 Would you drink it again?
               </span>
               <select
@@ -150,7 +150,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setDrinkAgain(event.target.value as DrinkAgainResponse | "")
                 }
-                className="w-full rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-base text-zinc-100 outline-none transition focus:border-amber-300/60 sm:text-sm"
+                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-gold)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {DRINK_AGAIN_OPTIONS.map((option) => (

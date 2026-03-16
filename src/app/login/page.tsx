@@ -108,27 +108,27 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="relative flex min-h-screen items-start justify-center overflow-y-auto bg-[#0f0a09] px-4 py-6 sm:items-center sm:px-6 sm:py-8">
+    <div className="relative flex min-h-screen items-start justify-center overflow-y-auto bg-[var(--color-screen-bg)] px-4 py-6 sm:items-center sm:px-6 sm:py-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute -bottom-40 left-0 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl" />
       </div>
-      <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur sm:p-8">
+      <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-zinc-50">CellarSnap</h1>
-            <p className="mt-2 text-sm text-zinc-300">
+            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">CellarSnap</h1>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               A private cellar journal with a social pour.
             </p>
           </div>
-          <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-zinc-200">
+          <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[var(--color-text-primary)]">
             Beta
           </span>
         </div>
 
         <form className="mt-5 space-y-4 sm:mt-6" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="identifier">
+            <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="identifier">
               {authMode === "phone" ? "Username or phone number" : "Email or username"}
             </label>
             <input
@@ -136,7 +136,7 @@ export default function LoginPage() {
               type="text"
               autoComplete={authMode === "phone" ? "username" : "email"}
               disabled={isSubmitting}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder={
                 authMode === "phone"
                   ? "username or (555) 123-4567"
@@ -144,7 +144,7 @@ export default function LoginPage() {
               }
               {...register("identifier", { required: true })}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               {authMode === "phone"
                 ? "You can also paste your email address."
                 : "You can sign in with email or username."}
@@ -152,7 +152,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="password">
+            <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="password">
               Password
             </label>
             <div className="relative mt-1">
@@ -161,14 +161,14 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 disabled={isSubmitting}
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-20 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-20 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
                 placeholder="********"
                 {...register("password", { required: true })}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:text-amber-200"
+                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-gold)]"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
@@ -192,25 +192,25 @@ export default function LoginPage() {
 
           <Link
             href="/signup"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+            className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
           >
             Create Account
           </Link>
           <div className="text-center">
             <Link
               href="/forgot-password"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-amber-200"
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-gold)]"
             >
               Forgot password?
             </Link>
           </div>
 
-          <div className="text-center text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-            <Link href="/privacy" className="transition hover:text-amber-200">
+          <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+            <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
               Privacy
             </Link>
             {" · "}
-            <Link href="/terms" className="transition hover:text-amber-200">
+            <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
               Terms
             </Link>
           </div>

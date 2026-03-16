@@ -59,7 +59,7 @@ export default function SwipePhotoGallery({
   if (items.length === 0) {
     return (
       <div
-        className={`flex ${heightClassName} items-center justify-center rounded-3xl border border-white/10 bg-black/40 text-sm text-zinc-400 ${wrapperClassName}`}
+        className={`flex ${heightClassName} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-black/40 text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
       >
         {empty ?? "No photo"}
       </div>
@@ -91,10 +91,10 @@ export default function SwipePhotoGallery({
 
   return (
     <div
-      className={`overflow-hidden rounded-3xl border border-white/10 bg-black/40 ${wrapperClassName}`}
+      className={`overflow-hidden rounded-3xl border border-[var(--color-border)] bg-black/40 ${wrapperClassName}`}
     >
       {header ? (
-        <div className="border-b border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+        <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-text-secondary)]">
           {header(active, activeIndex)}
         </div>
       ) : null}
@@ -138,14 +138,14 @@ export default function SwipePhotoGallery({
                     loading={itemIndex === 0 ? "eager" : "lazy"}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
+                  <div className="flex h-full w-full items-center justify-center text-sm text-[var(--color-text-tertiary)]">
                     Photo unavailable
                   </div>
                 )}
                 {item.badge
                   ? typeof item.badge === "string"
                     ? (
-                        <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
+                        <span className="absolute left-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-primary)]">
                           {item.badge}
                         </span>
                       )
@@ -156,7 +156,7 @@ export default function SwipePhotoGallery({
                 {topRightBadge
                   ? typeof topRightBadge === "string"
                     ? (
-                        <span className="absolute right-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold text-zinc-200">
+                        <span className="absolute right-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold text-[var(--color-text-primary)]">
                           {topRightBadge}
                         </span>
                       )
@@ -173,7 +173,7 @@ export default function SwipePhotoGallery({
           <>
             <button
               type="button"
-              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
+              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] md:inline-flex"
               aria-label="Previous photo"
               onClick={goPrev}
             >
@@ -181,13 +181,13 @@ export default function SwipePhotoGallery({
             </button>
             <button
               type="button"
-              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
+              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-gold)]/60 hover:text-[var(--color-accent-gold)] md:inline-flex"
               aria-label="Next photo"
               onClick={goNext}
             >
               {">"}
             </button>
-            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/45 px-2 py-1">
+            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--color-border)] bg-black/45 px-2 py-1">
               {items.map((_, dotIndex) => (
                 <button
                   key={dotIndex}
@@ -205,7 +205,7 @@ export default function SwipePhotoGallery({
       </div>
 
       {footer ? (
-        <div className="flex items-center justify-between border-t border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-300">
+        <div className="flex items-center justify-between border-t border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-text-secondary)]">
           {footer(active, activeIndex)}
         </div>
       ) : null}

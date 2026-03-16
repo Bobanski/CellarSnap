@@ -115,26 +115,26 @@ export default function PrimaryGrapeSelector({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-sm font-medium text-zinc-200">Primary grapes</label>
-        <span className="text-xs text-zinc-400">
+        <label className="text-sm font-medium text-[var(--color-text-primary)]">Primary grapes</label>
+        <span className="text-xs text-[var(--color-text-tertiary)]">
           {selected.length}/{MAX_PRIMARY_GRAPES}
         </span>
       </div>
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-[var(--color-text-tertiary)]">
         Type at least 4 letters to search. Select up to 3 grapes.
       </p>
 
-      <div className="relative rounded-xl border border-white/10 bg-black/30 p-2">
+      <div className="relative rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-2">
         <div className="flex flex-wrap items-center gap-2">
           {selected.map((item) => (
             <span
               key={item.id}
-              className="inline-flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-300/10 px-3 py-1 text-xs text-amber-100"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--color-accent-gold)]/50 bg-amber-300/10 px-3 py-1 text-xs text-[var(--color-accent-gold)]"
             >
               {item.name}
               <button
                 type="button"
-                className="rounded-full border border-white/20 px-1 text-[10px] leading-4 text-zinc-200 transition hover:border-rose-300 hover:text-rose-200"
+                className="rounded-full border border-white/20 px-1 text-[10px] leading-4 text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-200"
                 onClick={() => removeSelection(item.id)}
                 disabled={disabled}
                 aria-label={`Remove ${item.name}`}
@@ -162,27 +162,27 @@ export default function PrimaryGrapeSelector({
                   removeSelection(selected[selected.length - 1].id);
                 }
               }}
-              className="min-w-[180px] flex-1 bg-transparent px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+              className="min-w-[180px] flex-1 bg-transparent px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none"
               placeholder="Start typing a grape"
               disabled={disabled}
             />
           ) : (
-            <span className="px-2 py-1 text-xs text-zinc-400">
+            <span className="px-2 py-1 text-xs text-[var(--color-text-tertiary)]">
               Maximum primary grapes selected.
             </span>
           )}
         </div>
 
         {showSuggestions ? (
-          <div className="absolute left-2 right-2 top-full z-20 mt-2 max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-[#15100f] p-1 shadow-xl">
+          <div className="absolute left-2 right-2 top-full z-20 mt-2 max-h-56 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
             {isLoading ? (
-              <p className="px-3 py-2 text-xs text-zinc-400">Searching grapes...</p>
+              <p className="px-3 py-2 text-xs text-[var(--color-text-tertiary)]">Searching grapes...</p>
             ) : (
               filteredSuggestions.map((option) => (
                 <button
                   key={option.id}
                   type="button"
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-white/10"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
                   onMouseDown={(event) => {
                     event.preventDefault();
                   }}
@@ -197,7 +197,7 @@ export default function PrimaryGrapeSelector({
       </div>
 
       {!isLoading && shouldSearch && filteredSuggestions.length === 0 && !searchError ? (
-        <p className="text-xs text-zinc-500">No grape matches found.</p>
+        <p className="text-xs text-[var(--color-text-tertiary)]">No grape matches found.</p>
       ) : null}
 
       {searchError ? <p className="text-xs text-rose-300">{searchError}</p> : null}

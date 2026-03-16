@@ -11,7 +11,7 @@ type QprBadgeProps = {
 const QPR_STYLES: Record<QprLevel, string> = {
   extortion: "border-rose-400/40 bg-rose-400/10 text-rose-200",
   pricey: "border-red-400/40 bg-red-400/10 text-red-200",
-  mid: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+  mid: "border-amber-400/40 bg-amber-400/10 text-[var(--color-accent-gold)]",
   good_value: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
   absolute_steal: "border-green-400/40 bg-green-400/10 text-green-200",
 };

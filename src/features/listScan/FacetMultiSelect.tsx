@@ -104,11 +104,11 @@ export default function FacetMultiSelect({
     if (tone === "red") {
       return "border-[#4A3060]/45 bg-[#4A3060]/15 text-[#dbcfe7] hover:border-[#4A3060]/75 hover:bg-[#4A3060]/26";
     }
-    return "border-white/10 bg-white/5 text-zinc-200 hover:border-white/20 hover:bg-white/8";
+    return "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-primary)] hover:border-white/20 hover:bg-white/8";
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -116,14 +116,14 @@ export default function FacetMultiSelect({
         aria-expanded={open}
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
             {label}
           </span>
-          <span className="mt-1 block truncate text-sm font-semibold text-zinc-100">
+          <span className="mt-1 block truncate text-sm font-semibold text-[var(--color-text-primary)]">
             {summary}
           </span>
         </span>
-        <span className="text-sm font-semibold text-zinc-300">{open ? "v" : ">"}</span>
+        <span className="text-sm font-semibold text-[var(--color-text-secondary)]">{open ? "v" : ">"}</span>
       </button>
 
       {open ? (
@@ -142,7 +142,7 @@ export default function FacetMultiSelect({
                     {value}
                     <button
                       type="button"
-                      className="rounded-full border border-white/15 px-1 text-[10px] leading-4 text-zinc-100 transition hover:border-rose-300 hover:text-rose-200"
+                      className="rounded-full border border-[var(--color-border-strong)] px-1 text-[10px] leading-4 text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-200"
                       onClick={() => removeOption(value)}
                       aria-label={`Remove ${value}`}
                     >
@@ -172,11 +172,11 @@ export default function FacetMultiSelect({
                     removeOption(selected[selected.length - 1]);
                   }
                 }}
-                className="w-full rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
               />
 
               {filteredOptions.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#171210] p-2">
+                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[#171210] p-2">
                   <div className="flex max-h-[160px] flex-col flex-wrap gap-1.5">
                     {filteredOptions.map((option) => {
                       const tone = getOptionTone?.(option) ?? "neutral";
@@ -196,17 +196,17 @@ export default function FacetMultiSelect({
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-zinc-500">No more matching options.</p>
+                <p className="text-sm text-[var(--color-text-tertiary)]">No more matching options.</p>
               )}
             </>
           ) : (
-            <p className="text-sm text-zinc-500">No options were parsed from this list.</p>
+            <p className="text-sm text-[var(--color-text-tertiary)]">No options were parsed from this list.</p>
           )}
 
           <div className="flex justify-end">
             <button
               type="button"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               onClick={() => setOpen(false)}
             >
               Done
