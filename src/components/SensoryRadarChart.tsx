@@ -51,7 +51,7 @@ export default function SensoryRadarChart({
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
           <span className="inline-flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-accent-primary)]" />
             {wineLabel}
           </span>
           <span className="inline-flex items-center gap-2">

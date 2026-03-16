@@ -5,7 +5,7 @@ type RatingBadgeProps = {
 };
 
 function getRatingToneClasses(): string {
-  return "border-[var(--color-accent-gold)]/70 bg-amber-400/20 text-[var(--color-accent-gold)]";
+  return "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-gold)]";
 }
 
 export default function RatingBadge({

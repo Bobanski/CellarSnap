@@ -1121,7 +1121,7 @@ export default function ProfilePage() {
                         value={friendSearch}
                         onChange={(e) => setFriendSearch(e.target.value)}
                         placeholder="Search by username or name"
-                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       />
                       {searchError ? (
                         <p className="mt-2 text-sm text-rose-200">{searchError}</p>
@@ -1179,7 +1179,7 @@ export default function ProfilePage() {
                               Incoming requests
                             </h3>
                             {incomingRequests.length > 0 ? (
-                              <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-accent-gold)]">
+                              <span className="inline-flex min-w-[20px] items-center justify-center rounded-full bg-[var(--color-accent-primary)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-accent-gold)]">
                                 {incomingRequests.length > 99
                                   ? "99+"
                                   : incomingRequests.length}
@@ -1220,7 +1220,7 @@ export default function ProfilePage() {
                                       onClick={() =>
                                         respondToRequest(req.id, "accept")
                                       }
-                                      className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                                      className="rounded-full bg-[var(--color-accent-primary)] px-3 py-1 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                                     >
                                       Accept
                                     </button>
@@ -1498,7 +1498,7 @@ export default function ProfilePage() {
                   </h3>
 
                   {requiresUsernameSetup && isEditing ? (
-                    <p className="rounded-xl border border-[var(--color-accent-gold)]/40 bg-amber-500/10 px-3 py-2 text-sm text-[var(--color-accent-gold)]">
+                    <p className="rounded-xl border border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-2 text-sm text-[var(--color-accent-gold)]">
                       Set a username to continue using CellarSnap.
                     </p>
                   ) : null}
@@ -1561,7 +1561,7 @@ export default function ProfilePage() {
                         maxLength={80}
                         value={editFirstName}
                         onChange={(e) => setEditFirstName(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       />
                       <input
                         id="edit-last-name"
@@ -1570,7 +1570,7 @@ export default function ProfilePage() {
                         maxLength={80}
                         value={editLastName}
                         onChange={(e) => setEditLastName(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       />
                     </div>
                   </div>
@@ -1593,7 +1593,7 @@ export default function ProfilePage() {
                       rows={2}
                       value={editBio}
                       onChange={(e) => setEditBio(e.target.value)}
-                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     />
                     <p className="mt-1 text-right text-xs tabular-nums text-[var(--color-text-tertiary)]">
                       {editBio.length}/100
@@ -1618,7 +1618,7 @@ export default function ProfilePage() {
                       maxLength={100}
                       value={editUsername}
                       onChange={(e) => setEditUsername(e.target.value)}
-                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     />
                   </div>
 
@@ -1636,7 +1636,7 @@ export default function ProfilePage() {
                       placeholder="you@example.com"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
-                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     />
                   </div>
 
@@ -1657,7 +1657,7 @@ export default function ProfilePage() {
                       placeholder="(555) 123-4567"
                       value={editPhone}
                       onChange={(e) => setEditPhone(formatPhoneForInput(e.target.value))}
-                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     />
                   </div>
 
@@ -1683,7 +1683,7 @@ export default function ProfilePage() {
                       type="button"
                       disabled={isSavingUsername}
                       onClick={saveProfile}
-                      className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                      className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                     >
                       {isSavingUsername ? "Saving\u2026" : "Save profile"}
                     </button>
@@ -1706,7 +1706,7 @@ export default function ProfilePage() {
                         const baseClass =
                           "rounded-xl border px-3 py-4 text-center transition";
                         const visualClass = badge.earned
-                          ? "border-[var(--color-accent-gold)]/55 bg-amber-400/10 ring-1 ring-amber-300/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
+                          ? "border-[var(--color-accent-gold)]/55 bg-[var(--color-accent-primary)]/10 ring-1 ring-[var(--color-accent-primary)]/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
                           : badge.count > 0
                             ? "border-[var(--color-border)] bg-[var(--color-surface-muted)] opacity-80 saturate-50"
                             : "border-white/5 bg-[var(--color-surface-muted)] opacity-45 grayscale";
@@ -1717,7 +1717,7 @@ export default function ProfilePage() {
                             <button
                               key={badge.id}
                               type="button"
-                              className={`${baseClass} ${visualClass} cursor-pointer [perspective:900px] focus:outline-none focus:ring-2 focus:ring-amber-300/30`}
+                              className={`${baseClass} ${visualClass} cursor-pointer [perspective:900px] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30`}
                               onClick={() => toggleBadgeFlip(badge.id)}
                               aria-pressed={flipped}
                               aria-label={`${
@@ -1812,7 +1812,7 @@ export default function ProfilePage() {
                             });
                           }}
                           disabled={isSavingPrivacy}
-                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
                           {NAME_DISPLAY_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -1843,7 +1843,7 @@ export default function ProfilePage() {
                             });
                           }}
                           disabled={isSavingPrivacy}
-                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
                           {PRIVACY_OPTIONS.map((option) => (
                             <option key={`entry-${option.value}`} value={option.value}>
@@ -1870,7 +1870,7 @@ export default function ProfilePage() {
                             });
                           }}
                           disabled={isSavingPrivacy}
-                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
                           {PRIVACY_OPTIONS.map((option) => (
                             <option key={`reaction-${option.value}`} value={option.value}>
@@ -1897,7 +1897,7 @@ export default function ProfilePage() {
                             });
                           }}
                           disabled={isSavingPrivacy}
-                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30 disabled:opacity-50"
+                          className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
                           {PRIVACY_OPTIONS.map((option) => (
                             <option key={`comments-${option.value}`} value={option.value}>
@@ -1967,7 +1967,7 @@ export default function ProfilePage() {
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             placeholder="Enter your current password"
-                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           <button
                             type="button"
@@ -1996,7 +1996,7 @@ export default function ProfilePage() {
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Minimum 8 characters"
-                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           <button
                             type="button"
@@ -2025,7 +2025,7 @@ export default function ProfilePage() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Re-enter new password"
-                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           <button
                             type="button"
@@ -2047,7 +2047,7 @@ export default function ProfilePage() {
                           type="button"
                           disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
                           onClick={savePassword}
-                          className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isSavingPassword ? "Updating..." : "Update password"}
                         </button>

@@ -536,7 +536,7 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("sort")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "sort"
-                    ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                    ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                     : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "sort"}
@@ -561,7 +561,7 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("filter")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "filter"
-                    ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                    ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                     : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "filter"}
@@ -586,7 +586,7 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("organize")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "organize"
-                    ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                    ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                     : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "organize"}
@@ -617,7 +617,7 @@ export default function EntriesPage() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search wine, producer, region, or varietal"
-                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none"
+                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
               />
               {isSearchActive ? (
                 <button
@@ -655,7 +655,7 @@ export default function EntriesPage() {
                           onClick={() => setSortBy(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             sortBy === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -677,7 +677,7 @@ export default function EntriesPage() {
                           onClick={() => setSortOrder(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             sortOrder === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -708,7 +708,7 @@ export default function EntriesPage() {
                           onClick={() => updateFilterType(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             filterType === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -724,7 +724,7 @@ export default function EntriesPage() {
                         Country
                       </label>
                       <select
-                        className="select-field w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none"
+                        className="select-field w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                         value={filterValue}
                         onChange={(event) => setFilterValue(event.target.value)}
                       >
@@ -745,7 +745,7 @@ export default function EntriesPage() {
                       </label>
                       <div className="flex flex-wrap items-center gap-2">
                         <input
-                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none"
+                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                           type="number"
                           inputMode="numeric"
                           placeholder="Min"
@@ -753,7 +753,7 @@ export default function EntriesPage() {
                           onChange={(event) => setFilterMin(event.target.value)}
                         />
                         <input
-                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none"
+                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                           type="number"
                           inputMode="numeric"
                           placeholder="Max"
@@ -783,7 +783,7 @@ export default function EntriesPage() {
                           onClick={() => setLibraryViewMode(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             libraryViewMode === option.value
-                              ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                              ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -813,7 +813,7 @@ export default function EntriesPage() {
                             }}
                             className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                               groupScheme === option.value
-                                ? "border-[var(--color-accent-gold)]/70 bg-amber-300/15 text-[var(--color-accent-gold)]"
+                                ? "border-[var(--color-accent-gold)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-gold)]"
                                 : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                             }`}
                           >
@@ -857,7 +857,7 @@ export default function EntriesPage() {
                 type="button"
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="mt-4 inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                className="mt-4 inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
               >
                 {loadingMore ? "Loading..." : "Load more"}
               </button>
@@ -921,7 +921,7 @@ export default function EntriesPage() {
                   type="button"
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                  className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                 >
                   {loadingMore ? "Loading..." : "Load more"}
                 </button>

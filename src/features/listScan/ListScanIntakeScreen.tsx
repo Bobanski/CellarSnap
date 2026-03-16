@@ -345,14 +345,14 @@ export default function ListScanIntakeScreen() {
 
           <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
             {isSignedIn === false ? (
-              <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-amber-400/10 px-4 py-4 text-sm text-amber-50">
+              <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-[var(--color-accent-primary)]/10 px-4 py-4 text-sm text-[var(--color-text-on-accent)]">
                 <p className="font-semibold text-[var(--color-accent-gold)]">
                   Signed-out scans stay local to this browser.
                 </p>
-                <p className="mt-1 leading-6 text-amber-50/90">
+                <p className="mt-1 leading-6 text-[var(--color-text-on-accent)]/90">
                   <Link
                     href="/login"
-                    className="underline decoration-amber-200/50 underline-offset-4"
+                    className="underline decoration-[var(--color-accent-secondary)]/50 underline-offset-4"
                   >
                     Sign in
                   </Link>{" "}
@@ -478,7 +478,7 @@ export default function ListScanIntakeScreen() {
                   setErrorMessage(null);
                 }}
                 placeholder="https://restaurant.com/wine-list"
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
               />
             </div>
 
@@ -489,27 +489,27 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {isSubmitting && scanProgress ? (
-              <div className="rounded-2xl border border-[var(--color-accent-gold)]/20 bg-amber-400/10 px-4 py-4">
+              <div className="rounded-2xl border border-[var(--color-accent-gold)]/20 bg-[var(--color-accent-primary)]/10 px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-amber-50">
+                    <p className="text-sm font-semibold text-[var(--color-text-on-accent)]">
                       {scanProgress.label}
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-amber-50/85">
+                    <p className="mt-1 text-sm leading-6 text-[var(--color-text-on-accent)]/85">
                       {scanProgress.detail}
                     </p>
                   </div>
-                  <span className="rounded-full border border-amber-200/20 bg-[var(--color-surface-muted)] px-3 py-1 text-sm font-semibold text-amber-50">
+                  <span className="rounded-full border border-[var(--color-accent-secondary)]/20 bg-[var(--color-surface-muted)] px-3 py-1 text-sm font-semibold text-[var(--color-text-on-accent)]">
                     {scanProgress.percent}%
                   </span>
                 </div>
                 <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-200 via-amber-300 to-emerald-300 transition-[width] duration-700 ease-out"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-secondary)] via-[var(--color-accent-secondary)] to-emerald-300 transition-[width] duration-700 ease-out"
                     style={{ width: `${scanProgress.percent}%` }}
                   />
                 </div>
-                <p className="mt-3 text-xs text-amber-50/75">
+                <p className="mt-3 text-xs text-[var(--color-text-on-accent)]/75">
                   Longer PDFs and multi-page lists can take a little while, but the scan is still running.
                 </p>
               </div>
@@ -523,7 +523,7 @@ export default function ListScanIntakeScreen() {
                   isSubmitting ||
                   (selectedImages.length === 0 && !selectedPdf && !urlValue.trim())
                 }
-                className="rounded-full bg-amber-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Scanning..." : "Scan list"}
               </button>

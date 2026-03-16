@@ -129,7 +129,7 @@ export default function PrimaryGrapeSelector({
           {selected.map((item) => (
             <span
               key={item.id}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--color-accent-gold)]/50 bg-amber-300/10 px-3 py-1 text-xs text-[var(--color-accent-gold)]"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--color-accent-gold)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1 text-xs text-[var(--color-accent-gold)]"
             >
               {item.name}
               <button
