@@ -53,12 +53,12 @@ function RootNavigator() {
       <View
         style={{
           flex: 1,
-          backgroundColor: colors.champagne,
+          backgroundColor: colors.screenBg,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <ActivityIndicator color={colors.grenache} />
       </View>
     );
@@ -74,16 +74,16 @@ function RootNavigator() {
 
   return (
     <AuthProvider>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.champagne },
-          headerTintColor: colors.terroir,
+          headerStyle: { backgroundColor: colors.screenBg },
+          headerTintColor: colors.textPrimary,
           headerTitleStyle: APP_SANS_FONT_FAMILY
             ? { fontFamily: APP_SANS_FONT_FAMILY }
             : undefined,
           headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.champagne },
+          contentStyle: { backgroundColor: colors.screenBg },
         }}
       >
         <Stack.Screen
