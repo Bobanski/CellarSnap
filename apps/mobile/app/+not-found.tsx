@@ -8,15 +8,15 @@ export default function NotFoundScreen() {
     <View
       style={{
         flex: 1,
-        backgroundColor: colors.champagne,
+        backgroundColor: colors.screenBg,
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
         gap: 12,
       }}
     >
-      <AppText style={{ color: colors.terroir, fontSize: 28, fontWeight: "700" }}>Not found</AppText>
-      <AppText style={{ color: colors.fog, textAlign: "center" }}>
+      <AppText style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "700" }}>Not found</AppText>
+      <AppText style={{ color: colors.textSecondary, textAlign: "center" }}>
         This screen does not exist in the current build.
       </AppText>
       <Link href="/" asChild>
@@ -29,7 +29,7 @@ export default function NotFoundScreen() {
             paddingVertical: 10,
           }}
         >
-          <AppText style={{ color: colors.champagne, fontWeight: "700" }}>Go Home</AppText>
+          <AppText style={{ color: colors.textPrimary, fontWeight: "700" }}>Go Home</AppText>
         </Pressable>
       </Link>
     </View>

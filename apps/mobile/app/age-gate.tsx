@@ -73,7 +73,7 @@ export default function AgeGateScreen() {
             style={[styles.primaryButton, isSubmitting ? styles.primaryButtonDisabled : null]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.champagne} />
+              <ActivityIndicator color={colors.textPrimary} />
             ) : (
               <AppText style={styles.primaryButtonText}>I am 21 or older</AppText>
             )}
@@ -96,7 +96,7 @@ export default function AgeGateScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   blobTop: {
     position: "absolute",
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: "rgba(74, 48, 96, 0.08)",
+    backgroundColor: colors.accentSoft,
   },
   scrollContent: {
     flexGrow: 1,
@@ -128,8 +128,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 20,
     paddingVertical: 24,
     shadowColor: colors.shadowColor,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   wordmark: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: "700",
     textAlign: "center",
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 34,
     fontWeight: "700",
     letterSpacing: 1,
@@ -179,14 +179,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: "700",
     lineHeight: 36,
     textAlign: "center",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   declineText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
     textAlign: "center",
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   secondaryButtonText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.5,

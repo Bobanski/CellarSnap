@@ -2910,7 +2910,7 @@ export default function EntryDetailScreen() {
                   value={bulkReviewForm.wine_name}
                   onChangeText={(value) => updateBulkReviewField("wine_name", value)}
                   placeholder="Wine name"
-                  placeholderTextColor={colors.fog}
+                  placeholderTextColor={colors.textTertiary}
                   autoCapitalize="words"
                   autoCorrect={false}
                   style={styles.headerTitleInput}
@@ -3162,7 +3162,7 @@ export default function EntryDetailScreen() {
                     value={bulkReviewForm.notes}
                     onChangeText={(value) => updateBulkReviewField("notes", value)}
                     placeholder="Optional tasting notes"
-                    placeholderTextColor={colors.fog}
+                    placeholderTextColor={colors.textTertiary}
                     multiline
                     style={[
                       styles.bulkFormInput,
@@ -3344,7 +3344,7 @@ export default function EntryDetailScreen() {
                         ? "Search primary grapes"
                         : "Maximum primary grapes selected"
                     }
-                    placeholderTextColor={colors.fog}
+                    placeholderTextColor={colors.textTertiary}
                     style={styles.bulkFormInput}
                   />
                   {isPrimaryGrapeLoading ? (
@@ -3401,7 +3401,7 @@ export default function EntryDetailScreen() {
                       }, 120);
                     }}
                     placeholder="Search places (optional)"
-                    placeholderTextColor={colors.fog}
+                    placeholderTextColor={colors.textTertiary}
                     autoCapitalize="words"
                     autoCorrect={false}
                     style={styles.bulkFormInput}
@@ -3517,7 +3517,7 @@ export default function EntryDetailScreen() {
                       value={friendSearch}
                       onChangeText={setFriendSearch}
                       placeholder="Search friends"
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textTertiary}
                       autoCapitalize="none"
                       autoCorrect={false}
                       style={styles.bulkFormInput}
@@ -4083,7 +4083,7 @@ export default function EntryDetailScreen() {
                 disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
               >
                 {isSavingCrop ? (
-                  <ActivityIndicator color={colors.champagne} />
+                  <ActivityIndicator color={colors.textPrimary} />
                 ) : (
                   <AppText style={styles.bulkPrimaryButtonText}>Save crop</AppText>
                 )}
@@ -4286,7 +4286,7 @@ function Accordion({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   content: {
     paddingHorizontal: 18,
@@ -4298,21 +4298,21 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   backLinkText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
   },
   loadingCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 16,
     paddingVertical: 18,
     alignItems: "center",
@@ -4320,7 +4320,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
   },
   errorCard: {
@@ -4360,12 +4360,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   bulkReviewTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
   bulkReviewDescription: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4393,20 +4393,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   bulkPrimaryButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
   bulkSecondaryButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.2)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    backgroundColor: colors.surfacePrimary,
   },
   bulkSecondaryButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4415,7 +4415,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   bulkMinorButtonText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -4445,18 +4445,18 @@ const styles = StyleSheet.create({
   bulkEditCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 14,
     gap: 10,
   },
   bulkEditTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "700",
   },
   bulkEditDescription: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4472,7 +4472,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bulkFormLabel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.1,
@@ -4481,9 +4481,9 @@ const styles = StyleSheet.create({
   bulkFormInput: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
-    color: colors.terroir,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
+    color: colors.textPrimary,
     fontSize: 14,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -4491,8 +4491,8 @@ const styles = StyleSheet.create({
   bulkSelectTrigger: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     minHeight: 42,
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -4502,12 +4502,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   bulkSelectTriggerText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     flex: 1,
   },
   bulkSelectChevron: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4523,8 +4523,8 @@ const styles = StyleSheet.create({
   bulkChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.2)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -4533,7 +4533,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(123,29,58,0.15)",
   },
   bulkChipText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -4541,13 +4541,13 @@ const styles = StyleSheet.create({
     color: colors.rose,
   },
   bulkSectionHeading: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
   bulkSectionHint: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4586,7 +4586,7 @@ const styles = StyleSheet.create({
   inlineSuggestionList: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.1)",
+    borderColor: colors.border,
     backgroundColor: colors.limestone,
     overflow: "hidden",
     marginTop: 2,
@@ -4595,31 +4595,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(44, 26, 14, 0.06)",
+    borderTopColor: colors.border,
   },
   suggestionText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
   },
   friendChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.16)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    backgroundColor: "rgba(44, 26, 14, 0.02)",
+    backgroundColor: colors.surfacePrimary,
   },
   friendChipActive: {
     borderColor: colors.grenache,
     backgroundColor: "rgba(123, 29, 58, 0.2)",
   },
-  friendText: { color: colors.fog, fontSize: 12, fontWeight: "600" },
+  friendText: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
   friendTextActive: { color: colors.rose },
   accordion: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.08)",
-    backgroundColor: "rgba(44, 26, 14, 0.04)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     overflow: "hidden",
   },
   accordionHeader: {
@@ -4635,16 +4635,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accordionChevron: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
     width: 14,
     textAlign: "center",
   },
-  accordionTitle: { color: colors.terroir, fontSize: 14, fontWeight: "600" },
+  accordionTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "600" },
   accordionBody: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(44, 26, 14, 0.07)",
+    borderTopColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -4680,8 +4680,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -4691,7 +4691,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   authorAvatarFallback: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4700,12 +4700,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   authorName: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
   authorDate: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   eyebrow: {
@@ -4716,7 +4716,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 24,
     fontWeight: "700",
     lineHeight: 30,
@@ -4724,25 +4724,25 @@ const styles = StyleSheet.create({
   headerTitleInput: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.04)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 24,
     fontWeight: "700",
     lineHeight: 30,
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
   photoFrame: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     overflow: "hidden",
     height: 320,
     position: "relative",
@@ -4760,8 +4760,8 @@ const styles = StyleSheet.create({
     top: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.18)",
-    backgroundColor: "rgba(44, 26, 14, 0.12)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -4770,7 +4770,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(123,29,58,0.8)",
   },
   photoTypeChipText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.4,
@@ -4782,8 +4782,8 @@ const styles = StyleSheet.create({
     top: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.18)",
-    backgroundColor: "rgba(44, 26, 14, 0.12)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -4792,7 +4792,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(123,29,58,0.8)",
   },
   photoOrderChipText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -4824,7 +4824,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(44,26,14,0.35)",
+    backgroundColor: colors.surfacePrimary,
   },
   photoDotActive: {
     backgroundColor: colors.rose,
@@ -4833,11 +4833,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 20,
   },
   photoFallbackText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     textAlign: "center",
   },
@@ -4848,12 +4848,12 @@ const styles = StyleSheet.create({
   },
   cropModalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(44, 26, 14, 0.5)",
+    backgroundColor: colors.surfacePrimary,
   },
   cropModalCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.12)",
+    borderColor: colors.borderStrong,
     backgroundColor: colors.limestone,
     padding: 14,
     gap: 12,
@@ -4865,12 +4865,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cropModalTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: "700",
   },
   cropModalCloseText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -4881,8 +4881,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.12)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     overflow: "hidden",
     position: "relative",
   },
@@ -4915,7 +4915,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   cropFrameHint: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4927,8 +4927,8 @@ const styles = StyleSheet.create({
   detailsCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 14,
     gap: 12,
   },
@@ -4939,14 +4939,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   metaLabel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.4,
     textTransform: "uppercase",
   },
   metaValue: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -5002,13 +5002,13 @@ const styles = StyleSheet.create({
     height: 27,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.2)",
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: colors.surfacePrimary,
   },
   reactionAddButtonDisabled: {
-    borderColor: "rgba(44,26,14,0.1)",
+    borderColor: colors.border,
   },
   plusIcon: {
     width: 12,
@@ -5022,23 +5022,23 @@ const styles = StyleSheet.create({
     width: 12,
     height: 1.6,
     borderRadius: 999,
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   plusLineVertical: {
     position: "absolute",
     width: 1.6,
     height: 12,
     borderRadius: 999,
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   plusLineDisabled: {
-    backgroundColor: colors.fog,
+    backgroundColor: colors.textSecondary,
   },
   reactionPickerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 9,
     gap: 8,
   },
@@ -5050,8 +5050,8 @@ const styles = StyleSheet.create({
   reactionEmojiBtn: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     width: 34,
     height: 34,
     alignItems: "center",
@@ -5068,7 +5068,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   reactionPrivateText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   locationLinkText: {
@@ -5080,8 +5080,8 @@ const styles = StyleSheet.create({
   advancedNotesBlock: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 10,
     gap: 10,
   },
@@ -5092,12 +5092,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   advancedNotesTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
   advancedNotesToggleText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -5111,19 +5111,19 @@ const styles = StyleSheet.create({
   },
   pickerModalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(44, 26, 14, 0.5)",
+    backgroundColor: colors.surfacePrimary,
   },
   pickerModalCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     backgroundColor: colors.limestone,
     padding: 14,
     gap: 10,
     maxHeight: "70%",
   },
   pickerModalTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -5137,8 +5137,8 @@ const styles = StyleSheet.create({
   pickerModalItem: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44,26,14,0.04)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
@@ -5147,7 +5147,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(123,29,58,0.16)",
   },
   pickerModalItemText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "600",
   },
@@ -5212,7 +5212,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   calendarNavText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: "700",
     paddingHorizontal: 12,
@@ -5225,7 +5225,7 @@ const styles = StyleSheet.create({
   calendarWeekdayText: {
     flex: 1,
     textAlign: "center",
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -5247,12 +5247,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.viognier,
   },
   calendarCellText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "500",
   },
   calendarCellTextSelected: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontWeight: "700",
   },
 });
