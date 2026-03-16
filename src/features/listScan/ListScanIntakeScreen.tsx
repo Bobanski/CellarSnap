@@ -325,28 +325,28 @@ export default function ListScanIntakeScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-8 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-8 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <NavBar />
 
         <div className="mx-auto w-full max-w-3xl space-y-5">
           <header className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-gold)]/70">
               List scan
             </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
+            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
               Scan or upload a wine list.
             </h1>
-            <p className="text-sm text-zinc-300">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               Upload one or more list photos, choose a PDF, or paste a public wine-list
               link.
             </p>
           </header>
 
-          <section className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+          <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
             {isSignedIn === false ? (
-              <div className="rounded-2xl border border-amber-300/25 bg-amber-400/10 px-4 py-4 text-sm text-amber-50">
-                <p className="font-semibold text-amber-100">
+              <div className="rounded-2xl border border-[var(--color-accent-gold)]/25 bg-amber-400/10 px-4 py-4 text-sm text-amber-50">
+                <p className="font-semibold text-[var(--color-accent-gold)]">
                   Signed-out scans stay local to this browser.
                 </p>
                 <p className="mt-1 leading-6 text-amber-50/90">
@@ -363,10 +363,10 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Upload
               </p>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--color-text-tertiary)]">
                 Use up to {LIST_SCAN_MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
               </p>
             </div>
@@ -374,7 +374,7 @@ export default function ListScanIntakeScreen() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => imageInputRef.current?.click()}
                 disabled={isSubmitting}
               >
@@ -382,7 +382,7 @@ export default function ListScanIntakeScreen() {
               </button>
               <button
                 type="button"
-                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => pdfInputRef.current?.click()}
                 disabled={isSubmitting}
               >
@@ -425,7 +425,7 @@ export default function ListScanIntakeScreen() {
                 {imagePreviews.map((preview, index) => (
                   <div
                     key={preview.key}
-                    className="relative h-20 w-20 overflow-hidden rounded-2xl border border-white/10 bg-[#171210]"
+                    className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[#171210]"
                   >
                     <div
                       className="absolute inset-0 bg-cover bg-center"
@@ -449,16 +449,16 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {selectedPdf ? (
-              <div className="relative flex items-center gap-3 rounded-2xl border border-white/10 bg-[#171210] px-4 py-3">
-                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+              <div className="relative flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3">
+                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                   PDF
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-text-primary)]">
                   {selectedPdf.name}
                 </span>
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 text-xs font-bold text-zinc-200 transition hover:border-white/30"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs font-bold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                   onClick={() => setSelectedPdf(null)}
                   aria-label="Remove PDF"
                 >
@@ -468,7 +468,7 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Public wine list link
               </p>
               <input
@@ -478,7 +478,7 @@ export default function ListScanIntakeScreen() {
                   setErrorMessage(null);
                 }}
                 placeholder="https://restaurant.com/wine-list"
-                className="w-full rounded-2xl border border-white/10 bg-[#171210] px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)]/60 focus:outline-none"
               />
             </div>
 
@@ -489,7 +489,7 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {isSubmitting && scanProgress ? (
-              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-4">
+              <div className="rounded-2xl border border-[var(--color-accent-gold)]/20 bg-amber-400/10 px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-amber-50">
@@ -499,11 +499,11 @@ export default function ListScanIntakeScreen() {
                       {scanProgress.detail}
                     </p>
                   </div>
-                  <span className="rounded-full border border-amber-200/20 bg-black/20 px-3 py-1 text-sm font-semibold text-amber-50">
+                  <span className="rounded-full border border-amber-200/20 bg-[var(--color-surface-muted)] px-3 py-1 text-sm font-semibold text-amber-50">
                     {scanProgress.percent}%
                   </span>
                 </div>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-black/20">
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-amber-200 via-amber-300 to-emerald-300 transition-[width] duration-700 ease-out"
                     style={{ width: `${scanProgress.percent}%` }}
@@ -529,7 +529,7 @@ export default function ListScanIntakeScreen() {
               </button>
               <Link
                 href="/"
-                className="inline-flex rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               >
                 Back to Home
               </Link>

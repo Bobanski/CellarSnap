@@ -12,7 +12,7 @@ export default async function SommelierPage() {
   await assertPrivateBetaFeatureAccessAsync(supabase, user);
 
   return (
-    <main className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <main className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar activeHrefOverride="/sommelier" />
         <SommelierChat />

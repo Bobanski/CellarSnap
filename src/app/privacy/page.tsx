@@ -4,25 +4,25 @@ const LAST_UPDATED = "February 12, 2026";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2">
           <div className="flex items-center justify-between gap-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">
+            <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-gold)]/70">
               Legal
             </p>
             <Link
               href="/"
-              className="rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-200 transition hover:border-white/30 hover:text-amber-200"
+              className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-accent-gold)]"
             >
               Home
             </Link>
           </div>
-          <h1 className="text-3xl font-semibold text-zinc-50">Privacy Policy</h1>
-          <p className="text-sm text-zinc-400">Last updated: {LAST_UPDATED}</p>
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">Privacy Policy</h1>
+          <p className="text-sm text-[var(--color-text-tertiary)]">Last updated: {LAST_UPDATED}</p>
         </header>
 
-        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6 text-sm leading-6 text-zinc-300">
+        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
           <p>
             CellarSnap stores the account details and wine-log content needed to run the
             app, including profile info, entries, photos, social relationships, and
@@ -46,19 +46,19 @@ export default function PrivacyPage() {
           </p>
           <p>
             For more info,{" "}
-            <Link href="/privacy/more" className="font-semibold text-amber-200 transition hover:text-amber-100">
+            <Link href="/privacy/more" className="font-semibold text-[var(--color-accent-gold)] transition hover:text-[var(--color-accent-gold)]">
               click here
             </Link>
             .
           </p>
         </section>
 
-        <footer className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-          <Link href="/terms" className="transition hover:text-amber-200">
+        <footer className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+          <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
             Terms
           </Link>
           {" · "}
-          <Link href="/feedback" className="transition hover:text-amber-200">
+          <Link href="/feedback" className="transition hover:text-[var(--color-accent-gold)]">
             Feedback
           </Link>
         </footer>

@@ -102,7 +102,7 @@ export default function NavBar({
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/"
-          className="accent-link-hover text-lg font-semibold tracking-tight text-zinc-50 transition"
+          className="accent-link-hover text-lg font-semibold tracking-tight text-[var(--color-text-primary)] transition"
         >
           CellarSnap
         </Link>
@@ -123,7 +123,7 @@ export default function NavBar({
                 <Link
                   key={href}
                   href={href}
-                  className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                  className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                 >
                   {label}
                 </Link>
@@ -164,7 +164,7 @@ export default function NavBar({
           <AlertsMenu />
 
           <button
-            className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 md:inline-flex"
+            className="hidden rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] md:inline-flex"
             type="button"
             onClick={onSignOut}
           >
@@ -176,7 +176,7 @@ export default function NavBar({
             onClick={() =>
               setMobileOpenPathname((prev) => (prev === pathname ? null : pathname))
             }
-            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition hover:border-white/30 md:hidden"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] md:hidden"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
           >
@@ -218,7 +218,7 @@ export default function NavBar({
 
       {/* ── Mobile dropdown menu ── */}
       {mobileOpen ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-white/10 bg-[#14100f] p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:hidden">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:hidden">
           <div className="space-y-1">
             {navItems.map(({ label, href }) => {
               const active = isItemActive({ href, pathname, activeHrefOverride });
@@ -229,7 +229,7 @@ export default function NavBar({
                   className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     active
                       ? "accent-soft-chip border"
-                      : "text-zinc-200 hover:bg-white/5"
+                      : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10"
                   }`}
                 >
                   {label}
@@ -248,16 +248,16 @@ export default function NavBar({
             <button
               type="button"
               onClick={onSignOut}
-              className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-zinc-400 transition hover:bg-white/5 hover:text-zinc-200"
+              className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-surface-primary)]/10 hover:text-[var(--color-text-primary)]"
             >
               Sign out
             </button>
-            <div className="px-4 pt-2 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-              <Link href="/privacy" className="transition hover:text-amber-200">
+            <div className="px-4 pt-2 text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
                 Privacy
               </Link>
               {" · "}
-              <Link href="/terms" className="transition hover:text-amber-200">
+              <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
                 Terms
               </Link>
             </div>

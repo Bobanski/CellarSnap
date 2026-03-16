@@ -62,33 +62,33 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-2xl space-y-8">
         <header className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.25em] text-amber-300/70">
+          <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-gold)]/70">
             Feedback
           </p>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             Tell us what felt great and what broke
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Lightweight launch feedback form. We read every submission.
           </p>
         </header>
 
         <form
           onSubmit={onSubmit}
-          className="space-y-5 rounded-2xl border border-white/10 bg-white/5 p-6"
+          className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6"
         >
           <div>
-            <label htmlFor="category" className="text-sm font-medium text-zinc-200">
+            <label htmlFor="category" className="text-sm font-medium text-[var(--color-text-primary)]">
               Type
             </label>
             <select
               id="category"
               value={category}
               onChange={(event) => setCategory(event.target.value as CategoryValue)}
-              className="select-field mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="select-field mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
             >
               {CATEGORIES.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -99,7 +99,7 @@ export default function FeedbackPage() {
           </div>
 
           <div>
-            <label htmlFor="message" className="text-sm font-medium text-zinc-200">
+            <label htmlFor="message" className="text-sm font-medium text-[var(--color-text-primary)]">
               What happened?
             </label>
             <textarea
@@ -117,17 +117,17 @@ export default function FeedbackPage() {
               }}
               rows={7}
               maxLength={2000}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="Steps, what you expected, what actually happened."
             />
-            <p className="mt-1 text-xs text-zinc-500">{remainingChars} characters left</p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">{remainingChars} characters left</p>
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               Minimum: 10 characters.
             </p>
           </div>
 
           <div>
-            <label htmlFor="email" className="text-sm font-medium text-zinc-200">
+            <label htmlFor="email" className="text-sm font-medium text-[var(--color-text-primary)]">
               Email (optional)
             </label>
             <input
@@ -135,7 +135,7 @@ export default function FeedbackPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-gold)] focus:outline-none focus:ring-2 focus:ring-amber-300/30"
               placeholder="you@example.com"
             />
           </div>
@@ -155,19 +155,19 @@ export default function FeedbackPage() {
             </button>
             <Link
               href="/"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
             >
               Back home
             </Link>
           </div>
         </form>
 
-        <footer className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-          <Link href="/privacy" className="transition hover:text-amber-200">
+        <footer className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+          <Link href="/privacy" className="transition hover:text-[var(--color-accent-gold)]">
             Privacy
           </Link>
           {" · "}
-          <Link href="/terms" className="transition hover:text-amber-200">
+          <Link href="/terms" className="transition hover:text-[var(--color-accent-gold)]">
             Terms
           </Link>
         </footer>
