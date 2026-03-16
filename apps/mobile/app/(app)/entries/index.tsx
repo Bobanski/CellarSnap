@@ -21,6 +21,7 @@ import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 type SortBy = "consumed_at" | "rating" | "vintage";
 type SortOrder = "asc" | "desc";
@@ -482,7 +483,7 @@ export default function EntriesScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator color="#fbbf24" />
+        <ActivityIndicator color={colors.grenache} />
       </View>
     );
   }
@@ -491,7 +492,7 @@ export default function EntriesScreen() {
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadEntries(true)} tintColor="#fbbf24" />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadEntries(true)} tintColor={colors.grenache} />}
       >
         <AppTopBar activeHref="/(app)/entries" />
 
@@ -518,14 +519,14 @@ export default function EntriesScreen() {
               <Feather
                 name="search"
                 size={14}
-                color={isSearchOpen ? "#fef3c7" : "#d4d4d8"}
+                color={isSearchOpen ? colors.rose : colors.fog}
               />
             </Pressable>
           </View>
           {isSearchOpen ? (
             <View style={styles.searchPanel}>
               <View style={styles.searchRow}>
-                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor="#71717a" style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
+                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor={colors.fog} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
                 {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
               </View>
             </View>
@@ -545,7 +546,7 @@ export default function EntriesScreen() {
               <AppText style={styles.panelLabel}>Filter by</AppText>
               <View style={styles.pills}><Pill label="None" active={filterType === ""} onPress={() => updateFilterType("")} /><Pill label="Country" active={filterType === "country"} onPress={() => updateFilterType("country")} /><Pill label="Vintage range" active={filterType === "vintage"} onPress={() => updateFilterType("vintage")} /><Pill label="Rating range" active={filterType === "rating"} onPress={() => updateFilterType("rating")} /></View>
               {filterType === "country" ? <View style={styles.pills}><Pill label="All countries" active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
-              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor="#71717a" keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
+              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor={colors.fog} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor={colors.fog} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
             </View>
           ) : null}
 
@@ -595,78 +596,78 @@ export default function EntriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#0f0a09" },
-  loadingScreen: { flex: 1, backgroundColor: "#0f0a09", alignItems: "center", justifyContent: "center" },
+  screen: { flex: 1, backgroundColor: colors.champagne },
+  loadingScreen: { flex: 1, backgroundColor: colors.champagne, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
-  secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 7 },
-  secondaryBtnText: { color: "#e4e4e7", fontSize: 12, fontWeight: "700" },
+  secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.14)", paddingHorizontal: 10, paddingVertical: 7 },
+  secondaryBtnText: { color: colors.terroir, fontSize: 12, fontWeight: "700" },
   header: { gap: 6 },
-  eyebrow: { color: "#fcd34d", fontSize: 11, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
-  title: { color: "#fafafa", fontSize: 24, fontWeight: "700" },
-  subtitle: { color: "#d4d4d8", fontSize: 13, lineHeight: 18 },
-  controls: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 12, gap: 9 },
+  eyebrow: { color: colors.rose, fontSize: 11, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
+  title: { color: colors.terroir, fontSize: 24, fontWeight: "700" },
+  subtitle: { color: colors.fog, fontSize: 13, lineHeight: 18 },
+  controls: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", padding: 12, gap: 9 },
   controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap", alignItems: "center" },
-  controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", paddingHorizontal: 11, paddingVertical: 8 },
-  controlBtnActive: { borderColor: "rgba(252,211,77,0.7)", backgroundColor: "rgba(251,191,36,0.15)" },
-  controlBtnLabel: { color: "#e4e4e7", fontSize: 12, fontWeight: "700" },
+  controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.14)", paddingHorizontal: 11, paddingVertical: 8 },
+  controlBtnActive: { borderColor: "rgba(123,29,58,0.7)", backgroundColor: "rgba(123,29,58,0.15)" },
+  controlBtnLabel: { color: colors.terroir, fontSize: 12, fontWeight: "700" },
   searchToggleButton: {
     width: 32,
     height: 32,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(44,26,14,0.15)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     alignItems: "center",
     justifyContent: "center",
   },
   searchToggleButtonActive: {
-    borderColor: "rgba(252,211,77,0.7)",
-    backgroundColor: "rgba(251,191,36,0.15)",
+    borderColor: "rgba(123,29,58,0.7)",
+    backgroundColor: "rgba(123,29,58,0.15)",
   },
   searchPanel: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44,26,14,0.06)",
     padding: 10,
     gap: 8,
   },
   searchRow: { flexDirection: "row", gap: 8, alignItems: "center" },
-  searchInput: { flex: 1, minWidth: 0, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.3)", color: "#f4f4f5", paddingHorizontal: 12, paddingVertical: 9, fontSize: 12 },
-  panel: { borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(0,0,0,0.25)", padding: 10, gap: 8 },
-  panelLabel: { color: "#a1a1aa", fontSize: 11, fontWeight: "700", letterSpacing: 1.3, textTransform: "uppercase" },
+  searchInput: { flex: 1, minWidth: 0, borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: colors.inputBg, color: colors.terroir, paddingHorizontal: 12, paddingVertical: 9, fontSize: 12 },
+  panel: { borderRadius: 12, borderWidth: 1, borderColor: "rgba(44,26,14,0.08)", backgroundColor: "rgba(44,26,14,0.06)", padding: 10, gap: 8 },
+  panelLabel: { color: colors.fog, fontSize: 11, fontWeight: "700", letterSpacing: 1.3, textTransform: "uppercase" },
   pills: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  pill: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", paddingHorizontal: 12, paddingVertical: 7 },
-  pillActive: { borderColor: "rgba(252,211,77,0.7)", backgroundColor: "rgba(251,191,36,0.15)" },
-  pillText: { color: "#d4d4d8", fontSize: 12, fontWeight: "700" },
-  pillTextActive: { color: "#fef3c7" },
+  pill: { borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.15)", paddingHorizontal: 12, paddingVertical: 7 },
+  pillActive: { borderColor: "rgba(123,29,58,0.7)", backgroundColor: "rgba(123,29,58,0.15)" },
+  pillText: { color: colors.fog, fontSize: 12, fontWeight: "700" },
+  pillTextActive: { color: colors.rose },
   rangeRow: { flexDirection: "row", gap: 8 },
-  rangeInput: { width: 96, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(0,0,0,0.3)", color: "#f4f4f5", paddingHorizontal: 12, paddingVertical: 8, fontSize: 13 },
-  countText: { color: "#a1a1aa", fontSize: 12 },
-  errorText: { color: "#fecdd3", fontSize: 13 },
-  emptyCard: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 16, paddingVertical: 14 },
-  emptyText: { color: "#d4d4d8", fontSize: 14, lineHeight: 20 },
+  rangeInput: { width: 96, borderRadius: 999, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: colors.inputBg, color: colors.terroir, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13 },
+  countText: { color: colors.fog, fontSize: 12 },
+  errorText: { color: colors.error, fontSize: 13 },
+  emptyCard: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", paddingHorizontal: 16, paddingVertical: 14 },
+  emptyText: { color: colors.fog, fontSize: 14, lineHeight: 20 },
   stack: { gap: 10 },
-  groupCard: { borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 10, gap: 8 },
+  groupCard: { borderRadius: 14, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", padding: 10, gap: 8 },
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  groupTitle: { color: "#fafafa", fontSize: 17, fontWeight: "700" },
-  groupCount: { color: "#a1a1aa", fontSize: 11, marginTop: 2 },
-  entryCard: { flexDirection: "row", gap: 14, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(255,255,255,0.05)", padding: 14 },
-  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  groupTitle: { color: colors.terroir, fontSize: 17, fontWeight: "700" },
+  groupCount: { color: colors.fog, fontSize: 11, marginTop: 2 },
+  entryCard: { flexDirection: "row", gap: 14, borderRadius: 18, borderWidth: 1, borderColor: "rgba(44,26,14,0.1)", backgroundColor: "rgba(44,26,14,0.05)", padding: 14 },
+  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: "rgba(44,26,14,0.08)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   photoImage: { width: "100%", height: "100%" },
-  photoText: { color: "#71717a", fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
+  photoText: { color: colors.fog, fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
   entryMain: { flex: 1, justifyContent: "space-between", gap: 8 },
-  entryTitle: { color: "#fafafa", fontSize: 14, fontWeight: "700" },
-  entrySubtitle: { marginTop: 3, color: "#a1a1aa", fontSize: 12 },
+  entryTitle: { color: colors.terroir, fontSize: 14, fontWeight: "700" },
+  entrySubtitle: { marginTop: 3, color: colors.fog, fontSize: 12 },
   ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
   ratingStack: { flex: 1, minWidth: 0, gap: 4 },
   qprTag: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden", fontSize: 8, fontWeight: "700", letterSpacing: 0.25, textTransform: "uppercase" },
-  qpr_extortion: { borderColor: "rgba(251, 113, 133, 0.4)", backgroundColor: "rgba(251, 113, 133, 0.1)", color: "#fecdd3" },
-  qpr_pricey: { borderColor: "rgba(248, 113, 113, 0.4)", backgroundColor: "rgba(248, 113, 113, 0.1)", color: "#fecaca" },
-  qpr_mid: { borderColor: "rgba(251, 191, 36, 0.4)", backgroundColor: "rgba(251, 191, 36, 0.1)", color: "#fde68a" },
-  qpr_good_value: { borderColor: "rgba(74, 222, 128, 0.4)", backgroundColor: "rgba(74, 222, 128, 0.1)", color: "#bbf7d0" },
-  qpr_absolute_steal: { borderColor: "rgba(34, 197, 94, 0.4)", backgroundColor: "rgba(34, 197, 94, 0.1)", color: "#86efac" },
+  qpr_extortion: { borderColor: "rgba(192,57,43,0.4)", backgroundColor: "rgba(192,57,43,0.1)", color: colors.error },
+  qpr_pricey: { borderColor: "rgba(192,57,43,0.4)", backgroundColor: "rgba(192,57,43,0.1)", color: colors.error },
+  qpr_mid: { borderColor: "rgba(123,29,58,0.4)", backgroundColor: "rgba(123,29,58,0.1)", color: colors.rose },
+  qpr_good_value: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
+  qpr_absolute_steal: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
   entryMeta: { marginTop: 6, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
-  ratingText: { color: "#fcd34d", fontSize: 12, fontWeight: "800" },
-  entryDate: { color: "#a1a1aa", fontSize: 12, flexShrink: 0, textAlign: "right" },
+  ratingText: { color: colors.rose, fontSize: 12, fontWeight: "800" },
+  entryDate: { color: colors.fog, fontSize: 12, flexShrink: 0, textAlign: "right" },
 });

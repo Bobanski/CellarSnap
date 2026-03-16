@@ -1,6 +1,7 @@
 import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
 
 export default function Index() {
   const { isReady, session } = useAuth();
@@ -10,12 +11,12 @@ export default function Index() {
       <View
         style={{
           flex: 1,
-          backgroundColor: "#0f0a09",
+          backgroundColor: colors.champagne,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <ActivityIndicator color="#fbbf24" />
+        <ActivityIndicator color={colors.grenache} />
       </View>
     );
   }

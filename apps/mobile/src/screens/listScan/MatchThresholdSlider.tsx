@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { LayoutChangeEvent, PanResponder, StyleSheet, View } from "react-native";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 export default function MatchThresholdSlider({
   value,
@@ -53,8 +54,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(0,0,0,0.22)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     padding: 14,
     gap: 10,
   },
@@ -64,14 +65,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   label: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   value: {
-    color: "#6ee7b7",
+    color: colors.success,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -83,14 +84,14 @@ const styles = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(44,26,14,0.10)",
   },
   fill: {
     position: "absolute",
     left: 0,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#34d399",
+    backgroundColor: colors.success,
   },
   thumb: {
     position: "absolute",
@@ -98,8 +99,8 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 999,
-    backgroundColor: "#34d399",
+    backgroundColor: colors.success,
     borderWidth: 3,
-    borderColor: "#052e16",
+    borderColor: colors.champagne,
   },
 });

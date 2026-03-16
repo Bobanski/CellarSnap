@@ -20,6 +20,7 @@ import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
 
 type PublicProfile = {
   id: string;
@@ -349,7 +350,7 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator color="#fbbf24" />
+        <ActivityIndicator color={colors.grenache} />
       </View>
     );
   }
@@ -362,7 +363,7 @@ export default function UserProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void loadUserProfile(true)}
-            tintColor="#fbbf24"
+            tintColor={colors.grenache}
           />
         }
       >
@@ -490,11 +491,11 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -508,13 +509,13 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.12)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   backButtonText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -527,14 +528,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   errorText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 13,
   },
   profileCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 12,
     gap: 10,
   },
@@ -556,8 +557,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -566,7 +567,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   avatarFallback: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -575,16 +576,16 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   username: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 16,
     fontWeight: "700",
   },
   fullName: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
   },
   blockUnavailable: {
-    color: "#fca5a5",
+    color: colors.error,
     fontSize: 12,
     marginTop: 6,
   },
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   blockedChipText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -614,23 +615,23 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   blockActionButton: {
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.2)",
+    backgroundColor: "rgba(44,26,14,0.04)",
   },
   unblockButton: {
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(0,0,0,0.3)",
+    borderColor: "rgba(44,26,14,0.2)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
   },
   blockButtonDisabled: {
     opacity: 0.6,
   },
   blockButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },
   blockErrorText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 12,
     textAlign: "right",
   },
@@ -638,20 +639,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 15,
     fontWeight: "700",
   },
   emptyCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   emptyText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   entryGrid: {
@@ -660,8 +661,8 @@ const styles = StyleSheet.create({
   entryCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     padding: 10,
     gap: 6,
   },
@@ -670,9 +671,9 @@ const styles = StyleSheet.create({
     aspectRatio: 7 / 5,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(44,26,14,0.1)",
     overflow: "hidden",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -681,16 +682,16 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   entryImageFallback: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
   },
   entryName: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "600",
   },
   entryDate: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
   },
 });

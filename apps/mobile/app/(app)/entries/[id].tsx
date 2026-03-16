@@ -55,6 +55,7 @@ import {
 import { requestPhotoContext } from "@/src/lib/entryFlow/photoAnalysisClient";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
 
 type EntryPhotoType =
   | "label"
@@ -2865,7 +2866,7 @@ export default function EntryDetailScreen() {
 
         {loading ? (
           <View style={styles.loadingCard}>
-            <ActivityIndicator color="#fbbf24" />
+            <ActivityIndicator color={colors.grenache} />
             <AppText style={styles.loadingText}>Loading entry...</AppText>
           </View>
         ) : errorMessage || !entry ? (
@@ -2909,7 +2910,7 @@ export default function EntryDetailScreen() {
                   value={bulkReviewForm.wine_name}
                   onChangeText={(value) => updateBulkReviewField("wine_name", value)}
                   placeholder="Wine name"
-                  placeholderTextColor="#71717a"
+                  placeholderTextColor={colors.fog}
                   autoCapitalize="words"
                   autoCorrect={false}
                   style={styles.headerTitleInput}
@@ -3161,7 +3162,7 @@ export default function EntryDetailScreen() {
                     value={bulkReviewForm.notes}
                     onChangeText={(value) => updateBulkReviewField("notes", value)}
                     placeholder="Optional tasting notes"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.fog}
                     multiline
                     style={[
                       styles.bulkFormInput,
@@ -3208,8 +3209,8 @@ export default function EntryDetailScreen() {
                     style={[
                       styles.bulkEditCard,
                       {
-                        borderColor: "rgba(251,191,36,0.24)",
-                        backgroundColor: "rgba(251,191,36,0.1)",
+                        borderColor: "rgba(123,29,58,0.24)",
+                        backgroundColor: "rgba(123,29,58,0.1)",
                       },
                     ]}
                   >
@@ -3343,7 +3344,7 @@ export default function EntryDetailScreen() {
                         ? "Search primary grapes"
                         : "Maximum primary grapes selected"
                     }
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.fog}
                     style={styles.bulkFormInput}
                   />
                   {isPrimaryGrapeLoading ? (
@@ -3400,7 +3401,7 @@ export default function EntryDetailScreen() {
                       }, 120);
                     }}
                     placeholder="Search places (optional)"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.fog}
                     autoCapitalize="words"
                     autoCorrect={false}
                     style={styles.bulkFormInput}
@@ -3516,7 +3517,7 @@ export default function EntryDetailScreen() {
                       value={friendSearch}
                       onChangeText={setFriendSearch}
                       placeholder="Search friends"
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.fog}
                       autoCapitalize="none"
                       autoCorrect={false}
                       style={styles.bulkFormInput}
@@ -4030,7 +4031,7 @@ export default function EntryDetailScreen() {
             >
               {cropSourceLoading ? (
                 <View style={styles.cropFrameLoading}>
-                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <ActivityIndicator size="small" color={colors.grenache} />
                   <AppText style={styles.cropFrameHint}>Loading image...</AppText>
                 </View>
               ) : activeCropPhotoSourceUri ? (
@@ -4082,7 +4083,7 @@ export default function EntryDetailScreen() {
                 disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
               >
                 {isSavingCrop ? (
-                  <ActivityIndicator color="#09090b" />
+                  <ActivityIndicator color={colors.champagne} />
                 ) : (
                   <AppText style={styles.bulkPrimaryButtonText}>Save crop</AppText>
                 )}
@@ -4285,7 +4286,7 @@ function Accordion({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 18,
@@ -4297,21 +4298,21 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   backLinkText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "700",
   },
   loadingCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     paddingHorizontal: 16,
     paddingVertical: 18,
     alignItems: "center",
@@ -4319,52 +4320,52 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
   },
   errorCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.35)",
-    backgroundColor: "rgba(251,113,133,0.08)",
+    borderColor: "rgba(192,57,43,0.35)",
+    backgroundColor: "rgba(192,57,43,0.08)",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   errorText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
   bulkReviewCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.36)",
-    backgroundColor: "rgba(146,64,14,0.18)",
+    borderColor: "rgba(123,29,58,0.36)",
+    backgroundColor: "rgba(123,29,58,0.18)",
     padding: 12,
     gap: 8,
   },
   bulkReviewControlsCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.36)",
-    backgroundColor: "rgba(146,64,14,0.14)",
+    borderColor: "rgba(123,29,58,0.36)",
+    backgroundColor: "rgba(123,29,58,0.14)",
     padding: 12,
     gap: 8,
   },
   bulkReviewEyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   bulkReviewTitle: {
-    color: "#fef3c7",
+    color: colors.terroir,
     fontSize: 15,
     fontWeight: "700",
   },
   bulkReviewDescription: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4387,25 +4388,25 @@ const styles = StyleSheet.create({
   },
   bulkPrimaryButton: {
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   bulkPrimaryButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 12,
     fontWeight: "700",
   },
   bulkSecondaryButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(44,26,14,0.2)",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
   },
   bulkSecondaryButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4414,7 +4415,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   bulkMinorButtonText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -4423,13 +4424,13 @@ const styles = StyleSheet.create({
   bulkDangerButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.48)",
-    backgroundColor: "rgba(127,29,29,0.32)",
+    borderColor: "rgba(192,57,43,0.48)",
+    backgroundColor: "rgba(192,57,43,0.32)",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   bulkDangerButtonText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4437,25 +4438,25 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   bulkReviewErrorText: {
-    color: "#fecaca",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 16,
   },
   bulkEditCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 14,
     gap: 10,
   },
   bulkEditTitle: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 16,
     fontWeight: "700",
   },
   bulkEditDescription: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4471,7 +4472,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   bulkFormLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.1,
@@ -4480,9 +4481,9 @@ const styles = StyleSheet.create({
   bulkFormInput: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.22)",
-    color: "#f4f4f5",
+    borderColor: "rgba(44,26,14,0.15)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    color: colors.terroir,
     fontSize: 14,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -4490,8 +4491,8 @@ const styles = StyleSheet.create({
   bulkSelectTrigger: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.22)",
+    borderColor: "rgba(44,26,14,0.15)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     minHeight: 42,
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -4501,12 +4502,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   bulkSelectTriggerText: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 14,
     flex: 1,
   },
   bulkSelectChevron: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4522,31 +4523,31 @@ const styles = StyleSheet.create({
   bulkChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(0,0,0,0.24)",
+    borderColor: "rgba(44,26,14,0.2)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   bulkChipActive: {
-    borderColor: "rgba(251,191,36,0.58)",
-    backgroundColor: "rgba(251,191,36,0.15)",
+    borderColor: "rgba(123,29,58,0.58)",
+    backgroundColor: "rgba(123,29,58,0.15)",
   },
   bulkChipText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
   },
   bulkChipTextActive: {
-    color: "#fde68a",
+    color: colors.rose,
   },
   bulkSectionHeading: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
   bulkSectionHint: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4567,26 +4568,26 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.5)",
-    backgroundColor: "rgba(251, 191, 36, 0.14)",
+    borderColor: "rgba(123, 29, 58, 0.5)",
+    backgroundColor: "rgba(123, 29, 58, 0.14)",
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   primaryGrapeChipText: {
-    color: "#fde68a",
+    color: colors.rose,
     fontSize: 12,
     fontWeight: "700",
   },
   primaryGrapeChipRemove: {
-    color: "#fef3c7",
+    color: colors.rose,
     fontSize: 12,
     fontWeight: "700",
   },
   inlineSuggestionList: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "#191513",
+    borderColor: "rgba(44, 26, 14, 0.1)",
+    backgroundColor: colors.limestone,
     overflow: "hidden",
     marginTop: 2,
   },
@@ -4594,31 +4595,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    borderTopColor: "rgba(44, 26, 14, 0.06)",
   },
   suggestionText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
   },
   friendChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.16)",
+    borderColor: "rgba(44, 26, 14, 0.16)",
     paddingHorizontal: 10,
     paddingVertical: 7,
-    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    backgroundColor: "rgba(44, 26, 14, 0.02)",
   },
   friendChipActive: {
-    borderColor: "#fbbf24",
-    backgroundColor: "rgba(251, 191, 36, 0.2)",
+    borderColor: colors.grenache,
+    backgroundColor: "rgba(123, 29, 58, 0.2)",
   },
-  friendText: { color: "#d4d4d8", fontSize: 12, fontWeight: "600" },
-  friendTextActive: { color: "#fde68a" },
+  friendText: { color: colors.fog, fontSize: 12, fontWeight: "600" },
+  friendTextActive: { color: colors.rose },
   accordion: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    backgroundColor: "rgba(0, 0, 0, 0.18)",
+    borderColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
     overflow: "hidden",
   },
   accordionHeader: {
@@ -4634,16 +4635,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accordionChevron: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
     width: 14,
     textAlign: "center",
   },
-  accordionTitle: { color: "#e4e4e7", fontSize: 14, fontWeight: "600" },
+  accordionTitle: { color: colors.terroir, fontSize: 14, fontWeight: "600" },
   accordionBody: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.07)",
+    borderTopColor: "rgba(44, 26, 14, 0.07)",
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -4656,13 +4657,13 @@ const styles = StyleSheet.create({
   editButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.45)",
-    backgroundColor: "rgba(251,191,36,0.14)",
+    borderColor: "rgba(123,29,58,0.45)",
+    backgroundColor: "rgba(123,29,58,0.14)",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   editButtonText: {
-    color: "#fde68a",
+    color: colors.rose,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4679,8 +4680,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(0,0,0,0.28)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -4690,7 +4691,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   authorAvatarFallback: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -4699,23 +4700,23 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   authorName: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
   authorDate: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
   },
   eyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.4,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 24,
     fontWeight: "700",
     lineHeight: 30,
@@ -4723,25 +4724,25 @@ const styles = StyleSheet.create({
   headerTitleInput: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.18)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 24,
     fontWeight: "700",
     lineHeight: 30,
   },
   subtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
   photoFrame: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     overflow: "hidden",
     height: 320,
     position: "relative",
@@ -4759,17 +4760,17 @@ const styles = StyleSheet.create({
     top: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(0,0,0,0.55)",
+    borderColor: "rgba(44,26,14,0.18)",
+    backgroundColor: "rgba(44, 26, 14, 0.12)",
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   photoTypeChipEditable: {
-    borderColor: "rgba(251,191,36,0.55)",
-    backgroundColor: "rgba(113,63,18,0.8)",
+    borderColor: "rgba(123,29,58,0.55)",
+    backgroundColor: "rgba(123,29,58,0.8)",
   },
   photoTypeChipText: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.4,
@@ -4781,25 +4782,25 @@ const styles = StyleSheet.create({
     top: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(0,0,0,0.55)",
+    borderColor: "rgba(44,26,14,0.18)",
+    backgroundColor: "rgba(44, 26, 14, 0.12)",
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   photoOrderChipEditable: {
-    borderColor: "rgba(251,191,36,0.55)",
-    backgroundColor: "rgba(113,63,18,0.8)",
+    borderColor: "rgba(123,29,58,0.55)",
+    backgroundColor: "rgba(123,29,58,0.8)",
   },
   photoOrderChipText: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 10,
     fontWeight: "700",
   },
   inlineErrorWrap: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.36)",
-    backgroundColor: "rgba(127,29,29,0.32)",
+    borderColor: "rgba(192,57,43,0.36)",
+    backgroundColor: "rgba(192,57,43,0.32)",
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginTop: 8,
@@ -4823,20 +4824,20 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.35)",
+    backgroundColor: "rgba(44,26,14,0.35)",
   },
   photoDotActive: {
-    backgroundColor: "#fcd34d",
+    backgroundColor: colors.rose,
   },
   photoFallback: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     paddingHorizontal: 20,
   },
   photoFallbackText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 12,
     textAlign: "center",
   },
@@ -4847,13 +4848,13 @@ const styles = StyleSheet.create({
   },
   cropModalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.62)",
+    backgroundColor: "rgba(44, 26, 14, 0.5)",
   },
   cropModalCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-    backgroundColor: "#18110f",
+    borderColor: "rgba(44, 26, 14, 0.12)",
+    backgroundColor: colors.limestone,
     padding: 14,
     gap: 12,
   },
@@ -4864,12 +4865,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cropModalTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 18,
     fontWeight: "700",
   },
   cropModalCloseText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -4880,8 +4881,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    borderColor: "rgba(44, 26, 14, 0.12)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     overflow: "hidden",
     position: "relative",
   },
@@ -4891,7 +4892,7 @@ const styles = StyleSheet.create({
   cropFrameOutline: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 2,
-    borderColor: "rgba(251, 191, 36, 0.85)",
+    borderColor: "rgba(123, 29, 58, 0.85)",
   },
   cropFrameCrosshair: {
     position: "absolute",
@@ -4903,8 +4904,8 @@ const styles = StyleSheet.create({
     marginTop: -9,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.9)",
-    backgroundColor: "rgba(251, 191, 36, 0.2)",
+    borderColor: "rgba(123, 29, 58, 0.9)",
+    backgroundColor: "rgba(123, 29, 58, 0.2)",
   },
   cropFrameLoading: {
     flex: 1,
@@ -4914,7 +4915,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   cropFrameHint: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -4926,8 +4927,8 @@ const styles = StyleSheet.create({
   detailsCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 14,
     gap: 12,
   },
@@ -4938,14 +4939,14 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   metaLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.4,
     textTransform: "uppercase",
   },
   metaValue: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -4961,29 +4962,29 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   qpr_extortion: {
-    borderColor: "rgba(251,113,133,0.4)",
-    backgroundColor: "rgba(251,113,133,0.1)",
-    color: "#fecdd3",
+    borderColor: "rgba(192,57,43,0.4)",
+    backgroundColor: "rgba(192,57,43,0.1)",
+    color: colors.error,
   },
   qpr_pricey: {
-    borderColor: "rgba(248,113,113,0.4)",
-    backgroundColor: "rgba(248,113,113,0.1)",
-    color: "#fecaca",
+    borderColor: "rgba(192,57,43,0.4)",
+    backgroundColor: "rgba(192,57,43,0.1)",
+    color: colors.error,
   },
   qpr_mid: {
-    borderColor: "rgba(251,191,36,0.4)",
-    backgroundColor: "rgba(251,191,36,0.1)",
-    color: "#fde68a",
+    borderColor: "rgba(123,29,58,0.4)",
+    backgroundColor: "rgba(123,29,58,0.1)",
+    color: colors.rose,
   },
   qpr_good_value: {
-    borderColor: "rgba(74,222,128,0.4)",
-    backgroundColor: "rgba(74,222,128,0.1)",
-    color: "#bbf7d0",
+    borderColor: "rgba(45,125,70,0.4)",
+    backgroundColor: "rgba(45,125,70,0.1)",
+    color: colors.success,
   },
   qpr_absolute_steal: {
-    borderColor: "rgba(34,197,94,0.4)",
-    backgroundColor: "rgba(34,197,94,0.1)",
-    color: "#86efac",
+    borderColor: "rgba(45,125,70,0.4)",
+    backgroundColor: "rgba(45,125,70,0.1)",
+    color: colors.success,
   },
   entryReactionSection: {
     gap: 8,
@@ -5001,13 +5002,13 @@ const styles = StyleSheet.create({
     height: 27,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(44,26,14,0.2)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
   },
   reactionAddButtonDisabled: {
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(44,26,14,0.1)",
   },
   plusIcon: {
     width: 12,
@@ -5021,23 +5022,23 @@ const styles = StyleSheet.create({
     width: 12,
     height: 1.6,
     borderRadius: 999,
-    backgroundColor: "#e4e4e7",
+    backgroundColor: colors.terroir,
   },
   plusLineVertical: {
     position: "absolute",
     width: 1.6,
     height: 12,
     borderRadius: 999,
-    backgroundColor: "#e4e4e7",
+    backgroundColor: colors.terroir,
   },
   plusLineDisabled: {
-    backgroundColor: "#71717a",
+    backgroundColor: colors.fog,
   },
   reactionPickerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.28)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     padding: 9,
     gap: 8,
   },
@@ -5049,16 +5050,16 @@ const styles = StyleSheet.create({
   reactionEmojiBtn: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     width: 34,
     height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
   reactionEmojiBtnActive: {
-    borderColor: "rgba(252,211,77,0.5)",
-    backgroundColor: "rgba(251,191,36,0.14)",
+    borderColor: "rgba(123,29,58,0.5)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   reactionEmojiBtnDisabled: {
     opacity: 0.5,
@@ -5067,11 +5068,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   reactionPrivateText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
   },
   locationLinkText: {
-    color: "#fde68a",
+    color: colors.rose,
     fontSize: 13,
     fontWeight: "600",
     textDecorationLine: "underline",
@@ -5079,8 +5080,8 @@ const styles = StyleSheet.create({
   advancedNotesBlock: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.22)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     padding: 10,
     gap: 10,
   },
@@ -5091,12 +5092,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   advancedNotesTitle: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
   advancedNotesToggleText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -5110,19 +5111,19 @@ const styles = StyleSheet.create({
   },
   pickerModalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(44, 26, 14, 0.5)",
   },
   pickerModalCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "#171211",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: colors.limestone,
     padding: 14,
     gap: 10,
     maxHeight: "70%",
   },
   pickerModalTitle: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -5136,28 +5137,28 @@ const styles = StyleSheet.create({
   pickerModalItem: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
   pickerModalItemSelected: {
-    borderColor: "rgba(251,191,36,0.55)",
-    backgroundColor: "rgba(251,191,36,0.16)",
+    borderColor: "rgba(123,29,58,0.55)",
+    backgroundColor: "rgba(123,29,58,0.16)",
   },
   pickerModalItemText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "600",
   },
   pickerModalItemTextSelected: {
-    color: "#fde68a",
+    color: colors.rose,
   },
   deleteCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.34)",
-    backgroundColor: "rgba(244,63,94,0.1)",
+    borderColor: "rgba(192,57,43,0.34)",
+    backgroundColor: "rgba(192,57,43,0.1)",
     padding: 12,
     gap: 8,
   },
@@ -5172,35 +5173,35 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   deleteTitle: {
-    color: "#ffe4e6",
+    color: colors.error,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   deleteDescription: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 16,
   },
   deleteButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.55)",
+    borderColor: "rgba(192,57,43,0.55)",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "rgba(127,29,29,0.4)",
+    backgroundColor: "rgba(192,57,43,0.4)",
   },
   deleteButtonDisabled: {
     opacity: 0.6,
   },
   deleteButtonText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 12,
     fontWeight: "700",
   },
   deleteErrorText: {
-    color: "#fecaca",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -5211,7 +5212,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   calendarNavText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 18,
     fontWeight: "700",
     paddingHorizontal: 12,
@@ -5224,7 +5225,7 @@ const styles = StyleSheet.create({
   calendarWeekdayText: {
     flex: 1,
     textAlign: "center",
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -5243,15 +5244,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   calendarCellSelected: {
-    backgroundColor: "#f59e0b",
+    backgroundColor: colors.viognier,
   },
   calendarCellText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     fontWeight: "500",
   },
   calendarCellTextSelected: {
-    color: "#0f0a09",
+    color: colors.terroir,
     fontWeight: "700",
   },
 });

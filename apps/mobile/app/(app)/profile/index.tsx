@@ -46,6 +46,7 @@ import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrl, signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
 
 type EntryTile = {
   id: string;
@@ -1892,7 +1893,7 @@ export default function ProfileScreen() {
         <View style={styles.content}>
           <AppTopBar activeHref="/(app)/profile" />
           <View style={styles.loadingCard}>
-            <ActivityIndicator color="#fbbf24" />
+            <ActivityIndicator color={colors.grenache} />
             <AppText style={styles.loadingText}>Loading profile...</AppText>
           </View>
         </View>
@@ -1921,8 +1922,8 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            tintColor="#fbbf24"
-            colors={["#fbbf24"]}
+            tintColor={colors.grenache}
+            colors={[colors.grenache]}
             refreshing={refreshing}
             onRefresh={() => void loadProfileScreen(true, false)}
           />
@@ -2071,7 +2072,7 @@ export default function ProfileScreen() {
 
             {entriesLoading ? (
               <View style={styles.inlineLoaderRow}>
-                <ActivityIndicator color="#fbbf24" />
+                <ActivityIndicator color={colors.grenache} />
                 <AppText style={styles.inlineLoaderText}>Loading entries...</AppText>
               </View>
             ) : null}
@@ -2116,7 +2117,7 @@ export default function ProfileScreen() {
 
             {taggedLoading ? (
               <View style={styles.inlineLoaderRow}>
-                <ActivityIndicator color="#fbbf24" />
+                <ActivityIndicator color={colors.grenache} />
                 <AppText style={styles.inlineLoaderText}>Loading tagged entries...</AppText>
               </View>
             ) : null}
@@ -2129,7 +2130,7 @@ export default function ProfileScreen() {
 
             {friendsLoading ? (
               <View style={styles.loadingCardCompact}>
-                <ActivityIndicator color="#fbbf24" />
+                <ActivityIndicator color={colors.grenache} />
                 <AppText style={styles.loadingText}>Loading friends...</AppText>
               </View>
             ) : (
@@ -2402,7 +2403,7 @@ export default function ProfileScreen() {
             <View style={styles.modalHeader}>
               <AppText style={styles.modalTitle}>Settings</AppText>
               <Pressable style={styles.iconCircleSm} onPress={closeSettings}>
-                <Feather name="x" size={15} color="#d4d4d8" />
+                <Feather name="x" size={15} color={colors.fog} />
               </Pressable>
             </View>
 
@@ -2526,7 +2527,7 @@ export default function ProfileScreen() {
                   onPress={() => void saveProfile()}
                 >
                   {isSavingProfile ? (
-                    <ActivityIndicator color="#09090b" />
+                    <ActivityIndicator color={colors.champagne} />
                   ) : (
                     <AppText style={styles.primaryButtonText}>Save profile</AppText>
                   )}
@@ -2687,7 +2688,7 @@ export default function ProfileScreen() {
                         onPress={() => void savePassword()}
                       >
                         {isSavingPassword ? (
-                          <ActivityIndicator color="#09090b" />
+                          <ActivityIndicator color={colors.champagne} />
                         ) : (
                           <AppText style={styles.primaryButtonText}>Update password</AppText>
                         )}
@@ -2716,7 +2717,7 @@ export default function ProfileScreen() {
                     <AppText style={styles.sectionTitle}>Delete account</AppText>
                     <AppText style={styles.hintText}>
                       Permanently remove your account and all cellar content from
-                      CellarSnap.
+                      Cluster.
                     </AppText>
                   </View>
                   {!isDeleteAccountOpen ? (
@@ -2759,7 +2760,7 @@ export default function ProfileScreen() {
                         onPress={requestDeleteAccount}
                       >
                         {isDeletingAccount ? (
-                          <ActivityIndicator color="#fecdd3" />
+                          <ActivityIndicator color={colors.error} />
                         ) : (
                           <AppText style={styles.declineButtonText}>
                             Permanently delete
@@ -2814,7 +2815,7 @@ function LabeledInput({
       <DoneTextInput
         {...props}
         autoCorrect={false}
-        placeholderTextColor="#71717a"
+        placeholderTextColor={colors.fog}
         style={[styles.input, props.multiline ? styles.inputMultiline : null, props.style]}
       />
     </View>
@@ -2905,7 +2906,7 @@ function PrivacySelector({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 16,
@@ -2917,8 +2918,8 @@ const styles = StyleSheet.create({
     position: "relative",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 16,
     gap: 12,
   },
@@ -2928,7 +2929,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   settingsIcon: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 20,
     lineHeight: 20,
     fontWeight: "700",
@@ -2938,20 +2939,20 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(44,26,14,0.16)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
   },
   iconCircleSm: {
     width: 30,
     height: 30,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(44,26,14,0.16)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.16)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
   },
   identityHeader: {
     flexDirection: "row",
@@ -2963,8 +2964,8 @@ const styles = StyleSheet.create({
     height: 94,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(0,0,0,0.28)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -2974,8 +2975,8 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(0,0,0,0.28)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -2989,7 +2990,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   avatarFallback: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 24,
     fontWeight: "700",
   },
@@ -3003,16 +3004,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   profileName: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 20,
     fontWeight: "700",
   },
   fullName: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 14,
   },
   bioText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     fontStyle: "italic",
     marginTop: 2,
@@ -3029,12 +3030,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statValue: {
-    color: "#f5f5f5",
+    color: colors.terroir,
     fontSize: 14,
     fontWeight: "700",
   },
   statLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   galleryToggle: {
@@ -3050,16 +3051,16 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   galleryToggleBtnActive: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(44,26,14,0.1)",
+    borderColor: "rgba(44,26,14,0.12)",
   },
   galleryToggleText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
     fontWeight: "700",
   },
   galleryToggleTextActive: {
-    color: "#fafafa",
+    color: colors.terroir,
   },
   galleryGrid: {
     flexDirection: "row",
@@ -3071,7 +3072,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(44,26,14,0.05)",
   },
   galleryImage: {
     width: "100%",
@@ -3083,26 +3084,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   galleryFallbackText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
   },
   emptyCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     paddingVertical: 24,
     alignItems: "center",
   },
   emptyText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
   },
   friendsInlineCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     padding: 12,
     gap: 10,
   },
@@ -3117,7 +3118,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   inlineLoaderText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   loadMoreRow: {
@@ -3127,19 +3128,19 @@ const styles = StyleSheet.create({
   ghostButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: "rgba(44,26,14,0.16)",
     paddingHorizontal: 11,
     paddingVertical: 7,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(44,26,14,0.04)",
   },
   ghostButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },
   primaryButton: {
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 14,
     paddingVertical: 10,
     minHeight: 40,
@@ -3151,15 +3152,15 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   primaryButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 12,
     fontWeight: "800",
   },
   loadingCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     paddingVertical: 28,
     gap: 8,
     alignItems: "center",
@@ -3168,15 +3169,15 @@ const styles = StyleSheet.create({
   loadingCardCompact: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     paddingVertical: 20,
     gap: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   loadingText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   errorCard: {
@@ -3187,16 +3188,16 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   errorText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 17,
   },
   errorSubtleText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 11,
   },
   successText: {
-    color: "#bbf7d0",
+    color: colors.success,
     fontSize: 12,
   },
   modalOverlay: {
@@ -3207,15 +3208,15 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: colors.overlay,
   },
   modalCard: {
     width: "100%",
     maxHeight: "90%",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "#14100f",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: colors.limestone,
     padding: 14,
     gap: 10,
     alignSelf: "center",
@@ -3226,7 +3227,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   modalTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -3242,12 +3243,12 @@ const styles = StyleSheet.create({
   },
   sectionBlockTopBorder: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.10)",
+    borderTopColor: "rgba(44,26,14,0.10)",
     paddingTop: 12,
     gap: 8,
   },
   sectionTitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1.8,
@@ -3263,7 +3264,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   avatarTapHint: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 10,
   },
   avatarActionsCol: {
@@ -3274,12 +3275,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "600",
   },
   labelSmall: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: 1.6,
@@ -3287,9 +3288,9 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.26)",
-    color: "#f4f4f5",
+    borderColor: "rgba(44,26,14,0.12)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
+    color: colors.terroir,
     paddingHorizontal: 11,
     paddingVertical: 9,
     fontSize: 14,
@@ -3299,16 +3300,16 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   hintText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     lineHeight: 15,
   },
   hintTextTiny: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 10,
   },
   counterText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     textAlign: "right",
     marginTop: -4,
@@ -3325,7 +3326,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   memberSinceValue: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
   },
   badgeGrid: {
@@ -3347,37 +3348,37 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,191,36,0.12)",
   },
   badgeCardProgress: {
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(44,26,14,0.12)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
   },
   badgeCardMuted: {
-    borderColor: "rgba(255,255,255,0.07)",
-    backgroundColor: "rgba(0,0,0,0.17)",
+    borderColor: "rgba(44,26,14,0.07)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
     opacity: 0.62,
   },
   badgeSymbol: {
     fontSize: 20,
   },
   badgeName: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 10,
     fontWeight: "700",
     textAlign: "center",
   },
   badgeCount: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 10,
   },
   privacyBlock: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.18)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
     padding: 10,
     gap: 7,
   },
   privacyLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.2,
@@ -3391,22 +3392,22 @@ const styles = StyleSheet.create({
   privacyPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(44,26,14,0.14)",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: "rgba(255,255,255,0.02)",
+    backgroundColor: "rgba(44,26,14,0.02)",
   },
   privacyPillActive: {
     borderColor: "rgba(252,211,77,0.55)",
     backgroundColor: "rgba(251,191,36,0.14)",
   },
   privacyPillText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
   },
   privacyPillTextActive: {
-    color: "#fef3c7",
+    color: colors.champagne,
   },
   rowBetween: {
     flexDirection: "row",
@@ -3435,7 +3436,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   dangerHint: {
-    color: "#fecaca",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -3444,7 +3445,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   linkButtonText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -3458,8 +3459,8 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -3477,8 +3478,8 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.24)",
+    borderColor: "rgba(44,26,14,0.12)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -3488,28 +3489,28 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   friendAvatarText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "700",
   },
   friendName: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "600",
   },
   statusGood: {
-    color: "#bbf7d0",
+    color: colors.success,
     fontSize: 11,
   },
   statusWarn: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
   },
   cardRow: {
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 8,
@@ -3521,12 +3522,12 @@ const styles = StyleSheet.create({
   },
   acceptButton: {
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   acceptButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -3539,7 +3540,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(244,63,94,0.12)",
   },
   declineButtonText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -3553,7 +3554,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   countPillText: {
-    color: "#fde68a",
+    color: colors.rose,
     fontSize: 10,
     fontWeight: "800",
   },

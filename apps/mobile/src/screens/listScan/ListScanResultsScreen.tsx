@@ -38,6 +38,7 @@ import { AppText } from "@/src/components/AppText";
 import FacetMultiSelect from "@/src/screens/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/src/screens/listScan/RegionFilterSelect";
 import { readListScanResult } from "@/src/lib/listScan/storage";
+import { colors } from "@/src/lib/theme";
 
 function formatCurrencyValue(value: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? `$${value}` : "";
@@ -438,7 +439,7 @@ export default function ListScanResultsScreen() {
               onPress={toggleFiltersVisibility}
             >
               <View style={styles.filterToggleIconWrap}>
-                <Feather name="sliders" size={16} color="#fafafa" />
+                <Feather name="sliders" size={16} color={colors.terroir} />
               </View>
               <AppText style={styles.filterToggleButtonText}>
                 {filtersVisible ? "Hide filters" : "Show filters"}
@@ -510,7 +511,7 @@ export default function ListScanResultsScreen() {
                         }))
                       }
                       placeholder={filters.price_mode === "under" ? "Max price" : "Min price"}
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.fog}
                       keyboardType="decimal-pad"
                       style={styles.filterInput}
                     />
@@ -529,7 +530,7 @@ export default function ListScanResultsScreen() {
                         }))
                       }
                       placeholder={filters.price_mode === "over" ? "Min price" : "Max price"}
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.fog}
                       keyboardType="decimal-pad"
                       style={styles.filterInput}
                     />
@@ -643,7 +644,7 @@ export default function ListScanResultsScreen() {
                         }));
                       }}
                       placeholder="0"
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.fog}
                       keyboardType="number-pad"
                       style={styles.matchInput}
                     />
@@ -657,8 +658,8 @@ export default function ListScanResultsScreen() {
                       onValueChange={(show_match_column) =>
                         setFilters((current) => ({ ...current, show_match_column }))
                       }
-                      trackColor={{ false: "#3f3f46", true: "rgba(16,185,129,0.42)" }}
-                      thumbColor={filters.show_match_column ? "#34d399" : "#f4f4f5"}
+                      trackColor={{ false: colors.limestone, true: "rgba(45,125,70,0.42)" }}
+                      thumbColor={filters.show_match_column ? colors.success : colors.white}
                     />
                   </View>
                 </FilterDropdown>
@@ -830,7 +831,7 @@ export default function ListScanResultsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 20,
@@ -842,60 +843,60 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eyebrow: {
-    color: "rgba(252, 211, 77, 0.72)",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 28,
     lineHeight: 34,
     fontWeight: "700",
   },
   subtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 21,
   },
   warningCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(252,211,77,0.24)",
-    backgroundColor: "rgba(251,191,36,0.12)",
+    borderColor: "rgba(123,29,58,0.24)",
+    backgroundColor: "rgba(123,29,58,0.12)",
     padding: 16,
     gap: 8,
   },
   warningEyebrow: {
-    color: "#fde68a",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   warningText: {
-    color: "#fef3c7",
+    color: colors.champagne,
     fontSize: 13,
     lineHeight: 20,
   },
   sectionCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 18,
     gap: 14,
   },
   sectionEyebrow: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.2,
     textTransform: "uppercase",
   },
   sectionTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 22,
     lineHeight: 28,
     fontWeight: "700",
@@ -923,8 +924,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.24)",
+    borderColor: "rgba(44,26,14,0.12)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     paddingLeft: 10,
     paddingRight: 14,
     paddingVertical: 8,
@@ -934,13 +935,13 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     alignItems: "center",
     justifyContent: "center",
   },
   filterToggleButtonText: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -948,27 +949,27 @@ const styles = StyleSheet.create({
     minWidth: 22,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44,26,14,0.08)",
     paddingHorizontal: 7,
     paddingVertical: 3,
     alignItems: "center",
   },
   filterToggleBadgeText: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 11,
     fontWeight: "700",
   },
   filterCollapsedNote: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(0,0,0,0.16)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44, 26, 14, 0.04)",
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   filterCollapsedNoteText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -984,12 +985,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   sectionCounter: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
     fontWeight: "600",
   },
   sectionCounterBelow: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
     fontWeight: "600",
     marginTop: 4,
@@ -998,11 +999,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 2,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    borderBottomColor: "rgba(44,26,14,0.06)",
+    backgroundColor: "rgba(44,26,14,0.03)",
   },
   tableSectionHeaderText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.2,
@@ -1011,8 +1012,8 @@ const styles = StyleSheet.create({
   filterDropdown: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(0,0,0,0.22)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     overflow: "hidden",
   },
   filterDropdownHeader: {
@@ -1028,27 +1029,27 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   filterLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   filterSummary: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   filterChevron: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 16,
     fontWeight: "700",
   },
   filterDropdownBody: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "rgba(44,26,14,0.08)",
     padding: 14,
   },
   filterDoneRow: {
@@ -1058,12 +1059,12 @@ const styles = StyleSheet.create({
   filterDoneButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(44,26,14,0.10)",
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   filterDoneButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1075,13 +1076,13 @@ const styles = StyleSheet.create({
   segmentButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(44,26,14,0.12)",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   segmentButtonActive: {
-    borderColor: "#fbbf24",
-    backgroundColor: "#fbbf24",
+    borderColor: colors.grenache,
+    backgroundColor: colors.grenache,
   },
   segmentButtonWhite: {
     borderColor: "rgba(201,168,76,0.30)",
@@ -1112,25 +1113,25 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,48,96,0.15)",
   },
   segmentButtonRedActive: {
-    borderColor: "#4A3060",
-    backgroundColor: "#4A3060",
+    borderColor: colors.nebbiolo,
+    backgroundColor: colors.nebbiolo,
   },
   segmentButtonDisabled: {
     opacity: 0.35,
   },
   segmentButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
   segmentButtonTextActive: {
-    color: "#09090b",
+    color: colors.champagne,
   },
   segmentButtonTextWhite: {
-    color: "#e7d491",
+    color: colors.viognier,
   },
   segmentButtonTextWhiteActive: {
-    color: "#f5e8bc",
+    color: colors.viognier,
   },
   segmentButtonTextRose: {
     color: "#f1bfd0",
@@ -1139,7 +1140,7 @@ const styles = StyleSheet.create({
     color: "#fde5ec",
   },
   segmentButtonTextOrange: {
-    color: "#f2c78f",
+    color: colors.viognier,
   },
   segmentButtonTextOrangeActive: {
     color: "#fde6c7",
@@ -1153,9 +1154,9 @@ const styles = StyleSheet.create({
   filterInput: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
-    color: "#fafafa",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: colors.champagne,
+    color: colors.terroir,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -1166,7 +1167,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   matchHelperText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1174,9 +1175,9 @@ const styles = StyleSheet.create({
     minWidth: 72,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
-    color: "#fafafa",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: colors.champagne,
+    color: colors.terroir,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -1190,7 +1191,7 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     flex: 1,
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
@@ -1201,8 +1202,8 @@ const styles = StyleSheet.create({
   recommendationCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.22)",
-    backgroundColor: "rgba(16,185,129,0.08)",
+    borderColor: "rgba(45,125,70,0.22)",
+    backgroundColor: "rgba(45,125,70,0.08)",
     padding: 16,
     gap: 12,
   },
@@ -1213,7 +1214,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   recommendationEyebrow: {
-    color: "rgba(167,243,208,0.86)",
+    color: colors.success,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
@@ -1229,18 +1230,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   recommendationTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 18,
     lineHeight: 24,
     fontWeight: "700",
   },
   recommendationSubtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
   recommendationPrice: {
-    color: "#d1fae5",
+    color: colors.success,
     fontSize: 16,
     lineHeight: 22,
     fontWeight: "700",
@@ -1249,19 +1250,19 @@ const styles = StyleSheet.create({
   matchBadge: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(167,243,208,0.25)",
-    backgroundColor: "rgba(16,185,129,0.14)",
+    borderColor: "rgba(45,125,70,0.25)",
+    backgroundColor: "rgba(45,125,70,0.14)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     alignSelf: "flex-start",
   },
   matchBadgeText: {
-    color: "#d1fae5",
+    color: colors.success,
     fontSize: 15,
     fontWeight: "700",
   },
   recommendationBody: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -1271,10 +1272,10 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.08)",
+    borderBottomColor: "rgba(44,26,14,0.08)",
   },
   tableHeadText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
@@ -1302,7 +1303,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: "rgba(44,26,14,0.05)",
   },
   tableWineColumn: {
     flex: 1.55,
@@ -1316,35 +1317,35 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   tableWineText: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: "600",
   },
   tableWineTextHighlighted: {
-    color: "#34d399",
+    color: colors.success,
     fontWeight: "700",
   },
   tableSubText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     marginTop: 3,
   },
   tableCellText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "600",
   },
   tableMatchText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
     fontWeight: "700",
   },
   infoCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 18,
     gap: 14,
   },
@@ -1352,19 +1353,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   infoText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 20,
   },
   primaryButton: {
     alignSelf: "flex-start",
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 15,
     fontWeight: "700",
   },

@@ -18,6 +18,7 @@ import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 import { requestListScan, type MobileListScanUpload } from "@/src/lib/api/listScan";
 import { saveListScanResult } from "@/src/lib/listScan/storage";
+import { colors } from "@/src/lib/theme";
 
 type SelectedImage = {
   uri: string;
@@ -291,7 +292,7 @@ export default function ListScanIntakeScreen() {
                 setErrorMessage(null);
               }}
               placeholder="https://restaurant.com/wine-list"
-              placeholderTextColor="#71717a"
+              placeholderTextColor={colors.fog}
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -313,7 +314,7 @@ export default function ListScanIntakeScreen() {
           >
             {isSubmitting ? (
               <View style={styles.loadingRow}>
-                <ActivityIndicator color="#09090b" />
+                <ActivityIndicator color={colors.champagne} />
                 <AppText style={styles.submitButtonText}>Scanning...</AppText>
               </View>
             ) : (
@@ -329,7 +330,7 @@ export default function ListScanIntakeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 20,
@@ -341,40 +342,40 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    color: "rgba(252, 211, 77, 0.72)",
+    color: colors.grenache,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 29,
     lineHeight: 34,
     fontWeight: "700",
   },
   subtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 21,
   },
   card: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 18,
     gap: 12,
   },
   cardEyebrow: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.4,
     textTransform: "uppercase",
   },
   cardBody: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -384,13 +385,13 @@ const styles = StyleSheet.create({
   secondaryButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(44,26,14,0.12)",
     paddingHorizontal: 18,
     paddingVertical: 12,
     alignItems: "center",
   },
   secondaryButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -406,8 +407,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: colors.limestone,
   },
   thumbnailImage: {
     width: "100%",
@@ -422,10 +423,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.72)",
+    backgroundColor: "rgba(44, 26, 14, 0.5)",
   },
   thumbnailRemoveText: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -435,19 +436,19 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: colors.limestone,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   pdfBadge: {
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(44,26,14,0.08)",
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   pdfBadgeText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.2,
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
   },
   pdfName: {
     flex: 1,
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(44,26,14,0.12)",
   },
   urlSection: {
     gap: 8,
@@ -474,9 +475,9 @@ const styles = StyleSheet.create({
   urlInput: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
-    color: "#fafafa",
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.inputBg,
+    color: colors.terroir,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 14,
@@ -485,19 +486,19 @@ const styles = StyleSheet.create({
   errorCard: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.22)",
-    backgroundColor: "rgba(244,63,94,0.10)",
+    borderColor: "rgba(192,57,43,0.22)",
+    backgroundColor: "rgba(192,57,43,0.10)",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   errorText: {
-    color: "#ffe4e6",
+    color: colors.error,
     fontSize: 14,
     lineHeight: 20,
   },
   submitButton: {
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 18,
     paddingVertical: 14,
     alignItems: "center",
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
   submitButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 16,
     fontWeight: "700",
   },

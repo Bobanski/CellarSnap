@@ -18,6 +18,7 @@ import {
   type MobileSommelierMessage,
 } from "@/src/lib/api/sommelier";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
 
 type ChatMessage = {
   id: string;
@@ -177,7 +178,7 @@ export default function SommelierScreen() {
             value={value}
             onChangeText={setValue}
             placeholder="Ask about regions, pairings, or what you should try next..."
-            placeholderTextColor="#71717a"
+            placeholderTextColor={colors.fog}
             multiline
             maxLength={1200}
             style={styles.input}
@@ -202,7 +203,7 @@ export default function SommelierScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   flex: {
     flex: 1,
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   suggestionEyebrow: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.8,
     textTransform: "uppercase",
@@ -229,13 +230,13 @@ const styles = StyleSheet.create({
   suggestionChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.12)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   suggestionText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -249,47 +250,47 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   assistantBubble: {
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
   },
   userBubble: {
-    borderColor: "rgba(251,191,36,0.3)",
-    backgroundColor: "rgba(251,191,36,0.12)",
+    borderColor: "rgba(123,29,58,0.3)",
+    backgroundColor: "rgba(123,29,58,0.12)",
   },
   messageLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.8,
     textTransform: "uppercase",
     marginBottom: 8,
   },
   messageText: {
-    color: "#fafaf9",
+    color: colors.terroir,
     fontSize: 15,
     lineHeight: 24,
   },
   typingText: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 15,
     lineHeight: 24,
   },
   errorCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.3)",
-    backgroundColor: "rgba(244,63,94,0.14)",
+    borderColor: "rgba(192,57,43,0.3)",
+    backgroundColor: "rgba(192,57,43,0.14)",
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   errorText: {
-    color: "#ffe4e6",
+    color: colors.error,
     fontSize: 13,
     lineHeight: 20,
   },
   inputShell: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "#120d0c",
+    borderTopColor: "rgba(44,26,14,0.08)",
+    backgroundColor: colors.limestone,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 18,
@@ -300,9 +301,9 @@ const styles = StyleSheet.create({
     maxHeight: 180,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    color: "#fafaf9",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
+    color: colors.terroir,
     fontSize: 15,
     lineHeight: 22,
     paddingHorizontal: 14,
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   sendButton: {
     alignSelf: "flex-end",
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   sendButtonText: {
-    color: "#111827",
+    color: colors.champagne,
     fontSize: 14,
     fontWeight: "700",
   },

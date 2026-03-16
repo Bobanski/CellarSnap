@@ -8,6 +8,7 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { handleIncomingAuthUrl } from "@/src/lib/authRedirect";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 export default function AuthCallbackScreen() {
   const [error, setError] = useState<string | null>(null);
@@ -36,16 +37,16 @@ export default function AuthCallbackScreen() {
     <View
       style={{
         flex: 1,
-        backgroundColor: "#0f0a09",
+        backgroundColor: colors.champagne,
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
       }}
     >
-      <ActivityIndicator color="#fbbf24" />
-      <AppText style={{ color: "#f4f4f5", marginTop: 16 }}>Completing sign in...</AppText>
+      <ActivityIndicator color={colors.grenache} />
+      <AppText style={{ color: colors.terroir, marginTop: 16 }}>Completing sign in...</AppText>
       {error ? (
-        <AppText style={{ color: "#fda4af", marginTop: 8, textAlign: "center" }}>{error}</AppText>
+        <AppText style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>{error}</AppText>
       ) : null}
     </View>
   );

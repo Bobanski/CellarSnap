@@ -90,6 +90,7 @@ import {
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 type AdvancedNotesFormValues = {
   acidity: string;
@@ -1963,7 +1964,7 @@ export default function NewEntryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go to home"
           >
-            <AppText style={styles.navBrand}>CellarSnap</AppText>
+            <AppText style={styles.navBrand}>Cluster</AppText>
           </Pressable>
           <Pressable style={styles.backButton} onPress={returnFromNewEntry}>
             <AppText style={styles.backButtonText}>Back</AppText>
@@ -2113,7 +2114,7 @@ export default function NewEntryScreen() {
             {uploadMessage ? (
               uploadAnalysisStatus === "loading" ? (
                 <View style={styles.uploadLoadingRow}>
-                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <ActivityIndicator size="small" color={colors.grenache} />
                   <AppText style={styles.uploadLoadingText}>{uploadMessage}</AppText>
                 </View>
               ) : (
@@ -2202,7 +2203,7 @@ export default function NewEntryScreen() {
                             }
                           }}
                           placeholder="Stuytown tasting"
-                          placeholderTextColor="#71717a"
+                          placeholderTextColor={colors.fog}
                           autoCorrect={false}
                           style={[
                             styles.input,
@@ -2241,7 +2242,7 @@ export default function NewEntryScreen() {
                             autoCapitalize="words"
                             autoCorrect={false}
                             placeholder="Search places"
-                            placeholderTextColor="#71717a"
+                            placeholderTextColor={colors.fog}
                             style={styles.input}
                           />
                           {isLocationFocused && locationSuggestions.length > 0 ? (
@@ -2334,7 +2335,7 @@ export default function NewEntryScreen() {
                               value={friendSearch}
                               onChangeText={setFriendSearch}
                               placeholder="Search friends"
-                              placeholderTextColor="#71717a"
+                              placeholderTextColor={colors.fog}
                               autoCapitalize="none"
                               autoCorrect={false}
                               style={styles.input}
@@ -2421,7 +2422,7 @@ export default function NewEntryScreen() {
                           }
                         }}
                         placeholder="Past 2 weeks"
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.fog}
                         autoCorrect={false}
                         style={[
                           styles.input,
@@ -2513,7 +2514,7 @@ export default function NewEntryScreen() {
                 {bulkCreateMessage ? (
                   isBulkCreating ? (
                     <View style={styles.uploadLoadingRow}>
-                      <ActivityIndicator size="small" color="#fbbf24" />
+                      <ActivityIndicator size="small" color={colors.grenache} />
                       <AppText style={styles.uploadLoadingText}>{bulkCreateMessage}</AppText>
                     </View>
                   ) : (
@@ -2565,11 +2566,11 @@ export default function NewEntryScreen() {
                   value={form.drinking_now}
                   onValueChange={(value) => updateField("drinking_now", value)}
                   trackColor={{
-                    false: "rgba(255,255,255,0.16)",
-                    true: "rgba(56, 189, 248, 0.38)",
+                    false: "rgba(44,26,14,0.16)",
+                    true: "rgba(123,29,58,0.38)",
                   }}
-                  thumbColor={form.drinking_now ? "#e0f2fe" : "#f4f4f5"}
-                  ios_backgroundColor="rgba(255,255,255,0.16)"
+                  thumbColor={form.drinking_now ? colors.info : colors.white}
+                  ios_backgroundColor="rgba(44,26,14,0.16)"
                 />
               </View>
 
@@ -2684,7 +2685,7 @@ export default function NewEntryScreen() {
                         ? "Search primary grapes"
                         : "Maximum primary grapes selected"
                     }
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.fog}
                     style={styles.input}
                   />
                   {isPrimaryGrapeLoading ? (
@@ -2750,7 +2751,7 @@ export default function NewEntryScreen() {
                         autoCapitalize="words"
                         autoCorrect={false}
                         placeholder="Search places"
-                        placeholderTextColor="#71717a"
+                        placeholderTextColor={colors.fog}
                         style={styles.input}
                       />
                       {isLocationFocused && locationSuggestions.length > 0 ? (
@@ -2930,7 +2931,7 @@ export default function NewEntryScreen() {
                   disabled={isSubmitting || isBulkCreating}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="#09090b" />
+                    <ActivityIndicator color={colors.champagne} />
                   ) : (
                     <AppText style={styles.submitButtonText}>Save entry</AppText>
                   )}
@@ -3013,7 +3014,7 @@ export default function NewEntryScreen() {
             >
               {cropSourceLoading ? (
                 <View style={styles.cropFrameLoading}>
-                  <ActivityIndicator size="small" color="#fbbf24" />
+                  <ActivityIndicator size="small" color={colors.grenache} />
                   <AppText style={styles.cropFrameHint}>Loading image...</AppText>
                 </View>
               ) : activeCropPhotoSourceUri ? (
@@ -3062,7 +3063,7 @@ export default function NewEntryScreen() {
                 disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
               >
                 {isSavingCrop ? (
-                  <ActivityIndicator color="#09090b" />
+                  <ActivityIndicator color={colors.champagne} />
                 ) : (
                   <AppText style={styles.submitButtonText}>Save crop</AppText>
                 )}

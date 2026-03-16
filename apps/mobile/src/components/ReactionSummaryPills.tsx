@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 export function ReactionSummaryPills({
   entryId,
@@ -116,13 +117,13 @@ const styles = StyleSheet.create({
     maxWidth: 240,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "#1a1412",
+    borderColor: "rgba(44, 26, 14, 0.15)",
+    backgroundColor: colors.limestone,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   namesText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 11,
     lineHeight: 15,
     textAlign: "center",
@@ -130,8 +131,8 @@ const styles = StyleSheet.create({
   reactionPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(44, 26, 14, 0.15)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
@@ -139,7 +140,7 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   reactionPillText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "600",
   },
