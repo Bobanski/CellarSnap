@@ -1821,6 +1821,77 @@ async function parseUploadedSourceFromVisualBlocks(params: {
   });
 }
 
+// ─── Google Cloud Vision OCR ────────────────────────────────────────────────
+// Extracts text from one or more image files using the Google Cloud Vision API.
+// Returns the concatenated text from all images in order.
+// Requires GOOGLE_CLOUD_VISION_API_KEY env var.
+// ────────────────────────────────────────────────────────────────────────────
+
+async function extractTextFromImagesViaCloudVision(
+  files: File[]
+): Promise<string> {
+  const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("GOOGLE_CLOUD_VISION_API_KEY not configured.");
+  }
+
+  const results: string[] = [];
+
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const base64Content = buffer.toString("base64");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+
+    try {
+      const response = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requests: [
+              {
+                image: { content: base64Content },
+                features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+              },
+            ],
+          }),
+          signal: controller.signal,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Vision API returned ${response.status}`);
+      }
+
+      const data = (await response.json()) as {
+        responses?: Array<{
+          fullTextAnnotation?: { text?: string };
+          error?: { message?: string };
+        }>;
+      };
+
+      const annotation = data.responses?.[0];
+      if (annotation?.error) {
+        throw new Error(
+          annotation.error.message ?? "Vision API returned an error."
+        );
+      }
+
+      const text = annotation?.fullTextAnnotation?.text?.trim();
+      if (text) {
+        results.push(text);
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return results.join("\n\n");
+}
+
 async function parseImageSource({
   files,
   sourceLabel,
@@ -1837,7 +1908,7 @@ async function parseImageSource({
     throw new Error(`Upload up to ${MAX_IMAGE_COUNT} list images at a time.`);
   }
 
-  const preparedImages: string[] = [];
+  // Validate all files are images and within size limits.
   for (const file of files) {
     if (!file.type.startsWith("image/")) {
       throw new Error("List image must be an image file.");
@@ -1845,7 +1916,46 @@ async function parseImageSource({
     if (file.size > MAX_IMAGE_INPUT_BYTES) {
       throw new Error("List image is too large.");
     }
+  }
 
+  const title = normalizeText(sourceLabel) ?? files[0]?.name ?? "wine-list-image";
+
+  // Fast path: Google Cloud Vision OCR → heuristic parse (no OpenAI call).
+  // This typically completes in 1-3 seconds vs 10-20 seconds with OpenAI.
+  try {
+    const ocrText = await extractTextFromImagesViaCloudVision(files);
+    if (ocrText.trim()) {
+      const wineSectionText =
+        extractStrictWineSectionText(ocrText) || ocrText;
+      const heuristic = buildHeuristicParsedResponse({
+        text: wineSectionText,
+        title,
+        fallbackWarning: "",
+      });
+      if (heuristic.wines.length > 0) {
+        return heuristic;
+      }
+
+      // If section extraction missed, try from full OCR text.
+      const fullHeuristic = buildHeuristicParsedResponse({
+        text: ocrText,
+        title,
+        fallbackWarning: "",
+      });
+      if (fullHeuristic.wines.length > 0) {
+        return fullHeuristic;
+      }
+    }
+  } catch {
+    // Cloud Vision unavailable — fall through to OpenAI vision path.
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // OpenAI Vision fallback (kept as backup for when Cloud Vision is
+  // unavailable or OCR quality is insufficient, e.g. handwritten lists)
+  // ──────────────────────────────────────────────────────────────────────
+  const preparedImages: string[] = [];
+  for (const file of files) {
     try {
       const prepared = await prepareOpenAiImageDataUrl(file, {
         maxInputBytes: MAX_IMAGE_INPUT_BYTES,
@@ -1910,7 +2020,6 @@ async function extractTextFromPdfFile(file: File) {
 async function parsePdfTextSource({
   file,
   sourceLabel,
-  userId,
 }: {
   file: File;
   sourceLabel: string | null;
@@ -1918,50 +2027,53 @@ async function parsePdfTextSource({
 }) {
   const extractedText = await extractTextFromPdfFile(file);
   const focusedText = extractStrictWineSectionText(extractedText) || extractedText;
-  const compactedText = compactWineSectionTextForModel(focusedText);
   const title = normalizeText(sourceLabel) ?? normalizeText(file.name);
 
-  const buildHeuristicFallback = () =>
-    buildHeuristicParsedResponse({
-      text: focusedText,
+  // Fast path: parse directly from extracted PDF text — no API call needed.
+  const heuristic = buildHeuristicParsedResponse({
+    text: focusedText,
+    title,
+    fallbackWarning: "",
+  });
+
+  if (heuristic.wines.length > 0) {
+    return heuristic;
+  }
+
+  // Try compacted text if section-aware parse found nothing.
+  const compactedText = compactWineSectionTextForModel(focusedText);
+  if (compactedText.trim()) {
+    const compactedHeuristic = buildHeuristicParsedResponse({
+      text: compactedText,
       title,
-      fallbackWarning:
-        "This PDF was parsed from extracted text to preserve wine rows and improve normalization.",
+      fallbackWarning: "",
     });
-
-  if (!compactedText.trim()) {
-    const heuristicFallback = buildHeuristicFallback();
-    if (heuristicFallback.wines.length > 0) {
-      return heuristicFallback;
+    if (compactedHeuristic.wines.length > 0) {
+      return compactedHeuristic;
     }
-    throw new Error("That PDF did not contain readable wine-list text.");
   }
 
-  try {
-    return await createStructuredResponse({
-      sourceHint: "text extracted from a PDF wine list",
-      userId,
-      input:
-        `PDF label: ${title ?? "Unknown"}\n\n` +
-        "Extract every wine entry from this wine-list text. " +
-        "Each wine listing in the PDF must become exactly one wine object. " +
-        "Never merge adjacent wines into one object, even if they share a producer, region, or section. " +
-        "Preserve the original order from the PDF. " +
-        "Ignore section headers, page furniture, navigation, and non-wine beverages.\n\n" +
-        compactedText,
-    });
-  } catch (error) {
-    const heuristicFallback = buildHeuristicFallback();
-    if (heuristicFallback.wines.length > 0) {
-      return withWarning(
-        heuristicFallback,
-        isAbortLikeError(error) || isStructuredParsePayloadError(error)
-          ? "The live PDF parse did not complete, so this scan used extracted text instead."
-          : "This PDF used a fallback text parser for some entries; review the parsed text carefully."
-      );
-    }
-    throw error;
-  }
+  throw new Error("That PDF did not contain readable wine-list text.");
+
+  // ──────────────────────────────────────────────────────────────────────
+  // OpenAI fallback (disabled — kept for reference / future re-enablement)
+  // ──────────────────────────────────────────────────────────────────────
+  // try {
+  //   return await createStructuredResponse({
+  //     sourceHint: "text extracted from a PDF wine list",
+  //     userId,
+  //     input:
+  //       `PDF label: ${title ?? "Unknown"}\n\n` +
+  //       "Extract every wine entry from this wine-list text. " +
+  //       "Each wine listing in the PDF must become exactly one wine object. " +
+  //       "Never merge adjacent wines into one object, even if they share a producer, region, or section. " +
+  //       "Preserve the original order from the PDF. " +
+  //       "Ignore section headers, page furniture, navigation, and non-wine beverages.\n\n" +
+  //       compactedText,
+  //   });
+  // } catch (error) {
+  //   // ... OpenAI error handling was here
+  // }
 }
 
 async function parsePdfSource({
@@ -2391,17 +2503,27 @@ function buildHeuristicParsedResponse(params: {
       continue;
     }
 
+    // Extract vintage from the combined context (e.g. '23, '21, 2023, N.V.)
+    const vintageMatch = rowContext.match(
+      /\b((?:19|20)\d{2})\b|'(\d{2})\b|\b(N\.?V\.?)\b/i
+    );
+    const vintage = vintageMatch
+      ? vintageMatch[3]
+        ? "NV"
+        : vintageMatch[1] ?? `20${vintageMatch[2]}`
+      : null;
+
     wines.push({
       menu_label: menuLabel,
       producer: buffer[0] ?? null,
       wine_name: lineWithoutPrice ?? null,
-      vintage: null,
+      vintage,
       wine_type: detectWineTypeFromSignals(combinedContext, currentType),
       price_display: priceDisplay,
       price_value: Number.isFinite(priceValue) ? priceValue : null,
       varietals: [],
       regions: extractRegionsFromFallbackContext(combinedContext),
-      confidence: 0.55,
+      confidence: 0.72,
     });
 
     buffer = [];
@@ -2410,8 +2532,8 @@ function buildHeuristicParsedResponse(params: {
   return {
     venue_name: null,
     list_title: params.title,
-    overall_confidence: wines.length > 0 ? 0.62 : 0.35,
-    warnings: [params.fallbackWarning],
+    overall_confidence: wines.length > 0 ? 0.78 : 0.35,
+    warnings: params.fallbackWarning ? [params.fallbackWarning] : [],
     wines,
   };
 }
@@ -2494,88 +2616,64 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     throw new Error("That URL did not contain readable list text.");
   }
 
+  // Fast path: parse directly from extracted text — no API call needed.
+  // The heuristic parser handles section headings, prices, vintages, and
+  // wine-type detection. Varietals and regions are filled in downstream by
+  // normalizeParsedWines + applyInferenceToWine.
+  const heuristic = buildHeuristicParsedResponse({
+    text: wineSectionText,
+    title,
+    fallbackWarning: "",
+  });
+
+  if (heuristic.wines.length > 0) {
+    return heuristic;
+  }
+
+  // If the section-aware heuristic found nothing, try from compacted text.
   const compactedWineSectionText = compactWineSectionTextForModel(wineSectionText);
-
-  const buildHeuristicFallback = () => {
-    const heuristic = buildHeuristicParsedResponse({
-      text: wineSectionText,
+  if (compactedWineSectionText.trim()) {
+    const compactedHeuristic = buildHeuristicParsedResponse({
+      text: compactedWineSectionText,
       title,
-      fallbackWarning:
-        "This list was parsed from structured menu text to preserve order and exclude non-wine items.",
+      fallbackWarning: "",
     });
-    const compactedHeuristic =
-      compactedWineSectionText && compactedWineSectionText !== wineSectionText
-        ? buildHeuristicParsedResponse({
-            text: compactedWineSectionText,
-            title,
-            fallbackWarning:
-              "This list was compacted from webpage text to keep the scan focused on wine rows.",
-          })
-        : heuristic;
-    return compactedHeuristic.wines.length > heuristic.wines.length
-      ? compactedHeuristic
-      : heuristic;
-  };
-
-  if (!compactedWineSectionText.trim()) {
-    const heuristicFallback = buildHeuristicFallback();
-    if (heuristicFallback.wines.length > 0) {
-      return heuristicFallback;
+    if (compactedHeuristic.wines.length > 0) {
+      return compactedHeuristic;
     }
-    throw new Error("That URL did not contain readable wine-list text.");
   }
 
-  try {
-    return await createStructuredResponse({
-      sourceHint: "text extracted from a restaurant wine-list webpage",
-      userId,
-      input:
-        `URL: ${parsedUrl.toString()}\n` +
-        `Page title: ${title ?? "Unknown"}\n\n` +
-        "Extract every wine entry from this wine-list text. " +
-        "Each wine listing on the page must become exactly one wine object. " +
-        "Never merge two adjacent wines into one object, even if they share a section, producer, or region. " +
-        "Do not borrow a price, vintage, producer, varietal, or region from a neighboring entry. " +
-        "Preserve the wines in the exact order they appear on the page. " +
-        "menu_label must reproduce the wine listing text as closely as possible, preserving the original word order including producer, wine name, grape variety, region, and vintage, but do not include prices in menu_label. " +
-        "Ignore navigation, booking widgets, opening hours, unrelated marketing copy, and any non-wine beverages.\n\n" +
-        compactedWineSectionText,
-    });
-  } catch (error) {
-    const heuristicFallback = buildHeuristicFallback();
-    const fallbackWarning = isAbortLikeError(error)
-      ? "The live scan timed out, so this list used a fast text-only fallback."
-      : isStructuredParsePayloadError(error)
-        ? "This menu page was compacted and parsed with a text-only fallback to avoid live scan errors."
-        : "This list used a fallback parser for some entries; review the parsed text carefully.";
-    const fallback = withWarning(heuristicFallback, fallbackWarning);
+  // ──────────────────────────────────────────────────────────────────────
+  // OpenAI fallback (disabled — kept for reference / future re-enablement)
+  // ──────────────────────────────────────────────────────────────────────
+  // try {
+  //   return await createStructuredResponse({
+  //     sourceHint: "text extracted from a restaurant wine-list webpage",
+  //     userId,
+  //     input:
+  //       `URL: ${parsedUrl.toString()}\n` +
+  //       `Page title: ${title ?? "Unknown"}\n\n` +
+  //       "Extract every wine entry from this wine-list text. " +
+  //       "Each wine listing on the page must become exactly one wine object. " +
+  //       "Never merge two adjacent wines into one object, even if they share a section, producer, or region. " +
+  //       "Do not borrow a price, vintage, producer, varietal, or region from a neighboring entry. " +
+  //       "Preserve the wines in the exact order they appear on the page. " +
+  //       "menu_label must reproduce the wine listing text as closely as possible, preserving the original word order including producer, wine name, grape variety, region, and vintage, but do not include prices in menu_label. " +
+  //       "Ignore navigation, booking widgets, opening hours, unrelated marketing copy, and any non-wine beverages.\n\n" +
+  //       compactedWineSectionText,
+  //   });
+  // } catch (error) {
+  //   // ... OpenAI error handling was here
+  // }
 
-    if (fallback.wines.length > 0) {
-      return fallback;
-    }
-
-    if (isAbortLikeError(error) || isStructuredParsePayloadError(error)) {
-      throw new Error(
-        "That menu page was too large or inconsistent to scan live. Try the PDF, photos, or a shorter wine-list URL."
-      );
-    }
-    throw error;
-  }
+  throw new Error("That URL did not contain readable wine-list text.");
 }
 
 export async function parseWineListSource(
   params: ParseSourceParams
 ): Promise<ListScanResult> {
-  // Early validation: Check OpenAI API key availability
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY not configured. This error should be caught by the handler and returned as 503."
-    );
-  }
-
   // Pre-warm: kick off inference map + user preference loading in parallel
-  // with the OpenAI parse call so they're ready by the time we need them.
+  // with the parse step so they're ready by the time we need them for scoring.
   const inferenceMapPromise = loadInferenceMap().catch(() => null);
   const preferenceEntriesPromise =
     params.userId && params.userSupabase

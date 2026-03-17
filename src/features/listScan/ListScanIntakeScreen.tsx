@@ -26,68 +26,53 @@ const SCAN_PROGRESS_TIMELINES: Record<
 > = {
   image: [
     {
-      until: 14,
-      label: "Uploading photos",
-      detail: "Sending your wine-list images and getting the scan started.",
-    },
-    {
-      until: 42,
+      until: 30,
       label: "Reading the list",
-      detail: "Pulling text from the photos and separating likely wine rows.",
+      detail: "Extracting text from your photo.",
     },
     {
-      until: 72,
-      label: "Cleaning up entries",
-      detail: "Filtering out headers and tightening producer, region, and varietal details.",
+      until: 70,
+      label: "Parsing wines",
+      detail: "Identifying entries, prices, and regions.",
     },
     {
       until: 94,
       label: "Scoring matches",
-      detail: "Finalizing the list and preparing your results.",
+      detail: "Computing your personalized match scores.",
     },
   ],
   pdf: [
     {
-      until: 12,
-      label: "Loading the PDF",
-      detail: "Opening the file and checking whether the text can be extracted directly.",
-    },
-    {
-      until: 38,
-      label: "Reading the wine list",
-      detail: "Pulling text from the PDF and focusing on the wine sections.",
+      until: 30,
+      label: "Reading the PDF",
+      detail: "Extracting text and finding the wine section.",
     },
     {
       until: 70,
-      label: "Structuring the entries",
-      detail: "Turning the list into bottles, vintages, prices, regions, and grapes.",
+      label: "Parsing wines",
+      detail: "Identifying entries, prices, and regions.",
     },
     {
       until: 94,
-      label: "Final checks",
-      detail: "Applying cleanup and match scoring before the results load.",
+      label: "Scoring matches",
+      detail: "Computing your personalized match scores.",
     },
   ],
   url: [
     {
-      until: 16,
+      until: 40,
       label: "Fetching the page",
-      detail: "Loading the wine-list link and finding the menu content.",
+      detail: "Loading the wine-list link.",
     },
     {
-      until: 44,
-      label: "Extracting the list",
-      detail: "Pulling the wine section out of the page and removing unrelated content.",
-    },
-    {
-      until: 74,
-      label: "Normalizing the entries",
-      detail: "Cleaning up rows and sorting bottles into the right regions and styles.",
+      until: 75,
+      label: "Parsing wines",
+      detail: "Extracting entries from the menu.",
     },
     {
       until: 94,
-      label: "Preparing results",
-      detail: "Wrapping up the scan and building the final result set.",
+      label: "Scoring matches",
+      detail: "Computing your personalized match scores.",
     },
   ],
 };
@@ -114,7 +99,7 @@ function buildScanProgress(
   elapsedMs: number
 ): ScanProgressState {
   const targetDurationMs =
-    kind === "pdf" ? 40_000 : kind === "url" ? 28_000 : 24_000;
+    kind === "image" ? 6_000 : kind === "pdf" ? 4_000 : 3_000;
   const progressCurve = 1 - Math.exp(-elapsedMs / targetDurationMs);
   const percent = Math.max(6, Math.min(99, Math.round(6 + progressCurve * 93)));
   const timeline =
