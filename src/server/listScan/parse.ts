@@ -49,7 +49,7 @@ const REQUEST_TIMEOUT_MS = 90_000;
 const ABSOLUTE_NON_WINE_ENTRY_PATTERN =
   /\b(?:coffee|espresso|americano|macchiato|latte|flat white|cappuccino|cold brew|tea|herbal|water|sparkling water|soda|limeade|lemonade|juice|grape juice|shrub|arnold palmer|kombucha|beer|ale|ipa|pilsner|porter|stout|cider|spritz|michelada|mimosa|non-alcoholic|zero-proof|soft beverage)\b/i;
 const NON_WINE_SECTION_HEADING_PATTERN =
-  /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|spirits?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed)\b/i;
+  /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|spirits?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed|email signup|newsletter|contact|hours|location|reservations?|private events?|gift cards?|careers?|about)\b/i;
 const WINE_SECTION_HEADING_PATTERN =
   /^##\s*(?:wines?|sparkling|white|red|rose|rosÃ©|orange|skin contact|dessert wine|fortified|sweet wines?|by the glass|half bottles?|large format|magnums?)\b/i;
 const WINE_SIGNAL_PATTERN =
@@ -2050,9 +2050,21 @@ function stripHtmlToText(html: string) {
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
   const titleMatch = withoutScripts.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? decodeHtmlEntities(titleMatch[1]).trim() : null;
+  // Convert heading tags to markdown-style markers BEFORE stripping all tags.
+  // This preserves section structure (e.g. <h2>Sparkling</h2> → ## Sparkling)
+  // so downstream extractStrictWineSectionText can detect wine section boundaries.
+  const withHeadingMarkers = withoutScripts.replace(
+    /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi,
+    (_match, level: string, inner: string) => {
+      const hashes = "#".repeat(Number(level));
+      const cleaned = inner.replace(/<[^>]+>/g, " ").trim();
+      return `\n${hashes} ${cleaned}\n`;
+    }
+  );
+
   const text = decodeHtmlEntities(
-    withoutScripts
-      .replace(/<\/(p|div|li|tr|h\d|section|article)>/gi, "\n")
+    withHeadingMarkers
+      .replace(/<\/(p|div|li|tr|section|article)>/gi, "\n")
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<[^>]+>/g, " ")
       .replace(/\r/g, "")
