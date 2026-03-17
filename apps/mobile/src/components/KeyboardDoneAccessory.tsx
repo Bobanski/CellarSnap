@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   View,
 } from "react-native";
+import { colors } from "@/src/lib/theme";
 
 type KeyboardVisibility = {
   visible: boolean;
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   doneText: {
-    color: "#007aff",
+    color: colors.grenache,
     fontSize: 17,
     fontWeight: "700",
   },

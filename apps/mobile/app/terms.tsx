@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 const LAST_UPDATED = "March 2026";
 const SUPPORT_EMAIL = "cellarsnap@gmail.com";
@@ -19,12 +20,12 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>1. Acceptance of Terms</AppText>
             <AppText style={styles.paragraph}>
-              By downloading, accessing, or using CellarSnap, you agree to be bound by
+              By downloading, accessing, or using Cluster, you agree to be bound by
               these Terms of Use and our Privacy Policy. If you do not agree, please do
               not use the app.
             </AppText>
             <AppText style={styles.paragraph}>
-              Your continued use of CellarSnap after updates to the app or these terms
+              Your continued use of Cluster after updates to the app or these terms
               means you accept the revised terms as well.
             </AppText>
           </View>
@@ -32,7 +33,7 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>2. Eligibility</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap is intended only for people who are at least 21 years old, or
+              Cluster is intended only for people who are at least 21 years old, or
               the legal drinking age where they live, whichever is higher.
             </AppText>
             <AppText style={styles.paragraph}>
@@ -58,11 +59,11 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>4. User-Generated Content</AppText>
             <AppText style={styles.paragraph}>
-              You keep ownership of the content you create in CellarSnap, including wine
+              You keep ownership of the content you create in Cluster, including wine
               entries, photos, tasting notes, reviews, and comments.
             </AppText>
             <AppText style={styles.paragraph}>
-              By posting content, you give CellarSnap a non-exclusive license to host,
+              By posting content, you give Cluster a non-exclusive license to host,
               store, reproduce, display, and process that content as needed to operate,
               improve, and secure the app.
             </AppText>
@@ -77,7 +78,7 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>5. AI-Powered Features</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap uses artificial intelligence provided by OpenAI for features
+              Cluster uses artificial intelligence provided by OpenAI for features
               such as label scanning, wine autofill, and Pocket Sommelier responses.
             </AppText>
             <AppText style={styles.paragraph}>
@@ -96,7 +97,7 @@ export default function TermsScreen() {
             <AppText style={styles.sectionTitle}>6. Privacy Controls</AppText>
             <AppText style={styles.paragraph}>
               Your entries may be set to public, friends-only, or private. Public
-              entries can be visible to other CellarSnap users, while private entries
+              entries can be visible to other Cluster users, while private entries
               are intended only for you.
             </AppText>
             <AppText style={styles.paragraph}>
@@ -108,8 +109,8 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>7. Intellectual Property</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap, including its branding, software, design, and related
-              materials, is owned by CellarSnap or its licensors and is protected by
+              Cluster, including its branding, software, design, and related
+              materials, is owned by Cluster or its licensors and is protected by
               applicable intellectual property laws.
             </AppText>
             <AppText style={styles.paragraph}>
@@ -136,7 +137,7 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>9. Disclaimers</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap is provided on an &quot;as is&quot; and &quot;as available&quot;
+              Cluster is provided on an &quot;as is&quot; and &quot;as available&quot;
               basis without warranties of any kind, to the fullest extent permitted by
               law.
             </AppText>
@@ -146,7 +147,7 @@ export default function TermsScreen() {
               detail, recommendation, or AI response will be accurate.
             </AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap is not responsible for decisions you make based on tasting
+              Cluster is not responsible for decisions you make based on tasting
               notes, recommendations, pairings, or AI-generated suggestions.
             </AppText>
           </View>
@@ -154,7 +155,7 @@ export default function TermsScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>10. Limitation of Liability</AppText>
             <AppText style={styles.paragraph}>
-              To the maximum extent permitted by law, CellarSnap and its affiliates,
+              To the maximum extent permitted by law, Cluster and its affiliates,
               service providers, and licensors will not be liable for indirect,
               incidental, special, consequential, or punitive damages arising from or
               related to your use of the app.
@@ -173,7 +174,7 @@ export default function TermsScreen() {
             </AppText>
             <AppText style={styles.paragraph}>
               If we make material changes, we will notify you through the app or by
-              other reasonable means. Continued use of CellarSnap after the updated
+              other reasonable means. Continued use of Cluster after the updated
               terms take effect means you accept the changes.
             </AppText>
           </View>
@@ -200,7 +201,7 @@ export default function TermsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 16,
@@ -209,8 +210,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 16,
     gap: 14,
   },
@@ -218,19 +219,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.6,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 26,
     fontWeight: "700",
   },
   updated: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   section: {
@@ -241,23 +242,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 15,
     fontWeight: "700",
   },
   paragraph: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 19,
   },
   footerRow: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "rgba(44,26,14,0.1)",
     paddingTop: 10,
     alignItems: "center",
   },
   footerLink: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",

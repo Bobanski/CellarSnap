@@ -1,5 +1,6 @@
 import { normalizeConfidence, type PrivacyLevel } from "@cellarsnap/shared";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
+import { colors } from "@/src/lib/theme";
 
 export type UploadPhotoType =
   | "label"
@@ -205,27 +206,27 @@ export function getPrivacyBadgeTone(level: PrivacyLevel) {
     return {
       backgroundColor: "rgba(59, 130, 246, 0.16)",
       borderColor: "rgba(96, 165, 250, 0.7)",
-      textColor: "#dbeafe",
+      textColor: colors.info,
     };
   }
   if (level === "friends_of_friends") {
     return {
       backgroundColor: "rgba(16, 185, 129, 0.14)",
       borderColor: "rgba(52, 211, 153, 0.7)",
-      textColor: "#d1fae5",
+      textColor: colors.success,
     };
   }
   if (level === "friends") {
     return {
-      backgroundColor: "rgba(251, 191, 36, 0.14)",
-      borderColor: "rgba(252, 211, 77, 0.7)",
-      textColor: "#fef3c7",
+      backgroundColor: "rgba(123, 29, 58, 0.14)",
+      borderColor: "rgba(196, 96, 122, 0.7)",
+      textColor: colors.champagne,
     };
   }
   return {
-    backgroundColor: "rgba(244, 63, 94, 0.14)",
-    borderColor: "rgba(251, 113, 133, 0.7)",
-    textColor: "#ffe4e6",
+    backgroundColor: "rgba(192, 57, 43, 0.14)",
+    borderColor: "rgba(192, 57, 43, 0.7)",
+    textColor: colors.rose,
   };
 }
 

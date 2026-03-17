@@ -1,6 +1,7 @@
 import { ActivityIndicator, Image, Modal, Pressable, View } from "react-native";
 import { SelectField } from "@/src/components/entries/newEntryFormParts";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 import {
   formatSurveyWineMeta,
   formatSurveyWineTitle,
@@ -127,7 +128,7 @@ export function PostSaveSurveyModal({
                 disabled={!canSubmitPostSaveSurvey || isSubmittingSurvey}
               >
                 {isSubmittingSurvey ? (
-                  <ActivityIndicator color="#09090b" />
+                  <ActivityIndicator color={colors.champagne} />
                 ) : (
                   <AppText style={styles.submitButtonText}>Save and continue</AppText>
                 )}

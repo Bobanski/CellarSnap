@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "CellarSnap",
+    "name": "Cluster",
     "slug": "cellarsnap-mobile",
-    "scheme": "cellarsnap",
+    "scheme": "cluster",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "assetBundlePatterns": [
       "**/*"
@@ -16,8 +16,8 @@
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
-        "NSCameraUsageDescription": "CellarSnap uses your camera to scan wine labels for quick and accurate entry creation.",
+        "NSPhotoLibraryUsageDescription": "Allow Cluster to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
+        "NSCameraUsageDescription": "Cluster uses your camera to scan wine labels for quick and accurate entry creation.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -26,7 +26,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#0f0a09"
+        "backgroundColor": "#F5EDD6"
       }
     },
     "plugins": [
@@ -38,17 +38,18 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "backgroundColor": "#0f0a09",
+          "backgroundColor": "#F5EDD6",
           "imageWidth": 180
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow CellarSnap to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
-          "cameraPermission": "CellarSnap uses your camera to scan wine labels for quick and accurate entry creation."
+          "photosPermission": "Allow Cluster to access your photo library so you can upload wine labels, tasting photos, and profile pictures.",
+          "cameraPermission": "Cluster uses your camera to scan wine labels for quick and accurate entry creation."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

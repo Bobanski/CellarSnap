@@ -11,6 +11,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import { APP_SANS_FONT_FAMILY } from "@/src/lib/typography";
+import { colors } from "@/src/lib/theme";
 
 export const DoneTextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
   (
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   doneText: {
-    color: "#007aff",
+    color: colors.grenache,
     fontSize: 17,
     fontWeight: "700",
   },

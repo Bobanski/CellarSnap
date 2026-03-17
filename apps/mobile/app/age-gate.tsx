@@ -9,6 +9,7 @@ import {
 import { router } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 import { useAgeVerification } from "@/src/lib/ageVerificationContext";
+import { colors } from "@/src/lib/theme";
 
 export default function AgeGateScreen() {
   const { confirmAgeVerification } = useAgeVerification();
@@ -44,7 +45,7 @@ export default function AgeGateScreen() {
         <View style={styles.card}>
           <View style={styles.brandWrap}>
             <AppText style={styles.eyebrow}>Age Verification</AppText>
-            <AppText style={styles.wordmark}>CellarSnap</AppText>
+            <AppText style={styles.wordmark}>Cluster</AppText>
           </View>
 
           <View style={styles.badgeWrap}>
@@ -55,7 +56,7 @@ export default function AgeGateScreen() {
 
           <View style={styles.copyWrap}>
             <AppText style={styles.title}>
-              You must be of legal drinking age in your country to use CellarSnap.
+              You must be of legal drinking age in your country to use Cluster.
             </AppText>
             <AppText style={styles.subtitle}>
               By continuing, you confirm you are of legal drinking age in your jurisdiction.
@@ -72,7 +73,7 @@ export default function AgeGateScreen() {
             style={[styles.primaryButton, isSubmitting ? styles.primaryButtonDisabled : null]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#09090b" />
+              <ActivityIndicator color={colors.champagne} />
             ) : (
               <AppText style={styles.primaryButtonText}>I am 21 or older</AppText>
             )}
@@ -95,7 +96,7 @@ export default function AgeGateScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   blobTop: {
     position: "absolute",
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "rgba(245, 158, 11, 0.14)",
+    backgroundColor: "rgba(123, 29, 58, 0.10)",
   },
   blobBottom: {
     position: "absolute",
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: "rgba(244, 63, 94, 0.1)",
+    backgroundColor: "rgba(74, 48, 96, 0.08)",
   },
   scrollContent: {
     flexGrow: 1,
@@ -127,12 +128,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     paddingHorizontal: 20,
     paddingVertical: 24,
-    shadowColor: "#000000",
-    shadowOpacity: 0.45,
+    shadowColor: colors.shadowColor,
+    shadowOpacity: 0.15,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
     elevation: 12,
@@ -143,14 +144,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   eyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   wordmark: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 30,
     fontWeight: "700",
     textAlign: "center",
@@ -163,13 +164,13 @@ const styles = StyleSheet.create({
     height: 108,
     borderRadius: 54,
     borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.4)",
-    backgroundColor: "rgba(251,191,36,0.12)",
+    borderColor: "rgba(123,29,58,0.4)",
+    backgroundColor: "rgba(123,29,58,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
   badgeText: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 34,
     fontWeight: "700",
     letterSpacing: 1,
@@ -178,26 +179,26 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 30,
     fontWeight: "700",
     lineHeight: 36,
     textAlign: "center",
   },
   subtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
   },
   errorText: {
-    color: "#fda4af",
+    color: colors.error,
     fontSize: 13,
     lineHeight: 18,
     textAlign: "center",
   },
   declineText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
     textAlign: "center",
@@ -205,7 +206,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     minHeight: 46,
     borderRadius: 12,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   primaryButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   secondaryButtonText: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.5,

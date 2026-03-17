@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { ListScanFilterAccentTone } from "@cellarsnap/shared";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 type FacetMultiSelectProps = {
   label: string;
@@ -121,7 +122,7 @@ export default function FacetMultiSelect({
                 value={query}
                 onChangeText={setQuery}
                 placeholder={placeholder}
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.fog}
                 style={styles.input}
               />
               {filteredOptions.length > 0 ? (
@@ -189,8 +190,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(0,0,0,0.22)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     overflow: "hidden",
   },
   header: {
@@ -206,27 +207,27 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   summary: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   chevron: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 16,
     fontWeight: "700",
   },
   body: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "rgba(44,26,14,0.08)",
     padding: 14,
   },
   tokenWrap: {
@@ -240,8 +241,8 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.35)",
-    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(45,125,70,0.35)",
+    backgroundColor: "rgba(45,125,70,0.12)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -262,33 +263,33 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,48,96,0.72)",
   },
   tokenText: {
-    color: "#d1fae5",
+    color: colors.success,
     fontSize: 12,
     fontWeight: "700",
   },
   tokenTextWhite: {
-    color: "#f5e8bc",
+    color: colors.viognier,
   },
   tokenTextRose: {
-    color: "#fde5ec",
+    color: colors.rose,
   },
   tokenTextOrange: {
-    color: "#fde6c7",
+    color: colors.viognier,
   },
   tokenTextRed: {
-    color: "#f3eef8",
+    color: colors.nebbiolo,
   },
   tokenRemove: {
-    color: "#f8fafc",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
   input: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
-    color: "#fafafa",
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.inputBg,
+    color: colors.terroir,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -296,8 +297,8 @@ const styles = StyleSheet.create({
   suggestionScroll: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.limestone,
   },
   suggestionScrollContent: {
     padding: 6,
@@ -311,8 +312,8 @@ const styles = StyleSheet.create({
   suggestionButton: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44,26,14,0.06)",
     paddingHorizontal: 10,
     paddingVertical: 7,
     width: 130,
@@ -334,23 +335,23 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,48,96,0.15)",
   },
   suggestionText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 11,
   },
   suggestionTextWhite: {
-    color: "#e7d491",
+    color: colors.viognier,
   },
   suggestionTextRose: {
-    color: "#f1bfd0",
+    color: colors.rose,
   },
   suggestionTextOrange: {
-    color: "#f2c78f",
+    color: colors.viognier,
   },
   suggestionTextRed: {
-    color: "#dbcfe7",
+    color: colors.nebbiolo,
   },
   emptyText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -361,12 +362,12 @@ const styles = StyleSheet.create({
   doneButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(44,26,14,0.10)",
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   doneButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },

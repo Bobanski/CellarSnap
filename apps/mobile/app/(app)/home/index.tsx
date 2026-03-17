@@ -34,6 +34,7 @@ import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { colors } from "@/src/lib/theme";
 
 type HomeEntryRow = {
   id: string;
@@ -161,24 +162,24 @@ const PRIVACY_TONES: Record<
   { borderColor: string; backgroundColor: string; textColor: string }
 > = {
   public: {
-    borderColor: "rgba(125, 211, 252, 0.45)",
-    backgroundColor: "rgba(14, 165, 233, 0.12)",
-    textColor: "#e0f2fe",
+    borderColor: "rgba(59, 130, 246, 0.45)",
+    backgroundColor: "rgba(59, 130, 246, 0.12)",
+    textColor: colors.info,
   },
   friends_of_friends: {
-    borderColor: "rgba(45, 212, 191, 0.45)",
-    backgroundColor: "rgba(20, 184, 166, 0.12)",
-    textColor: "#ccfbf1",
+    borderColor: "rgba(45, 125, 70, 0.45)",
+    backgroundColor: "rgba(45, 125, 70, 0.12)",
+    textColor: colors.success,
   },
   friends: {
-    borderColor: "rgba(252, 211, 77, 0.45)",
-    backgroundColor: "rgba(251, 191, 36, 0.12)",
-    textColor: "#fef3c7",
+    borderColor: "rgba(123, 29, 58, 0.45)",
+    backgroundColor: "rgba(123, 29, 58, 0.12)",
+    textColor: colors.rose,
   },
   private: {
-    borderColor: "rgba(251, 113, 133, 0.45)",
-    backgroundColor: "rgba(244, 63, 94, 0.12)",
-    textColor: "#fecdd3",
+    borderColor: "rgba(192, 57, 43, 0.45)",
+    backgroundColor: "rgba(192, 57, 43, 0.12)",
+    textColor: colors.error,
   },
 };
 
@@ -1041,7 +1042,7 @@ export default function HomeScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <AppTopBar activeHref="/(app)/home" />
           <View style={styles.loadingCard}>
-            <ActivityIndicator color="#fbbf24" />
+            <ActivityIndicator color={colors.grenache} />
             <AppText style={styles.loadingText}>Loading...</AppText>
           </View>
         </ScrollView>
@@ -1057,7 +1058,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => void loadHome(true)}
-            tintColor="#fbbf24"
+            tintColor={colors.grenache}
           />
         }
       >
@@ -1072,8 +1073,8 @@ export default function HomeScreen() {
           >
             {isFirstTime
               ? welcomeName
-                ? `Welcome to CellarSnap, ${welcomeName}.`
-                : "Welcome to CellarSnap."
+                ? `Welcome to Cluster, ${welcomeName}.`
+                : "Welcome to Cluster."
               : welcomeName
                 ? `Welcome back, ${welcomeName}.`
                 : "Welcome back."}
@@ -1257,7 +1258,7 @@ export default function HomeScreen() {
                 <>
                   <AppText style={styles.emptyText}>
                     {isFirstTime
-                      ? "CellarSnap is better with friends. Add the people you drink with and see what they're enjoying."
+                      ? "Cluster is better with friends. Add the people you drink with and see what they're enjoying."
                       : "You haven't added any friends yet."}
                   </AppText>
                   <Pressable
@@ -1317,7 +1318,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 18,
@@ -1328,8 +1329,8 @@ const styles = StyleSheet.create({
   loadingCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     paddingHorizontal: 16,
     paddingVertical: 18,
     alignItems: "center",
@@ -1337,21 +1338,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
   },
   header: {
     gap: 6,
   },
   eyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 30,
     fontWeight: "700",
     lineHeight: 36,
@@ -1361,45 +1362,45 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   subtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
   errorCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.35)",
-    backgroundColor: "rgba(251,113,133,0.08)",
+    borderColor: "rgba(192,57,43,0.35)",
+    backgroundColor: "rgba(192,57,43,0.08)",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   errorText: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 13,
     lineHeight: 18,
   },
   onboardingCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(252,211,77,0.35)",
-    backgroundColor: "rgba(251,191,36,0.1)",
+    borderColor: "rgba(123,29,58,0.35)",
+    backgroundColor: "rgba(123,29,58,0.1)",
     padding: 13,
     gap: 8,
   },
   onboardingEyebrow: {
-    color: "#fde68a",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.4,
     textTransform: "uppercase",
   },
   onboardingTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 18,
     fontWeight: "700",
   },
   onboardingSubtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1409,14 +1410,14 @@ const styles = StyleSheet.create({
   privacyOption: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     paddingHorizontal: 11,
     paddingVertical: 10,
   },
   privacyOptionSelected: {
-    borderColor: "rgba(252,211,77,0.55)",
-    backgroundColor: "rgba(251,191,36,0.14)",
+    borderColor: "rgba(123,29,58,0.55)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   privacyBadge: {
     alignSelf: "flex-start",
@@ -1433,7 +1434,7 @@ const styles = StyleSheet.create({
   },
   privacyDescription: {
     marginTop: 6,
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -1441,7 +1442,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 2,
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
@@ -1449,27 +1450,27 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   confirmPrivacyButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 13,
     fontWeight: "700",
   },
   heroCard: {
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "rgba(252,211,77,0.32)",
-    backgroundColor: "rgba(251,191,36,0.08)",
+    borderColor: "rgba(123,29,58,0.32)",
+    backgroundColor: "rgba(123,29,58,0.08)",
     paddingHorizontal: 18,
     paddingVertical: 18,
     alignItems: "center",
     gap: 8,
   },
   heroTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 20,
     fontWeight: "700",
   },
   heroSubtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
     textAlign: "center",
@@ -1477,12 +1478,12 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 2,
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   primaryButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1490,13 +1491,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.34)",
-    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(45,125,70,0.34)",
+    backgroundColor: "rgba(45,125,70,0.12)",
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   secondaryCtaButtonText: {
-    color: "#d1fae5",
+    color: colors.success,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1508,25 +1509,25 @@ const styles = StyleSheet.create({
   },
   inlineCtaButton: {
     borderRadius: 999,
-    backgroundColor: "rgba(251,191,36,0.9)",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   inlineCtaButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 13,
     fontWeight: "700",
   },
   inlineSecondaryCtaButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.34)",
-    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(45,125,70,0.34)",
+    backgroundColor: "rgba(45,125,70,0.12)",
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   inlineSecondaryCtaButtonText: {
-    color: "#d1fae5",
+    color: colors.success,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1535,14 +1536,14 @@ const styles = StyleSheet.create({
   },
   sectionDivider: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "rgba(44,26,14,0.1)",
     marginVertical: 2,
   },
   sectionDividerBeforeCircle: {
     marginTop: 10,
   },
   sectionLabel: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.4,
@@ -1554,15 +1555,15 @@ const styles = StyleSheet.create({
   entryCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 13,
   },
   entryCardDrinkingNow: {
     borderColor: "rgba(125,211,252,0.72)",
-    backgroundColor: "rgba(8,47,73,0.62)",
-    shadowColor: "#7dd3fc",
-    shadowOpacity: 0.44,
+    backgroundColor: "rgba(59, 130, 246, 0.08)",
+    shadowColor: colors.info,
+    shadowOpacity: 0.15,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 0 },
     elevation: 10,
@@ -1574,7 +1575,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   entryOwner: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "600",
     flexShrink: 1,
@@ -1593,8 +1594,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -1604,15 +1605,15 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   entryOwnerAvatarFallback: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
   },
   entryOwnerButton: {
-    color: "#e4e4e7",
+    color: colors.terroir,
   },
   entryDate: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   entryBodyRow: {
@@ -1624,7 +1625,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 14,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(44, 26, 14, 0.08)",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -1634,7 +1635,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   photoText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     textAlign: "center",
     paddingHorizontal: 6,
@@ -1645,13 +1646,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   entryTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 15,
     fontWeight: "700",
   },
   entrySubtitle: {
     marginTop: 2,
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   entryMetaRow: {
@@ -1675,7 +1676,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   ratingText: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1690,42 +1691,42 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   qpr_extortion: {
-    borderColor: "rgba(251,113,133,0.4)",
-    backgroundColor: "rgba(251,113,133,0.1)",
-    color: "#fecdd3",
+    borderColor: "rgba(192,57,43,0.4)",
+    backgroundColor: "rgba(192,57,43,0.1)",
+    color: colors.error,
   },
   qpr_pricey: {
-    borderColor: "rgba(248,113,113,0.4)",
-    backgroundColor: "rgba(248,113,113,0.1)",
-    color: "#fecaca",
+    borderColor: "rgba(192,57,43,0.4)",
+    backgroundColor: "rgba(192,57,43,0.1)",
+    color: colors.error,
   },
   qpr_mid: {
-    borderColor: "rgba(251,191,36,0.4)",
-    backgroundColor: "rgba(251,191,36,0.1)",
-    color: "#fde68a",
+    borderColor: "rgba(123,29,58,0.4)",
+    backgroundColor: "rgba(123,29,58,0.1)",
+    color: colors.rose,
   },
   qpr_good_value: {
-    borderColor: "rgba(74,222,128,0.4)",
-    backgroundColor: "rgba(74,222,128,0.1)",
-    color: "#bbf7d0",
+    borderColor: "rgba(45,125,70,0.4)",
+    backgroundColor: "rgba(45,125,70,0.1)",
+    color: colors.success,
   },
   qpr_absolute_steal: {
-    borderColor: "rgba(34,197,94,0.4)",
-    backgroundColor: "rgba(34,197,94,0.1)",
-    color: "#86efac",
+    borderColor: "rgba(45,125,70,0.4)",
+    backgroundColor: "rgba(45,125,70,0.1)",
+    color: colors.success,
   },
   reactionAddButton: {
     width: 27,
     height: 27,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(44,26,14,0.2)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
   },
   reactionAddButtonDisabled: {
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(44,26,14,0.1)",
   },
   plusIcon: {
     width: 12,
@@ -1739,23 +1740,23 @@ const styles = StyleSheet.create({
     width: 12,
     height: 1.6,
     borderRadius: 999,
-    backgroundColor: "#e4e4e7",
+    backgroundColor: colors.terroir,
   },
   plusLineVertical: {
     position: "absolute",
     width: 1.6,
     height: 12,
     borderRadius: 999,
-    backgroundColor: "#e4e4e7",
+    backgroundColor: colors.terroir,
   },
   plusLineDisabled: {
-    backgroundColor: "#71717a",
+    backgroundColor: colors.fog,
   },
   reactionPickerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(0,0,0,0.28)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.06)",
     padding: 9,
     gap: 8,
   },
@@ -1767,16 +1768,16 @@ const styles = StyleSheet.create({
   reactionEmojiBtn: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.14)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     width: 34,
     height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
   reactionEmojiBtnActive: {
-    borderColor: "rgba(252,211,77,0.5)",
-    backgroundColor: "rgba(251,191,36,0.14)",
+    borderColor: "rgba(123,29,58,0.5)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   reactionEmojiBtnDisabled: {
     opacity: 0.5,
@@ -1785,11 +1786,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   reactionPrivateText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
   },
   inlineLink: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 13,
     fontWeight: "600",
   },
@@ -1797,19 +1798,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   inlineLinkHighlight: {
-    color: "#fde68a",
+    color: colors.rose,
   },
   emptyCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 8,
   },
   emptyText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1817,12 +1818,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(44,26,14,0.14)",
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   secondaryButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },

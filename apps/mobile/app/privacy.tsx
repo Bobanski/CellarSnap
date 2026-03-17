@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 const LAST_UPDATED = "March 2026";
 const SUPPORT_EMAIL = "cellarsnap@gmail.com";
@@ -19,13 +20,13 @@ export default function PrivacyScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>1. Introduction</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap is a wine journal and social sharing app that helps you log
+              Cluster is a wine journal and social sharing app that helps you log
               bottles, capture tasting notes, share entries, and explore AI-powered wine
               tools.
             </AppText>
             <AppText style={styles.paragraph}>
               This Privacy Policy explains what information we collect, how we use it,
-              when we share it, and the choices you have when using CellarSnap.
+              when we share it, and the choices you have when using Cluster.
             </AppText>
           </View>
 
@@ -56,7 +57,7 @@ export default function PrivacyScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>3. How We Use Information</AppText>
             <AppText style={styles.paragraph}>
-              We use your information to provide, maintain, and improve CellarSnap,
+              We use your information to provide, maintain, and improve Cluster,
               including saving entries, personalizing the app, and supporting social
               discovery features.
             </AppText>
@@ -74,7 +75,7 @@ export default function PrivacyScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>4. Third-Party Services</AppText>
             <AppText style={styles.paragraph}>
-              We use third-party providers to operate CellarSnap. Supabase provides
+              We use third-party providers to operate Cluster. Supabase provides
               authentication, database services, and file storage on AWS
               infrastructure.
             </AppText>
@@ -93,7 +94,7 @@ export default function PrivacyScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>5. Data Storage and Security</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap data is stored through Supabase on AWS infrastructure in the
+              Cluster data is stored through Supabase on AWS infrastructure in the
               US-West-2 region. Photos are stored in Supabase Storage and served using
               signed URLs where applicable.
             </AppText>
@@ -136,7 +137,7 @@ export default function PrivacyScreen() {
           <View style={styles.sectionBlock}>
             <AppText style={styles.sectionTitle}>8. Children&apos;s Privacy</AppText>
             <AppText style={styles.paragraph}>
-              CellarSnap is not intended for anyone under 21 years old or under the
+              Cluster is not intended for anyone under 21 years old or under the
               legal drinking age in their jurisdiction. We do not knowingly collect
               personal information from minors.
             </AppText>
@@ -154,7 +155,7 @@ export default function PrivacyScreen() {
             </AppText>
             <AppText style={styles.paragraph}>
               If we make material changes, we will communicate them through the app or
-              by other reasonable means. Continued use of CellarSnap after an update
+              by other reasonable means. Continued use of Cluster after an update
               means you accept the revised policy.
             </AppText>
           </View>
@@ -184,7 +185,7 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   content: {
     paddingHorizontal: 16,
@@ -193,8 +194,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.05)",
     padding: 16,
     gap: 14,
   },
@@ -202,19 +203,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.6,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 26,
     fontWeight: "700",
   },
   updated: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   section: {
@@ -225,23 +226,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 15,
     fontWeight: "700",
   },
   paragraph: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 19,
   },
   footerRow: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
+    borderTopColor: "rgba(44,26,14,0.1)",
     paddingTop: 10,
     alignItems: "center",
   },
   footerLink: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",

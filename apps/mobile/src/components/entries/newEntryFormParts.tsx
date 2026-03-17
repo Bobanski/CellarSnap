@@ -3,6 +3,7 @@ import { Dimensions, Modal, Pressable, ScrollView, View } from "react-native";
 import { PRIVACY_LEVEL_LABELS, type PrivacyLevel } from "@cellarsnap/shared";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 import {
   FIELD_ROW_GAP,
   formatYmd,
@@ -57,7 +58,7 @@ export function Field({
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
         placeholder={placeholder}
-        placeholderTextColor="#71717a"
+        placeholderTextColor={colors.fog}
         multiline={multiline}
         style={[styles.input, multiline ? styles.inputMultiline : null]}
       />

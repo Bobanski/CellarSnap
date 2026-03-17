@@ -7,6 +7,7 @@ import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 type AppRoute =
   | "/(app)/home"
@@ -447,7 +448,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
           accessibilityRole="button"
           accessibilityLabel="Go to home"
         >
-          <AppText style={styles.brand}>CellarSnap</AppText>
+          <AppText style={styles.brand}>Cluster</AppText>
         </Pressable>
         <View style={styles.navActions}>
           <Pressable
@@ -463,7 +464,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={alertsOpen ? "Close alerts" : "Open alerts"}
           >
-            <Feather name="bell" size={16} color="#e4e4e7" />
+            <Feather name="bell" size={16} color={colors.terroir} />
             {alertCount > 0 ? (
               <View style={styles.alertBadge}>
                 <AppText style={styles.alertBadgeText}>
@@ -479,7 +480,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
           >
-            <Feather name={menuOpen ? "x" : "menu"} size={18} color="#e4e4e7" />
+            <Feather name={menuOpen ? "x" : "menu"} size={18} color={colors.terroir} />
           </Pressable>
         </View>
       </View>
@@ -494,7 +495,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
           </View>
           {alertsLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color="#fbbf24" />
+              <ActivityIndicator color={colors.grenache} />
             </View>
           ) : alertsError ? (
             <AppText style={styles.panelError}>{alertsError}</AppText>
@@ -635,7 +636,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
 const styles = StyleSheet.create({
   container: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: "rgba(44,26,14,0.06)",
     paddingBottom: 12,
     gap: 10,
     position: "relative",
@@ -648,7 +649,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brand: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 20,
     fontWeight: "700",
   },
@@ -659,12 +660,12 @@ const styles = StyleSheet.create({
   },
   newBtn: {
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   newBtnText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -673,7 +674,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(44,26,14,0.14)",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -683,7 +684,7 @@ const styles = StyleSheet.create({
     right: -3,
     top: -5,
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 4,
     minWidth: 16,
     height: 16,
@@ -691,15 +692,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   alertBadgeText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 9,
     fontWeight: "800",
   },
   panel: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(20,16,15,0.98)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: colors.white,
     padding: 10,
     gap: 8,
   },
@@ -709,8 +710,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 40,
-    shadowColor: "#000",
-    shadowOpacity: 0.45,
+    shadowColor: colors.terroir,
+    shadowOpacity: 0.15,
     shadowRadius: 22,
     shadowOffset: {
       width: 0,
@@ -724,12 +725,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   panelTitle: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },
   panelAction: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -738,11 +739,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   panelError: {
-    color: "#fecdd3",
+    color: colors.error,
     fontSize: 12,
   },
   panelEmpty: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 12,
   },
   alertList: {
@@ -751,8 +752,8 @@ const styles = StyleSheet.create({
   alertRow: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(44,26,14,0.1)",
+    backgroundColor: "rgba(44,26,14,0.04)",
     padding: 9,
     gap: 7,
   },
@@ -770,20 +771,20 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   alertLabel: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 12,
     lineHeight: 17,
   },
   alertActor: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontWeight: "700",
   },
   alertWineName: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontWeight: "600",
   },
   alertDate: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
   },
   alertDismissButton: {
@@ -791,13 +792,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    borderColor: "rgba(44,26,14,0.14)",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   alertDismissButtonText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -810,13 +811,13 @@ const styles = StyleSheet.create({
   actionPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(74,222,128,0.5)",
-    backgroundColor: "rgba(74,222,128,0.14)",
+    borderColor: "rgba(45,125,70,0.5)",
+    backgroundColor: "rgba(45,125,70,0.14)",
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   actionPillText: {
-    color: "#bbf7d0",
+    color: colors.success,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -824,23 +825,23 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(44,26,14,0.18)",
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   actionGhostText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
   },
   actionAmber: {
     borderRadius: 999,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   actionAmberText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -850,21 +851,21 @@ const styles = StyleSheet.create({
   menuItem: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(44,26,14,0.1)",
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   menuItemActive: {
-    borderColor: "rgba(252,211,77,0.55)",
-    backgroundColor: "rgba(251,191,36,0.14)",
+    borderColor: "rgba(123,29,58,0.55)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   menuItemText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },
   menuItemTextActive: {
-    color: "#fef3c7",
+    color: colors.grenache,
   },
   menuLegalRow: {
     paddingTop: 2,
@@ -873,14 +874,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   menuLegalLink: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
     fontWeight: "600",
   },
   menuLegalSeparator: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.2,
   },

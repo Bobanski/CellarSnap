@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { ListScanRegionGroup } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
 type RegionFilterSelectProps = {
   regionGroups: ListScanRegionGroup[];
@@ -117,8 +118,8 @@ export default function RegionFilterSelect({
                   const fullySelected = isCountryFullySelected(group);
                   const partiallySelected = isCountryPartiallySelected(group);
 
-                  let chipStyle = styles.countryChip;
-                  let textStyle = styles.countryChipText;
+                  let chipStyle: typeof styles.countryChip = styles.countryChip;
+                  let textStyle: typeof styles.countryChipText | typeof styles.countryChipTextActive = styles.countryChipText;
                   if (isExpanded || fullySelected) {
                     chipStyle = styles.countryChipActive;
                     textStyle = styles.countryChipTextActive;
@@ -208,8 +209,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(0,0,0,0.22)",
+    borderColor: "rgba(44,26,14,0.10)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     overflow: "hidden",
   },
   header: {
@@ -225,27 +226,27 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   summaryText: {
-    color: "#f4f4f5",
+    color: colors.terroir,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   chevron: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 16,
     fontWeight: "700",
   },
   body: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "rgba(44,26,14,0.08)",
     padding: 14,
   },
   countryChipWrap: {
@@ -256,46 +257,46 @@ const styles = StyleSheet.create({
   countryChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(44,26,14,0.10)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   countryChipActive: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.50)",
-    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(45,125,70,0.50)",
+    backgroundColor: "rgba(45,125,70,0.12)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   countryChipPartial: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.25)",
-    backgroundColor: "rgba(16,185,129,0.06)",
+    borderColor: "rgba(45,125,70,0.25)",
+    backgroundColor: "rgba(45,125,70,0.06)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   countryChipText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "700",
   },
   countryChipTextActive: {
-    color: "#a7f3d0",
+    color: colors.success,
     fontSize: 12,
     fontWeight: "700",
   },
   countryChipTextPartial: {
-    color: "rgba(167,243,208,0.80)",
+    color: colors.success,
     fontSize: 12,
     fontWeight: "700",
   },
   subRegionScroll: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "#171210",
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.limestone,
   },
   subRegionScrollContent: {
     padding: 6,
@@ -309,25 +310,25 @@ const styles = StyleSheet.create({
   subRegionChip: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(44,26,14,0.08)",
+    backgroundColor: "rgba(44,26,14,0.06)",
     paddingHorizontal: 10,
     paddingVertical: 7,
     width: 130,
   },
   subRegionChipActive: {
-    borderColor: "rgba(52,211,153,0.40)",
-    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: "rgba(45,125,70,0.40)",
+    backgroundColor: "rgba(45,125,70,0.12)",
   },
   subRegionText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
   },
   subRegionTextActive: {
-    color: "#a7f3d0",
+    color: colors.success,
   },
   emptyText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -338,12 +339,12 @@ const styles = StyleSheet.create({
   doneButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(44,26,14,0.10)",
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   doneButtonText: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 13,
     fontWeight: "700",
   },

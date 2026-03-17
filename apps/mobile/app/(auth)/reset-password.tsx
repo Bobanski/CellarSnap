@@ -14,8 +14,9 @@ import { Link, router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
+import { colors } from "@/src/lib/theme";
 
-const INPUT_SELECTION_COLOR = "#52525b";
+const INPUT_SELECTION_COLOR = colors.fog;
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ email?: string }>();
@@ -155,7 +156,7 @@ export default function ResetPasswordScreen() {
                       selectionColor={INPUT_SELECTION_COLOR}
                       keyboardType="email-address"
                       placeholder="you@example.com"
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.fog}
                       style={styles.input}
                     />
                   </View>
@@ -172,7 +173,7 @@ export default function ResetPasswordScreen() {
                       selectionColor={INPUT_SELECTION_COLOR}
                       keyboardType="number-pad"
                       placeholder="6-digit code"
-                      placeholderTextColor="#71717a"
+                      placeholderTextColor={colors.fog}
                       style={styles.input}
                     />
                     <View style={styles.resendRow}>
@@ -198,7 +199,7 @@ export default function ResetPasswordScreen() {
                     textContentType="newPassword"
                     selectionColor={INPUT_SELECTION_COLOR}
                     placeholder="At least 8 characters"
-                    placeholderTextColor="#71717a"
+                    placeholderTextColor={colors.fog}
                     style={styles.passwordInput}
                   />
                   <Pressable
@@ -222,7 +223,7 @@ export default function ResetPasswordScreen() {
                   textContentType="newPassword"
                   selectionColor={INPUT_SELECTION_COLOR}
                   placeholder="Repeat password"
-                  placeholderTextColor="#71717a"
+                  placeholderTextColor={colors.fog}
                   style={styles.input}
                 />
               </View>
@@ -256,7 +257,7 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0f0a09",
+    backgroundColor: colors.champagne,
   },
   blobTop: {
     position: "absolute",
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     width: 340,
     height: 340,
     borderRadius: 170,
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
+    backgroundColor: "rgba(123, 29, 58, 0.10)",
   },
   blobBottom: {
     position: "absolute",
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: "rgba(244, 63, 94, 0.12)",
+    backgroundColor: "rgba(74, 48, 96, 0.08)",
   },
   scrollContent: {
     flexGrow: 1,
@@ -288,12 +289,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderColor: "rgba(44, 26, 14, 0.1)",
+    backgroundColor: "rgba(44, 26, 14, 0.05)",
     paddingHorizontal: 20,
     paddingVertical: 22,
-    shadowColor: "#000000",
-    shadowOpacity: 0.45,
+    shadowColor: colors.shadowColor,
+    shadowOpacity: 0.15,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
     elevation: 12,
@@ -303,40 +304,40 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   eyebrow: {
-    color: "#fcd34d",
+    color: colors.rose,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   title: {
-    color: "#fafafa",
+    color: colors.terroir,
     fontSize: 30,
     fontWeight: "700",
   },
   subtitle: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
     lineHeight: 20,
   },
   loadingText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 14,
   },
   formField: {
     gap: 6,
   },
   label: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 14,
     fontWeight: "600",
   },
   input: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    color: "#f4f4f5",
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.inputBg,
+    color: colors.terroir,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -346,11 +347,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resendText: {
-    color: "#71717a",
+    color: colors.fog,
     fontSize: 12,
   },
   resendLink: {
-    color: "#e4e4e7",
+    color: colors.terroir,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -359,14 +360,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderColor: colors.inputBorder,
+    backgroundColor: colors.inputBg,
     paddingLeft: 12,
     paddingRight: 8,
   },
   passwordInput: {
     flex: 1,
-    color: "#f4f4f5",
+    color: colors.terroir,
     paddingVertical: 10,
     fontSize: 14,
   },
@@ -376,31 +377,31 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   passwordToggleText: {
-    color: "#d4d4d8",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 0.8,
     fontWeight: "700",
     textTransform: "uppercase",
   },
   errorText: {
-    color: "#fda4af",
+    color: colors.error,
     fontSize: 13,
   },
   infoText: {
-    color: "#6ee7b7",
+    color: colors.success,
     fontSize: 13,
   },
   primaryButton: {
     marginTop: 2,
     borderRadius: 12,
-    backgroundColor: "#fbbf24",
+    backgroundColor: colors.grenache,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
     minHeight: 46,
   },
   primaryButtonText: {
-    color: "#09090b",
+    color: colors.champagne,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backLink: {
-    color: "#a1a1aa",
+    color: colors.fog,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
