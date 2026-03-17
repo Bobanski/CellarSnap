@@ -1205,16 +1205,21 @@ async function enrichParsedWines(params: {
   wines: ListScanParsedWine[];
   userId?: string | null;
   userSupabase?: SupabaseClient | null;
+  preloadedInferenceMap?: Awaited<ReturnType<typeof loadInferenceMap>> | null;
+  preloadedPreferenceEntries?: PreferenceSourceEntry[] | null;
 }): Promise<EnrichedListScanWines> {
   const warnings: string[] = [];
-  let inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>> | null = null;
+  let inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>> | null =
+    params.preloadedInferenceMap ?? null;
 
-  try {
-    inferenceMap = await loadInferenceMap();
-  } catch {
-    warnings.push(
-      "Database inference was unavailable, so some varietal and region guesses fell back to built-in patterns."
-    );
+  if (!inferenceMap) {
+    try {
+      inferenceMap = await loadInferenceMap();
+    } catch {
+      warnings.push(
+        "Database inference was unavailable, so some varietal and region guesses fell back to built-in patterns."
+      );
+    }
   }
 
   const inferredWines =
@@ -1235,23 +1240,27 @@ async function enrichParsedWines(params: {
   }
 
   let preferenceEntries: PreferenceSourceEntry[];
-  try {
-    preferenceEntries = await loadUserPreferenceEntries(
-      params.userSupabase,
-      params.userId
-    );
-  } catch {
-    warnings.push(
-      "Preference data could not be loaded, so match percentages are using placeholder values."
-    );
-    return {
-      wines: stubbedWines,
-      scoreSummary: buildStubScoreSummary(
-        0,
-        "Personalized scores were temporarily unavailable for this scan."
-      ),
-      warnings,
-    };
+  if (params.preloadedPreferenceEntries) {
+    preferenceEntries = params.preloadedPreferenceEntries;
+  } else {
+    try {
+      preferenceEntries = await loadUserPreferenceEntries(
+        params.userSupabase,
+        params.userId
+      );
+    } catch {
+      warnings.push(
+        "Preference data could not be loaded, so match percentages are using placeholder values."
+      );
+      return {
+        wines: stubbedWines,
+        scoreSummary: buildStubScoreSummary(
+          0,
+          "Personalized scores were temporarily unavailable for this scan."
+        ),
+        warnings,
+      };
+    }
   }
 
   const qualifyingEntryCount = preferenceEntries.filter((entry) => entry.advanced_notes).length;
@@ -1786,95 +1795,30 @@ async function parseUploadedSourceFromVisualBlocks(params: {
     | { type: "input_file"; filename?: string; file_data?: string }
   >;
 }) {
-  try {
-    const initialTranscription = await createUploadBlockResponse({
-      sourceHint: params.sourceHint,
-      userId: params.userId,
-      reasoningEffort: "low",
-      input: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: buildUploadBlockTranscriptionPrompt({
-                sourceHint: params.sourceHint,
-                sourceLabel: params.sourceLabel,
-                continuityInstruction: params.continuityInstruction,
-              }),
-            },
-            ...params.content,
-          ],
-        },
-      ],
-    });
-
-    if (initialTranscription.blocks.length === 0) {
-      throw new Error("No data returned from list scan");
-    }
-
-    // Keep list scans responsive by defaulting to a single visual transcription pass.
-    const preferredTranscription = initialTranscription;
-    const mergedTranscription = {
-      ...preferredTranscription,
-      warnings: mergeParsedWarnings(initialTranscription.warnings),
-    } satisfies UploadBlockResponse;
-
-    if (mergedTranscription.blocks.length === 0) {
-      throw new Error("No data returned from list scan");
-    }
-
-    const heuristic = buildHeuristicParsedResponseFromBlocks(mergedTranscription);
-
-    try {
-      const parsed = await createStructuredResponse({
-        sourceHint: `transcribed wine entry blocks from ${params.sourceHint}`,
-        userId: params.userId,
-        reasoningEffort: "low",
-        input: buildStructuredParseInputFromBlocks({
-          sourceHint: params.sourceHint,
-          sourceLabel: params.sourceLabel,
-          continuityInstruction: params.continuityInstruction,
-          transcription: mergedTranscription,
-        }),
-      });
-
-      return mergeStructuredParseWithBlocks(mergedTranscription, parsed);
-    } catch (error) {
-      if (isAbortLikeError(error) || isStructuredParsePayloadError(error)) {
-        return withWarning(
-          heuristic,
-          "This scan kept the visual entry-block transcription because the structured block parse did not complete."
-        );
-      }
-      throw error;
-    }
-  } catch (error) {
-    if (isAbortLikeError(error) || isStructuredParsePayloadError(error)) {
-      return createStructuredResponse({
-        sourceHint: params.sourceHint,
-        userId: params.userId,
-        reasoningEffort: "low",
-        input: [
+  // Single-call path: send images/files directly to the structured response
+  // model which extracts all wine data in one pass, eliminating the previous
+  // two-call pipeline (block transcription → structured parse).
+  return createStructuredResponse({
+    sourceHint: params.sourceHint,
+    userId: params.userId,
+    reasoningEffort: "low",
+    input: [
+      {
+        role: "user",
+        content: [
           {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: buildInitialUploadPrompt({
-                  sourceHint: params.sourceHint,
-                  sourceLabel: params.sourceLabel,
-                  continuityInstruction: params.continuityInstruction,
-                }),
-              },
-              ...params.content,
-            ],
+            type: "input_text",
+            text: buildInitialUploadPrompt({
+              sourceHint: params.sourceHint,
+              sourceLabel: params.sourceLabel,
+              continuityInstruction: params.continuityInstruction,
+            }),
           },
+          ...params.content,
         ],
-      });
-    }
-    throw error;
-  }
+      },
+    ],
+  });
 }
 
 async function parseImageSource({
@@ -2618,6 +2562,16 @@ export async function parseWineListSource(
     );
   }
 
+  // Pre-warm: kick off inference map + user preference loading in parallel
+  // with the OpenAI parse call so they're ready by the time we need them.
+  const inferenceMapPromise = loadInferenceMap().catch(() => null);
+  const preferenceEntriesPromise =
+    params.userId && params.userSupabase
+      ? loadUserPreferenceEntries(params.userSupabase, params.userId).catch(
+          () => null
+        )
+      : Promise.resolve(null);
+
   const parsed =
     params.sourceType === "url"
       ? await parseUrlSource({ url: params.url, userId: params.requesterId })
@@ -2633,10 +2587,18 @@ export async function parseWineListSource(
             userId: params.requesterId,
           });
 
+  // Await pre-warmed data (should already be resolved or nearly so).
+  const [preloadedInferenceMap, preloadedPreferenceEntries] = await Promise.all([
+    inferenceMapPromise,
+    preferenceEntriesPromise,
+  ]);
+
   const enriched = await enrichParsedWines({
     wines: normalizeParsedWines(parsed),
     userId: params.userId ?? null,
     userSupabase: params.userSupabase ?? null,
+    preloadedInferenceMap,
+    preloadedPreferenceEntries,
   });
   const warnings = [...(parsed.warnings ?? []), ...enriched.warnings]
     .map((warning) => normalizeText(warning))
