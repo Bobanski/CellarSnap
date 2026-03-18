@@ -20,6 +20,7 @@ import {
   getListScanVarietalAccentTone,
   getListScanSectionTitle,
   getTopListScanRecommendations,
+  sortListScanWines,
   listScanWineTypeLabels,
   LIST_SCAN_FILTERABLE_WINE_TYPES,
   resolveListScanWineType,
@@ -27,6 +28,7 @@ import {
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
+  type ListScanSortMode,
   type ListScanWineType,
 } from "@shared";
 import FacetMultiSelect from "@/features/listScan/FacetMultiSelect";
@@ -321,6 +323,7 @@ export default function ListScanResultsScreen() {
   const [varietalOpen, setVarietalOpen] = useState(false);
   const [regionOpen, setRegionOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
 
   useEffect(() => {
     let isActive = true;
@@ -394,8 +397,11 @@ export default function ListScanResultsScreen() {
   }, [scanId]);
 
   const filteredWines = useMemo(
-    () => (result ? filterListScanWines(result.wines, filters) : []),
-    [filters, result]
+    () =>
+      result
+        ? sortListScanWines(filterListScanWines(result.wines, filters), sortMode)
+        : [],
+    [filters, result, sortMode]
   );
   const topRecommendations = useMemo(
     () => getTopListScanRecommendations(filteredWines, 3),
@@ -873,16 +879,45 @@ export default function ListScanResultsScreen() {
         </section>
 
         <section className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-              Full list
-            </p>
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              Filtered wines in uploaded list order
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
-              {filteredWines.length} of {result.wines.length} shown
-            </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                Full list
+              </p>
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
+                {sortMode === "match"
+                  ? "Filtered wines by best match"
+                  : "Filtered wines in list order"}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
+                {filteredWines.length} of {result.wines.length} shown
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-black/25 p-1">
+              {(
+                [
+                  { value: "list_order", label: "List Order" },
+                  { value: "match", label: "Best Match" },
+                ] as const
+              ).map((option) => {
+                const active = sortMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSortMode(option.value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      active
+                        ? "bg-white/12 text-[var(--color-text-primary)] shadow-sm"
+                        : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[#120f0e]">

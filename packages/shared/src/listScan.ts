@@ -27,6 +27,7 @@ export const LIST_SCAN_ROSE_ACCENT_HEX = "#C76886";
 export const LIST_SCAN_ORANGE_ACCENT_HEX = "#D17A2A";
 export const LIST_SCAN_RED_ACCENT_HEX = "#4A3060";
 export const LIST_SCAN_SCORE_MODES = ["personalized", "stub"] as const;
+export const LIST_SCAN_SORT_MODES = ["list_order", "match"] as const;
 
 export type ListScanSourceType = (typeof LIST_SCAN_SOURCE_TYPES)[number];
 export type ListScanWineType = (typeof LIST_SCAN_ALL_WINE_TYPES)[number];
@@ -36,6 +37,7 @@ export type ListScanPriceMode = (typeof LIST_SCAN_PRICE_MODES)[number];
 export type ListScanFilterAccentTone =
   (typeof LIST_SCAN_FILTER_ACCENT_TONES)[number];
 export type ListScanScoreMode = (typeof LIST_SCAN_SCORE_MODES)[number];
+export type ListScanSortMode = (typeof LIST_SCAN_SORT_MODES)[number];
 
 export const listScanWineTypeLabels: Record<ListScanWineType, string> = {
   sparkling: "Sparkling",
@@ -553,6 +555,16 @@ export function rankListScanWines(wines: ListScanParsedWine[]) {
     }
     return left.source_order - right.source_order;
   });
+}
+
+export function sortListScanWines(
+  wines: ListScanParsedWine[],
+  mode: ListScanSortMode
+) {
+  if (mode === "match") {
+    return rankListScanWines(wines);
+  }
+  return [...wines].sort((left, right) => left.source_order - right.source_order);
 }
 
 export function getTopListScanRecommendations(
