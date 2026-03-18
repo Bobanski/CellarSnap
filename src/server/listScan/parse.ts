@@ -2291,6 +2291,46 @@ async function extractTextFromPdfFile(file: File) {
   }
 }
 
+/**
+ * Normalize text extracted from a PDF before feeding into section extraction
+ * and heuristic parsing. Handles PDF-specific patterns that differ from
+ * HTML/OCR text: page markers, spaced-out headings, etc.
+ */
+function normalizePdfExtractedText(text: string): string {
+  const lines = text.split("\n");
+  const result: string[] = [];
+
+  for (const rawLine of lines) {
+    // Remove page markers like "-- 32 of 43 --"
+    if (/^--\s*\d+\s+of\s+\d+\s*--$/.test(rawLine.trim())) {
+      continue;
+    }
+
+    // Collapse spaced-out characters: "C A B E R N E T" → "CABERNET"
+    // Detect lines where most word-tokens are single uppercase letters
+    // separated by spaces (e.g. "C A B E R N E T & B O R D E A U X")
+    let line = rawLine;
+    const spacedMatch = line.match(
+      /(?:^|[\t])([A-Z] (?:[A-Z] )*[A-Z](?:\s*[&/\-,]\s*[A-Z] (?:[A-Z] )*[A-Z])*)/
+    );
+    if (spacedMatch) {
+      const collapsed = spacedMatch[1]!.replace(
+        /([A-Z]) (?=[A-Z](?:\s|$|[&/\-,]))/g,
+        "$1"
+      );
+      line = line.replace(spacedMatch[1]!, collapsed);
+    }
+
+    result.push(line);
+  }
+
+  const normalized = result.join("\n");
+  console.log(
+    `[ListScan PDF] normalizePdfExtractedText: ${text.length} → ${normalized.length} chars, ${text.split("\n").length - result.length} lines removed`
+  );
+  return normalized;
+}
+
 async function parsePdfTextSource({
   file,
   sourceLabel,
@@ -2300,16 +2340,23 @@ async function parsePdfTextSource({
   userId: string;
 }) {
   const tExtract0 = Date.now();
-  const extractedText = await extractTextFromPdfFile(file);
+  const rawExtractedText = await extractTextFromPdfFile(file);
   const extractMs = Date.now() - tExtract0;
   console.log(
-    `[ListScan PDF] Text extraction: ${extractMs}ms, ${extractedText.length} chars`
+    `[ListScan PDF] Text extraction: ${extractMs}ms, ${rawExtractedText.length} chars`
   );
   console.log(
-    `[ListScan PDF] Text preview: ${extractedText.substring(0, 500)}`
+    `[ListScan PDF] Text preview: ${rawExtractedText.substring(0, 500)}`
   );
 
-  const focusedText = extractStrictWineSectionText(extractedText) || extractedText;
+  // Normalize PDF-specific patterns (page markers, spaced-out headings)
+  // BEFORE section extraction so heading detection works correctly.
+  const extractedText = normalizePdfExtractedText(rawExtractedText);
+
+  // PDF text path feeds ONLY into the heuristic regex parser (no API call),
+  // so we pass Infinity to avoid the truncation limits designed for OpenAI input.
+  const focusedText =
+    extractStrictWineSectionText(extractedText, Infinity) || extractedText;
   const title = normalizeText(sourceLabel) ?? normalizeText(file.name);
 
   // Fast path: parse directly from extracted PDF text — no API call needed.
@@ -2338,7 +2385,8 @@ async function parsePdfTextSource({
   }
 
   // Try compacted text if section-aware parse found nothing.
-  const compactedText = compactWineSectionTextForModel(focusedText);
+  // Pass Infinity for PDF — no API token limit to respect.
+  const compactedText = compactWineSectionTextForModel(focusedText, Infinity);
   if (compactedText.trim()) {
     const compactedHeuristic = buildHeuristicParsedResponse({
       text: compactedText,
@@ -2533,7 +2581,10 @@ function stripHtmlToText(html: string) {
 
 // Legacy fallback kept temporarily while the stricter extractor bakes in.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function extractLikelyWineSectionText(text: string) {
+function extractLikelyWineSectionText(
+  text: string,
+  maxChars: number = MAX_FETCHED_TEXT_CHARS
+) {
   const lines = text
     .split("\n")
     .map((line) => normalizeText(line))
@@ -2564,10 +2615,13 @@ function extractLikelyWineSectionText(text: string) {
     endIndex = lines.length;
   }
 
-  return lines.slice(startIndex, endIndex).join("\n").slice(0, MAX_FETCHED_TEXT_CHARS);
+  return lines.slice(startIndex, endIndex).join("\n").slice(0, maxChars);
 }
 
-function extractStrictWineSectionText(text: string) {
+function extractStrictWineSectionText(
+  text: string,
+  maxChars: number = MAX_FETCHED_TEXT_CHARS
+) {
   const lines = text
     .split("\n")
     .map((line) => normalizeText(line))
@@ -2606,14 +2660,17 @@ function extractStrictWineSectionText(text: string) {
     collected.push(line);
   }
 
-  return collected.join("\n").slice(0, MAX_FETCHED_TEXT_CHARS);
+  return collected.join("\n").slice(0, maxChars);
 }
 
 function cleanListLine(line: string) {
   return line.replace(/^[*•\-]+\s*/, "").replace(/\s+/g, " ").trim();
 }
 
-function compactWineSectionTextForModel(text: string) {
+function compactWineSectionTextForModel(
+  text: string,
+  maxChars: number = MAX_URL_MODEL_INPUT_CHARS
+) {
   const lines = text
     .split("\n")
     .map((line) => cleanListLine(line))
@@ -2658,7 +2715,7 @@ function compactWineSectionTextForModel(text: string) {
     }
   }
 
-  return compacted.join("\n").slice(0, MAX_URL_MODEL_INPUT_CHARS);
+  return compacted.join("\n").slice(0, maxChars);
 }
 
 function withWarning(parsed: ParsedResponse, warning: string): ParsedResponse {
@@ -2795,11 +2852,18 @@ function buildHeuristicParsedResponse(params: {
     // OCR text won't have ## prefixes, so we also match lines like
     // "WHITE WINE", "Red Wine", "SPARKLING", "DRAFT BEER", etc.
     const isMarkdownHeading = /^##\s*/.test(line);
-    const isOcrHeading =
+    const isAllCapsHeadingLike =
       !isMarkdownHeading &&
-      line.length < 40 &&
       !pricePatternQuick.test(line) &&
-      /^[A-Z][A-Z\s&/\-]+$/.test(line);
+      /^[A-Z][A-Z\s&/\-,]+$/.test(line);
+    // Standard short heading (< 40 chars) OR longer all-caps line that
+    // matches a known wine section pattern — PDF text often produces
+    // headings longer than 40 chars after spaced-char normalization.
+    const isOcrHeading =
+      isAllCapsHeadingLike &&
+      (line.length < 40 ||
+        WINE_SECTION_HEADING_PATTERN.test(`## ${line}`) ||
+        NON_WINE_SECTION_HEADING_PATTERN.test(`## ${line}`));
     const headingText = isMarkdownHeading
       ? line
       : isOcrHeading
@@ -2837,7 +2901,10 @@ function buildHeuristicParsedResponse(params: {
       ) ??
       line.match(/\$\s*\d+(?:\.\d{1,2})?/) ??
       (inWineSection
-        ? // Dot-leader + number: ".... 16" or ".......18"
+        ? // Tab-separated bare price (common in PDF text):
+          // "PRODUCER NAME\t2019\t479" or "SECOND GROWTH\t2008\t759"
+          line.match(/\t(\d{2,5})\s*$/) ??
+          // Dot-leader + number: ".... 16" or ".......18"
           line.match(/\.{2,}\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
           // Wine name followed by 2+ spaces then number: "Chardonnay  18"
           line.match(/\s{2,}(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
