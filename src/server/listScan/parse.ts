@@ -2078,7 +2078,10 @@ async function parseImageSource({
       detail: "high" as const,
     })),
   });
-  console.log(`[ListScan Image] OpenAI Vision completed: ${Date.now() - tOpenAi0}ms, ${openAiResult.wines.length} wines`);
+  _imageDiag.openAiMs = Date.now() - tOpenAi0;
+  _imageDiag.openAiWineCount = openAiResult.wines.length;
+  console.log(`[ListScan Image] OpenAI Vision completed: ${_imageDiag.openAiMs}ms, ${openAiResult.wines.length} wines`);
+  (openAiResult as Record<string, unknown>)._imageDiag = _imageDiag;
   return openAiResult;
 }
 
@@ -2519,6 +2522,7 @@ function buildHeuristicParsedResponse(params: {
   let currentType: ListScanWineType = "unknown";
   let inWineSection = false;
   let buffer: string[] = [];
+  const pricePatternQuick = /\$\s*\d+/;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -2526,16 +2530,41 @@ function buildHeuristicParsedResponse(params: {
       continue;
     }
 
-    if (/^##\s*/.test(line)) {
-      if (NON_WINE_SECTION_HEADING_PATTERN.test(line)) {
+    // Detect section headings: markdown ## headings (from URL scans) OR
+    // plain-text all-caps / title-case short headings (from OCR image scans).
+    // OCR text won't have ## prefixes, so we also match lines like
+    // "WHITE WINE", "Red Wine", "SPARKLING", "DRAFT BEER", etc.
+    const isMarkdownHeading = /^##\s*/.test(line);
+    const isOcrHeading =
+      !isMarkdownHeading &&
+      line.length < 40 &&
+      !pricePatternQuick.test(line) &&
+      /^[A-Z][A-Z\s&/\-]+$/.test(line);
+    const headingText = isMarkdownHeading
+      ? line
+      : isOcrHeading
+        ? `## ${line}`
+        : null;
+
+    if (headingText) {
+      if (NON_WINE_SECTION_HEADING_PATTERN.test(headingText)) {
         inWineSection = false;
         buffer = [];
         continue;
       }
-      inWineSection = true;
-      currentType = detectWineTypeFromSignals(line, currentType);
-      buffer = [];
-      continue;
+      if (WINE_SECTION_HEADING_PATTERN.test(headingText) || isMarkdownHeading) {
+        inWineSection = true;
+        currentType = detectWineTypeFromSignals(headingText, currentType);
+        buffer = [];
+        continue;
+      }
+      // Unknown all-caps heading (e.g. "DRAFT BEER" matched above, but
+      // "APPETIZERS" didn't match wine heading) — exit wine section.
+      if (isOcrHeading) {
+        inWineSection = false;
+        buffer = [];
+        continue;
+      }
     }
 
     const priceMatch =
