@@ -2299,18 +2299,41 @@ async function parsePdfTextSource({
   sourceLabel: string | null;
   userId: string;
 }) {
+  const tExtract0 = Date.now();
   const extractedText = await extractTextFromPdfFile(file);
+  const extractMs = Date.now() - tExtract0;
+  console.log(
+    `[ListScan PDF] Text extraction: ${extractMs}ms, ${extractedText.length} chars`
+  );
+  console.log(
+    `[ListScan PDF] Text preview: ${extractedText.substring(0, 500)}`
+  );
+
   const focusedText = extractStrictWineSectionText(extractedText) || extractedText;
   const title = normalizeText(sourceLabel) ?? normalizeText(file.name);
 
   // Fast path: parse directly from extracted PDF text — no API call needed.
+  const tHeuristic0 = Date.now();
   const heuristic = buildHeuristicParsedResponse({
     text: focusedText,
     title,
     fallbackWarning: "",
   });
+  const heuristicMs = Date.now() - tHeuristic0;
+  console.log(
+    `[ListScan PDF] Heuristic parse (section text): ${heuristicMs}ms, ${heuristic.wines.length} wines from ${focusedText.length} chars`
+  );
 
   if (heuristic.wines.length > 0) {
+    // Attach PDF diagnostics to the result
+    (heuristic as Record<string, unknown>)._pdfDiag = {
+      extractMs,
+      textLength: extractedText.length,
+      focusedTextLength: focusedText.length,
+      heuristicMs,
+      wineCount: heuristic.wines.length,
+      path: "pdf_text_heuristic",
+    };
     return heuristic;
   }
 
@@ -2322,11 +2345,45 @@ async function parsePdfTextSource({
       title,
       fallbackWarning: "",
     });
+    console.log(
+      `[ListScan PDF] Compacted heuristic: ${compactedHeuristic.wines.length} wines`
+    );
     if (compactedHeuristic.wines.length > 0) {
+      (compactedHeuristic as Record<string, unknown>)._pdfDiag = {
+        extractMs,
+        textLength: extractedText.length,
+        compactedTextLength: compactedText.length,
+        wineCount: compactedHeuristic.wines.length,
+        path: "pdf_text_compacted_heuristic",
+      };
       return compactedHeuristic;
     }
   }
 
+  // Try full raw text as last resort before giving up on text path.
+  if (focusedText !== extractedText) {
+    const fullHeuristic = buildHeuristicParsedResponse({
+      text: extractedText,
+      title,
+      fallbackWarning: "",
+    });
+    console.log(
+      `[ListScan PDF] Full text heuristic: ${fullHeuristic.wines.length} wines`
+    );
+    if (fullHeuristic.wines.length > 0) {
+      (fullHeuristic as Record<string, unknown>)._pdfDiag = {
+        extractMs,
+        textLength: extractedText.length,
+        wineCount: fullHeuristic.wines.length,
+        path: "pdf_text_full_heuristic",
+      };
+      return fullHeuristic;
+    }
+  }
+
+  console.log(
+    `[ListScan PDF] ⚠️ Text path found 0 wines — will fall through to OpenAI visual`
+  );
   throw new Error("That PDF did not contain readable wine-list text.");
 
   // ──────────────────────────────────────────────────────────────────────
@@ -2364,15 +2421,23 @@ async function parsePdfSource({
   }
 
   try {
-    return await parsePdfTextSource({
+    const tText0 = Date.now();
+    const result = await parsePdfTextSource({
       file,
       sourceLabel,
       userId,
     });
-  } catch {
-    // Fall back to the visual parser for image-like PDFs or extraction failures.
+    console.log(
+      `[ListScan PDF] ✅ Text path succeeded in ${Date.now() - tText0}ms`
+    );
+    return result;
+  } catch (textError) {
+    console.log(
+      `[ListScan PDF] ⚠️ Text path failed: ${textError instanceof Error ? textError.message : String(textError)}, falling back to OpenAI visual`
+    );
   }
 
+  console.log(`[ListScan PDF] 🐌 Using slow OpenAI visual fallback...`);
   const buffer = Buffer.from(await file.arrayBuffer());
   const sourceHint = "a PDF wine list";
   const resolvedSourceLabel = sourceLabel ?? file.name;
