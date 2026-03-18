@@ -2127,40 +2127,40 @@ async function parseImageSource({
   };
 
   // ──────────────────────────────────────────────────────────────────────
-  // PRIMARY PATH: Gemini Flash 2.5 — direct image → structured wine JSON.
-  // Skips OCR + regex entirely. ~1-3 seconds, ~$0.04 per scan.
-  // Falls through gracefully if GEMINI_API_KEY is not configured.
+  // PRIMARY PATH: Gemini Flash — direct image → structured wine JSON.
+  // TEMPORARILY DISABLED for A/B testing Cloud Vision + heuristic path.
+  // Uncomment to re-enable Gemini as primary.
   // ──────────────────────────────────────────────────────────────────────
-  try {
-    const tGemini0 = Date.now();
-    const geminiResult = await parseImageViaGeminiFlash(files, title);
-    _imageDiag.geminiMs = Date.now() - tGemini0;
-    if (geminiResult && geminiResult.wines.length > 0) {
-      _imageDiag.path = "gemini_flash";
-      _imageDiag.geminiWineCount = geminiResult.wines.length;
-      console.log(
-        `[ListScan Image] Gemini Flash: ${_imageDiag.geminiMs}ms, ${geminiResult.wines.length} wines`
-      );
-      (geminiResult as Record<string, unknown>)._imageDiag = _imageDiag;
-      return geminiResult;
-    }
-    if (geminiResult) {
-      _imageDiag.geminiWineCount = 0;
-      console.log(
-        `[ListScan Image] Gemini Flash returned 0 wines (${_imageDiag.geminiMs}ms), trying Cloud Vision + heuristic`
-      );
-    } else {
-      console.log(
-        `[ListScan Image] Gemini Flash unavailable, trying Cloud Vision + heuristic`
-      );
-    }
-  } catch (geminiError) {
-    _imageDiag.geminiError =
-      geminiError instanceof Error ? geminiError.message : String(geminiError);
-    console.log(
-      `[ListScan Image] Gemini Flash failed: ${_imageDiag.geminiError}, trying Cloud Vision + heuristic`
-    );
-  }
+  // try {
+  //   const tGemini0 = Date.now();
+  //   const geminiResult = await parseImageViaGeminiFlash(files, title);
+  //   _imageDiag.geminiMs = Date.now() - tGemini0;
+  //   if (geminiResult && geminiResult.wines.length > 0) {
+  //     _imageDiag.path = "gemini_flash";
+  //     _imageDiag.geminiWineCount = geminiResult.wines.length;
+  //     console.log(
+  //       `[ListScan Image] Gemini Flash: ${_imageDiag.geminiMs}ms, ${geminiResult.wines.length} wines`
+  //     );
+  //     (geminiResult as Record<string, unknown>)._imageDiag = _imageDiag;
+  //     return geminiResult;
+  //   }
+  //   if (geminiResult) {
+  //     _imageDiag.geminiWineCount = 0;
+  //     console.log(
+  //       `[ListScan Image] Gemini Flash returned 0 wines (${_imageDiag.geminiMs}ms), trying Cloud Vision + heuristic`
+  //     );
+  //   } else {
+  //     console.log(
+  //       `[ListScan Image] Gemini Flash unavailable, trying Cloud Vision + heuristic`
+  //     );
+  //   }
+  // } catch (geminiError) {
+  //   _imageDiag.geminiError =
+  //     geminiError instanceof Error ? geminiError.message : String(geminiError);
+  //   console.log(
+  //     `[ListScan Image] Gemini Flash failed: ${_imageDiag.geminiError}, trying Cloud Vision + heuristic`
+  //   );
+  // }
 
   // ──────────────────────────────────────────────────────────────────────
   // FALLBACK 1: Cloud Vision OCR → heuristic regex parse.
