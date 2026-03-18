@@ -1963,8 +1963,11 @@ async function parseImageSource({
   // Fast path: Google Cloud Vision OCR → heuristic parse (no OpenAI call).
   // This typically completes in 1-3 seconds vs 10-20 seconds with OpenAI.
   try {
+    const tOcr0 = Date.now();
     const ocrText = await extractTextFromImagesViaCloudVision(files);
+    console.log(`[ListScan Image] Cloud Vision OCR: ${Date.now() - tOcr0}ms, ${ocrText.length} chars`);
     if (ocrText.trim()) {
+      const tHeuristic0 = Date.now();
       const wineSectionText =
         extractStrictWineSectionText(ocrText) || ocrText;
       const heuristic = buildHeuristicParsedResponse({
@@ -1972,6 +1975,7 @@ async function parseImageSource({
         title,
         fallbackWarning: "",
       });
+      console.log(`[ListScan Image] Heuristic parse: ${Date.now() - tHeuristic0}ms, ${heuristic.wines.length} wines from section text`);
       if (heuristic.wines.length > 0) {
         return heuristic;
       }
@@ -1982,11 +1986,13 @@ async function parseImageSource({
         title,
         fallbackWarning: "",
       });
+      console.log(`[ListScan Image] Full text heuristic: ${fullHeuristic.wines.length} wines`);
       if (fullHeuristic.wines.length > 0) {
         return fullHeuristic;
       }
     }
-  } catch {
+  } catch (ocrError) {
+    console.log(`[ListScan Image] Cloud Vision failed: ${ocrError instanceof Error ? ocrError.message : "unknown"}, falling back to OpenAI`);
     // Cloud Vision unavailable — fall through to OpenAI vision path.
   }
 
@@ -1994,6 +2000,8 @@ async function parseImageSource({
   // OpenAI Vision fallback (kept as backup for when Cloud Vision is
   // unavailable or OCR quality is insufficient, e.g. handwritten lists)
   // ──────────────────────────────────────────────────────────────────────
+  console.log(`[ListScan Image] ⚠️ Falling back to OpenAI Vision (this will be slow ~20-40s)`);
+  const tOpenAi0 = Date.now();
   const preparedImages: string[] = [];
   for (const file of files) {
     try {
@@ -2033,7 +2041,7 @@ async function parseImageSource({
       ? "If multiple images are provided, treat them as consecutive pages of the same list and merge them into one response without duplicating wines."
       : "Treat the photo as a wine list page and preserve the visible row order.";
 
-  return parseUploadedSourceFromVisualBlocks({
+  const openAiResult = await parseUploadedSourceFromVisualBlocks({
     sourceHint,
     sourceLabel: resolvedSourceLabel,
     continuityInstruction,
@@ -2044,6 +2052,8 @@ async function parseImageSource({
       detail: "high" as const,
     })),
   });
+  console.log(`[ListScan Image] OpenAI Vision completed: ${Date.now() - tOpenAi0}ms, ${openAiResult.wines.length} wines`);
+  return openAiResult;
 }
 
 async function extractTextFromPdfFile(file: File) {
@@ -2712,6 +2722,9 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
 export async function parseWineListSource(
   params: ParseSourceParams
 ): Promise<ListScanResult> {
+  const t0 = Date.now();
+  const timing: Record<string, number> = {};
+
   // Pre-warm: kick off inference map + user preference loading in parallel
   // with the parse step so they're ready by the time we need them for scoring.
   const inferenceMapPromise = loadInferenceMap().catch(() => null);
@@ -2722,6 +2735,7 @@ export async function parseWineListSource(
         )
       : Promise.resolve(null);
 
+  const tParse0 = Date.now();
   const parsed =
     params.sourceType === "url"
       ? await parseUrlSource({ url: params.url, userId: params.requesterId })
@@ -2736,13 +2750,17 @@ export async function parseWineListSource(
             sourceLabel: params.sourceLabel,
             userId: params.requesterId,
           });
+  timing.parse_ms = Date.now() - tParse0;
 
   // Await pre-warmed data (should already be resolved or nearly so).
+  const tPreWarm0 = Date.now();
   const [preloadedInferenceMap, preloadedPreferenceEntries] = await Promise.all([
     inferenceMapPromise,
     preferenceEntriesPromise,
   ]);
+  timing.prewarm_await_ms = Date.now() - tPreWarm0;
 
+  const tEnrich0 = Date.now();
   const enriched = await enrichParsedWines({
     wines: normalizeParsedWines(parsed),
     userId: params.userId ?? null,
@@ -2750,10 +2768,18 @@ export async function parseWineListSource(
     preloadedInferenceMap,
     preloadedPreferenceEntries,
   });
+  timing.enrich_ms = Date.now() - tEnrich0;
+
   const warnings = [...(parsed.warnings ?? []), ...enriched.warnings]
     .map((warning) => normalizeText(warning))
     .filter((warning): warning is string => Boolean(warning));
   const facets = deriveListScanFacets(enriched.wines);
+
+  timing.total_ms = Date.now() - t0;
+
+  console.log(
+    `[ListScan Timing] source=${params.sourceType} | parse=${timing.parse_ms}ms | prewarm=${timing.prewarm_await_ms}ms | enrich=${timing.enrich_ms}ms | total=${timing.total_ms}ms | wines=${enriched.wines.length}`
+  );
 
   return {
     scan_id: createListScanId(),
@@ -2771,7 +2797,8 @@ export async function parseWineListSource(
     facets,
     wines: enriched.wines,
     scanned_at: new Date().toISOString(),
-  };
+    _timing: timing,
+  } as ListScanResult;
 }
 
 export const __listScanTestUtils = {
