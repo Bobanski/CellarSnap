@@ -1960,23 +1960,40 @@ async function parseImageSource({
 
   const title = normalizeText(sourceLabel) ?? files[0]?.name ?? "wine-list-image";
 
+  // Diagnostic breadcrumbs — surfaced in _timing so we can debug Vercel.
+  const _imageDiag: Record<string, unknown> = {
+    fileCount: files.length,
+    fileSizes: files.map((f) => f.size),
+    fileTypes: files.map((f) => f.type),
+  };
+
   // Fast path: Google Cloud Vision OCR → heuristic parse (no OpenAI call).
   // This typically completes in 1-3 seconds vs 10-20 seconds with OpenAI.
   try {
     const tOcr0 = Date.now();
     const ocrText = await extractTextFromImagesViaCloudVision(files);
-    console.log(`[ListScan Image] Cloud Vision OCR: ${Date.now() - tOcr0}ms, ${ocrText.length} chars`);
+    _imageDiag.cloudVisionMs = Date.now() - tOcr0;
+    _imageDiag.ocrTextLength = ocrText.length;
+    _imageDiag.ocrTextPreview = ocrText.substring(0, 300);
+    console.log(`[ListScan Image] Cloud Vision OCR: ${_imageDiag.cloudVisionMs}ms, ${ocrText.length} chars`);
     if (ocrText.trim()) {
       const tHeuristic0 = Date.now();
       const wineSectionText =
         extractStrictWineSectionText(ocrText) || ocrText;
+      _imageDiag.sectionTextLength = wineSectionText.length;
+      _imageDiag.usedSectionExtraction = wineSectionText !== ocrText;
       const heuristic = buildHeuristicParsedResponse({
         text: wineSectionText,
         title,
         fallbackWarning: "",
       });
-      console.log(`[ListScan Image] Heuristic parse: ${Date.now() - tHeuristic0}ms, ${heuristic.wines.length} wines from section text`);
+      _imageDiag.heuristicMs = Date.now() - tHeuristic0;
+      _imageDiag.heuristicWineCount = heuristic.wines.length;
+      console.log(`[ListScan Image] Heuristic parse: ${_imageDiag.heuristicMs}ms, ${heuristic.wines.length} wines from section text`);
       if (heuristic.wines.length > 0) {
+        _imageDiag.path = "cloud_vision_heuristic";
+        // Attach diagnostics so they appear in _timing
+        (heuristic as Record<string, unknown>)._imageDiag = _imageDiag;
         return heuristic;
       }
 
@@ -1986,13 +2003,21 @@ async function parseImageSource({
         title,
         fallbackWarning: "",
       });
+      _imageDiag.fullHeuristicWineCount = fullHeuristic.wines.length;
       console.log(`[ListScan Image] Full text heuristic: ${fullHeuristic.wines.length} wines`);
       if (fullHeuristic.wines.length > 0) {
+        _imageDiag.path = "cloud_vision_full_text_heuristic";
+        (fullHeuristic as Record<string, unknown>)._imageDiag = _imageDiag;
         return fullHeuristic;
       }
+      _imageDiag.fallbackReason = "heuristic_found_0_wines";
+    } else {
+      _imageDiag.fallbackReason = "ocr_returned_empty";
     }
   } catch (ocrError) {
-    console.log(`[ListScan Image] Cloud Vision failed: ${ocrError instanceof Error ? ocrError.message : "unknown"}, falling back to OpenAI`);
+    _imageDiag.fallbackReason = "cloud_vision_error";
+    _imageDiag.errorMessage = ocrError instanceof Error ? ocrError.message : String(ocrError);
+    console.log(`[ListScan Image] Cloud Vision failed: ${_imageDiag.errorMessage}, falling back to OpenAI`);
     // Cloud Vision unavailable — fall through to OpenAI vision path.
   }
 
@@ -2000,7 +2025,8 @@ async function parseImageSource({
   // OpenAI Vision fallback (kept as backup for when Cloud Vision is
   // unavailable or OCR quality is insufficient, e.g. handwritten lists)
   // ──────────────────────────────────────────────────────────────────────
-  console.log(`[ListScan Image] ⚠️ Falling back to OpenAI Vision (this will be slow ~20-40s)`);
+  _imageDiag.path = "openai_vision_fallback";
+  console.log(`[ListScan Image] ⚠️ Falling back to OpenAI Vision: ${JSON.stringify(_imageDiag)}`);
   const tOpenAi0 = Date.now();
   const preparedImages: string[] = [];
   for (const file of files) {
@@ -2776,6 +2802,12 @@ export async function parseWineListSource(
   const facets = deriveListScanFacets(enriched.wines);
 
   timing.total_ms = Date.now() - t0;
+
+  // Pull _imageDiag from the parsed response if it was attached by parseImageSource.
+  const imageDiag = (parsed as Record<string, unknown>)?._imageDiag ?? null;
+  if (imageDiag) {
+    timing._imageDiag = imageDiag as number; // smuggle through as any
+  }
 
   console.log(
     `[ListScan Timing] source=${params.sourceType} | parse=${timing.parse_ms}ms | prewarm=${timing.prewarm_await_ms}ms | enrich=${timing.enrich_ms}ms | total=${timing.total_ms}ms | wines=${enriched.wines.length}`
