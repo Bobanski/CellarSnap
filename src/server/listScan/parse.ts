@@ -1861,6 +1861,154 @@ async function parseUploadedSourceFromVisualBlocks(params: {
   });
 }
 
+// ─── Gemini Flash — Direct Image → Structured Wine JSON ───────────────────
+// Sends the wine list image directly to Gemini Flash 2.5 and gets back
+// structured wine data. Skips OCR + regex entirely — the model reads the
+// image and returns clean JSON. Typically ~1-3 seconds, ~$0.04 per scan.
+// Requires GEMINI_API_KEY env var.
+// ────────────────────────────────────────────────────────────────────────────
+
+async function parseImageViaGeminiFlash(
+  files: File[],
+  sourceLabel: string | null
+): Promise<ParsedResponse | null> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    return null; // Gemini not configured — fall through to other methods
+  }
+
+  const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> =
+    [];
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    imageParts.push({
+      inlineData: {
+        mimeType: file.type || "image/jpeg",
+        data: buffer.toString("base64"),
+      },
+    });
+  }
+
+  const prompt = `You are a wine list parser. Analyze this photo of a wine list/menu and extract every wine entry into structured JSON.
+
+For each wine, extract:
+- menu_label: The full display text (producer + wine name + region as shown on the menu)
+- producer: The wine producer/winery name
+- wine_name: The specific wine name (e.g. "Blanc de Blancs", "El Llano Cabernet Sauvignon")
+- vintage: Year if shown (as string like "2021"), or null
+- wine_type: One of "sparkling", "white", "rose", "red", "dessert_fortified", "orange", or "unknown"
+- price_display: Price as shown (e.g. "$16" or "$18/$72") — add $ if not shown
+- price_value: Numeric price (glass price if multiple prices shown)
+- varietals: Array of grape varieties if identifiable from the name (e.g. ["Cabernet Sauvignon"])
+- regions: Array of regions mentioned (e.g. ["Napa Valley", "California"])
+- confidence: Your confidence in this extraction (0.0 to 1.0)
+
+IMPORTANT:
+- Extract ONLY wine entries. Skip beer, cocktails, spirits, food items.
+- Each wine on the menu should be a SEPARATE entry — never merge two wines.
+- Use the section headings (e.g. "WHITE WINE", "RED") to determine wine_type.
+- If a price is just a number without $, still include it.
+- Preserve the order wines appear on the menu.
+
+Return valid JSON matching this exact schema:
+{
+  "venue_name": string | null,
+  "list_title": string | null,
+  "overall_confidence": number (0-1),
+  "wines": [ ...array of wine objects as described above... ]
+}
+
+Return ONLY the JSON object, no markdown fences or extra text.`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                ...imageParts,
+                { text: prompt },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+          },
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      console.log(
+        `[ListScan Image] Gemini Flash returned ${response.status}: ${errText.substring(0, 200)}`
+      );
+      return null;
+    }
+
+    const data = (await response.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+      }>;
+      error?: { message?: string };
+    };
+
+    if (data.error) {
+      console.log(
+        `[ListScan Image] Gemini Flash error: ${data.error.message}`
+      );
+      return null;
+    }
+
+    const rawText =
+      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+    if (!rawText) {
+      console.log("[ListScan Image] Gemini Flash returned empty response");
+      return null;
+    }
+
+    // Strip markdown fences if present (despite instruction, models sometimes add them)
+    const jsonText = rawText
+      .replace(/^```(?:json)?\s*\n?/i, "")
+      .replace(/\n?```\s*$/i, "")
+      .trim();
+
+    const parsed = JSON.parse(jsonText);
+    const validated = responseSchema.safeParse(parsed);
+
+    if (!validated.success) {
+      console.log(
+        `[ListScan Image] Gemini Flash response failed validation: ${validated.error.message.substring(0, 200)}`
+      );
+      return null;
+    }
+
+    return validated.data;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.log("[ListScan Image] Gemini Flash returned invalid JSON");
+    } else {
+      console.log(
+        `[ListScan Image] Gemini Flash error: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ─── Google Cloud Vision OCR ────────────────────────────────────────────────
 // Extracts text from one or more image files using the Google Cloud Vision API.
 // Returns the concatenated text from all images in order.
@@ -1967,8 +2115,46 @@ async function parseImageSource({
     fileTypes: files.map((f) => f.type),
   };
 
-  // Fast path: Google Cloud Vision OCR → heuristic parse (no OpenAI call).
-  // This typically completes in 1-3 seconds vs 10-20 seconds with OpenAI.
+  // ──────────────────────────────────────────────────────────────────────
+  // PRIMARY PATH: Gemini Flash 2.5 — direct image → structured wine JSON.
+  // Skips OCR + regex entirely. ~1-3 seconds, ~$0.04 per scan.
+  // Falls through gracefully if GEMINI_API_KEY is not configured.
+  // ──────────────────────────────────────────────────────────────────────
+  try {
+    const tGemini0 = Date.now();
+    const geminiResult = await parseImageViaGeminiFlash(files, title);
+    _imageDiag.geminiMs = Date.now() - tGemini0;
+    if (geminiResult && geminiResult.wines.length > 0) {
+      _imageDiag.path = "gemini_flash";
+      _imageDiag.geminiWineCount = geminiResult.wines.length;
+      console.log(
+        `[ListScan Image] Gemini Flash: ${_imageDiag.geminiMs}ms, ${geminiResult.wines.length} wines`
+      );
+      (geminiResult as Record<string, unknown>)._imageDiag = _imageDiag;
+      return geminiResult;
+    }
+    if (geminiResult) {
+      _imageDiag.geminiWineCount = 0;
+      console.log(
+        `[ListScan Image] Gemini Flash returned 0 wines (${_imageDiag.geminiMs}ms), trying Cloud Vision + heuristic`
+      );
+    } else {
+      console.log(
+        `[ListScan Image] Gemini Flash unavailable, trying Cloud Vision + heuristic`
+      );
+    }
+  } catch (geminiError) {
+    _imageDiag.geminiError =
+      geminiError instanceof Error ? geminiError.message : String(geminiError);
+    console.log(
+      `[ListScan Image] Gemini Flash failed: ${_imageDiag.geminiError}, trying Cloud Vision + heuristic`
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // FALLBACK 1: Cloud Vision OCR → heuristic regex parse.
+  // Used when Gemini Flash is not configured or fails.
+  // ──────────────────────────────────────────────────────────────────────
   try {
     const tOcr0 = Date.now();
     const ocrText = await extractTextFromImagesViaCloudVision(files);
@@ -1992,7 +2178,6 @@ async function parseImageSource({
       console.log(`[ListScan Image] Heuristic parse: ${_imageDiag.heuristicMs}ms, ${heuristic.wines.length} wines from section text`);
       if (heuristic.wines.length > 0) {
         _imageDiag.path = "cloud_vision_heuristic";
-        // Attach diagnostics so they appear in _timing
         (heuristic as Record<string, unknown>)._imageDiag = _imageDiag;
         return heuristic;
       }
@@ -2018,7 +2203,6 @@ async function parseImageSource({
     _imageDiag.fallbackReason = "cloud_vision_error";
     _imageDiag.errorMessage = ocrError instanceof Error ? ocrError.message : String(ocrError);
     console.log(`[ListScan Image] Cloud Vision failed: ${_imageDiag.errorMessage}, falling back to OpenAI`);
-    // Cloud Vision unavailable — fall through to OpenAI vision path.
   }
 
   // ──────────────────────────────────────────────────────────────────────
