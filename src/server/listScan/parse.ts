@@ -105,6 +105,25 @@ const APPELLATION_VARIETAL_INFERENCES = [
   { pattern: /\bsavenni[èe]res\b/i, varietal: "Chenin Blanc" },
   { pattern: /\bvouvray\b/i, varietal: "Chenin Blanc" },
   { pattern: /\bmontlouis\b/i, varietal: "Chenin Blanc" },
+  { pattern: /\bbarolo\b/i, varietal: "Nebbiolo" },
+  { pattern: /\bbarbaresco\b/i, varietal: "Nebbiolo" },
+  { pattern: /\bgattinara\b/i, varietal: "Nebbiolo" },
+  { pattern: /\bghemme\b/i, varietal: "Nebbiolo" },
+  { pattern: /\brioja\b/i, varietal: "Tempranillo" },
+  { pattern: /\bribera del duero\b/i, varietal: "Tempranillo" },
+  { pattern: /\btoro\b/i, varietal: "Tempranillo" },
+  { pattern: /\bbeaujolais\b/i, varietal: "Gamay" },
+  { pattern: /\bmorgon\b/i, varietal: "Gamay" },
+  { pattern: /\bfleurie\b/i, varietal: "Gamay" },
+  { pattern: /\bmoulin[\s-]?[àa][\s-]?vent\b/i, varietal: "Gamay" },
+  { pattern: /\bsoave\b/i, varietal: "Garganega" },
+  { pattern: /\bgreco di tufo\b/i, varietal: "Greco" },
+  { pattern: /\bverdicchio dei castelli di jesi\b/i, varietal: "Verdicchio" },
+  { pattern: /\bcrozes[\s-]hermitage\b/i, varietal: "Syrah" },
+  { pattern: /\bhermitage\b/i, varietal: "Syrah" },
+  { pattern: /\bcornas\b/i, varietal: "Syrah" },
+  { pattern: /\bc[ôo]te[\s-]r[ôo]tie\b/i, varietal: "Syrah" },
+  { pattern: /\bsaint[\s-]joseph\b/i, varietal: "Syrah" },
 ];
 
 const WINE_TYPE_BY_VARIETAL: Record<string, ListScanWineType> = {
@@ -1015,27 +1034,60 @@ function uniqueValues(values: string[]) {
   return Array.from(seen.values());
 }
 
-function resolveInferenceForWine(
-  wine: Pick<ListScanParsedWine, "regions">,
+function lookupAppellation(
+  value: string,
   inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>>
 ) {
-  for (const region of wine.regions) {
-    const normalizedRegion = normalizeInferenceLookupValue(region);
-    const inferred = inferenceMap.appellationToGrapes.get(normalizedRegion);
-    if (inferred) {
-      return inferred;
-    }
+  const normalized = normalizeInferenceLookupValue(value);
+  if (!normalized) {
+    return null;
+  }
 
-    const aliasedRegion = inferenceMap.regionAliases.get(normalizedRegion);
-    if (!aliasedRegion) {
-      continue;
-    }
+  const direct = inferenceMap.appellationToGrapes.get(normalized);
+  if (direct) {
+    return direct;
+  }
 
-    const inferredFromAlias = inferenceMap.appellationToGrapes.get(
-      normalizeInferenceLookupValue(aliasedRegion)
+  const alias = inferenceMap.regionAliases.get(normalized);
+  if (alias) {
+    const fromAlias = inferenceMap.appellationToGrapes.get(
+      normalizeInferenceLookupValue(alias)
     );
-    if (inferredFromAlias) {
-      return inferredFromAlias;
+    if (fromAlias) {
+      return fromAlias;
+    }
+  }
+
+  return null;
+}
+
+function resolveInferenceForWine(
+  wine: Pick<ListScanParsedWine, "regions" | "wine_name" | "menu_label">,
+  inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>>
+) {
+  // Check all regions (most specific first — reverse order since regions go broad→specific)
+  for (let i = wine.regions.length - 1; i >= 0; i--) {
+    const result = lookupAppellation(wine.regions[i], inferenceMap);
+    if (result) {
+      return result;
+    }
+  }
+
+  // Scan wine_name and menu_label for known appellation names
+  const textSources = [wine.wine_name, wine.menu_label].filter(Boolean) as string[];
+  for (const text of textSources) {
+    // Extract potential appellation tokens from the text
+    // Check each word/phrase against the appellation map
+    const words = text.split(/[\s|,;:()\-\u2013\u2014]+/).filter(Boolean);
+    // Try multi-word phrases (up to 3 words) and single words
+    for (let len = 3; len >= 1; len--) {
+      for (let start = 0; start <= words.length - len; start++) {
+        const phrase = words.slice(start, start + len).join(" ");
+        const result = lookupAppellation(phrase, inferenceMap);
+        if (result) {
+          return result;
+        }
+      }
     }
   }
 
