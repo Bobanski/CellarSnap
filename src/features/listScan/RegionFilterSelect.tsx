@@ -39,7 +39,9 @@ export default function RegionFilterSelect({
   onOpenChange,
 }: RegionFilterSelectProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
+  const [expandedCountries, setExpandedCountries] = useState<Set<string>>(
+    new Set()
+  );
 
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -61,23 +63,32 @@ export default function RegionFilterSelect({
 
   const isCountryPartiallySelected = (group: ListScanRegionGroup) => {
     const regions = getSelectableRegions(group);
-    return regions.some((r) => selectedSet.has(r)) && !isCountryFullySelected(group);
+    return (
+      regions.some((r) => selectedSet.has(r)) && !isCountryFullySelected(group)
+    );
   };
 
-  const handleCountryPress = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
+  const toggleCountryExpanded = (country: string) => {
+    setExpandedCountries((prev) => {
+      const next = new Set(prev);
+      if (next.has(country)) {
+        next.delete(country);
+      } else {
+        next.add(country);
+      }
+      return next;
+    });
+  };
 
-    if (expandedCountry === group.country) {
-      // Already expanded - deselect all regions under this country and collapse
+  const handleCountryCheckbox = (group: ListScanRegionGroup) => {
+    const regions = getSelectableRegions(group);
+    if (isCountryFullySelected(group)) {
       const toRemove = new Set(regions);
       onChange(selected.filter((r) => !toRemove.has(r)));
-      setExpandedCountry(null);
     } else {
-      // Expand and select all regions under this country
       const newSelected = new Set(selected);
       regions.forEach((r) => newSelected.add(r));
       onChange(Array.from(newSelected));
-      setExpandedCountry(group.country);
     }
   };
 
@@ -88,8 +99,6 @@ export default function RegionFilterSelect({
       onChange([...selected, region]);
     }
   };
-
-  const expandedGroup = regionGroups.find((g) => g.country === expandedCountry);
 
   return (
     <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
@@ -113,76 +122,165 @@ export default function RegionFilterSelect({
       </button>
 
       {open ? (
-        <div className="space-y-3 border-t border-white/8 p-4">
+        <div className="space-y-1 border-t border-[var(--color-border)] p-3">
           {regionGroups.length > 0 ? (
-            <>
-              {/* Country chips */}
-              <div className="flex flex-wrap gap-2">
-                {regionGroups.map((group) => {
-                  const isExpanded = expandedCountry === group.country;
-                  const fullySelected = isCountryFullySelected(group);
-                  const partiallySelected = isCountryPartiallySelected(group);
+            <div className="max-h-[320px] space-y-1 overflow-y-auto">
+              {regionGroups.map((group) => {
+                const isExpanded = expandedCountries.has(group.country);
+                const fullySelected = isCountryFullySelected(group);
+                const partiallySelected = isCountryPartiallySelected(group);
+                const hasSubRegions = group.subRegions.length > 0;
 
-                  let chipClasses =
-                    "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-white/25";
-                  if (isExpanded || fullySelected) {
-                    chipClasses =
-                      "border border-emerald-400/50 bg-emerald-400/12 text-emerald-200";
-                  } else if (partiallySelected) {
-                    chipClasses =
-                      "border border-emerald-400/25 bg-emerald-400/6 text-emerald-300/80";
-                  }
-
-                  return (
-                    <button
-                      key={group.country}
-                      type="button"
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${chipClasses}`}
-                      onClick={() => handleCountryPress(group)}
+                return (
+                  <div key={group.country}>
+                    {/* Country row */}
+                    <div
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 transition ${
+                        fullySelected
+                          ? "bg-[var(--color-accent-red)]/20"
+                          : partiallySelected
+                            ? "bg-[var(--color-accent-red)]/10"
+                            : "hover:bg-white/4"
+                      }`}
                     >
-                      {group.country}
-                      {group.subRegions.length > 0 ? (
-                        <span className="ml-1 text-[10px] opacity-60">
-                          ({group.subRegions.length})
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCountryCheckbox(group)}
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                          fullySelected
+                            ? "border-[var(--color-accent-rose)] bg-[var(--color-accent-rose)] text-white"
+                            : partiallySelected
+                              ? "border-[var(--color-accent-rose)]/60 bg-[var(--color-accent-rose)]/30 text-white"
+                              : "border-white/20 hover:border-white/40"
+                        }`}
+                        aria-label={`Select all regions in ${group.country}`}
+                      >
+                        {fullySelected ? (
+                          <svg
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-2.5 w-2.5"
+                          >
+                            <path d="M2 6l3 3 5-5" />
+                          </svg>
+                        ) : partiallySelected ? (
+                          <svg
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="h-2.5 w-2.5"
+                          >
+                            <path d="M3 6h6" />
+                          </svg>
+                        ) : null}
+                      </button>
 
-              {/* Sub-regions for expanded country */}
-              {expandedGroup && expandedGroup.subRegions.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[#171210] p-2">
-                  <div className="flex max-h-[120px] flex-col flex-wrap gap-1.5">
-                    {expandedGroup.subRegions.map((region) => {
-                      const isSelected = selectedSet.has(region);
-                      return (
-                        <button
-                          key={region}
-                          type="button"
-                          className={`w-[140px] shrink-0 rounded-xl border px-2.5 py-1.5 text-left text-xs transition ${
-                            isSelected
-                              ? "border-emerald-400/40 bg-emerald-400/12 text-emerald-200"
-                              : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-secondary)] hover:border-white/20 hover:bg-white/8"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hasSubRegions
+                            ? toggleCountryExpanded(group.country)
+                            : handleCountryCheckbox(group)
+                        }
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      >
+                        <span
+                          className={`text-sm font-semibold ${
+                            fullySelected || partiallySelected
+                              ? "text-[var(--color-text-primary)]"
+                              : "text-[var(--color-text-secondary)]"
                           }`}
-                          onClick={() => handleSubRegionToggle(region)}
                         >
-                          {region}
+                          {group.country}
+                        </span>
+                        {hasSubRegions ? (
+                          <span className="text-[10px] text-[var(--color-text-tertiary)]">
+                            {group.subRegions.length}
+                          </span>
+                        ) : null}
+                      </button>
+
+                      {hasSubRegions ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleCountryExpanded(group.country)}
+                          className="ml-auto shrink-0 px-1 text-xs text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]"
+                          aria-label={
+                            isExpanded
+                              ? `Collapse ${group.country}`
+                              : `Expand ${group.country}`
+                          }
+                        >
+                          <svg
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            className={`h-3 w-3 transition-transform ${
+                              isExpanded ? "rotate-90" : ""
+                            }`}
+                          >
+                            <path d="M4 2l4 4-4 4" />
+                          </svg>
                         </button>
-                      );
-                    })}
+                      ) : null}
+                    </div>
+
+                    {/* Sub-regions (accordion body) */}
+                    {isExpanded && hasSubRegions ? (
+                      <div className="ml-6 space-y-0.5 border-l border-[var(--color-border)] py-1 pl-3">
+                        {group.subRegions.map((region) => {
+                          const isSelected = selectedSet.has(region);
+                          return (
+                            <button
+                              key={region}
+                              type="button"
+                              onClick={() => handleSubRegionToggle(region)}
+                              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
+                                isSelected
+                                  ? "bg-[var(--color-accent-rose)]/10 text-[var(--color-text-primary)]"
+                                  : "text-[var(--color-text-tertiary)] hover:bg-white/4 hover:text-[var(--color-text-secondary)]"
+                              }`}
+                            >
+                              <span
+                                className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border transition ${
+                                  isSelected
+                                    ? "border-[var(--color-accent-rose)] bg-[var(--color-accent-rose)] text-white"
+                                    : "border-white/20"
+                                }`}
+                              >
+                                {isSelected ? (
+                                  <svg
+                                    viewBox="0 0 12 12"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    className="h-2 w-2"
+                                  >
+                                    <path d="M2 6l3 3 5-5" />
+                                  </svg>
+                                ) : null}
+                              </span>
+                              {region}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
-                </div>
-              ) : null}
-            </>
+                );
+              })}
+            </div>
           ) : (
             <p className="text-sm text-[var(--color-text-tertiary)]">
               No regions were parsed from this list.
             </p>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <button
               type="button"
               className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
