@@ -2570,7 +2570,16 @@ function buildHeuristicParsedResponse(params: {
     const priceMatch =
       line.match(
         /\$\s*\d+(?:\.\d{1,2})?(?:\s*(?:\/|[-–])\s*\$?\s*\d+(?:\.\d{1,2})?)+/
-      ) ?? line.match(/\$\s*\d+(?:\.\d{1,2})?/);
+      ) ??
+      line.match(/\$\s*\d+(?:\.\d{1,2})?/) ??
+      // OCR from printed menus often has bare trailing numbers without $
+      // e.g. "Schramsberg Blanc de Blancs .... 16" or "Frog's Leap Chardonnay  18"
+      // Only match when inside a wine section to avoid false positives.
+      (inWineSection
+        ? line.match(/\.{2,}\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+          line.match(/\s{2,}(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+          line.match(/\s(\d{2,3}(?:\.\d{1,2})?)\s*$/)
+        : null);
     if (!priceMatch) {
       if (
         inWineSection &&
