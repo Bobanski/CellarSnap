@@ -818,6 +818,17 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         return null;
       }
 
+      // Filter out garbage entries from OCR: bare numbers, price fragments,
+      // dot-leader remnants, or labels too short to be a real wine name.
+      const labelLettersOnly = rawMenuLabel.replace(/[^a-zA-Z]/g, "");
+      if (
+        labelLettersOnly.length < 3 ||
+        /^\.?\d{1,4}$/.test(rawMenuLabel.trim()) ||
+        /^[.\s\d]+$/.test(rawMenuLabel.trim())
+      ) {
+        return null;
+      }
+
       const producer = normalizeProducerText(wine.producer) ?? normalizeText(wine.producer);
       const wineName =
         normalizeWineNameText(wine.wine_name) ?? normalizeText(wine.wine_name);
