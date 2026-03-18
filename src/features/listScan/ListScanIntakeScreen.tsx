@@ -12,6 +12,70 @@ function createFileKey(file: File) {
   return `${file.name}-${file.size}-${file.lastModified}`;
 }
 
+/**
+ * Compress an image file to JPEG at a target max dimension and quality.
+ * This keeps uploads well under Vercel's 4.5 MB body limit while
+ * retaining enough resolution for OCR (Cloud Vision or OpenAI).
+ */
+async function compressImageFile(
+  file: File,
+  maxDimension = 2048,
+  quality = 0.8
+): Promise<File> {
+  // Skip if already small enough (< 1 MB)
+  if (file.size < 1_000_000) return file;
+
+  return new Promise<File>((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        const scale = maxDimension / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file); // Fallback to original
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            resolve(file); // Keep original if compression didn't help
+            return;
+          }
+          const compressed = new File(
+            [blob],
+            file.name.replace(/\.\w+$/, ".jpg"),
+            { type: "image/jpeg", lastModified: file.lastModified }
+          );
+          resolve(compressed);
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file); // Fallback to original on error
+    };
+
+    img.src = url;
+  });
+}
+
 type ScanSourceKind = "image" | "pdf" | "url";
 
 type ScanProgressState = {
@@ -225,7 +289,11 @@ export default function ListScanIntakeScreen() {
     const formData = new FormData();
 
     if (selectedImages.length > 0) {
-      selectedImages.forEach((file) => {
+      // Compress images client-side to stay under Vercel's 4.5 MB body limit.
+      const compressed = await Promise.all(
+        selectedImages.map((file) => compressImageFile(file))
+      );
+      compressed.forEach((file) => {
         formData.append("files", file);
       });
       formData.append(
