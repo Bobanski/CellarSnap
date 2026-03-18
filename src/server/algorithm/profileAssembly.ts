@@ -989,3 +989,128 @@ export async function assembleWineProfileWithDataSource(
     metadata: normalizeProfileMetadata(baseProfile, fallbackLevel, modifiersApplied),
   };
 }
+
+/**
+ * Pre-fetches all reference data needed for batch wine profile assembly.
+ * Called once before scoring any wines to eliminate redundant Supabase queries.
+ */
+export async function batchPrefetchProfileData(
+  dataSource: ProfileAssemblyDataSource,
+  wineTypes: WineType[],
+  vintages: number[]
+) {
+  const uniqueWineTypes = Array.from(new Set(wineTypes));
+  const uniqueVintages = Array.from(new Set(vintages));
+
+  const prefetchQueries: Promise<unknown>[] = [];
+
+  // Fetch base profiles and aging curves for each wine type
+  const baseProfilesByType = new Map<WineType, BaseProfileRow[]>();
+  const agingCurvesByType = new Map<WineType, AgingCurveRow[]>();
+
+  for (const wineType of uniqueWineTypes) {
+    prefetchQueries.push(
+      dataSource.listBaseProfiles(wineType).then((profiles) => {
+        baseProfilesByType.set(wineType, profiles);
+      })
+    );
+    prefetchQueries.push(
+      dataSource.listAgingCurves(wineType).then((curves) => {
+        agingCurvesByType.set(wineType, curves);
+      })
+    );
+  }
+
+  // Fetch vintage weather modifiers for each vintage
+  const vintageWeatherByVintage = new Map<number, VintageWeatherRow[]>();
+  for (const vintage of uniqueVintages) {
+    prefetchQueries.push(
+      dataSource.listVintageWeatherModifiers(vintage).then((weather) => {
+        vintageWeatherByVintage.set(vintage, weather);
+      })
+    );
+  }
+
+  // Fetch shared reference tables (only once)
+  let classificationTaxonomy: ClassificationTaxonomyRow[] = [];
+  let classificationTierModifiers: ClassificationTierModifierRow[] = [];
+  let producerModifiers: ProducerModifierRow[] = [];
+  let producerRegionCrosswalk: ProducerRegionCrosswalkRow[] = [];
+  let grapeSensitivityRows: GrapeSensitivityRow[] = [];
+
+  prefetchQueries.push(
+    dataSource.listClassificationTaxonomy().then((rows) => {
+      classificationTaxonomy = rows;
+    })
+  );
+  prefetchQueries.push(
+    dataSource.listClassificationTierModifiers().then((rows) => {
+      classificationTierModifiers = rows;
+    })
+  );
+  prefetchQueries.push(
+    dataSource.listProducerModifiers().then((rows) => {
+      producerModifiers = rows;
+    })
+  );
+  prefetchQueries.push(
+    dataSource.listProducerRegionCrosswalk().then((rows) => {
+      producerRegionCrosswalk = rows;
+    })
+  );
+  prefetchQueries.push(
+    dataSource.listGrapeSensitivityCoefficients().then((rows) => {
+      grapeSensitivityRows = rows;
+    })
+  );
+
+  // Wait for all queries to complete
+  await Promise.all(prefetchQueries);
+
+  // Return a synchronous data source that uses pre-fetched data
+  return {
+    baseProfilesByType,
+    agingCurvesByType,
+    vintageWeatherByVintage,
+    classificationTaxonomy,
+    classificationTierModifiers,
+    producerModifiers,
+    producerRegionCrosswalk,
+    grapeSensitivityRows,
+  };
+}
+
+/**
+ * Creates a ProfileAssemblyDataSource that returns pre-fetched data synchronously.
+ * Wraps results in Promise.resolve() for API compatibility.
+ */
+export function createPreFetchedProfileDataSource(
+  prefetchedData: Awaited<ReturnType<typeof batchPrefetchProfileData>>
+): ProfileAssemblyDataSource {
+  return {
+    listBaseProfiles: (wineType: WineType) => {
+      return Promise.resolve(prefetchedData.baseProfilesByType.get(wineType) ?? []);
+    },
+    listAgingCurves: (wineType: WineType) => {
+      return Promise.resolve(prefetchedData.agingCurvesByType.get(wineType) ?? []);
+    },
+    listVintageWeatherModifiers: (vintage: number) => {
+      return Promise.resolve(prefetchedData.vintageWeatherByVintage.get(vintage) ?? []);
+    },
+    listClassificationTaxonomy: () => {
+      return Promise.resolve(prefetchedData.classificationTaxonomy);
+    },
+    listClassificationTierModifiers: () => {
+      return Promise.resolve(prefetchedData.classificationTierModifiers);
+    },
+    listProducerModifiers: () => {
+      return Promise.resolve(prefetchedData.producerModifiers);
+    },
+    listProducerRegionCrosswalk: () => {
+      return Promise.resolve(prefetchedData.producerRegionCrosswalk);
+    },
+    listGrapeSensitivityCoefficients: () => {
+      return Promise.resolve(prefetchedData.grapeSensitivityRows);
+    },
+  };
+}

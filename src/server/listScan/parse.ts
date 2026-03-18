@@ -20,6 +20,8 @@ import type { ProfileAssemblyDataSource } from "@/server/algorithm/profileAssemb
 import {
   assembleWineProfileWithDataSource,
   createSupabaseProfileAssemblyDataSource,
+  batchPrefetchProfileData,
+  createPreFetchedProfileDataSource,
 } from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import {
@@ -1275,14 +1277,49 @@ async function enrichParsedWines(params: {
     };
   }
 
+  // TEAM ALPHA: Batch Prefetch Strategy
+  // Collect all unique wine types and vintages upfront
+  const uniqueWineTypes: WineType[] = [];
+  const uniqueVintages: number[] = [];
+  const wineTypeMap = new Map<ListScanWineType, WineType>();
+
+  for (const wine of inferredWines) {
+    const wineType = toAlgorithmWineType(wine.wine_type);
+    if (wineType && !wineTypeMap.has(wine.wine_type)) {
+      wineTypeMap.set(wine.wine_type, wineType);
+      uniqueWineTypes.push(wineType);
+    }
+    if (wine.vintage) {
+      const vintage = Number.parseInt(wine.vintage, 10);
+      if (!Number.isNaN(vintage) && !uniqueVintages.includes(vintage)) {
+        uniqueVintages.push(vintage);
+      }
+    }
+  }
+
+  const prefetchStartTime = Date.now();
+
+  // Prefetch all reference data in a SINGLE batch
   const referenceSupabase = createSupabaseAdminClient();
-  const profileDataSource = createMemoizedProfileAssemblyDataSource(referenceSupabase);
+  const memoizedDataSource = createMemoizedProfileAssemblyDataSource(referenceSupabase);
+  const prefetchedData = await batchPrefetchProfileData(
+    memoizedDataSource,
+    uniqueWineTypes,
+    uniqueVintages
+  );
+  const prefetchedDataSource = createPreFetchedProfileDataSource(prefetchedData);
+
+  const prefetchMs = Date.now() - prefetchStartTime;
+  console.log(`[Team Alpha] Prefetch completed in ${prefetchMs}ms for ${uniqueWineTypes.length} wine types and ${uniqueVintages.length} vintages`);
+
   const preferenceVectors = new Map<WineType, ReturnType<typeof buildUserPreferenceVector>>();
   const profileCache = new Map<
     string,
-    ReturnType<typeof assembleWineProfileWithDataSource>
+    Promise<Awaited<ReturnType<typeof assembleWineProfileWithDataSource>>>
   >();
   let scoredWineCount = 0;
+
+  const scoringStartTime = Date.now();
 
   const wines = await Promise.all(
     inferredWines.map(async (wine) => {
@@ -1315,7 +1352,7 @@ async function enrichParsedWines(params: {
         const profileKey = JSON.stringify(profileInput);
         const profilePromise =
           profileCache.get(profileKey) ??
-          assembleWineProfileWithDataSource(profileInput, profileDataSource);
+          assembleWineProfileWithDataSource(profileInput, prefetchedDataSource);
         profileCache.set(profileKey, profilePromise);
         const profile = await profilePromise;
         const preferenceVector =
@@ -1334,6 +1371,9 @@ async function enrichParsedWines(params: {
       }
     })
   );
+
+  const scoringMs = Date.now() - scoringStartTime;
+  console.log(`[Team Alpha] Scoring completed in ${scoringMs}ms for ${scoredWineCount} wines`);
 
   if (scoredWineCount === 0) {
     warnings.push(
