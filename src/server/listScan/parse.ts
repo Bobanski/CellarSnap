@@ -2567,26 +2567,42 @@ function buildHeuristicParsedResponse(params: {
       }
     }
 
+    // OCR from printed menus often splits wine names and prices onto separate
+    // lines and uses bare trailing numbers without $ signs. Also handle
+    // price-only lines (just dots + number) and bare small numbers that are
+    // likely standalone prices on their own line.
     const priceMatch =
       line.match(
         /\$\s*\d+(?:\.\d{1,2})?(?:\s*(?:\/|[-–])\s*\$?\s*\d+(?:\.\d{1,2})?)+/
       ) ??
       line.match(/\$\s*\d+(?:\.\d{1,2})?/) ??
-      // OCR from printed menus often has bare trailing numbers without $
-      // e.g. "Schramsberg Blanc de Blancs .... 16" or "Frog's Leap Chardonnay  18"
-      // Only match when inside a wine section to avoid false positives.
       (inWineSection
-        ? line.match(/\.{2,}\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+        ? // Dot-leader + number: ".... 16" or ".......18"
+          line.match(/\.{2,}\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+          // Wine name followed by 2+ spaces then number: "Chardonnay  18"
           line.match(/\s{2,}(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
-          line.match(/\s(\d{2,3}(?:\.\d{1,2})?)\s*$/)
+          // Wine name then single space then 2-3 digit number: "Pinot Noir 22"
+          line.match(/[a-zA-Z)]\s(\d{2,3}(?:\.\d{1,2})?)\s*$/) ??
+          // Price-only line: just a number (e.g. "16" or "18") — only when
+          // the entire line is a short number and we have something buffered
+          (buffer.length > 0 && /^\d{1,3}(?:\.\d{1,2})?$/.test(line)
+            ? line.match(/^(\d{1,3}(?:\.\d{1,2})?)$/)
+            : null)
         : null);
+
+    // Skip bare numbers that look like vintages, not prices (e.g. 2019, 2023)
     if (!priceMatch) {
       if (
         inWineSection &&
         !/^(by the glass|by the bottle|wine list)$/i.test(line) &&
-        !ABSOLUTE_NON_WINE_ENTRY_PATTERN.test(line)
+        !ABSOLUTE_NON_WINE_ENTRY_PATTERN.test(line) &&
+        // Don't buffer bare numbers — they're likely stray prices or vintages,
+        // not wine names
+        !/^\d{1,4}$/.test(line)
       ) {
-        buffer.push(line);
+        // Clean trailing dot-leaders from OCR (e.g. "Frog's Leap Chardonnay, Napa Valley.")
+        const cleanedLine = line.replace(/\.{2,}\s*$/, "").replace(/\.\s*$/, "");
+        buffer.push(cleanedLine || line);
         buffer = buffer.slice(-2);
       }
       continue;
@@ -2594,7 +2610,50 @@ function buildHeuristicParsedResponse(params: {
 
     const priceDisplay = normalizeCompositePriceDisplay(priceMatch[0]);
     const priceValue = parseFallbackPriceValue(priceDisplay);
-    const lineWithoutPrice = normalizeText(line.replace(priceMatch[0], ""));
+    const lineWithoutPrice = normalizeText(
+      line.replace(priceMatch[0], "").replace(/\.{2,}\s*$/, "")
+    );
+
+    // OCR often puts wine names and prices on separate lines. When the price
+    // is on its own line (lineWithoutPrice is empty/just dots), each buffered
+    // entry is likely a separate wine. Emit earlier buffer entries as their
+    // own wines (with the same price as a reasonable guess), then use only the
+    // last buffer entry for this price line.
+    if (!lineWithoutPrice && buffer.length > 1) {
+      // Each earlier buffer entry is a standalone wine whose price line we
+      // missed (OCR merged it or it was on a line we couldn't parse).
+      // Emit them with the current price as best guess.
+      for (let bi = 0; bi < buffer.length - 1; bi++) {
+        const orphanName = buffer[bi];
+        if (!orphanName || /^\d{1,4}$/.test(orphanName)) continue;
+        const orphanContext = orphanName;
+        if (ABSOLUTE_NON_WINE_ENTRY_PATTERN.test(orphanContext)) continue;
+        if (!inWineSection && !WINE_SIGNAL_PATTERN.test(orphanContext)) continue;
+        const orphanVintageMatch = orphanContext.match(
+          /\b((?:19|20)\d{2})\b|'(\d{2})\b|\b(N\.?V\.?)\b/i
+        );
+        const orphanVintage = orphanVintageMatch
+          ? orphanVintageMatch[3]
+            ? "NV"
+            : orphanVintageMatch[1] ?? `20${orphanVintageMatch[2]}`
+          : null;
+        wines.push({
+          menu_label: orphanName,
+          producer: null,
+          wine_name: orphanName,
+          vintage: orphanVintage,
+          wine_type: detectWineTypeFromSignals(orphanContext, currentType),
+          price_display: priceDisplay,
+          price_value: Number.isFinite(priceValue) ? priceValue : null,
+          varietals: [],
+          regions: extractRegionsFromFallbackContext(orphanContext),
+          confidence: 0.6, // lower confidence — price is a guess
+        });
+      }
+      // Keep only the last buffer entry for this price line
+      buffer = [buffer[buffer.length - 1]!];
+    }
+
     const menuParts = [...buffer, lineWithoutPrice].filter(
       (part, index, items) =>
         Boolean(part) &&
