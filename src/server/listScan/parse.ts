@@ -28,6 +28,7 @@ import {
   buildUserPreferenceVector,
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
+import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import {
   normalizeProducerText,
@@ -317,9 +318,16 @@ type DeterministicWineInference = {
 };
 
 type PreferenceEntryRow = {
+  id: string;
   rating: number | null;
   advanced_notes: unknown;
   wine_type?: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  canonical_country?: string | null;
+  region?: string | null;
+  appellation?: string | null;
+  country?: string | null;
 };
 
 type EnrichedListScanWines = {
@@ -1098,11 +1106,17 @@ async function loadUserPreferenceEntries(
 ): Promise<PreferenceSourceEntry[]> {
   const selectAttempts = [
     {
-      fields: "rating, advanced_notes, wine_type",
-      missingColumns: ["wine_type"] as const,
+      fields:
+        "id, rating, advanced_notes, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country",
+      missingColumns: [
+        "wine_type",
+        "canonical_region",
+        "canonical_sub_region",
+        "canonical_country",
+      ] as const,
     },
     {
-      fields: "rating, advanced_notes",
+      fields: "id, rating, advanced_notes, region, appellation, country",
       missingColumns: [] as const,
     },
   ] as const;
@@ -1128,10 +1142,24 @@ async function loadUserPreferenceEntries(
     throw result.error;
   }
 
-  return (((result.data ?? []) as unknown) as PreferenceEntryRow[]).map((row) => ({
+  const rows = (((result.data ?? []) as unknown) as PreferenceEntryRow[]);
+  const grapeMap = await fetchPrimaryGrapesByEntryId(
+    supabase as unknown as Parameters<typeof fetchPrimaryGrapesByEntryId>[0],
+    rows.map((row) => row.id)
+  );
+
+  return rows.map((row) => ({
     rating: row.rating ?? null,
     advanced_notes: normalizeAdvancedNotes(row.advanced_notes),
     wine_type: isWineType(row.wine_type) ? row.wine_type : null,
+    canonical_region: row.canonical_region ?? row.region ?? null,
+    canonical_sub_region: row.canonical_sub_region ?? row.appellation ?? null,
+    canonical_country: row.canonical_country ?? row.country ?? null,
+    region: row.region ?? null,
+    appellation: row.appellation ?? null,
+    country: row.country ?? null,
+    primary_grapes:
+      grapeMap.get(row.id)?.map((grape) => grape.name).join(", ") ?? null,
   }));
 }
 
@@ -1213,71 +1241,6 @@ function createMemoizedProfileAssemblyDataSource(
   };
 }
 
-/**
- * Build a map of varietal → affinity score (0–1) from the user's preference
- * entries. Uses the inference map to figure out which grapes map to which
- * wine_type, then weights by how frequently the user logs each type.
- */
-function buildVarietalAffinityMap(
-  entries: PreferenceSourceEntry[],
-  inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>> | null
-): Map<string, number> {
-  const affinityMap = new Map<string, number>();
-  if (!inferenceMap) {
-    return affinityMap;
-  }
-
-  // Count wine_type frequency from user entries
-  const typeCounts = new Map<string, number>();
-  let totalEntries = 0;
-  entries.forEach((entry) => {
-    if (entry.wine_type) {
-      typeCounts.set(entry.wine_type, (typeCounts.get(entry.wine_type) ?? 0) + 1);
-      totalEntries += 1;
-    }
-  });
-
-  if (totalEntries === 0) {
-    return affinityMap;
-  }
-
-  // For each grape→wineType mapping in the inference map, compute affinity
-  // as the proportion of user entries of that wine type
-  inferenceMap.grapeToWineType.forEach((wineType, normalizedGrape) => {
-    const count = typeCounts.get(wineType) ?? 0;
-    if (count > 0) {
-      affinityMap.set(normalizedGrape, count / totalEntries);
-    }
-  });
-
-  return affinityMap;
-}
-
-/**
- * Compute a small bonus (0–5 points) based on how well the wine's varietals
- * overlap with the user's most-logged wine types.
- */
-function computeVarietalAffinityBonus(
-  varietals: string[],
-  affinityMap: Map<string, number>
-): number {
-  if (varietals.length === 0 || affinityMap.size === 0) {
-    return 0;
-  }
-
-  let maxAffinity = 0;
-  for (const varietal of varietals) {
-    const normalized = normalizeInferenceLookupValue(varietal);
-    const affinity = affinityMap.get(normalized) ?? 0;
-    if (affinity > maxAffinity) {
-      maxAffinity = affinity;
-    }
-  }
-
-  // Scale: 0→0, 0.5→3, 1.0→5
-  return Math.round(maxAffinity * 5);
-}
-
 async function enrichParsedWines(params: {
   wines: ListScanParsedWine[];
   userId?: string | null;
@@ -1351,9 +1314,6 @@ async function enrichParsedWines(params: {
       warnings,
     };
   }
-
-  // Build varietal affinity map from user's entries + inference map
-  const varietalAffinityMap = buildVarietalAffinityMap(preferenceEntries, inferenceMap);
 
   // TEAM ALPHA: Batch Prefetch Strategy
   // Collect all unique wine types and vintages upfront
@@ -1438,12 +1398,11 @@ async function enrichParsedWines(params: {
           buildUserPreferenceVector(preferenceEntries, wineType);
         preferenceVectors.set(wineType, preferenceVector);
         const match = computeMatchScore(profile, preferenceVector);
-        const affinityBonus = computeVarietalAffinityBonus(wine.varietals, varietalAffinityMap);
         scoredWineCount += 1;
 
         return {
           ...wine,
-          match_percent: Math.min(100, Math.round(match.score + affinityBonus)),
+          match_percent: Math.min(100, Math.round(match.score)),
         } satisfies ListScanParsedWine;
       } catch {
         return wine;

@@ -59,9 +59,16 @@ type EntryRowFallback = {
 };
 
 type PreferenceEntryRow = {
+  id: string;
   rating: number | null;
   advanced_notes: unknown;
   wine_type?: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  canonical_country?: string | null;
+  region?: string | null;
+  appellation?: string | null;
+  country?: string | null;
 };
 
 type AlgorithmScoreHandlerDependencies = {
@@ -232,12 +239,18 @@ export async function defaultLoadUserPreferenceEntries(
 ): Promise<PreferenceSourceEntry[]> {
   const selectAttempts = [
     {
-      fields: "rating, advanced_notes, wine_type",
+      fields:
+        "id, rating, advanced_notes, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country",
       includesWineType: true,
-      missingColumns: ["wine_type"] as const,
+      missingColumns: [
+        "wine_type",
+        "canonical_region",
+        "canonical_sub_region",
+        "canonical_country",
+      ] as const,
     },
     {
-      fields: "rating, advanced_notes",
+      fields: "id, rating, advanced_notes, region, appellation, country",
       includesWineType: false,
       missingColumns: [] as const,
     },
@@ -264,10 +277,23 @@ export async function defaultLoadUserPreferenceEntries(
   }
 
   const rows = ((result.data ?? []) as unknown) as PreferenceEntryRow[];
+  const grapeMap = await fetchPrimaryGrapesByEntryId(
+    supabase as unknown as Parameters<typeof fetchPrimaryGrapesByEntryId>[0],
+    rows.map((row) => row.id)
+  );
+
   return rows.map((row) => ({
     rating: row.rating ?? null,
     advanced_notes: normalizeAdvancedNotes(row.advanced_notes),
     wine_type: isWineType(row.wine_type) ? row.wine_type : null,
+    canonical_region: row.canonical_region ?? row.region ?? null,
+    canonical_sub_region: row.canonical_sub_region ?? row.appellation ?? null,
+    canonical_country: row.canonical_country ?? row.country ?? null,
+    region: row.region ?? null,
+    appellation: row.appellation ?? null,
+    country: row.country ?? null,
+    primary_grapes:
+      grapeMap.get(row.id)?.map((grape) => grape.name).join(", ") ?? null,
   }));
 }
 

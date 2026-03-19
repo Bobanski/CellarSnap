@@ -120,7 +120,10 @@ function makeInput(
   };
 }
 
-function buildPreferenceEntries(rating = 95) {
+function buildPreferenceEntries(
+  rating = 95,
+  overrides: Record<string, unknown> = {}
+) {
   return [
     {
       rating,
@@ -132,6 +135,7 @@ function buildPreferenceEntries(rating = 95) {
         alcohol: "medium" as const,
         sweetness: "dry" as const,
       },
+      ...overrides,
     },
   ];
 }
@@ -139,7 +143,8 @@ function buildPreferenceEntries(rating = 95) {
 function buildProfileWithSensory(
   sensory: Partial<SensoryVector>,
   overallBalance = 4,
-  fallbackLevel = 1
+  fallbackLevel = 1,
+  metadataOverrides: Partial<EffectiveWineProfile["metadata"]> = {}
 ): EffectiveWineProfile {
   return {
     sensory: {
@@ -165,12 +170,18 @@ function buildProfileWithSensory(
       },
       texture: "structured",
       style_families: [],
+      canonical_country: null,
+      canonical_region: null,
+      canonical_sub_region: null,
+      primary_grapes: [],
+      ...metadataOverrides,
     },
   };
 }
 
 function buildDenseUserPreferenceVector(
-  sensory: Partial<SensoryVector> = {}
+  sensory: Partial<SensoryVector> = {},
+  categoricalOverrides: Partial<UserPreferenceVector["categorical"]> = {}
 ): UserPreferenceVector {
   return {
     wine_type: "red",
@@ -179,6 +190,17 @@ function buildDenseUserPreferenceVector(
       ...sensory,
     },
     weights: {},
+    categorical: {
+      varietals: {},
+      regions: {},
+      countries: {},
+      weights: {
+        varietal: 0,
+        region: 0,
+        country: 0,
+      },
+      ...categoricalOverrides,
+    },
     event_count: 25,
   };
 }
@@ -651,6 +673,53 @@ test.describe("WS1 algorithm core", () => {
     expect(lowScore.score).toBeLessThan(highScore.score);
   });
 
+  test("categorical preferences lift wines that match varietal and place bias", () => {
+    const user = buildDenseUserPreferenceVector(
+      {},
+      {
+        varietals: {
+          "pinot noir": 1,
+          "cabernet sauvignon": 0.15,
+        },
+        regions: {
+          "santa rita hills": 1,
+          "central coast": 0.7,
+        },
+        countries: {
+          usa: 1,
+        },
+        weights: {
+          varietal: 1,
+          region: 1,
+          country: 1,
+        },
+      }
+    );
+
+    const matchingWine = buildProfileWithSensory({}, 4, 1, {
+      canonical_country: "USA",
+      canonical_region: "Central Coast",
+      canonical_sub_region: "Santa Rita Hills",
+      primary_grapes: ["Pinot Noir"],
+    });
+    const mismatchingWine = buildProfileWithSensory({}, 4, 1, {
+      canonical_country: "France",
+      canonical_region: "Bordeaux",
+      canonical_sub_region: "Left Bank",
+      primary_grapes: ["Cabernet Sauvignon"],
+    });
+
+    const matchingScore = computeMatchScore(matchingWine, user);
+    const mismatchingScore = computeMatchScore(mismatchingWine, user);
+
+    expect(matchingScore.pre_balance_score).toBeCloseTo(
+      mismatchingScore.pre_balance_score,
+      5
+    );
+    expect(matchingScore.score).toBeGreaterThan(mismatchingScore.score + 10);
+    expect(matchingScore.score).toBeGreaterThan(60);
+  });
+
   test("empty user preference vector returns low confidence", () => {
     const score = computeMatchScore(
       buildProfileWithSensory({}),
@@ -658,6 +727,16 @@ test.describe("WS1 algorithm core", () => {
         wine_type: "red",
         sensory: {},
         weights: {},
+        categorical: {
+          varietals: {},
+          regions: {},
+          countries: {},
+          weights: {
+            varietal: 0,
+            region: 0,
+            country: 0,
+          },
+        },
         event_count: 0,
       }
     );

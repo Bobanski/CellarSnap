@@ -10,7 +10,7 @@ function makeUser(id: string): User {
     id,
     aud: "authenticated",
     role: "authenticated",
-    email: `${id}@example.com`,
+    email: "eitansneider1@gmail.com",
     app_metadata: {},
     user_metadata: {},
     identities: [],
@@ -57,6 +57,10 @@ function makeProfile(): EffectiveWineProfile {
       },
       texture: "structured",
       style_families: ["classic"],
+      canonical_country: "France",
+      canonical_region: "Bordeaux",
+      canonical_sub_region: "Left Bank",
+      primary_grapes: ["Cabernet Sauvignon", "Merlot"],
     },
   };
 }

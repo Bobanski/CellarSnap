@@ -755,7 +755,8 @@ function getBalanceValue(row: BaseProfileRow, keys: string[]) {
 function normalizeProfileMetadata(
   row: BaseProfileRow,
   fallbackLevel: number,
-  modifiersApplied: string[]
+  modifiersApplied: string[],
+  input: AssembleWineProfileInput
 ): EffectiveWineProfile["metadata"] {
   return {
     base_profile_id: toNumber(row.id) ?? 0,
@@ -768,6 +769,10 @@ function normalizeProfileMetadata(
     },
     texture: toString(row.texture) ?? "",
     style_families: parseList(row.style_families),
+    canonical_country: input.canonical_country ?? null,
+    canonical_region: input.canonical_region ?? null,
+    canonical_sub_region: input.canonical_sub_region ?? null,
+    primary_grapes: parseList(input.primary_grapes),
   };
 }
 
@@ -963,7 +968,7 @@ export async function assembleWineProfileWithDataSource(
 
   return {
     sensory,
-    balance: {
+      balance: {
       body_acid: getBalanceValue(baseProfile, [
         "balance_body_acid",
         "body_acid_balance",
@@ -985,9 +990,14 @@ export async function assembleWineProfileWithDataSource(
         "oak_fruit_balance",
       ]),
       overall: getBalanceValue(baseProfile, ["overall_balance"]),
-    },
-    metadata: normalizeProfileMetadata(baseProfile, fallbackLevel, modifiersApplied),
-  };
+      },
+      metadata: normalizeProfileMetadata(
+        baseProfile,
+        fallbackLevel,
+        modifiersApplied,
+        input
+      ),
+    };
 }
 
 /**
