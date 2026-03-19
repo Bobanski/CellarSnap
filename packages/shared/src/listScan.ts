@@ -937,6 +937,25 @@ function stripProducerPrefixFromLabel(label: string, producer: string) {
   return trimmed || null;
 }
 
+function hasEmbeddedProducerPrefix(label: string, producer: string) {
+  const normalizedLabel = normalizeFacetValue(label);
+  const normalizedProducer = normalizeFacetValue(producer);
+  if (!normalizedLabel || !normalizedProducer) {
+    return false;
+  }
+
+  const patterns = [
+    new RegExp(`^${escapeRegExp(normalizedProducer)}(?:\\s*[|,:;()\\-\\u2013\\u2014]+\\s*)?`, "i"),
+    new RegExp(`^${escapeRegExp(normalizedProducer)}\\s+`, "i"),
+  ];
+
+  return (
+    normalizedLabel.localeCompare(normalizedProducer, undefined, {
+      sensitivity: "base",
+    }) === 0 || patterns.some((pattern) => pattern.test(normalizedLabel))
+  );
+}
+
 function inferProducerFromLabel(
   label: string,
   wineName: string | null
@@ -994,15 +1013,25 @@ export function getListScanDisplayLines(
     (wine.producer ? normalizeFacetValue(wine.producer) : null) ??
     inferProducerFromLabel(sanitizedLabel, wineName);
 
-  const title = sanitizedLabel || producer || wineName || "Untitled wine";
-  const subtitleCandidate =
+  const producerPrefix =
     producer && sanitizedLabel
       ? stripProducerPrefixFromLabel(sanitizedLabel, producer)
       : null;
+  const producerEmbedded =
+    producer && sanitizedLabel ? hasEmbeddedProducerPrefix(sanitizedLabel, producer) : false;
+  const producerIsSeparate =
+    Boolean(producer && sanitizedLabel) &&
+    !producerEmbedded;
+  const title =
+    producerIsSeparate && producer
+      ? producer
+      : sanitizedLabel || producer || wineName || "Untitled wine";
+  const subtitleCandidate = producerPrefix ?? (producerIsSeparate ? sanitizedLabel : null);
   const subtitle =
     subtitleCandidate &&
     subtitleCandidate.localeCompare(title, undefined, { sensitivity: "base" }) !== 0 &&
-    subtitleCandidate.localeCompare(wineName ?? "", undefined, { sensitivity: "base" }) !== 0
+    (producerIsSeparate ||
+      subtitleCandidate.localeCompare(wineName ?? "", undefined, { sensitivity: "base" }) !== 0)
       ? subtitleCandidate
       : null;
 

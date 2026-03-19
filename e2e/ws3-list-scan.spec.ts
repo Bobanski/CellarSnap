@@ -627,4 +627,30 @@ test.describe("WS3 list scan parse handler", () => {
       "Bordeaux Blend, Château Cantenac Brown, Margaux, Bordeaux 2021, FR"
     );
   });
+
+  test("display lines keep separately parsed producers visible in the title", () => {
+    const display = getListScanDisplayLines(
+      buildParsedWine({
+        id: "display-producer",
+        source_order: 0,
+        menu_label: "Syrah, Cote-Rotie, Rhone, France '21",
+        producer: "Bernard Levet",
+        wine_name: "Syrah, Cote-Rotie, Rhone, France '21",
+        vintage: "2021",
+        wine_type: "red",
+        price_display: "$222",
+        price_value: 222,
+        varietals: ["Syrah"],
+        regions: ["Rhone", "Cote-Rotie"],
+        canonical_country: "France",
+        match_percent: 64,
+        parse_confidence: 84,
+        rationale: "Highlights Syrah.",
+      })
+    );
+
+    expect(display.title).toBe("Bernard Levet");
+    expect(display.subtitle).toBe("Syrah, Cote-Rotie, Rhone, France '21");
+    expect(display.producer).toBe("Bernard Levet");
+  });
 });

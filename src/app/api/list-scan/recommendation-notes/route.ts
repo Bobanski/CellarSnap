@@ -37,6 +37,7 @@ type NoteSignalSummary = {
   display_region: string | null;
   sensory_signals: string[];
   categorical_signals: string[];
+  draft_note: string;
 };
 
 function normalizeSignalText(value: string | null | undefined) {
@@ -107,27 +108,55 @@ function findBestAffinityCandidate(
   return bestCandidate;
 }
 
-function axisLabel(axis: string) {
-  const labels: Record<string, string> = {
-    body: "body",
-    acidity: "acidity",
-    tannin: "tannin",
-    alcohol_perception: "alcohol",
-    fruit_ripeness: "fruit ripeness",
-    oak_presence: "oak",
-    earthy: "earthiness",
-    mineral: "minerality",
-    savory: "savory character",
-    aromatic_intensity: "aromatic intensity",
-    sweetness_perception: "sweetness",
-    bitterness_phenolic_grip: "grip",
-    finish_length: "finish length",
-    concentration: "concentration",
-    complexity: "complexity",
-    freshness: "freshness",
-  };
+function describeSensorySignal(params: {
+  axis: string;
+  userValue: number;
+  wineValue: number;
+  wineType: NoteSignalSummary["wine_type"];
+}) {
+  const { axis, userValue, wineValue, wineType } = params;
+  const higher = wineValue > userValue;
+  const lower = wineValue < userValue;
 
-  return labels[axis] ?? axis.replace(/_/g, " ");
+  switch (axis) {
+    case "body":
+      return higher ? "richer body" : lower ? "lighter body" : "balanced body";
+    case "acidity":
+      return higher ? "brighter acidity" : lower ? "softer acidity" : "balanced acidity";
+    case "tannin":
+      if (wineType !== "red") {
+        return null;
+      }
+      return higher ? "firmer tannins" : lower ? "softer tannins" : "balanced tannins";
+    case "alcohol_perception":
+      return higher ? "more warmth" : lower ? "more restrained alcohol" : "balanced alcohol";
+    case "fruit_ripeness":
+      return higher ? "riper fruit" : lower ? "fresher fruit" : "balanced fruit ripeness";
+    case "oak_presence":
+      return higher ? "more oak" : lower ? "more restrained oak" : "balanced oak";
+    case "earthy":
+      return higher ? "more earthy character" : lower ? "less earthy character" : "balanced earthiness";
+    case "mineral":
+      return higher ? "more mineral drive" : lower ? "softer minerality" : "balanced minerality";
+    case "savory":
+      return higher ? "more savory edge" : lower ? "softer savory character" : "balanced savoriness";
+    case "aromatic_intensity":
+      return higher ? "more lifted aromatics" : lower ? "more restrained aromatics" : "balanced aromatics";
+    case "sweetness_perception":
+      return higher ? "slightly sweeter finish" : "drier finish";
+    case "bitterness_phenolic_grip":
+      return higher ? "more grip" : lower ? "softer grip" : "balanced grip";
+    case "finish_length":
+      return higher ? "longer finish" : lower ? "briefer finish" : "steady finish";
+    case "concentration":
+      return higher ? "more concentration" : lower ? "lighter concentration" : "balanced concentration";
+    case "complexity":
+      return higher ? "more layered complexity" : lower ? "cleaner complexity" : "balanced complexity";
+    case "freshness":
+      return higher ? "brighter freshness" : lower ? "softer freshness" : "balanced freshness";
+    default:
+      return axis.replace(/_/g, " ");
+  }
 }
 
 function truncateNote(value: string, maxChars = 140) {
@@ -148,16 +177,26 @@ function sanitizeNote(value: string | null | undefined) {
   return normalized ? truncateNote(normalized) : null;
 }
 
-function buildFallbackNote(signal: NoteSignalSummary) {
-  const cues = [signal.categorical_signals[0], signal.sensory_signals[0], signal.sensory_signals[1]]
+function buildDraftNote(signal: NoteSignalSummary) {
+  const cues = [signal.sensory_signals[0], signal.sensory_signals[1], signal.categorical_signals[0]]
     .filter((value): value is string => Boolean(value))
-    .slice(0, 2);
+    .slice(0, 3);
 
   if (cues.length > 0) {
-    return truncateNote(`${cues.join(" and ")} line up with your palate.`);
+    if (cues.length === 1) {
+      return truncateNote(`${cues[0]} fits your preferences.`);
+    }
+    if (cues.length === 2) {
+      return truncateNote(`${cues[0]} and ${cues[1]} fit your preferences.`);
+    }
+    return truncateNote(`${cues[0]}, ${cues[1]}, and ${cues[2]} fit your preferences.`);
   }
 
   return "Its style lines up with the palate signals behind your strongest matches.";
+}
+
+function buildFallbackNote(signal: NoteSignalSummary) {
+  return buildDraftNote(signal);
 }
 
 function buildSignalSummary(params: {
@@ -169,12 +208,25 @@ function buildSignalSummary(params: {
   const structured = getListScanStructuredMeta(params.item);
   const resolvedWineType = resolveListScanWineType(params.item);
 
-  const sensorySignals = Object.entries(params.score.axis_contributions)
+  const sensorySignals: string[] = [];
+  Object.entries(params.score.axis_contributions)
     .filter(([, contribution]) => contribution.user_value !== null)
     .sort((left, right) => left[1].contribution - right[1].contribution)
-    .slice(0, 2)
-    .map(([axis]) => axisLabel(axis))
-    .filter(Boolean);
+    .forEach(([axis, contribution]) => {
+      if (sensorySignals.length >= 2) {
+        return;
+      }
+
+      const phrase = describeSensorySignal({
+        axis,
+        userValue: contribution.user_value ?? contribution.wine_value,
+        wineValue: contribution.wine_value,
+        wineType: params.item.wine_type,
+      });
+      if (phrase) {
+        sensorySignals.push(phrase);
+      }
+    });
 
   const categoricalSignals = Array.from(
     new Set(
@@ -206,6 +258,18 @@ function buildSignalSummary(params: {
     display_region: structured.displayRegion,
     sensory_signals: sensorySignals,
     categorical_signals: categoricalSignals,
+    draft_note: buildDraftNote({
+      id: params.item.id,
+      title: display.title,
+      match_percent: params.item.match_percent,
+      wine_type: resolvedWineType,
+      type_label: structured.typeLabel,
+      primary_varietal: structured.primaryVarietal,
+      display_region: structured.displayRegion,
+      sensory_signals: sensorySignals,
+      categorical_signals: categoricalSignals,
+      draft_note: "",
+    }),
   };
 }
 
@@ -220,8 +284,11 @@ function createOpenAiClient(apiKey = process.env.OPENAI_API_KEY) {
 function buildPrompt(signals: NoteSignalSummary[]) {
   return [
     "Write one short bullet point for each wine recommendation card.",
-    "Each note must explain why the wine aligns with the user's palate.",
-    "Use the supplied signals, but do not mention the score percentage, the word 'match', or backend details.",
+    "Use the supplied draft note as the baseline and keep the concrete reasons.",
+    "Prefer specific phrasing like lighter body, brighter acidity, drier finish, more restrained oak, or named places and varietals.",
+    "Never mention tannins for non-red wines.",
+    "If a wine reads dry, say dryness or drier finish instead of sweetness.",
+    "Do not mention the score percentage, the word 'match', or backend details.",
     "Keep each note to a plain, conversational fragment of 16 words or fewer.",
     "Avoid repeating the wine title or sounding generic.",
     "Return JSON only.",
@@ -399,10 +466,25 @@ export async function POST(request: Request) {
     const noteMap = new Map<string, string>();
 
     (parsedNotes.notes ?? []).forEach((entry) => {
-      const sanitized = sanitizeNote(entry.note);
-      if (sanitized) {
-        noteMap.set(entry.id, sanitized);
+      const sourceSignal = signalSummaries.find((signal) => signal.id === entry.id);
+      if (!sourceSignal) {
+        return;
       }
+
+      const sanitized = sanitizeNote(entry.note);
+      if (!sanitized) {
+        return;
+      }
+
+      if (sourceSignal.wine_type !== "red" && /\btannins?\b/i.test(sanitized)) {
+        return;
+      }
+
+      if (/\bsweetness\b/i.test(sanitized) && sourceSignal.wine_type !== "dessert_fortified" && !/\bdry|drier\b/i.test(sanitized)) {
+        return;
+      }
+
+      noteMap.set(entry.id, sanitized);
     });
 
     return NextResponse.json({
