@@ -112,12 +112,9 @@ function buildWineTypeSummary(
 }
 
 function buildMatchSummary(filters: ListScanFilters) {
-  const threshold =
-    filters.min_match_percent > 0
-      ? `Over ${filters.min_match_percent}%`
-      : "Any match";
-  const column = filters.show_match_column ? "showing % column" : "hiding % column";
-  return `${threshold}, ${column}`;
+  return filters.min_match_percent > 0
+    ? `Over ${filters.min_match_percent}%`
+    : "Any match";
 }
 
 function getAccentPillClasses(
@@ -188,7 +185,7 @@ function countActiveFilterGroups(
   if (filters.selected_regions.length > 0) {
     count += 1;
   }
-  if (filters.min_match_percent > 0 || !filters.show_match_column) {
+  if (filters.min_match_percent > 0) {
     count += 1;
   }
 
@@ -745,46 +742,31 @@ export default function ListScanResultsScreen() {
                   open={matchOpen}
                   onToggle={() => setMatchOpen((current) => !current)}
                 >
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm text-[var(--color-text-secondary)]">Show wines over</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="0"
-                    max="100"
-                    placeholder="0"
-                    value={
-                      filters.min_match_percent > 0 ? String(filters.min_match_percent) : ""
-                    }
-                    onChange={(event) => {
-                      const trimmed = event.target.value.trim();
-                      const nextValue = trimmed === "" ? 0 : Number(trimmed);
-                      setFilters((current) => ({
-                        ...current,
-                        min_match_percent: Number.isFinite(nextValue)
-                          ? Math.max(0, Math.min(100, Math.round(nextValue)))
-                          : current.min_match_percent,
-                      }));
-                    }}
-                    className="w-24 rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-center text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-emerald-300/60 focus:outline-none"
-                  />
-                  <span className="text-sm text-[var(--color-text-secondary)]">%</span>
-                </div>
-
-                <label className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-primary)]">
-                  <input
-                    type="checkbox"
-                    checked={filters.show_match_column}
-                    onChange={(event) =>
-                      setFilters((current) => ({
-                        ...current,
-                        show_match_column: event.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-white/20 accent-emerald-400"
-                  />
-                  Show % match in full list
-                </label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm text-[var(--color-text-secondary)]">Show wines over</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={
+                        filters.min_match_percent > 0 ? String(filters.min_match_percent) : ""
+                      }
+                      onChange={(event) => {
+                        const trimmed = event.target.value.trim();
+                        const nextValue = trimmed === "" ? 0 : Number(trimmed);
+                        setFilters((current) => ({
+                          ...current,
+                          min_match_percent: Number.isFinite(nextValue)
+                            ? Math.max(0, Math.min(100, Math.round(nextValue)))
+                            : current.min_match_percent,
+                        }));
+                      }}
+                      className="w-24 rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-center text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-emerald-300/60 focus:outline-none"
+                    />
+                    <span className="text-sm text-[var(--color-text-secondary)]">%</span>
+                  </div>
                 </FilterDropdown>
               </div>
             </div>
@@ -818,11 +800,7 @@ export default function ListScanResultsScreen() {
                   const detailLine =
                     display.subtitle ??
                     [display.wineName, display.producer].filter(Boolean).join(" · ");
-                  const metaLine = [
-                    structured.typeLabel,
-                    structured.primaryVarietal,
-                    structured.displayRegion,
-                  ]
+                  const metaLine = [structured.typeLabel, structured.primaryVarietal, structured.displayRegion]
                     .filter(Boolean)
                     .join(" · ");
                   return (
@@ -834,9 +812,6 @@ export default function ListScanResultsScreen() {
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
                           Recommendation {index + 1}
                         </p>
-                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
-                          {wine.match_percent}%
-                        </span>
                       </div>
 
                       <div className="mt-3 flex items-start justify-between gap-4">
@@ -852,13 +827,6 @@ export default function ListScanResultsScreen() {
                           {metaLine ? (
                             <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                               {metaLine}
-                              {structured.confidenceLabel
-                                ? ` · ${structured.confidenceLabel}`
-                                : ""}
-                            </p>
-                          ) : structured.confidenceLabel ? (
-                            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                              {structured.confidenceLabel}
                             </p>
                           ) : null}
                         </div>
@@ -923,18 +891,9 @@ export default function ListScanResultsScreen() {
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[#120f0e]">
-            <div
-              className={`grid gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)] ${
-                filters.show_match_column
-                  ? "grid-cols-[minmax(0,1fr)_120px_110px]"
-                  : "grid-cols-[minmax(0,1fr)_120px]"
-              }`}
-            >
+            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
               <span>Wine</span>
               <span className="text-center">Price</span>
-              {filters.show_match_column ? (
-                <span className="whitespace-nowrap text-right">% match</span>
-              ) : null}
             </div>
 
             <div className="max-h-[520px] overflow-y-auto">
@@ -966,13 +925,7 @@ export default function ListScanResultsScreen() {
                             </span>
                           </div>
                         ) : null}
-                        <div
-                          className={`grid gap-3 border-b border-white/6 px-5 py-3 text-sm ${
-                            filters.show_match_column
-                              ? "grid-cols-[minmax(0,1fr)_120px_110px]"
-                              : "grid-cols-[minmax(0,1fr)_120px]"
-                          }`}
-                        >
+                        <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-b border-white/6 px-5 py-3 text-sm">
                           <div className="min-w-0">
                             <p
                               className={`truncate ${
@@ -996,15 +949,6 @@ export default function ListScanResultsScreen() {
                           >
                             {formatPriceDisplay(wine.price_display, wine.menu_label)}
                           </span>
-                          {filters.show_match_column ? (
-                            <span
-                              className={`text-right font-semibold ${
-                                highlighted ? "text-emerald-300" : "text-[var(--color-text-tertiary)]"
-                              }`}
-                            >
-                              {wine.match_percent}%
-                            </span>
-                          ) : null}
                         </div>
                       </div>
                     );

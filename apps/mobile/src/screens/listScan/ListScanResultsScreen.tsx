@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -103,12 +102,9 @@ function buildWineTypeSummary(
 }
 
 function buildMatchSummary(filters: ListScanFilters) {
-  const threshold =
-    filters.min_match_percent > 0
-      ? `Over ${filters.min_match_percent}%`
-      : "Any match";
-  const column = filters.show_match_column ? "showing % column" : "hiding % column";
-  return `${threshold}, ${column}`;
+  return filters.min_match_percent > 0
+    ? `Over ${filters.min_match_percent}%`
+    : "Any match";
 }
 
 function getSegmentToneStyles(
@@ -186,7 +182,7 @@ function countActiveFilterGroups(
   if (filters.selected_regions.length > 0) {
     count += 1;
   }
-  if (filters.min_match_percent > 0 || !filters.show_match_column) {
+  if (filters.min_match_percent > 0) {
     count += 1;
   }
 
@@ -639,17 +635,6 @@ export default function ListScanResultsScreen() {
                     <AppText style={styles.matchHelperText}>%</AppText>
                   </View>
 
-                  <View style={styles.switchRow}>
-                    <AppText style={styles.switchLabel}>Show % match in full list</AppText>
-                    <Switch
-                      value={filters.show_match_column}
-                      onValueChange={(show_match_column) =>
-                        setFilters((current) => ({ ...current, show_match_column }))
-                      }
-                      trackColor={{ false: colors.surfaceRaised, true: "rgba(45,125,70,0.42)" }}
-                      thumbColor={filters.show_match_column ? colors.success : colors.surfaceRaised}
-                    />
-                  </View>
                 </FilterDropdown>
               </View>
             </View>
@@ -686,7 +671,6 @@ export default function ListScanResultsScreen() {
                   structured.typeLabel,
                   structured.primaryVarietal,
                   structured.displayRegion,
-                  structured.confidenceLabel,
                 ]
                   .filter(Boolean)
                   .join(" · ");
@@ -696,9 +680,6 @@ export default function ListScanResultsScreen() {
                       <AppText style={styles.recommendationEyebrow}>
                         Recommendation {index + 1}
                       </AppText>
-                      <View style={styles.matchBadge}>
-                        <AppText style={styles.matchBadgeText}>{wine.match_percent}%</AppText>
-                      </View>
                     </View>
 
                     <View style={styles.recommendationTitleRow}>
@@ -742,9 +723,6 @@ export default function ListScanResultsScreen() {
           <View style={styles.tableHead}>
             <AppText style={[styles.tableHeadText, styles.tableWineColumn]}>Wine</AppText>
             <AppText style={[styles.tableHeadText, styles.tablePriceHead]}>Price</AppText>
-            {filters.show_match_column ? (
-              <AppText style={[styles.tableHeadText, styles.tableMatchHead]}>% match</AppText>
-            ) : null}
           </View>
 
           <View style={styles.tableWrap}>
@@ -807,18 +785,6 @@ export default function ListScanResultsScreen() {
                               {formatPriceDisplay(wine.price_display, wine.menu_label)}
                             </AppText>
                           </View>
-                          {filters.show_match_column ? (
-                            <View style={styles.tableMatchColumn}>
-                              <AppText
-                                style={[
-                                  styles.tableMatchText,
-                                  highlighted ? styles.tableWineTextHighlighted : null,
-                                ]}
-                              >
-                                {wine.match_percent}%
-                              </AppText>
-                            </View>
-                          ) : null}
                         </View>
                       </View>
                     );

@@ -550,6 +550,25 @@ function matchesSelectedOptions(
   );
 }
 
+function matchesSelectedRegions(values: string[], selected: string[]) {
+  if (selected.length === 0) {
+    return true;
+  }
+
+  const effectiveSelection = selected.length > 1 ? selected.slice(1) : selected;
+  if (effectiveSelection.length === 0) {
+    return true;
+  }
+
+  const normalizedRowValues = new Set(
+    values.map((value) => normalizeListScanRegionValue(value).toLowerCase()).filter(Boolean)
+  );
+
+  return effectiveSelection.some((value) =>
+    normalizedRowValues.has(normalizeListScanRegionValue(value).toLowerCase())
+  );
+}
+
 function matchesPriceFilter(wine: ListScanParsedWine, filters: ListScanFilters) {
   const price = wine.price_value;
   if (filters.price_mode === "any") {
@@ -603,13 +622,7 @@ export function filterListScanWines(
     if (!matchesSelectedOptions(wine.varietals, filters.selected_varietals)) {
       return false;
     }
-    if (
-      !matchesSelectedOptions(
-        wine.regions,
-        filters.selected_regions,
-        normalizeListScanRegionValue
-      )
-    ) {
+    if (!matchesSelectedRegions(wine.regions, filters.selected_regions)) {
       return false;
     }
     return wine.match_percent >= filters.min_match_percent;
@@ -898,17 +911,14 @@ export function getListScanStructuredMeta(
   const typeLabel =
     resolvedType !== "unknown" ? listScanWineTypeLabels[resolvedType] : null;
   const primaryVarietal = wine.varietals[0] ?? null;
-  const displayRegion = wine.regions.length > 0 ? wine.regions[wine.regions.length - 1] : null;
-  const confidenceLabel =
-    typeof wine.parse_confidence === "number" && Number.isFinite(wine.parse_confidence)
-      ? `Parsed ${Math.round(wine.parse_confidence)}%`
-      : null;
-
+  const displayRegion =
+    wine.regions.find((region) => !normalizeListScanCountryLabel(region)) ??
+    wine.regions[0] ??
+    null;
   return {
     typeLabel,
     primaryVarietal,
     displayRegion,
-    confidenceLabel,
   };
 }
 

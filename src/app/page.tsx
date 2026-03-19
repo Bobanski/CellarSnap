@@ -545,7 +545,7 @@ export default function HomePage() {
                   Pocket Sommelier can now answer with your palate in mind.
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--color-text-secondary)]">
-                  Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history alongside the structured wine knowledge base.
+                  Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history to personalize suggestions.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -554,12 +554,6 @@ export default function HomePage() {
                   className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
                 >
                   Open Pocket Sommelier
-                </Link>
-                <Link
-                  href="/sommelier/knowledge"
-                  className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                >
-                  Knowledge base
                 </Link>
               </div>
             </div>

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   createDefaultListScanFilters,
   deriveListScanRegionGroups,
+  filterListScanWines,
   resolveListScanWineType,
   sanitizeListScanFilters,
   type ListScanRegionGroup,
@@ -312,6 +313,35 @@ test.describe("WS3 list scan parse handler", () => {
     expect(regionGroups).toEqual([
       { country: "France", subRegions: ["Bordeaux"] },
       { country: "USA", subRegions: ["Napa Valley"] },
+    ]);
+  });
+
+  test("region filters only match selected subregions when a country is active", () => {
+    const wines = [
+      {
+        ...baseResult.wines[0],
+        id: "wine-napa",
+        regions: ["USA", "Napa Valley"],
+      },
+      {
+        ...baseResult.wines[0],
+        id: "wine-northern-ca",
+        regions: ["USA", "Northern California"],
+      },
+      {
+        ...baseResult.wines[0],
+        id: "wine-central-coast",
+        regions: ["USA", "Central Coast"],
+      },
+    ];
+
+    const filters = {
+      ...createDefaultListScanFilters(),
+      selected_regions: ["USA", "Napa Valley"],
+    };
+
+    expect(filterListScanWines(wines, filters).map((wine) => wine.id)).toEqual([
+      "wine-napa",
     ]);
   });
 

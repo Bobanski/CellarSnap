@@ -44,7 +44,7 @@ export default function SommelierInput({
       />
       <div className="mt-3 flex items-center justify-between gap-3 px-2">
         <p className="text-xs text-[var(--color-text-tertiary)]">
-          Shift+Enter for a new line. Responses use your tasting history plus the wine knowledge base.
+          Shift+Enter for a new line. Responses use your tasting history.
         </p>
         <button
           type="button"
