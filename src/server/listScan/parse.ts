@@ -7,6 +7,7 @@ import {
   createStableMatchPercent,
   deriveListScanFacets,
   buildListScanRationale,
+  normalizeListScanCountryLabel,
   resolveListScanWineType,
   sanitizeListScanMenuLabel,
   type ListScanParsedWine,
@@ -398,6 +399,34 @@ function normalizeFacetValues(values?: string[] | null) {
       return;
     }
     const label = toTitleCaseWineText(normalized);
+    const dedupeKey = label.toLowerCase();
+    if (!map.has(dedupeKey)) {
+      map.set(dedupeKey, label);
+    }
+  });
+  return Array.from(map.values());
+}
+
+function normalizeRegionFacetValue(value: string) {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return null;
+  }
+
+  return normalizeListScanCountryLabel(normalized) ?? toTitleCaseWineText(normalized);
+}
+
+function normalizeRegionFacetValues(values?: string[] | null) {
+  if (!Array.isArray(values)) {
+    return [] as string[];
+  }
+
+  const map = new Map<string, string>();
+  values.forEach((value) => {
+    const label = normalizeRegionFacetValue(value);
+    if (!label) {
+      return;
+    }
     const dedupeKey = label.toLowerCase();
     if (!map.has(dedupeKey)) {
       map.set(dedupeKey, label);
@@ -821,7 +850,7 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         priceDisplay,
         priceValue
       );
-      const regions = normalizeFacetValues(wine.regions);
+      const regions = normalizeRegionFacetValues(wine.regions);
       const suppliedWineType = normalizeWineType(wine.wine_type);
       const suppliedVarietals = normalizeFacetValues(wine.varietals);
       const preliminaryWineType = inferWineTypeFromContext({
@@ -1054,7 +1083,7 @@ function applyInferenceToWine(
   inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>>
 ) {
   const inferred = resolveInferenceForWine(wine, inferenceMap);
-  const regions = uniqueValues([
+  const regions = normalizeRegionFacetValues([
     ...wine.regions,
     ...(inferred?.canonicalCountry ? [inferred.canonicalCountry] : []),
     ...(inferred?.canonicalRegion ? [inferred.canonicalRegion] : []),
@@ -1081,6 +1110,10 @@ function applyInferenceToWine(
     ...wine,
     regions,
     varietals,
+    canonical_country:
+      normalizeListScanCountryLabel(inferred?.canonicalCountry) ??
+      wine.canonical_country ??
+      null,
     wine_type: wineType,
     rationale: buildListScanRationale({
       wine_type: wineType,

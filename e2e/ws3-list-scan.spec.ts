@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   createDefaultListScanFilters,
+  deriveListScanRegionGroups,
   resolveListScanWineType,
   sanitizeListScanFilters,
   type ListScanRegionGroup,
@@ -165,6 +166,38 @@ test.describe("WS3 list scan parse handler", () => {
     expect(enriched.wine_type).toBe("white");
   });
 
+  test("inference normalizes United States country labels to USA", () => {
+    const inferenceMap: ListScanInferenceMap = {
+      appellationToGrapes: new Map([
+        [
+          "napa valley",
+          {
+            grapes: ["Cabernet Sauvignon"],
+            wineType: "red",
+            canonicalCountry: "United States",
+            canonicalRegion: "Napa Valley",
+            canonicalSubRegion: null,
+          },
+        ],
+      ]),
+      grapeToWineType: new Map([["cabernet sauvignon", "red"]]),
+      regionAliases: new Map(),
+    };
+
+    const enriched = __listScanTestUtils.applyInferenceToWine(
+      {
+        ...baseResult.wines[0],
+        wine_type: "unknown",
+        varietals: [],
+        regions: ["Napa Valley"],
+      },
+      inferenceMap
+    );
+
+    expect(enriched.canonical_country).toBe("USA");
+    expect(enriched.regions).toEqual(["Napa Valley", "USA"]);
+  });
+
   test("test accounts automatically receive private beta access", async () => {
     const hasAccess = await userHasPrivateBetaFeatureAccess(
       {
@@ -260,6 +293,26 @@ test.describe("WS3 list scan parse handler", () => {
     expect(sanitized.included_wine_types).toEqual(["red"]);
     expect(sanitized.selected_varietals).toEqual(["Cabernet Sauvignon"]);
     expect(sanitized.selected_regions).toEqual(["France", "Bordeaux"]);
+  });
+
+  test("region groups keep U.S. regions under USA", () => {
+    const regionGroups = deriveListScanRegionGroups([
+      {
+        ...baseResult.wines[0],
+        id: "wine-us",
+        regions: ["Napa Valley", "USA"],
+      },
+      {
+        ...baseResult.wines[0],
+        id: "wine-fr",
+        regions: ["France", "Bordeaux"],
+      },
+    ]);
+
+    expect(regionGroups).toEqual([
+      { country: "France", subRegions: ["Bordeaux"] },
+      { country: "USA", subRegions: ["Napa Valley"] },
+    ]);
   });
 
   test("parser normalization accepts rose aliases and section signals", () => {

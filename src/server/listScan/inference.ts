@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { normalizeListScanCountryLabel } from "@shared";
 import type { WineType } from "@/types/wine";
 
 type BaseProfileRow = {
@@ -135,7 +136,7 @@ function registerBucketValue(
   const bucket =
     buckets.get(key) ??
     ({
-      country: normalizeDisplayValue(row.country),
+      country: normalizeListScanCountryLabel(row.country) ?? normalizeDisplayValue(row.country),
       region: normalizeDisplayValue(row.region),
       subRegion: normalizeDisplayValue(row.sub_region),
       grapeCounts: new Map<string, number>(),

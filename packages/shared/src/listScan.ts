@@ -49,6 +49,66 @@ export const listScanWineTypeLabels: Record<ListScanWineType, string> = {
   unknown: "Unknown",
 };
 
+const LIST_SCAN_COUNTRY_LABELS = new Map<string, string>([
+  ["usa", "USA"],
+  ["u s", "USA"],
+  ["u s a", "USA"],
+  ["us", "USA"],
+  ["united states", "USA"],
+  ["united states of america", "USA"],
+  ["france", "France"],
+  ["italy", "Italy"],
+  ["spain", "Spain"],
+  ["portugal", "Portugal"],
+  ["germany", "Germany"],
+  ["austria", "Austria"],
+  ["australia", "Australia"],
+  ["new zealand", "New Zealand"],
+  ["argentina", "Argentina"],
+  ["chile", "Chile"],
+  ["south africa", "South Africa"],
+  ["greece", "Greece"],
+  ["hungary", "Hungary"],
+  ["canada", "Canada"],
+  ["mexico", "Mexico"],
+  ["england", "England"],
+  ["united kingdom", "United Kingdom"],
+  ["uruguay", "Uruguay"],
+  ["brazil", "Brazil"],
+  ["israel", "Israel"],
+  ["lebanon", "Lebanon"],
+  ["switzerland", "Switzerland"],
+  ["slovenia", "Slovenia"],
+  ["croatia", "Croatia"],
+  ["romania", "Romania"],
+  ["georgia", "Georgia"],
+]);
+
+function normalizeCountryLookupValue(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function normalizeListScanCountryLabel(value: string | null | undefined) {
+  const key = normalizeCountryLookupValue(value);
+  if (!key) {
+    return null;
+  }
+  return LIST_SCAN_COUNTRY_LABELS.get(key) ?? null;
+}
+
+function normalizeListScanRegionValue(value: string) {
+  return normalizeListScanCountryLabel(value) ?? normalizeFacetValue(value);
+}
+
 const LIST_SCAN_WINE_TYPE_BY_VARIETAL: Partial<Record<string, ListScanWineType>> = {
   "Albarino": "white",
   "Arneis": "white",
@@ -124,6 +184,7 @@ export const listScanParsedWineSchema = z.object({
   price_value: z.number().nullable(),
   varietals: z.array(z.string()),
   regions: z.array(z.string()),
+  canonical_country: z.string().nullable().optional(),
   match_percent: z.number().int().min(0).max(100),
   parse_confidence: z.number().int().min(0).max(100),
   rationale: z.string(),
@@ -471,17 +532,21 @@ export function getListScanVarietalAccentTone(
   return accentMap[key] ?? "neutral";
 }
 
-function matchesSelectedOptions(values: string[], selected: string[]) {
+function matchesSelectedOptions(
+  values: string[],
+  selected: string[],
+  normalizeValue: (value: string) => string = normalizeFacetValue
+) {
   if (selected.length === 0) {
     return true;
   }
 
   const normalizedRowValues = new Set(
-    values.map((value) => normalizeFacetValue(value).toLowerCase()).filter(Boolean)
+    values.map((value) => normalizeValue(value).toLowerCase()).filter(Boolean)
   );
 
   return selected.some((value) =>
-    normalizedRowValues.has(normalizeFacetValue(value).toLowerCase())
+    normalizedRowValues.has(normalizeValue(value).toLowerCase())
   );
 }
 
@@ -538,7 +603,13 @@ export function filterListScanWines(
     if (!matchesSelectedOptions(wine.varietals, filters.selected_varietals)) {
       return false;
     }
-    if (!matchesSelectedOptions(wine.regions, filters.selected_regions)) {
+    if (
+      !matchesSelectedOptions(
+        wine.regions,
+        filters.selected_regions,
+        normalizeListScanRegionValue
+      )
+    ) {
       return false;
     }
     return wine.match_percent >= filters.min_match_percent;
@@ -917,13 +988,27 @@ export type ListScanRegionGroup = {
   subRegions: string[];
 };
 
+function getListScanCountryLabel(wine: Pick<
+  ListScanParsedWine,
+  "canonical_country" | "regions"
+>) {
+  return (
+    normalizeListScanCountryLabel(wine.canonical_country) ??
+    wine.regions
+      .map((region) => normalizeListScanCountryLabel(region))
+      .find((value): value is string => Boolean(value)) ??
+    (wine.regions[0] ? normalizeFacetValue(wine.regions[0]) : null)
+  );
+}
+
 export function deriveListScanRegionGroups(
   wines: ListScanParsedWine[]
 ): ListScanRegionGroup[] {
   // Only sub-regions need to pass the region validation filter.
-  // Countries (regions[0]) are always accepted as group headers.
   const validSubRegions = new Set(
-    deriveListScanRegionFacets(wines).map((r) => r.toLowerCase())
+    deriveListScanRegionFacets(wines).map((r) =>
+      normalizeListScanRegionValue(r).toLowerCase()
+    )
   );
 
   const countryMap = new Map<string, Set<string>>();
@@ -934,7 +1019,7 @@ export function deriveListScanRegionGroups(
       return;
     }
 
-    const country = normalizeFacetValue(wine.regions[0]);
+    const country = getListScanCountryLabel(wine);
     if (!country) {
       return;
     }
@@ -945,8 +1030,8 @@ export function deriveListScanRegionGroups(
       countryDisplay.set(countryKey, country);
     }
 
-    for (let i = 1; i < wine.regions.length; i++) {
-      const sub = normalizeFacetValue(wine.regions[i]);
+    for (const region of wine.regions) {
+      const sub = normalizeListScanRegionValue(region);
       if (!sub) {
         continue;
       }
