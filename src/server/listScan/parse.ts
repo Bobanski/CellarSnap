@@ -10,6 +10,7 @@ import {
   normalizeListScanCountryLabel,
   resolveListScanWineType,
   sanitizeListScanMenuLabel,
+  sanitizeListScanWineName,
   stripLeadingListScanIdentifier,
   type ListScanParsedWine,
   type ListScanResult,
@@ -52,6 +53,8 @@ const MAX_FETCHED_TEXT_CHARS = 24_000;
 const MAX_URL_HTML_BYTES = 400_000;
 const MAX_URL_MODEL_INPUT_CHARS = 10_000;
 const REQUEST_TIMEOUT_MS = 90_000;
+const PRICE_NUMBER_PATTERN = /(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?/;
+const BARE_PRICE_NUMBER_PATTERN = /(?:\d{1,3}(?:,\d{3})+|\d{1,5})(?:\.\d{1,2})?/;
 const ABSOLUTE_NON_WINE_ENTRY_PATTERN =
   /\b(?:coffee|espresso|americano|macchiato|latte|flat white|cappuccino|cold brew|tea|herbal|water|sparkling water|soda|limeade|lemonade|juice|grape juice|shrub|arnold palmer|kombucha|beer|ale|ipa|pilsner|porter|stout|cider|spritz|michelada|mimosa|cognac|brandy|armagnac|grappa|liqueur|aperitif|digestif|corkage|non-alcoholic|zero-proof|soft beverage)\b/i;
 const NON_WINE_SECTION_HEADING_PATTERN =
@@ -483,7 +486,7 @@ function normalizePriceDisplay(value?: string | null) {
 }
 
 function extractNormalizedPriceTokens(value?: string | null) {
-  return (value?.match(/\$?\s*\d+(?:\.\d{1,2})?/g) ?? [])
+  return (value?.match(/\$?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?/g) ?? [])
     .map((token) => token.replace(/\s+/g, "").replace(/^\$/, ""))
     .filter(Boolean)
     .map((token) => `$${token}`);
@@ -500,7 +503,10 @@ function resolveListScanPriceFields(
 ) {
   const normalizedPriceDisplay = normalizeCompositePriceDisplay(priceDisplay);
   const multiPriceLabelMatch = rawMenuLabel.match(
-    /^(.*?)(\$\s*\d+(?:\.\d{1,2})?(?:\s*(?:\/|[-–])\s*\$?\s*\d+(?:\.\d{1,2})?)+)\s*$/i
+    new RegExp(
+      `^(.*?)(\\$\\s*${PRICE_NUMBER_PATTERN.source}(?:\\s*(?:\\/|[-–])\\s*\\$?\\s*${PRICE_NUMBER_PATTERN.source})+)\\s*$`,
+      "i"
+    )
   );
 
   if (multiPriceLabelMatch?.[2]) {
@@ -511,7 +517,10 @@ function resolveListScanPriceFields(
   }
 
   const secondaryPriceLabelMatch = rawMenuLabel.match(
-    /^(.*?)(?:\s*(?:\/|[-–])\s*)(\$?\s*\d+(?:\.\d{1,2})?)\s*$/i
+    new RegExp(
+      `^(.*?)(?:\\s*(?:\\/|[-–])\\s*)(\\$?\\s*${PRICE_NUMBER_PATTERN.source})\\s*$`,
+      "i"
+    )
   );
   if (secondaryPriceLabelMatch?.[2] && normalizedPriceDisplay) {
     const mergedTokens = [
@@ -580,6 +589,81 @@ function buildInitialUploadPrompt(params: {
   );
 }
 
+function isCountryListLabel(label: string) {
+  const normalized = normalizeText(label);
+  if (!normalized) {
+    return false;
+  }
+
+  const parts = normalized
+    .split(/\s*(?:,|\/|&|\band\b)\s*/i)
+    .map((part) => normalizeText(part))
+    .filter((part): part is string => Boolean(part));
+
+  return parts.length >= 2 && parts.every((part) => Boolean(normalizeListScanCountryLabel(part)));
+}
+
+function isLikelyNarrativeLabel(label: string) {
+  const normalized = normalizeText(label);
+  if (!normalized) {
+    return false;
+  }
+
+  if (/\b\d{5,}\b/.test(normalized)) {
+    return false;
+  }
+
+  const wordCount = normalized.split(/\s+/).length;
+  if (wordCount < 8 || normalized.length < 45) {
+    return false;
+  }
+
+  if (/^[a-z]/.test(normalized)) {
+    return true;
+  }
+
+  return (
+    /[.!?]/.test(normalized) &&
+    /\b(?:we|our|the|and|with|from|for|this|that|wine|doors|proud|share|culture|specialty|achievement|walk)\b/i.test(
+      normalized
+    )
+  );
+}
+
+function stripNoisyPrefixBeforeListScanIdentifier(label: string) {
+  const normalized = normalizeText(label);
+  if (!normalized) {
+    return null;
+  }
+
+  const identifierMatch = normalized.match(/\b\d{5,}\b/);
+  if (!identifierMatch || identifierMatch.index === undefined) {
+    return null;
+  }
+
+  const prefix = normalizeText(normalized.slice(0, identifierMatch.index));
+  const suffix = normalizeText(
+    normalized
+      .slice(identifierMatch.index + identifierMatch[0].length)
+      .replace(/^[\s)\].,;:\-–—]+/, "")
+  );
+
+  if (!prefix || !suffix) {
+    return null;
+  }
+
+  if (prefix.length < 20) {
+    return null;
+  }
+
+  if (!isLikelyNarrativeLabel(prefix) && !/^[a-z]/.test(prefix)) {
+    return null;
+  }
+
+  const strippedSuffix = stripLeadingListScanIdentifier(suffix);
+  return strippedSuffix.length > 0 ? strippedSuffix : null;
+}
+
 function isLikelyNonWineEntry(params: {
   menuLabel: string;
   wineName: string | null;
@@ -595,6 +679,14 @@ function isLikelyNonWineEntry(params: {
     params.varietals.length === 0 &&
     params.regions.length === 0
   ) {
+    return true;
+  }
+
+  if (isLikelyStandaloneSectionHeaderLabel(params.menuLabel)) {
+    return true;
+  }
+
+  if (isCountryListLabel(params.menuLabel) || isLikelyNarrativeLabel(params.menuLabel)) {
     return true;
   }
 
@@ -629,15 +721,15 @@ function hasLikelyWineEvidence(params: {
     return false;
   }
 
-  if (
-    params.wineType === "sparkling" ||
-    params.wineType === "white" ||
-    params.wineType === "red" ||
-    params.wineType === "dessert_fortified"
-  ) {
-    return true;
+  if (isLikelyStandaloneSectionHeaderLabel(params.menuLabel)) {
+    return false;
   }
-  if (params.varietals.length > 0 || params.regions.length > 0) {
+
+  if (isCountryListLabel(params.menuLabel) || isLikelyNarrativeLabel(params.menuLabel)) {
+    return false;
+  }
+
+  if (params.varietals.length > 0) {
     return true;
   }
   if (params.vintage) {
@@ -799,12 +891,12 @@ function parseFallbackPriceValue(value: string | null) {
     return null;
   }
 
-  const matches = value.match(/\d+(?:\.\d{1,2})?/g);
+  const matches = value.match(/(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?/g);
   if (!matches || matches.length === 0) {
     return null;
   }
 
-  const parsed = Number(matches[0]);
+  const parsed = Number(matches[0].replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -836,9 +928,18 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         return null;
       }
 
-      const producer = normalizeProducerText(wine.producer) ?? normalizeText(wine.producer);
-      const wineName =
+      let producer = normalizeProducerText(wine.producer) ?? normalizeText(wine.producer);
+      if (
+        producer &&
+        (isLikelyNarrativeLabel(producer) ||
+          isCountryListLabel(producer) ||
+          isLikelyStandaloneSectionHeaderLabel(producer))
+      ) {
+        producer = null;
+      }
+      const rawWineName =
         normalizeWineNameText(wine.wine_name) ?? normalizeText(wine.wine_name);
+      const wineName = sanitizeListScanWineName(rawWineName);
       const vintage = normalizeText(wine.vintage);
       const resolvedPriceFields = resolveListScanPriceFields(
         rawMenuLabel,
@@ -849,11 +950,24 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         typeof wine.price_value === "number" && Number.isFinite(wine.price_value)
           ? wine.price_value
           : parseFallbackPriceValue(priceDisplay);
-      const menuLabel = sanitizeListScanMenuLabel(
+      const sanitizedMenuLabel = sanitizeListScanMenuLabel(
         resolvedPriceFields.menuLabel,
         priceDisplay,
         priceValue
       );
+      const noisyMenuLabel = stripNoisyPrefixBeforeListScanIdentifier(
+        sanitizedMenuLabel
+      );
+      let menuLabel = noisyMenuLabel ?? sanitizedMenuLabel;
+      if (
+        isLikelyNarrativeLabel(menuLabel) &&
+        wineName &&
+        !isLikelyNarrativeLabel(wineName) &&
+        !isCountryListLabel(wineName) &&
+        !isLikelyStandaloneSectionHeaderLabel(wineName)
+      ) {
+        menuLabel = wineName;
+      }
       const regions = normalizeRegionFacetValues(wine.regions);
       const suppliedWineType = normalizeWineType(wine.wine_type);
       const suppliedVarietals = normalizeFacetValues(wine.varietals);
@@ -966,7 +1080,7 @@ const LIST_SCAN_NOISE_LABEL_PATTERN =
 const LIST_SCAN_SECTION_NAVIGATION_PATTERN =
   /(?:\b\d{1,3}\s*[-–]\s*\d{1,3}\b.*[—-].*)|(?:\.{3,}.*\b\d{1,3}\s*[-–]\s*\d{1,3}\b)/i;
 const LIST_SCAN_SECTION_HEADER_LABEL_PATTERN =
-  /^(?:wines?|wine|sparkling|white|red|rose|rosé|orange|skin contact|dessert(?:[\/-]\s*fortified)?|fortified|sweet(?: wines?)?|by the glass|half bottles?|large format|magnums?|beer|beers|draft beer|full list|all available|top \d+|filtered wines in list order|current recommendations|best match|list order)$/i;
+  /^(?:wines?|wine|sparkling|white|red|rose|rosé|orange|skin contact|dessert(?:[\/-]\s*fortified)?|fortified|sweet(?: wines?)?|kosher wines?(?:\s+by\s+the\s+bottle)?|by the glass|half bottles?|large format|magnums?|beer|beers|draft beer|full list|all available|top \d+|filtered wines in list order|current recommendations|best match|list order)$/i;
 const LIST_SCAN_COUNTRY_SECTION_LABEL_PATTERN =
   /^(?:usa|u\.s\.a\.|u\.s\.|us|united states(?: of america)?|france|italy|spain|portugal|germany|australia|new zealand|argentina|chile|south africa|greece|hungary|canada|mexico|england|united kingdom|uruguay|brazil|israel|lebanon|switzerland|slovenia|croatia|romania|georgia)(?:\s*[:,-]\s*.+)?$/i;
 const LIST_SCAN_SECTION_GEOGRAPHIC_HINT_PATTERN =
@@ -1000,25 +1114,16 @@ function isListScanNoiseLabel(value: string) {
   return false;
 }
 
-function isLikelyStandaloneSectionHeader(
-  wine: Pick<
-    ListScanParsedWine,
-    "menu_label" | "wine_name" | "producer" | "vintage" | "varietals" | "regions" | "wine_type"
-  >
-) {
-  const label = normalizeText(wine.menu_label);
-  if (!label) {
-    return false;
-  }
-  if (wine.wine_name || wine.producer || wine.vintage || wine.varietals.length > 0) {
-    return false;
-  }
-
+function isLikelyStandaloneSectionHeaderLabel(label: string) {
   if (LIST_SCAN_SECTION_HEADER_LABEL_PATTERN.test(label)) {
     return true;
   }
 
   if (LIST_SCAN_COUNTRY_SECTION_LABEL_PATTERN.test(label)) {
+    return true;
+  }
+
+  if (isCountryListLabel(label)) {
     return true;
   }
 
@@ -1029,11 +1134,20 @@ function isLikelyStandaloneSectionHeader(
     return true;
   }
 
-  if (normalizeListScanCountryLabel(label) && !/\b(?:19|20)\d{2}\b/.test(label)) {
-    return true;
-  }
+  return Boolean(normalizeListScanCountryLabel(label)) && !/\b(?:19|20)\d{2}\b/.test(label);
+}
 
-  return false;
+function isLikelyStandaloneSectionHeader(
+  wine: Pick<
+    ListScanParsedWine,
+    "menu_label" | "wine_name" | "producer" | "vintage" | "varietals" | "regions" | "wine_type"
+  >
+) {
+  const label = normalizeText(wine.menu_label);
+  if (!label) {
+    return false;
+  }
+  return isLikelyStandaloneSectionHeaderLabel(label);
 }
 
 function isLikelyProducerOnlyRow(wine: ListScanParsedWine) {
@@ -1216,11 +1330,16 @@ function cleanupNormalizedParsedWines(wines: ListScanParsedWine[]) {
     .filter(
       (wine) =>
         !isListScanNoiseLabel(wine.menu_label) &&
-        !isLikelyStandaloneSectionHeader(wine)
+        !isLikelyStandaloneSectionHeader(wine) &&
+        !isCountryListLabel(wine.menu_label) &&
+        !isLikelyNarrativeLabel(wine.menu_label)
     );
 
   return mergeSplitWineRows(normalized).filter(
-    (wine) => !isLikelyStandaloneSectionHeader(wine)
+    (wine) =>
+      !isLikelyStandaloneSectionHeader(wine) &&
+      !isCountryListLabel(wine.menu_label) &&
+      !isLikelyNarrativeLabel(wine.menu_label)
   );
 }
 
@@ -2215,6 +2334,97 @@ function normalizePdfExtractedText(text: string): string {
   return normalized;
 }
 
+function splitDensePdfEntryLine(line: string) {
+  if (!/\b\d{5,}\b/.test(line)) {
+    return [line];
+  }
+
+  const tabSplit = line.split(/\t(?=\d{5,}\b)/g);
+  const dashSplit = tabSplit.flatMap((segment) =>
+    segment.split(/\s+[—–]\s+(?=\d{5,}\b)/g)
+  );
+
+  return dashSplit
+    .map((segment) => normalizeText(segment))
+    .filter((segment): segment is string => Boolean(segment));
+}
+
+function preprocessPdfRecoveryText(text: string) {
+  const lines = text.split("\n");
+  const recovered: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = cleanListLine(rawLine);
+    if (!line) {
+      continue;
+    }
+    if (/^--\s*\d+\s+of\s+\d+\s*--$/.test(line)) {
+      continue;
+    }
+    if (isLikelyNarrativeLabel(line) || isCountryListLabel(line)) {
+      continue;
+    }
+    if (isListScanNoiseLabel(line)) {
+      continue;
+    }
+
+    recovered.push(...splitDensePdfEntryLine(line));
+  }
+
+  return recovered.join("\n");
+}
+
+function isLikelyPdfRecoveryWineRow(context: string) {
+  const normalized = normalizeText(context);
+  if (!normalized) {
+    return false;
+  }
+
+  if (
+    ABSOLUTE_NON_WINE_ENTRY_PATTERN.test(normalized) ||
+    isLikelyNarrativeLabel(normalized) ||
+    isCountryListLabel(normalized) ||
+    isLikelyStandaloneSectionHeaderLabel(normalized)
+  ) {
+    return false;
+  }
+
+  if (WINE_SIGNAL_PATTERN.test(normalized)) {
+    return true;
+  }
+  if (/\b(?:19|20)\d{2}\b/.test(normalized)) {
+    return true;
+  }
+  if (/\b\d{5,}\b/.test(normalized)) {
+    return true;
+  }
+  if (/,/.test(normalized) && /\b[\p{L}\p{M}]{3,}\b/u.test(normalized)) {
+    return true;
+  }
+
+  return false;
+}
+
+function scorePdfParsedResponse(parsed: ParsedResponse) {
+  const cleaned = cleanupNormalizedParsedWines(normalizeParsedWines(parsed));
+  return {
+    rawCount: parsed.wines.length,
+    cleanedCount: cleaned.length,
+  };
+}
+
+function buildPdfRecoveryParsedResponse(params: {
+  text: string;
+  title: string | null;
+}) {
+  return buildHeuristicParsedResponse({
+    text: preprocessPdfRecoveryText(params.text),
+    title: params.title,
+    fallbackWarning: "",
+    allowLoosePdfRows: true,
+  });
+}
+
 async function parsePdfTextSource({
   file,
   sourceLabel,
@@ -2237,6 +2447,7 @@ async function parsePdfTextSource({
   // BEFORE section extraction so heading detection works correctly.
   const extractedText = normalizePdfExtractedText(rawExtractedText);
   const normalizeMs = Date.now() - tExtract0 - extractMs;
+  const recoveryText = preprocessPdfRecoveryText(extractedText);
 
   // PDF text path feeds ONLY into the heuristic regex parser (no API call),
   // so we pass Infinity to avoid the truncation limits designed for OpenAI input.
@@ -2252,6 +2463,7 @@ async function parsePdfTextSource({
     fallbackWarning: "",
   });
   const heuristicMs = Date.now() - tHeuristic0;
+  const heuristicScore = scorePdfParsedResponse(heuristic);
   console.log(
     `[ListScan PDF] Heuristic parse (section text): ${heuristicMs}ms, ${heuristic.wines.length} wines from ${focusedText.length} chars`
   );
@@ -2263,87 +2475,113 @@ async function parsePdfTextSource({
     fallbackWarning: "",
   });
   const rawHeuristicMs = Date.now() - tRawHeuristic0;
+  const rawHeuristicScore = scorePdfParsedResponse(rawHeuristic);
   console.log(
     `[ListScan PDF] Raw text heuristic: ${rawHeuristicMs}ms, ${rawHeuristic.wines.length} wines from ${extractedText.length} chars`
   );
 
-  const bestHeuristic =
-    rawHeuristic.wines.length > heuristic.wines.length ? rawHeuristic : heuristic;
-  if (bestHeuristic.wines.length > 0) {
-    (bestHeuristic as Record<string, unknown>)._pdfDiag = {
+  const tRecovery0 = Date.now();
+  const recoveryHeuristic = buildHeuristicParsedResponse({
+    text: recoveryText,
+    title,
+    fallbackWarning: "",
+    allowLoosePdfRows: true,
+  });
+  const recoveryHeuristicMs = Date.now() - tRecovery0;
+  const recoveryHeuristicScore = scorePdfParsedResponse(recoveryHeuristic);
+  console.log(
+    `[ListScan PDF] Recovery heuristic: ${recoveryHeuristicMs}ms, ${recoveryHeuristic.wines.length} wines from ${recoveryText.length} chars`
+  );
+
+  const compactedText = compactWineSectionTextForModel(focusedText, Infinity);
+  const tCompacted0 = Date.now();
+  const compactedHeuristic = compactedText.trim()
+    ? buildHeuristicParsedResponse({
+        text: compactedText,
+        title,
+        fallbackWarning: "",
+      })
+    : null;
+  const compactedHeuristicMs = compactedHeuristic
+    ? Date.now() - tCompacted0
+    : 0;
+  const compactedHeuristicScore = compactedHeuristic
+    ? scorePdfParsedResponse(compactedHeuristic)
+    : { rawCount: 0, cleanedCount: 0 };
+  if (compactedHeuristic) {
+    console.log(
+      `[ListScan PDF] Compacted heuristic: ${compactedHeuristicMs}ms, ${compactedHeuristic.wines.length} wines from ${compactedText.length} chars`
+    );
+  }
+
+  const candidates = [
+    {
+      parsed: heuristic,
+      name: "pdf_text_heuristic",
+      parseMs: heuristicMs,
+      score: heuristicScore,
+    },
+    {
+      parsed: rawHeuristic,
+      name: "pdf_text_raw_heuristic",
+      parseMs: rawHeuristicMs,
+      score: rawHeuristicScore,
+    },
+    {
+      parsed: recoveryHeuristic,
+      name: "pdf_text_recovery",
+      parseMs: recoveryHeuristicMs,
+      score: recoveryHeuristicScore,
+    },
+    ...(compactedHeuristic
+      ? [
+          {
+            parsed: compactedHeuristic,
+            name: "pdf_text_compacted_heuristic",
+            parseMs: compactedHeuristicMs,
+            score: compactedHeuristicScore,
+          },
+        ]
+      : []),
+  ];
+
+  const bestCandidate = candidates.reduce((best, candidate) => {
+    if (candidate.score.cleanedCount > best.score.cleanedCount) {
+      return candidate;
+    }
+    if (candidate.score.cleanedCount < best.score.cleanedCount) {
+      return best;
+    }
+    if (candidate.score.rawCount > best.score.rawCount) {
+      return candidate;
+    }
+    return best;
+  });
+
+  if (bestCandidate.score.cleanedCount > 0) {
+    (bestCandidate.parsed as Record<string, unknown>)._pdfDiag = {
       extractMs,
       normalizeMs,
       textLength: extractedText.length,
+      recoveryTextLength: recoveryText.length,
       focusedTextLength: focusedText.length,
       focusedHeuristicMs: heuristicMs,
       focusedWineCount: heuristic.wines.length,
+      focusedCleanedCount: heuristicScore.cleanedCount,
       rawHeuristicMs,
       rawWineCount: rawHeuristic.wines.length,
-      path:
-        bestHeuristic === rawHeuristic
-          ? "pdf_text_raw_heuristic"
-          : "pdf_text_heuristic",
+      rawCleanedCount: rawHeuristicScore.cleanedCount,
+      recoveryHeuristicMs,
+      recoveryWineCount: recoveryHeuristic.wines.length,
+      recoveryCleanedCount: recoveryHeuristicScore.cleanedCount,
+      compactedHeuristicMs,
+      compactedWineCount: compactedHeuristic?.wines.length ?? 0,
+      compactedCleanedCount: compactedHeuristicScore.cleanedCount,
+      selectedWineCount: bestCandidate.score.rawCount,
+      selectedCleanedCount: bestCandidate.score.cleanedCount,
+      path: bestCandidate.name,
     };
-    return bestHeuristic;
-  }
-
-  // Try compacted text if section-aware parse found nothing.
-  // Pass Infinity for PDF — no API token limit to respect.
-  const compactedText = compactWineSectionTextForModel(focusedText, Infinity);
-  if (compactedText.trim()) {
-    const tCompacted0 = Date.now();
-    const compactedHeuristic = buildHeuristicParsedResponse({
-      text: compactedText,
-      title,
-      fallbackWarning: "",
-    });
-    const compactedHeuristicMs = Date.now() - tCompacted0;
-    console.log(
-      `[ListScan PDF] Compacted heuristic: ${compactedHeuristicMs}ms, ${compactedHeuristic.wines.length} wines`
-    );
-    if (compactedHeuristic.wines.length > 0) {
-      (compactedHeuristic as Record<string, unknown>)._pdfDiag = {
-        extractMs,
-        normalizeMs,
-        textLength: extractedText.length,
-        focusedTextLength: focusedText.length,
-        focusedHeuristicMs: heuristicMs,
-        focusedWineCount: heuristic.wines.length,
-        compactedTextLength: compactedText.length,
-        compactedHeuristicMs,
-        wineCount: compactedHeuristic.wines.length,
-        path: "pdf_text_compacted_heuristic",
-      };
-      return compactedHeuristic;
-    }
-  }
-
-  // Try full raw text as last resort before giving up on text path.
-  if (focusedText !== extractedText) {
-    const tFullHeuristic0 = Date.now();
-    const fullHeuristic = buildHeuristicParsedResponse({
-      text: extractedText,
-      title,
-      fallbackWarning: "",
-    });
-    const fullHeuristicMs = Date.now() - tFullHeuristic0;
-    console.log(
-      `[ListScan PDF] Full text heuristic: ${fullHeuristicMs}ms, ${fullHeuristic.wines.length} wines`
-    );
-    if (fullHeuristic.wines.length > 0) {
-      (fullHeuristic as Record<string, unknown>)._pdfDiag = {
-        extractMs,
-        normalizeMs,
-        textLength: extractedText.length,
-        focusedTextLength: focusedText.length,
-        focusedHeuristicMs: heuristicMs,
-        focusedWineCount: heuristic.wines.length,
-        fullHeuristicMs,
-        wineCount: fullHeuristic.wines.length,
-        path: "pdf_text_full_heuristic",
-      };
-      return fullHeuristic;
-    }
+    return bestCandidate.parsed;
   }
 
   console.log(
@@ -2733,6 +2971,7 @@ function buildHeuristicParsedResponse(params: {
   text: string;
   title: string | null;
   fallbackWarning: string;
+  allowLoosePdfRows?: boolean;
 }): ParsedResponse {
   const lines = params.text
     .split("\n")
@@ -2815,24 +3054,26 @@ function buildHeuristicParsedResponse(params: {
     // likely standalone prices on their own line.
     const priceMatch =
       line.match(
-        /\$\s*\d+(?:\.\d{1,2})?(?:\s*(?:\/|[-–])\s*\$?\s*\d+(?:\.\d{1,2})?)+/
+        new RegExp(
+          `\\$\\s*${PRICE_NUMBER_PATTERN.source}(?:\\s*(?:\\/|[-–])\\s*\\$?\\s*${PRICE_NUMBER_PATTERN.source})+`
+        )
       ) ??
-      line.match(/\$\s*\d+(?:\.\d{1,2})?/) ??
+      line.match(new RegExp(`\\$\\s*${PRICE_NUMBER_PATTERN.source}`)) ??
       (inWineSection
         ? // Tab-separated bare price (common in PDF text):
           // "PRODUCER NAME\t2019\t479" or "SECOND GROWTH\t2008\t759"
-          line.match(/\t(\d{2,5})\s*$/) ??
+          line.match(new RegExp(`\\t(${PRICE_NUMBER_PATTERN.source})\\s*$`)) ??
           // Dot-leader + number: ".... 16" or ".......18"
-          line.match(/\.{2,}\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+          line.match(new RegExp(`\\.{2,}\\s*(${PRICE_NUMBER_PATTERN.source})\\s*$`)) ??
           // Wine name followed by 2+ spaces then number: "Chardonnay  18"
-          line.match(/\s{2,}(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+          line.match(new RegExp(`\\s{2,}(${PRICE_NUMBER_PATTERN.source})\\s*$`)) ??
           // Wine name then single space then a trailing number: "Pinot Noir 22"
           // or "D.O.C.G. 17" / "Aÿ 200" / "Grand Cru 1950".
-          line.match(/\s(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
+          line.match(new RegExp(`\\s(${PRICE_NUMBER_PATTERN.source})\\s*$`)) ??
           // Price-only line: just a number (e.g. "16" or "18") — only when
           // the entire line is a short number and we have something buffered
-          (buffer.length > 0 && /^\d{1,3}(?:\.\d{1,2})?$/.test(line)
-            ? line.match(/^(\d{1,3}(?:\.\d{1,2})?)$/)
+          (buffer.length > 0 && BARE_PRICE_NUMBER_PATTERN.test(line)
+            ? line.match(new RegExp(`^(${BARE_PRICE_NUMBER_PATTERN.source})$`))
             : null)
         : null);
 
@@ -2874,7 +3115,13 @@ function buildHeuristicParsedResponse(params: {
         if (!orphanName || /^\d{1,4}$/.test(orphanName)) continue;
         const orphanContext = orphanName;
         if (ABSOLUTE_NON_WINE_ENTRY_PATTERN.test(orphanContext)) continue;
-        if (!inWineSection && !WINE_SIGNAL_PATTERN.test(orphanContext)) continue;
+        if (
+          !inWineSection &&
+          !WINE_SIGNAL_PATTERN.test(orphanContext) &&
+          !(params.allowLoosePdfRows && isLikelyPdfRecoveryWineRow(orphanContext))
+        ) {
+          continue;
+        }
         const orphanVintageMatch = orphanContext.match(
           /\b((?:19|20)\d{2})\b|'(\d{2})\b|\b(N\.?V\.?)\b/i
         );
@@ -2917,7 +3164,11 @@ function buildHeuristicParsedResponse(params: {
       buffer = [];
       continue;
     }
-    if (!inWineSection && !WINE_SIGNAL_PATTERN.test(rowContext)) {
+    if (
+      !inWineSection &&
+      !WINE_SIGNAL_PATTERN.test(rowContext) &&
+      !(params.allowLoosePdfRows && isLikelyPdfRecoveryWineRow(rowContext))
+    ) {
       buffer = [];
       continue;
     }
@@ -3295,6 +3546,7 @@ export const __listScanTestUtils = {
   detectWineTypeFromSignals,
   extractJson,
   extractWineListTextFromHtml,
+  buildPdfRecoveryParsedResponse,
   normalizeWineType,
   mergeSplitWineRows,
 };

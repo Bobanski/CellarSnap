@@ -4,6 +4,7 @@ import {
   createDefaultListScanFilters,
   deriveListScanRegionGroups,
   filterListScanWines,
+  getListScanDisplayLines,
   getListScanStructuredMeta,
   resolveListScanWineType,
   sanitizeListScanFilters,
@@ -348,6 +349,78 @@ test.describe("WS3 list scan parse handler", () => {
     );
   });
 
+  test("cleanup drops Wally's section prose and country lists while salvaging bin-delimited wines", () => {
+    const cleaned = __listScanTestUtils.cleanupNormalizedParsedWines([
+      buildParsedWine({
+        id: "country-list",
+        source_order: 0,
+        menu_label: "Argentina, South Africa",
+        wine_name: "Argentina, South Africa",
+        wine_type: "red",
+        price_display: "$74",
+        price_value: 74,
+        regions: ["South Africa"],
+      }),
+      buildParsedWine({
+        id: "prose-1",
+        source_order: 1,
+        menu_label:
+          "the rich culture of wine. We’re proud of this achievement and are excited to share our",
+        wine_name:
+          "The Rich Culture Of Wine. We’Re Proud Of This Achievement And Are Excited To Share Our",
+        wine_type: "red",
+        price_display: "$6",
+        price_value: 6,
+      }),
+      buildParsedWine({
+        id: "section-1",
+        source_order: 2,
+        menu_label: "KOSHER WINES BY THE BOTTLE",
+        wine_name: "Kosher Wines By The Bottle",
+        wine_type: "red",
+        price_display: "$76",
+        price_value: 76,
+      }),
+      buildParsedWine({
+        id: "bin-1",
+        source_order: 3,
+        menu_label:
+          "Paarl, and the Swartland. South Africa’s red wine specialty is Pinotage, a dark-colored wine with notes of chocolate-covered cherry, ground — pepper and dried herbs — 233531 Pinotage, Kanonkop, Stellenbosch 2020",
+        producer:
+          "Paarl, And The Swartland. South Africa’S Red Wine Specialty Is Pinotage, A Dark-Colored Wine With Notes Of Chocolate-Covered Cherry, Ground",
+        wine_name: "233531 Pinotage, Kanonkop, Stellenbosch 2020",
+        wine_type: "red",
+        price_display: "$100",
+        price_value: 100,
+        varietals: ["Cabernet Sauvignon", "Malbec", "Merlot"],
+        regions: ["South Africa", "Stellenbosch"],
+      }),
+    ]);
+
+    expect(cleaned).toHaveLength(1);
+    expect(cleaned[0]?.id).toBe("bin-1");
+    expect(cleaned[0]?.menu_label).toContain("Pinotage");
+    expect(cleaned[0]?.price_value).toBe(100);
+  });
+
+  test("PDF recovery splits collapsed multi-bin rows and keeps comma prices", () => {
+    const recovered = __listScanTestUtils.buildPdfRecoveryParsedResponse({
+      title: "Wally's",
+      text: [
+        "RED WINES",
+        "203794 Dana Estate 'Helms Vineyard' Rutherford 2010 1.5 Liter 1,450 — 218416 Dana Estate 'Lotus Vineyard' Cabernet Sauvignon, Napa Valley 2008 1.5 Liter 1,200 — 226134 Dominus Estate, Napa Valley 2019 1.5 Liter 3,900",
+      ].join("\n"),
+    });
+
+    expect(recovered.wines).toHaveLength(3);
+    expect(recovered.wines[0]?.menu_label).toContain("Dana Estate");
+    expect(recovered.wines[0]?.price_value).toBe(1450);
+    expect(recovered.wines[1]?.menu_label).toContain("Dana Estate");
+    expect(recovered.wines[1]?.price_value).toBe(1200);
+    expect(recovered.wines[2]?.menu_label).toContain("Dominus Estate");
+    expect(recovered.wines[2]?.price_value).toBe(3900);
+  });
+
   test("structured meta prefers broad clean regions in Gjelina recommendations", () => {
     const friuliWine = buildParsedWine({
       id: "wine-friuli",
@@ -533,5 +606,25 @@ test.describe("WS3 list scan parse handler", () => {
       "orange"
     );
     expect(__listScanTestUtils.detectWineTypeFromSignals("## Rose", "unknown")).toBe("rose");
+  });
+
+  test("display lines strip bin numbers from wine names", () => {
+    const display = getListScanDisplayLines(
+      buildParsedWine({
+        id: "display-bin",
+        source_order: 0,
+        menu_label:
+          "Bordeaux Blend, Château Cantenac Brown, Margaux, Bordeaux 2021, FR",
+        wine_name:
+          "234421 Bordeaux Blend, Château Cantenac Brown, Margaux, Bordeaux 2021, FR",
+        wine_type: "red",
+        price_display: "$250",
+        price_value: 250,
+      })
+    );
+
+    expect(display.wineName).toBe(
+      "Bordeaux Blend, Château Cantenac Brown, Margaux, Bordeaux 2021, FR"
+    );
   });
 });

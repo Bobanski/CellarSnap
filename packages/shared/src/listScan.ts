@@ -903,6 +903,17 @@ function normalizeListScanDisplaySpacing(value: string) {
     .replace(/\bNV\s{2,}/g, "NV ");
 }
 
+export function sanitizeListScanWineName(value: string | null | undefined) {
+  const normalized = normalizeFacetValue(value ?? "");
+  if (!normalized) {
+    return null;
+  }
+
+  const stripped = stripLeadingListScanIdentifier(normalized);
+  const spaced = normalizeListScanDisplaySpacing(stripped);
+  return spaced.length > 0 ? spaced : null;
+}
+
 function stripProducerPrefixFromLabel(label: string, producer: string) {
   const normalizedLabel = normalizeFacetValue(label);
   const normalizedProducer = normalizeFacetValue(producer);
@@ -978,7 +989,7 @@ export function getListScanDisplayLines(
     wine.price_display,
     wine.price_value
   );
-  const wineName = wine.wine_name ? normalizeFacetValue(wine.wine_name) : null;
+  const wineName = sanitizeListScanWineName(wine.wine_name);
   const producer =
     (wine.producer ? normalizeFacetValue(wine.producer) : null) ??
     inferProducerFromLabel(sanitizedLabel, wineName);

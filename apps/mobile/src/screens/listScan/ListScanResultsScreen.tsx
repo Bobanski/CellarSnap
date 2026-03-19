@@ -314,6 +314,7 @@ export default function ListScanResultsScreen() {
     () => getTopListScanRecommendations(filteredWines, 3),
     [filteredWines]
   );
+  const [recommendationNotes, setRecommendationNotes] = useState<Record<string, string>>({});
   const highlightedIds = useMemo(
     () => new Set(topRecommendations.map((wine) => wine.id)),
     [topRecommendations]
@@ -325,6 +326,64 @@ export default function ListScanResultsScreen() {
         : 0,
     [availableWineTypes, derivedFacets, visibleFilters]
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+    const eligibleItems = topRecommendations.filter((wine) => wine.match_percent > 59);
+
+    if (eligibleItems.length === 0) {
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
+
+    const timeoutId = setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/api/list-scan/recommendation-notes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ items: eligibleItems }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !isActive) {
+            return;
+          }
+
+          const payload = (await response.json()) as {
+            notes?: Array<{ id: string; note: string | null }>;
+          };
+
+          if (!isActive) {
+            return;
+          }
+
+          const nextNotes: Record<string, string> = {};
+          (payload.notes ?? []).forEach((entry) => {
+            if (entry.id && typeof entry.note === "string" && entry.note.trim().length > 0) {
+              nextNotes[entry.id] = entry.note.trim();
+            }
+          });
+          setRecommendationNotes(nextNotes);
+        } catch {
+          if (isActive) {
+            setRecommendationNotes({});
+          }
+        }
+      })();
+    }, 150);
+
+    return () => {
+      isActive = false;
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [topRecommendations]);
   const filterColumns = width >= 320 ? 2 : 1;
   const collapsedFilterCardWidth =
     filterColumns === 2 ? Math.max(140, Math.floor((width - 88) / 2)) : "100%";
@@ -707,6 +766,14 @@ export default function ListScanResultsScreen() {
                     </View>
 
                     <AppText style={styles.recommendationBody}>{wine.rationale}</AppText>
+                    {recommendationNotes[wine.id] ? (
+                      <View style={styles.recommendationNoteRow}>
+                        <AppText style={styles.recommendationNoteBullet}>•</AppText>
+                        <AppText style={styles.recommendationNoteText}>
+                          {recommendationNotes[wine.id]}
+                        </AppText>
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
@@ -1267,6 +1334,23 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 21,
+  },
+  recommendationNoteRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  recommendationNoteBullet: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: "700",
+  },
+  recommendationNoteText: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 13,
+    lineHeight: 20,
   },
   tableHead: {
     flexDirection: "row",

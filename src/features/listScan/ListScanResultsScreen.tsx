@@ -290,6 +290,7 @@ export default function ListScanResultsScreen() {
   const [regionOpen, setRegionOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
   const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
+  const [recommendationNotes, setRecommendationNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const cachedResult = scanId ? readListScanResult(scanId) : null;
@@ -410,6 +411,64 @@ export default function ListScanResultsScreen() {
         : 0,
     [availableWineTypes, derivedFacets, visibleFilters]
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+    const eligibleItems = topRecommendations.filter((wine) => wine.match_percent > 59);
+
+    if (eligibleItems.length === 0) {
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/api/list-scan/recommendation-notes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ items: eligibleItems }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !isActive) {
+            return;
+          }
+
+          const payload = (await response.json()) as {
+            notes?: Array<{ id: string; note: string | null }>;
+          };
+
+          if (!isActive) {
+            return;
+          }
+
+          const nextNotes: Record<string, string> = {};
+          (payload.notes ?? []).forEach((entry) => {
+            if (entry.id && typeof entry.note === "string" && entry.note.trim().length > 0) {
+              nextNotes[entry.id] = entry.note.trim();
+            }
+          });
+          setRecommendationNotes(nextNotes);
+        } catch {
+          if (isActive) {
+            setRecommendationNotes({});
+          }
+        }
+      })();
+    }, 150);
+
+    return () => {
+      isActive = false;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [topRecommendations]);
 
   const toggleFiltersVisibility = () => {
     if (filtersVisible) {
@@ -839,6 +898,11 @@ export default function ListScanResultsScreen() {
                       </div>
 
                       <p className="mt-4 text-sm leading-6 text-[var(--color-text-primary)]">{wine.rationale}</p>
+                      {recommendationNotes[wine.id] ? (
+                        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-[var(--color-text-primary)]">
+                          <li>{recommendationNotes[wine.id]}</li>
+                        </ul>
+                      ) : null}
                     </article>
                   );
                 })()
