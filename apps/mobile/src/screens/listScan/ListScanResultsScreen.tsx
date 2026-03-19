@@ -680,19 +680,28 @@ export default function ListScanResultsScreen() {
                       <AppText style={styles.recommendationEyebrow}>
                         Recommendation {index + 1}
                       </AppText>
+                      <View style={styles.matchBadge}>
+                        <AppText style={styles.matchBadgeText}>{wine.match_percent}%</AppText>
+                      </View>
                     </View>
 
                     <View style={styles.recommendationTitleRow}>
                       <View style={styles.recommendationTitleWrap}>
-                        <AppText style={styles.recommendationTitle}>{display.title}</AppText>
+                        <AppText numberOfLines={1} style={styles.recommendationTitle}>
+                          {display.title}
+                        </AppText>
                         {detailLine ? (
-                          <AppText style={styles.recommendationSubtitle}>{detailLine}</AppText>
+                          <AppText numberOfLines={1} style={styles.recommendationSubtitle}>
+                            {detailLine}
+                          </AppText>
                         ) : null}
                         {metaLine ? (
-                          <AppText style={styles.recommendationMeta}>{metaLine}</AppText>
+                          <AppText numberOfLines={1} style={styles.recommendationMeta}>
+                            {metaLine}
+                          </AppText>
                         ) : null}
                       </View>
-                      <AppText style={styles.recommendationPrice}>
+                      <AppText numberOfLines={1} style={styles.recommendationPrice}>
                         {formatPriceDisplay(wine.price_display, wine.menu_label)}
                       </AppText>
                     </View>
@@ -723,6 +732,7 @@ export default function ListScanResultsScreen() {
           <View style={styles.tableHead}>
             <AppText style={[styles.tableHeadText, styles.tableWineColumn]}>Wine</AppText>
             <AppText style={[styles.tableHeadText, styles.tablePriceHead]}>Price</AppText>
+            <AppText style={[styles.tableHeadText, styles.tableMatchHead]}>% match</AppText>
           </View>
 
           <View style={styles.tableWrap}>
@@ -757,7 +767,7 @@ export default function ListScanResultsScreen() {
                         <View style={styles.tableRow}>
                           <View style={styles.tableWineColumn}>
                             <AppText
-                              numberOfLines={2}
+                              numberOfLines={1}
                               style={[
                                 styles.tableWineText,
                                 highlighted ? styles.tableWineTextHighlighted : null,
@@ -783,6 +793,16 @@ export default function ListScanResultsScreen() {
                               ]}
                             >
                               {formatPriceDisplay(wine.price_display, wine.menu_label)}
+                            </AppText>
+                          </View>
+                          <View style={styles.tableMatchColumn}>
+                            <AppText
+                              style={[
+                                styles.tableMatchText,
+                                highlighted ? styles.tableWineTextHighlighted : null,
+                              ]}
+                            >
+                              {wine.match_percent}%
                             </AppText>
                           </View>
                         </View>
@@ -1187,6 +1207,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+    minWidth: 0,
   },
   recommendationEyebrow: {
     color: colors.success,
@@ -1202,6 +1223,7 @@ const styles = StyleSheet.create({
   },
   recommendationTitleWrap: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
   },
   recommendationTitle: {
@@ -1262,11 +1284,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   tablePriceHead: {
-    width: 72,
+    width: 66,
     textAlign: "center",
   },
   tableMatchHead: {
-    width: 68,
+    width: 56,
     fontSize: 10,
     letterSpacing: 1.2,
     textAlign: "right",
@@ -1279,7 +1301,7 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -1287,13 +1309,14 @@ const styles = StyleSheet.create({
   },
   tableWineColumn: {
     flex: 1.55,
+    minWidth: 0,
   },
   tablePriceColumn: {
-    width: 72,
+    width: 66,
     alignItems: "flex-end",
   },
   tableMatchColumn: {
-    width: 68,
+    width: 56,
     alignItems: "flex-end",
   },
   tableWineText: {
@@ -1310,16 +1333,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 11,
     marginTop: 3,
+    lineHeight: 15,
   },
   tableCellText: {
     color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "600",
+    lineHeight: 18,
   },
   tableMatchText: {
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
+    lineHeight: 18,
   },
   infoCard: {
     borderRadius: 24,

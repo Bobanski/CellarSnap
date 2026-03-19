@@ -812,6 +812,9 @@ export default function ListScanResultsScreen() {
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
                           Recommendation {index + 1}
                         </p>
+                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
+                          {wine.match_percent}%
+                        </span>
                       </div>
 
                       <div className="mt-3 flex items-start justify-between gap-4">
@@ -891,9 +894,10 @@ export default function ListScanResultsScreen() {
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[#120f0e]">
-            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
+            <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
               <span>Wine</span>
               <span className="text-center">Price</span>
+              <span className="whitespace-nowrap text-right">% match</span>
             </div>
 
             <div className="max-h-[520px] overflow-y-auto">
@@ -925,7 +929,7 @@ export default function ListScanResultsScreen() {
                             </span>
                           </div>
                         ) : null}
-                        <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-b border-white/6 px-5 py-3 text-sm">
+                        <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-white/6 px-5 py-3 text-sm">
                           <div className="min-w-0">
                             <p
                               className={`truncate ${
@@ -948,6 +952,13 @@ export default function ListScanResultsScreen() {
                             }`}
                           >
                             {formatPriceDisplay(wine.price_display, wine.menu_label)}
+                          </span>
+                          <span
+                            className={`text-right font-semibold ${
+                              highlighted ? "text-emerald-300" : "text-[var(--color-text-tertiary)]"
+                            }`}
+                          >
+                            {wine.match_percent}%
                           </span>
                         </div>
                       </div>
