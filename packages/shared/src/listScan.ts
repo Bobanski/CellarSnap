@@ -806,6 +806,38 @@ export function getListScanDisplayLines(
       subtitle.localeCompare(title, undefined, { sensitivity: "base" }) !== 0
         ? subtitle
         : null,
+    producer,
+    wineName,
+  };
+}
+
+export function getListScanStructuredMeta(
+  wine: Pick<
+    ListScanParsedWine,
+    | "wine_type"
+    | "menu_label"
+    | "wine_name"
+    | "producer"
+    | "regions"
+    | "varietals"
+    | "parse_confidence"
+  >
+) {
+  const resolvedType = resolveListScanWineType(wine);
+  const typeLabel =
+    resolvedType !== "unknown" ? listScanWineTypeLabels[resolvedType] : null;
+  const primaryVarietal = wine.varietals[0] ?? null;
+  const displayRegion = wine.regions.length > 0 ? wine.regions[wine.regions.length - 1] : null;
+  const confidenceLabel =
+    typeof wine.parse_confidence === "number" && Number.isFinite(wine.parse_confidence)
+      ? `Parsed ${Math.round(wine.parse_confidence)}%`
+      : null;
+
+  return {
+    typeLabel,
+    primaryVarietal,
+    displayRegion,
+    confidenceLabel,
   };
 }
 
@@ -939,4 +971,137 @@ export function deriveListScanRegionGroups(
 
   result.sort((a, b) => facetSort(a.country, b.country));
   return result;
+}
+
+function arraysEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function filterSelectionToAvailable<T extends string>(
+  selected: readonly T[],
+  available: readonly T[],
+  fallback: readonly T[]
+) {
+  if (available.length === 0) {
+    return [...fallback];
+  }
+
+  const availableMap = new Map<string, T>();
+  available.forEach((value) => {
+    const normalized = normalizeFacetValue(value).toLowerCase();
+    if (!normalized || availableMap.has(normalized)) {
+      return;
+    }
+    availableMap.set(normalized, value);
+  });
+
+  const seen = new Set<string>();
+  const next: T[] = [];
+
+  selected.forEach((value) => {
+    const normalized = normalizeFacetValue(value).toLowerCase();
+    const canonicalValue = availableMap.get(normalized);
+    if (!canonicalValue || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    next.push(canonicalValue);
+  });
+
+  return next;
+}
+
+export type ListScanRegionSelectionState = {
+  country: string | null;
+  subRegions: string[];
+  countryGroup: ListScanRegionGroup | null;
+};
+
+export function getListScanRegionSelectionState(
+  selected: string[],
+  regionGroups: ListScanRegionGroup[]
+): ListScanRegionSelectionState {
+  if (selected.length === 0 || regionGroups.length === 0) {
+    return {
+      country: null,
+      subRegions: [],
+      countryGroup: null,
+    };
+  }
+
+  const selectedSet = new Set(
+    selected.map((value) => normalizeFacetValue(value).toLowerCase())
+  );
+  const countryGroup =
+    regionGroups.find((group) =>
+      selectedSet.has(normalizeFacetValue(group.country).toLowerCase())
+    ) ?? null;
+
+  if (!countryGroup) {
+    return {
+      country: null,
+      subRegions: [],
+      countryGroup: null,
+    };
+  }
+
+  return {
+    country: countryGroup.country,
+    subRegions: countryGroup.subRegions.filter((region) =>
+      selectedSet.has(normalizeFacetValue(region).toLowerCase())
+    ),
+    countryGroup,
+  };
+}
+
+export function sanitizeListScanRegionSelection(
+  selected: string[],
+  regionGroups: ListScanRegionGroup[]
+) {
+  const selectionState = getListScanRegionSelectionState(selected, regionGroups);
+  if (!selectionState.country) {
+    return [];
+  }
+
+  return [selectionState.country, ...selectionState.subRegions];
+}
+
+export function sanitizeListScanFilters(
+  filters: ListScanFilters,
+  facets?: Partial<ListScanFacets>,
+  regionGroups: ListScanRegionGroup[] = []
+): ListScanFilters {
+  const nextIncludedWineTypes = filterSelectionToAvailable(
+    filters.included_wine_types,
+    facets?.wine_types ?? [],
+    [...LIST_SCAN_FILTERABLE_WINE_TYPES]
+  );
+  const nextSelectedVarietals = filterSelectionToAvailable(
+    filters.selected_varietals,
+    facets?.varietals ?? [],
+    []
+  );
+  const nextSelectedRegions = sanitizeListScanRegionSelection(
+    filters.selected_regions,
+    regionGroups
+  );
+
+  if (
+    arraysEqual(filters.included_wine_types, nextIncludedWineTypes) &&
+    arraysEqual(filters.selected_varietals, nextSelectedVarietals) &&
+    arraysEqual(filters.selected_regions, nextSelectedRegions)
+  ) {
+    return filters;
+  }
+
+  return {
+    ...filters,
+    included_wine_types: nextIncludedWineTypes,
+    selected_varietals: nextSelectedVarietals,
+    selected_regions: nextSelectedRegions,
+  };
 }

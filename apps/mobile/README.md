@@ -59,9 +59,9 @@ For TestFlight / App Review builds, point `EXPO_PUBLIC_WEB_API_BASE_URL` at the 
 
 The app uses deep links and `auth/callback` for magic link / OTP callbacks.
 
-Add these to Supabase Auth redirect URL allow-list:
+Add these to Supabase Auth redirect URL allow-list (matching the `cluster` scheme in `app.json`):
 
-- `cellarsnap://auth/callback`
+- `cluster://auth/callback`
 - `exp://*/--/auth/callback` (Expo Go development)
 
 If you later add OAuth providers (Google/Apple), use the same callback path and ensure provider console redirect settings point to your Supabase project callback URL.

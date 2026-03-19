@@ -134,8 +134,8 @@ const PAGE_SIZE = 30;
 const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
 const BADGE_DEFINITIONS: BadgeConfig[] = [
   {
-    id: "burgundy_bitch",
-    name: "Burgundy Bitch",
+    id: "burgundy_royalty",
+    name: "Burgundy Royalty",
     symbol: "👑",
     threshold: 10,
     orFilter: "region.ilike.%burgundy%,region.ilike.%bourgogne%",
@@ -148,8 +148,8 @@ const BADGE_DEFINITIONS: BadgeConfig[] = [
     ilike: ["region", "%california%"],
   },
   {
-    id: "bordeaux_hoe",
-    name: "Bordeaux Hoe",
+    id: "bordeaux_patron",
+    name: "Bordeaux Patron",
     symbol: "🏰",
     threshold: 10,
     ilike: ["region", "%bordeaux%"],

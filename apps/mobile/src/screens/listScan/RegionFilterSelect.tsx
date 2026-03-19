@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { ListScanRegionGroup } from "@cellarsnap/shared";
+import {
+  getListScanRegionSelectionState,
+  type ListScanRegionGroup,
+} from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 
@@ -16,20 +19,25 @@ function buildRegionSummary(
   regionGroups: ListScanRegionGroup[],
   selected: string[]
 ) {
-  const allRegions = regionGroups.flatMap((g) => [
-    g.country,
-    ...g.subRegions,
-  ]);
-  if (allRegions.length === 0) {
+  if (regionGroups.length === 0) {
     return "No options found";
   }
-  if (selected.length === 0) {
+  const { country, subRegions } = getListScanRegionSelectionState(
+    selected,
+    regionGroups
+  );
+  if (!country) {
     return "All available";
   }
-  if (selected.length <= 2) {
-    return selected.join(", ");
+  if (subRegions.length === 0) {
+    return country;
   }
-  return `${selected.slice(0, 2).join(", ")} +${selected.length - 2}`;
+  if (subRegions.length <= 2) {
+    return `${country}, ${subRegions.join(", ")}`;
+  }
+  return `${country}, ${subRegions.slice(0, 2).join(", ")} +${
+    subRegions.length - 2
+  }`;
 }
 
 export default function RegionFilterSelect({
@@ -40,7 +48,6 @@ export default function RegionFilterSelect({
   onOpenChange,
 }: RegionFilterSelectProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
 
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -49,51 +56,37 @@ export default function RegionFilterSelect({
     () => buildRegionSummary(regionGroups, selected),
     [regionGroups, selected]
   );
-
-  const selectedSet = useMemo(() => new Set(selected), [selected]);
-
-  const getSelectableRegions = (group: ListScanRegionGroup) =>
-    group.subRegions.length > 0 ? group.subRegions : [group.country];
-
-  const isCountryFullySelected = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
-    return regions.every((r) => selectedSet.has(r));
-  };
-
-  const isCountryPartiallySelected = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
-    return (
-      regions.some((r) => selectedSet.has(r)) &&
-      !isCountryFullySelected(group)
-    );
-  };
+  const selectionState = useMemo(
+    () => getListScanRegionSelectionState(selected, regionGroups),
+    [regionGroups, selected]
+  );
+  const selectedCountry = selectionState.country;
+  const selectedSubRegions = selectionState.subRegions;
+  const expandedGroup = selectionState.countryGroup;
 
   const handleCountryPress = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
-
-    if (expandedCountry === group.country) {
-      const toRemove = new Set(regions);
-      onChange(selected.filter((r) => !toRemove.has(r)));
-      setExpandedCountry(null);
-    } else {
-      const newSelected = new Set(selected);
-      regions.forEach((r) => newSelected.add(r));
-      onChange(Array.from(newSelected));
-      setExpandedCountry(group.country);
+    if (selectedCountry === group.country) {
+      onChange([]);
+      return;
     }
+
+    onChange([group.country]);
   };
 
   const handleSubRegionToggle = (region: string) => {
-    if (selectedSet.has(region)) {
-      onChange(selected.filter((r) => r !== region));
+    if (!selectedCountry) {
+      return;
+    }
+
+    if (selectedSubRegions.includes(region)) {
+      onChange([
+        selectedCountry,
+        ...selectedSubRegions.filter((value) => value !== region),
+      ]);
     } else {
-      onChange([...selected, region]);
+      onChange([selectedCountry, ...selectedSubRegions, region]);
     }
   };
-
-  const expandedGroup = regionGroups.find(
-    (g) => g.country === expandedCountry
-  );
 
   return (
     <View style={styles.card}>
@@ -114,27 +107,23 @@ export default function RegionFilterSelect({
               {/* Country chips */}
               <View style={styles.countryChipWrap}>
                 {regionGroups.map((group) => {
-                  const isExpanded = expandedCountry === group.country;
-                  const fullySelected = isCountryFullySelected(group);
-                  const partiallySelected = isCountryPartiallySelected(group);
-
-                  let chipStyle: typeof styles.countryChip = styles.countryChip;
-                  let textStyle: typeof styles.countryChipText | typeof styles.countryChipTextActive = styles.countryChipText;
-                  if (isExpanded || fullySelected) {
-                    chipStyle = styles.countryChipActive;
-                    textStyle = styles.countryChipTextActive;
-                  } else if (partiallySelected) {
-                    chipStyle = styles.countryChipPartial;
-                    textStyle = styles.countryChipTextPartial;
-                  }
+                  const isActive = selectedCountry === group.country;
 
                   return (
                     <Pressable
                       key={group.country}
-                      style={chipStyle}
+                      style={[
+                        styles.countryChip,
+                        isActive ? styles.countryChipActive : null,
+                      ]}
                       onPress={() => handleCountryPress(group)}
                     >
-                      <AppText style={textStyle}>
+                      <AppText
+                        style={[
+                          styles.countryChipText,
+                          isActive ? styles.countryChipTextActive : null,
+                        ]}
+                      >
                         {group.country}
                         {group.subRegions.length > 0
                           ? ` (${group.subRegions.length})`
@@ -145,8 +134,8 @@ export default function RegionFilterSelect({
                 })}
               </View>
 
-              {/* Sub-regions for expanded country */}
-              {expandedGroup && expandedGroup.subRegions.length > 0 ? (
+              {/* Sub-regions for selected country */}
+              {selectedCountry && expandedGroup && expandedGroup.subRegions.length > 0 ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -154,8 +143,11 @@ export default function RegionFilterSelect({
                   contentContainerStyle={styles.subRegionScrollContent}
                 >
                   <View style={styles.subRegionColumnWrap}>
+                    <AppText style={styles.subRegionHeading}>
+                      Regions in {selectedCountry}
+                    </AppText>
                     {expandedGroup.subRegions.map((region) => {
-                      const isSelected = selectedSet.has(region);
+                      const isSelected = selectedSubRegions.includes(region);
                       return (
                         <Pressable
                           key={region}
@@ -183,6 +175,10 @@ export default function RegionFilterSelect({
                     })}
                   </View>
                 </ScrollView>
+              ) : !selectedCountry ? (
+                <AppText style={styles.emptyHint}>
+                  Select a country to reveal its regions.
+                </AppText>
               ) : null}
             </>
           ) : (
@@ -264,16 +260,8 @@ const styles = StyleSheet.create({
   countryChipActive: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(45,125,70,0.50)",
-    backgroundColor: "rgba(45,125,70,0.12)",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  countryChipPartial: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(45,125,70,0.25)",
-    backgroundColor: "rgba(45,125,70,0.06)",
+    borderColor: "rgba(45,125,70,0.22)",
+    backgroundColor: "rgba(45,125,70,0.16)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -283,11 +271,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   countryChipTextActive: {
-    color: colors.success,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  countryChipTextPartial: {
     color: colors.success,
     fontSize: 12,
     fontWeight: "700",
@@ -306,6 +289,15 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     maxHeight: 120,
     gap: 6,
+  },
+  subRegionHeading: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    width: "100%",
+    marginBottom: 2,
   },
   subRegionChip: {
     borderRadius: 12,
@@ -326,6 +318,11 @@ const styles = StyleSheet.create({
   },
   subRegionTextActive: {
     color: colors.success,
+  },
+  emptyHint: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   emptyText: {
     color: colors.textSecondary,

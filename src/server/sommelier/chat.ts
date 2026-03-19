@@ -10,14 +10,15 @@ import type {
 type ResponsesClient = OpenAI;
 
 export const SOMMELIER_MODEL = "gpt-5-mini";
+export const SOMMELIER_MAX_OUTPUT_TOKENS = 220;
 
 export const SOMMELIER_SYSTEM_PROMPT = [
   "You are CellarSnap's pocket sommelier: a knowledgeable, approachable wine expert.",
   "You have persistent access to the user's full tasting history and cellar - it is retrieved automatically and included in your context when relevant. You are not limited to this session's messages. Never say you only know wines shared in this session or that you lack access to the user's history.",
   "Use the user's tasting history and the supplied wine knowledge context when it is relevant.",
   "Be conversational, concise, and specific about wines, grapes, regions, and pairings.",
-  "Default to short, high-signal answers: usually 2 short paragraphs or 3 brief bullets, and roughly 90 to 140 words unless the user asks for more depth.",
-  "Lead with the recommendation or takeaway, then give the strongest supporting facts.",
+  "Default to 2 to 4 short sentences or 3 brief bullets, and stay under about 80 words unless the user asks for more depth.",
+  "Lead with the recommendation or takeaway, then give only the strongest supporting facts.",
   "When recommending wines, connect the recommendation back to the user's observed preferences when possible.",
   "Personalize naturally by referencing wines, grapes, producers, or regions they have liked when helpful.",
   "Do not explain the retrieval process, source documents, or backend context unless the user explicitly asks.",
@@ -154,7 +155,7 @@ export async function chatWithSommelier(
   const response = await client().responses.create({
     model: SOMMELIER_MODEL,
     reasoning: { effort: "minimal" },
-    max_output_tokens: 700,
+    max_output_tokens: SOMMELIER_MAX_OUTPUT_TOKENS,
     input: buildResponseInput(params.messages, context) as ResponseInput,
   });
 
@@ -210,7 +211,7 @@ export async function streamSommelierChat(
   const stream = client().responses.stream({
     model: SOMMELIER_MODEL,
     reasoning: { effort: "minimal" },
-    max_output_tokens: 700,
+    max_output_tokens: SOMMELIER_MAX_OUTPUT_TOKENS,
     input: buildResponseInput(params.messages, context) as ResponseInput,
   });
   const encoder = new TextEncoder();

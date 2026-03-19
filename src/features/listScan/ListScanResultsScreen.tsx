@@ -15,6 +15,7 @@ import {
   deriveListScanRegionGroups,
   filterListScanWines,
   formatListScanPriceDisplay,
+  getListScanStructuredMeta,
   getListScanDisplayLines,
   getListScanFilterAccentTone,
   getListScanVarietalAccentTone,
@@ -22,19 +23,21 @@ import {
   getTopListScanRecommendations,
   sortListScanWines,
   listScanWineTypeLabels,
-  LIST_SCAN_FILTERABLE_WINE_TYPES,
+  sanitizeListScanFilters,
   resolveListScanWineType,
   type ListScanFilterAccentTone,
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
   type ListScanSortMode,
-  type ListScanWineType,
 } from "@shared";
 import FacetMultiSelect from "@/features/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/features/listScan/RegionFilterSelect";
 import NavBar from "@/components/NavBar";
 import { readListScanResult, saveListScanResult } from "@/lib/listScan/storage";
+
+const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
+const EMPTY_STRING_LIST: string[] = [];
 
 function formatCurrencyValue(value: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? `$${value}` : "";
@@ -59,86 +62,6 @@ function parseNonNegativePriceInput(value: string) {
 
 function formatPriceDisplay(priceDisplay: string | null, menuLabel?: string) {
   return formatListScanPriceDisplay(priceDisplay, menuLabel) ?? "-";
-}
-
-function formatWineListSubLabel(
-  varietals: string[],
-  wineType: ListScanWineType
-) {
-  if (varietals.length > 1) {
-    if (wineType === "rose") {
-      return "Rose blend";
-    }
-    if (wineType === "orange") {
-      return "Orange blend";
-    }
-    if (wineType === "red") {
-      return "Red blend";
-    }
-    if (wineType === "white") {
-      return "White blend";
-    }
-    return "Blend";
-  }
-  if (varietals[0] === "Red Blend") {
-    return "Red blend";
-  }
-  if (varietals[0] === "White Blend") {
-    return "White blend";
-  }
-  if (varietals[0] === "Rose Blend") {
-    return "Rose blend";
-  }
-  if (varietals[0] === "Orange Blend") {
-    return "Orange blend";
-  }
-  return varietals[0] || null;
-}
-
-function getMatchPercentColor(percent: number) {
-  if (percent >= 90) {
-    return "text-emerald-300";
-  }
-  if (percent >= 75) {
-    return "text-amber-200";
-  }
-  if (percent >= 60) {
-    return "text-zinc-300";
-  }
-  return "text-zinc-500";
-}
-
-function getMatchPercentBgColor(percent: number) {
-  if (percent >= 90) {
-    return "border-emerald-300/35 bg-emerald-400/10";
-  }
-  if (percent >= 75) {
-    return "border-amber-300/30 bg-amber-400/8";
-  }
-  if (percent >= 60) {
-    return "border-zinc-300/20 bg-zinc-400/8";
-  }
-  return "border-zinc-500/15 bg-zinc-500/5";
-}
-
-const WINE_TYPE_DOT_COLORS: Record<string, string> = {
-  sparkling: "bg-[#C9A84C]",
-  white: "bg-[#C9A84C]",
-  rose: "bg-[#C76886]",
-  orange: "bg-[#D17A2A]",
-  red: "bg-[#4A3060]",
-  dessert_fortified: "bg-zinc-400",
-};
-
-function getWineTypeDotColor(wineType: ListScanWineType) {
-  return WINE_TYPE_DOT_COLORS[wineType] ?? "bg-zinc-500";
-}
-
-function formatWineTypeLabel(wineType: ListScanWineType) {
-  if (wineType === "unknown") {
-    return null;
-  }
-  return listScanWineTypeLabels[wineType];
 }
 
 function summarizeSelectedLabels(values: string[], emptyLabel: string) {
@@ -372,20 +295,18 @@ export default function ListScanResultsScreen() {
   const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
 
   useEffect(() => {
-    let isActive = true;
     const cachedResult = scanId ? readListScanResult(scanId) : null;
-    
-    // Set initial state synchronously before fetch
-    setResult(scanId ? cachedResult ?? undefined : null);
-    setLoadError(null);
 
-    if (!scanId) {
-      return () => {
-        isActive = false;
-      };
-    }
+    let isActive = true;
 
     const loadSavedResult = async () => {
+      setResult(scanId ? cachedResult ?? undefined : null);
+      setLoadError(null);
+
+      if (!scanId) {
+        return;
+      }
+
       try {
         const response = await fetch(`/api/list-scan/scans/${encodeURIComponent(scanId)}`, {
           cache: "no-store",
@@ -442,21 +363,6 @@ export default function ListScanResultsScreen() {
     };
   }, [scanId]);
 
-  const filteredWines = useMemo(
-    () =>
-      result
-        ? sortListScanWines(filterListScanWines(result.wines, filters), sortMode)
-        : [],
-    [filters, result, sortMode]
-  );
-  const topRecommendations = useMemo(
-    () => getTopListScanRecommendations(filteredWines, 3),
-    [filteredWines]
-  );
-  const highlightedIds = useMemo(
-    () => new Set(topRecommendations.map((wine) => wine.id)),
-    [topRecommendations]
-  );
   const derivedFacets = useMemo(
     () => (result ? deriveListScanFacets(result.wines) : null),
     [result]
@@ -469,12 +375,43 @@ export default function ListScanResultsScreen() {
     () => (result ? deriveListScanRegionGroups(result.wines) : []),
     [result]
   );
+  const visibleFilters = useMemo(
+    () =>
+      result
+        ? sanitizeListScanFilters(
+            filters,
+            derivedFacets ?? undefined,
+            regionGroups
+          )
+        : filters,
+    [derivedFacets, filters, regionGroups, result]
+  );
+  const availableWineTypes = derivedFacets?.wine_types ?? EMPTY_WINE_TYPES;
+  const availableVarietals = derivedFacets?.varietals ?? EMPTY_STRING_LIST;
+  const hasWineTypeOptions = availableWineTypes.length > 0;
+  const hasVarietalOptions = availableVarietals.length > 0;
+  const hasRegionOptions = regionGroups.length > 0;
+  const filteredWines = useMemo(
+    () =>
+      result
+        ? sortListScanWines(filterListScanWines(result.wines, visibleFilters), sortMode)
+        : [],
+    [result, sortMode, visibleFilters]
+  );
+  const topRecommendations = useMemo(
+    () => getTopListScanRecommendations(filteredWines, 3),
+    [filteredWines]
+  );
+  const highlightedIds = useMemo(
+    () => new Set(topRecommendations.map((wine) => wine.id)),
+    [topRecommendations]
+  );
   const activeFilterCount = useMemo(
     () =>
       derivedFacets
-        ? countActiveFilterGroups(filters, derivedFacets.wine_types)
+        ? countActiveFilterGroups(visibleFilters, availableWineTypes)
         : 0,
-    [derivedFacets, filters]
+    [availableWineTypes, derivedFacets, visibleFilters]
   );
 
   const toggleFiltersVisibility = () => {
@@ -622,7 +559,7 @@ export default function ListScanResultsScreen() {
               <div className={priceOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                 <FilterDropdown
                   label="Price"
-                  summary={buildPriceSummary(filters)}
+                  summary={buildPriceSummary(visibleFilters)}
                   open={priceOpen}
                   onToggle={() => setPriceOpen((current) => !current)}
                 >
@@ -671,7 +608,6 @@ export default function ListScanResultsScreen() {
                           const newValue = parseNonNegativePriceInput(event.target.value);
                           // Validate bounds in "between" mode
                           if (current.price_mode === "between") {
-                            const isMinInput = true; // This is the min input
                             const otherValue = current.price_max;
                             // Swap if new min > current max (and max is non-zero)
                             if (newValue !== null && otherValue !== null && newValue > otherValue && otherValue > 0) {
@@ -706,7 +642,6 @@ export default function ListScanResultsScreen() {
                           const newValue = parseNonNegativePriceInput(event.target.value);
                           // Validate bounds in "between" mode
                           if (current.price_mode === "between") {
-                            const isMaxInput = true; // This is the max input
                             const otherValue = current.price_min;
                             // Swap if new max < current min (and new value is non-zero)
                             if (newValue !== null && otherValue !== null && newValue < otherValue && newValue > 0) {
@@ -730,26 +665,24 @@ export default function ListScanResultsScreen() {
                 </FilterDropdown>
               </div>
 
-              {result ? (
+              {result && hasWineTypeOptions ? (
                 <div className={wineTypeOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                   <FilterDropdown
                     label="Wine type"
                     summary={buildWineTypeSummary(
-                      filters.included_wine_types,
-                      derivedFacets?.wine_types ?? []
+                      visibleFilters.included_wine_types,
+                      availableWineTypes
                     )}
                     open={wineTypeOpen}
                     onToggle={() => setWineTypeOpen((current) => !current)}
                   >
                   <div className="flex flex-wrap gap-2">
-                    {LIST_SCAN_FILTERABLE_WINE_TYPES.map((type) => {
-                      const available = derivedFacets?.wine_types.includes(type) ?? false;
-                      const selected = filters.included_wine_types.includes(type);
+                    {availableWineTypes.map((type) => {
+                      const selected = visibleFilters.included_wine_types.includes(type);
                       return (
                         <button
                           key={type}
                           type="button"
-                          disabled={!available}
                           onClick={() =>
                             setFilters((current) => ({
                               ...current,
@@ -761,50 +694,54 @@ export default function ListScanResultsScreen() {
                           className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${getWineTypeButtonClasses(
                             type,
                             selected
-                          )} ${available ? "" : "cursor-not-allowed opacity-35"}`}
+                          )}`}
                         >
                           {listScanWineTypeLabels[type]}
                         </button>
-                      );
+                    );
                     })}
                   </div>
                   </FilterDropdown>
                 </div>
               ) : null}
 
-              <div className={varietalOpen ? "col-span-2 min-w-0" : "min-w-0"}>
-                <FacetMultiSelect
-                  label="Varietal"
-                  placeholder="Type a varietal from this list"
-                  options={derivedFacets?.varietals ?? []}
-                  selected={filters.selected_varietals}
-                  onChange={(selected_varietals) =>
-                    setFilters((current) => ({ ...current, selected_varietals }))
-                  }
-                  getOptionTone={(option) =>
-                    getListScanVarietalAccentTone(option, varietalAccentMap)
-                  }
-                  open={varietalOpen}
-                  onOpenChange={setVarietalOpen}
-                />
-              </div>
+              {hasVarietalOptions ? (
+                <div className={varietalOpen ? "col-span-2 min-w-0" : "min-w-0"}>
+                  <FacetMultiSelect
+                    label="Varietal"
+                    placeholder="Type a varietal from this list"
+                    options={availableVarietals}
+                    selected={visibleFilters.selected_varietals}
+                    onChange={(selected_varietals) =>
+                      setFilters((current) => ({ ...current, selected_varietals }))
+                    }
+                    getOptionTone={(option) =>
+                      getListScanVarietalAccentTone(option, varietalAccentMap)
+                    }
+                    open={varietalOpen}
+                    onOpenChange={setVarietalOpen}
+                  />
+                </div>
+              ) : null}
 
-              <div className={regionOpen ? "col-span-2 min-w-0" : "min-w-0"}>
-                <RegionFilterSelect
-                  regionGroups={regionGroups}
-                  selected={filters.selected_regions}
-                  onChange={(selected_regions) =>
-                    setFilters((current) => ({ ...current, selected_regions }))
-                  }
-                  open={regionOpen}
-                  onOpenChange={setRegionOpen}
-                />
-              </div>
+              {hasRegionOptions ? (
+                <div className={regionOpen ? "col-span-2 min-w-0" : "min-w-0"}>
+                  <RegionFilterSelect
+                    regionGroups={regionGroups}
+                    selected={visibleFilters.selected_regions}
+                    onChange={(selected_regions) =>
+                      setFilters((current) => ({ ...current, selected_regions }))
+                    }
+                    open={regionOpen}
+                    onOpenChange={setRegionOpen}
+                  />
+                </div>
+              ) : null}
 
               <div className={matchOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                 <FilterDropdown
                   label="Match"
-                  summary={buildMatchSummary(filters)}
+                  summary={buildMatchSummary(visibleFilters)}
                   open={matchOpen}
                   onToggle={() => setMatchOpen((current) => !current)}
                 >
@@ -874,62 +811,67 @@ export default function ListScanResultsScreen() {
 
           {topRecommendations.length > 0 ? (
             <div className="grid gap-4 lg:grid-cols-3">
-              {topRecommendations.map((wine, index) => {
-                const display = getListScanDisplayLines(wine);
-                const resolvedType = resolveListScanWineType(wine);
-                const varietalLabel = formatWineListSubLabel(
-                  wine.varietals,
-                  resolvedType
-                );
-                const typeLabel = formatWineTypeLabel(resolvedType);
-                const regionLabel = wine.regions.length > 0
-                  ? wine.regions.slice(0, 2).join(", ")
-                  : null;
-                const secondaryParts = [varietalLabel, regionLabel].filter(Boolean);
-
-                return (
-                  <article
-                    key={wine.id}
-                    className="rounded-3xl border border-emerald-300/20 bg-emerald-400/7 p-5 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)]"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`h-2.5 w-2.5 rounded-full ${getWineTypeDotColor(resolvedType)}`}
-                          title={typeLabel ?? undefined}
-                        />
+              {topRecommendations.map((wine, index) => (
+                (() => {
+                  const display = getListScanDisplayLines(wine);
+                  const structured = getListScanStructuredMeta(wine);
+                  const detailLine =
+                    display.subtitle ??
+                    [display.wineName, display.producer].filter(Boolean).join(" · ");
+                  const metaLine = [
+                    structured.typeLabel,
+                    structured.primaryVarietal,
+                    structured.displayRegion,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <article
+                      key={wine.id}
+                      className="rounded-3xl border border-emerald-300/20 bg-emerald-400/7 p-5 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)]"
+                    >
+                      <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
                           Recommendation {index + 1}
                         </p>
+                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
+                          {wine.match_percent}%
+                        </span>
                       </div>
-                      <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${getMatchPercentBgColor(wine.match_percent)} ${getMatchPercentColor(wine.match_percent)}`}>
-                        {wine.match_percent}%
-                      </span>
-                    </div>
 
-                    <div className="mt-3 flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                          {display.title}
-                        </h3>
-                        {wine.vintage ? (
-                          <span className="text-xs text-[var(--color-text-tertiary)]">{wine.vintage}</span>
-                        ) : null}
-                        {secondaryParts.length > 0 ? (
-                          <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
-                            {secondaryParts.join(" · ")}
-                          </p>
-                        ) : null}
+                      <div className="mt-3 flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                            {display.title}
+                          </h3>
+                          {detailLine ? (
+                            <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
+                              {detailLine}
+                            </p>
+                          ) : null}
+                          {metaLine ? (
+                            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                              {metaLine}
+                              {structured.confidenceLabel
+                                ? ` · ${structured.confidenceLabel}`
+                                : ""}
+                            </p>
+                          ) : structured.confidenceLabel ? (
+                            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                              {structured.confidenceLabel}
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className="shrink-0 text-right text-base font-semibold text-emerald-100">
+                          {formatPriceDisplay(wine.price_display, wine.menu_label)}
+                        </span>
                       </div>
-                      <span className="shrink-0 text-right text-base font-semibold text-emerald-100">
-                        {formatPriceDisplay(wine.price_display, wine.menu_label)}
-                      </span>
-                    </div>
 
-                    <p className="mt-4 text-sm leading-6 text-[var(--color-text-primary)]">{wine.rationale}</p>
-                  </article>
-                );
-              })}
+                      <p className="mt-4 text-sm leading-6 text-[var(--color-text-primary)]">{wine.rationale}</p>
+                    </article>
+                  );
+                })()
+              ))}
             </div>
           ) : (
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-secondary)]">
@@ -981,27 +923,39 @@ export default function ListScanResultsScreen() {
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[#120f0e]">
-            <div className="max-h-[600px] overflow-y-auto">
+            <div
+              className={`grid gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)] ${
+                filters.show_match_column
+                  ? "grid-cols-[minmax(0,1fr)_120px_110px]"
+                  : "grid-cols-[minmax(0,1fr)_120px]"
+              }`}
+            >
+              <span>Wine</span>
+              <span className="text-center">Price</span>
+              {filters.show_match_column ? (
+                <span className="whitespace-nowrap text-right">% match</span>
+              ) : null}
+            </div>
+
+            <div className="max-h-[520px] overflow-y-auto">
               {filteredWines.length > 0 ? (
                 (() => {
                   let lastSectionType: string | null = null;
                   return filteredWines.map((wine) => {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
+                    const structured = getListScanStructuredMeta(wine);
+                    const metaLine = [
+                      structured.typeLabel,
+                      structured.primaryVarietal,
+                      structured.displayRegion,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                     const resolvedType = resolveListScanWineType(wine);
                     const showSectionHeader =
                       sortMode === "list_order" && resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
-                    const varietalLabel = formatWineListSubLabel(
-                      wine.varietals,
-                      resolvedType
-                    );
-                    const typeLabel = formatWineTypeLabel(resolvedType);
-                    const regionLabel = wine.regions.length > 0
-                      ? wine.regions.slice(0, 2).join(", ")
-                      : null;
-                    const secondaryParts = [varietalLabel, regionLabel].filter(Boolean);
-                    const vintageText = wine.vintage ?? null;
 
                     return (
                       <div key={wine.id}>
@@ -1013,54 +967,40 @@ export default function ListScanResultsScreen() {
                           </div>
                         ) : null}
                         <div
-                          className={`flex items-start gap-3 border-b border-white/6 px-5 py-3 ${
-                            highlighted ? "bg-emerald-400/5" : ""
+                          className={`grid gap-3 border-b border-white/6 px-5 py-3 text-sm ${
+                            filters.show_match_column
+                              ? "grid-cols-[minmax(0,1fr)_120px_110px]"
+                              : "grid-cols-[minmax(0,1fr)_120px]"
                           }`}
                         >
-                          {/* Wine type dot */}
-                          <span
-                            className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${getWineTypeDotColor(resolvedType)}`}
-                            title={typeLabel ?? undefined}
-                          />
-
-                          {/* Main info */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2">
-                              <p
-                                className={`truncate text-sm ${
-                                  highlighted
-                                    ? "font-bold text-emerald-300"
-                                    : "font-medium text-[var(--color-text-primary)]"
-                                }`}
-                              >
-                                {display.title}
-                              </p>
-                              {vintageText ? (
-                                <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
-                                  {vintageText}
-                                </span>
-                              ) : null}
-                            </div>
-                            {secondaryParts.length > 0 ? (
-                              <p className="mt-0.5 truncate text-xs text-[var(--color-text-tertiary)]">
-                                {secondaryParts.join(" · ")}
+                          <div className="min-w-0">
+                            <p
+                              className={`truncate ${
+                                highlighted
+                                  ? "font-bold text-emerald-300"
+                                  : "font-medium text-[var(--color-text-primary)]"
+                              }`}
+                            >
+                              {display.title}
+                            </p>
+                            {metaLine ? (
+                              <p className="mt-1 truncate text-xs text-[var(--color-text-tertiary)]">
+                                {metaLine}
                               </p>
                             ) : null}
                           </div>
-
-                          {/* Price */}
                           <span
-                            className={`shrink-0 text-sm font-medium ${
-                              highlighted ? "text-emerald-300" : "text-[var(--color-text-secondary)]"
+                            className={`text-right font-medium ${
+                              highlighted ? "text-emerald-300" : "text-[var(--color-text-primary)]"
                             }`}
                           >
                             {formatPriceDisplay(wine.price_display, wine.menu_label)}
                           </span>
-
-                          {/* Match % */}
                           {filters.show_match_column ? (
                             <span
-                              className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${getMatchPercentBgColor(wine.match_percent)} ${getMatchPercentColor(wine.match_percent)}`}
+                              className={`text-right font-semibold ${
+                                highlighted ? "text-emerald-300" : "text-[var(--color-text-tertiary)]"
+                              }`}
                             >
                               {wine.match_percent}%
                             </span>

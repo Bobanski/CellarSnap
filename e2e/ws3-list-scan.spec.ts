@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { resolveListScanWineType, type ListScanResult } from "@shared";
+import {
+  createDefaultListScanFilters,
+  resolveListScanWineType,
+  sanitizeListScanFilters,
+  type ListScanRegionGroup,
+  type ListScanResult,
+} from "@shared";
 import { createListScanParseHandler } from "../src/app/api/list-scan/parse/handler";
 import { userHasPrivateBetaFeatureAccess } from "../src/lib/access/privateBetaFeatures";
 import { RequestAuthError } from "../src/server/auth/requestAuth";
@@ -226,6 +232,34 @@ test.describe("WS3 list scan parse handler", () => {
         varietals: [],
       })
     ).toBe("rose");
+  });
+
+  test("filter sanitization keeps only visible options and one active country", () => {
+    const regionGroups: ListScanRegionGroup[] = [
+      { country: "France", subRegions: ["Bordeaux", "Loire"] },
+      { country: "Italy", subRegions: ["Tuscany", "Piedmont"] },
+    ];
+
+    const sanitized = sanitizeListScanFilters(
+      {
+        ...createDefaultListScanFilters(),
+        included_wine_types: ["red", "white", "sparkling"],
+        selected_varietals: ["Cabernet Sauvignon", "Nebbiolo"],
+        selected_regions: ["France", "Bordeaux", "Italy", "Tuscany"],
+      },
+      {
+        wine_types: ["red"],
+        varietals: ["Cabernet Sauvignon"],
+        regions: ["France", "Bordeaux"],
+        min_price: null,
+        max_price: null,
+      },
+      regionGroups
+    );
+
+    expect(sanitized.included_wine_types).toEqual(["red"]);
+    expect(sanitized.selected_varietals).toEqual(["Cabernet Sauvignon"]);
+    expect(sanitized.selected_regions).toEqual(["France", "Bordeaux"]);
   });
 
   test("parser normalization accepts rose aliases and section signals", () => {

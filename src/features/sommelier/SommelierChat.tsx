@@ -72,9 +72,8 @@ export default function SommelierChat() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [lastSubmittedPrompt, setLastSubmittedPrompt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  // Track content version for each message to prevent race conditions in streaming updates
-  const contentVersionRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -88,6 +87,7 @@ export default function SommelierChat() {
     if (!trimmed || pending) {
       return;
     }
+    setLastSubmittedPrompt(trimmed);
 
     const assistantId = createMessageId("assistant");
     const userMessage: ChatMessage = {
@@ -163,9 +163,6 @@ export default function SommelierChat() {
         buffer = parseSseBuffer(buffer, (event, data) => {
           if (event === "delta") {
             const delta = typeof data.text === "string" ? data.text : "";
-            // Increment version to ensure atomicity of delta updates
-            const currentVersion = (contentVersionRef.current[assistantId] ?? 0) + 1;
-            contentVersionRef.current[assistantId] = currentVersion;
             startTransition(() => {
               setMessages((current) =>
                 current.map((message) =>
@@ -183,9 +180,6 @@ export default function SommelierChat() {
           }
 
           if (event === "done") {
-            // Increment version for done event to ensure it's processed after all deltas
-            const currentVersion = (contentVersionRef.current[assistantId] ?? 0) + 1;
-            contentVersionRef.current[assistantId] = currentVersion;
             startTransition(() => {
               setMessages((current) =>
                 current.map((message) =>
@@ -281,13 +275,27 @@ export default function SommelierChat() {
       {error ? (
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           <p>{error}</p>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-100 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40"
-          >
-            Dismiss
-          </button>
+          <div className="flex items-center gap-2">
+            {lastSubmittedPrompt ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void sendMessage(lastSubmittedPrompt);
+                }}
+                disabled={pending}
+                className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-100 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Retry last prompt
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-100 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       ) : null}
 

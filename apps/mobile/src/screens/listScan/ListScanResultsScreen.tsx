@@ -18,19 +18,19 @@ import {
   deriveListScanRegionGroups,
   filterListScanWines,
   formatListScanPriceDisplay,
+  getListScanStructuredMeta,
   getListScanDisplayLines,
   getListScanFilterAccentTone,
   getListScanVarietalAccentTone,
   getListScanSectionTitle,
   getTopListScanRecommendations,
   listScanWineTypeLabels,
-  LIST_SCAN_FILTERABLE_WINE_TYPES,
+  sanitizeListScanFilters,
   resolveListScanWineType,
   type ListScanFilterAccentTone,
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
-  type ListScanWineType,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -52,39 +52,8 @@ function formatPriceDisplay(value: string | null, menuLabel?: string) {
   return formatListScanPriceDisplay(value, menuLabel) ?? "-";
 }
 
-function formatWineListSubLabel(
-  varietals: string[],
-  wineType: ListScanWineType
-) {
-  if (varietals.length > 1) {
-    if (wineType === "rose") {
-      return "Rose blend";
-    }
-    if (wineType === "orange") {
-      return "Orange blend";
-    }
-    if (wineType === "red") {
-      return "Red blend";
-    }
-    if (wineType === "white") {
-      return "White blend";
-    }
-    return "Blend";
-  }
-  if (varietals[0] === "Red Blend") {
-    return "Red blend";
-  }
-  if (varietals[0] === "White Blend") {
-    return "White blend";
-  }
-  if (varietals[0] === "Rose Blend") {
-    return "Rose blend";
-  }
-  if (varietals[0] === "Orange Blend") {
-    return "Orange blend";
-  }
-  return varietals[0] || "Varietal not parsed";
-}
+const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
+const EMPTY_STRING_LIST: string[] = [];
 
 function summarizeSelectedLabels(values: string[], emptyLabel: string) {
   if (values.length === 0) {
@@ -313,18 +282,6 @@ export default function ListScanResultsScreen() {
     };
   }, [params.scanId]);
 
-  const filteredWines = useMemo(
-    () => (result ? filterListScanWines(result.wines, filters) : []),
-    [filters, result]
-  );
-  const topRecommendations = useMemo(
-    () => getTopListScanRecommendations(filteredWines, 3),
-    [filteredWines]
-  );
-  const highlightedIds = useMemo(
-    () => new Set(topRecommendations.map((wine) => wine.id)),
-    [topRecommendations]
-  );
   const derivedFacets = useMemo(
     () => (result ? deriveListScanFacets(result.wines) : null),
     [result]
@@ -337,12 +294,40 @@ export default function ListScanResultsScreen() {
     () => (result ? deriveListScanRegionGroups(result.wines) : []),
     [result]
   );
+  const visibleFilters = useMemo(
+    () =>
+      result
+        ? sanitizeListScanFilters(
+            filters,
+            derivedFacets ?? undefined,
+            regionGroups
+          )
+        : filters,
+    [derivedFacets, filters, regionGroups, result]
+  );
+  const availableWineTypes = derivedFacets?.wine_types ?? EMPTY_WINE_TYPES;
+  const availableVarietals = derivedFacets?.varietals ?? EMPTY_STRING_LIST;
+  const hasWineTypeOptions = availableWineTypes.length > 0;
+  const hasVarietalOptions = availableVarietals.length > 0;
+  const hasRegionOptions = regionGroups.length > 0;
+  const filteredWines = useMemo(
+    () => (result ? filterListScanWines(result.wines, visibleFilters) : []),
+    [result, visibleFilters]
+  );
+  const topRecommendations = useMemo(
+    () => getTopListScanRecommendations(filteredWines, 3),
+    [filteredWines]
+  );
+  const highlightedIds = useMemo(
+    () => new Set(topRecommendations.map((wine) => wine.id)),
+    [topRecommendations]
+  );
   const activeFilterCount = useMemo(
     () =>
       derivedFacets
-        ? countActiveFilterGroups(filters, derivedFacets.wine_types)
+        ? countActiveFilterGroups(visibleFilters, availableWineTypes)
         : 0,
-    [derivedFacets, filters]
+    [availableWineTypes, derivedFacets, visibleFilters]
   );
   const filterColumns = width >= 320 ? 2 : 1;
   const collapsedFilterCardWidth =
@@ -459,7 +444,7 @@ export default function ListScanResultsScreen() {
               <View style={[styles.filterGridItem, { width: getFilterCardWidth(priceOpen) }]}>
                 <FilterDropdown
                   label="Price"
-                  summary={buildPriceSummary(filters)}
+                  summary={buildPriceSummary(visibleFilters)}
                   open={priceOpen}
                   onToggle={() => setPriceOpen((current) => !current)}
                 >
@@ -538,90 +523,93 @@ export default function ListScanResultsScreen() {
                 </FilterDropdown>
               </View>
 
-              <View
-                style={[styles.filterGridItem, { width: getFilterCardWidth(wineTypeOpen) }]}
-              >
-                <FilterDropdown
-                  label="Wine type"
-                  summary={buildWineTypeSummary(
-                    filters.included_wine_types,
-                    derivedFacets?.wine_types ?? []
-                  )}
-                  open={wineTypeOpen}
-                  onToggle={() => setWineTypeOpen((current) => !current)}
+              {hasWineTypeOptions ? (
+                <View
+                  style={[styles.filterGridItem, { width: getFilterCardWidth(wineTypeOpen) }]}
                 >
-                  <View style={styles.segmentRow}>
-                    {LIST_SCAN_FILTERABLE_WINE_TYPES.map((type) => {
-                      const available = derivedFacets?.wine_types.includes(type) ?? false;
-                      const selected = filters.included_wine_types.includes(type);
-                      const toneStyles = getWineTypeSegmentToneStyles(type, selected);
-                      return (
-                        <Pressable
-                          key={type}
-                          style={[
-                            styles.segmentButton,
-                            toneStyles.button,
-                            !available ? styles.segmentButtonDisabled : null,
-                          ]}
-                          disabled={!available}
-                          onPress={() =>
-                            setFilters((current) => ({
-                              ...current,
-                              included_wine_types: current.included_wine_types.includes(type)
-                                ? current.included_wine_types.filter((value) => value !== type)
-                                : [...current.included_wine_types, type],
-                            }))
-                          }
-                        >
-                          <AppText
-                            style={[styles.segmentButtonText, toneStyles.text]}
+                  <FilterDropdown
+                    label="Wine type"
+                    summary={buildWineTypeSummary(
+                      visibleFilters.included_wine_types,
+                      availableWineTypes
+                    )}
+                    open={wineTypeOpen}
+                    onToggle={() => setWineTypeOpen((current) => !current)}
+                  >
+                    <View style={styles.segmentRow}>
+                      {availableWineTypes.map((type) => {
+                        const selected = visibleFilters.included_wine_types.includes(type);
+                        const toneStyles = getWineTypeSegmentToneStyles(type, selected);
+                        return (
+                          <Pressable
+                            key={type}
+                            style={[
+                              styles.segmentButton,
+                              toneStyles.button,
+                            ]}
+                            onPress={() =>
+                              setFilters((current) => ({
+                                ...current,
+                                included_wine_types: current.included_wine_types.includes(type)
+                                  ? current.included_wine_types.filter((value) => value !== type)
+                                  : [...current.included_wine_types, type],
+                              }))
+                            }
                           >
-                            {listScanWineTypeLabels[type]}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </FilterDropdown>
-              </View>
+                            <AppText
+                              style={[styles.segmentButtonText, toneStyles.text]}
+                            >
+                              {listScanWineTypeLabels[type]}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </FilterDropdown>
+                </View>
+              ) : null}
 
-              <View
-                style={[styles.filterGridItem, { width: getFilterCardWidth(varietalOpen) }]}
-              >
-                <FacetMultiSelect
-                  label="Varietal"
-                  placeholder="Type a varietal from this list"
-                  options={derivedFacets?.varietals ?? []}
-                  selected={filters.selected_varietals}
-                  onChange={(selected_varietals) =>
-                    setFilters((current) => ({ ...current, selected_varietals }))
-                  }
-                  getOptionTone={(option) =>
-                    getListScanVarietalAccentTone(option, varietalAccentMap)
-                  }
-                  open={varietalOpen}
-                  onOpenChange={setVarietalOpen}
-                />
-              </View>
+              {hasVarietalOptions ? (
+                <View
+                  style={[styles.filterGridItem, { width: getFilterCardWidth(varietalOpen) }]}
+                >
+                  <FacetMultiSelect
+                    label="Varietal"
+                    placeholder="Type a varietal from this list"
+                    options={availableVarietals}
+                    selected={visibleFilters.selected_varietals}
+                    onChange={(selected_varietals) =>
+                      setFilters((current) => ({ ...current, selected_varietals }))
+                    }
+                    getOptionTone={(option) =>
+                      getListScanVarietalAccentTone(option, varietalAccentMap)
+                    }
+                    open={varietalOpen}
+                    onOpenChange={setVarietalOpen}
+                  />
+                </View>
+              ) : null}
 
-              <View
-                style={[styles.filterGridItem, { width: getFilterCardWidth(regionOpen) }]}
-              >
-                <RegionFilterSelect
-                  regionGroups={regionGroups}
-                  selected={filters.selected_regions}
-                  onChange={(selected_regions) =>
-                    setFilters((current) => ({ ...current, selected_regions }))
-                  }
-                  open={regionOpen}
-                  onOpenChange={setRegionOpen}
-                />
-              </View>
+              {hasRegionOptions ? (
+                <View
+                  style={[styles.filterGridItem, { width: getFilterCardWidth(regionOpen) }]}
+                >
+                  <RegionFilterSelect
+                    regionGroups={regionGroups}
+                    selected={visibleFilters.selected_regions}
+                    onChange={(selected_regions) =>
+                      setFilters((current) => ({ ...current, selected_regions }))
+                    }
+                    open={regionOpen}
+                    onOpenChange={setRegionOpen}
+                  />
+                </View>
+              ) : null}
 
               <View style={[styles.filterGridItem, { width: getFilterCardWidth(matchOpen) }]}>
                 <FilterDropdown
                   label="Match"
-                  summary={buildMatchSummary(filters)}
+                  summary={buildMatchSummary(visibleFilters)}
                   open={matchOpen}
                   onToggle={() => setMatchOpen((current) => !current)}
                 >
@@ -690,10 +678,18 @@ export default function ListScanResultsScreen() {
             <View style={styles.recommendationStack}>
               {topRecommendations.map((wine, index) => {
                 const display = getListScanDisplayLines(wine);
-                const subLabel = formatWineListSubLabel(
-                  wine.varietals,
-                  resolveListScanWineType(wine)
-                );
+                const structured = getListScanStructuredMeta(wine);
+                const detailLine =
+                  display.subtitle ??
+                  [display.wineName, display.producer].filter(Boolean).join(" · ");
+                const metaLine = [
+                  structured.typeLabel,
+                  structured.primaryVarietal,
+                  structured.displayRegion,
+                  structured.confidenceLabel,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
                 return (
                   <View key={wine.id} style={styles.recommendationCard}>
                     <View style={styles.recommendationTopRow}>
@@ -708,8 +704,11 @@ export default function ListScanResultsScreen() {
                     <View style={styles.recommendationTitleRow}>
                       <View style={styles.recommendationTitleWrap}>
                         <AppText style={styles.recommendationTitle}>{display.title}</AppText>
-                        {subLabel ? (
-                          <AppText style={styles.recommendationSubtitle}>{subLabel}</AppText>
+                        {detailLine ? (
+                          <AppText style={styles.recommendationSubtitle}>{detailLine}</AppText>
+                        ) : null}
+                        {metaLine ? (
+                          <AppText style={styles.recommendationMeta}>{metaLine}</AppText>
                         ) : null}
                       </View>
                       <AppText style={styles.recommendationPrice}>
@@ -756,10 +755,14 @@ export default function ListScanResultsScreen() {
                   return filteredWines.map((wine) => {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
-                    const subLabel = formatWineListSubLabel(
-                      wine.varietals,
-                      resolveListScanWineType(wine)
-                    );
+                    const structured = getListScanStructuredMeta(wine);
+                    const metaLine = [
+                      structured.typeLabel,
+                      structured.primaryVarietal,
+                      structured.displayRegion,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                     const resolvedType = resolveListScanWineType(wine);
                     const showSectionHeader = resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
@@ -784,9 +787,15 @@ export default function ListScanResultsScreen() {
                             >
                               {display.title}
                             </AppText>
-                            <AppText numberOfLines={1} style={styles.tableSubText}>
-                              {subLabel}
-                            </AppText>
+                            {metaLine ? (
+                              <AppText numberOfLines={1} style={styles.tableSubText}>
+                                {metaLine}
+                              </AppText>
+                            ) : display.subtitle ? (
+                              <AppText numberOfLines={1} style={styles.tableSubText}>
+                                {display.subtitle}
+                              </AppText>
+                            ) : null}
                           </View>
                           <View style={styles.tablePriceColumn}>
                             <AppText
@@ -1239,6 +1248,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
+  },
+  recommendationMeta: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   recommendationPrice: {
     color: colors.success,
