@@ -10,6 +10,7 @@ import {
   normalizeListScanCountryLabel,
   resolveListScanWineType,
   sanitizeListScanMenuLabel,
+  stripLeadingListScanIdentifier,
   type ListScanParsedWine,
   type ListScanResult,
   type ListScanSourceType,
@@ -52,7 +53,7 @@ const MAX_URL_HTML_BYTES = 400_000;
 const MAX_URL_MODEL_INPUT_CHARS = 10_000;
 const REQUEST_TIMEOUT_MS = 90_000;
 const ABSOLUTE_NON_WINE_ENTRY_PATTERN =
-  /\b(?:coffee|espresso|americano|macchiato|latte|flat white|cappuccino|cold brew|tea|herbal|water|sparkling water|soda|limeade|lemonade|juice|grape juice|shrub|arnold palmer|kombucha|beer|ale|ipa|pilsner|porter|stout|cider|spritz|michelada|mimosa|non-alcoholic|zero-proof|soft beverage)\b/i;
+  /\b(?:coffee|espresso|americano|macchiato|latte|flat white|cappuccino|cold brew|tea|herbal|water|sparkling water|soda|limeade|lemonade|juice|grape juice|shrub|arnold palmer|kombucha|beer|ale|ipa|pilsner|porter|stout|cider|spritz|michelada|mimosa|cognac|brandy|armagnac|grappa|liqueur|aperitif|digestif|corkage|non-alcoholic|zero-proof|soft beverage)\b/i;
 const NON_WINE_SECTION_HEADING_PATTERN =
   /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|spirits?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed|email signup|newsletter|contact|hours|location|reservations?|private events?|gift cards?|careers?|about)\b/i;
 const WINE_SECTION_HEADING_PATTERN =
@@ -817,7 +818,9 @@ function toPercent(value?: number | null, fallback = 0) {
 function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
   return parsed.wines
     .map((wine, index) => {
-      const rawMenuLabel = normalizeText(wine.menu_label);
+      const rawMenuLabel = stripLeadingListScanIdentifier(
+        normalizeText(wine.menu_label) ?? ""
+      );
       if (!rawMenuLabel) {
         return null;
       }
@@ -956,6 +959,269 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
       } satisfies ListScanParsedWine;
     })
     .filter((wine): wine is ListScanParsedWine => wine !== null);
+}
+
+const LIST_SCAN_NOISE_LABEL_PATTERN =
+  /\b(?:sommelier|coravin|corkage|selections?|selection)\b/i;
+const LIST_SCAN_SECTION_NAVIGATION_PATTERN =
+  /(?:\b\d{1,3}\s*[-–]\s*\d{1,3}\b.*[—-].*)|(?:\.{3,}.*\b\d{1,3}\s*[-–]\s*\d{1,3}\b)/i;
+const LIST_SCAN_SECTION_HEADER_LABEL_PATTERN =
+  /^(?:wines?|wine|sparkling|white|red|rose|rosé|orange|skin contact|dessert(?:[\/-]\s*fortified)?|fortified|sweet(?: wines?)?|by the glass|half bottles?|large format|magnums?|beer|beers|draft beer|full list|all available|top \d+|filtered wines in list order|current recommendations|best match|list order)$/i;
+const LIST_SCAN_COUNTRY_SECTION_LABEL_PATTERN =
+  /^(?:usa|u\.s\.a\.|u\.s\.|us|united states(?: of america)?|france|italy|spain|portugal|germany|australia|new zealand|argentina|chile|south africa|greece|hungary|canada|mexico|england|united kingdom|uruguay|brazil|israel|lebanon|switzerland|slovenia|croatia|romania|georgia)(?:\s*[:,-]\s*.+)?$/i;
+const LIST_SCAN_SECTION_GEOGRAPHIC_HINT_PATTERN =
+  /\b(?:appellation|ava|basin|bay|bench|burgundy|coast|county|delta|district|gorge|hills?|islands?|lake|mesa|mountains?|plateau|ridge|river|shore|slope|slopes|sound|terraces?|valley)\b/i;
+const LIST_SCAN_SECTION_GEO_ONLY_LABEL_PATTERN =
+  /^(?:[\p{L}\p{M}'’.-]+(?:\s+[\p{L}\p{M}'’.-]+){0,4})$/u;
+const LIST_SCAN_STYLE_ONLY_DESCRIPTOR_PATTERN =
+  /^(?:rose|rosé|sparkling|white|red|orange|brut(?: nature)?|extra brut|extra dry|dry|nature|sec|demi-sec|skin contact|champagne|cava|prosecco|pet[\s-]?nat|lambrusco|n\.?v\.?)$/i;
+
+function hasListScanPrice(wine: Pick<ListScanParsedWine, "price_display" | "price_value">) {
+  return (
+    (typeof wine.price_value === "number" && Number.isFinite(wine.price_value)) ||
+    Boolean(normalizeText(wine.price_display))
+  );
+}
+
+function isListScanNoiseLabel(value: string) {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return true;
+  }
+
+  if (LIST_SCAN_NOISE_LABEL_PATTERN.test(normalized)) {
+    return true;
+  }
+
+  if (LIST_SCAN_SECTION_NAVIGATION_PATTERN.test(normalized)) {
+    return true;
+  }
+
+  return false;
+}
+
+function isLikelyStandaloneSectionHeader(
+  wine: Pick<
+    ListScanParsedWine,
+    "menu_label" | "wine_name" | "producer" | "vintage" | "varietals" | "regions" | "wine_type"
+  >
+) {
+  const label = normalizeText(wine.menu_label);
+  if (!label) {
+    return false;
+  }
+  if (wine.wine_name || wine.producer || wine.vintage || wine.varietals.length > 0) {
+    return false;
+  }
+
+  if (LIST_SCAN_SECTION_HEADER_LABEL_PATTERN.test(label)) {
+    return true;
+  }
+
+  if (LIST_SCAN_COUNTRY_SECTION_LABEL_PATTERN.test(label)) {
+    return true;
+  }
+
+  if (
+    LIST_SCAN_SECTION_GEOGRAPHIC_HINT_PATTERN.test(label) &&
+    LIST_SCAN_SECTION_GEO_ONLY_LABEL_PATTERN.test(label)
+  ) {
+    return true;
+  }
+
+  if (normalizeListScanCountryLabel(label) && !/\b(?:19|20)\d{2}\b/.test(label)) {
+    return true;
+  }
+
+  return false;
+}
+
+function isLikelyProducerOnlyRow(wine: ListScanParsedWine) {
+  const label = normalizeText(wine.menu_label);
+  if (!label) {
+    return false;
+  }
+  if (isListScanNoiseLabel(label) || isLikelyStandaloneSectionHeader(wine)) {
+    return false;
+  }
+  if (!hasListScanPrice(wine)) {
+    return false;
+  }
+  const hasStrongDetail =
+    Boolean(wine.vintage) ||
+    wine.varietals.length > 0 ||
+    wine.regions.some((region) => !isStyleOnlyDescriptor(region)) ||
+    Boolean(wine.wine_name && !isStyleOnlyDescriptor(wine.wine_name));
+  if (hasStrongDetail) {
+    return false;
+  }
+  if (/,/.test(label) || /\b(?:19|20)\d{2}\b/.test(label)) {
+    return false;
+  }
+
+  const wordCount = label.split(/\s+/).length;
+  if (label.length > 60 || wordCount > 5) {
+    return false;
+  }
+
+  return /^[\p{L}\p{M}'"&.\-’—–\s]+$/u.test(label);
+}
+
+function isLikelySplitWineTitle(wine: ListScanParsedWine) {
+  return isLikelyProducerOnlyRow(wine);
+}
+
+function isLikelySplitWineDetail(wine: ListScanParsedWine) {
+  const label = normalizeText(wine.menu_label);
+  if (!label) {
+    return false;
+  }
+  if (isListScanNoiseLabel(label)) {
+    return false;
+  }
+  if (label.length < 12) {
+    return false;
+  }
+
+  const hasDetailSignals =
+    wine.wine_name !== null ||
+    wine.varietals.length > 0 ||
+    wine.regions.length > 0 ||
+    /,/.test(label) ||
+    /\b(?:19|20)\d{2}\b/.test(label) ||
+    /[a-z].*[A-Z]|[A-Z].*[a-z]/.test(label);
+
+  return hasDetailSignals;
+}
+
+function combineSplitWineLabels(left: string, right: string) {
+  const leftLabel = normalizeText(left);
+  const rightLabel = normalizeText(right);
+  if (!leftLabel) {
+    return rightLabel ?? "";
+  }
+  if (!rightLabel) {
+    return leftLabel;
+  }
+
+  const leftKey = leftLabel.toLowerCase();
+  const rightKey = rightLabel.toLowerCase();
+  if (rightKey.startsWith(leftKey)) {
+    return rightLabel;
+  }
+  if (leftKey.startsWith(rightKey)) {
+    return leftLabel;
+  }
+
+  return `${leftLabel} — ${rightLabel}`;
+}
+
+function isStyleOnlyDescriptor(value: string | null | undefined) {
+  return LIST_SCAN_STYLE_ONLY_DESCRIPTOR_PATTERN.test(normalizeText(value) ?? "");
+}
+
+function mergeSplitWineRows(
+  wines: ListScanParsedWine[]
+): ListScanParsedWine[] {
+  const merged: ListScanParsedWine[] = [];
+
+  for (let index = 0; index < wines.length; index += 1) {
+    const current = wines[index]!;
+    const next = wines[index + 1];
+
+    const shouldMerge =
+      Boolean(next) &&
+      isLikelySplitWineTitle(current) &&
+      isLikelySplitWineDetail(next!);
+
+    if (!shouldMerge || !next) {
+      merged.push(current);
+      continue;
+    }
+
+    const leadLabel = normalizeText(current.producer) ?? normalizeText(current.menu_label);
+    const detailLabel = normalizeText(next.menu_label) ?? "";
+    const combinedMenuLabel =
+      leadLabel && detailLabel
+        ? `${leadLabel} — ${detailLabel}`
+        : combineSplitWineLabels(current.menu_label, next.menu_label);
+    const treatAsProducerDetailSplit = isLikelyProducerOnlyRow(current);
+    const combinedProducer =
+      current.producer ??
+      (treatAsProducerDetailSplit ? normalizeText(current.menu_label) : null) ??
+      next.producer ??
+      null;
+    const combinedWineName = next.wine_name ?? normalizeText(next.menu_label) ?? null;
+    const combinedRegions = uniqueValues([
+      ...current.regions.filter((region) => !isStyleOnlyDescriptor(region)),
+      ...next.regions.filter((region) => !isStyleOnlyDescriptor(region)),
+    ]);
+    const combinedVarietals = uniqueValues([
+      ...current.varietals,
+      ...next.varietals,
+    ]);
+    const combinedWineType = resolveListScanWineType({
+      wine_type:
+        current.wine_type !== "unknown" ? current.wine_type : next.wine_type,
+      menu_label: combinedMenuLabel,
+      wine_name: combinedWineName,
+      producer: combinedProducer,
+      regions: combinedRegions,
+      varietals: combinedVarietals,
+    });
+
+    merged.push({
+      ...current,
+      menu_label: combinedMenuLabel,
+      producer: combinedProducer,
+      wine_name: combinedWineName,
+      vintage: current.vintage ?? next.vintage,
+      wine_type: combinedWineType,
+      price_display: current.price_display ?? next.price_display,
+      price_value: current.price_value ?? next.price_value,
+      varietals: combinedVarietals,
+      regions: combinedRegions,
+      canonical_country: current.canonical_country ?? next.canonical_country,
+      match_percent: Math.max(current.match_percent, next.match_percent),
+      parse_confidence: Math.max(
+        current.parse_confidence,
+        next.parse_confidence
+      ),
+      rationale: buildListScanRationale({
+        wine_type: combinedWineType,
+        varietals: combinedVarietals,
+        regions: combinedRegions,
+        price_display: current.price_display ?? next.price_display,
+      }),
+    });
+
+    index += 1;
+  }
+
+  return merged;
+}
+
+function cleanupNormalizedParsedWines(wines: ListScanParsedWine[]) {
+  const normalized = wines
+    .map((wine) => ({
+      ...wine,
+      menu_label: stripLeadingListScanIdentifier(
+        sanitizeListScanMenuLabel(
+          normalizeText(wine.menu_label) ?? "",
+          wine.price_display,
+          wine.price_value
+        )
+      ),
+    }))
+    .filter(
+      (wine) =>
+        !isListScanNoiseLabel(wine.menu_label) &&
+        !isLikelyStandaloneSectionHeader(wine)
+    );
+
+  return mergeSplitWineRows(normalized).filter(
+    (wine) => !isLikelyStandaloneSectionHeader(wine)
+  );
 }
 
 function isWineType(value: string | null | undefined): value is WineType {
@@ -1899,7 +2165,7 @@ async function parseImageSource({
 }
 
 async function extractTextFromPdfFile(file: File) {
-  const { PDFParse } = await import("pdf-parse");
+  const { PDFParse } = await import(/* webpackIgnore: true */ "pdf-parse");
   const parser = new PDFParse({ data: Buffer.from(await file.arrayBuffer()) });
   try {
     const result = await parser.getText();
@@ -1970,6 +2236,7 @@ async function parsePdfTextSource({
   // Normalize PDF-specific patterns (page markers, spaced-out headings)
   // BEFORE section extraction so heading detection works correctly.
   const extractedText = normalizePdfExtractedText(rawExtractedText);
+  const normalizeMs = Date.now() - tExtract0 - extractMs;
 
   // PDF text path feeds ONLY into the heuristic regex parser (no API call),
   // so we pass Infinity to avoid the truncation limits designed for OpenAI input.
@@ -1989,36 +2256,61 @@ async function parsePdfTextSource({
     `[ListScan PDF] Heuristic parse (section text): ${heuristicMs}ms, ${heuristic.wines.length} wines from ${focusedText.length} chars`
   );
 
-  if (heuristic.wines.length > 0) {
-    // Attach PDF diagnostics to the result
-    (heuristic as Record<string, unknown>)._pdfDiag = {
+  const tRawHeuristic0 = Date.now();
+  const rawHeuristic = buildHeuristicParsedResponse({
+    text: extractedText,
+    title,
+    fallbackWarning: "",
+  });
+  const rawHeuristicMs = Date.now() - tRawHeuristic0;
+  console.log(
+    `[ListScan PDF] Raw text heuristic: ${rawHeuristicMs}ms, ${rawHeuristic.wines.length} wines from ${extractedText.length} chars`
+  );
+
+  const bestHeuristic =
+    rawHeuristic.wines.length > heuristic.wines.length ? rawHeuristic : heuristic;
+  if (bestHeuristic.wines.length > 0) {
+    (bestHeuristic as Record<string, unknown>)._pdfDiag = {
       extractMs,
+      normalizeMs,
       textLength: extractedText.length,
       focusedTextLength: focusedText.length,
-      heuristicMs,
-      wineCount: heuristic.wines.length,
-      path: "pdf_text_heuristic",
+      focusedHeuristicMs: heuristicMs,
+      focusedWineCount: heuristic.wines.length,
+      rawHeuristicMs,
+      rawWineCount: rawHeuristic.wines.length,
+      path:
+        bestHeuristic === rawHeuristic
+          ? "pdf_text_raw_heuristic"
+          : "pdf_text_heuristic",
     };
-    return heuristic;
+    return bestHeuristic;
   }
 
   // Try compacted text if section-aware parse found nothing.
   // Pass Infinity for PDF — no API token limit to respect.
   const compactedText = compactWineSectionTextForModel(focusedText, Infinity);
   if (compactedText.trim()) {
+    const tCompacted0 = Date.now();
     const compactedHeuristic = buildHeuristicParsedResponse({
       text: compactedText,
       title,
       fallbackWarning: "",
     });
+    const compactedHeuristicMs = Date.now() - tCompacted0;
     console.log(
-      `[ListScan PDF] Compacted heuristic: ${compactedHeuristic.wines.length} wines`
+      `[ListScan PDF] Compacted heuristic: ${compactedHeuristicMs}ms, ${compactedHeuristic.wines.length} wines`
     );
     if (compactedHeuristic.wines.length > 0) {
       (compactedHeuristic as Record<string, unknown>)._pdfDiag = {
         extractMs,
+        normalizeMs,
         textLength: extractedText.length,
+        focusedTextLength: focusedText.length,
+        focusedHeuristicMs: heuristicMs,
+        focusedWineCount: heuristic.wines.length,
         compactedTextLength: compactedText.length,
+        compactedHeuristicMs,
         wineCount: compactedHeuristic.wines.length,
         path: "pdf_text_compacted_heuristic",
       };
@@ -2028,18 +2320,25 @@ async function parsePdfTextSource({
 
   // Try full raw text as last resort before giving up on text path.
   if (focusedText !== extractedText) {
+    const tFullHeuristic0 = Date.now();
     const fullHeuristic = buildHeuristicParsedResponse({
       text: extractedText,
       title,
       fallbackWarning: "",
     });
+    const fullHeuristicMs = Date.now() - tFullHeuristic0;
     console.log(
-      `[ListScan PDF] Full text heuristic: ${fullHeuristic.wines.length} wines`
+      `[ListScan PDF] Full text heuristic: ${fullHeuristicMs}ms, ${fullHeuristic.wines.length} wines`
     );
     if (fullHeuristic.wines.length > 0) {
       (fullHeuristic as Record<string, unknown>)._pdfDiag = {
         extractMs,
+        normalizeMs,
         textLength: extractedText.length,
+        focusedTextLength: focusedText.length,
+        focusedHeuristicMs: heuristicMs,
+        focusedWineCount: heuristic.wines.length,
+        fullHeuristicMs,
         wineCount: fullHeuristic.wines.length,
         path: "pdf_text_full_heuristic",
       };
@@ -2099,8 +2398,13 @@ async function parsePdfSource({
     return result;
   } catch (textError) {
     console.log(
-      `[ListScan PDF] ⚠️ Text path failed: ${textError instanceof Error ? textError.message : String(textError)}, falling back to OpenAI visual`
+      `[ListScan PDF] ⚠️ Text path failed: ${
+        textError instanceof Error ? textError.message : String(textError)
+      }, falling back to OpenAI visual`
     );
+    if (textError instanceof Error && textError.stack) {
+      console.log(`[ListScan PDF] Text path stack: ${textError.stack}`);
+    }
   }
 
   console.log(`[ListScan PDF] 🐌 Using slow OpenAI visual fallback...`);
@@ -2447,6 +2751,19 @@ function buildHeuristicParsedResponse(params: {
       continue;
     }
 
+    // PDF text often keeps the section heading and table header on the same
+    // line (for example: "SPARKLING SPARKLING bottles bottles"). Strip the
+    // trailing column labels first so we can still recognize the section.
+    const headingCandidate = line
+      .replace(
+        /\b(?:bottles?|bottle|glass(?:es)?|by the glass|by the bottle|3oz|6oz|9oz|12oz)\b.*$/i,
+        ""
+      )
+      .replace(/\s+/g, " ")
+      .trim();
+    const compactHeadingCandidate = headingCandidate.replace(/\s+/g, "");
+    const isBubblesHeading = /bubbles?/i.test(compactHeadingCandidate);
+
     // Detect section headings: markdown ## headings (from URL scans) OR
     // plain-text all-caps / title-case short headings (from OCR image scans).
     // OCR text won't have ## prefixes, so we also match lines like
@@ -2454,20 +2771,21 @@ function buildHeuristicParsedResponse(params: {
     const isMarkdownHeading = /^##\s*/.test(line);
     const isAllCapsHeadingLike =
       !isMarkdownHeading &&
-      !pricePatternQuick.test(line) &&
-      /^[A-Z][A-Z\s&/\-,]+$/.test(line);
+      !pricePatternQuick.test(headingCandidate) &&
+      /^[A-Z][A-Z\s&/\-,]+$/.test(headingCandidate);
     // Standard short heading (< 40 chars) OR longer all-caps line that
     // matches a known wine section pattern — PDF text often produces
     // headings longer than 40 chars after spaced-char normalization.
     const isOcrHeading =
       isAllCapsHeadingLike &&
       (line.length < 40 ||
-        WINE_SECTION_HEADING_PATTERN.test(`## ${line}`) ||
-        NON_WINE_SECTION_HEADING_PATTERN.test(`## ${line}`));
+        WINE_SECTION_HEADING_PATTERN.test(`## ${headingCandidate}`) ||
+        NON_WINE_SECTION_HEADING_PATTERN.test(`## ${headingCandidate}`) ||
+        isBubblesHeading);
     const headingText = isMarkdownHeading
       ? line
       : isOcrHeading
-        ? `## ${line}`
+        ? `## ${isBubblesHeading ? "SPARKLING" : headingCandidate}`
         : null;
 
     if (headingText) {
@@ -2508,8 +2826,9 @@ function buildHeuristicParsedResponse(params: {
           line.match(/\.{2,}\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
           // Wine name followed by 2+ spaces then number: "Chardonnay  18"
           line.match(/\s{2,}(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
-          // Wine name then single space then 2-3 digit number: "Pinot Noir 22"
-          line.match(/[a-zA-Z)]\s(\d{2,3}(?:\.\d{1,2})?)\s*$/) ??
+          // Wine name then single space then a trailing number: "Pinot Noir 22"
+          // or "D.O.C.G. 17" / "Aÿ 200" / "Grand Cru 1950".
+          line.match(/\s(\d{1,4}(?:\.\d{1,2})?)\s*$/) ??
           // Price-only line: just a number (e.g. "16" or "18") — only when
           // the entire line is a short number and we have something buffered
           (buffer.length > 0 && /^\d{1,3}(?:\.\d{1,2})?$/.test(line)
@@ -2736,38 +3055,62 @@ function extractWineListTextFromHtml(html: string, hash: string) {
 
 async function parseUrlSource({ url, userId }: { url: string; userId: string }) {
   const parsedUrl = assertHttpUrl(url);
+  const tFetch0 = Date.now();
   const response = await fetchRemoteSource(parsedUrl);
+  const fetchMs = Date.now() - tFetch0;
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
 
   if (contentType.includes("application/pdf") || parsedUrl.pathname.endsWith(".pdf")) {
+    const tBytes0 = Date.now();
     const bytes = await response.arrayBuffer();
+    const bytesMs = Date.now() - tBytes0;
     const file = new File([bytes], parsedUrl.pathname.split("/").pop() || "wine-list.pdf", {
       type: "application/pdf",
     });
-    return parsePdfSource({
+    const parsed = await parsePdfSource({
       file,
       sourceLabel: parsedUrl.toString(),
       userId,
     });
+    (parsed as Record<string, unknown>)._urlDiag = {
+      fetchMs,
+      bytesMs,
+      contentType,
+      path: "pdf",
+    };
+    return parsed;
   }
 
   if (contentType.startsWith("image/")) {
+    const tBytes0 = Date.now();
     const bytes = await response.arrayBuffer();
+    const bytesMs = Date.now() - tBytes0;
     const file = new File([bytes], parsedUrl.pathname.split("/").pop() || "wine-list.jpg", {
       type: contentType || "image/jpeg",
     });
-    return parseImageSource({
+    const parsed = await parseImageSource({
       files: [file],
       sourceLabel: parsedUrl.toString(),
       userId,
     });
+    (parsed as Record<string, unknown>)._urlDiag = {
+      fetchMs,
+      bytesMs,
+      contentType,
+      path: "image",
+    };
+    return parsed;
   }
 
+  const tHtml0 = Date.now();
   const rawHtml = await readResponseTextPreview(response);
+  const htmlMs = Date.now() - tHtml0;
+  const tExtract0 = Date.now();
   const { title, text: wineSectionText } = extractWineListTextFromHtml(
     rawHtml,
     parsedUrl.hash
   );
+  const extractMs = Date.now() - tExtract0;
   if (!wineSectionText.trim()) {
     throw new Error("That URL did not contain readable list text.");
   }
@@ -2783,6 +3126,13 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   });
 
   if (heuristic.wines.length > 0) {
+    (heuristic as Record<string, unknown>)._urlDiag = {
+      fetchMs,
+      htmlMs,
+      extractMs,
+      contentType,
+      path: "html_heuristic",
+    };
     return heuristic;
   }
 
@@ -2795,6 +3145,13 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
       fallbackWarning: "",
     });
     if (compactedHeuristic.wines.length > 0) {
+      (compactedHeuristic as Record<string, unknown>)._urlDiag = {
+        fetchMs,
+        htmlMs,
+        extractMs,
+        contentType,
+        path: "html_compacted_heuristic",
+      };
       return compactedHeuristic;
     }
   }
@@ -2858,6 +3215,24 @@ export async function parseWineListSource(
           });
   timing.parse_ms = Date.now() - tParse0;
 
+  const pdfDiag = (parsed as Record<string, unknown>)?._pdfDiag ?? null;
+  if (pdfDiag && typeof pdfDiag === "object") {
+    for (const [key, value] of Object.entries(pdfDiag as Record<string, unknown>)) {
+      if (typeof value === "number") {
+        timing[`pdf_${key}`] = value;
+      }
+    }
+  }
+
+  const urlDiag = (parsed as Record<string, unknown>)?._urlDiag ?? null;
+  if (urlDiag && typeof urlDiag === "object") {
+    for (const [key, value] of Object.entries(urlDiag as Record<string, unknown>)) {
+      if (typeof value === "number") {
+        timing[`url_${key}`] = value;
+      }
+    }
+  }
+
   // Await pre-warmed data (should already be resolved or nearly so).
   const tPreWarm0 = Date.now();
   const [preloadedInferenceMap, preloadedPreferenceEntries] = await Promise.all([
@@ -2868,7 +3243,7 @@ export async function parseWineListSource(
 
   const tEnrich0 = Date.now();
   const enriched = await enrichParsedWines({
-    wines: normalizeParsedWines(parsed),
+    wines: cleanupNormalizedParsedWines(normalizeParsedWines(parsed)),
     userId: params.userId ?? null,
     userSupabase: params.userSupabase ?? null,
     preloadedInferenceMap,
@@ -2916,10 +3291,12 @@ export async function parseWineListSource(
 export const __listScanTestUtils = {
   applyInferenceToWine,
   applyStubMatchPercents,
+  cleanupNormalizedParsedWines,
   detectWineTypeFromSignals,
   extractJson,
   extractWineListTextFromHtml,
   normalizeWineType,
+  mergeSplitWineRows,
 };
 
 export function detectListScanSourceType(params: {

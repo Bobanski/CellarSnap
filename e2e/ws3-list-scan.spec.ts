@@ -1,10 +1,13 @@
 import { expect, test } from "@playwright/test";
 import {
+  buildListScanRationale,
   createDefaultListScanFilters,
   deriveListScanRegionGroups,
   filterListScanWines,
+  getListScanStructuredMeta,
   resolveListScanWineType,
   sanitizeListScanFilters,
+  type ListScanParsedWine,
   type ListScanRegionGroup,
   type ListScanResult,
 } from "@shared";
@@ -56,6 +59,27 @@ const baseResult: ListScanResult = {
   ],
   scanned_at: "2026-03-15T12:00:00.000Z",
 };
+
+function buildParsedWine(
+  overrides: Partial<ListScanParsedWine> &
+    Pick<ListScanParsedWine, "id" | "source_order" | "menu_label">
+): ListScanParsedWine {
+  return {
+    producer: null,
+    wine_name: null,
+    vintage: null,
+    wine_type: "unknown",
+    price_display: null,
+    price_value: null,
+    varietals: [],
+    regions: [],
+    canonical_country: null,
+    match_percent: 0,
+    parse_confidence: 0,
+    rationale: "",
+    ...overrides,
+  };
+}
 
 test.describe("WS3 list scan parse handler", () => {
   test("authenticated scans are persisted after parsing", async () => {
@@ -242,6 +266,137 @@ test.describe("WS3 list scan parse handler", () => {
     expect(Array.isArray(extracted.value.wines)).toBeTruthy();
     expect(extracted.value.wines).toHaveLength(1);
     expect(extracted.value.wines[0]?.menu_label).toBe("Wine A");
+  });
+
+  test("cleanup merges split producer/detail rows and strips section headers", () => {
+    const cleaned = __listScanTestUtils.cleanupNormalizedParsedWines([
+      buildParsedWine({
+        id: "wine-1",
+        source_order: 0,
+        menu_label: "Paltrinieri — Rosé",
+        producer: "Paltrinieri",
+        wine_type: "rose",
+        wine_name: "Rosé",
+        regions: ["Rosé"],
+        price_display: "ROSÉ 75",
+        price_value: 75,
+        parse_confidence: 88,
+      }),
+      buildParsedWine({
+        id: "wine-2",
+        source_order: 1,
+        menu_label: "Lambrusco di Sorbara, Pirla, Emilia-Romagna, Italy '23",
+        wine_name: "Lambrusco di Sorbara, Pirla, Emilia-Romagna, Italy '23",
+        vintage: "2023",
+        wine_type: "sparkling",
+        price_display: "$82",
+        price_value: 82,
+        varietals: ["Lambrusco", "Sangiovese"],
+        regions: ["Pirla", "Emilia-Romagna", "Italy"],
+        canonical_country: "Italy",
+        parse_confidence: 92,
+      }),
+      buildParsedWine({
+        id: "section-1",
+        source_order: 2,
+        menu_label: "SPARKLING",
+        wine_type: "sparkling",
+        parse_confidence: 90,
+      }),
+      buildParsedWine({
+        id: "section-2",
+        source_order: 3,
+        menu_label: "France: Burgundy",
+        regions: ["France"],
+        wine_type: "red",
+        parse_confidence: 90,
+      }),
+      buildParsedWine({
+        id: "wine-3",
+        source_order: 4,
+        menu_label: "226672 Château Haut-Brion, Pessac-Léognan 2021",
+        vintage: "2021",
+        wine_type: "white",
+        price_display: "$900",
+        price_value: 900,
+        regions: ["Pessac-Léognan"],
+        canonical_country: "France",
+        parse_confidence: 86,
+      }),
+      buildParsedWine({
+        id: "wine-4",
+        source_order: 5,
+        menu_label: "NVVeuve Clicquot, Brut Réserve Cuvée, Reims",
+        wine_type: "sparkling",
+        price_display: "$82",
+        price_value: 82,
+        parse_confidence: 93,
+      }),
+    ]);
+
+    expect(cleaned).toHaveLength(3);
+    expect(cleaned[0]?.producer).toBe("Paltrinieri");
+    expect(cleaned[0]?.menu_label).toBe(
+      "Paltrinieri — Lambrusco di Sorbara, Pirla, Emilia-Romagna, Italy '23"
+    );
+    expect(cleaned[0]?.price_value).toBe(75);
+    expect(cleaned[0]?.regions).toEqual(["Pirla", "Emilia-Romagna", "Italy"]);
+    expect(cleaned[0]?.wine_name).toContain("Lambrusco");
+    expect(cleaned[1]?.menu_label).toBe("Château Haut-Brion, Pessac-Léognan 2021");
+    expect(cleaned[2]?.menu_label).toBe(
+      "NV Veuve Clicquot, Brut Réserve Cuvée, Reims"
+    );
+  });
+
+  test("structured meta prefers broad clean regions in Gjelina recommendations", () => {
+    const friuliWine = buildParsedWine({
+      id: "wine-friuli",
+      source_order: 10,
+      menu_label:
+        "Malvasia, Carso-Kras, Friuli, Venezia Giulia, Italy '21 — Terpin — Skin Contact",
+      producer: "Malvasia, Carso-Kras, Friuli, Venezia Giulia, Italy '21",
+      wine_name: "Skin Contact",
+      wine_type: "orange",
+      price_display: "$96",
+      price_value: 96,
+      varietals: ["Vitovska"],
+      regions: ["Carso-Kras", "Friuli", "Venezia Giulia", "Slovenia", "Primorska", "Kras"],
+    });
+
+    const bordeauxWine = buildParsedWine({
+      id: "wine-bordeaux",
+      source_order: 11,
+      menu_label: "Chateau De Vieille Chapelle — Merlot/Cab Franc, Tradition (Bordeaux, France '21",
+      producer: "Chateau De Vieille Chapelle",
+      wine_name: "Merlot/Cab Franc, Tradition (bordeaux, France '21)",
+      wine_type: "red",
+      price_display: "$18/$80",
+      price_value: 18,
+      varietals: ["Merlot", "Cabernet Franc", "Cabernet Sauvignon"],
+      regions: ["Tradition (bordeaux", "France '21)", "France", "Bordeaux", "Left Bank"],
+      canonical_country: "France",
+    });
+
+    expect(getListScanStructuredMeta(friuliWine).displayRegion).toBe(
+      "Friuli-Venezia Giulia"
+    );
+    expect(getListScanStructuredMeta(bordeauxWine).displayRegion).toBe("Bordeaux");
+    expect(
+      buildListScanRationale({
+        wine_type: friuliWine.wine_type,
+        varietals: friuliWine.varietals,
+        regions: friuliWine.regions,
+        price_display: friuliWine.price_display,
+      })
+    ).toContain("Friuli-Venezia Giulia");
+    expect(
+      buildListScanRationale({
+        wine_type: bordeauxWine.wine_type,
+        varietals: bordeauxWine.varietals,
+        regions: bordeauxWine.regions,
+        price_display: bordeauxWine.price_display,
+      })
+    ).toContain("Bordeaux");
   });
 
   test("shared wine-type resolution keeps rose and orange distinct", () => {

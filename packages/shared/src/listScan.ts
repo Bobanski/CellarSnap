@@ -236,6 +236,98 @@ export function normalizeFacetValue(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+function normalizeListScanDisplayRegionValue(value: string) {
+  return normalizeFacetValue(value)
+    .replace(/^[\s'’"({[\-–—]+/, "")
+    .replace(/[\s'’"()}\],;:.-]+$/, "")
+    .trim();
+}
+
+function isLikelyListScanDisplayRegionNoise(value: string) {
+  return (
+    /[\d$]/.test(value) ||
+    /[()]/.test(value) ||
+    /\b(?:selection|selections?|sommelier|coravin|corkage)\b/i.test(value)
+  );
+}
+
+function scoreListScanDisplayRegionCandidate(value: string) {
+  const wordCount = value.split(/\s+/).length;
+  const hyphenCount = (value.match(/-/g) ?? []).length;
+  let score = 0;
+
+  score += 4;
+  if (!/[(),]/.test(value)) {
+    score += 2;
+  }
+  if (!/\d/.test(value)) {
+    score += 1;
+  }
+  if (hyphenCount === 0) {
+    score += 1;
+  }
+  if (wordCount <= 2) {
+    score += 1;
+  }
+  if (value.length <= 24) {
+    score += 1;
+  }
+  score -= hyphenCount * 0.75;
+  score -= Math.max(0, wordCount - 2) * 0.25;
+
+  return score;
+}
+
+export function getListScanDisplayRegion(regions: string[]) {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  for (const region of regions) {
+    const normalized = normalizeListScanDisplayRegionValue(region);
+    if (!normalized) {
+      continue;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    if (normalizeListScanCountryLabel(normalized)) {
+      continue;
+    }
+    candidates.push(normalized);
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const friuli = candidates.find((region) => /^friuli$/i.test(region));
+  const veneziaGiulia = candidates.find(
+    (region) => /^venezia giulia$/i.test(region)
+  );
+  if (friuli && veneziaGiulia) {
+    return "Friuli-Venezia Giulia";
+  }
+
+  const scoredCandidates = candidates
+    .filter((region) => !isLikelyListScanDisplayRegionNoise(region))
+    .map((region, index) => ({
+      region,
+      score: scoreListScanDisplayRegionCandidate(region) - index * 0.01,
+    }))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return left.region.localeCompare(right.region, undefined, {
+        sensitivity: "base",
+      });
+    });
+
+  return scoredCandidates[0]?.region ?? null;
+}
+
 export function createListScanId(prefix = "scan") {
   const random = Math.random().toString(36).slice(2, 10);
   return `${prefix}-${Date.now().toString(36)}-${random}`;
@@ -687,8 +779,9 @@ export function buildListScanRationale(wine: {
   if (wine.varietals[0]) {
     parts.push(`Highlights ${wine.varietals[0]}.`);
   }
-  if (wine.regions[0]) {
-    parts.push(`Comes from ${wine.regions[0]}.`);
+  const displayRegion = getListScanDisplayRegion(wine.regions);
+  if (displayRegion) {
+    parts.push(`Comes from ${displayRegion}.`);
   }
   const formattedPrice = formatPriceDisplayForCopy(wine.price_display);
   if (formattedPrice) {
@@ -798,6 +891,18 @@ export function formatListScanPriceDisplay(value: string | null, label?: string)
   return resolveTrailingDualPriceDisplay(value, label);
 }
 
+export function stripLeadingListScanIdentifier(value: string) {
+  return value.replace(/^\s*\d{5,}(?:[\s)\].,:;\-–—]+)?\s*/, "").trim();
+}
+
+function normalizeListScanDisplaySpacing(value: string) {
+  return value
+    .replace(/^\s*N\.?\s*V\.?(?=\s*[A-ZÀ-ÿ])/i, "NV ")
+    .replace(/\bN\.?\s*V\.?(?=\s*[A-ZÀ-ÿ])/gi, "NV ")
+    .replace(/^\s*NV(?=[A-ZÀ-ÿ][a-zà-ÿ])/i, "NV ")
+    .replace(/\bNV\s{2,}/g, "NV ");
+}
+
 function stripProducerPrefixFromLabel(label: string, producer: string) {
   const normalizedLabel = normalizeFacetValue(label);
   const normalizedProducer = normalizeFacetValue(producer);
@@ -879,17 +984,20 @@ export function getListScanDisplayLines(
     inferProducerFromLabel(sanitizedLabel, wineName);
 
   const title = sanitizedLabel || producer || wineName || "Untitled wine";
-  const subtitle = producer && sanitizedLabel
-    ? stripProducerPrefixFromLabel(sanitizedLabel, producer)
-    : null;
+  const subtitleCandidate =
+    producer && sanitizedLabel
+      ? stripProducerPrefixFromLabel(sanitizedLabel, producer)
+      : null;
+  const subtitle =
+    subtitleCandidate &&
+    subtitleCandidate.localeCompare(title, undefined, { sensitivity: "base" }) !== 0 &&
+    subtitleCandidate.localeCompare(wineName ?? "", undefined, { sensitivity: "base" }) !== 0
+      ? subtitleCandidate
+      : null;
 
   return {
     title,
-    subtitle:
-      subtitle &&
-      subtitle.localeCompare(title, undefined, { sensitivity: "base" }) !== 0
-        ? subtitle
-        : null,
+    subtitle,
     producer,
     wineName,
   };
@@ -911,10 +1019,7 @@ export function getListScanStructuredMeta(
   const typeLabel =
     resolvedType !== "unknown" ? listScanWineTypeLabels[resolvedType] : null;
   const primaryVarietal = wine.varietals[0] ?? null;
-  const displayRegion =
-    wine.regions.find((region) => !normalizeListScanCountryLabel(region)) ??
-    wine.regions[0] ??
-    null;
+  const displayRegion = getListScanDisplayRegion(wine.regions);
   return {
     typeLabel,
     primaryVarietal,
@@ -927,10 +1032,12 @@ export function sanitizeListScanMenuLabel(
   priceDisplay: string | null,
   priceValue: number | null
 ) {
-  let normalized = normalizeFacetValue(label);
+  let normalized = stripLeadingListScanIdentifier(normalizeFacetValue(label));
   if (!normalized) {
     return label;
   }
+
+  normalized = normalizeListScanDisplaySpacing(normalized);
 
   const candidates = new Set<string>();
   const formattedPrice = formatListScanPriceDisplay(priceDisplay, label);
