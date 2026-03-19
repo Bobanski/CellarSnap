@@ -48,6 +48,7 @@ const MAX_IMAGE_PROCESSED_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_COUNT = 6;
 const MAX_FILE_INPUT_BYTES = 32 * 1024 * 1024;
 const MAX_FETCHED_TEXT_CHARS = 24_000;
+const MAX_URL_HTML_BYTES = 400_000;
 const MAX_URL_MODEL_INPUT_CHARS = 10_000;
 const REQUEST_TIMEOUT_MS = 90_000;
 const ABSOLUTE_NON_WINE_ENTRY_PATTERN =
@@ -2197,7 +2198,6 @@ function stripHtmlToText(html: string) {
 }
 
 // Legacy fallback kept temporarily while the stricter extractor bakes in.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function extractLikelyWineSectionText(
   text: string,
   maxChars: number = MAX_FETCHED_TEXT_CHARS
@@ -2679,6 +2679,61 @@ async function fetchRemoteSource(url: URL) {
   }
 }
 
+async function readResponseTextPreview(response: Response, maxBytes = MAX_URL_HTML_BYTES) {
+  if (!response.body) {
+    return response.text();
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  let consumedBytes = 0;
+
+  try {
+    while (consumedBytes < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done || !value) {
+        break;
+      }
+
+      consumedBytes += value.byteLength;
+      chunks.push(decoder.decode(value, { stream: true }));
+      if (consumedBytes >= maxBytes) {
+        break;
+      }
+    }
+
+    chunks.push(decoder.decode());
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // Ignore stream cleanup issues; the response is no longer needed.
+    }
+  }
+
+  return chunks.join("");
+}
+
+function extractWineListTextFromHtml(html: string, hash: string) {
+  const focusedHtml = sliceHtmlAroundHash(html, hash);
+  const { title, text } = stripHtmlToText(focusedHtml);
+  const strictWineSectionText = extractStrictWineSectionText(text);
+  const likelyWineSectionText = extractLikelyWineSectionText(text);
+  const strictHasWineSignal = WINE_SIGNAL_PATTERN.test(strictWineSectionText);
+  const likelyHasWineSignal = WINE_SIGNAL_PATTERN.test(likelyWineSectionText);
+
+  const wineSectionText =
+    !strictHasWineSignal && likelyHasWineSignal
+      ? likelyWineSectionText
+      : strictWineSectionText || likelyWineSectionText;
+
+  return {
+    title,
+    text: wineSectionText,
+  };
+}
+
 async function parseUrlSource({ url, userId }: { url: string; userId: string }) {
   const parsedUrl = assertHttpUrl(url);
   const response = await fetchRemoteSource(parsedUrl);
@@ -2708,10 +2763,11 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     });
   }
 
-  const rawHtml = await response.text();
-  const focusedHtml = sliceHtmlAroundHash(rawHtml, parsedUrl.hash);
-  const { title, text } = stripHtmlToText(focusedHtml);
-  const wineSectionText = extractStrictWineSectionText(text);
+  const rawHtml = await readResponseTextPreview(response);
+  const { title, text: wineSectionText } = extractWineListTextFromHtml(
+    rawHtml,
+    parsedUrl.hash
+  );
   if (!wineSectionText.trim()) {
     throw new Error("That URL did not contain readable list text.");
   }
@@ -2862,6 +2918,7 @@ export const __listScanTestUtils = {
   applyStubMatchPercents,
   detectWineTypeFromSignals,
   extractJson,
+  extractWineListTextFromHtml,
   normalizeWineType,
 };
 

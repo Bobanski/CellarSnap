@@ -316,6 +316,30 @@ test.describe("WS3 list scan parse handler", () => {
     ]);
   });
 
+  test("url text extraction keeps wine sections and skips food and beer noise", () => {
+    const extracted = __listScanTestUtils.extractWineListTextFromHtml(
+      [
+        "<html><head><title>Dinner Menu</title></head><body>",
+        "<h2>Food</h2>",
+        "<p>Burger</p>",
+        "<h2>Beer</h2>",
+        "<p>Lager 8</p>",
+        "<h2>Wines</h2>",
+        "<p>Schramsberg Blanc de Blancs, North Coast 16</p>",
+        "<p>Revolver Cabernet Franc, Napa Valley 16</p>",
+        "<footer>Hours</footer>",
+        "</body></html>",
+      ].join(""),
+      ""
+    );
+
+    expect(extracted.title).toBe("Dinner Menu");
+    expect(extracted.text).toContain("Schramsberg Blanc de Blancs");
+    expect(extracted.text).toContain("Revolver Cabernet Franc");
+    expect(extracted.text).not.toContain("Burger");
+    expect(extracted.text).not.toContain("Lager");
+  });
+
   test("region filters only match selected subregions when a country is active", () => {
     const wines = [
       {

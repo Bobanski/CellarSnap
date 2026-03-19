@@ -163,7 +163,7 @@ function buildScanProgress(
   elapsedMs: number
 ): ScanProgressState {
   const targetDurationMs =
-    kind === "image" ? 6_000 : kind === "pdf" ? 4_000 : 3_000;
+    kind === "image" ? 6_000 : kind === "pdf" ? 4_000 : 8_000;
   const progressCurve = 1 - Math.exp(-elapsedMs / targetDurationMs);
   const percent = Math.max(6, Math.min(99, Math.round(6 + progressCurve * 93)));
   const timeline =
