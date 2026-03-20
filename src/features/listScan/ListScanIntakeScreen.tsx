@@ -284,6 +284,25 @@ export default function ListScanIntakeScreen() {
     });
   };
 
+  const clearInputs = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setSelectedImages([]);
+    setSelectedPdf(null);
+    setUrlValue("");
+    setErrorMessage(null);
+    setScanProgress(null);
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = "";
+    }
+  };
+
   const submitForm = async () => {
     const trimmedUrl = urlValue.trim();
     const formData = new FormData();
@@ -376,6 +395,13 @@ export default function ListScanIntakeScreen() {
       setIsSubmitting(false);
     }
   };
+
+  const hasIntakeSelection =
+    selectedImages.length > 0 ||
+    selectedPdf !== null ||
+    Boolean(urlValue.trim()) ||
+    Boolean(errorMessage) ||
+    Boolean(scanProgress);
 
   return (
     <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-8 text-[var(--color-text-primary)]">
@@ -580,12 +606,14 @@ export default function ListScanIntakeScreen() {
               >
                 {isSubmitting ? "Scanning..." : "Scan list"}
               </button>
-              <Link
-                href="/"
-                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+              <button
+                type="button"
+                onClick={clearInputs}
+                disabled={isSubmitting || !hasIntakeSelection}
+                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Back to Home
-              </Link>
+                Clear
+              </button>
             </div>
           </section>
         </div>

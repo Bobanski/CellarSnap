@@ -3,6 +3,7 @@ import {
   buildListScanRationale,
   createDefaultListScanFilters,
   deriveListScanRegionGroups,
+  extractListScanFollowupCopy,
   filterListScanWines,
   getListScanDisplayLines,
   getListScanStructuredMeta,
@@ -652,5 +653,76 @@ test.describe("WS3 list scan parse handler", () => {
     expect(display.title).toBe("Bernard Levet");
     expect(display.subtitle).toBe("Syrah, Cote-Rotie, Rhone, France '21");
     expect(display.producer).toBe("Bernard Levet");
+  });
+
+  test("display lines promote producer-prefixed menu labels into the title", () => {
+    const display = getListScanDisplayLines(
+      buildParsedWine({
+        id: "display-producer-prefix",
+        source_order: 0,
+        menu_label: "Bernard Levet — Syrah, Cote-Rotie, Rhone, France '21",
+        producer: "Bernard Levet",
+        wine_name: "Syrah, Cote-Rotie, Rhone, France '21",
+        vintage: "2021",
+        wine_type: "red",
+        price_display: "$222",
+        price_value: 222,
+        varietals: ["Syrah"],
+        regions: ["Rhone", "Cote-Rotie"],
+        canonical_country: "France",
+        match_percent: 64,
+        parse_confidence: 84,
+        rationale: "Highlights Syrah.",
+      })
+    );
+
+    expect(display.title).toBe("Bernard Levet");
+    expect(display.subtitle).toBe("Syrah, Cote-Rotie, Rhone, France '21");
+    expect(display.producer).toBe("Bernard Levet");
+  });
+
+  test("section headings stay authoritative over varietal-only context", () => {
+    expect(
+      __listScanTestUtils.detectWineTypeFromSignals("Chenin Blanc, France '21", "sparkling")
+    ).toBe("sparkling");
+  });
+
+  test("url extraction preserves bentobox producers in the wine rows", () => {
+    const extracted = __listScanTestUtils.extractWineListTextFromHtml(
+      [
+        "<html><head><title>Wine List</title></head><body>",
+        '<h2 id="wine-la">Wines</h2>',
+        '<div class="menu-item__heading">',
+        '<p class="menu-item__heading menu-item__heading--name">Bernard Levet</p>',
+        '<span class="menu-item__heading--price"><strong><span class="menu-item__currency">$</span>222</strong></span>',
+        "</div>",
+        '<p class="menu-item__details--description">Syrah, Cote-Rotie, Rhone, France \'21</p>',
+        "</body></html>",
+      ].join(""),
+      "#wine-la"
+    );
+
+    expect(extracted.title).toBe("Wine List");
+    expect(extracted.text).toContain("Bernard Levet");
+    expect(extracted.text).toContain("Syrah, Cote-Rotie, Rhone, France '21");
+    expect(extracted.text).toContain("$222");
+  });
+
+  test("followup copy prefers the second sentence when requested", () => {
+    const value = extractListScanFollowupCopy(
+      "Highlights Syrah. Comes from Rhone. Listed at $145.",
+      { preferFollowup: true }
+    );
+
+    expect(value).toBe("Comes from Rhone. Listed at $145.");
+  });
+
+  test("followup copy hides generic single-sentence summaries", () => {
+    const value = extractListScanFollowupCopy(
+      "Its style lines up with the palate signals behind your strongest matches.",
+      { preferFollowup: true }
+    );
+
+    expect(value).toBeNull();
   });
 });

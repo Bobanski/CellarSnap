@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
+  extractListScanFollowupCopy,
   getListScanDisplayLines,
   getListScanStructuredMeta,
   listScanParsedWineSchema,
@@ -37,7 +38,7 @@ type NoteSignalSummary = {
   display_region: string | null;
   sensory_signals: string[];
   categorical_signals: string[];
-  draft_note: string;
+  draft_note: string | null;
 };
 
 function normalizeSignalText(value: string | null | undefined) {
@@ -167,6 +168,15 @@ function truncateNote(value: string, maxChars = 140) {
   return value.slice(0, maxChars).trimEnd().replace(/[.,;:!?-]+$/, "");
 }
 
+function capitalizeNote(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 function sanitizeNote(value: string | null | undefined) {
   const normalized = (value ?? "")
     .replace(/^\s*[-•*]+\s*/, "")
@@ -174,7 +184,10 @@ function sanitizeNote(value: string | null | undefined) {
     .replace(/\s+/g, " ")
     .trim();
 
-  return normalized ? truncateNote(normalized) : null;
+  const visible = extractListScanFollowupCopy(normalized, {
+    preferFollowup: true,
+  });
+  return visible ? capitalizeNote(truncateNote(visible)) : null;
 }
 
 function buildDraftNote(signal: NoteSignalSummary) {
@@ -184,15 +197,17 @@ function buildDraftNote(signal: NoteSignalSummary) {
 
   if (cues.length > 0) {
     if (cues.length === 1) {
-      return truncateNote(`${cues[0]} fits your preferences.`);
+      return capitalizeNote(truncateNote(`${cues[0]} fits your preferences.`));
     }
     if (cues.length === 2) {
-      return truncateNote(`${cues[0]} and ${cues[1]} fit your preferences.`);
+      return capitalizeNote(truncateNote(`${cues[0]} and ${cues[1]} fit your preferences.`));
     }
-    return truncateNote(`${cues[0]}, ${cues[1]}, and ${cues[2]} fit your preferences.`);
+    return capitalizeNote(
+      truncateNote(`${cues[0]}, ${cues[1]}, and ${cues[2]} fit your preferences.`)
+    );
   }
 
-  return "Its style lines up with the palate signals behind your strongest matches.";
+  return null;
 }
 
 function buildFallbackNote(signal: NoteSignalSummary) {
@@ -286,6 +301,8 @@ function buildPrompt(signals: NoteSignalSummary[]) {
     "Write one short bullet point for each wine recommendation card.",
     "Use the supplied draft note as the baseline and keep the concrete reasons.",
     "Prefer specific phrasing like lighter body, brighter acidity, drier finish, more restrained oak, or named places and varietals.",
+    "Start each note with a capital letter.",
+    "Do not open with a generic lead-in or echo the draft note verbatim when a more specific reason is available.",
     "Never mention tannins for non-red wines.",
     "If a wine reads dry, say dryness or drier finish instead of sweetness.",
     "Do not mention the score percentage, the word 'match', or backend details.",

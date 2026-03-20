@@ -404,6 +404,9 @@ export default function ListScanResultsScreen() {
     () => new Set(topRecommendations.map((wine) => wine.id)),
     [topRecommendations]
   );
+  const historyHref = scanId
+    ? `/list-scan/history?fromScanId=${encodeURIComponent(scanId)}`
+    : "/list-scan/history";
   const activeFilterCount = useMemo(
     () =>
       derivedFacets
@@ -507,7 +510,7 @@ export default function ListScanResultsScreen() {
                 Scan another
               </Link>
               <Link
-                href="/list-scan/history"
+                href={historyHref}
                 className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               >
                 My scans
@@ -543,7 +546,7 @@ export default function ListScanResultsScreen() {
               Scan another
             </Link>
             <Link
-              href="/list-scan/history"
+              href={historyHref}
               className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
             >
               My scans
@@ -851,7 +854,7 @@ export default function ListScanResultsScreen() {
           </div>
 
           {topRecommendations.length > 0 ? (
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
               {topRecommendations.map((wine, index) => (
                 (() => {
                   const display = getListScanDisplayLines(wine);
@@ -859,13 +862,13 @@ export default function ListScanResultsScreen() {
                   const detailLine =
                     display.subtitle ??
                     [display.wineName, display.producer].filter(Boolean).join(" · ");
-                  const metaLine = [structured.typeLabel, structured.primaryVarietal, structured.displayRegion]
+                  const metaLine = [structured.primaryVarietal, structured.displayRegion]
                     .filter(Boolean)
                     .join(" · ");
                   return (
                     <article
                       key={wine.id}
-                      className="rounded-3xl border border-emerald-300/20 bg-emerald-400/7 p-5 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)]"
+                      className="rounded-2xl border border-emerald-300/20 bg-emerald-400/7 p-4 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)] sm:rounded-3xl sm:p-5"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
@@ -878,11 +881,11 @@ export default function ListScanResultsScreen() {
 
                       <div className="mt-3 flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                          <h3 className="text-base font-semibold leading-7 text-[var(--color-text-primary)] sm:text-lg">
                             {display.title}
                           </h3>
                           {detailLine ? (
-                            <p className="mt-1 text-sm leading-6 text-[var(--color-text-secondary)]">
+                            <p className="mt-1 text-xs leading-6 text-[var(--color-text-secondary)] sm:text-sm">
                               {detailLine}
                             </p>
                           ) : null}
@@ -897,10 +900,9 @@ export default function ListScanResultsScreen() {
                         </span>
                       </div>
 
-                      <p className="mt-4 text-sm leading-6 text-[var(--color-text-primary)]">{wine.rationale}</p>
-                      {recommendationNotes[wine.id] ? (
-                        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-[var(--color-text-primary)]">
-                          <li>{recommendationNotes[wine.id]}</li>
+                    {recommendationNotes[wine.id] ? (
+                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-[var(--color-text-primary)]">
+                        <li>{recommendationNotes[wine.id]}</li>
                         </ul>
                       ) : null}
                     </article>
@@ -972,8 +974,15 @@ export default function ListScanResultsScreen() {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
                     const structured = getListScanStructuredMeta(wine);
+                    const sourceDetailLine = display.subtitle ?? display.wineName;
+                    const detailLine =
+                      sourceDetailLine &&
+                      sourceDetailLine.localeCompare(display.title, undefined, {
+                        sensitivity: "base",
+                      }) !== 0
+                        ? sourceDetailLine
+                        : null;
                     const metaLine = [
-                      structured.typeLabel,
                       structured.primaryVarietal,
                       structured.displayRegion,
                     ]
@@ -996,7 +1005,7 @@ export default function ListScanResultsScreen() {
                         <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-white/6 px-5 py-3 text-sm">
                           <div className="min-w-0">
                             <p
-                              className={`truncate ${
+                              className={`max-h-16 overflow-hidden break-words text-[15px] leading-5 md:max-h-none md:truncate ${
                                 highlighted
                                   ? "font-bold text-emerald-300"
                                   : "font-medium text-[var(--color-text-primary)]"
@@ -1004,8 +1013,13 @@ export default function ListScanResultsScreen() {
                             >
                               {display.title}
                             </p>
+                            {detailLine ? (
+                              <p className="mt-1 max-h-9 overflow-hidden break-words text-xs leading-4 text-[var(--color-text-secondary)] md:max-h-none md:truncate">
+                                {detailLine}
+                              </p>
+                            ) : null}
                             {metaLine ? (
-                              <p className="mt-1 truncate text-xs text-[var(--color-text-tertiary)]">
+                              <p className="mt-1 max-h-8 overflow-hidden break-words text-xs leading-4 text-[var(--color-text-tertiary)] md:max-h-none md:truncate">
                                 {metaLine}
                               </p>
                             ) : null}

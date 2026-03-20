@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
 
 type ListScanHistoryItem = {
@@ -16,11 +17,47 @@ type ListScanHistoryItem = {
 };
 
 export default function ListScanHistoryScreen() {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<ListScanHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSignedOut, setIsSignedOut] = useState(false);
+  const [backToScanId, setBackToScanId] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      const fromScanId = searchParams.get("fromScanId");
+      if (fromScanId) {
+        setBackToScanId(fromScanId);
+        return;
+      }
+
+      if (typeof window === "undefined" || !document.referrer) {
+        setBackToScanId(null);
+        return;
+      }
+
+      try {
+        const referrer = new URL(document.referrer);
+        if (
+          referrer.origin === window.location.origin &&
+          referrer.pathname === "/list-scan/results"
+        ) {
+          setBackToScanId(referrer.searchParams.get("scanId"));
+          return;
+        }
+      } catch {
+        // Ignore malformed referrer values.
+      }
+
+      setBackToScanId(null);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [searchParams]);
 
   useEffect(() => {
     return () => {
@@ -112,6 +149,14 @@ export default function ListScanHistoryScreen() {
           <p className="text-sm text-[var(--color-text-secondary)]">
             Revisit previously scanned wine lists across devices.
           </p>
+          {backToScanId ? (
+            <Link
+              href={`/list-scan/results?scanId=${encodeURIComponent(backToScanId)}`}
+              className="mr-2 inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+            >
+              Back to current scan
+            </Link>
+          ) : null}
           <Link
             href="/list-scan"
             className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"

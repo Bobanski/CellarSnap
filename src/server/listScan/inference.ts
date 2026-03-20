@@ -33,6 +33,18 @@ export type ListScanInferenceMap = {
 };
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const MIXED_REGION_BUCKET_KEYS = new Set<string>([
+  "bordeaux",
+  "rhone",
+  "burgundy",
+  "loire",
+  "alsace",
+  "champagne",
+  "tuscany",
+  "piedmont",
+  "rioja",
+  "mosel",
+]);
 
 let cachedInferenceMap:
   | {
@@ -152,6 +164,7 @@ function registerBucketValue(
 }
 
 function finalizeBucket(
+  bucketKey: string,
   bucket: AggregatedInferenceBucket
 ): ListScanInferenceValue | null {
   const sortedGrapes = Array.from(bucket.grapeCounts.entries())
@@ -167,13 +180,16 @@ function finalizeBucket(
   const sortedWineTypes = Array.from(bucket.wineTypeCounts.entries()).sort(
     (left, right) => right[1] - left[1]
   );
-  const wineType =
-    sortedWineTypes.length === 1 ||
-    (sortedWineTypes.length > 1 &&
-      sortedWineTypes[0]?.[1] !== undefined &&
-      sortedWineTypes[0][1] > (sortedWineTypes[1]?.[1] ?? 0))
-      ? sortedWineTypes[0]?.[0] ?? null
-      : null;
+  const topWineType = sortedWineTypes[0];
+  const nextWineType = sortedWineTypes[1];
+  const topCount = topWineType?.[1] ?? 0;
+  const nextCount = nextWineType?.[1] ?? 0;
+  const isMixedBroadRegion = MIXED_REGION_BUCKET_KEYS.has(bucketKey);
+  const hasDominantType =
+    !isMixedBroadRegion &&
+    topCount > 0 &&
+    (nextCount === 0 || (topCount >= 4 && topCount >= Math.ceil(nextCount * 1.5)));
+  const wineType = hasDominantType ? topWineType?.[0] ?? null : null;
 
   if (sortedGrapes.length === 0 && !wineType) {
     return null;
@@ -252,7 +268,7 @@ async function buildInferenceMap(): Promise<ListScanInferenceMap> {
 
   const appellationToGrapes = new Map<string, ListScanInferenceValue>();
   appellationBuckets.forEach((bucket, key) => {
-    const finalized = finalizeBucket(bucket);
+    const finalized = finalizeBucket(key, bucket);
     if (finalized) {
       appellationToGrapes.set(key, finalized);
     }

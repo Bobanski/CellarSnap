@@ -256,6 +256,18 @@ const ORANGE_WINE_PATTERN =
 const RED_WINE_PATTERN = /\b(?:red|rosso|rouge|tinto)\b/i;
 const WHITE_WINE_PATTERN =
   /\b(?:white|bianco|blanc|blanco)\b/i;
+const MIXED_REGION_WINE_TYPE_HINTS = new Set([
+  "bordeaux",
+  "rhone",
+  "burgundy",
+  "loire",
+  "alsace",
+  "champagne",
+  "tuscany",
+  "piedmont",
+  "rioja",
+  "mosel",
+]);
 
 const responseSchema = z.object({
   venue_name: z.string().nullable().optional(),
@@ -1389,6 +1401,11 @@ function normalizeInferenceLookupValue(value: string | null | undefined) {
     .trim();
 }
 
+function isMixedRegionTypeHint(region: string | null | undefined) {
+  const normalized = normalizeInferenceLookupValue(region);
+  return normalized ? MIXED_REGION_WINE_TYPE_HINTS.has(normalized) : false;
+}
+
 function uniqueValues(values: string[]) {
   const seen = new Map<string, string>();
   values.forEach((value) => {
@@ -1487,10 +1504,25 @@ function applyInferenceToWine(
   const uniqueWineTypes = Array.from(new Set(inferredWineTypeFromVarietals));
   const inferredWineType =
     uniqueWineTypes.length === 1 ? toListScanWineType(uniqueWineTypes[0]) : null;
+  const contextWineType = inferWineTypeFromContext({
+    menuLabel: wine.menu_label,
+    wineName: wine.wine_name,
+    producer: wine.producer,
+    regions,
+    varietals,
+    wineType: wine.wine_type,
+  });
+  const inferredWineTypeFromLocation =
+    toListScanWineType(inferred?.wineType ?? null) &&
+    !(isMixedRegionTypeHint(inferred?.canonicalRegion) && !inferred?.canonicalSubRegion)
+      ? toListScanWineType(inferred?.wineType ?? null)
+      : null;
   const wineType =
     wine.wine_type !== "unknown"
       ? wine.wine_type
-      : toListScanWineType(inferred?.wineType ?? null) ?? inferredWineType ?? wine.wine_type;
+      : contextWineType !== "unknown"
+        ? contextWineType
+        : inferredWineTypeFromLocation ?? inferredWineType ?? wine.wine_type;
 
   return {
     ...wine,
@@ -1799,7 +1831,7 @@ async function enrichParsedWines(params: {
           canonical_sub_region:
             inferredLocation?.canonicalSubRegion ??
             (wine.regions.length > 1 ? wine.regions[wine.regions.length - 1] : null),
-          canonical_country: inferredLocation?.canonicalCountry ?? null,
+          canonical_country: inferredLocation?.canonicalCountry ?? wine.canonical_country ?? null,
           primary_grapes: primaryGrapes,
           vintage: wine.vintage ? Number.parseInt(wine.vintage, 10) || null : null,
           producer: wine.producer,
@@ -2702,17 +2734,186 @@ function sliceHtmlAroundHash(html: string, hash: string) {
   return html.slice(start, end);
 }
 
+function stripHtmlFragmentText(html: string) {
+  return normalizeText(decodeHtmlEntities(html.replace(/<[^>]+>/g, " "))) ?? "";
+}
+
+function extractMetaTagContent(html: string, key: string, attribute: "name" | "property") {
+  const escapedKey = escapeRegExp(key);
+  const contentFirst = new RegExp(
+    `<meta[^>]*content=["']([^"']+)["'][^>]*${attribute}=["']${escapedKey}["'][^>]*>`,
+    "i"
+  );
+  const contentLast = new RegExp(
+    `<meta[^>]*${attribute}=["']${escapedKey}["'][^>]*content=["']([^"']+)["'][^>]*>`,
+    "i"
+  );
+  const match = html.match(contentFirst) ?? html.match(contentLast);
+  return match?.[1] ? normalizeText(decodeHtmlEntities(match[1])) : null;
+}
+
+function extractOrganizationNameFromJsonLd(html: string) {
+  const scriptPattern =
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  const candidates: string[] = [];
+  let match: RegExpExecArray | null = scriptPattern.exec(html);
+
+  const collectName = (value: unknown) => {
+    if (!value || typeof value !== "object") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => collectName(entry));
+      return;
+    }
+
+    const record = value as Record<string, unknown>;
+    const typeValue = Array.isArray(record["@type"])
+      ? record["@type"].join(" ")
+      : typeof record["@type"] === "string"
+        ? record["@type"]
+        : "";
+    const normalizedType = typeValue.toLowerCase();
+    const isVenueLikeType =
+      normalizedType.includes("organization") ||
+      normalizedType.includes("restaurant") ||
+      normalizedType.includes("localbusiness");
+
+    if (isVenueLikeType && typeof record.name === "string") {
+      const normalizedName = normalizeText(record.name);
+      if (normalizedName) {
+        candidates.push(normalizedName);
+      }
+    }
+
+    Object.values(record).forEach((entry) => collectName(entry));
+  };
+
+  while (match) {
+    const rawJson = match[1]?.trim();
+    if (rawJson) {
+      try {
+        collectName(JSON.parse(rawJson));
+      } catch {
+        // Ignore malformed JSON-LD blocks.
+      }
+    }
+    match = scriptPattern.exec(html);
+  }
+
+  return candidates[0] ?? null;
+}
+
+function deriveVenueNameFromHostname(hostname: string) {
+  const normalizedHost = hostname.trim().toLowerCase();
+  if (!normalizedHost) {
+    return null;
+  }
+
+  if (
+    /(squarespace|cloudfront|amazonaws|wixstatic|shopify|cdn|static)/.test(
+      normalizedHost
+    )
+  ) {
+    return null;
+  }
+
+  const withoutWww = normalizedHost.replace(/^www\d*\./, "");
+  const rootSegment = withoutWww.split(".")[0]?.replace(/[-_]+/g, " ").trim();
+  if (!rootSegment || rootSegment.length < 2) {
+    return null;
+  }
+
+  const normalized = normalizeText(rootSegment);
+  return normalized ? toTitleCaseWineText(normalized) : null;
+}
+
+function deriveListTitleFromDocumentTitle(params: {
+  documentTitle: string | null;
+  venueName: string | null;
+}) {
+  const normalizedTitle = normalizeText(params.documentTitle);
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  const venueName = normalizeText(params.venueName);
+  if (!venueName) {
+    return normalizedTitle;
+  }
+
+  const escapedVenue = escapeRegExp(venueName);
+  const trimmed = normalizeText(
+    normalizedTitle
+      .replace(new RegExp(`^${escapedVenue}\\s*[-|:·]\\s*`, "i"), "")
+      .replace(new RegExp(`\\s*[-|:·]\\s*${escapedVenue}$`, "i"), "")
+  );
+
+  if (!trimmed) {
+    return normalizedTitle;
+  }
+
+  if (/^(?:home|menu|wine list|wine)$/i.test(trimmed)) {
+    return normalizedTitle;
+  }
+
+  return trimmed;
+}
+
+function rewriteBentoBoxMenuItemBlocks(html: string) {
+  if (
+    !html.includes("menu-item__heading--name") ||
+    !html.includes("menu-item__details--description")
+  ) {
+    return html;
+  }
+
+  const menuItemPattern =
+    /<div\b[^>]*class="[^"]*\bmenu-item__heading\b[^"]*"[\s\S]*?<p\b[^>]*class="[^"]*\bmenu-item__heading\b[^"]*\bmenu-item__heading--name\b[^"]*"[^>]*>([\s\S]*?)<\/p>[\s\S]*?<span\b[^>]*class="[^"]*\bmenu-item__heading--price\b[^"]*"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<\/div>\s*<p\b[^>]*class="[^"]*\bmenu-item__details--description\b[^"]*"[^>]*>([\s\S]*?)<\/p>/gi;
+
+  return html.replace(
+    menuItemPattern,
+    (_match, producerHtml: string, _priceHtml: string, detailsHtml: string) => {
+      const producer = stripHtmlFragmentText(producerHtml);
+      const details = stripHtmlFragmentText(detailsHtml);
+      const price =
+        normalizeCompositePriceDisplay(
+          _match.match(
+            /menu-item__currency\b[^>]*>\s*\$\s*<\/span>\s*([0-9,]+(?:\.\d{1,2})?(?:\s*(?:\/|[-–])\s*\$?\s*[0-9,]+(?:\.\d{1,2})?)*)/i
+          )?.[1] ?? null
+        ) ?? null;
+
+      const detailLine = [details, price ? `— ${price}` : null]
+        .filter((value): value is string => Boolean(value))
+        .join(" ")
+        .trim();
+
+      const lines = [producer, detailLine].filter((value): value is string => Boolean(value));
+      return lines.length > 0 ? `\n${lines.join("\n")}\n` : "\n";
+    }
+  );
+}
+
 function stripHtmlToText(html: string) {
   const withoutScripts = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ");
-  const titleMatch = withoutScripts.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const bentoboxRewritten = rewriteBentoBoxMenuItemBlocks(withoutScripts);
+  const titleMatch = bentoboxRewritten.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? decodeHtmlEntities(titleMatch[1]).trim() : null;
+  const ogSiteName = extractMetaTagContent(bentoboxRewritten, "og:site_name", "property");
+  const applicationName = extractMetaTagContent(
+    bentoboxRewritten,
+    "application-name",
+    "name"
+  );
+  const organizationName = extractOrganizationNameFromJsonLd(bentoboxRewritten);
   // Convert heading tags to markdown-style markers BEFORE stripping all tags.
   // This preserves section structure (e.g. <h2>Sparkling</h2> → ## Sparkling)
   // so downstream extractStrictWineSectionText can detect wine section boundaries.
-  const withHeadingMarkers = withoutScripts.replace(
+  const withHeadingMarkers = bentoboxRewritten.replace(
     /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi,
     (_match, level: string, inner: string) => {
       const hashes = "#".repeat(Number(level));
@@ -2735,6 +2936,8 @@ function stripHtmlToText(html: string) {
 
   return {
     title,
+    siteName: ogSiteName ?? applicationName ?? null,
+    organizationName,
     text: text.slice(0, MAX_FETCHED_TEXT_CHARS),
   };
 }
@@ -2917,6 +3120,9 @@ function detectWineTypeFromSignals(
   value: string,
   currentType: ListScanWineType
 ): ListScanWineType {
+  if (currentType !== "unknown") {
+    return currentType;
+  }
   if (SPARKLING_WINE_PATTERN.test(value)) {
     return "sparkling";
   }
@@ -2970,6 +3176,7 @@ function extractRegionsFromFallbackContext(value: string) {
 function buildHeuristicParsedResponse(params: {
   text: string;
   title: string | null;
+  venueName?: string | null;
   fallbackWarning: string;
   allowLoosePdfRows?: boolean;
 }): ParsedResponse {
@@ -3200,7 +3407,7 @@ function buildHeuristicParsedResponse(params: {
   }
 
   return {
-    venue_name: null,
+    venue_name: params.venueName ?? null,
     list_title: params.title,
     overall_confidence: wines.length > 0 ? 0.78 : 0.35,
     warnings: params.fallbackWarning ? [params.fallbackWarning] : [],
@@ -3287,7 +3494,7 @@ async function readResponseTextPreview(response: Response, maxBytes = MAX_URL_HT
 
 function extractWineListTextFromHtml(html: string, hash: string) {
   const focusedHtml = sliceHtmlAroundHash(html, hash);
-  const { title, text } = stripHtmlToText(focusedHtml);
+  const { title, siteName, organizationName, text } = stripHtmlToText(focusedHtml);
   const strictWineSectionText = extractStrictWineSectionText(text);
   const likelyWineSectionText = extractLikelyWineSectionText(text);
   const strictHasWineSignal = WINE_SIGNAL_PATTERN.test(strictWineSectionText);
@@ -3297,9 +3504,18 @@ function extractWineListTextFromHtml(html: string, hash: string) {
     !strictHasWineSignal && likelyHasWineSignal
       ? likelyWineSectionText
       : strictWineSectionText || likelyWineSectionText;
+  const venueName =
+    normalizeText(siteName) ??
+    normalizeText(organizationName) ??
+    null;
+  const listTitle = deriveListTitleFromDocumentTitle({
+    documentTitle: title,
+    venueName,
+  });
 
   return {
-    title,
+    title: listTitle ?? normalizeText(title),
+    venueName,
     text: wineSectionText,
   };
 }
@@ -3315,12 +3531,15 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     const tBytes0 = Date.now();
     const bytes = await response.arrayBuffer();
     const bytesMs = Date.now() - tBytes0;
-    const file = new File([bytes], parsedUrl.pathname.split("/").pop() || "wine-list.pdf", {
+    const remoteFileName =
+      decodeURIComponent(parsedUrl.pathname.split("/").pop() || "wine-list.pdf") ||
+      "wine-list.pdf";
+    const file = new File([bytes], remoteFileName, {
       type: "application/pdf",
     });
     const parsed = await parsePdfSource({
       file,
-      sourceLabel: parsedUrl.toString(),
+      sourceLabel: remoteFileName,
       userId,
     });
     (parsed as Record<string, unknown>)._urlDiag = {
@@ -3336,12 +3555,15 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     const tBytes0 = Date.now();
     const bytes = await response.arrayBuffer();
     const bytesMs = Date.now() - tBytes0;
-    const file = new File([bytes], parsedUrl.pathname.split("/").pop() || "wine-list.jpg", {
+    const remoteFileName =
+      decodeURIComponent(parsedUrl.pathname.split("/").pop() || "wine-list.jpg") ||
+      "wine-list.jpg";
+    const file = new File([bytes], remoteFileName, {
       type: contentType || "image/jpeg",
     });
     const parsed = await parseImageSource({
       files: [file],
-      sourceLabel: parsedUrl.toString(),
+      sourceLabel: remoteFileName,
       userId,
     });
     (parsed as Record<string, unknown>)._urlDiag = {
@@ -3357,10 +3579,11 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   const rawHtml = await readResponseTextPreview(response);
   const htmlMs = Date.now() - tHtml0;
   const tExtract0 = Date.now();
-  const { title, text: wineSectionText } = extractWineListTextFromHtml(
+  const { title, venueName, text: wineSectionText } = extractWineListTextFromHtml(
     rawHtml,
     parsedUrl.hash
   );
+  const resolvedVenueName = venueName ?? deriveVenueNameFromHostname(parsedUrl.hostname);
   const extractMs = Date.now() - tExtract0;
   if (!wineSectionText.trim()) {
     throw new Error("That URL did not contain readable list text.");
@@ -3373,6 +3596,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   const heuristic = buildHeuristicParsedResponse({
     text: wineSectionText,
     title,
+    venueName: resolvedVenueName,
     fallbackWarning: "",
   });
 
@@ -3393,6 +3617,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     const compactedHeuristic = buildHeuristicParsedResponse({
       text: compactedWineSectionText,
       title,
+      venueName: resolvedVenueName,
       fallbackWarning: "",
     });
     if (compactedHeuristic.wines.length > 0) {
@@ -3524,7 +3749,10 @@ export async function parseWineListSource(
     source_type: params.sourceType,
     source_label:
       params.sourceType === "url"
-        ? params.url
+        ? normalizeText(parsed.venue_name) ??
+          normalizeText(parsed.list_title) ??
+          deriveVenueNameFromHostname(new URL(params.url).hostname) ??
+          params.url
         : normalizeText(params.sourceLabel) ??
           normalizeText(params.sourceType === "pdf" ? params.file.name : params.files[0]?.name),
     venue_name: normalizeText(parsed.venue_name),

@@ -997,6 +997,56 @@ function inferProducerFromLabel(
   return null;
 }
 
+function normalizeListScanSentenceText(value: string | null | undefined) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function splitListScanSentences(value: string | null | undefined) {
+  const normalized = normalizeListScanSentenceText(value);
+  if (!normalized) {
+    return [];
+  }
+
+  const matches = normalized.match(/[^.!?]+[.!?]?/g) ?? [];
+  return matches
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+}
+
+function isGenericListScanLeadSentence(sentence: string) {
+  return (
+    /^\s*its style lines up with\b/i.test(sentence) ||
+    /^\s*this wine(?:'s)? style lines up with\b/i.test(sentence) ||
+    /^\s*a strong placeholder match\b/i.test(sentence) ||
+    /^\s*highlights?\b/i.test(sentence)
+  );
+}
+
+export function extractListScanFollowupCopy(
+  value: string | null | undefined,
+  options?: { preferFollowup?: boolean }
+) {
+  const sentences = splitListScanSentences(value);
+  if (sentences.length === 0) {
+    return null;
+  }
+
+  if (sentences.length === 1) {
+    return isGenericListScanLeadSentence(sentences[0]) ? null : sentences[0];
+  }
+
+  const [firstSentence, ...remainingSentences] = sentences;
+  if (
+    options?.preferFollowup === true ||
+    isGenericListScanLeadSentence(firstSentence)
+  ) {
+    const followup = remainingSentences.join(" ").trim();
+    return followup || null;
+  }
+
+  return sentences.join(" ");
+}
+
 export function getListScanDisplayLines(
   wine: Pick<
     ListScanParsedWine,
@@ -1017,16 +1067,25 @@ export function getListScanDisplayLines(
     producer && sanitizedLabel
       ? stripProducerPrefixFromLabel(sanitizedLabel, producer)
       : null;
+  const producerPrefixIsMeaningful =
+    producerPrefix !== null &&
+    producerPrefix.localeCompare(sanitizedLabel, undefined, {
+      sensitivity: "base",
+    }) !== 0;
   const producerEmbedded =
     producer && sanitizedLabel ? hasEmbeddedProducerPrefix(sanitizedLabel, producer) : false;
   const producerIsSeparate =
     Boolean(producer && sanitizedLabel) &&
-    !producerEmbedded;
+    (producerPrefixIsMeaningful || !producerEmbedded);
   const title =
     producerIsSeparate && producer
       ? producer
       : sanitizedLabel || producer || wineName || "Untitled wine";
-  const subtitleCandidate = producerPrefix ?? (producerIsSeparate ? sanitizedLabel : null);
+  const subtitleCandidate = producerPrefixIsMeaningful
+    ? producerPrefix
+    : producerIsSeparate
+      ? sanitizedLabel
+      : null;
   const subtitle =
     subtitleCandidate &&
     subtitleCandidate.localeCompare(title, undefined, { sensitivity: "base" }) !== 0 &&

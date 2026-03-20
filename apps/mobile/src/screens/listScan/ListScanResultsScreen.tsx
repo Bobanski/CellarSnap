@@ -726,11 +726,7 @@ export default function ListScanResultsScreen() {
                 const detailLine =
                   display.subtitle ??
                   [display.wineName, display.producer].filter(Boolean).join(" · ");
-                const metaLine = [
-                  structured.typeLabel,
-                  structured.primaryVarietal,
-                  structured.displayRegion,
-                ]
+                const metaLine = [structured.primaryVarietal, structured.displayRegion]
                   .filter(Boolean)
                   .join(" · ");
                 return (
@@ -746,11 +742,11 @@ export default function ListScanResultsScreen() {
 
                     <View style={styles.recommendationTitleRow}>
                       <View style={styles.recommendationTitleWrap}>
-                        <AppText numberOfLines={1} style={styles.recommendationTitle}>
+                        <AppText numberOfLines={2} style={styles.recommendationTitle}>
                           {display.title}
                         </AppText>
                         {detailLine ? (
-                          <AppText numberOfLines={1} style={styles.recommendationSubtitle}>
+                          <AppText numberOfLines={2} style={styles.recommendationSubtitle}>
                             {detailLine}
                           </AppText>
                         ) : null}
@@ -765,7 +761,6 @@ export default function ListScanResultsScreen() {
                       </AppText>
                     </View>
 
-                    <AppText style={styles.recommendationBody}>{wine.rationale}</AppText>
                     {recommendationNotes[wine.id] ? (
                       <View style={styles.recommendationNoteRow}>
                         <AppText style={styles.recommendationNoteBullet}>•</AppText>
@@ -811,8 +806,15 @@ export default function ListScanResultsScreen() {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
                     const structured = getListScanStructuredMeta(wine);
+                    const sourceDetailLine = display.subtitle ?? display.wineName;
+                    const detailLine =
+                      sourceDetailLine &&
+                      sourceDetailLine.localeCompare(display.title, undefined, {
+                        sensitivity: "base",
+                      }) !== 0
+                        ? sourceDetailLine
+                        : null;
                     const metaLine = [
-                      structured.typeLabel,
                       structured.primaryVarietal,
                       structured.displayRegion,
                     ]
@@ -834,7 +836,7 @@ export default function ListScanResultsScreen() {
                         <View style={styles.tableRow}>
                           <View style={styles.tableWineColumn}>
                             <AppText
-                              numberOfLines={1}
+                              numberOfLines={3}
                               style={[
                                 styles.tableWineText,
                                 highlighted ? styles.tableWineTextHighlighted : null,
@@ -842,13 +844,14 @@ export default function ListScanResultsScreen() {
                             >
                               {display.title}
                             </AppText>
+                            {detailLine ? (
+                              <AppText numberOfLines={2} style={styles.tableSubText}>
+                                {detailLine}
+                              </AppText>
+                            ) : null}
                             {metaLine ? (
                               <AppText numberOfLines={1} style={styles.tableSubText}>
                                 {metaLine}
-                              </AppText>
-                            ) : display.subtitle ? (
-                              <AppText numberOfLines={1} style={styles.tableSubText}>
-                                {display.subtitle}
                               </AppText>
                             ) : null}
                           </View>
@@ -1259,21 +1262,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   recommendationStack: {
-    gap: 12,
+    gap: 8,
   },
   recommendationCard: {
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(45,125,70,0.22)",
     backgroundColor: "rgba(45,125,70,0.08)",
-    padding: 16,
-    gap: 12,
+    padding: 10,
+    gap: 6,
   },
   recommendationTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
     minWidth: 0,
   },
   recommendationEyebrow: {
@@ -1291,18 +1294,18 @@ const styles = StyleSheet.create({
   recommendationTitleWrap: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
+    gap: 2,
   },
   recommendationTitle: {
     color: colors.textPrimary,
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "700",
   },
   recommendationSubtitle: {
     color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
   },
   recommendationMeta: {
     color: colors.textSecondary,
@@ -1311,8 +1314,8 @@ const styles = StyleSheet.create({
   },
   recommendationPrice: {
     color: colors.success,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: "700",
     textAlign: "right",
   },
@@ -1321,19 +1324,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(45,125,70,0.25)",
     backgroundColor: "rgba(45,125,70,0.14)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     alignSelf: "flex-start",
   },
   matchBadgeText: {
     color: colors.success,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
   },
   recommendationBody: {
     color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 11,
+    lineHeight: 16,
   },
   recommendationNoteRow: {
     flexDirection: "row",
@@ -1349,8 +1352,8 @@ const styles = StyleSheet.create({
   recommendationNoteText: {
     flex: 1,
     color: colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 11,
+    lineHeight: 16,
   },
   tableHead: {
     flexDirection: "row",
@@ -1368,11 +1371,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   tablePriceHead: {
-    width: 66,
+    width: 62,
     textAlign: "center",
   },
   tableMatchHead: {
-    width: 56,
+    width: 52,
     fontSize: 10,
     letterSpacing: 1.2,
     textAlign: "right",
@@ -1386,21 +1389,21 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   tableWineColumn: {
-    flex: 1.55,
+    flex: 1.85,
     minWidth: 0,
   },
   tablePriceColumn: {
-    width: 66,
+    width: 56,
     alignItems: "flex-end",
   },
   tableMatchColumn: {
-    width: 56,
+    width: 48,
     alignItems: "flex-end",
   },
   tableWineText: {
