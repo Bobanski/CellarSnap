@@ -15,24 +15,29 @@ import {
   deriveListScanRegionGroups,
   filterListScanWines,
   formatListScanPriceDisplay,
+  getListScanStructuredMeta,
   getListScanDisplayLines,
   getListScanFilterAccentTone,
   getListScanVarietalAccentTone,
   getListScanSectionTitle,
   getTopListScanRecommendations,
+  sortListScanWines,
   listScanWineTypeLabels,
-  LIST_SCAN_FILTERABLE_WINE_TYPES,
+  sanitizeListScanFilters,
   resolveListScanWineType,
   type ListScanFilterAccentTone,
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
-  type ListScanWineType,
+  type ListScanSortMode,
 } from "@shared";
 import FacetMultiSelect from "@/features/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/features/listScan/RegionFilterSelect";
 import NavBar from "@/components/NavBar";
 import { readListScanResult, saveListScanResult } from "@/lib/listScan/storage";
+
+const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
+const EMPTY_STRING_LIST: string[] = [];
 
 function formatCurrencyValue(value: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? `$${value}` : "";
@@ -57,40 +62,6 @@ function parseNonNegativePriceInput(value: string) {
 
 function formatPriceDisplay(priceDisplay: string | null, menuLabel?: string) {
   return formatListScanPriceDisplay(priceDisplay, menuLabel) ?? "-";
-}
-
-function formatWineListSubLabel(
-  varietals: string[],
-  wineType: ListScanWineType
-) {
-  if (varietals.length > 1) {
-    if (wineType === "rose") {
-      return "Rose blend";
-    }
-    if (wineType === "orange") {
-      return "Orange blend";
-    }
-    if (wineType === "red") {
-      return "Red blend";
-    }
-    if (wineType === "white") {
-      return "White blend";
-    }
-    return "Blend";
-  }
-  if (varietals[0] === "Red Blend") {
-    return "Red blend";
-  }
-  if (varietals[0] === "White Blend") {
-    return "White blend";
-  }
-  if (varietals[0] === "Rose Blend") {
-    return "Rose blend";
-  }
-  if (varietals[0] === "Orange Blend") {
-    return "Orange blend";
-  }
-  return varietals[0] || "Varietal not parsed";
 }
 
 function summarizeSelectedLabels(values: string[], emptyLabel: string) {
@@ -141,12 +112,9 @@ function buildWineTypeSummary(
 }
 
 function buildMatchSummary(filters: ListScanFilters) {
-  const threshold =
-    filters.min_match_percent > 0
-      ? `Over ${filters.min_match_percent}%`
-      : "Any match";
-  const column = filters.show_match_column ? "showing % column" : "hiding % column";
-  return `${threshold}, ${column}`;
+  return filters.min_match_percent > 0
+    ? `Over ${filters.min_match_percent}%`
+    : "Any match";
 }
 
 function getAccentPillClasses(
@@ -165,8 +133,8 @@ function getAccentPillClasses(
   }
   if (tone === "white") {
     return selected
-      ? "border border-[#C9A84C]/70 bg-[#C9A84C]/18 text-[#f5e8bc]"
-      : "border border-[#C9A84C]/30 bg-[#C9A84C]/8 text-[#e7d491] hover:border-[#C9A84C]/55";
+      ? "border border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-secondary)]/18 text-[var(--color-text-on-accent)]"
+      : "border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-secondary)]/8 text-[var(--color-text-on-accent)] hover:border-[var(--color-accent-secondary)]/55";
   }
   if (tone === "red") {
     return selected
@@ -175,7 +143,7 @@ function getAccentPillClasses(
   }
   return selected
     ? "border border-emerald-400 bg-emerald-400 text-emerald-950"
-    : "border border-white/10 text-zinc-200 hover:border-white/30";
+    : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]";
 }
 
 function getWineTypeButtonClasses(
@@ -217,7 +185,7 @@ function countActiveFilterGroups(
   if (filters.selected_regions.length > 0) {
     count += 1;
   }
-  if (filters.min_match_percent > 0 || !filters.show_match_column) {
+  if (filters.min_match_percent > 0) {
     count += 1;
   }
 
@@ -242,7 +210,7 @@ function FilterDropdown({
   children,
 }: FilterDropdownProps) {
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -250,14 +218,14 @@ function FilterDropdown({
         aria-expanded={open}
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
             {label}
           </span>
-          <span className="mt-1 block truncate text-sm font-semibold text-zinc-100">
+          <span className="mt-1 block truncate text-sm font-semibold text-[var(--color-text-primary)]">
             {summary}
           </span>
         </span>
-        <span className="text-sm font-semibold text-zinc-300">{open ? "v" : ">"}</span>
+        <span className="text-sm font-semibold text-[var(--color-text-secondary)]">{open ? "v" : ">"}</span>
       </button>
 
       {open ? (
@@ -266,7 +234,7 @@ function FilterDropdown({
           <div className="flex justify-end">
             <button
               type="button"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               onClick={onDone ?? onToggle}
             >
               Done
@@ -281,25 +249,25 @@ function FilterDropdown({
 function ResultsLoadingSkeleton() {
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-        <div className="h-3 w-24 animate-pulse rounded-full bg-white/10" />
-        <div className="mt-4 h-8 w-72 animate-pulse rounded-full bg-white/10" />
-        <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-white/10" />
+      <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8">
+        <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+        <div className="mt-4 h-8 w-72 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+        <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
         <div className="mt-6 flex gap-3">
-          <div className="h-10 w-32 animate-pulse rounded-full bg-white/10" />
-          <div className="h-10 w-28 animate-pulse rounded-full bg-white/10" />
+          <div className="h-10 w-32 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+          <div className="h-10 w-28 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+            className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6"
           >
-            <div className="h-3 w-24 animate-pulse rounded-full bg-white/10" />
-            <div className="mt-4 h-6 w-40 animate-pulse rounded-full bg-white/10" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/10" />
-            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-white/10" />
+            <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+            <div className="mt-4 h-6 w-40 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
+            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
           </div>
         ))}
       </div>
@@ -321,22 +289,22 @@ export default function ListScanResultsScreen() {
   const [varietalOpen, setVarietalOpen] = useState(false);
   const [regionOpen, setRegionOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
+  const [recommendationNotes, setRecommendationNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    let isActive = true;
     const cachedResult = scanId ? readListScanResult(scanId) : null;
-    
-    // Set initial state synchronously before fetch
-    setResult(scanId ? cachedResult ?? undefined : null);
-    setLoadError(null);
 
-    if (!scanId) {
-      return () => {
-        isActive = false;
-      };
-    }
+    let isActive = true;
 
     const loadSavedResult = async () => {
+      setResult(scanId ? cachedResult ?? undefined : null);
+      setLoadError(null);
+
+      if (!scanId) {
+        return;
+      }
+
       try {
         const response = await fetch(`/api/list-scan/scans/${encodeURIComponent(scanId)}`, {
           cache: "no-store",
@@ -393,18 +361,6 @@ export default function ListScanResultsScreen() {
     };
   }, [scanId]);
 
-  const filteredWines = useMemo(
-    () => (result ? filterListScanWines(result.wines, filters) : []),
-    [filters, result]
-  );
-  const topRecommendations = useMemo(
-    () => getTopListScanRecommendations(filteredWines, 3),
-    [filteredWines]
-  );
-  const highlightedIds = useMemo(
-    () => new Set(topRecommendations.map((wine) => wine.id)),
-    [topRecommendations]
-  );
   const derivedFacets = useMemo(
     () => (result ? deriveListScanFacets(result.wines) : null),
     [result]
@@ -417,13 +373,105 @@ export default function ListScanResultsScreen() {
     () => (result ? deriveListScanRegionGroups(result.wines) : []),
     [result]
   );
+  const visibleFilters = useMemo(
+    () =>
+      result
+        ? sanitizeListScanFilters(
+            filters,
+            derivedFacets ?? undefined,
+            regionGroups
+          )
+        : filters,
+    [derivedFacets, filters, regionGroups, result]
+  );
+  const availableWineTypes = derivedFacets?.wine_types ?? EMPTY_WINE_TYPES;
+  const availableVarietals = derivedFacets?.varietals ?? EMPTY_STRING_LIST;
+  const hasWineTypeOptions = availableWineTypes.length > 0;
+  const hasVarietalOptions = availableVarietals.length > 0;
+  const hasRegionOptions = regionGroups.length > 0;
+  const filteredWines = useMemo(
+    () =>
+      result
+        ? sortListScanWines(filterListScanWines(result.wines, visibleFilters), sortMode)
+        : [],
+    [result, sortMode, visibleFilters]
+  );
+  const topRecommendations = useMemo(
+    () => getTopListScanRecommendations(filteredWines, 3),
+    [filteredWines]
+  );
+  const highlightedIds = useMemo(
+    () => new Set(topRecommendations.map((wine) => wine.id)),
+    [topRecommendations]
+  );
+  const historyHref = scanId
+    ? `/list-scan/history?fromScanId=${encodeURIComponent(scanId)}`
+    : "/list-scan/history";
   const activeFilterCount = useMemo(
     () =>
       derivedFacets
-        ? countActiveFilterGroups(filters, derivedFacets.wine_types)
+        ? countActiveFilterGroups(visibleFilters, availableWineTypes)
         : 0,
-    [derivedFacets, filters]
+    [availableWineTypes, derivedFacets, visibleFilters]
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+    const eligibleItems = topRecommendations.filter((wine) => wine.match_percent > 59);
+
+    if (eligibleItems.length === 0) {
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/api/list-scan/recommendation-notes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ items: eligibleItems }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !isActive) {
+            return;
+          }
+
+          const payload = (await response.json()) as {
+            notes?: Array<{ id: string; note: string | null }>;
+          };
+
+          if (!isActive) {
+            return;
+          }
+
+          const nextNotes: Record<string, string> = {};
+          (payload.notes ?? []).forEach((entry) => {
+            if (entry.id && typeof entry.note === "string" && entry.note.trim().length > 0) {
+              nextNotes[entry.id] = entry.note.trim();
+            }
+          });
+          setRecommendationNotes(nextNotes);
+        } catch {
+          if (isActive) {
+            setRecommendationNotes({});
+          }
+        }
+      })();
+    }, 150);
+
+    return () => {
+      isActive = false;
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [topRecommendations]);
 
   const toggleFiltersVisibility = () => {
     if (filtersVisible) {
@@ -438,7 +486,7 @@ export default function ListScanResultsScreen() {
 
   if (result === undefined) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
           <ResultsLoadingSkeleton />
@@ -449,21 +497,21 @@ export default function ListScanResultsScreen() {
 
   if (!result) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             {loadError ?? "This scan result is no longer available in the current session."}
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href="/list-scan"
-                className="inline-flex rounded-full bg-amber-400 px-4 py-2 font-semibold text-zinc-950 transition hover:bg-amber-300"
+                className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
               >
                 Scan another
               </Link>
               <Link
-                href="/list-scan/history"
-                className="inline-flex rounded-full border border-white/10 px-4 py-2 font-semibold text-zinc-100 transition hover:border-white/30"
+                href={historyHref}
+                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               >
                 My scans
               </Link>
@@ -475,31 +523,31 @@ export default function ListScanResultsScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
 
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             List results
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             {result.venue_name || result.list_title || "Scanned wine list"}
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Filter the scanned list, review the current top 3, and browse the full
             list in its original order.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
               href="/list-scan"
-              className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               Scan another
             </Link>
             <Link
-              href="/list-scan/history"
-              className="inline-flex rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-white/30"
+              href={historyHref}
+              className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
             >
               My scans
             </Link>
@@ -507,29 +555,29 @@ export default function ListScanResultsScreen() {
         </header>
 
         {loadError ? (
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-200 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
             {loadError}
           </section>
         ) : null}
 
         {result.score_summary.warning ? (
-          <section className="rounded-3xl border border-amber-300/25 bg-amber-400/10 p-5 text-sm text-amber-50 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80">
+          <section className="rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 p-5 text-sm text-[var(--color-text-on-accent)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
               Match scoring
             </p>
-            <p className="mt-2 text-sm leading-6 text-amber-50">
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-on-accent)]">
               {result.score_summary.warning}
             </p>
           </section>
         ) : null}
 
-        <section className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+        <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Filters
               </p>
-              <h2 className="text-xl font-semibold text-zinc-50">
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
                 Narrow the scanned list
               </h2>
             </div>
@@ -538,9 +586,9 @@ export default function ListScanResultsScreen() {
               type="button"
               onClick={toggleFiltersVisibility}
               aria-expanded={filtersVisible}
-              className="inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-black/25 px-4 py-2.5 text-sm font-semibold text-zinc-100 transition hover:border-white/25 hover:bg-black/35"
+              className="inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-black/25 px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/25 hover:bg-black/35"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-100">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-primary)]">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -558,7 +606,7 @@ export default function ListScanResultsScreen() {
               </span>
               <span>{filtersVisible ? "Hide filters" : "Show filters"}</span>
               {activeFilterCount > 0 ? (
-                <span className="rounded-full border border-white/10 bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-zinc-100">
+                <span className="rounded-full border border-[var(--color-border)] bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)]">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -570,7 +618,7 @@ export default function ListScanResultsScreen() {
               <div className={priceOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                 <FilterDropdown
                   label="Price"
-                  summary={buildPriceSummary(filters)}
+                  summary={buildPriceSummary(visibleFilters)}
                   open={priceOpen}
                   onToggle={() => setPriceOpen((current) => !current)}
                 >
@@ -594,8 +642,8 @@ export default function ListScanResultsScreen() {
                         }
                         className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                           selected
-                            ? "bg-amber-400 text-zinc-950"
-                            : "border border-white/10 text-zinc-200 hover:border-white/30"
+                            ? "bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
+                            : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                         }`}
                       >
                         {option.label}
@@ -619,7 +667,6 @@ export default function ListScanResultsScreen() {
                           const newValue = parseNonNegativePriceInput(event.target.value);
                           // Validate bounds in "between" mode
                           if (current.price_mode === "between") {
-                            const isMinInput = true; // This is the min input
                             const otherValue = current.price_max;
                             // Swap if new min > current max (and max is non-zero)
                             if (newValue !== null && otherValue !== null && newValue > otherValue && otherValue > 0) {
@@ -636,7 +683,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                     />
                   ) : null}
 
@@ -654,7 +701,6 @@ export default function ListScanResultsScreen() {
                           const newValue = parseNonNegativePriceInput(event.target.value);
                           // Validate bounds in "between" mode
                           if (current.price_mode === "between") {
-                            const isMaxInput = true; // This is the max input
                             const otherValue = current.price_min;
                             // Swap if new max < current min (and new value is non-zero)
                             if (newValue !== null && otherValue !== null && newValue < otherValue && newValue > 0) {
@@ -671,33 +717,31 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                     />
                   ) : null}
                 </div>
                 </FilterDropdown>
               </div>
 
-              {result ? (
+              {result && hasWineTypeOptions ? (
                 <div className={wineTypeOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                   <FilterDropdown
                     label="Wine type"
                     summary={buildWineTypeSummary(
-                      filters.included_wine_types,
-                      derivedFacets?.wine_types ?? []
+                      visibleFilters.included_wine_types,
+                      availableWineTypes
                     )}
                     open={wineTypeOpen}
                     onToggle={() => setWineTypeOpen((current) => !current)}
                   >
                   <div className="flex flex-wrap gap-2">
-                    {LIST_SCAN_FILTERABLE_WINE_TYPES.map((type) => {
-                      const available = derivedFacets?.wine_types.includes(type) ?? false;
-                      const selected = filters.included_wine_types.includes(type);
+                    {availableWineTypes.map((type) => {
+                      const selected = visibleFilters.included_wine_types.includes(type);
                       return (
                         <button
                           key={type}
                           type="button"
-                          disabled={!available}
                           onClick={() =>
                             setFilters((current) => ({
                               ...current,
@@ -709,98 +753,87 @@ export default function ListScanResultsScreen() {
                           className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${getWineTypeButtonClasses(
                             type,
                             selected
-                          )} ${available ? "" : "cursor-not-allowed opacity-35"}`}
+                          )}`}
                         >
                           {listScanWineTypeLabels[type]}
                         </button>
-                      );
+                    );
                     })}
                   </div>
                   </FilterDropdown>
                 </div>
               ) : null}
 
-              <div className={varietalOpen ? "col-span-2 min-w-0" : "min-w-0"}>
-                <FacetMultiSelect
-                  label="Varietal"
-                  placeholder="Type a varietal from this list"
-                  options={derivedFacets?.varietals ?? []}
-                  selected={filters.selected_varietals}
-                  onChange={(selected_varietals) =>
-                    setFilters((current) => ({ ...current, selected_varietals }))
-                  }
-                  getOptionTone={(option) =>
-                    getListScanVarietalAccentTone(option, varietalAccentMap)
-                  }
-                  open={varietalOpen}
-                  onOpenChange={setVarietalOpen}
-                />
-              </div>
+              {hasVarietalOptions ? (
+                <div className={varietalOpen ? "col-span-2 min-w-0" : "min-w-0"}>
+                  <FacetMultiSelect
+                    label="Varietal"
+                    placeholder="Type a varietal from this list"
+                    options={availableVarietals}
+                    selected={visibleFilters.selected_varietals}
+                    onChange={(selected_varietals) =>
+                      setFilters((current) => ({ ...current, selected_varietals }))
+                    }
+                    getOptionTone={(option) =>
+                      getListScanVarietalAccentTone(option, varietalAccentMap)
+                    }
+                    open={varietalOpen}
+                    onOpenChange={setVarietalOpen}
+                  />
+                </div>
+              ) : null}
 
-              <div className={regionOpen ? "col-span-2 min-w-0" : "min-w-0"}>
-                <RegionFilterSelect
-                  regionGroups={regionGroups}
-                  selected={filters.selected_regions}
-                  onChange={(selected_regions) =>
-                    setFilters((current) => ({ ...current, selected_regions }))
-                  }
-                  open={regionOpen}
-                  onOpenChange={setRegionOpen}
-                />
-              </div>
+              {hasRegionOptions ? (
+                <div className={regionOpen ? "col-span-2 min-w-0" : "min-w-0"}>
+                  <RegionFilterSelect
+                    regionGroups={regionGroups}
+                    selected={visibleFilters.selected_regions}
+                    onChange={(selected_regions) =>
+                      setFilters((current) => ({ ...current, selected_regions }))
+                    }
+                    open={regionOpen}
+                    onOpenChange={setRegionOpen}
+                  />
+                </div>
+              ) : null}
 
               <div className={matchOpen ? "col-span-2 min-w-0" : "min-w-0"}>
                 <FilterDropdown
                   label="Match"
-                  summary={buildMatchSummary(filters)}
+                  summary={buildMatchSummary(visibleFilters)}
                   open={matchOpen}
                   onToggle={() => setMatchOpen((current) => !current)}
                 >
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm text-zinc-300">Show wines over</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="0"
-                    max="100"
-                    placeholder="0"
-                    value={
-                      filters.min_match_percent > 0 ? String(filters.min_match_percent) : ""
-                    }
-                    onChange={(event) => {
-                      const trimmed = event.target.value.trim();
-                      const nextValue = trimmed === "" ? 0 : Number(trimmed);
-                      setFilters((current) => ({
-                        ...current,
-                        min_match_percent: Number.isFinite(nextValue)
-                          ? Math.max(0, Math.min(100, Math.round(nextValue)))
-                          : current.min_match_percent,
-                      }));
-                    }}
-                    className="w-24 rounded-xl border border-white/10 bg-[#171210] px-3 py-2 text-center text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-300/60 focus:outline-none"
-                  />
-                  <span className="text-sm text-zinc-300">%</span>
-                </div>
-
-                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-                  <input
-                    type="checkbox"
-                    checked={filters.show_match_column}
-                    onChange={(event) =>
-                      setFilters((current) => ({
-                        ...current,
-                        show_match_column: event.target.checked,
-                      }))
-                    }
-                    className="h-4 w-4 rounded border-white/20 accent-emerald-400"
-                  />
-                  Show % match in full list
-                </label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-sm text-[var(--color-text-secondary)]">Show wines over</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={
+                        filters.min_match_percent > 0 ? String(filters.min_match_percent) : ""
+                      }
+                      onChange={(event) => {
+                        const trimmed = event.target.value.trim();
+                        const nextValue = trimmed === "" ? 0 : Number(trimmed);
+                        setFilters((current) => ({
+                          ...current,
+                          min_match_percent: Number.isFinite(nextValue)
+                            ? Math.max(0, Math.min(100, Math.round(nextValue)))
+                            : current.min_match_percent,
+                        }));
+                      }}
+                      className="w-24 rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-center text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-emerald-300/60 focus:outline-none"
+                    />
+                    <span className="text-sm text-[var(--color-text-secondary)]">%</span>
+                  </div>
                 </FilterDropdown>
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/8 bg-black/15 px-4 py-4 text-sm text-zinc-400">
+            <div className="rounded-2xl border border-white/8 bg-black/15 px-4 py-4 text-sm text-[var(--color-text-tertiary)]">
               {activeFilterCount > 0
                 ? `${activeFilterCount} filter ${
                     activeFilterCount === 1 ? "setting is" : "settings are"
@@ -812,27 +845,30 @@ export default function ListScanResultsScreen() {
 
         <section className="space-y-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Top 3
             </p>
-            <h2 className="text-xl font-semibold text-zinc-50">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
               Current recommendations
             </h2>
           </div>
 
           {topRecommendations.length > 0 ? (
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
               {topRecommendations.map((wine, index) => (
                 (() => {
                   const display = getListScanDisplayLines(wine);
-                  const subLabel = formatWineListSubLabel(
-                    wine.varietals,
-                    resolveListScanWineType(wine)
-                  );
+                  const structured = getListScanStructuredMeta(wine);
+                  const detailLine =
+                    display.subtitle ??
+                    [display.wineName, display.producer].filter(Boolean).join(" · ");
+                  const metaLine = [structured.primaryVarietal, structured.displayRegion]
+                    .filter(Boolean)
+                    .join(" · ");
                   return (
                     <article
                       key={wine.id}
-                      className="rounded-3xl border border-emerald-300/20 bg-emerald-400/7 p-5 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)]"
+                      className="rounded-2xl border border-emerald-300/20 bg-emerald-400/7 p-4 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)] sm:rounded-3xl sm:p-5"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
@@ -845,12 +881,17 @@ export default function ListScanResultsScreen() {
 
                       <div className="mt-3 flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <h3 className="text-lg font-semibold text-zinc-50">
+                          <h3 className="text-base font-semibold leading-7 text-[var(--color-text-primary)] sm:text-lg">
                             {display.title}
                           </h3>
-                          {subLabel ? (
-                            <p className="mt-1 text-sm leading-6 text-zinc-300">
-                              {subLabel}
+                          {detailLine ? (
+                            <p className="mt-1 text-xs leading-6 text-[var(--color-text-secondary)] sm:text-sm">
+                              {detailLine}
+                            </p>
+                          ) : null}
+                          {metaLine ? (
+                            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                              {metaLine}
                             </p>
                           ) : null}
                         </div>
@@ -859,45 +900,70 @@ export default function ListScanResultsScreen() {
                         </span>
                       </div>
 
-                      <p className="mt-4 text-sm leading-6 text-zinc-200">{wine.rationale}</p>
+                    {recommendationNotes[wine.id] ? (
+                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-[var(--color-text-primary)]">
+                        <li>{recommendationNotes[wine.id]}</li>
+                        </ul>
+                      ) : null}
                     </article>
                   );
                 })()
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-secondary)]">
               No wines match the current filters.
             </div>
           )}
         </section>
 
         <section className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              Full list
-            </p>
-            <h2 className="text-xl font-semibold text-zinc-50">
-              Filtered wines in uploaded list order
-            </h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              {filteredWines.length} of {result.wines.length} shown
-            </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                Full list
+              </p>
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
+                {sortMode === "match"
+                  ? "Filtered wines by best match"
+                  : "Filtered wines in list order"}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
+                {filteredWines.length} of {result.wines.length} shown
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-black/25 p-1">
+              {(
+                [
+                  { value: "list_order", label: "List Order" },
+                  { value: "match", label: "Best Match" },
+                ] as const
+              ).map((option) => {
+                const active = sortMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSortMode(option.value)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      active
+                        ? "bg-white/12 text-[var(--color-text-primary)] shadow-sm"
+                        : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#120f0e]">
-            <div
-              className={`grid gap-3 border-b border-white/10 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400 ${
-                filters.show_match_column
-                  ? "grid-cols-[minmax(0,1fr)_120px_110px]"
-                  : "grid-cols-[minmax(0,1fr)_120px]"
-              }`}
-            >
+          <div className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[#120f0e]">
+            <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-[var(--color-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
               <span>Wine</span>
               <span className="text-center">Price</span>
-              {filters.show_match_column ? (
-                <span className="whitespace-nowrap text-right">% match</span>
-              ) : null}
+              <span className="whitespace-nowrap text-right">% match</span>
             </div>
 
             <div className="max-h-[520px] overflow-y-auto">
@@ -907,67 +973,78 @@ export default function ListScanResultsScreen() {
                   return filteredWines.map((wine) => {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
-                    const subLabel = formatWineListSubLabel(
-                      wine.varietals,
-                      resolveListScanWineType(wine)
-                    );
+                    const structured = getListScanStructuredMeta(wine);
+                    const sourceDetailLine = display.subtitle ?? display.wineName;
+                    const detailLine =
+                      sourceDetailLine &&
+                      sourceDetailLine.localeCompare(display.title, undefined, {
+                        sensitivity: "base",
+                      }) !== 0
+                        ? sourceDetailLine
+                        : null;
+                    const metaLine = [
+                      structured.primaryVarietal,
+                      structured.displayRegion,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                     const resolvedType = resolveListScanWineType(wine);
-                    const showSectionHeader = resolvedType !== lastSectionType;
+                    const showSectionHeader =
+                      sortMode === "list_order" && resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
 
                     return (
                       <div key={wine.id}>
                         {showSectionHeader ? (
                           <div className="border-b border-white/8 bg-white/4 px-5 py-2">
-                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                               {getListScanSectionTitle(resolvedType)}
                             </span>
                           </div>
                         ) : null}
-                        <div
-                          className={`grid gap-3 border-b border-white/6 px-5 py-3 text-sm ${
-                            filters.show_match_column
-                              ? "grid-cols-[minmax(0,1fr)_120px_110px]"
-                              : "grid-cols-[minmax(0,1fr)_120px]"
-                          }`}
-                        >
+                        <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-white/6 px-5 py-3 text-sm">
                           <div className="min-w-0">
                             <p
-                              className={`truncate ${
+                              className={`max-h-16 overflow-hidden break-words text-[15px] leading-5 md:max-h-none md:truncate ${
                                 highlighted
                                   ? "font-bold text-emerald-300"
-                                  : "font-medium text-zinc-100"
+                                  : "font-medium text-[var(--color-text-primary)]"
                               }`}
                             >
                               {display.title}
                             </p>
-                            <p className="mt-1 truncate text-xs text-zinc-500">
-                              {subLabel}
-                            </p>
+                            {detailLine ? (
+                              <p className="mt-1 max-h-9 overflow-hidden break-words text-xs leading-4 text-[var(--color-text-secondary)] md:max-h-none md:truncate">
+                                {detailLine}
+                              </p>
+                            ) : null}
+                            {metaLine ? (
+                              <p className="mt-1 max-h-8 overflow-hidden break-words text-xs leading-4 text-[var(--color-text-tertiary)] md:max-h-none md:truncate">
+                                {metaLine}
+                              </p>
+                            ) : null}
                           </div>
                           <span
                             className={`text-right font-medium ${
-                              highlighted ? "text-emerald-300" : "text-zinc-200"
+                              highlighted ? "text-emerald-300" : "text-[var(--color-text-primary)]"
                             }`}
                           >
                             {formatPriceDisplay(wine.price_display, wine.menu_label)}
                           </span>
-                          {filters.show_match_column ? (
-                            <span
-                              className={`text-right font-semibold ${
-                                highlighted ? "text-emerald-300" : "text-zinc-400"
-                              }`}
-                            >
-                              {wine.match_percent}%
-                            </span>
-                          ) : null}
+                          <span
+                            className={`text-right font-semibold ${
+                              highlighted ? "text-emerald-300" : "text-[var(--color-text-tertiary)]"
+                            }`}
+                          >
+                            {wine.match_percent}%
+                          </span>
                         </div>
                       </div>
                     );
                   });
                 })()
               ) : (
-                <div className="px-5 py-6 text-sm text-zinc-400">
+                <div className="px-5 py-6 text-sm text-[var(--color-text-tertiary)]">
                   No wines match the current filter set.
                 </div>
               )}

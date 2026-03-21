@@ -22,11 +22,12 @@ export const LIST_SCAN_FILTER_ACCENT_TONES = [
   "red",
 ] as const;
 export const LIST_SCAN_MAX_IMAGE_COUNT = 6;
-export const LIST_SCAN_WHITE_ACCENT_HEX = "#C9A84C";
+export const LIST_SCAN_WHITE_ACCENT_HEX = "#7B1D3A";
 export const LIST_SCAN_ROSE_ACCENT_HEX = "#C76886";
 export const LIST_SCAN_ORANGE_ACCENT_HEX = "#D17A2A";
 export const LIST_SCAN_RED_ACCENT_HEX = "#4A3060";
 export const LIST_SCAN_SCORE_MODES = ["personalized", "stub"] as const;
+export const LIST_SCAN_SORT_MODES = ["list_order", "match"] as const;
 
 export type ListScanSourceType = (typeof LIST_SCAN_SOURCE_TYPES)[number];
 export type ListScanWineType = (typeof LIST_SCAN_ALL_WINE_TYPES)[number];
@@ -36,6 +37,7 @@ export type ListScanPriceMode = (typeof LIST_SCAN_PRICE_MODES)[number];
 export type ListScanFilterAccentTone =
   (typeof LIST_SCAN_FILTER_ACCENT_TONES)[number];
 export type ListScanScoreMode = (typeof LIST_SCAN_SCORE_MODES)[number];
+export type ListScanSortMode = (typeof LIST_SCAN_SORT_MODES)[number];
 
 export const listScanWineTypeLabels: Record<ListScanWineType, string> = {
   sparkling: "Sparkling",
@@ -46,6 +48,66 @@ export const listScanWineTypeLabels: Record<ListScanWineType, string> = {
   dessert_fortified: "Dessert/Fortified",
   unknown: "Unknown",
 };
+
+const LIST_SCAN_COUNTRY_LABELS = new Map<string, string>([
+  ["usa", "USA"],
+  ["u s", "USA"],
+  ["u s a", "USA"],
+  ["us", "USA"],
+  ["united states", "USA"],
+  ["united states of america", "USA"],
+  ["france", "France"],
+  ["italy", "Italy"],
+  ["spain", "Spain"],
+  ["portugal", "Portugal"],
+  ["germany", "Germany"],
+  ["austria", "Austria"],
+  ["australia", "Australia"],
+  ["new zealand", "New Zealand"],
+  ["argentina", "Argentina"],
+  ["chile", "Chile"],
+  ["south africa", "South Africa"],
+  ["greece", "Greece"],
+  ["hungary", "Hungary"],
+  ["canada", "Canada"],
+  ["mexico", "Mexico"],
+  ["england", "England"],
+  ["united kingdom", "United Kingdom"],
+  ["uruguay", "Uruguay"],
+  ["brazil", "Brazil"],
+  ["israel", "Israel"],
+  ["lebanon", "Lebanon"],
+  ["switzerland", "Switzerland"],
+  ["slovenia", "Slovenia"],
+  ["croatia", "Croatia"],
+  ["romania", "Romania"],
+  ["georgia", "Georgia"],
+]);
+
+function normalizeCountryLookupValue(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function normalizeListScanCountryLabel(value: string | null | undefined) {
+  const key = normalizeCountryLookupValue(value);
+  if (!key) {
+    return null;
+  }
+  return LIST_SCAN_COUNTRY_LABELS.get(key) ?? null;
+}
+
+function normalizeListScanRegionValue(value: string) {
+  return normalizeListScanCountryLabel(value) ?? normalizeFacetValue(value);
+}
 
 const LIST_SCAN_WINE_TYPE_BY_VARIETAL: Partial<Record<string, ListScanWineType>> = {
   "Albarino": "white",
@@ -118,10 +180,12 @@ export const listScanParsedWineSchema = z.object({
   wine_name: z.string().nullable(),
   vintage: z.string().nullable(),
   wine_type: z.enum(LIST_SCAN_ALL_WINE_TYPES),
+  section_type: z.enum(LIST_SCAN_ALL_WINE_TYPES).nullable().optional(),
   price_display: z.string().nullable(),
   price_value: z.number().nullable(),
   varietals: z.array(z.string()),
   regions: z.array(z.string()),
+  canonical_country: z.string().nullable().optional(),
   match_percent: z.number().int().min(0).max(100),
   parse_confidence: z.number().int().min(0).max(100),
   rationale: z.string(),
@@ -171,6 +235,98 @@ export type ListScanFilters = z.infer<typeof listScanFiltersSchema>;
 
 export function normalizeFacetValue(value: string) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeListScanDisplayRegionValue(value: string) {
+  return normalizeFacetValue(value)
+    .replace(/^[\s'’"({[\-–—]+/, "")
+    .replace(/[\s'’"()}\],;:.-]+$/, "")
+    .trim();
+}
+
+function isLikelyListScanDisplayRegionNoise(value: string) {
+  return (
+    /[\d$]/.test(value) ||
+    /[()]/.test(value) ||
+    /\b(?:selection|selections?|sommelier|coravin|corkage)\b/i.test(value)
+  );
+}
+
+function scoreListScanDisplayRegionCandidate(value: string) {
+  const wordCount = value.split(/\s+/).length;
+  const hyphenCount = (value.match(/-/g) ?? []).length;
+  let score = 0;
+
+  score += 4;
+  if (!/[(),]/.test(value)) {
+    score += 2;
+  }
+  if (!/\d/.test(value)) {
+    score += 1;
+  }
+  if (hyphenCount === 0) {
+    score += 1;
+  }
+  if (wordCount <= 2) {
+    score += 1;
+  }
+  if (value.length <= 24) {
+    score += 1;
+  }
+  score -= hyphenCount * 0.75;
+  score -= Math.max(0, wordCount - 2) * 0.25;
+
+  return score;
+}
+
+export function getListScanDisplayRegion(regions: string[]) {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  for (const region of regions) {
+    const normalized = normalizeListScanDisplayRegionValue(region);
+    if (!normalized) {
+      continue;
+    }
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    if (normalizeListScanCountryLabel(normalized)) {
+      continue;
+    }
+    candidates.push(normalized);
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const friuli = candidates.find((region) => /^friuli$/i.test(region));
+  const veneziaGiulia = candidates.find(
+    (region) => /^venezia giulia$/i.test(region)
+  );
+  if (friuli && veneziaGiulia) {
+    return "Friuli-Venezia Giulia";
+  }
+
+  const scoredCandidates = candidates
+    .filter((region) => !isLikelyListScanDisplayRegionNoise(region))
+    .map((region, index) => ({
+      region,
+      score: scoreListScanDisplayRegionCandidate(region) - index * 0.01,
+    }))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return left.region.localeCompare(right.region, undefined, {
+        sensitivity: "base",
+      });
+    });
+
+  return scoredCandidates[0]?.region ?? null;
 }
 
 export function createListScanId(prefix = "scan") {
@@ -469,17 +625,40 @@ export function getListScanVarietalAccentTone(
   return accentMap[key] ?? "neutral";
 }
 
-function matchesSelectedOptions(values: string[], selected: string[]) {
+function matchesSelectedOptions(
+  values: string[],
+  selected: string[],
+  normalizeValue: (value: string) => string = normalizeFacetValue
+) {
   if (selected.length === 0) {
     return true;
   }
 
   const normalizedRowValues = new Set(
-    values.map((value) => normalizeFacetValue(value).toLowerCase()).filter(Boolean)
+    values.map((value) => normalizeValue(value).toLowerCase()).filter(Boolean)
   );
 
   return selected.some((value) =>
-    normalizedRowValues.has(normalizeFacetValue(value).toLowerCase())
+    normalizedRowValues.has(normalizeValue(value).toLowerCase())
+  );
+}
+
+function matchesSelectedRegions(values: string[], selected: string[]) {
+  if (selected.length === 0) {
+    return true;
+  }
+
+  const effectiveSelection = selected.length > 1 ? selected.slice(1) : selected;
+  if (effectiveSelection.length === 0) {
+    return true;
+  }
+
+  const normalizedRowValues = new Set(
+    values.map((value) => normalizeListScanRegionValue(value).toLowerCase()).filter(Boolean)
+  );
+
+  return effectiveSelection.some((value) =>
+    normalizedRowValues.has(normalizeListScanRegionValue(value).toLowerCase())
   );
 }
 
@@ -536,7 +715,7 @@ export function filterListScanWines(
     if (!matchesSelectedOptions(wine.varietals, filters.selected_varietals)) {
       return false;
     }
-    if (!matchesSelectedOptions(wine.regions, filters.selected_regions)) {
+    if (!matchesSelectedRegions(wine.regions, filters.selected_regions)) {
       return false;
     }
     return wine.match_percent >= filters.min_match_percent;
@@ -553,6 +732,16 @@ export function rankListScanWines(wines: ListScanParsedWine[]) {
     }
     return left.source_order - right.source_order;
   });
+}
+
+export function sortListScanWines(
+  wines: ListScanParsedWine[],
+  mode: ListScanSortMode
+) {
+  if (mode === "match") {
+    return rankListScanWines(wines);
+  }
+  return [...wines].sort((left, right) => left.source_order - right.source_order);
 }
 
 export function getTopListScanRecommendations(
@@ -591,8 +780,9 @@ export function buildListScanRationale(wine: {
   if (wine.varietals[0]) {
     parts.push(`Highlights ${wine.varietals[0]}.`);
   }
-  if (wine.regions[0]) {
-    parts.push(`Comes from ${wine.regions[0]}.`);
+  const displayRegion = getListScanDisplayRegion(wine.regions);
+  if (displayRegion) {
+    parts.push(`Comes from ${displayRegion}.`);
   }
   const formattedPrice = formatPriceDisplayForCopy(wine.price_display);
   if (formattedPrice) {
@@ -702,6 +892,29 @@ export function formatListScanPriceDisplay(value: string | null, label?: string)
   return resolveTrailingDualPriceDisplay(value, label);
 }
 
+export function stripLeadingListScanIdentifier(value: string) {
+  return value.replace(/^\s*\d{5,}(?:[\s)\].,:;\-–—]+)?\s*/, "").trim();
+}
+
+function normalizeListScanDisplaySpacing(value: string) {
+  return value
+    .replace(/^\s*N\.?\s*V\.?(?=\s*[A-ZÀ-ÿ])/i, "NV ")
+    .replace(/\bN\.?\s*V\.?(?=\s*[A-ZÀ-ÿ])/gi, "NV ")
+    .replace(/^\s*NV(?=[A-ZÀ-ÿ][a-zà-ÿ])/i, "NV ")
+    .replace(/\bNV\s{2,}/g, "NV ");
+}
+
+export function sanitizeListScanWineName(value: string | null | undefined) {
+  const normalized = normalizeFacetValue(value ?? "");
+  if (!normalized) {
+    return null;
+  }
+
+  const stripped = stripLeadingListScanIdentifier(normalized);
+  const spaced = normalizeListScanDisplaySpacing(stripped);
+  return spaced.length > 0 ? spaced : null;
+}
+
 function stripProducerPrefixFromLabel(label: string, producer: string) {
   const normalizedLabel = normalizeFacetValue(label);
   const normalizedProducer = normalizeFacetValue(producer);
@@ -723,6 +936,25 @@ function stripProducerPrefixFromLabel(label: string, producer: string) {
   }
 
   return trimmed || null;
+}
+
+function hasEmbeddedProducerPrefix(label: string, producer: string) {
+  const normalizedLabel = normalizeFacetValue(label);
+  const normalizedProducer = normalizeFacetValue(producer);
+  if (!normalizedLabel || !normalizedProducer) {
+    return false;
+  }
+
+  const patterns = [
+    new RegExp(`^${escapeRegExp(normalizedProducer)}(?:\\s*[|,:;()\\-\\u2013\\u2014]+\\s*)?`, "i"),
+    new RegExp(`^${escapeRegExp(normalizedProducer)}\\s+`, "i"),
+  ];
+
+  return (
+    normalizedLabel.localeCompare(normalizedProducer, undefined, {
+      sensitivity: "base",
+    }) === 0 || patterns.some((pattern) => pattern.test(normalizedLabel))
+  );
 }
 
 function inferProducerFromLabel(
@@ -766,6 +998,56 @@ function inferProducerFromLabel(
   return null;
 }
 
+function normalizeListScanSentenceText(value: string | null | undefined) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function splitListScanSentences(value: string | null | undefined) {
+  const normalized = normalizeListScanSentenceText(value);
+  if (!normalized) {
+    return [];
+  }
+
+  const matches = normalized.match(/[^.!?]+[.!?]?/g) ?? [];
+  return matches
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+}
+
+function isGenericListScanLeadSentence(sentence: string) {
+  return (
+    /^\s*its style lines up with\b/i.test(sentence) ||
+    /^\s*this wine(?:'s)? style lines up with\b/i.test(sentence) ||
+    /^\s*a strong placeholder match\b/i.test(sentence) ||
+    /^\s*highlights?\b/i.test(sentence)
+  );
+}
+
+export function extractListScanFollowupCopy(
+  value: string | null | undefined,
+  options?: { preferFollowup?: boolean }
+) {
+  const sentences = splitListScanSentences(value);
+  if (sentences.length === 0) {
+    return null;
+  }
+
+  if (sentences.length === 1) {
+    return isGenericListScanLeadSentence(sentences[0]) ? null : sentences[0];
+  }
+
+  const [firstSentence, ...remainingSentences] = sentences;
+  if (
+    options?.preferFollowup === true ||
+    isGenericListScanLeadSentence(firstSentence)
+  ) {
+    const followup = remainingSentences.join(" ").trim();
+    return followup || null;
+  }
+
+  return sentences.join(" ");
+}
+
 export function getListScanDisplayLines(
   wine: Pick<
     ListScanParsedWine,
@@ -777,23 +1059,71 @@ export function getListScanDisplayLines(
     wine.price_display,
     wine.price_value
   );
-  const wineName = wine.wine_name ? normalizeFacetValue(wine.wine_name) : null;
+  const wineName = sanitizeListScanWineName(wine.wine_name);
   const producer =
     (wine.producer ? normalizeFacetValue(wine.producer) : null) ??
     inferProducerFromLabel(sanitizedLabel, wineName);
 
-  const title = sanitizedLabel || producer || wineName || "Untitled wine";
-  const subtitle = producer && sanitizedLabel
-    ? stripProducerPrefixFromLabel(sanitizedLabel, producer)
-    : null;
+  const producerPrefix =
+    producer && sanitizedLabel
+      ? stripProducerPrefixFromLabel(sanitizedLabel, producer)
+      : null;
+  const producerPrefixIsMeaningful =
+    producerPrefix !== null &&
+    producerPrefix.localeCompare(sanitizedLabel, undefined, {
+      sensitivity: "base",
+    }) !== 0;
+  const producerEmbedded =
+    producer && sanitizedLabel ? hasEmbeddedProducerPrefix(sanitizedLabel, producer) : false;
+  const producerIsSeparate =
+    Boolean(producer && sanitizedLabel) &&
+    (producerPrefixIsMeaningful || !producerEmbedded);
+  const title =
+    producerIsSeparate && producer
+      ? producer
+      : sanitizedLabel || producer || wineName || "Untitled wine";
+  const subtitleCandidate = producerPrefixIsMeaningful
+    ? producerPrefix
+    : producerIsSeparate
+      ? sanitizedLabel
+      : null;
+  const subtitle =
+    subtitleCandidate &&
+    subtitleCandidate.localeCompare(title, undefined, { sensitivity: "base" }) !== 0 &&
+    (producerIsSeparate ||
+      subtitleCandidate.localeCompare(wineName ?? "", undefined, { sensitivity: "base" }) !== 0)
+      ? subtitleCandidate
+      : null;
 
   return {
     title,
-    subtitle:
-      subtitle &&
-      subtitle.localeCompare(title, undefined, { sensitivity: "base" }) !== 0
-        ? subtitle
-        : null,
+    subtitle,
+    producer,
+    wineName,
+  };
+}
+
+export function getListScanStructuredMeta(
+  wine: Pick<
+    ListScanParsedWine,
+    | "wine_type"
+    | "menu_label"
+    | "wine_name"
+    | "producer"
+    | "regions"
+    | "varietals"
+    | "parse_confidence"
+  >
+) {
+  const resolvedType = resolveListScanWineType(wine);
+  const typeLabel =
+    resolvedType !== "unknown" ? listScanWineTypeLabels[resolvedType] : null;
+  const primaryVarietal = wine.varietals[0] ?? null;
+  const displayRegion = getListScanDisplayRegion(wine.regions);
+  return {
+    typeLabel,
+    primaryVarietal,
+    displayRegion,
   };
 }
 
@@ -802,10 +1132,12 @@ export function sanitizeListScanMenuLabel(
   priceDisplay: string | null,
   priceValue: number | null
 ) {
-  let normalized = normalizeFacetValue(label);
+  let normalized = stripLeadingListScanIdentifier(normalizeFacetValue(label));
   if (!normalized) {
     return label;
   }
+
+  normalized = normalizeListScanDisplaySpacing(normalized);
 
   const candidates = new Set<string>();
   const formattedPrice = formatListScanPriceDisplay(priceDisplay, label);
@@ -873,13 +1205,27 @@ export type ListScanRegionGroup = {
   subRegions: string[];
 };
 
+function getListScanCountryLabel(wine: Pick<
+  ListScanParsedWine,
+  "canonical_country" | "regions"
+>) {
+  return (
+    normalizeListScanCountryLabel(wine.canonical_country) ??
+    wine.regions
+      .map((region) => normalizeListScanCountryLabel(region))
+      .find((value): value is string => Boolean(value)) ??
+    (wine.regions[0] ? normalizeFacetValue(wine.regions[0]) : null)
+  );
+}
+
 export function deriveListScanRegionGroups(
   wines: ListScanParsedWine[]
 ): ListScanRegionGroup[] {
   // Only sub-regions need to pass the region validation filter.
-  // Countries (regions[0]) are always accepted as group headers.
   const validSubRegions = new Set(
-    deriveListScanRegionFacets(wines).map((r) => r.toLowerCase())
+    deriveListScanRegionFacets(wines).map((r) =>
+      normalizeListScanRegionValue(r).toLowerCase()
+    )
   );
 
   const countryMap = new Map<string, Set<string>>();
@@ -890,7 +1236,7 @@ export function deriveListScanRegionGroups(
       return;
     }
 
-    const country = normalizeFacetValue(wine.regions[0]);
+    const country = getListScanCountryLabel(wine);
     if (!country) {
       return;
     }
@@ -901,8 +1247,8 @@ export function deriveListScanRegionGroups(
       countryDisplay.set(countryKey, country);
     }
 
-    for (let i = 1; i < wine.regions.length; i++) {
-      const sub = normalizeFacetValue(wine.regions[i]);
+    for (const region of wine.regions) {
+      const sub = normalizeListScanRegionValue(region);
       if (!sub) {
         continue;
       }
@@ -927,4 +1273,137 @@ export function deriveListScanRegionGroups(
 
   result.sort((a, b) => facetSort(a.country, b.country));
   return result;
+}
+
+function arraysEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function filterSelectionToAvailable<T extends string>(
+  selected: readonly T[],
+  available: readonly T[],
+  fallback: readonly T[]
+) {
+  if (available.length === 0) {
+    return [...fallback];
+  }
+
+  const availableMap = new Map<string, T>();
+  available.forEach((value) => {
+    const normalized = normalizeFacetValue(value).toLowerCase();
+    if (!normalized || availableMap.has(normalized)) {
+      return;
+    }
+    availableMap.set(normalized, value);
+  });
+
+  const seen = new Set<string>();
+  const next: T[] = [];
+
+  selected.forEach((value) => {
+    const normalized = normalizeFacetValue(value).toLowerCase();
+    const canonicalValue = availableMap.get(normalized);
+    if (!canonicalValue || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    next.push(canonicalValue);
+  });
+
+  return next;
+}
+
+export type ListScanRegionSelectionState = {
+  country: string | null;
+  subRegions: string[];
+  countryGroup: ListScanRegionGroup | null;
+};
+
+export function getListScanRegionSelectionState(
+  selected: string[],
+  regionGroups: ListScanRegionGroup[]
+): ListScanRegionSelectionState {
+  if (selected.length === 0 || regionGroups.length === 0) {
+    return {
+      country: null,
+      subRegions: [],
+      countryGroup: null,
+    };
+  }
+
+  const selectedSet = new Set(
+    selected.map((value) => normalizeFacetValue(value).toLowerCase())
+  );
+  const countryGroup =
+    regionGroups.find((group) =>
+      selectedSet.has(normalizeFacetValue(group.country).toLowerCase())
+    ) ?? null;
+
+  if (!countryGroup) {
+    return {
+      country: null,
+      subRegions: [],
+      countryGroup: null,
+    };
+  }
+
+  return {
+    country: countryGroup.country,
+    subRegions: countryGroup.subRegions.filter((region) =>
+      selectedSet.has(normalizeFacetValue(region).toLowerCase())
+    ),
+    countryGroup,
+  };
+}
+
+export function sanitizeListScanRegionSelection(
+  selected: string[],
+  regionGroups: ListScanRegionGroup[]
+) {
+  const selectionState = getListScanRegionSelectionState(selected, regionGroups);
+  if (!selectionState.country) {
+    return [];
+  }
+
+  return [selectionState.country, ...selectionState.subRegions];
+}
+
+export function sanitizeListScanFilters(
+  filters: ListScanFilters,
+  facets?: Partial<ListScanFacets>,
+  regionGroups: ListScanRegionGroup[] = []
+): ListScanFilters {
+  const nextIncludedWineTypes = filterSelectionToAvailable(
+    filters.included_wine_types,
+    facets?.wine_types ?? [],
+    [...LIST_SCAN_FILTERABLE_WINE_TYPES]
+  );
+  const nextSelectedVarietals = filterSelectionToAvailable(
+    filters.selected_varietals,
+    facets?.varietals ?? [],
+    []
+  );
+  const nextSelectedRegions = sanitizeListScanRegionSelection(
+    filters.selected_regions,
+    regionGroups
+  );
+
+  if (
+    arraysEqual(filters.included_wine_types, nextIncludedWineTypes) &&
+    arraysEqual(filters.selected_varietals, nextSelectedVarietals) &&
+    arraysEqual(filters.selected_regions, nextSelectedRegions)
+  ) {
+    return filters;
+  }
+
+  return {
+    ...filters,
+    included_wine_types: nextIncludedWineTypes,
+    selected_varietals: nextSelectedVarietals,
+    selected_regions: nextSelectedRegions,
+  };
 }

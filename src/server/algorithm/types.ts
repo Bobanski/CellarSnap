@@ -50,10 +50,25 @@ export type EffectiveWineProfile = {
     };
     texture: string;
     style_families: string[];
+    canonical_country: string | null;
+    canonical_region: string | null;
+    canonical_sub_region: string | null;
+    primary_grapes: string[];
   };
 };
 
 export type MatchBand = "excellent" | "strong" | "decent" | "not_your_style";
+
+export type CategoricalPreferenceVector = {
+  varietals: Record<string, number>;
+  regions: Record<string, number>;
+  countries: Record<string, number>;
+  weights: {
+    varietal: number;
+    region: number;
+    country: number;
+  };
+};
 
 export type MatchScore = {
   score: number;
@@ -68,6 +83,7 @@ export type UserPreferenceVector = {
   wine_type: WineType;
   sensory: Partial<SensoryVector>;
   weights: Partial<Record<SensoryAxis, number>>;
+  categorical: CategoricalPreferenceVector;
   event_count: number;
 };
 

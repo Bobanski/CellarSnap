@@ -5,7 +5,7 @@ type RatingBadgeProps = {
 };
 
 function getRatingToneClasses(): string {
-  return "border-amber-300/70 bg-amber-400/20 text-amber-100";
+  return "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-secondary)]";
 }
 
 export default function RatingBadge({
@@ -15,7 +15,7 @@ export default function RatingBadge({
 }: RatingBadgeProps) {
   const baseClasses =
     variant === "text"
-      ? "inline-flex items-center text-sm font-bold leading-none tabular-nums text-amber-300"
+      ? "inline-flex items-center text-sm font-bold leading-none tabular-nums text-[var(--color-accent-secondary)]"
       : "inline-flex items-center rounded-full border px-2.5 py-1 text-sm font-semibold leading-none tabular-nums";
 
   if (typeof rating !== "number" || Number.isNaN(rating)) {
@@ -23,8 +23,8 @@ export default function RatingBadge({
       <span
         className={
           variant === "text"
-            ? `${baseClasses} text-zinc-500 ${className}`.trim()
-            : `${baseClasses} border-white/10 bg-white/5 text-zinc-400 ${className}`.trim()
+            ? `${baseClasses} text-[var(--color-text-tertiary)] ${className}`.trim()
+            : `${baseClasses} border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-tertiary)] ${className}`.trim()
         }
       >
         Unrated

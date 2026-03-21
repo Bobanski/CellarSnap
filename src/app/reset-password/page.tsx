@@ -234,42 +234,42 @@ export default function ResetPasswordPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+      <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Reset password
           </span>
-          <h1 className="text-2xl font-semibold text-zinc-50">
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
             Set a new password
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Choose a new password to regain access to CellarSnap.
           </p>
         </div>
 
         {!ready ? (
-          <p className="text-sm text-zinc-300">Preparing reset form...</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">Preparing reset form...</p>
         ) : (
           <form className="space-y-4" onSubmit={onSubmit}>
             {!hasSession ? (
               <>
                 <div>
-                  <label className="text-sm font-medium text-zinc-200" htmlFor="email">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="email">
                     Email address
                   </label>
                   <input
                     id="email"
                     type="email"
                     autoComplete="email"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     placeholder="you@example.com"
                     {...register("email", { required: true })}
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-zinc-200" htmlFor="code">
+                  <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="code">
                     Recovery code
                   </label>
                   <input
@@ -277,15 +277,15 @@ export default function ResetPasswordPage() {
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     placeholder="6-digit code"
                     {...register("code", { required: true })}
                   />
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                     Need a new code?{" "}
                     <Link
                       href="/forgot-password"
-                      className="font-medium text-zinc-200 transition hover:text-amber-200"
+                      className="font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-secondary)]"
                     >
                       Go back and resend.
                     </Link>
@@ -295,7 +295,7 @@ export default function ResetPasswordPage() {
             ) : null}
 
             <div>
-              <label className="text-sm font-medium text-zinc-200" htmlFor="password">
+              <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="password">
                 New password
               </label>
               <div className="relative mt-1">
@@ -303,14 +303,14 @@ export default function ResetPasswordPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
-                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   placeholder="At least 8 characters"
                   {...register("password", { required: true })}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? "Hide" : "Show"}
@@ -319,7 +319,7 @@ export default function ResetPasswordPage() {
             </div>
             <div>
               <label
-                className="text-sm font-medium text-zinc-200"
+                className="text-sm font-medium text-[var(--color-text-primary)]"
                 htmlFor="confirmPassword"
               >
                 Confirm password
@@ -329,14 +329,14 @@ export default function ResetPasswordPage() {
                   id="confirmPassword"
                   type={showConfirm ? "text" : "password"}
                   autoComplete="new-password"
-                  className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 pr-16 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   placeholder="Repeat password"
                   {...register("confirmPassword", { required: true })}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm((p) => !p)}
-                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:text-amber-200"
+                  className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
                   aria-label={showConfirm ? "Hide password" : "Show password"}
                 >
                   {showConfirm ? "Hide" : "Show"}
@@ -353,16 +353,16 @@ export default function ResetPasswordPage() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
               disabled={isSubmitting}
             >
               Update password
             </button>
 
-            <p className="text-center text-sm text-zinc-400">
+            <p className="text-center text-sm text-[var(--color-text-tertiary)]">
               <Link
                 href="/login"
-                className="font-medium text-zinc-200 transition hover:text-amber-200"
+                className="font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 ← Back to login
               </Link>

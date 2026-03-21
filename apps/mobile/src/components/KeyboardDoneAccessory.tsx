@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   doneText: {
-    color: colors.grenache,
+    color: colors.accentPrimary,
     fontSize: 17,
     fontWeight: "700",
   },

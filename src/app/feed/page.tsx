@@ -221,7 +221,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40"
+      className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/40"
       onClickCapture={(event) => {
         if (!didSwipeRef.current) {
           return;
@@ -285,7 +285,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
               className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
               loading="lazy"
             />
-            <span className="absolute left-2 top-2 rounded-full border border-white/15 bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-200">
+            <span className="absolute left-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-primary)]">
               {PHOTO_TYPE_LABELS[photo.type]}
             </span>
           </div>
@@ -296,7 +296,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
         <>
           <button
             type="button"
-            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
+            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
             aria-label="Previous photo"
             onClick={(event) => {
               event.stopPropagation();
@@ -307,7 +307,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
           </button>
           <button
             type="button"
-            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-zinc-100 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
+            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
             aria-label="Next photo"
             onClick={(event) => {
               event.stopPropagation();
@@ -316,14 +316,14 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
           >
             {">"}
           </button>
-          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/45 px-2 py-1">
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--color-border)] bg-black/45 px-2 py-1">
             {photos.map((_, dotIndex) => (
               <button
                 key={dotIndex}
                 type="button"
                 aria-label={`Go to photo ${dotIndex + 1}`}
                 className={`h-1.5 w-1.5 rounded-full transition ${
-                  dotIndex === activeIndex ? "bg-amber-300" : "bg-zinc-400/70"
+                  dotIndex === activeIndex ? "bg-[var(--color-accent-primary)]" : "bg-zinc-400/70"
                 }`}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -367,7 +367,7 @@ function CommentAuthorAvatar({
   if (authorAvatarUrl) {
     return (
       <span
-        className="h-5 w-5 shrink-0 rounded-full border border-white/15 bg-cover bg-center bg-no-repeat"
+        className="h-5 w-5 shrink-0 rounded-full border border-[var(--color-border-strong)] bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${authorAvatarUrl})` }}
         aria-hidden
       />
@@ -376,7 +376,7 @@ function CommentAuthorAvatar({
 
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 text-[10px] font-semibold text-zinc-300"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-black/40 text-[10px] font-semibold text-[var(--color-text-secondary)]"
       aria-hidden
     >
       {fallbackInitial}
@@ -1018,23 +1018,23 @@ export default function FeedPage() {
     : [];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Social feed
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             What the cellar is sipping.
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Discover what others are enjoying across the app.
           </p>
         </header>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 backdrop-blur">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
             Find a friend
           </label>
           <input
@@ -1048,7 +1048,7 @@ export default function FeedPage() {
                 setSearchResults([]);
               }
             }}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
             aria-describedby="search-results-desc"
           />
           <p id="search-results-desc" className="sr-only">
@@ -1057,16 +1057,16 @@ export default function FeedPage() {
           {searchQuery.trim() && (
             <div className="mt-3 space-y-1">
               {searching ? (
-                <p className="text-sm text-zinc-400">Searching...</p>
+                <p className="text-sm text-[var(--color-text-tertiary)]">Searching...</p>
               ) : searchResults.length === 0 ? (
-                <p className="text-sm text-zinc-400">No friends match your search.</p>
+                <p className="text-sm text-[var(--color-text-tertiary)]">No friends match your search.</p>
               ) : (
                 <ul className="space-y-1">
                   {searchResults.map((u) => (
                     <li key={u.id}>
                       <Link
                         href={`/profile/${u.id}`}
-                        className="block rounded-lg px-2 py-1.5 text-sm text-zinc-200 hover:bg-white/10"
+                        className="block rounded-lg px-2 py-1.5 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
                       >
                         {u.display_name ?? "Unknown"}
                       </Link>
@@ -1084,8 +1084,8 @@ export default function FeedPage() {
             onClick={() => setFeedScope("public")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "public"
-                ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
-                : "border border-white/10 text-zinc-200 hover:border-white/30"
+                ? "border border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
             Public feed
@@ -1095,20 +1095,20 @@ export default function FeedPage() {
             onClick={() => setFeedScope("friends")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "friends"
-                ? "border border-amber-300/60 bg-amber-400/10 text-amber-200"
-                : "border border-white/10 text-zinc-200 hover:border-white/30"
+                ? "border border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
             Friends only
           </button>
-          <div className="ml-auto inline-flex rounded-full border border-white/10 bg-black/20 p-1 text-xs">
+          <div className="ml-auto inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1 text-xs">
             <button
               type="button"
               onClick={() => setFeedSortMode("recent")}
               className={`rounded-full px-3 py-1.5 font-semibold transition ${
                 activeFeedSortMode === "recent"
-                  ? "bg-white/10 text-zinc-100"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
               }`}
             >
               Recent
@@ -1119,8 +1119,8 @@ export default function FeedPage() {
                 onClick={() => setFeedSortMode("best_match")}
                 className={`rounded-full px-3 py-1.5 font-semibold transition ${
                   activeFeedSortMode === "best_match"
-                    ? "bg-white/10 text-zinc-100"
-                    : "text-zinc-400 hover:text-zinc-200"
+                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                 }`}
               >
                 Best match
@@ -1142,7 +1142,7 @@ export default function FeedPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             Loading feed...
           </div>
         ) : errorMessage ? (
@@ -1150,7 +1150,7 @@ export default function FeedPage() {
             {errorMessage}
           </div>
         ) : entries.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             No entries yet.
           </div>
         ) : (
@@ -1159,15 +1159,15 @@ export default function FeedPage() {
             <section className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                     Best matches
                   </p>
-                  <h2 className="mt-1 text-xl font-semibold text-zinc-50">
+                  <h2 className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">
                     Standout palate matches from this feed
                   </h2>
                 </div>
                 {matchScoresLoading ? (
-                  <p className="text-xs text-zinc-500">Refreshing scores...</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Refreshing scores...</p>
                 ) : null}
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
@@ -1182,17 +1182,17 @@ export default function FeedPage() {
                       key={`feed-best-match-${entry.id}`}
                       type="button"
                       onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
-                      className="rounded-3xl border border-amber-300/20 bg-gradient-to-br from-amber-400/12 to-transparent p-5 text-left transition hover:border-amber-300/40"
+                      className="rounded-3xl border border-[var(--color-accent-secondary)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-secondary)]/40"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                             {entry.author_name}
                           </p>
-                          <h3 className="mt-2 text-lg font-semibold text-zinc-50">
+                          <h3 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
                             {entry.wine_name || "Untitled wine"}
                           </h3>
-                          <p className="mt-1 text-sm text-zinc-400">
+                          <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
                             {entry.producer || "Unknown producer"}
                           </p>
                         </div>
@@ -1216,7 +1216,7 @@ export default function FeedPage() {
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
                     ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                    : "border-white/10 bg-white/5 hover:border-amber-300/40"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
@@ -1229,7 +1229,7 @@ export default function FeedPage() {
                   }
                 }}
               >
-                <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-zinc-400">
+                <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-[var(--color-text-tertiary)]">
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <button
                       type="button"
@@ -1237,9 +1237,9 @@ export default function FeedPage() {
                         event.stopPropagation();
                         router.push(`/profile/${entry.user_id}`);
                       }}
-                        className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300/50"
+                        className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/50"
                     >
-                      <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/40 ring-1 ring-white/5">
+                      <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
                         {entry.author_avatar_url ? (
                           <AppImage
                             src={entry.author_avatar_url}
@@ -1247,12 +1247,12 @@ export default function FeedPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <span className="flex h-full w-full items-center justify-center text-[10px] font-medium text-zinc-500">
+                          <span className="flex h-full w-full items-center justify-center text-[10px] font-medium text-[var(--color-text-tertiary)]">
                             {(entry.author_name || "?")[0].toUpperCase()}
                           </span>
                         )}
                       </span>
-                      <span className="block min-w-0 whitespace-normal break-words font-medium text-zinc-200 hover:text-amber-200">
+                      <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
                         {entry.author_name}
                       </span>
                     </button>
@@ -1277,7 +1277,7 @@ export default function FeedPage() {
                                 current === entry.id ? null : entry.id
                               );
                             }}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-tertiary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
                             aria-label="More actions"
                           >
                             <span className="inline-flex items-center gap-0.5" aria-hidden>
@@ -1288,13 +1288,13 @@ export default function FeedPage() {
                           </button>
                           {postMenuEntryId === entry.id ? (
                             <div
-                              className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                              className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
                               onClick={(event) => event.stopPropagation()}
                             >
                               <div className="px-3 pb-1">
                                 <label
                                   htmlFor={`post-report-reason-${entry.id}`}
-                                  className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-zinc-500"
+                                  className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]"
                                 >
                                   Reason
                                 </label>
@@ -1307,7 +1307,7 @@ export default function FeedPage() {
                                       [entry.id]: event.target.value as ReportReason,
                                     }))
                                   }
-                                  className="w-full rounded border border-white/15 bg-black/30 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-300/60 focus:outline-none"
+                                  className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                 >
                                   {REPORT_REASON_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>
@@ -1329,7 +1329,7 @@ export default function FeedPage() {
                                       DEFAULT_REPORT_REASON,
                                   })
                                 }
-                                className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
+                                className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
                               >
                                 {reportingEntryId === entry.id
                                   ? "Reporting..."
@@ -1354,8 +1354,8 @@ export default function FeedPage() {
                 </div>
                 <div className="mt-4">
                   {entry.entry_group ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                      <span className="rounded-full border border-white/10 bg-black/30 px-2 py-1 font-semibold uppercase tracking-[0.14em] text-zinc-300">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
+                      <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-1 font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
                         {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
                       </span>
                       <span>Grouped bulk post</span>
@@ -1363,7 +1363,7 @@ export default function FeedPage() {
                   ) : (
                     <div className="min-w-0">
                       {entry.wine_name ? (
-                        <h2 className="text-base font-semibold leading-snug text-zinc-50 break-words">
+                        <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
                           {entry.wine_name}
                         </h2>
                       ) : null}
@@ -1371,14 +1371,14 @@ export default function FeedPage() {
                         const meta = buildEntryMetaFields(entry).join(" · ");
 
                         return meta ? (
-                          <p className="text-sm text-zinc-400 break-words">{meta}</p>
+                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
                         ) : null;
                       })()}
                     </div>
                   )}
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
-                  <div className="mt-3 break-words text-xs text-zinc-400">
+                  <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
                     Tasted with:{" "}
                     {entry.tasted_with_users
                       .map((user) => user.display_name ?? "Unknown")
@@ -1409,7 +1409,7 @@ export default function FeedPage() {
                         event.stopPropagation();
                         toggleNotesExpanded(entry.id);
                       }}
-                      className="mt-3 block w-full text-left text-xs leading-relaxed text-zinc-300"
+                      className="mt-3 block w-full text-left text-xs leading-relaxed text-[var(--color-text-secondary)]"
                       title={expanded ? "Collapse notes" : "Expand notes"}
                     >
                       <span
@@ -1449,7 +1449,7 @@ export default function FeedPage() {
                         className="mt-auto pt-3"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        <div className="border-t border-white/10 pt-3">
+                        <div className="border-t border-[var(--color-border)] pt-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             {canComment ? (
                               <button
@@ -1460,14 +1460,14 @@ export default function FeedPage() {
                                 }}
                                 className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                                   commentsExpanded
-                                    ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
-                                    : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
+                                    ? "border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                                    : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                                 }`}
                                 aria-label={`Toggle comments (${getCommentCount(entry)})`}
                               >
                                 <CommentBubbleIcon className="h-4 w-4 shrink-0" />
                                 <span>Comments</span>
-                                <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">
+                                <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 tabular-nums">
                                   {getCommentCount(entry)}
                                 </span>
                               </button>
@@ -1491,14 +1491,14 @@ export default function FeedPage() {
                                               prev === popupKey ? null : popupKey
                                             );
                                           }}
-                                          className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200 transition hover:border-amber-300/40"
+                                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                                         >
                                           <span>{emoji}</span>
-                                          <span className="tabular-nums text-zinc-400">{count}</span>
+                                          <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
                                         </button>
                                         {names.length > 0 ? (
                                           <span
-                                            className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#1a1412] px-2.5 py-1.5 text-[11px] text-zinc-200 shadow-lg transition-opacity ${
+                                            className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${
                                               showNames
                                                 ? "pointer-events-auto opacity-100"
                                                 : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"
@@ -1519,10 +1519,10 @@ export default function FeedPage() {
                                     id === entry.id ? null : entry.id
                                   );
                                 }}
-                                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-black/20 text-sm font-semibold leading-none transition ${
+                                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
                                   canReact
-                                    ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
-                                    : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
+                                    ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                                    : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
                                 }`}
                                 aria-label={canReact ? "Add reaction" : "View reaction options"}
                               >
@@ -1531,7 +1531,7 @@ export default function FeedPage() {
                             </div>
                           </div>
                           {reactionPopupEntryId === entry.id ? (
-                            <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-1.5">
+                            <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {REACTION_EMOJIS.map((emoji) => {
                                   const count = entry.reaction_counts?.[emoji] ?? 0;
@@ -1544,9 +1544,9 @@ export default function FeedPage() {
                                           e.stopPropagation();
                                           toggleReaction(entry.id, emoji);
                                         }}
-                                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${
+                                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${
                                           (entry.my_reactions ?? []).includes(emoji)
-                                            ? "bg-amber-400/20"
+                                            ? "bg-[var(--color-accent-primary)]/20"
                                             : ""
                                         }`}
                                       >
@@ -1557,11 +1557,11 @@ export default function FeedPage() {
                                   return (
                                     <span
                                       key={emoji}
-                                      className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/10 bg-black/20 px-1 text-lg text-zinc-400"
+                                      className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-1 text-lg text-[var(--color-text-tertiary)]"
                                     >
                                       {emoji}
                                       {count > 0 ? (
-                                        <span className="ml-0.5 text-[10px] font-medium text-zinc-500">
+                                        <span className="ml-0.5 text-[10px] font-medium text-[var(--color-text-tertiary)]">
                                           {count}
                                         </span>
                                       ) : null}
@@ -1570,7 +1570,7 @@ export default function FeedPage() {
                                 })}
                               </div>
                               {!canReact ? (
-                                <p className="mt-1 text-[11px] text-zinc-500">
+                                <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
                                   Reactions are not available for this post.
                                 </p>
                               ) : null}
@@ -1580,11 +1580,11 @@ export default function FeedPage() {
                       </div>
                       {commentsExpanded ? (
                         <div
-                          className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 md:mt-3"
+                          className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 md:mt-3"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300/70">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                               Comments
                             </p>
                             <button
@@ -1593,21 +1593,21 @@ export default function FeedPage() {
                                 event.stopPropagation();
                                 toggleCommentsExpanded(entry.id);
                               }}
-                              className="text-[11px] text-zinc-400 transition hover:text-zinc-200"
+                              className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]"
                             >
                               Collapse
                             </button>
                           </div>
                           {commentsLoading ? (
-                            <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">
+                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">
                               Loading comments...
                             </div>
                           ) : !canComment ? (
-                            <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">
+                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">
                               Comments are private for this post.
                             </div>
                           ) : entryComments.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">
+                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">
                               No comments yet. Start the thread.
                             </div>
                           ) : (
@@ -1624,7 +1624,7 @@ export default function FeedPage() {
                                 return (
                                   <li
                                     key={comment.id}
-                                    className="rounded-xl border border-white/10 bg-black/25 p-3"
+                                    className="rounded-xl border border-[var(--color-border)] bg-black/25 p-3"
                                   >
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="min-w-0">
@@ -1634,7 +1634,7 @@ export default function FeedPage() {
                                               authorName={comment.author_name}
                                               authorAvatarUrl={comment.author_avatar_url}
                                             />
-                                            <p className="text-xs font-semibold text-zinc-200">
+                                            <p className="text-xs font-semibold text-[var(--color-text-primary)]">
                                               {comment.author_name}
                                             </p>
                                           </div>
@@ -1642,15 +1642,15 @@ export default function FeedPage() {
                                         <p
                                           className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${
                                             isCommentDeleted
-                                              ? "italic text-zinc-500"
-                                              : "text-zinc-100"
+                                              ? "italic text-[var(--color-text-tertiary)]"
+                                              : "text-[var(--color-text-primary)]"
                                           }`}
                                         >
                                           {isCommentDeleted ? "[deleted]" : comment.body}
                                         </p>
                                       </div>
                                       <div className="flex shrink-0 items-center gap-2">
-                                        <span className="text-[11px] text-zinc-500">
+                                        <span className="text-[11px] text-[var(--color-text-tertiary)]">
                                           {formatCommentDate(comment.created_at)}
                                         </span>
                                         {!isCommentDeleted &&
@@ -1661,7 +1661,7 @@ export default function FeedPage() {
                                             onClick={() => {
                                               void deleteCommentForEntry(entry.id, comment.id);
                                             }}
-                                            className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
                                           >
                                             {deletingComment ? "Deleting..." : "Delete"}
                                           </button>
@@ -1680,7 +1680,7 @@ export default function FeedPage() {
                                                     : topCommentMenuKey
                                                 );
                                               }}
-                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-tertiary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
                                               aria-label="Comment actions"
                                             >
                                               <span className="inline-flex items-center gap-0.5" aria-hidden>
@@ -1691,13 +1691,13 @@ export default function FeedPage() {
                                             </button>
                                             {commentMenuKey === topCommentMenuKey ? (
                                               <div
-                                                className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                                                className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
                                                 onClick={(event) => event.stopPropagation()}
                                               >
                                                 <div className="px-3 pb-1">
                                                   <label
                                                     htmlFor={`comment-report-reason-${comment.id}`}
-                                                    className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-zinc-500"
+                                                    className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]"
                                                   >
                                                     Reason
                                                   </label>
@@ -1716,7 +1716,7 @@ export default function FeedPage() {
                                                         })
                                                       )
                                                     }
-                                                    className="w-full rounded border border-white/15 bg-black/30 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-300/60 focus:outline-none"
+                                                    className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                                   >
                                                     {REPORT_REASON_OPTIONS.map((option) => (
                                                       <option key={option.value} value={option.value}>
@@ -1740,7 +1740,7 @@ export default function FeedPage() {
                                                         ] ?? DEFAULT_REPORT_REASON,
                                                     })
                                                   }
-                                                  className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
+                                                  className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
                                                 >
                                                   {reportingCommentId === comment.id
                                                     ? "Reporting..."
@@ -1762,7 +1762,7 @@ export default function FeedPage() {
                                               [entry.id]: comment.id,
                                             }))
                                           }
-                                          className="font-medium text-zinc-300 transition hover:text-amber-200"
+                                          className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
                                         >
                                           Reply
                                         </button>
@@ -1776,7 +1776,7 @@ export default function FeedPage() {
                                               [comment.id]: !current[comment.id],
                                             }))
                                           }
-                                          className="text-zinc-400 transition hover:text-zinc-200"
+                                          className="text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]"
                                         >
                                           {repliesExpanded
                                             ? "Hide replies"
@@ -1789,7 +1789,7 @@ export default function FeedPage() {
                                       ) : null}
                                     </div>
                                     {repliesExpanded && comment.replies.length > 0 ? (
-                                      <div className="mt-2 space-y-2 border-l border-white/10 pl-3">
+                                      <div className="mt-2 space-y-2 border-l border-[var(--color-border)] pl-3">
                                         {comment.replies.map((reply) => {
                                           const isReplyDeleted = Boolean(reply.is_deleted);
                                           const deletingReply = Boolean(
@@ -1799,7 +1799,7 @@ export default function FeedPage() {
                                           return (
                                             <div
                                               key={reply.id}
-                                              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+                                              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                                             >
                                               <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
@@ -1809,7 +1809,7 @@ export default function FeedPage() {
                                                         authorName={reply.author_name}
                                                         authorAvatarUrl={reply.author_avatar_url}
                                                       />
-                                                      <p className="text-xs font-semibold text-zinc-200">
+                                                      <p className="text-xs font-semibold text-[var(--color-text-primary)]">
                                                         {reply.author_name}
                                                       </p>
                                                     </div>
@@ -1817,15 +1817,15 @@ export default function FeedPage() {
                                                   <p
                                                     className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${
                                                       isReplyDeleted
-                                                        ? "italic text-zinc-500"
-                                                        : "text-zinc-100"
+                                                        ? "italic text-[var(--color-text-tertiary)]"
+                                                        : "text-[var(--color-text-primary)]"
                                                     }`}
                                                   >
                                                     {isReplyDeleted ? "[deleted]" : reply.body}
                                                   </p>
                                                 </div>
                                                 <div className="flex shrink-0 items-center gap-2">
-                                                  <span className="text-[11px] text-zinc-500">
+                                                  <span className="text-[11px] text-[var(--color-text-tertiary)]">
                                                     {formatCommentDate(reply.created_at)}
                                                   </span>
                                                   {!isReplyDeleted &&
@@ -1839,7 +1839,7 @@ export default function FeedPage() {
                                                           reply.id
                                                         );
                                                       }}
-                                                      className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                      className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                       {deletingReply ? "Deleting..." : "Delete"}
                                                     </button>
@@ -1858,7 +1858,7 @@ export default function FeedPage() {
                                                               : replyMenuKey
                                                           );
                                                         }}
-                                                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/30 hover:text-zinc-200"
+                                                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-tertiary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
                                                         aria-label="Reply actions"
                                                       >
                                                         <span className="inline-flex items-center gap-0.5" aria-hidden>
@@ -1869,13 +1869,13 @@ export default function FeedPage() {
                                                       </button>
                                                       {commentMenuKey === replyMenuKey ? (
                                                         <div
-                                                          className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-white/15 bg-[#1a1412] py-1 text-left shadow-lg"
+                                                          className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
                                                           onClick={(event) => event.stopPropagation()}
                                                         >
                                                           <div className="px-3 pb-1">
                                                             <label
                                                               htmlFor={`comment-report-reason-${reply.id}`}
-                                                              className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-zinc-500"
+                                                              className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]"
                                                             >
                                                               Reason
                                                             </label>
@@ -1895,7 +1895,7 @@ export default function FeedPage() {
                                                                   })
                                                                 )
                                                               }
-                                                              className="w-full rounded border border-white/15 bg-black/30 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-300/60 focus:outline-none"
+                                                              className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                                             >
                                                               {REPORT_REASON_OPTIONS.map((option) => (
                                                                 <option key={option.value} value={option.value}>
@@ -1919,7 +1919,7 @@ export default function FeedPage() {
                                                                   ] ?? DEFAULT_REPORT_REASON,
                                                               })
                                                             }
-                                                            className="block w-full px-3 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:bg-white/10 disabled:opacity-50"
+                                                            className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
                                                           >
                                                             {reportingCommentId === reply.id
                                                               ? "Reporting..."
@@ -1944,9 +1944,9 @@ export default function FeedPage() {
                           {commentError ? (
                             <p className="mt-2 text-xs text-rose-300">{commentError}</p>
                           ) : null}
-                          <div className="mt-3 border-t border-white/10 pt-3">
+                          <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                             {replyTarget ? (
-                              <div className="mb-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-xs text-zinc-300">
+                              <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
                                 <span className="truncate">
                                   Replying to {replyTarget.author_name ?? "this thread"}
                                 </span>
@@ -1958,7 +1958,7 @@ export default function FeedPage() {
                                       [entry.id]: null,
                                     }))
                                   }
-                                  className="shrink-0 text-zinc-400 transition hover:text-zinc-100"
+                                  className="shrink-0 text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]"
                                 >
                                   Cancel
                                 </button>
@@ -1982,11 +1982,11 @@ export default function FeedPage() {
                               placeholder={
                                 replyTarget ? "Write a reply..." : "Write a comment..."
                               }
-                              className="w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                              className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                               disabled={!canComment || postingComment}
                             />
                             <div className="mt-2 flex items-center justify-between">
-                              <p className="text-[11px] text-zinc-500">
+                              <p className="text-[11px] text-[var(--color-text-tertiary)]">
                                 {canComment
                                   ? "Comments + replies are now live."
                                   : "Comments are private for this post."}
@@ -1997,7 +1997,7 @@ export default function FeedPage() {
                                   void submitCommentForEntry(entry.id);
                                 }}
                                 disabled={!commentDraft.trim() || !canComment || postingComment}
-                                className="inline-flex rounded-full border border-amber-300/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {postingComment
                                   ? "Posting..."
@@ -2021,7 +2021,7 @@ export default function FeedPage() {
                 type="button"
                 onClick={loadMoreFeed}
                 disabled={loadingMore}
-                className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
               >
                 {loadingMore ? "Loading…" : "Load more"}
               </button>

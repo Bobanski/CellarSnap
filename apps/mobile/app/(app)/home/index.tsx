@@ -1318,7 +1318,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   content: {
     paddingHorizontal: 18,
@@ -1329,8 +1329,8 @@ const styles = StyleSheet.create({
   loadingCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 16,
     paddingVertical: 18,
     alignItems: "center",
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
   },
   header: {
@@ -1352,7 +1352,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: "700",
     lineHeight: 36,
@@ -1362,7 +1362,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1395,12 +1395,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   onboardingTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: "700",
   },
   onboardingSubtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1410,8 +1410,8 @@ const styles = StyleSheet.create({
   privacyOption: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 11,
     paddingVertical: 10,
   },
@@ -1434,7 +1434,7 @@ const styles = StyleSheet.create({
   },
   privacyDescription: {
     marginTop: 6,
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   confirmPrivacyButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1465,12 +1465,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heroTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: "700",
   },
   heroSubtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
     textAlign: "center",
@@ -1483,7 +1483,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1514,7 +1514,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   inlineCtaButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1536,14 +1536,14 @@ const styles = StyleSheet.create({
   },
   sectionDivider: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.1)",
+    borderTopColor: colors.border,
     marginVertical: 2,
   },
   sectionDividerBeforeCircle: {
     marginTop: 10,
   },
   sectionLabel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.4,
@@ -1555,8 +1555,8 @@ const styles = StyleSheet.create({
   entryCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 13,
   },
   entryCardDrinkingNow: {
@@ -1575,7 +1575,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   entryOwner: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "600",
     flexShrink: 1,
@@ -1594,8 +1594,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -1605,15 +1605,15 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   entryOwnerAvatarFallback: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
   entryOwnerButton: {
-    color: colors.terroir,
+    color: colors.textPrimary,
   },
   entryDate: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   entryBodyRow: {
@@ -1625,7 +1625,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 14,
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -1635,7 +1635,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   photoText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     textAlign: "center",
     paddingHorizontal: 6,
@@ -1646,13 +1646,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   entryTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
   entrySubtitle: {
     marginTop: 2,
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   entryMetaRow: {
@@ -1720,13 +1720,13 @@ const styles = StyleSheet.create({
     height: 27,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.2)",
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    backgroundColor: colors.surfacePrimary,
   },
   reactionAddButtonDisabled: {
-    borderColor: "rgba(44,26,14,0.1)",
+    borderColor: colors.border,
   },
   plusIcon: {
     width: 12,
@@ -1740,23 +1740,23 @@ const styles = StyleSheet.create({
     width: 12,
     height: 1.6,
     borderRadius: 999,
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   plusLineVertical: {
     position: "absolute",
     width: 1.6,
     height: 12,
     borderRadius: 999,
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   plusLineDisabled: {
-    backgroundColor: colors.fog,
+    backgroundColor: colors.textSecondary,
   },
   reactionPickerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 9,
     gap: 8,
   },
@@ -1768,8 +1768,8 @@ const styles = StyleSheet.create({
   reactionEmojiBtn: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     width: 34,
     height: 34,
     alignItems: "center",
@@ -1786,11 +1786,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   reactionPrivateText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   inlineLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "600",
   },
@@ -1803,14 +1803,14 @@ const styles = StyleSheet.create({
   emptyCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 8,
   },
   emptyText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1818,12 +1818,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   secondaryButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },

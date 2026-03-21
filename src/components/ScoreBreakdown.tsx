@@ -24,10 +24,10 @@ export default function ScoreBreakdown({
 
   return (
     <details
-      className="rounded-3xl border border-white/10 bg-white/5 p-5"
+      className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5"
       open={defaultOpen}
     >
-      <summary className="cursor-pointer select-none text-sm font-semibold text-zinc-100">
+      <summary className="cursor-pointer select-none text-sm font-semibold text-[var(--color-text-primary)]">
         Why this score?
       </summary>
 
@@ -42,8 +42,8 @@ export default function ScoreBreakdown({
             <div className="mt-3 space-y-3">
               {insights.positive.map((item) => (
                 <div key={`positive-${item.axis}`}>
-                  <p className="text-sm font-semibold text-zinc-100">{item.title}</p>
-                  <p className="mt-1 text-sm text-zinc-300">{item.body}</p>
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{item.body}</p>
                 </div>
               ))}
             </div>
@@ -56,8 +56,8 @@ export default function ScoreBreakdown({
             <div className="mt-3 space-y-3">
               {insights.caution.map((item) => (
                 <div key={`caution-${item.axis}`}>
-                  <p className="text-sm font-semibold text-zinc-100">{item.title}</p>
-                  <p className="mt-1 text-sm text-zinc-300">{item.body}</p>
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.title}</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{item.body}</p>
                 </div>
               ))}
             </div>
@@ -71,15 +71,15 @@ export default function ScoreBreakdown({
             .map(([axis, contribution]) => (
               <div
                 key={axis}
-                className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
               >
-                <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
                   {SENSORY_AXIS_LABELS[axis as keyof typeof SENSORY_AXIS_LABELS]}
                 </p>
-                <p className="mt-2 text-sm text-zinc-200">
+                <p className="mt-2 text-sm text-[var(--color-text-primary)]">
                   Wine: {formatSensoryLevel(contribution.wine_value)}
                 </p>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-[var(--color-text-tertiary)]">
                   You: {formatSensoryLevel(contribution.user_value)}
                 </p>
               </div>
@@ -88,14 +88,14 @@ export default function ScoreBreakdown({
 
         {result.modifiers_applied.length > 0 ? (
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Profile modifiers
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {result.modifiers_applied.map((modifier) => (
                 <span
                   key={modifier}
-                  className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-zinc-300"
+                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1 text-xs text-[var(--color-text-secondary)]"
                 >
                   {modifier}
                 </span>

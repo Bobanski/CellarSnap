@@ -508,10 +508,10 @@ export default function EntryDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-5xl space-y-8">
           <NavBar />
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             Loading entry...
           </div>
         </div>
@@ -521,7 +521,7 @@ export default function EntryDetailPage() {
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-5xl space-y-8">
           <NavBar />
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
@@ -742,31 +742,31 @@ export default function EntryDetailPage() {
     scoreResult.preference_event_count < 5;
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-5xl space-y-8">
         <NavBar activeHrefOverride={openedFromFeed ? "/feed" : null} />
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Link
-              className="text-sm font-medium text-zinc-400 hover:text-amber-200"
+              className="text-sm font-medium text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-secondary)]"
               href={backHref}
             >
               {backLabel}
             </Link>
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               Cellar entry
             </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
+            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
               {entry.wine_name || "Untitled wine"}
             </h1>
-            <p className="text-sm text-zinc-300">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               {entry.producer || "Unknown producer"}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm font-semibold text-amber-100 transition hover:border-amber-300/60 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={sharing}
               onClick={onShare}
             >
@@ -774,7 +774,7 @@ export default function EntryDetailPage() {
             </button>
             {isOwner ? (
               <Link
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                 href={`/entries/${entry.id}/edit`}
               >
                 Edit entry
@@ -790,7 +790,7 @@ export default function EntryDetailPage() {
               empty={photosLoading ? "Loading photos..." : "No photos uploaded."}
               wrapperClassName="rounded-b-none"
             />
-            <div className="rounded-b-3xl border border-t-0 border-white/10 bg-white/5 p-4" ref={reactionMenuRef}>
+            <div className="rounded-b-3xl border border-t-0 border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4" ref={reactionMenuRef}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {canComment ? (
                   <button
@@ -803,13 +803,13 @@ export default function EntryDetailPage() {
                     }}
                     className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                       commentsExpanded
-                        ? "border-amber-300/50 bg-amber-400/10 text-amber-200"
-                        : "border-white/10 bg-black/20 text-zinc-300 hover:border-amber-300/50 hover:text-amber-200"
+                        ? "border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                     }`}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
                     <span>Comments</span>
-                    <span className="rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 tabular-nums">{commentCount}</span>
+                    <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 tabular-nums">{commentCount}</span>
                   </button>
                 ) : null}
                 <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
@@ -822,13 +822,13 @@ export default function EntryDetailPage() {
                         <button
                           type="button"
                           onClick={() => setReactionUsersPopup((prev) => prev === popupKey ? null : popupKey)}
-                          className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/30 px-1.5 py-0.5 text-[11px] text-zinc-200 transition hover:border-amber-300/40"
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                         >
                           <span>{emoji}</span>
-                          <span className="tabular-nums text-zinc-400">{count}</span>
+                          <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
                         </button>
                         {names.length > 0 ? (
-                          <span className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#1a1412] px-2.5 py-1.5 text-[11px] text-zinc-200 shadow-lg transition-opacity ${showNames ? "pointer-events-auto opacity-100" : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"}`}>
+                          <span className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${showNames ? "pointer-events-auto opacity-100" : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"}`}>
                             {names.join(", ")}
                           </span>
                         ) : null}
@@ -838,10 +838,10 @@ export default function EntryDetailPage() {
                   <button
                     type="button"
                     onClick={() => setReactionPopupOpen((prev) => !prev)}
-                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-black/20 text-sm font-semibold leading-none transition ${
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
                       canReact
-                        ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
-                        : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
+                        ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                        : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
                     }`}
                     aria-label={canReact ? "Add reaction" : "View reaction options"}
                   >
@@ -850,41 +850,41 @@ export default function EntryDetailPage() {
                 </div>
               </div>
               {reactionPopupOpen ? (
-                <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-1.5">
+                <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {REACTION_EMOJIS.map((emoji) => {
                       if (canReact) {
                         return (
-                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${myReactions.includes(emoji) ? "bg-amber-400/20" : ""}`}>
+                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${myReactions.includes(emoji) ? "bg-[var(--color-accent-primary)]/20" : ""}`}>
                             {emoji}
                           </button>
                         );
                       }
                       const count = reactionCounts[emoji] ?? 0;
                       return (
-                        <span key={emoji} className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/10 bg-black/20 px-1 text-lg text-zinc-400">
+                        <span key={emoji} className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-1 text-lg text-[var(--color-text-tertiary)]">
                           {emoji}
-                          {count > 0 ? <span className="ml-0.5 text-[10px] font-medium text-zinc-500">{count}</span> : null}
+                          {count > 0 ? <span className="ml-0.5 text-[10px] font-medium text-[var(--color-text-tertiary)]">{count}</span> : null}
                         </span>
                       );
                     })}
                   </div>
-                  {!canReact ? <p className="mt-1 text-[11px] text-zinc-500">Reactions are not available for this post.</p> : null}
+                  {!canReact ? <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">Reactions are not available for this post.</p> : null}
                 </div>
               ) : null}
 
               {commentsExpanded ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3">
+                <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300/70">Comments</p>
-                    <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-zinc-400 transition hover:text-zinc-200">Collapse</button>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">Comments</p>
+                    <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Collapse</button>
                   </div>
                   {loadingComments ? (
-                    <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">Loading comments...</div>
+                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Loading comments...</div>
                   ) : !canComment ? (
-                    <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">Comments are private for this post.</div>
+                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Comments are private for this post.</div>
                   ) : comments.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-3 text-sm text-zinc-400">No comments yet. Start the thread.</div>
+                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">No comments yet. Start the thread.</div>
                   ) : (
                     <ul className="space-y-2">
                       {comments.map((comment) => {
@@ -892,20 +892,20 @@ export default function EntryDetailPage() {
                         const isDeleted = Boolean(comment.is_deleted);
                         const deleting = deletingCommentId === comment.id;
                         return (
-                          <li key={comment.id} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                          <li key={comment.id} className="rounded-xl border border-[var(--color-border)] bg-black/25 p-3">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 {!isDeleted && comment.author_name ? (
-                                  <p className="text-xs font-semibold text-zinc-200">{comment.author_name}</p>
+                                  <p className="text-xs font-semibold text-[var(--color-text-primary)]">{comment.author_name}</p>
                                 ) : null}
-                                <p className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${isDeleted ? "italic text-zinc-500" : "text-zinc-100"}`}>
+                                <p className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${isDeleted ? "italic text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`}>
                                   {isDeleted ? "[deleted]" : comment.body}
                                 </p>
                               </div>
                               <div className="flex shrink-0 items-center gap-2">
-                                <span className="text-[11px] text-zinc-500">{formatCommentDate(comment.created_at)}</span>
+                                <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(comment.created_at)}</span>
                                 {!isDeleted && currentUserId === comment.user_id ? (
-                                  <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                  <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
                                     {deleting ? "Deleting..." : "Delete"}
                                   </button>
                                 ) : null}
@@ -913,30 +913,30 @@ export default function EntryDetailPage() {
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
                               {!isDeleted ? (
-                                <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-zinc-300 transition hover:text-amber-200">Reply</button>
+                                <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]">Reply</button>
                               ) : null}
                               {comment.replies.length > 0 ? (
-                                <button type="button" onClick={() => setExpandedReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))} className="text-zinc-400 transition hover:text-zinc-200">
+                                <button type="button" onClick={() => setExpandedReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))} className="text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">
                                   {repliesOpen ? "Hide replies" : `View ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`}
                                 </button>
                               ) : null}
                             </div>
                             {repliesOpen && comment.replies.length > 0 ? (
-                              <div className="mt-2 space-y-2 border-l border-white/10 pl-3">
+                              <div className="mt-2 space-y-2 border-l border-[var(--color-border)] pl-3">
                                 {comment.replies.map((reply) => {
                                   const replyDeleted = Boolean(reply.is_deleted);
                                   const deletingReply = deletingCommentId === reply.id;
                                   return (
-                                    <div key={reply.id} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+                                    <div key={reply.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2">
                                       <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
-                                          {!replyDeleted && reply.author_name ? <p className="text-xs font-semibold text-zinc-200">{reply.author_name}</p> : null}
-                                          <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${replyDeleted ? "italic text-zinc-500" : "text-zinc-100"}`}>{replyDeleted ? "[deleted]" : reply.body}</p>
+                                          {!replyDeleted && reply.author_name ? <p className="text-xs font-semibold text-[var(--color-text-primary)]">{reply.author_name}</p> : null}
+                                          <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${replyDeleted ? "italic text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`}>{replyDeleted ? "[deleted]" : reply.body}</p>
                                         </div>
                                         <div className="flex shrink-0 items-center gap-2">
-                                          <span className="text-[11px] text-zinc-500">{formatCommentDate(reply.created_at)}</span>
+                                          <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(reply.created_at)}</span>
                                           {!replyDeleted && currentUserId === reply.user_id ? (
-                                            <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-zinc-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
                                               {deletingReply ? "Deleting..." : "Delete"}
                                             </button>
                                           ) : null}
@@ -953,11 +953,11 @@ export default function EntryDetailPage() {
                     </ul>
                   )}
                   {commentError ? <p className="mt-2 text-xs text-rose-300">{commentError}</p> : null}
-                  <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                     {replyTarget ? (
-                      <div className="mb-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-xs text-zinc-300">
+                      <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
                         <span className="truncate">Replying to {replyTarget.author_name ?? "this thread"}</span>
-                        <button type="button" onClick={() => setReplyTargetId(null)} className="shrink-0 text-zinc-400 transition hover:text-zinc-100">Cancel</button>
+                        <button type="button" onClick={() => setReplyTargetId(null)} className="shrink-0 text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Cancel</button>
                       </div>
                     ) : null}
                     <textarea
@@ -971,7 +971,7 @@ export default function EntryDetailPage() {
                       }}
                       rows={2}
                       placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
-                      className="w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       disabled={!canComment || postingComment}
                     />
                     <div className="mt-2 flex items-center justify-end">
@@ -979,7 +979,7 @@ export default function EntryDetailPage() {
                         type="button"
                         onClick={() => void submitComment()}
                         disabled={!commentDraft.trim() || !canComment || postingComment}
-                        className="inline-flex rounded-full border border-amber-300/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
                       </button>
@@ -990,11 +990,11 @@ export default function EntryDetailPage() {
             </div>
           </div>
 
-          <div className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+          <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
             {hasPrivateBetaFeatureAccess
               ? scoreLoading
                 ? (
-                  <div className="rounded-3xl border border-white/10 bg-black/25 p-5 text-sm text-zinc-400">
+                  <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5 text-sm text-[var(--color-text-tertiary)]">
                     Calculating your palate match...
                   </div>
                 )
@@ -1010,16 +1010,16 @@ export default function EntryDetailPage() {
                     </>
                   )
                   : (
-                    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
-                      <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                    <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                         Palate match
                       </p>
-                      <h2 className="mt-2 text-lg font-semibold text-zinc-50">
+                      <h2 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
                         {isScoreProfileBuilding
                           ? "Build your palate profile"
                           : "Match score not ready yet"}
                       </h2>
-                      <p className="mt-2 text-sm text-zinc-300">
+                      <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                         {isScoreProfileBuilding
                           ? `We need at least 5 scored entries with sensory notes. You currently have ${scoreResult?.preference_event_count ?? 0}.`
                           : scoreError ??
@@ -1029,13 +1029,13 @@ export default function EntryDetailPage() {
                       <div className="mt-4 flex flex-wrap gap-3">
                         <Link
                           href="/entries/new"
-                          className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+                          className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
                         >
                           Log another wine
                         </Link>
                         <Link
                           href="/palate"
-                          className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/50 hover:text-amber-200"
+                          className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                         >
                           View palate profile
                         </Link>
@@ -1045,26 +1045,26 @@ export default function EntryDetailPage() {
               : null}
 
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Date consumed
               </p>
-              <p className="mt-1 text-lg font-semibold text-zinc-50">
+              <p className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
                 {formatConsumedDate(entry.consumed_at)}
               </p>
             </div>
 
             {isOwner || hasLocation ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Location
                 </p>
                 {hasLocation ? (
                   <div className="space-y-1">
                     {hasExpandedLocation ? (
-                      <details className="text-sm text-zinc-200">
+                      <details className="text-sm text-[var(--color-text-primary)]">
                         <summary
                           className={`cursor-pointer list-none ${
-                            hasGoogleMapsLocation ? "hover:text-amber-200" : ""
+                            hasGoogleMapsLocation ? "hover:text-[var(--color-accent-secondary)]" : ""
                           }`}
                         >
                           {hasGoogleMapsLocation ? (
@@ -1072,7 +1072,7 @@ export default function EntryDetailPage() {
                               href={locationMapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
+                              className="text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-secondary)]"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {locationDisplayLabel}
@@ -1081,57 +1081,57 @@ export default function EntryDetailPage() {
                             <span>{locationDisplayLabel}</span>
                           )}
                         </summary>
-                        <p className="mt-1 text-zinc-300">{locationText}</p>
+                        <p className="mt-1 text-[var(--color-text-secondary)]">{locationText}</p>
                       </details>
                     ) : hasGoogleMapsLocation ? (
                       <a
                         href={locationMapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-amber-300 underline decoration-amber-300/60 underline-offset-2 hover:text-amber-200"
+                        className="text-sm text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/60 underline-offset-2 hover:text-[var(--color-accent-secondary)]"
                       >
                         {locationDisplayLabel}
                       </a>
                     ) : (
-                      <p className="text-sm text-zinc-200">
+                      <p className="text-sm text-[var(--color-text-primary)]">
                         {locationDisplayLabel}
                       </p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-zinc-200">Not set</p>
+                  <p className="text-sm text-[var(--color-text-primary)]">Not set</p>
                 )}
               </div>
             ) : null}
 
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Rating
               </p>
-              <p className="mt-1 text-sm text-zinc-400">
+              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
                 <RatingBadge rating={entry.rating} />
               </p>
             </div>
 
             {isOwner || entry.qpr_level ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   QPR
                 </p>
                 {entry.qpr_level ? (
                   <QprBadge level={entry.qpr_level} className="mt-1" />
                 ) : (
-                  <p className="text-sm text-zinc-200">Not set</p>
+                  <p className="text-sm text-[var(--color-text-primary)]">Not set</p>
                 )}
               </div>
             ) : null}
 
             {isOwner || entry.country ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Country
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.country || "Not set"}
                 </p>
               </div>
@@ -1139,10 +1139,10 @@ export default function EntryDetailPage() {
 
             {isOwner || entry.region ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Region
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.region || "Not set"}
                 </p>
               </div>
@@ -1150,10 +1150,10 @@ export default function EntryDetailPage() {
 
             {isOwner || entry.appellation ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Appellation
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.appellation || "Not set"}
                 </p>
               </div>
@@ -1161,10 +1161,10 @@ export default function EntryDetailPage() {
 
             {isOwner || entry.classification ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Classification
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.classification || "Not set"}
                 </p>
               </div>
@@ -1172,10 +1172,10 @@ export default function EntryDetailPage() {
 
             {isOwner || primaryGrapeDisplay ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Primary grapes
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {primaryGrapeDisplay || "Not set"}
                 </p>
               </div>
@@ -1183,10 +1183,10 @@ export default function EntryDetailPage() {
 
             {isOwner || entry.vintage ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Vintage
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.vintage || "Not set"}
                 </p>
               </div>
@@ -1194,10 +1194,10 @@ export default function EntryDetailPage() {
 
             {isOwner || entry.notes ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Notes
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.notes || "Not set"}
                 </p>
               </div>
@@ -1206,10 +1206,10 @@ export default function EntryDetailPage() {
             {isOwner ||
             (entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0) ? (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                   Tasted with
                 </p>
-                <p className="text-sm text-zinc-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.tasted_with_user_ids && entry.tasted_with_user_ids.length > 0
                     ? entry.tasted_with_user_ids
                         .map((id) => {
@@ -1229,17 +1229,17 @@ export default function EntryDetailPage() {
             ) : null}
 
             {populatedAdvancedNotes.length > 0 ? (
-              <details className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                <summary className="cursor-pointer select-none text-sm font-medium text-zinc-200">
+              <details className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+                <summary className="cursor-pointer select-none text-sm font-medium text-[var(--color-text-primary)]">
                   Advanced notes
                 </summary>
                 <div className="mt-4 space-y-4">
                   {populatedAdvancedNotes.map((field) => (
                     <div key={field.key}>
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                         {field.label}
                       </p>
-                      <p className="text-sm text-zinc-200">
+                      <p className="text-sm text-[var(--color-text-primary)]">
                         {formatAdvancedNoteValue(field.key, field.value)}
                       </p>
                     </div>
@@ -1269,7 +1269,7 @@ export default function EntryDetailPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <Link
                     href={`/entries/${addToLogEntryId}/edit`}
-                    className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-white/30"
+                    className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                   >
                     Edit in my cellar
                   </Link>
@@ -1280,20 +1280,20 @@ export default function EntryDetailPage() {
               ) : null}
             </div>
           ) : (
-            <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-6">
+            <div className="rounded-2xl border border-[var(--color-border-accent)] bg-[var(--color-accent-primary)]/10 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-amber-100">
+                  <h2 className="text-sm font-semibold text-[var(--color-accent-secondary)]">
                     You were tagged in this tasting
                   </h2>
-                  <p className="mt-1 text-xs text-amber-100/70">
+                  <p className="mt-1 text-xs text-[var(--color-accent-secondary)]/70">
                     Add it to your cellar without creating a duplicate post in the feed.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={addingToLog}
                     onClick={async () => {
                       if (!entryId) return;
@@ -1372,24 +1372,24 @@ export default function EntryDetailPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => setShowDeleteConfirm(false)}
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#14100f] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-            <h3 className="text-lg font-semibold text-zinc-50">
+          <div className="relative w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               Delete this entry?
             </h3>
-            <p className="mt-2 text-sm text-zinc-300">
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               This action can’t be undone. The entry and its photos will be removed.
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
                 type="button"
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+                className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                 onClick={() => setShowDeleteConfirm(false)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="rounded-full bg-rose-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-rose-300"
+                className="rounded-full bg-rose-400 px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-rose-300"
                 onClick={async () => {
                   setShowDeleteConfirm(false);
                   await onDelete();

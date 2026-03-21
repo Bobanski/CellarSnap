@@ -178,7 +178,7 @@ export default function SommelierScreen() {
             value={value}
             onChangeText={setValue}
             placeholder="Ask about regions, pairings, or what you should try next..."
-            placeholderTextColor={colors.fog}
+            placeholderTextColor={colors.textTertiary}
             multiline
             maxLength={1200}
             style={styles.input}
@@ -203,7 +203,7 @@ export default function SommelierScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   flex: {
     flex: 1,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   suggestionEyebrow: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.8,
     textTransform: "uppercase",
@@ -230,13 +230,13 @@ const styles = StyleSheet.create({
   suggestionChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44,26,14,0.04)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   suggestionText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -250,22 +250,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   assistantBubble: {
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
   },
   userBubble: {
     borderColor: "rgba(123,29,58,0.3)",
     backgroundColor: "rgba(123,29,58,0.12)",
   },
   messageLabel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.8,
     textTransform: "uppercase",
     marginBottom: 8,
   },
   messageText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     lineHeight: 24,
   },
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   inputShell: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.08)",
+    borderTopColor: colors.border,
     backgroundColor: colors.limestone,
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -301,9 +301,9 @@ const styles = StyleSheet.create({
     maxHeight: 180,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.04)",
-    color: colors.terroir,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    color: colors.textPrimary,
     fontSize: 15,
     lineHeight: 22,
     paddingHorizontal: 14,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   sendButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },

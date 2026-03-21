@@ -12,6 +12,70 @@ function createFileKey(file: File) {
   return `${file.name}-${file.size}-${file.lastModified}`;
 }
 
+/**
+ * Compress an image file to JPEG at a target max dimension and quality.
+ * This keeps uploads well under Vercel's 4.5 MB body limit while
+ * retaining enough resolution for OCR (Cloud Vision or OpenAI).
+ */
+async function compressImageFile(
+  file: File,
+  maxDimension = 2048,
+  quality = 0.8
+): Promise<File> {
+  // Skip if already small enough (< 1 MB)
+  if (file.size < 1_000_000) return file;
+
+  return new Promise<File>((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        const scale = maxDimension / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file); // Fallback to original
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            resolve(file); // Keep original if compression didn't help
+            return;
+          }
+          const compressed = new File(
+            [blob],
+            file.name.replace(/\.\w+$/, ".jpg"),
+            { type: "image/jpeg", lastModified: file.lastModified }
+          );
+          resolve(compressed);
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file); // Fallback to original on error
+    };
+
+    img.src = url;
+  });
+}
+
 type ScanSourceKind = "image" | "pdf" | "url";
 
 type ScanProgressState = {
@@ -26,68 +90,53 @@ const SCAN_PROGRESS_TIMELINES: Record<
 > = {
   image: [
     {
-      until: 14,
-      label: "Uploading photos",
-      detail: "Sending your wine-list images and getting the scan started.",
-    },
-    {
-      until: 42,
+      until: 30,
       label: "Reading the list",
-      detail: "Pulling text from the photos and separating likely wine rows.",
+      detail: "Extracting text from your photo.",
     },
     {
-      until: 72,
-      label: "Cleaning up entries",
-      detail: "Filtering out headers and tightening producer, region, and varietal details.",
+      until: 70,
+      label: "Parsing wines",
+      detail: "Identifying entries, prices, and regions.",
     },
     {
       until: 94,
       label: "Scoring matches",
-      detail: "Finalizing the list and preparing your results.",
+      detail: "Computing your personalized match scores.",
     },
   ],
   pdf: [
     {
-      until: 12,
-      label: "Loading the PDF",
-      detail: "Opening the file and checking whether the text can be extracted directly.",
-    },
-    {
-      until: 38,
-      label: "Reading the wine list",
-      detail: "Pulling text from the PDF and focusing on the wine sections.",
+      until: 30,
+      label: "Reading the PDF",
+      detail: "Extracting text and finding the wine section.",
     },
     {
       until: 70,
-      label: "Structuring the entries",
-      detail: "Turning the list into bottles, vintages, prices, regions, and grapes.",
+      label: "Parsing wines",
+      detail: "Identifying entries, prices, and regions.",
     },
     {
       until: 94,
-      label: "Final checks",
-      detail: "Applying cleanup and match scoring before the results load.",
+      label: "Scoring matches",
+      detail: "Computing your personalized match scores.",
     },
   ],
   url: [
     {
-      until: 16,
+      until: 40,
       label: "Fetching the page",
-      detail: "Loading the wine-list link and finding the menu content.",
+      detail: "Loading the wine-list link.",
     },
     {
-      until: 44,
-      label: "Extracting the list",
-      detail: "Pulling the wine section out of the page and removing unrelated content.",
-    },
-    {
-      until: 74,
-      label: "Normalizing the entries",
-      detail: "Cleaning up rows and sorting bottles into the right regions and styles.",
+      until: 75,
+      label: "Parsing wines",
+      detail: "Extracting entries from the menu.",
     },
     {
       until: 94,
-      label: "Preparing results",
-      detail: "Wrapping up the scan and building the final result set.",
+      label: "Scoring matches",
+      detail: "Computing your personalized match scores.",
     },
   ],
 };
@@ -114,7 +163,7 @@ function buildScanProgress(
   elapsedMs: number
 ): ScanProgressState {
   const targetDurationMs =
-    kind === "pdf" ? 40_000 : kind === "url" ? 28_000 : 24_000;
+    kind === "image" ? 6_000 : kind === "pdf" ? 4_000 : 8_000;
   const progressCurve = 1 - Math.exp(-elapsedMs / targetDurationMs);
   const percent = Math.max(6, Math.min(99, Math.round(6 + progressCurve * 93)));
   const timeline =
@@ -235,12 +284,35 @@ export default function ListScanIntakeScreen() {
     });
   };
 
+  const clearInputs = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setSelectedImages([]);
+    setSelectedPdf(null);
+    setUrlValue("");
+    setErrorMessage(null);
+    setScanProgress(null);
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = "";
+    }
+  };
+
   const submitForm = async () => {
     const trimmedUrl = urlValue.trim();
     const formData = new FormData();
 
     if (selectedImages.length > 0) {
-      selectedImages.forEach((file) => {
+      // Compress images client-side to stay under Vercel's 4.5 MB body limit.
+      const compressed = await Promise.all(
+        selectedImages.map((file) => compressImageFile(file))
+      );
+      compressed.forEach((file) => {
         formData.append("files", file);
       });
       formData.append(
@@ -324,35 +396,42 @@ export default function ListScanIntakeScreen() {
     }
   };
 
+  const hasIntakeSelection =
+    selectedImages.length > 0 ||
+    selectedPdf !== null ||
+    Boolean(urlValue.trim()) ||
+    Boolean(errorMessage) ||
+    Boolean(scanProgress);
+
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-8 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-8 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <NavBar />
 
         <div className="mx-auto w-full max-w-3xl space-y-5">
           <header className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               List scan
             </span>
-            <h1 className="text-3xl font-semibold text-zinc-50">
+            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
               Scan or upload a wine list.
             </h1>
-            <p className="text-sm text-zinc-300">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               Upload one or more list photos, choose a PDF, or paste a public wine-list
               link.
             </p>
           </header>
 
-          <section className="space-y-5 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+          <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
             {isSignedIn === false ? (
-              <div className="rounded-2xl border border-amber-300/25 bg-amber-400/10 px-4 py-4 text-sm text-amber-50">
-                <p className="font-semibold text-amber-100">
+              <div className="rounded-2xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 px-4 py-4 text-sm text-[var(--color-text-on-accent)]">
+                <p className="font-semibold text-[var(--color-accent-secondary)]">
                   Signed-out scans stay local to this browser.
                 </p>
-                <p className="mt-1 leading-6 text-amber-50/90">
+                <p className="mt-1 leading-6 text-[var(--color-text-on-accent)]/90">
                   <Link
                     href="/login"
-                    className="underline decoration-amber-200/50 underline-offset-4"
+                    className="underline decoration-[var(--color-accent-secondary)]/50 underline-offset-4"
                   >
                     Sign in
                   </Link>{" "}
@@ -363,10 +442,10 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Upload
               </p>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--color-text-tertiary)]">
                 Use up to {LIST_SCAN_MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
               </p>
             </div>
@@ -374,7 +453,7 @@ export default function ListScanIntakeScreen() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => imageInputRef.current?.click()}
                 disabled={isSubmitting}
               >
@@ -382,7 +461,7 @@ export default function ListScanIntakeScreen() {
               </button>
               <button
                 type="button"
-                className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={() => pdfInputRef.current?.click()}
                 disabled={isSubmitting}
               >
@@ -425,7 +504,7 @@ export default function ListScanIntakeScreen() {
                 {imagePreviews.map((preview, index) => (
                   <div
                     key={preview.key}
-                    className="relative h-20 w-20 overflow-hidden rounded-2xl border border-white/10 bg-[#171210]"
+                    className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[#171210]"
                   >
                     <div
                       className="absolute inset-0 bg-cover bg-center"
@@ -449,16 +528,16 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {selectedPdf ? (
-              <div className="relative flex items-center gap-3 rounded-2xl border border-white/10 bg-[#171210] px-4 py-3">
-                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+              <div className="relative flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3">
+                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                   PDF
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-text-primary)]">
                   {selectedPdf.name}
                 </span>
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 text-xs font-bold text-zinc-200 transition hover:border-white/30"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] text-xs font-bold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                   onClick={() => setSelectedPdf(null)}
                   aria-label="Remove PDF"
                 >
@@ -468,7 +547,7 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Public wine list link
               </p>
               <input
@@ -478,7 +557,7 @@ export default function ListScanIntakeScreen() {
                   setErrorMessage(null);
                 }}
                 placeholder="https://restaurant.com/wine-list"
-                className="w-full rounded-2xl border border-white/10 bg-[#171210] px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300/60 focus:outline-none"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
               />
             </div>
 
@@ -489,27 +568,27 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {isSubmitting && scanProgress ? (
-              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-4">
+              <div className="rounded-2xl border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)]/10 px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-amber-50">
+                    <p className="text-sm font-semibold text-[var(--color-text-on-accent)]">
                       {scanProgress.label}
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-amber-50/85">
+                    <p className="mt-1 text-sm leading-6 text-[var(--color-text-on-accent)]/85">
                       {scanProgress.detail}
                     </p>
                   </div>
-                  <span className="rounded-full border border-amber-200/20 bg-black/20 px-3 py-1 text-sm font-semibold text-amber-50">
+                  <span className="rounded-full border border-[var(--color-accent-secondary)]/20 bg-[var(--color-surface-muted)] px-3 py-1 text-sm font-semibold text-[var(--color-text-on-accent)]">
                     {scanProgress.percent}%
                   </span>
                 </div>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-black/20">
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-200 via-amber-300 to-emerald-300 transition-[width] duration-700 ease-out"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-secondary)] via-[var(--color-accent-secondary)] to-emerald-300 transition-[width] duration-700 ease-out"
                     style={{ width: `${scanProgress.percent}%` }}
                   />
                 </div>
-                <p className="mt-3 text-xs text-amber-50/75">
+                <p className="mt-3 text-xs text-[var(--color-text-on-accent)]/75">
                   Longer PDFs and multi-page lists can take a little while, but the scan is still running.
                 </p>
               </div>
@@ -523,16 +602,18 @@ export default function ListScanIntakeScreen() {
                   isSubmitting ||
                   (selectedImages.length === 0 && !selectedPdf && !urlValue.trim())
                 }
-                className="rounded-full bg-amber-400 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Scanning..." : "Scan list"}
               </button>
-              <Link
-                href="/"
-                className="inline-flex rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              <button
+                type="button"
+                onClick={clearInputs}
+                disabled={isSubmitting || !hasIntakeSelection}
+                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Back to Home
-              </Link>
+                Clear
+              </button>
             </div>
           </section>
         </div>

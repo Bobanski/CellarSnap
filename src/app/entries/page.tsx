@@ -141,9 +141,9 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
   return (
     <Link
       href={`/entries/${entry.id}`}
-      className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
     >
-      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
         {entry.label_image_url ? (
           <Photo
             src={entry.label_image_url}
@@ -160,10 +160,10 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
         <div>
           <div className="flex items-start justify-between gap-2">
             {entry.wine_name ? (
-              <h2 className="text-lg font-semibold text-zinc-50">{entry.wine_name}</h2>
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{entry.wine_name}</h2>
             ) : <span />}
             {commentCount != null && commentCount > 0 ? (
-              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-zinc-500">
+              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[var(--color-text-tertiary)]">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true"><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
                 <span className="text-[11px] tabular-nums">{commentCount}</span>
               </span>
@@ -179,25 +179,25 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
               return null;
             }
             return (
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-[var(--color-text-tertiary)]">
                 {producer ?? ""}
                 {producer && entry.vintage ? (
-                  <span className="text-zinc-500">{" · "}{entry.vintage}</span>
+                  <span className="text-[var(--color-text-tertiary)]">{" · "}{entry.vintage}</span>
                 ) : entry.vintage ? (
-                  <span className="text-zinc-500">{entry.vintage}</span>
+                  <span className="text-[var(--color-text-tertiary)]">{entry.vintage}</span>
                 ) : null}
               </p>
             );
           })()}
           {[entry.country, entry.region, entry.appellation].filter(Boolean).length > 0 ? (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               {[entry.country, entry.region, entry.appellation]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
           ) : null}
         </div>
-        <div className="mt-2 flex items-start justify-between gap-2 text-xs text-zinc-400">
+        <div className="mt-2 flex items-start justify-between gap-2 text-xs text-[var(--color-text-tertiary)]">
           {((typeof entry.rating === "number" && !Number.isNaN(entry.rating)) ||
             entry.qpr_level) ? (
             <div className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
@@ -513,22 +513,22 @@ export default function EntriesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             My library
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             Curate your cellar library.
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Organize bottles by region, vintage, or varietal while keeping your filters.
           </p>
         </header>
 
-        <section className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -536,13 +536,13 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("sort")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "sort"
-                    ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                    : "border-white/10 text-zinc-200 hover:border-white/30"
+                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                    : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "sort"}
               >
                 <span className="font-semibold">Sort</span>
-                <span className="hidden text-xs text-zinc-400 sm:inline">
+                <span className="hidden text-xs text-[var(--color-text-tertiary)] sm:inline">
                   {sortSummary}
                 </span>
                 <svg
@@ -561,13 +561,13 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("filter")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "filter"
-                    ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                    : "border-white/10 text-zinc-200 hover:border-white/30"
+                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                    : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "filter"}
               >
                 <span className="font-semibold">Filter</span>
-                <span className="hidden text-xs text-zinc-400 sm:inline">
+                <span className="hidden text-xs text-[var(--color-text-tertiary)] sm:inline">
                   {filterSummary}
                 </span>
                 <svg
@@ -586,13 +586,13 @@ export default function EntriesPage() {
                 onClick={() => toggleControlPanel("organize")}
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
                   activeControlPanel === "organize"
-                    ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                    : "border-white/10 text-zinc-200 hover:border-white/30"
+                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                    : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
                 }`}
                 aria-expanded={activeControlPanel === "organize"}
               >
                 <span className="font-semibold">Organize</span>
-                <span className="hidden text-xs text-zinc-400 sm:inline">
+                <span className="hidden text-xs text-[var(--color-text-tertiary)] sm:inline">
                   {organizeSummary}
                 </span>
                 <svg
@@ -617,30 +617,30 @@ export default function EntriesPage() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search wine, producer, region, or varietal"
-                className="w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none"
+                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
               />
               {isSearchActive ? (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="shrink-0 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 hover:text-zinc-100"
+                  className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
                 >
                   Clear
                 </button>
               ) : null}
             </div>
 
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-[var(--color-text-tertiary)]">
               {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
             </span>
           </div>
 
           {activeControlPanel ? (
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-black/25 p-4">
               {activeControlPanel === "sort" ? (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                       Sort by
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -655,8 +655,8 @@ export default function EntriesPage() {
                           onClick={() => setSortBy(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             sortBy === option.value
-                              ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                              : "border-white/10 text-zinc-300 hover:border-white/30"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           {option.label}
@@ -666,7 +666,7 @@ export default function EntriesPage() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                       Order
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -677,8 +677,8 @@ export default function EntriesPage() {
                           onClick={() => setSortOrder(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             sortOrder === option.value
-                              ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                              : "border-white/10 text-zinc-300 hover:border-white/30"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           {option.label}
@@ -692,7 +692,7 @@ export default function EntriesPage() {
               {activeControlPanel === "filter" ? (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                       Filter by
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -708,8 +708,8 @@ export default function EntriesPage() {
                           onClick={() => updateFilterType(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             filterType === option.value
-                              ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                              : "border-white/10 text-zinc-300 hover:border-white/30"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           {option.label}
@@ -720,11 +720,11 @@ export default function EntriesPage() {
 
                   {filterType === "country" ? (
                     <div className="max-w-xs">
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                         Country
                       </label>
                       <select
-                        className="select-field w-full rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                        className="select-field w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                         value={filterValue}
                         onChange={(event) => setFilterValue(event.target.value)}
                       >
@@ -740,12 +740,12 @@ export default function EntriesPage() {
 
                   {filterType === "rating" || filterType === "vintage" ? (
                     <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                         {filterType === "rating" ? "Rating range" : "Vintage range"}
                       </label>
                       <div className="flex flex-wrap items-center gap-2">
                         <input
-                          className="w-28 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                           type="number"
                           inputMode="numeric"
                           placeholder="Min"
@@ -753,7 +753,7 @@ export default function EntriesPage() {
                           onChange={(event) => setFilterMin(event.target.value)}
                         />
                         <input
-                          className="w-28 rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-zinc-200 focus:border-amber-300 focus:outline-none"
+                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                           type="number"
                           inputMode="numeric"
                           placeholder="Max"
@@ -769,7 +769,7 @@ export default function EntriesPage() {
               {activeControlPanel === "organize" ? (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                       Library view
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -783,8 +783,8 @@ export default function EntriesPage() {
                           onClick={() => setLibraryViewMode(option.value)}
                           className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                             libraryViewMode === option.value
-                              ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                              : "border-white/10 text-zinc-300 hover:border-white/30"
+                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           {option.label}
@@ -795,7 +795,7 @@ export default function EntriesPage() {
 
                   {libraryViewMode === "grouped" ? (
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                         Group by
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -813,8 +813,8 @@ export default function EntriesPage() {
                             }}
                             className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                               groupScheme === option.value
-                                ? "border-amber-300/70 bg-amber-300/15 text-amber-100"
-                                : "border-white/10 text-zinc-300 hover:border-white/30"
+                                ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
+                                : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                             }`}
                           >
                             {option.label}
@@ -830,7 +830,7 @@ export default function EntriesPage() {
         </section>
 
         {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             Loading your library...
           </div>
         ) : errorMessage ? (
@@ -838,7 +838,7 @@ export default function EntriesPage() {
             {errorMessage}
           </div>
         ) : sortedEntries.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             <p>
               {isSearchActive
                 ? hasMore
@@ -857,7 +857,7 @@ export default function EntriesPage() {
                 type="button"
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="mt-4 inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                className="mt-4 inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
               >
                 {loadingMore ? "Loading..." : "Load more"}
               </button>
@@ -875,12 +875,12 @@ export default function EntriesPage() {
                   return (
                     <section
                       key={group.id}
-                      className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4"
                     >
                       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <h2 className="text-lg font-semibold text-zinc-50">{group.label}</h2>
-                          <p className="text-xs text-zinc-400">
+                          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{group.label}</h2>
+                          <p className="text-xs text-[var(--color-text-tertiary)]">
                             {group.entries.length} {group.entries.length === 1 ? "entry" : "entries"}
                           </p>
                         </div>
@@ -893,7 +893,7 @@ export default function EntriesPage() {
                                 [group.id]: !prev[group.id],
                               }))
                             }
-                            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                            className="rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                           >
                             {expanded ? "Show less" : "See all"}
                           </button>
@@ -921,7 +921,7 @@ export default function EntriesPage() {
                   type="button"
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="inline-flex rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:opacity-50"
+                  className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                 >
                   {loadingMore ? "Loading..." : "Load more"}
                 </button>

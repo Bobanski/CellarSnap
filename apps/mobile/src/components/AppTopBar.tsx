@@ -464,7 +464,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={alertsOpen ? "Close alerts" : "Open alerts"}
           >
-            <Feather name="bell" size={16} color={colors.terroir} />
+            <Feather name="bell" size={16} color={colors.textPrimary} />
             {alertCount > 0 ? (
               <View style={styles.alertBadge}>
                 <AppText style={styles.alertBadgeText}>
@@ -480,7 +480,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
           >
-            <Feather name={menuOpen ? "x" : "menu"} size={18} color={colors.terroir} />
+            <Feather name={menuOpen ? "x" : "menu"} size={18} color={colors.textPrimary} />
           </Pressable>
         </View>
       </View>
@@ -495,7 +495,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
           </View>
           {alertsLoading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={colors.grenache} />
+              <ActivityIndicator color={colors.accentPrimary} />
             </View>
           ) : alertsError ? (
             <AppText style={styles.panelError}>{alertsError}</AppText>
@@ -636,7 +636,7 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
 const styles = StyleSheet.create({
   container: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.06)",
+    borderBottomColor: colors.border,
     paddingBottom: 12,
     gap: 10,
     position: "relative",
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brand: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: "700",
   },
@@ -660,12 +660,12 @@ const styles = StyleSheet.create({
   },
   newBtn: {
     borderRadius: 999,
-    backgroundColor: colors.grenache,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   newBtnText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     right: -3,
     top: -5,
     borderRadius: 999,
-    backgroundColor: colors.grenache,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: 4,
     minWidth: 16,
     height: 16,
@@ -692,15 +692,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   alertBadgeText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 9,
     fontWeight: "800",
   },
   panel: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
     padding: 10,
     gap: 8,
   },
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 40,
-    shadowColor: colors.terroir,
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.15,
     shadowRadius: 22,
     shadowOffset: {
@@ -725,12 +725,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   panelTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
   panelAction: {
-    color: colors.rose,
+    color: colors.accentSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   panelEmpty: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   alertList: {
@@ -752,8 +752,8 @@ const styles = StyleSheet.create({
   alertRow: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.04)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     padding: 9,
     gap: 7,
   },
@@ -771,20 +771,20 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   alertLabel: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     lineHeight: 17,
   },
   alertActor: {
-    color: colors.rose,
+    color: colors.accentSecondary,
     fontWeight: "700",
   },
   alertWineName: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontWeight: "600",
   },
   alertDate: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   alertDismissButton: {
@@ -792,13 +792,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   alertDismissButtonText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -825,23 +825,23 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.18)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   actionGhostText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
   actionAmber: {
     borderRadius: 999,
-    backgroundColor: colors.grenache,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   actionAmberText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   menuItem: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
+    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -860,12 +860,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(123,29,58,0.14)",
   },
   menuItemText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
   menuItemTextActive: {
-    color: colors.grenache,
+    color: colors.accentPrimary,
   },
   menuLegalRow: {
     paddingTop: 2,
@@ -874,14 +874,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   menuLegalLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",
     fontWeight: "600",
   },
   menuLegalSeparator: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
   },

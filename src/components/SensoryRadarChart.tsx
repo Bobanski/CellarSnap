@@ -39,19 +39,19 @@ export default function SensoryRadarChart({
   const rings = [1, 2, 3, 4, 5];
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
+    <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
             Sensory map
           </p>
-          <p className="mt-1 text-sm text-zinc-300">
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Very Low to Very High labels are grouped into broader tasting dimensions.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
           <span className="inline-flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-accent-primary)]" />
             {wineLabel}
           </span>
           <span className="inline-flex items-center gap-2">
@@ -61,7 +61,7 @@ export default function SensoryRadarChart({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-white/5 bg-[#0c0807] px-2 py-2">
+      <div className="mt-4 rounded-2xl border border-white/5 bg-[var(--color-screen-bg)] px-2 py-2">
         <svg
           viewBox={`0 0 ${size} ${size}`}
           role="img"

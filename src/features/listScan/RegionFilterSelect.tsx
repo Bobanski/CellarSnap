@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ListScanRegionGroup } from "@shared";
+import {
+  getListScanRegionSelectionState,
+  type ListScanRegionGroup,
+} from "@shared";
 
 type RegionFilterSelectProps = {
   regionGroups: ListScanRegionGroup[];
@@ -15,20 +18,25 @@ function buildRegionSummary(
   regionGroups: ListScanRegionGroup[],
   selected: string[]
 ) {
-  const allRegions = regionGroups.flatMap((g) => [
-    g.country,
-    ...g.subRegions,
-  ]);
-  if (allRegions.length === 0) {
+  if (regionGroups.length === 0) {
     return "No options found";
   }
-  if (selected.length === 0) {
+  const { country, subRegions } = getListScanRegionSelectionState(
+    selected,
+    regionGroups
+  );
+  if (!country) {
     return "All available";
   }
-  if (selected.length <= 2) {
-    return selected.join(", ");
+  if (subRegions.length === 0) {
+    return country;
   }
-  return `${selected.slice(0, 2).join(", ")} +${selected.length - 2}`;
+  if (subRegions.length <= 2) {
+    return `${country}, ${subRegions.join(", ")}`;
+  }
+  return `${country}, ${subRegions.slice(0, 2).join(", ")} +${
+    subRegions.length - 2
+  }`;
 }
 
 export default function RegionFilterSelect({
@@ -39,7 +47,6 @@ export default function RegionFilterSelect({
   onOpenChange,
 }: RegionFilterSelectProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
 
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -48,51 +55,40 @@ export default function RegionFilterSelect({
     () => buildRegionSummary(regionGroups, selected),
     [regionGroups, selected]
   );
-
-  const selectedSet = useMemo(() => new Set(selected), [selected]);
-
-  const getSelectableRegions = (group: ListScanRegionGroup) =>
-    group.subRegions.length > 0 ? group.subRegions : [group.country];
-
-  const isCountryFullySelected = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
-    return regions.every((r) => selectedSet.has(r));
-  };
-
-  const isCountryPartiallySelected = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
-    return regions.some((r) => selectedSet.has(r)) && !isCountryFullySelected(group);
-  };
+  const selectionState = useMemo(
+    () => getListScanRegionSelectionState(selected, regionGroups),
+    [regionGroups, selected]
+  );
+  const selectedCountry = selectionState.country;
+  const selectedSubRegions = selectionState.subRegions;
+  const expandedGroup = selectionState.countryGroup;
 
   const handleCountryPress = (group: ListScanRegionGroup) => {
-    const regions = getSelectableRegions(group);
-
-    if (expandedCountry === group.country) {
-      // Already expanded - deselect all regions under this country and collapse
-      const toRemove = new Set(regions);
-      onChange(selected.filter((r) => !toRemove.has(r)));
-      setExpandedCountry(null);
-    } else {
-      // Expand and select all regions under this country
-      const newSelected = new Set(selected);
-      regions.forEach((r) => newSelected.add(r));
-      onChange(Array.from(newSelected));
-      setExpandedCountry(group.country);
+    if (selectedCountry === group.country) {
+      onChange([]);
+      return;
     }
+
+    onChange([group.country]);
   };
 
   const handleSubRegionToggle = (region: string) => {
-    if (selectedSet.has(region)) {
-      onChange(selected.filter((r) => r !== region));
+    if (!selectedCountry) {
+      return;
+    }
+
+    if (selectedSubRegions.includes(region)) {
+      onChange([
+        selectedCountry,
+        ...selectedSubRegions.filter((value) => value !== region),
+      ]);
     } else {
-      onChange([...selected, region]);
+      onChange([selectedCountry, ...selectedSubRegions, region]);
     }
   };
 
-  const expandedGroup = regionGroups.find((g) => g.country === expandedCountry);
-
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-white/10 bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -100,14 +96,14 @@ export default function RegionFilterSelect({
         aria-expanded={open}
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-tertiary)]">
             Region
           </span>
-          <span className="mt-1 block truncate text-sm font-semibold text-zinc-100">
+          <span className="mt-1 block truncate text-sm font-semibold text-[var(--color-text-primary)]">
             {summary}
           </span>
         </span>
-        <span className="text-sm font-semibold text-zinc-300">
+        <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
           {open ? "v" : ">"}
         </span>
       </button>
@@ -119,19 +115,10 @@ export default function RegionFilterSelect({
               {/* Country chips */}
               <div className="flex flex-wrap gap-2">
                 {regionGroups.map((group) => {
-                  const isExpanded = expandedCountry === group.country;
-                  const fullySelected = isCountryFullySelected(group);
-                  const partiallySelected = isCountryPartiallySelected(group);
-
-                  let chipClasses =
-                    "border border-white/10 text-zinc-200 hover:border-white/25";
-                  if (isExpanded || fullySelected) {
-                    chipClasses =
-                      "border border-emerald-400/50 bg-emerald-400/12 text-emerald-200";
-                  } else if (partiallySelected) {
-                    chipClasses =
-                      "border border-emerald-400/25 bg-emerald-400/6 text-emerald-300/80";
-                  }
+                  const isActive = selectedCountry === group.country;
+                  const chipClasses = isActive
+                    ? "border border-emerald-400/50 bg-emerald-400/12 text-emerald-200"
+                    : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-white/25";
 
                   return (
                     <button
@@ -151,12 +138,15 @@ export default function RegionFilterSelect({
                 })}
               </div>
 
-              {/* Sub-regions for expanded country */}
-              {expandedGroup && expandedGroup.subRegions.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#171210] p-2">
+              {/* Sub-regions for selected country */}
+              {selectedCountry && expandedGroup && expandedGroup.subRegions.length > 0 ? (
+                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[#171210] p-2">
+                  <div className="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
+                    Regions in {selectedCountry}
+                  </div>
                   <div className="flex max-h-[120px] flex-col flex-wrap gap-1.5">
                     {expandedGroup.subRegions.map((region) => {
-                      const isSelected = selectedSet.has(region);
+                      const isSelected = selectedSubRegions.includes(region);
                       return (
                         <button
                           key={region}
@@ -164,7 +154,7 @@ export default function RegionFilterSelect({
                           className={`w-[140px] shrink-0 rounded-xl border px-2.5 py-1.5 text-left text-xs transition ${
                             isSelected
                               ? "border-emerald-400/40 bg-emerald-400/12 text-emerald-200"
-                              : "border-white/10 bg-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/8"
+                              : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-secondary)] hover:border-white/20 hover:bg-white/8"
                           }`}
                           onClick={() => handleSubRegionToggle(region)}
                         >
@@ -174,10 +164,14 @@ export default function RegionFilterSelect({
                     })}
                   </div>
                 </div>
+              ) : !selectedCountry ? (
+                <p className="text-sm text-[var(--color-text-tertiary)]">
+                  Select a country to reveal its regions.
+                </p>
               ) : null}
             </>
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[var(--color-text-tertiary)]">
               No regions were parsed from this list.
             </p>
           )}
@@ -185,7 +179,7 @@ export default function RegionFilterSelect({
           <div className="flex justify-end">
             <button
               type="button"
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
+              className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               onClick={() => setOpen(false)}
             >
               Done

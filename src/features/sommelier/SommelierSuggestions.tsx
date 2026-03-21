@@ -19,7 +19,7 @@ export default function SommelierSuggestions({
           key={suggestion}
           type="button"
           onClick={() => onSelect(suggestion)}
-          className="rounded-full border border-white/12 bg-white/5 px-4 py-2 text-left text-sm text-zinc-200 transition hover:border-amber-300/40 hover:bg-amber-300/10 hover:text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-300/40"
+          className="rounded-full border border-white/12 bg-[var(--color-surface-primary)]/10 px-4 py-2 text-left text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-primary)]/10 hover:text-[var(--color-text-on-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
         >
           {suggestion}
         </button>

@@ -2114,7 +2114,7 @@ export default function NewEntryScreen() {
             {uploadMessage ? (
               uploadAnalysisStatus === "loading" ? (
                 <View style={styles.uploadLoadingRow}>
-                  <ActivityIndicator size="small" color={colors.grenache} />
+                  <ActivityIndicator size="small" color={colors.accentPrimary} />
                   <AppText style={styles.uploadLoadingText}>{uploadMessage}</AppText>
                 </View>
               ) : (
@@ -2203,7 +2203,7 @@ export default function NewEntryScreen() {
                             }
                           }}
                           placeholder="Stuytown tasting"
-                          placeholderTextColor={colors.fog}
+                          placeholderTextColor={colors.textSecondary}
                           autoCorrect={false}
                           style={[
                             styles.input,
@@ -2242,7 +2242,7 @@ export default function NewEntryScreen() {
                             autoCapitalize="words"
                             autoCorrect={false}
                             placeholder="Search places"
-                            placeholderTextColor={colors.fog}
+                            placeholderTextColor={colors.textSecondary}
                             style={styles.input}
                           />
                           {isLocationFocused && locationSuggestions.length > 0 ? (
@@ -2335,7 +2335,7 @@ export default function NewEntryScreen() {
                               value={friendSearch}
                               onChangeText={setFriendSearch}
                               placeholder="Search friends"
-                              placeholderTextColor={colors.fog}
+                              placeholderTextColor={colors.textSecondary}
                               autoCapitalize="none"
                               autoCorrect={false}
                               style={styles.input}
@@ -2422,7 +2422,7 @@ export default function NewEntryScreen() {
                           }
                         }}
                         placeholder="Past 2 weeks"
-                        placeholderTextColor={colors.fog}
+                        placeholderTextColor={colors.textSecondary}
                         autoCorrect={false}
                         style={[
                           styles.input,
@@ -2514,7 +2514,7 @@ export default function NewEntryScreen() {
                 {bulkCreateMessage ? (
                   isBulkCreating ? (
                     <View style={styles.uploadLoadingRow}>
-                      <ActivityIndicator size="small" color={colors.grenache} />
+                      <ActivityIndicator size="small" color={colors.accentPrimary} />
                       <AppText style={styles.uploadLoadingText}>{bulkCreateMessage}</AppText>
                     </View>
                   ) : (
@@ -2566,11 +2566,11 @@ export default function NewEntryScreen() {
                   value={form.drinking_now}
                   onValueChange={(value) => updateField("drinking_now", value)}
                   trackColor={{
-                    false: "rgba(44,26,14,0.16)",
+                    false: colors.borderStrong,
                     true: "rgba(123,29,58,0.38)",
                   }}
-                  thumbColor={form.drinking_now ? colors.info : colors.white}
-                  ios_backgroundColor="rgba(44,26,14,0.16)"
+                  thumbColor={form.drinking_now ? colors.info : colors.surfaceRaised}
+                  ios_backgroundColor={colors.borderStrong}
                 />
               </View>
 
@@ -2685,7 +2685,7 @@ export default function NewEntryScreen() {
                         ? "Search primary grapes"
                         : "Maximum primary grapes selected"
                     }
-                    placeholderTextColor={colors.fog}
+                    placeholderTextColor={colors.textSecondary}
                     style={styles.input}
                   />
                   {isPrimaryGrapeLoading ? (
@@ -2751,7 +2751,7 @@ export default function NewEntryScreen() {
                         autoCapitalize="words"
                         autoCorrect={false}
                         placeholder="Search places"
-                        placeholderTextColor={colors.fog}
+                        placeholderTextColor={colors.textSecondary}
                         style={styles.input}
                       />
                       {isLocationFocused && locationSuggestions.length > 0 ? (
@@ -2931,7 +2931,7 @@ export default function NewEntryScreen() {
                   disabled={isSubmitting || isBulkCreating}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color={colors.champagne} />
+                    <ActivityIndicator color={colors.screenBg} />
                   ) : (
                     <AppText style={styles.submitButtonText}>Save entry</AppText>
                   )}
@@ -3014,7 +3014,7 @@ export default function NewEntryScreen() {
             >
               {cropSourceLoading ? (
                 <View style={styles.cropFrameLoading}>
-                  <ActivityIndicator size="small" color={colors.grenache} />
+                  <ActivityIndicator size="small" color={colors.accentPrimary} />
                   <AppText style={styles.cropFrameHint}>Loading image...</AppText>
                 </View>
               ) : activeCropPhotoSourceUri ? (
@@ -3063,7 +3063,7 @@ export default function NewEntryScreen() {
                 disabled={isSavingCrop || cropSourceLoading || !activeCropPhoto}
               >
                 {isSavingCrop ? (
-                  <ActivityIndicator color={colors.champagne} />
+                  <ActivityIndicator color={colors.screenBg} />
                 ) : (
                   <AppText style={styles.submitButtonText}>Save crop</AppText>
                 )}

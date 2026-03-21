@@ -16,7 +16,7 @@ import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 
-const INPUT_SELECTION_COLOR = colors.fog;
+const INPUT_SELECTION_COLOR = colors.textSecondary;
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ email?: string }>();
@@ -156,7 +156,7 @@ export default function ResetPasswordScreen() {
                       selectionColor={INPUT_SELECTION_COLOR}
                       keyboardType="email-address"
                       placeholder="you@example.com"
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textTertiary}
                       style={styles.input}
                     />
                   </View>
@@ -173,7 +173,7 @@ export default function ResetPasswordScreen() {
                       selectionColor={INPUT_SELECTION_COLOR}
                       keyboardType="number-pad"
                       placeholder="6-digit code"
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textTertiary}
                       style={styles.input}
                     />
                     <View style={styles.resendRow}>
@@ -199,7 +199,7 @@ export default function ResetPasswordScreen() {
                     textContentType="newPassword"
                     selectionColor={INPUT_SELECTION_COLOR}
                     placeholder="At least 8 characters"
-                    placeholderTextColor={colors.fog}
+                    placeholderTextColor={colors.textTertiary}
                     style={styles.passwordInput}
                   />
                   <Pressable
@@ -223,7 +223,7 @@ export default function ResetPasswordScreen() {
                   textContentType="newPassword"
                   selectionColor={INPUT_SELECTION_COLOR}
                   placeholder="Repeat password"
-                  placeholderTextColor={colors.fog}
+                  placeholderTextColor={colors.textTertiary}
                   style={styles.input}
                 />
               </View>
@@ -257,7 +257,7 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   blobTop: {
     position: "absolute",
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     width: 360,
     height: 360,
     borderRadius: 180,
-    backgroundColor: "rgba(74, 48, 96, 0.08)",
+    backgroundColor: colors.accentSoft,
   },
   scrollContent: {
     flexGrow: 1,
@@ -289,8 +289,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(44, 26, 14, 0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 20,
     paddingVertical: 22,
     shadowColor: colors.shadowColor,
@@ -311,24 +311,24 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 30,
     fontWeight: "700",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   loadingText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
   },
   formField: {
     gap: 6,
   },
   label: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.inputBorder,
     backgroundColor: colors.inputBg,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
@@ -347,11 +347,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resendText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   resendLink: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    color: colors.terroir,
+    color: colors.textPrimary,
     paddingVertical: 10,
     fontSize: 14,
   },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   passwordToggleText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 0.8,
     fontWeight: "700",
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     minHeight: 46,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backLink: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: "uppercase",

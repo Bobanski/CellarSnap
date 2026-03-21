@@ -338,10 +338,10 @@ export default function FriendProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
             Loading profile...
           </div>
         </div>
@@ -351,11 +351,11 @@ export default function FriendProfilePage() {
 
   if (errorMessage || !profile) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
           <Link
-            className="text-sm font-medium text-zinc-300 hover:text-zinc-50"
+            className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             href="/friends"
           >
             ← Back to Friends
@@ -369,22 +369,22 @@ export default function FriendProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <NavBar />
         <header className="space-y-2">
           <Link
-            className="accent-link-hover inline-block text-sm font-medium text-zinc-400"
+            className="accent-link-hover inline-block text-sm font-medium text-[var(--color-text-tertiary)]"
             href="/friends"
           >
             ← Back to Friends
           </Link>
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             {isOwnProfile ? "Your profile" : "Profile"}
           </span>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/30 ring-2 ring-white/5 sm:h-16 sm:w-16">
+              <div className="flex h-14 w-14 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] ring-2 ring-white/5 sm:h-16 sm:w-16">
                 {profile.avatar_url ? (
                   <AppImage
                     src={profile.avatar_url}
@@ -392,19 +392,19 @@ export default function FriendProfilePage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center text-lg font-medium text-zinc-500 sm:text-xl">
+                  <span className="flex h-full w-full items-center justify-center text-lg font-medium text-[var(--color-text-tertiary)] sm:text-xl">
                     {(profile.display_name ?? "?")[0].toUpperCase()}
                   </span>
                 )}
               </div>
               <div className="min-w-0">
-                <h1 className="text-3xl font-semibold text-zinc-50">
+                <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
                   {profile.display_name ?? "Unknown"}
                 </h1>
                 {fullName ? (
-                  <p className="mt-1 text-sm text-zinc-300">{fullName}</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{fullName}</p>
                 ) : null}
-                <p className="text-sm text-zinc-300">
+                <p className="text-sm text-[var(--color-text-secondary)]">
                   {isOwnProfile
                     ? "Wines you've logged and wines you've been tagged in."
                     : "Wines they've logged and wines they've been tagged in."}
@@ -424,7 +424,7 @@ export default function FriendProfilePage() {
                       type="button"
                       disabled={blockActionLoading}
                       onClick={toggleBlock}
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                      className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                     >
                       {blockActionLoading ? "Updating..." : "Unblock"}
                     </button>
@@ -434,7 +434,7 @@ export default function FriendProfilePage() {
                     {friendStatus === "friends" ? (
                       confirmingUnfriend ? (
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                          <span className="text-xs text-zinc-400">Remove friend?</span>
+                          <span className="text-xs text-[var(--color-text-tertiary)]">Remove friend?</span>
                           <button
                             type="button"
                             disabled={friendActionLoading}
@@ -447,7 +447,7 @@ export default function FriendProfilePage() {
                             type="button"
                             disabled={friendActionLoading}
                             onClick={() => setConfirmingUnfriend(false)}
-                            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                           >
                             Cancel
                           </button>
@@ -476,7 +476,7 @@ export default function FriendProfilePage() {
                               setFriendActionError(null);
                               setConfirmingUnfriend(true);
                             }}
-                            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
                           >
                             Remove
                           </button>
@@ -491,7 +491,7 @@ export default function FriendProfilePage() {
                           type="button"
                           disabled={friendActionLoading || !outgoingRequestId}
                           onClick={cancelOutgoingRequest}
-                          className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                         >
                           {friendActionLoading ? "Cancelling..." : "Cancel"}
                         </button>
@@ -519,7 +519,7 @@ export default function FriendProfilePage() {
                       type="button"
                       disabled={blockActionLoading}
                       onClick={toggleBlock}
-                      className="w-full text-right text-[11px] uppercase tracking-[0.16em] text-zinc-500 transition hover:text-zinc-200 disabled:opacity-50"
+                      className="w-full text-right text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)] disabled:opacity-50"
                     >
                       {blockActionLoading ? "Updating..." : "Block user"}
                     </button>
@@ -543,11 +543,11 @@ export default function FriendProfilePage() {
         ) : (
           <>
             <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-zinc-50">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {isOwnProfile ? "Wines you've uploaded" : "Wines they've uploaded"}
               </h2>
               {theirEntries.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-tertiary)]">
                   {isOwnProfile ? "You haven't uploaded any wines yet." : "No wines uploaded yet."}
                 </div>
               ) : (
@@ -556,9 +556,9 @@ export default function FriendProfilePage() {
                     <Link
                       key={entry.id}
                       href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                      className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
                     >
-                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
                         {entry.label_image_url ? (
                           <Photo
                             src={entry.label_image_url}
@@ -573,7 +573,7 @@ export default function FriendProfilePage() {
                       </div>
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
-                          <h3 className="font-semibold text-zinc-50">
+                          <h3 className="font-semibold text-[var(--color-text-primary)]">
                             {entry.wine_name || "Untitled wine"}
                           </h3>
                           {(() => {
@@ -590,10 +590,10 @@ export default function FriendProfilePage() {
                               return null;
                             }
                             return (
-                              <p className="text-sm text-zinc-400">
+                              <p className="text-sm text-[var(--color-text-tertiary)]">
                                 {producerLabel ?? ""}
                                 {entry.vintage ? (
-                                  <span className="text-zinc-500">
+                                  <span className="text-[var(--color-text-tertiary)]">
                                     {producerLabel ? " · " : ""}
                                     {entry.vintage}
                                   </span>
@@ -602,7 +602,7 @@ export default function FriendProfilePage() {
                             );
                           })()}
                         </div>
-                        <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                        <div className="flex items-center justify-between gap-2 text-xs text-[var(--color-text-tertiary)]">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {typeof entry.rating === "number" &&
                             !Number.isNaN(entry.rating) ? (
@@ -622,7 +622,7 @@ export default function FriendProfilePage() {
                   <button
                     type="button"
                     onClick={() => setShowAllEntries((prev) => !prev)}
-                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
+                    className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                   >
                     {showAllEntries ? "Show fewer entries" : "See all entries"}
                   </button>
@@ -631,11 +631,11 @@ export default function FriendProfilePage() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-zinc-50">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {isOwnProfile ? "Tagged entries" : "Tagged in by others"}
               </h2>
               {taggedEntries.length === 0 ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-zinc-400">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-tertiary)]">
                   {isOwnProfile
                     ? "You are not tagged in any entries yet."
                     : "Not tagged in any entries yet."}
@@ -646,9 +646,9 @@ export default function FriendProfilePage() {
                     <Link
                       key={entry.id}
                       href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                      className="group flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-amber-300/40"
+                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
                     >
-                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
                         {entry.label_image_url ? (
                           <Photo
                             src={entry.label_image_url}
@@ -663,10 +663,10 @@ export default function FriendProfilePage() {
                       </div>
                       <div className="flex flex-1 flex-col justify-between">
                         <div>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-xs text-[var(--color-text-tertiary)]">
                             Logged by {entry.author_name ?? "Unknown"}
                           </p>
-                          <h3 className="font-semibold text-zinc-50">
+                          <h3 className="font-semibold text-[var(--color-text-primary)]">
                             {entry.wine_name || "Untitled wine"}
                           </h3>
                           {(() => {
@@ -683,10 +683,10 @@ export default function FriendProfilePage() {
                               return null;
                             }
                             return (
-                              <p className="text-sm text-zinc-400">
+                              <p className="text-sm text-[var(--color-text-tertiary)]">
                                 {producerLabel ?? ""}
                                 {entry.vintage ? (
-                                  <span className="text-zinc-500">
+                                  <span className="text-[var(--color-text-tertiary)]">
                                     {producerLabel ? " · " : ""}
                                     {entry.vintage}
                                   </span>
@@ -695,7 +695,7 @@ export default function FriendProfilePage() {
                             );
                           })()}
                         </div>
-                        <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
+                        <div className="flex items-center justify-between gap-2 text-xs text-[var(--color-text-tertiary)]">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {typeof entry.rating === "number" &&
                             !Number.isNaN(entry.rating) ? (
@@ -715,7 +715,7 @@ export default function FriendProfilePage() {
                   <button
                     type="button"
                     onClick={() => setShowAllTaggedEntries((prev) => !prev)}
-                    className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-200 transition hover:border-white/30"
+                    className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                   >
                     {showAllTaggedEntries
                       ? "Show fewer tagged entries"

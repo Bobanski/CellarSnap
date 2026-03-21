@@ -137,16 +137,16 @@ function HomeReactionControls({
                 }}
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
                   names.length > 0
-                    ? "border-white/15 bg-black/30 text-zinc-200 transition hover:border-amber-300/40"
-                    : "border-white/10 bg-black/20 text-zinc-400"
+                    ? "border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-tertiary)]"
                 }`}
               >
                 <span>{emoji}</span>
-                <span className="tabular-nums text-zinc-400">{count}</span>
+                <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
               </button>
               {names.length > 0 ? (
                 <span
-                  className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#1a1412] px-2.5 py-1.5 text-[11px] text-zinc-200 shadow-lg transition-opacity ${
+                  className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${
                     showNames
                       ? "pointer-events-auto opacity-100"
                       : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"
@@ -159,7 +159,7 @@ function HomeReactionControls({
           );
         })}
         {hiddenReactionCount > 0 ? (
-          <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] text-zinc-400">
+          <span className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[11px] text-[var(--color-text-tertiary)]">
             +{hiddenReactionCount}
           </span>
         ) : null}
@@ -170,10 +170,10 @@ function HomeReactionControls({
             event.stopPropagation();
             setReactionPickerOpen((current) => !current);
           }}
-          className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-black/20 text-sm font-semibold leading-none transition ${
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
             entry.can_react
-              ? "border-white/20 text-zinc-100 hover:border-amber-300/60 hover:text-amber-200"
-              : "border-white/15 text-zinc-300 hover:border-white/40 hover:text-zinc-100"
+              ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+              : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
           }`}
           aria-label={entry.can_react ? "Add reaction" : "View reaction options"}
         >
@@ -182,7 +182,7 @@ function HomeReactionControls({
       </div>
       {reactionPickerOpen ? (
         <div
-          className="rounded-xl border border-white/10 bg-black/20 p-1.5"
+          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1.5"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -202,8 +202,8 @@ function HomeReactionControls({
                       setReactionPickerOpen(false);
                       void onToggleReaction(entry.id, emoji);
                     }}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-white/10 ${
-                      entry.my_reactions.includes(emoji) ? "bg-amber-400/20" : ""
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${
+                      entry.my_reactions.includes(emoji) ? "bg-[var(--color-accent-primary)]/20" : ""
                     }`}
                   >
                     {emoji}
@@ -213,11 +213,11 @@ function HomeReactionControls({
               return (
                 <span
                   key={`${entry.id}-picker-${emoji}`}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-white/10 bg-black/20 px-1 text-lg text-zinc-400"
+                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-1 text-lg text-[var(--color-text-tertiary)]"
                 >
                   {emoji}
                   {count > 0 ? (
-                    <span className="ml-0.5 text-[10px] font-medium text-zinc-500">
+                    <span className="ml-0.5 text-[10px] font-medium text-[var(--color-text-tertiary)]">
                       {count}
                     </span>
                   ) : null}
@@ -226,7 +226,7 @@ function HomeReactionControls({
             })}
           </div>
           {!entry.can_react ? (
-            <p className="mt-1 text-[11px] text-zinc-500">
+            <p className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">
               Reactions are not available for this post.
             </p>
           ) : null}
@@ -497,10 +497,10 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-6xl space-y-8">
           <NavBar />
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-sm text-zinc-300">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
             Loading...
           </div>
         </div>
@@ -509,16 +509,16 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-10">
         <NavBar />
 
         {/* ── Header ── */}
         <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             {isFirstTime ? "Getting started" : "Home"}
           </span>
-          <h1 className="text-3xl font-semibold text-zinc-50">
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
             {isFirstTime
               ? welcomeName
                 ? `Welcome to CellarSnap, ${welcomeName}.`
@@ -527,7 +527,7 @@ export default function HomePage() {
                 ? `Welcome back, ${welcomeName}.`
                 : "Welcome back."}
           </h1>
-          <p className="text-sm text-zinc-300">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             {isFirstTime
               ? "Your personal wine journal. Snap a label, log the moment, share with friends."
               : "What\u2019s happening in your wine world right now?"}
@@ -535,31 +535,25 @@ export default function HomePage() {
         </header>
 
         {hasPrivateBetaFeatureAccess ? (
-          <section className="rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
+          <section className="rounded-[2rem] border border-[var(--color-border)] bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_-45px_rgba(0,0,0,0.9)]">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs uppercase tracking-[0.28em] text-amber-200/70">
+                <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent-secondary)]/70">
                   New
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-zinc-50">
+                <h2 className="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">
                   Pocket Sommelier can now answer with your palate in mind.
                 </h2>
-                <p className="mt-3 text-sm leading-7 text-zinc-300">
-                  Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history alongside the structured wine knowledge base.
+                <p className="mt-3 text-sm leading-7 text-[var(--color-text-secondary)]">
+                  Ask about regions, pairing ideas, or what bottle to chase next. The chat draws on your tasting history to personalize suggestions.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/sommelier"
-                  className="rounded-full bg-amber-300 px-5 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-200"
+                  className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
                 >
                   Open Pocket Sommelier
-                </Link>
-                <Link
-                  href="/sommelier/knowledge"
-                  className="rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-white/30"
-                >
-                  Knowledge base
                 </Link>
               </div>
             </div>
@@ -567,14 +561,14 @@ export default function HomePage() {
         ) : null}
 
         {!privacyConfirmedAt ? (
-          <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
+          <section className="rounded-2xl border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
               Onboarding privacy check
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-zinc-50">
+            <h2 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
               Confirm who should see new entries by default
             </h2>
-            <p className="mt-1 text-sm text-zinc-300">
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               You can still override visibility per entry at any time.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -598,12 +592,12 @@ export default function HomePage() {
                     onClick={() => setDefaultEntryPrivacy(option.value)}
                     className={`rounded-xl border px-3 py-2 text-left transition ${
                       selected
-                        ? "border-amber-300/60 bg-amber-400/10"
-                        : "border-white/10 bg-black/20 hover:border-white/30"
+                        ? "border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-muted)] hover:border-[var(--color-border-strong)]"
                     }`}
                   >
                     <PrivacyBadge level={option.value} />
-                    <p className="mt-1 text-xs text-zinc-300">{option.description}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{option.description}</p>
                   </button>
                 );
               })}
@@ -615,7 +609,7 @@ export default function HomePage() {
               type="button"
               onClick={confirmDefaultPrivacy}
               disabled={savingPrivacyOnboarding}
-              className="mt-4 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-4 rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {savingPrivacyOnboarding
                 ? "Saving..."
@@ -626,17 +620,17 @@ export default function HomePage() {
 
         {/* ── First-time hero CTA ── */}
         {isFirstTime ? (
-          <div className="rounded-3xl border border-amber-300/30 bg-amber-400/5 p-8 text-center backdrop-blur">
-            <h2 className="text-xl font-semibold text-zinc-50">
+          <div className="rounded-3xl border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/5 p-8 text-center backdrop-blur">
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
               Record your first pour
             </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-zinc-400">
+            <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-text-tertiary)]">
               Snap a photo of the label and we&rsquo;ll autofill the details.
               Or just jot down what you&rsquo;re drinking &mdash; it only takes a moment.
             </p>
             <Link
               href="/entries/new"
-              className="mt-5 inline-block rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="mt-5 inline-block rounded-full bg-[var(--color-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               + Record a new pour
             </Link>
@@ -655,7 +649,7 @@ export default function HomePage() {
           <div className="flex flex-col items-start gap-3">
             <Link
               href="/entries/new"
-              className="inline-block rounded-full bg-amber-400/90 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="inline-block rounded-full bg-[var(--color-accent-primary)]/90 px-5 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               + Record a new pour
             </Link>
@@ -674,15 +668,15 @@ export default function HomePage() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-amber-300/70">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                   Best matches
                 </p>
-                <h2 className="mt-1 text-xl font-semibold text-zinc-50">
+                <h2 className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">
                   Your strongest recent palate hits
                 </h2>
               </div>
               {matchScoresLoading ? (
-                <p className="text-xs text-zinc-500">Refreshing scores...</p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">Refreshing scores...</p>
               ) : null}
             </div>
 
@@ -697,23 +691,23 @@ export default function HomePage() {
                   <Link
                     key={`best-match-${entry.id}`}
                     href={`/entries/${entry.id}`}
-                    className="rounded-3xl border border-amber-300/20 bg-gradient-to-br from-amber-400/12 to-transparent p-5 transition hover:border-amber-300/40"
+                    className="rounded-3xl border border-[var(--color-accent-secondary)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 transition hover:border-[var(--color-accent-secondary)]/40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                        <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                           {formatConsumedDate(entry.consumed_at)}
                         </p>
-                        <h3 className="mt-2 text-lg font-semibold text-zinc-50">
+                        <h3 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
                           {entry.wine_name || "Untitled wine"}
                         </h3>
-                        <p className="mt-1 text-sm text-zinc-400">
+                        <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
                           {entry.producer || "Unknown producer"}
                         </p>
                       </div>
                       <MatchBadge score={score.score} band={score.band} />
                     </div>
-                    <p className="mt-4 text-sm text-zinc-300">
+                    <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
                       {score.score}% match to your palate
                     </p>
                   </Link>
@@ -727,17 +721,17 @@ export default function HomePage() {
         {!isFirstTime ? (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Recent from you
               </h2>
-              <div className="inline-flex rounded-full border border-white/10 bg-black/20 p-1 text-xs">
+              <div className="inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1 text-xs">
                 <button
                   type="button"
                   onClick={() => setSortMode("recent")}
                   className={`rounded-full px-3 py-1.5 font-semibold transition ${
                     activeSortMode === "recent"
-                      ? "bg-white/10 text-zinc-100"
-                      : "text-zinc-400 hover:text-zinc-200"
+                      ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                      : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >
                   Recent
@@ -748,8 +742,8 @@ export default function HomePage() {
                     onClick={() => setSortMode("best_match")}
                     className={`rounded-full px-3 py-1.5 font-semibold transition ${
                       activeSortMode === "best_match"
-                        ? "bg-white/10 text-zinc-100"
-                        : "text-zinc-400 hover:text-zinc-200"
+                        ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                        : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                     }`}
                   >
                     Best match
@@ -770,7 +764,7 @@ export default function HomePage() {
                         now: currentTimeMs,
                       })
                         ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                        : "border-white/10 bg-white/5 hover:border-amber-300/40"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                     }`}
                     role="button"
                     tabIndex={0}
@@ -782,8 +776,8 @@ export default function HomePage() {
                       }
                     }}
                   >
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span className="font-medium text-zinc-200">You</span>
+                    <div className="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
+                      <span className="font-medium text-[var(--color-text-primary)]">You</span>
                       <div className="flex items-center gap-2">
                         {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
                           <MatchBadge
@@ -803,8 +797,8 @@ export default function HomePage() {
                             slides={entry.group_slides ?? []}
                             heightClassName="h-56"
                           />
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                            <span className="rounded-full border border-white/10 bg-black/30 px-2 py-1 font-semibold uppercase tracking-[0.14em] text-zinc-300">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
+                            <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-1 font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
                               {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
                             </span>
                             <span>Grouped bulk post</span>
@@ -812,7 +806,7 @@ export default function HomePage() {
                         </div>
                       ) : (
                         <>
-                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
                             {entry.label_image_url ? (
                               <Photo
                                 src={entry.label_image_url}
@@ -828,7 +822,7 @@ export default function HomePage() {
                           <div className="flex flex-1 flex-col justify-between">
                             <div>
                               {entry.wine_name ? (
-                                <h3 className="text-base font-semibold text-zinc-50">
+                                <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
                                   {entry.wine_name}
                                 </h3>
                               ) : null}
@@ -842,7 +836,7 @@ export default function HomePage() {
                                   return null;
                                 }
                                 return (
-                                  <p className="text-sm text-zinc-400">
+                                  <p className="text-sm text-[var(--color-text-tertiary)]">
                                     {producer ?? ""}
                                     {producer && entry.vintage
                                       ? ` \u00b7 ${entry.vintage}`
@@ -853,7 +847,7 @@ export default function HomePage() {
                                 );
                               })()}
                             </div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-text-tertiary)]">
                               {typeof entry.rating === "number" &&
                               !Number.isNaN(entry.rating) ? (
                                 <RatingBadge rating={entry.rating} variant="text" />
@@ -865,7 +859,7 @@ export default function HomePage() {
                       )}
                     </div>
                     <div
-                      className="mt-4 border-t border-white/10 pt-3"
+                      className="mt-4 border-t border-[var(--color-border)] pt-3"
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -882,7 +876,7 @@ export default function HomePage() {
 
               <Link
                 href="/entries"
-                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
+                className="inline-block text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 View my library &rarr;
               </Link>
@@ -892,34 +886,34 @@ export default function HomePage() {
 
         {/* ── Section 2: From your circle ── */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
             From your circle
           </h2>
 
           {circleEntries.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6">
               {friendCount === 0 ? (
                 <>
-                  <p className="text-sm text-zinc-300">
+                  <p className="text-sm text-[var(--color-text-secondary)]">
                     {isFirstTime
                       ? "CellarSnap is better with friends. Add the people you drink with and see what they\u2019re enjoying."
                       : "You haven\u2019t added any friends yet."}
                   </p>
                   <Link
                     href="/friends"
-                    className="mt-3 inline-block rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-amber-300/60 hover:text-amber-200"
+                    className="mt-3 inline-block rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                   >
                     Find friends
                   </Link>
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-zinc-300">
+                  <p className="text-sm text-[var(--color-text-secondary)]">
                     Your friends haven&rsquo;t posted anything yet. Check back soon!
                   </p>
                   <Link
                     href="/feed"
-                    className="mt-3 inline-block text-sm font-medium text-amber-200 transition hover:text-amber-100"
+                    className="mt-3 inline-block text-sm font-medium text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
                   >
                     Browse the public feed &rarr;
                   </Link>
@@ -939,7 +933,7 @@ export default function HomePage() {
                         now: currentTimeMs,
                       })
                         ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                        : "border-white/10 bg-white/5 hover:border-amber-300/40"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                     }`}
                     role="button"
                     tabIndex={0}
@@ -951,14 +945,14 @@ export default function HomePage() {
                       }
                     }}
                   >
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <div className="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/profile/${entry.user_id}`);
                         }}
-                        className="font-medium text-zinc-200 hover:text-amber-200"
+                        className="font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]"
                       >
                         {entry.author_name}
                       </button>
@@ -981,8 +975,8 @@ export default function HomePage() {
                             slides={entry.group_slides ?? []}
                             heightClassName="h-56"
                           />
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                            <span className="rounded-full border border-white/10 bg-black/30 px-2 py-1 font-semibold uppercase tracking-[0.14em] text-zinc-300">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
+                            <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-1 font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
                               {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
                             </span>
                             <span>Grouped bulk post</span>
@@ -990,7 +984,7 @@ export default function HomePage() {
                         </div>
                       ) : (
                         <>
-                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-zinc-400">
+                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
                             {entry.label_image_url ? (
                               <Photo
                                 src={entry.label_image_url}
@@ -1006,7 +1000,7 @@ export default function HomePage() {
                           <div className="flex flex-1 flex-col justify-between">
                             <div>
                               {entry.wine_name ? (
-                                <h3 className="text-base font-semibold text-zinc-50">
+                                <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
                                   {entry.wine_name}
                                 </h3>
                               ) : null}
@@ -1019,11 +1013,11 @@ export default function HomePage() {
                                   return null;
                                 }
                                 return (
-                                  <p className="text-sm text-zinc-400">{entry.producer}</p>
+                                  <p className="text-sm text-[var(--color-text-tertiary)]">{entry.producer}</p>
                                 );
                               })()}
                             </div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400">
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-text-tertiary)]">
                               {typeof entry.rating === "number" &&
                               !Number.isNaN(entry.rating) ? (
                                 <RatingBadge rating={entry.rating} variant="text" />
@@ -1035,7 +1029,7 @@ export default function HomePage() {
                       )}
                     </div>
                     <div
-                      className="mt-4 border-t border-white/10 pt-3"
+                      className="mt-4 border-t border-[var(--color-border)] pt-3"
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1052,7 +1046,7 @@ export default function HomePage() {
 
               <Link
                 href="/feed"
-                className="inline-block text-sm font-medium text-zinc-400 transition hover:text-amber-200"
+                className="inline-block text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
               >
                 View full feed &rarr;
               </Link>

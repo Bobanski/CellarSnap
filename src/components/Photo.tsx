@@ -26,7 +26,7 @@ export default function Photo({
       aria-busy={!loaded}
     >
       <div
-        className={`absolute inset-0 bg-white/5 transition-opacity ${
+        className={`absolute inset-0 bg-[var(--color-surface-primary)]/10 transition-opacity ${
           loaded ? "opacity-0" : "opacity-100 animate-pulse"
         }`}
         aria-hidden="true"

@@ -989,7 +989,7 @@ function FeedCard({
                 value={commentDraft}
                 onChangeText={onChangeCommentDraft}
                 placeholder={replyTargetName ? "Write a reply..." : "Write a comment..."}
-                placeholderTextColor={colors.fog}
+                placeholderTextColor={colors.textTertiary}
                 style={styles.commentInput}
                 multiline
               />
@@ -1426,7 +1426,7 @@ export default function FeedScreen() {
                   }
                 }}
                 placeholder="Search by username or name"
-                placeholderTextColor={colors.fog}
+                placeholderTextColor={colors.textTertiary}
                 style={styles.friendSearchInput}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -1583,7 +1583,7 @@ export default function FeedScreen() {
             onPress={() => void loadMore()}
           >
             {isLoadingMore ? (
-              <ActivityIndicator color={colors.champagne} />
+              <ActivityIndicator color={colors.textPrimary} />
             ) : (
               <AppText style={styles.loadMoreText}>Load more</AppText>
             )}
@@ -1657,11 +1657,11 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1682,12 +1682,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 24,
     fontWeight: "700",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -1700,7 +1700,7 @@ const styles = StyleSheet.create({
   scopePill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 13,
     paddingVertical: 9,
   },
@@ -1709,20 +1709,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,191,36,0.15)",
   },
   scopePillText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
   },
   scopePillTextActive: {
-    color: colors.terroir,
+    color: colors.textPrimary,
   },
   searchToggleButton: {
     width: 42,
     height: 42,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1731,19 +1731,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,191,36,0.15)",
   },
   searchToggleIcon: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 20,
     fontWeight: "700",
     lineHeight: 20,
   },
   searchToggleIconActive: {
-    color: colors.terroir,
+    color: colors.textPrimary,
   },
   friendSearchPanel: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 10,
     gap: 8,
   },
@@ -1756,9 +1756,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
-    color: colors.terroir,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    color: colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
@@ -1766,35 +1766,35 @@ const styles = StyleSheet.create({
   friendSearchClearButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   friendSearchClearText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
   friendSearchResultsWrap: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.03)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     overflow: "hidden",
   },
   friendSearchResultRow: {
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.06)",
+    borderBottomColor: colors.border,
   },
   friendSearchResultText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "600",
   },
   friendSearchMetaText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1822,12 +1822,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251, 113, 133, 0.12)",
   },
   moderationNoticeText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
   },
   reportModalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(44, 26, 14, 0.5)",
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
@@ -1837,19 +1837,19 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     backgroundColor: colors.limestone,
     paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 10,
   },
   reportModalTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
   reportModalSubtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   reportReasonList: {
@@ -1858,8 +1858,8 @@ const styles = StyleSheet.create({
   reportReasonRow: {
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44,26,14,0.03)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -1868,12 +1868,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,191,36,0.14)",
   },
   reportReasonText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   reportReasonTextActive: {
-    color: colors.terroir,
+    color: colors.textPrimary,
   },
   reportModalActions: {
     flexDirection: "row",
@@ -1884,12 +1884,12 @@ const styles = StyleSheet.create({
   reportModalCancelButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
   reportModalCancelText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1902,20 +1902,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   reportModalSubmitText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },
   emptyCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   emptyText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1925,8 +1925,8 @@ const styles = StyleSheet.create({
   feedCard: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 14,
     gap: 10,
   },
@@ -1957,8 +1957,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1967,19 +1967,19 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   feedAvatarFallback: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
   feedAuthorName: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
     lineHeight: 15,
     flexShrink: 1,
   },
   feedDate: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     flexShrink: 0,
   },
@@ -2000,8 +2000,8 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2015,7 +2015,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 999,
-    backgroundColor: colors.fog,
+    backgroundColor: colors.textSecondary,
   },
   feedMenuPanel: {
     position: "absolute",
@@ -2024,13 +2024,13 @@ const styles = StyleSheet.create({
     zIndex: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     backgroundColor: colors.limestone,
     minWidth: 116,
     paddingVertical: 4,
   },
   feedMenuItemText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
     paddingHorizontal: 10,
@@ -2041,19 +2041,19 @@ const styles = StyleSheet.create({
     aspectRatio: 7 / 5,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
+    borderColor: colors.border,
     overflow: "hidden",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: colors.surfacePrimary,
     position: "relative",
   },
   feedPhotoTrack: {
     flexDirection: "row",
     height: "100%",
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   feedPhotoTrackSlide: {
     height: "100%",
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
     flexShrink: 0,
   },
   feedPhotoStatic: {
@@ -2069,8 +2069,8 @@ const styles = StyleSheet.create({
     gap: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -2091,8 +2091,8 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.2)",
-    backgroundColor: "rgba(44, 26, 14, 0.12)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2103,7 +2103,7 @@ const styles = StyleSheet.create({
     right: 8,
   },
   photoNavButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 14,
@@ -2114,7 +2114,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   feedPhotoFallbackText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   photoTypeChip: {
@@ -2123,13 +2123,13 @@ const styles = StyleSheet.create({
     top: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.15)",
-    backgroundColor: "rgba(44, 26, 14, 0.12)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   photoTypeChipText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -2139,18 +2139,18 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   feedWineName: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 17,
     fontWeight: "700",
     lineHeight: 23,
   },
   feedMetaText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
   feedTastedWithText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     lineHeight: 16,
     marginTop: 4,
@@ -2206,7 +2206,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   notesText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -2217,7 +2217,7 @@ const styles = StyleSheet.create({
   },
   feedDivider: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.11)",
+    borderTopColor: colors.border,
     marginTop: 3,
     marginBottom: 2,
   },
@@ -2233,8 +2233,8 @@ const styles = StyleSheet.create({
     gap: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
@@ -2243,15 +2243,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,191,36,0.12)",
   },
   commentsButtonText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
   commentsButtonTextActive: {
-    color: colors.terroir,
+    color: colors.textPrimary,
   },
   commentsButtonCount: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -2267,13 +2267,13 @@ const styles = StyleSheet.create({
     height: 27,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.2)",
+    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(44, 26, 14, 0.08)",
+    backgroundColor: colors.surfacePrimary,
   },
   reactionAddButtonDisabled: {
-    borderColor: "rgba(44,26,14,0.1)",
+    borderColor: colors.border,
   },
   plusIcon: {
     width: 12,
@@ -2287,23 +2287,23 @@ const styles = StyleSheet.create({
     width: 12,
     height: 1.6,
     borderRadius: 999,
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   plusLineVertical: {
     position: "absolute",
     width: 1.6,
     height: 12,
     borderRadius: 999,
-    backgroundColor: colors.terroir,
+    backgroundColor: colors.surfaceRaised,
   },
   plusLineDisabled: {
-    backgroundColor: colors.fog,
+    backgroundColor: colors.textSecondary,
   },
   reactionPickerCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 9,
     gap: 8,
   },
@@ -2315,8 +2315,8 @@ const styles = StyleSheet.create({
   reactionEmojiBtn: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     width: 34,
     height: 34,
     alignItems: "center",
@@ -2333,19 +2333,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   reactionPrivateText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   commentsPanel: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 10,
     gap: 8,
   },
   commentsEmptyText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   commentList: {
@@ -2354,8 +2354,8 @@ const styles = StyleSheet.create({
   commentRow: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44,26,14,0.03)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 8,
     gap: 4,
   },
@@ -2363,14 +2363,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingLeft: 8,
     borderLeftWidth: 1,
-    borderLeftColor: "rgba(44,26,14,0.1)",
+    borderLeftColor: colors.border,
     gap: 6,
   },
   replyRow: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     padding: 7,
     gap: 3,
   },
@@ -2386,13 +2386,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   commentAuthor: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "700",
     flex: 1,
   },
   commentDate: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 10,
   },
   commentMenuWrap: {
@@ -2403,8 +2403,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2418,7 +2418,7 @@ const styles = StyleSheet.create({
     width: 2.5,
     height: 2.5,
     borderRadius: 999,
-    backgroundColor: colors.fog,
+    backgroundColor: colors.textSecondary,
   },
   commentMenuPanel: {
     position: "absolute",
@@ -2427,38 +2427,38 @@ const styles = StyleSheet.create({
     zIndex: 25,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.14)",
+    borderColor: colors.borderStrong,
     backgroundColor: colors.limestone,
     minWidth: 120,
     paddingVertical: 4,
   },
   commentMenuItemText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   commentBody: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
   },
   commentBodyDeleted: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontStyle: "italic",
   },
   replyActionButton: {
     alignSelf: "flex-start",
   },
   replyActionText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "600",
   },
   commentComposer: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.1)",
+    borderTopColor: colors.border,
     paddingTop: 8,
     gap: 8,
   },
@@ -2469,27 +2469,27 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.1)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
   replyTargetText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     flex: 1,
   },
   replyTargetCancel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "600",
   },
   commentInput: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44, 26, 14, 0.06)",
-    color: colors.terroir,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 18,
     paddingHorizontal: 10,
@@ -2510,7 +2510,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   commentSubmitButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -2526,7 +2526,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   loadMoreText: {
-    color: colors.champagne,
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
   },

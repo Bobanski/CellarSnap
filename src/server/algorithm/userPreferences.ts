@@ -4,6 +4,7 @@ import {
   SHRINKAGE_CONSTANT,
 } from "@/server/algorithm/constants";
 import type {
+  CategoricalPreferenceVector,
   SensoryAxis,
   SensoryVector,
   UserPreferenceVector,
@@ -21,10 +22,32 @@ type PreferenceSummary = {
   eventCount: number;
 };
 
+type AffinityAccumulator = {
+  weightedSum: number;
+};
+
+type CategoricalSummary = {
+  varietals: Record<string, number>;
+  regions: Record<string, number>;
+  countries: Record<string, number>;
+  eventCounts: {
+    varietal: number;
+    region: number;
+    country: number;
+  };
+};
+
 export type PreferenceSourceEntry = {
   rating: number | null;
   advanced_notes: AdvancedNotes | null;
   wine_type?: WineType | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  canonical_country?: string | null;
+  region?: string | null;
+  appellation?: string | null;
+  country?: string | null;
+  primary_grapes?: string | string[] | null;
 };
 
 const ADVANCED_NOTE_AXIS_MAP = {
@@ -35,12 +58,203 @@ const ADVANCED_NOTE_AXIS_MAP = {
   sweetness: "sweetness_perception",
 } as const;
 
+function normalizePreferenceText(value: string | null | undefined) {
+  const normalized = (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (
+    normalized === "united states" ||
+    normalized === "united states of america" ||
+    normalized === "u s" ||
+    normalized === "u s a" ||
+    normalized === "us"
+  ) {
+    return "usa";
+  }
+
+  return normalized;
+}
+
+function normalizePreferenceValues(
+  value:
+    | string
+    | Array<string | null | undefined>
+    | ReadonlyArray<string | null | undefined>
+    | null
+    | undefined
+) {
+  const rawValues = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[;,/|]/)
+      : [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  rawValues.forEach((entry) => {
+    const key = normalizePreferenceText(entry);
+    if (!key || seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    normalized.push(key);
+  });
+
+  return normalized;
+}
+
 function normalizeRatingWeight(rating: number | null) {
   if (typeof rating !== "number" || !Number.isFinite(rating)) {
     return 0.5;
   }
 
   return Math.max(0.25, Math.min(1.25, rating / 80));
+}
+
+function calculateCategoricalWeight(eventCount: number) {
+  if (eventCount <= 0) {
+    return 0;
+  }
+
+  const confidence = eventCount / (eventCount + SHRINKAGE_CONSTANT);
+  return Number((0.35 + confidence * 0.65).toFixed(3));
+}
+
+function addAffinityValue(
+  accumulator: Map<string, AffinityAccumulator>,
+  value: string,
+  weight: number
+) {
+  const current = accumulator.get(value) ?? {
+    weightedSum: 0,
+  };
+
+  current.weightedSum += weight;
+  accumulator.set(value, current);
+}
+
+function buildAffinityRecord(
+  accumulator: Map<string, AffinityAccumulator>,
+  totalWeight: number
+) {
+  const record: Record<string, number> = {};
+
+  accumulator.forEach((value, key) => {
+    if (totalWeight <= 0) {
+      return;
+    }
+
+    record[key] = Number((value.weightedSum / totalWeight).toFixed(3));
+  });
+
+  return record;
+}
+
+function buildCategoricalSummary(entries: PreferenceSourceEntry[]): CategoricalSummary {
+  const varietals = new Map<string, AffinityAccumulator>();
+  const regions = new Map<string, AffinityAccumulator>();
+  const countries = new Map<string, AffinityAccumulator>();
+  let varietalTotalWeight = 0;
+  let regionTotalWeight = 0;
+  let countryTotalWeight = 0;
+  const eventCounts = {
+    varietal: 0,
+    region: 0,
+    country: 0,
+  };
+
+  entries.forEach((entry) => {
+    const weight = normalizeRatingWeight(entry.rating);
+
+    const varietalValues = normalizePreferenceValues(entry.primary_grapes);
+    if (varietalValues.length > 0) {
+      varietalTotalWeight += weight;
+      eventCounts.varietal += 1;
+      varietalValues.forEach((value) => addAffinityValue(varietals, value, weight));
+    }
+
+    const regionValues = normalizePreferenceValues([
+      entry.canonical_sub_region,
+      entry.canonical_region,
+      entry.appellation,
+      entry.region,
+    ]);
+    if (regionValues.length > 0) {
+      regionTotalWeight += weight;
+      eventCounts.region += 1;
+      regionValues.forEach((value) => addAffinityValue(regions, value, weight));
+    }
+
+    const countryValues = normalizePreferenceValues([
+      entry.canonical_country,
+      entry.country,
+    ]);
+    if (countryValues.length > 0) {
+      countryTotalWeight += weight;
+      eventCounts.country += 1;
+      countryValues.forEach((value) => addAffinityValue(countries, value, weight));
+    }
+  });
+
+  return {
+    varietals: buildAffinityRecord(varietals, varietalTotalWeight),
+    regions: buildAffinityRecord(regions, regionTotalWeight),
+    countries: buildAffinityRecord(countries, countryTotalWeight),
+    eventCounts,
+  };
+}
+
+function mergeAffinityRecords(
+  typeRecord: Record<string, number>,
+  globalRecord: Record<string, number>,
+  shrinkageWeight: number
+) {
+  const merged: Record<string, number> = {};
+  const keys = new Set([...Object.keys(typeRecord), ...Object.keys(globalRecord)]);
+
+  keys.forEach((key) => {
+    const typeValue = typeRecord[key];
+    const globalValue = globalRecord[key];
+
+    if (typeof typeValue === "number" && typeof globalValue === "number") {
+      merged[key] = Number(
+        (typeValue * shrinkageWeight + globalValue * (1 - shrinkageWeight)).toFixed(3)
+      );
+      return;
+    }
+
+    if (typeof typeValue === "number") {
+      merged[key] = Number(typeValue.toFixed(3));
+      return;
+    }
+
+    if (typeof globalValue === "number") {
+      merged[key] = Number(globalValue.toFixed(3));
+    }
+  });
+
+  return merged;
+}
+
+function mergeCategoricalWeight(typeEventCount: number, globalEventCount: number, shrinkageWeight: number) {
+  const mergedCount =
+    typeEventCount > 0 && globalEventCount > 0
+      ? Math.round(typeEventCount * shrinkageWeight + globalEventCount * (1 - shrinkageWeight))
+      : typeEventCount > 0
+        ? typeEventCount
+        : globalEventCount;
+
+  return calculateCategoricalWeight(mergedCount);
 }
 
 function levelToValue(
@@ -179,6 +393,10 @@ export function buildUserPreferenceVector(
   const shrinkageWeight =
     typeSummary.eventCount / (typeSummary.eventCount + SHRINKAGE_CONSTANT);
 
+  const typeCategoricalSummary = buildCategoricalSummary(effectiveTypeEntries);
+  const globalCategoricalSummary =
+    typeEntries.length > 0 ? buildCategoricalSummary(entries) : typeCategoricalSummary;
+
   const sensory: Partial<SensoryVector> = {};
   const weights: Partial<Record<SensoryAxis, number>> = {};
 
@@ -210,10 +428,46 @@ export function buildUserPreferenceVector(
     weights[axis] = Number((DEFAULT_AXIS_WEIGHTS[axis] * observationWeight).toFixed(3));
   });
 
+  const categorical: CategoricalPreferenceVector = {
+    varietals: mergeAffinityRecords(
+      typeCategoricalSummary.varietals,
+      globalCategoricalSummary.varietals,
+      shrinkageWeight
+    ),
+    regions: mergeAffinityRecords(
+      typeCategoricalSummary.regions,
+      globalCategoricalSummary.regions,
+      shrinkageWeight
+    ),
+    countries: mergeAffinityRecords(
+      typeCategoricalSummary.countries,
+      globalCategoricalSummary.countries,
+      shrinkageWeight
+    ),
+    weights: {
+      varietal: mergeCategoricalWeight(
+        typeCategoricalSummary.eventCounts.varietal,
+        globalCategoricalSummary.eventCounts.varietal,
+        shrinkageWeight
+      ),
+      region: mergeCategoricalWeight(
+        typeCategoricalSummary.eventCounts.region,
+        globalCategoricalSummary.eventCounts.region,
+        shrinkageWeight
+      ),
+      country: mergeCategoricalWeight(
+        typeCategoricalSummary.eventCounts.country,
+        globalCategoricalSummary.eventCounts.country,
+        shrinkageWeight
+      ),
+    },
+  };
+
   return {
     wine_type: wineType,
     sensory,
     weights,
+    categorical,
     event_count: typeSummary.eventCount,
   };
 }

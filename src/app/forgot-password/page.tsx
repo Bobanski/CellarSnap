@@ -117,14 +117,14 @@ export default function ForgotPasswordPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
-      <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+      <div className="mx-auto w-full max-w-md space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
         <div className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-amber-300/70">
+          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Reset access
           </span>
-          <h1 className="text-2xl font-semibold text-zinc-50">Forgot your password?</h1>
-          <p className="text-sm text-zinc-300">
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Forgot your password?</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Enter your username, phone number, or email. We will send a recovery code to your phone
             (or email if your account does not have a phone number yet).
           </p>
@@ -132,14 +132,14 @@ export default function ForgotPasswordPage() {
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="text-sm font-medium text-zinc-200" htmlFor="identifier">
+            <label className="text-sm font-medium text-[var(--color-text-primary)]" htmlFor="identifier">
               Username, phone, or email
             </label>
             <input
               id="identifier"
               type="text"
               autoComplete="username"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+              className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
               placeholder="username or (555) 123-4567"
               {...register("identifier", { required: true })}
             />
@@ -150,7 +150,7 @@ export default function ForgotPasswordPage() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
             disabled={isSubmitting}
           >
             Send recovery code
@@ -160,7 +160,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center">
           <Link
             href="/login"
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 transition hover:text-amber-200"
+            className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
           >
             Back to sign in
           </Link>

@@ -104,14 +104,14 @@ export default async function SharePage({ params }: SharePageProps) {
 
   if (!share) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0f0a09] px-6 py-12 text-zinc-100">
-        <div className="w-full max-w-xl space-y-8 rounded-3xl border border-white/10 bg-black/25 p-8 text-center backdrop-blur">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-screen-bg)] px-6 py-12 text-[var(--color-text-primary)]">
+        <div className="w-full max-w-xl space-y-8 rounded-3xl border border-[var(--color-border)] bg-black/25 p-8 text-center backdrop-blur">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.35em] text-amber-300/70">
+            <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
               CellarSnap share
             </p>
-            <h1 className="text-3xl font-semibold text-zinc-50">Link expired</h1>
-            <p className="text-sm text-zinc-300">
+            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">Link expired</h1>
+            <p className="text-sm text-[var(--color-text-secondary)]">
               This share link has expired, was revoked, or is no longer available.
             </p>
           </div>
@@ -119,13 +119,13 @@ export default async function SharePage({ params }: SharePageProps) {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/login"
-              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               Sign in for more posts
             </Link>
             <Link
               href="/signup"
-              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/40"
+              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/40"
             >
               Create account
             </Link>
@@ -174,17 +174,17 @@ export default async function SharePage({ params }: SharePageProps) {
     .slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-[#0f0a09] px-6 py-10 text-zinc-100">
+    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.35em] text-amber-300/70">
+          <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
             CellarSnap share
           </p>
-          <h1 className="text-3xl font-semibold text-zinc-50">{displayTitle}</h1>
-          <p className="text-sm text-zinc-300">Read-only shared wine post</p>
+          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">{displayTitle}</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">Read-only shared wine post</p>
         </header>
 
-        <article className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+        <article className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10">
           {share.labelImageUrl ? (
             <AppImage
               src={share.labelImageUrl}
@@ -193,7 +193,7 @@ export default async function SharePage({ params }: SharePageProps) {
               loading="eager"
             />
           ) : (
-            <div className="flex h-40 items-center justify-center bg-black/35 text-xs uppercase tracking-[0.3em] text-zinc-500">
+            <div className="flex h-40 items-center justify-center bg-black/35 text-xs uppercase tracking-[0.3em] text-[var(--color-text-tertiary)]">
               No label image
             </div>
           )}
@@ -201,35 +201,35 @@ export default async function SharePage({ params }: SharePageProps) {
           <div className="space-y-5 p-6">
             <div className="flex flex-wrap items-center gap-3">
               {typeof share.rating === "number" ? (
-                <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1 text-sm font-semibold text-amber-100">
+                <span className="rounded-full border border-[var(--color-accent-secondary)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-1 text-sm font-semibold text-[var(--color-accent-secondary)]">
                   Rating {share.rating}/100
                 </span>
               ) : (
-                <span className="rounded-full border border-white/15 px-3 py-1 text-sm text-zinc-300">
+                <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-sm text-[var(--color-text-secondary)]">
                   No rating
                 </span>
               )}
-              <span className="text-sm text-zinc-400">
+              <span className="text-sm text-[var(--color-text-tertiary)]">
                 Consumed {formatConsumedDate(share.consumedAt)}
               </span>
             </div>
 
             {share.producer ? (
-              <p className="text-sm text-zinc-200">{share.producer}</p>
+              <p className="text-sm text-[var(--color-text-primary)]">{share.producer}</p>
             ) : null}
 
             {share.notes ? (
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Notes</p>
-                <p className="text-sm leading-relaxed text-zinc-200">{share.notes}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">Notes</p>
+                <p className="text-sm leading-relaxed text-[var(--color-text-primary)]">{share.notes}</p>
               </div>
             ) : null}
 
             {detailFields.length > 0 ? (
-              <div className="grid gap-3 text-sm text-zinc-300 sm:grid-cols-2">
+              <div className="grid gap-3 text-sm text-[var(--color-text-secondary)] sm:grid-cols-2">
                 {detailFields.map((field) => (
                   <p key={field.label}>
-                    <span className="text-zinc-500">{field.label}:</span>{" "}
+                    <span className="text-[var(--color-text-tertiary)]">{field.label}:</span>{" "}
                     {field.value}
                   </p>
                 ))}
@@ -238,20 +238,20 @@ export default async function SharePage({ params }: SharePageProps) {
           </div>
         </article>
 
-        <section className="rounded-2xl border border-white/10 bg-black/25 p-5 text-center">
-          <p className="text-sm text-zinc-300">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-black/25 p-5 text-center">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             Want to see more tasting details and posts on CellarSnap?
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/login"
-              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-amber-300"
+              className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
             >
               Sign in for more posts
             </Link>
             <Link
               href="/signup"
-              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/40"
+              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/40"
             >
               Create account
             </Link>

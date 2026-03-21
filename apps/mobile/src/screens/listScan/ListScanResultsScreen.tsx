@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -18,19 +17,19 @@ import {
   deriveListScanRegionGroups,
   filterListScanWines,
   formatListScanPriceDisplay,
+  getListScanStructuredMeta,
   getListScanDisplayLines,
   getListScanFilterAccentTone,
   getListScanVarietalAccentTone,
   getListScanSectionTitle,
   getTopListScanRecommendations,
   listScanWineTypeLabels,
-  LIST_SCAN_FILTERABLE_WINE_TYPES,
+  sanitizeListScanFilters,
   resolveListScanWineType,
   type ListScanFilterAccentTone,
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
-  type ListScanWineType,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -52,39 +51,8 @@ function formatPriceDisplay(value: string | null, menuLabel?: string) {
   return formatListScanPriceDisplay(value, menuLabel) ?? "-";
 }
 
-function formatWineListSubLabel(
-  varietals: string[],
-  wineType: ListScanWineType
-) {
-  if (varietals.length > 1) {
-    if (wineType === "rose") {
-      return "Rose blend";
-    }
-    if (wineType === "orange") {
-      return "Orange blend";
-    }
-    if (wineType === "red") {
-      return "Red blend";
-    }
-    if (wineType === "white") {
-      return "White blend";
-    }
-    return "Blend";
-  }
-  if (varietals[0] === "Red Blend") {
-    return "Red blend";
-  }
-  if (varietals[0] === "White Blend") {
-    return "White blend";
-  }
-  if (varietals[0] === "Rose Blend") {
-    return "Rose blend";
-  }
-  if (varietals[0] === "Orange Blend") {
-    return "Orange blend";
-  }
-  return varietals[0] || "Varietal not parsed";
-}
+const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
+const EMPTY_STRING_LIST: string[] = [];
 
 function summarizeSelectedLabels(values: string[], emptyLabel: string) {
   if (values.length === 0) {
@@ -134,12 +102,9 @@ function buildWineTypeSummary(
 }
 
 function buildMatchSummary(filters: ListScanFilters) {
-  const threshold =
-    filters.min_match_percent > 0
-      ? `Over ${filters.min_match_percent}%`
-      : "Any match";
-  const column = filters.show_match_column ? "showing % column" : "hiding % column";
-  return `${threshold}, ${column}`;
+  return filters.min_match_percent > 0
+    ? `Over ${filters.min_match_percent}%`
+    : "Any match";
 }
 
 function getSegmentToneStyles(
@@ -217,7 +182,7 @@ function countActiveFilterGroups(
   if (filters.selected_regions.length > 0) {
     count += 1;
   }
-  if (filters.min_match_percent > 0 || !filters.show_match_column) {
+  if (filters.min_match_percent > 0) {
     count += 1;
   }
 
@@ -313,18 +278,6 @@ export default function ListScanResultsScreen() {
     };
   }, [params.scanId]);
 
-  const filteredWines = useMemo(
-    () => (result ? filterListScanWines(result.wines, filters) : []),
-    [filters, result]
-  );
-  const topRecommendations = useMemo(
-    () => getTopListScanRecommendations(filteredWines, 3),
-    [filteredWines]
-  );
-  const highlightedIds = useMemo(
-    () => new Set(topRecommendations.map((wine) => wine.id)),
-    [topRecommendations]
-  );
   const derivedFacets = useMemo(
     () => (result ? deriveListScanFacets(result.wines) : null),
     [result]
@@ -337,13 +290,100 @@ export default function ListScanResultsScreen() {
     () => (result ? deriveListScanRegionGroups(result.wines) : []),
     [result]
   );
+  const visibleFilters = useMemo(
+    () =>
+      result
+        ? sanitizeListScanFilters(
+            filters,
+            derivedFacets ?? undefined,
+            regionGroups
+          )
+        : filters,
+    [derivedFacets, filters, regionGroups, result]
+  );
+  const availableWineTypes = derivedFacets?.wine_types ?? EMPTY_WINE_TYPES;
+  const availableVarietals = derivedFacets?.varietals ?? EMPTY_STRING_LIST;
+  const hasWineTypeOptions = availableWineTypes.length > 0;
+  const hasVarietalOptions = availableVarietals.length > 0;
+  const hasRegionOptions = regionGroups.length > 0;
+  const filteredWines = useMemo(
+    () => (result ? filterListScanWines(result.wines, visibleFilters) : []),
+    [result, visibleFilters]
+  );
+  const topRecommendations = useMemo(
+    () => getTopListScanRecommendations(filteredWines, 3),
+    [filteredWines]
+  );
+  const [recommendationNotes, setRecommendationNotes] = useState<Record<string, string>>({});
+  const highlightedIds = useMemo(
+    () => new Set(topRecommendations.map((wine) => wine.id)),
+    [topRecommendations]
+  );
   const activeFilterCount = useMemo(
     () =>
       derivedFacets
-        ? countActiveFilterGroups(filters, derivedFacets.wine_types)
+        ? countActiveFilterGroups(visibleFilters, availableWineTypes)
         : 0,
-    [derivedFacets, filters]
+    [availableWineTypes, derivedFacets, visibleFilters]
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+    const eligibleItems = topRecommendations.filter((wine) => wine.match_percent > 59);
+
+    if (eligibleItems.length === 0) {
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
+
+    const timeoutId = setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/api/list-scan/recommendation-notes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ items: eligibleItems }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !isActive) {
+            return;
+          }
+
+          const payload = (await response.json()) as {
+            notes?: Array<{ id: string; note: string | null }>;
+          };
+
+          if (!isActive) {
+            return;
+          }
+
+          const nextNotes: Record<string, string> = {};
+          (payload.notes ?? []).forEach((entry) => {
+            if (entry.id && typeof entry.note === "string" && entry.note.trim().length > 0) {
+              nextNotes[entry.id] = entry.note.trim();
+            }
+          });
+          setRecommendationNotes(nextNotes);
+        } catch {
+          if (isActive) {
+            setRecommendationNotes({});
+          }
+        }
+      })();
+    }, 150);
+
+    return () => {
+      isActive = false;
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [topRecommendations]);
   const filterColumns = width >= 320 ? 2 : 1;
   const collapsedFilterCardWidth =
     filterColumns === 2 ? Math.max(140, Math.floor((width - 88) / 2)) : "100%";
@@ -439,7 +479,7 @@ export default function ListScanResultsScreen() {
               onPress={toggleFiltersVisibility}
             >
               <View style={styles.filterToggleIconWrap}>
-                <Feather name="sliders" size={16} color={colors.terroir} />
+                <Feather name="sliders" size={16} color={colors.textPrimary} />
               </View>
               <AppText style={styles.filterToggleButtonText}>
                 {filtersVisible ? "Hide filters" : "Show filters"}
@@ -459,7 +499,7 @@ export default function ListScanResultsScreen() {
               <View style={[styles.filterGridItem, { width: getFilterCardWidth(priceOpen) }]}>
                 <FilterDropdown
                   label="Price"
-                  summary={buildPriceSummary(filters)}
+                  summary={buildPriceSummary(visibleFilters)}
                   open={priceOpen}
                   onToggle={() => setPriceOpen((current) => !current)}
                 >
@@ -511,7 +551,7 @@ export default function ListScanResultsScreen() {
                         }))
                       }
                       placeholder={filters.price_mode === "under" ? "Max price" : "Min price"}
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textSecondary}
                       keyboardType="decimal-pad"
                       style={styles.filterInput}
                     />
@@ -530,7 +570,7 @@ export default function ListScanResultsScreen() {
                         }))
                       }
                       placeholder={filters.price_mode === "over" ? "Min price" : "Max price"}
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textSecondary}
                       keyboardType="decimal-pad"
                       style={styles.filterInput}
                     />
@@ -538,90 +578,93 @@ export default function ListScanResultsScreen() {
                 </FilterDropdown>
               </View>
 
-              <View
-                style={[styles.filterGridItem, { width: getFilterCardWidth(wineTypeOpen) }]}
-              >
-                <FilterDropdown
-                  label="Wine type"
-                  summary={buildWineTypeSummary(
-                    filters.included_wine_types,
-                    derivedFacets?.wine_types ?? []
-                  )}
-                  open={wineTypeOpen}
-                  onToggle={() => setWineTypeOpen((current) => !current)}
+              {hasWineTypeOptions ? (
+                <View
+                  style={[styles.filterGridItem, { width: getFilterCardWidth(wineTypeOpen) }]}
                 >
-                  <View style={styles.segmentRow}>
-                    {LIST_SCAN_FILTERABLE_WINE_TYPES.map((type) => {
-                      const available = derivedFacets?.wine_types.includes(type) ?? false;
-                      const selected = filters.included_wine_types.includes(type);
-                      const toneStyles = getWineTypeSegmentToneStyles(type, selected);
-                      return (
-                        <Pressable
-                          key={type}
-                          style={[
-                            styles.segmentButton,
-                            toneStyles.button,
-                            !available ? styles.segmentButtonDisabled : null,
-                          ]}
-                          disabled={!available}
-                          onPress={() =>
-                            setFilters((current) => ({
-                              ...current,
-                              included_wine_types: current.included_wine_types.includes(type)
-                                ? current.included_wine_types.filter((value) => value !== type)
-                                : [...current.included_wine_types, type],
-                            }))
-                          }
-                        >
-                          <AppText
-                            style={[styles.segmentButtonText, toneStyles.text]}
+                  <FilterDropdown
+                    label="Wine type"
+                    summary={buildWineTypeSummary(
+                      visibleFilters.included_wine_types,
+                      availableWineTypes
+                    )}
+                    open={wineTypeOpen}
+                    onToggle={() => setWineTypeOpen((current) => !current)}
+                  >
+                    <View style={styles.segmentRow}>
+                      {availableWineTypes.map((type) => {
+                        const selected = visibleFilters.included_wine_types.includes(type);
+                        const toneStyles = getWineTypeSegmentToneStyles(type, selected);
+                        return (
+                          <Pressable
+                            key={type}
+                            style={[
+                              styles.segmentButton,
+                              toneStyles.button,
+                            ]}
+                            onPress={() =>
+                              setFilters((current) => ({
+                                ...current,
+                                included_wine_types: current.included_wine_types.includes(type)
+                                  ? current.included_wine_types.filter((value) => value !== type)
+                                  : [...current.included_wine_types, type],
+                              }))
+                            }
                           >
-                            {listScanWineTypeLabels[type]}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </FilterDropdown>
-              </View>
+                            <AppText
+                              style={[styles.segmentButtonText, toneStyles.text]}
+                            >
+                              {listScanWineTypeLabels[type]}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </FilterDropdown>
+                </View>
+              ) : null}
 
-              <View
-                style={[styles.filterGridItem, { width: getFilterCardWidth(varietalOpen) }]}
-              >
-                <FacetMultiSelect
-                  label="Varietal"
-                  placeholder="Type a varietal from this list"
-                  options={derivedFacets?.varietals ?? []}
-                  selected={filters.selected_varietals}
-                  onChange={(selected_varietals) =>
-                    setFilters((current) => ({ ...current, selected_varietals }))
-                  }
-                  getOptionTone={(option) =>
-                    getListScanVarietalAccentTone(option, varietalAccentMap)
-                  }
-                  open={varietalOpen}
-                  onOpenChange={setVarietalOpen}
-                />
-              </View>
+              {hasVarietalOptions ? (
+                <View
+                  style={[styles.filterGridItem, { width: getFilterCardWidth(varietalOpen) }]}
+                >
+                  <FacetMultiSelect
+                    label="Varietal"
+                    placeholder="Type a varietal from this list"
+                    options={availableVarietals}
+                    selected={visibleFilters.selected_varietals}
+                    onChange={(selected_varietals) =>
+                      setFilters((current) => ({ ...current, selected_varietals }))
+                    }
+                    getOptionTone={(option) =>
+                      getListScanVarietalAccentTone(option, varietalAccentMap)
+                    }
+                    open={varietalOpen}
+                    onOpenChange={setVarietalOpen}
+                  />
+                </View>
+              ) : null}
 
-              <View
-                style={[styles.filterGridItem, { width: getFilterCardWidth(regionOpen) }]}
-              >
-                <RegionFilterSelect
-                  regionGroups={regionGroups}
-                  selected={filters.selected_regions}
-                  onChange={(selected_regions) =>
-                    setFilters((current) => ({ ...current, selected_regions }))
-                  }
-                  open={regionOpen}
-                  onOpenChange={setRegionOpen}
-                />
-              </View>
+              {hasRegionOptions ? (
+                <View
+                  style={[styles.filterGridItem, { width: getFilterCardWidth(regionOpen) }]}
+                >
+                  <RegionFilterSelect
+                    regionGroups={regionGroups}
+                    selected={visibleFilters.selected_regions}
+                    onChange={(selected_regions) =>
+                      setFilters((current) => ({ ...current, selected_regions }))
+                    }
+                    open={regionOpen}
+                    onOpenChange={setRegionOpen}
+                  />
+                </View>
+              ) : null}
 
               <View style={[styles.filterGridItem, { width: getFilterCardWidth(matchOpen) }]}>
                 <FilterDropdown
                   label="Match"
-                  summary={buildMatchSummary(filters)}
+                  summary={buildMatchSummary(visibleFilters)}
                   open={matchOpen}
                   onToggle={() => setMatchOpen((current) => !current)}
                 >
@@ -644,24 +687,13 @@ export default function ListScanResultsScreen() {
                         }));
                       }}
                       placeholder="0"
-                      placeholderTextColor={colors.fog}
+                      placeholderTextColor={colors.textSecondary}
                       keyboardType="number-pad"
                       style={styles.matchInput}
                     />
                     <AppText style={styles.matchHelperText}>%</AppText>
                   </View>
 
-                  <View style={styles.switchRow}>
-                    <AppText style={styles.switchLabel}>Show % match in full list</AppText>
-                    <Switch
-                      value={filters.show_match_column}
-                      onValueChange={(show_match_column) =>
-                        setFilters((current) => ({ ...current, show_match_column }))
-                      }
-                      trackColor={{ false: colors.limestone, true: "rgba(45,125,70,0.42)" }}
-                      thumbColor={filters.show_match_column ? colors.success : colors.white}
-                    />
-                  </View>
                 </FilterDropdown>
               </View>
             </View>
@@ -690,10 +722,13 @@ export default function ListScanResultsScreen() {
             <View style={styles.recommendationStack}>
               {topRecommendations.map((wine, index) => {
                 const display = getListScanDisplayLines(wine);
-                const subLabel = formatWineListSubLabel(
-                  wine.varietals,
-                  resolveListScanWineType(wine)
-                );
+                const structured = getListScanStructuredMeta(wine);
+                const detailLine =
+                  display.subtitle ??
+                  [display.wineName, display.producer].filter(Boolean).join(" · ");
+                const metaLine = [structured.primaryVarietal, structured.displayRegion]
+                  .filter(Boolean)
+                  .join(" · ");
                 return (
                   <View key={wine.id} style={styles.recommendationCard}>
                     <View style={styles.recommendationTopRow}>
@@ -707,17 +742,33 @@ export default function ListScanResultsScreen() {
 
                     <View style={styles.recommendationTitleRow}>
                       <View style={styles.recommendationTitleWrap}>
-                        <AppText style={styles.recommendationTitle}>{display.title}</AppText>
-                        {subLabel ? (
-                          <AppText style={styles.recommendationSubtitle}>{subLabel}</AppText>
+                        <AppText numberOfLines={2} style={styles.recommendationTitle}>
+                          {display.title}
+                        </AppText>
+                        {detailLine ? (
+                          <AppText numberOfLines={2} style={styles.recommendationSubtitle}>
+                            {detailLine}
+                          </AppText>
+                        ) : null}
+                        {metaLine ? (
+                          <AppText numberOfLines={1} style={styles.recommendationMeta}>
+                            {metaLine}
+                          </AppText>
                         ) : null}
                       </View>
-                      <AppText style={styles.recommendationPrice}>
+                      <AppText numberOfLines={1} style={styles.recommendationPrice}>
                         {formatPriceDisplay(wine.price_display, wine.menu_label)}
                       </AppText>
                     </View>
 
-                    <AppText style={styles.recommendationBody}>{wine.rationale}</AppText>
+                    {recommendationNotes[wine.id] ? (
+                      <View style={styles.recommendationNoteRow}>
+                        <AppText style={styles.recommendationNoteBullet}>•</AppText>
+                        <AppText style={styles.recommendationNoteText}>
+                          {recommendationNotes[wine.id]}
+                        </AppText>
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
@@ -743,9 +794,7 @@ export default function ListScanResultsScreen() {
           <View style={styles.tableHead}>
             <AppText style={[styles.tableHeadText, styles.tableWineColumn]}>Wine</AppText>
             <AppText style={[styles.tableHeadText, styles.tablePriceHead]}>Price</AppText>
-            {filters.show_match_column ? (
-              <AppText style={[styles.tableHeadText, styles.tableMatchHead]}>% match</AppText>
-            ) : null}
+            <AppText style={[styles.tableHeadText, styles.tableMatchHead]}>% match</AppText>
           </View>
 
           <View style={styles.tableWrap}>
@@ -756,10 +805,21 @@ export default function ListScanResultsScreen() {
                   return filteredWines.map((wine) => {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
-                    const subLabel = formatWineListSubLabel(
-                      wine.varietals,
-                      resolveListScanWineType(wine)
-                    );
+                    const structured = getListScanStructuredMeta(wine);
+                    const sourceDetailLine = display.subtitle ?? display.wineName;
+                    const detailLine =
+                      sourceDetailLine &&
+                      sourceDetailLine.localeCompare(display.title, undefined, {
+                        sensitivity: "base",
+                      }) !== 0
+                        ? sourceDetailLine
+                        : null;
+                    const metaLine = [
+                      structured.primaryVarietal,
+                      structured.displayRegion,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                     const resolvedType = resolveListScanWineType(wine);
                     const showSectionHeader = resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
@@ -776,7 +836,7 @@ export default function ListScanResultsScreen() {
                         <View style={styles.tableRow}>
                           <View style={styles.tableWineColumn}>
                             <AppText
-                              numberOfLines={2}
+                              numberOfLines={3}
                               style={[
                                 styles.tableWineText,
                                 highlighted ? styles.tableWineTextHighlighted : null,
@@ -784,9 +844,16 @@ export default function ListScanResultsScreen() {
                             >
                               {display.title}
                             </AppText>
-                            <AppText numberOfLines={1} style={styles.tableSubText}>
-                              {subLabel}
-                            </AppText>
+                            {detailLine ? (
+                              <AppText numberOfLines={2} style={styles.tableSubText}>
+                                {detailLine}
+                              </AppText>
+                            ) : null}
+                            {metaLine ? (
+                              <AppText numberOfLines={1} style={styles.tableSubText}>
+                                {metaLine}
+                              </AppText>
+                            ) : null}
                           </View>
                           <View style={styles.tablePriceColumn}>
                             <AppText
@@ -798,18 +865,16 @@ export default function ListScanResultsScreen() {
                               {formatPriceDisplay(wine.price_display, wine.menu_label)}
                             </AppText>
                           </View>
-                          {filters.show_match_column ? (
-                            <View style={styles.tableMatchColumn}>
-                              <AppText
-                                style={[
-                                  styles.tableMatchText,
-                                  highlighted ? styles.tableWineTextHighlighted : null,
-                                ]}
-                              >
-                                {wine.match_percent}%
-                              </AppText>
-                            </View>
-                          ) : null}
+                          <View style={styles.tableMatchColumn}>
+                            <AppText
+                              style={[
+                                styles.tableMatchText,
+                                highlighted ? styles.tableWineTextHighlighted : null,
+                              ]}
+                            >
+                              {wine.match_percent}%
+                            </AppText>
+                          </View>
                         </View>
                       </View>
                     );
@@ -831,7 +896,7 @@ export default function ListScanResultsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.champagne,
+    backgroundColor: colors.screenBg,
   },
   content: {
     paddingHorizontal: 20,
@@ -843,20 +908,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eyebrow: {
-    color: colors.rose,
+    color: colors.accentSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 28,
     lineHeight: 34,
     fontWeight: "700",
   },
   subtitle: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -869,34 +934,34 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   warningEyebrow: {
-    color: colors.rose,
+    color: colors.accentSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   warningText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 13,
     lineHeight: 20,
   },
   sectionCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     padding: 18,
     gap: 14,
   },
   sectionEyebrow: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.2,
     textTransform: "uppercase",
   },
   sectionTitle: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 22,
     lineHeight: 28,
     fontWeight: "700",
@@ -924,8 +989,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
     paddingLeft: 10,
     paddingRight: 14,
     paddingVertical: 8,
@@ -935,13 +1000,13 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
   filterToggleButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -949,27 +1014,27 @@ const styles = StyleSheet.create({
     minWidth: 22,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44,26,14,0.08)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     paddingHorizontal: 7,
     paddingVertical: 3,
     alignItems: "center",
   },
   filterToggleBadgeText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "700",
   },
   filterCollapsedNote: {
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44, 26, 14, 0.04)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   filterCollapsedNoteText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -985,12 +1050,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   sectionCounter: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   sectionCounterBelow: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "600",
     marginTop: 4,
@@ -999,11 +1064,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 2,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.06)",
-    backgroundColor: "rgba(44,26,14,0.03)",
+    borderBottomColor: colors.border,
+    backgroundColor: colors.border,
   },
   tableSectionHeaderText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.2,
@@ -1012,8 +1077,8 @@ const styles = StyleSheet.create({
   filterDropdown: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
     overflow: "hidden",
   },
   filterDropdownHeader: {
@@ -1029,27 +1094,27 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   filterLabel: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   filterSummary: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   filterChevron: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "700",
   },
   filterDropdownBody: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,26,14,0.08)",
+    borderTopColor: colors.border,
     padding: 14,
   },
   filterDoneRow: {
@@ -1059,12 +1124,12 @@ const styles = StyleSheet.create({
   filterDoneButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
+    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   filterDoneButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1076,13 +1141,13 @@ const styles = StyleSheet.create({
   segmentButton: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.12)",
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   segmentButtonActive: {
-    borderColor: colors.grenache,
-    backgroundColor: colors.grenache,
+    borderColor: colors.accentPrimary,
+    backgroundColor: colors.accentPrimary,
   },
   segmentButtonWhite: {
     borderColor: "rgba(201,168,76,0.30)",
@@ -1109,29 +1174,29 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(209,122,42,0.18)",
   },
   segmentButtonRed: {
-    borderColor: "rgba(74,48,96,0.45)",
-    backgroundColor: "rgba(74,48,96,0.15)",
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.accentSoft,
   },
   segmentButtonRedActive: {
-    borderColor: colors.nebbiolo,
-    backgroundColor: colors.nebbiolo,
+    borderColor: colors.accentPurple,
+    backgroundColor: colors.accentPurple,
   },
   segmentButtonDisabled: {
     opacity: 0.35,
   },
   segmentButtonText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "700",
   },
   segmentButtonTextActive: {
-    color: colors.champagne,
+    color: colors.screenBg,
   },
   segmentButtonTextWhite: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   segmentButtonTextWhiteActive: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   segmentButtonTextRose: {
     color: "#f1bfd0",
@@ -1140,7 +1205,7 @@ const styles = StyleSheet.create({
     color: "#fde5ec",
   },
   segmentButtonTextOrange: {
-    color: colors.viognier,
+    color: colors.accentGold,
   },
   segmentButtonTextOrangeActive: {
     color: "#fde6c7",
@@ -1154,9 +1219,9 @@ const styles = StyleSheet.create({
   filterInput: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.champagne,
-    color: colors.terroir,
+    borderColor: colors.border,
+    backgroundColor: colors.screenBg,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -1167,7 +1232,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   matchHelperText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -1175,9 +1240,9 @@ const styles = StyleSheet.create({
     minWidth: 72,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: colors.champagne,
-    color: colors.terroir,
+    borderColor: colors.border,
+    backgroundColor: colors.screenBg,
+    color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
@@ -1191,27 +1256,28 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     flex: 1,
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "600",
   },
   recommendationStack: {
-    gap: 12,
+    gap: 8,
   },
   recommendationCard: {
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(45,125,70,0.22)",
     backgroundColor: "rgba(45,125,70,0.08)",
-    padding: 16,
-    gap: 12,
+    padding: 10,
+    gap: 6,
   },
   recommendationTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
+    minWidth: 0,
   },
   recommendationEyebrow: {
     color: colors.success,
@@ -1227,23 +1293,29 @@ const styles = StyleSheet.create({
   },
   recommendationTitleWrap: {
     flex: 1,
-    gap: 4,
+    minWidth: 0,
+    gap: 2,
   },
   recommendationTitle: {
-    color: colors.terroir,
-    fontSize: 18,
-    lineHeight: 24,
+    color: colors.textPrimary,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "700",
   },
   recommendationSubtitle: {
-    color: colors.fog,
-    fontSize: 13,
-    lineHeight: 18,
+    color: colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  recommendationMeta: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   recommendationPrice: {
     color: colors.success,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: "700",
     textAlign: "right",
   },
@@ -1252,19 +1324,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(45,125,70,0.25)",
     backgroundColor: "rgba(45,125,70,0.14)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     alignSelf: "flex-start",
   },
   matchBadgeText: {
     color: colors.success,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
   },
   recommendationBody: {
-    color: colors.terroir,
-    fontSize: 14,
+    color: colors.textPrimary,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  recommendationNoteRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  recommendationNoteBullet: {
+    color: colors.textPrimary,
+    fontSize: 16,
     lineHeight: 21,
+    fontWeight: "700",
+  },
+  recommendationNoteText: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 11,
+    lineHeight: 16,
   },
   tableHead: {
     flexDirection: "row",
@@ -1272,21 +1361,21 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.08)",
+    borderBottomColor: colors.border,
   },
   tableHeadText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   tablePriceHead: {
-    width: 72,
+    width: 62,
     textAlign: "center",
   },
   tableMatchHead: {
-    width: 68,
+    width: 52,
     fontSize: 10,
     letterSpacing: 1.2,
     textAlign: "right",
@@ -1299,25 +1388,26 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    alignItems: "flex-start",
+    gap: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(44,26,14,0.05)",
+    borderBottomColor: colors.border,
   },
   tableWineColumn: {
-    flex: 1.55,
+    flex: 1.85,
+    minWidth: 0,
   },
   tablePriceColumn: {
-    width: 72,
+    width: 56,
     alignItems: "flex-end",
   },
   tableMatchColumn: {
-    width: 68,
+    width: 48,
     alignItems: "flex-end",
   },
   tableWineText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: "600",
@@ -1327,25 +1417,28 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   tableSubText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     marginTop: 3,
+    lineHeight: 15,
   },
   tableCellText: {
-    color: colors.terroir,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: "600",
+    lineHeight: 18,
   },
   tableMatchText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "700",
+    lineHeight: 18,
   },
   infoCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.08)",
-    backgroundColor: "rgba(44,26,14,0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.border,
     padding: 18,
     gap: 14,
   },
@@ -1353,19 +1446,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   infoText: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   primaryButton: {
     alignSelf: "flex-start",
     borderRadius: 999,
-    backgroundColor: colors.grenache,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: colors.champagne,
+    color: colors.screenBg,
     fontSize: 15,
     fontWeight: "700",
   },

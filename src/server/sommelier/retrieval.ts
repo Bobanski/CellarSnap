@@ -36,6 +36,28 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function toFiniteNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toWineTypeOrNull(value: unknown): WineType | null {
+  return WINE_TYPE_VALUES.includes(value as WineType) ? (value as WineType) : null;
+}
+
+function toKnowledgeMatch(row: DataRow): KnowledgeMatch {
+  return {
+    id: String(row.id ?? ""),
+    content: normalizeText(row.content),
+    similarity: toFiniteNumber(row.similarity) ?? 0,
+    metadata: asRecord(row.metadata),
+  };
+}
+
 function normalizeSearchText(value: string) {
   return value
     .toLowerCase()
@@ -95,13 +117,7 @@ async function rpcKnowledgeSearch(
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as DataRow[]).map((row) => ({
-    id: String(row.id ?? ""),
-    content: normalizeText(row.content),
-    similarity:
-      typeof row.similarity === "number" ? row.similarity : Number(row.similarity ?? 0),
-    metadata: asRecord(row.metadata),
-  }));
+  return ((data ?? []) as DataRow[]).map((row) => toKnowledgeMatch(row));
 }
 
 async function retrieveWineKnowledgeByEmbedding(
@@ -266,15 +282,12 @@ export async function retrieveUserContext(
       wineName: normalizeText(row.wine_name) || null,
       producer: normalizeText(row.producer) || null,
       vintage: normalizeText(row.vintage) || null,
-      wineType: WINE_TYPE_VALUES.includes(row.wine_type as WineType)
-        ? (row.wine_type as WineType)
-        : null,
+      wineType: toWineTypeOrNull(row.wine_type),
       region: normalizeText(row.region) || null,
       appellation: normalizeText(row.appellation) || null,
       country: normalizeText(row.country) || null,
       classification: normalizeText(row.classification) || null,
-      rating:
-        typeof row.rating === "number" ? row.rating : Number.isFinite(Number(row.rating)) ? Number(row.rating) : null,
+      rating: toFiniteNumber(row.rating),
       consumedAt: normalizeText(row.consumed_at) || null,
       notes: normalizeText(row.notes) || null,
       aiNotesSummary: normalizeText(row.ai_notes_summary) || null,
@@ -292,12 +305,9 @@ export async function retrieveUserContext(
 
   const preferenceEntries = ((data ?? []) as DataRow[]).map(
     (row): PreferenceSourceEntry => ({
-      rating:
-        typeof row.rating === "number" ? row.rating : Number.isFinite(Number(row.rating)) ? Number(row.rating) : null,
+      rating: toFiniteNumber(row.rating),
       advanced_notes: (row.advanced_notes as PreferenceSourceEntry["advanced_notes"]) ?? null,
-      wine_type: WINE_TYPE_VALUES.includes(row.wine_type as WineType)
-        ? (row.wine_type as WineType)
-        : null,
+      wine_type: toWineTypeOrNull(row.wine_type),
     })
   );
 
@@ -364,13 +374,7 @@ async function retrieveUserEntryMatchesByEmbedding(
   }
 
   return dedupeKnowledgeMatches(
-    ((data ?? []) as DataRow[]).map((row) => ({
-      id: String(row.id ?? ""),
-      content: normalizeText(row.content),
-      similarity:
-        typeof row.similarity === "number" ? row.similarity : Number(row.similarity ?? 0),
-      metadata: asRecord(row.metadata),
-    }))
+    ((data ?? []) as DataRow[]).map((row) => toKnowledgeMatch(row))
   );
 }
 

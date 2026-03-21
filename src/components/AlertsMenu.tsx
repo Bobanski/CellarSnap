@@ -450,7 +450,7 @@ export default function AlertsMenu() {
     <div className="relative" ref={menuRef}>
       <button
         type="button"
-        className="accent-outline-hover relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-200 transition"
+        className="accent-outline-hover relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-primary)] transition"
         onClick={toggleOpen}
         aria-label="Alerts"
       >
@@ -463,24 +463,24 @@ export default function AlertsMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-white/10 bg-[#14100f] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+            <span className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Alerts
             </span>
             <button
               type="button"
               onClick={() => setOpenPathname(null)}
-              className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-semibold text-zinc-200 transition hover:border-white/30"
+              className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
               aria-label="Close alerts"
             >
               Close
             </button>
           </div>
           {loading ? (
-            <div className="px-4 py-4 text-sm text-zinc-300">Loading...</div>
+            <div className="px-4 py-4 text-sm text-[var(--color-text-secondary)]">Loading...</div>
           ) : items.length === 0 ? (
-            <div className="px-4 py-4 text-sm text-zinc-300">
+            <div className="px-4 py-4 text-sm text-[var(--color-text-secondary)]">
               No new alerts yet.
             </div>
           ) : (
@@ -498,11 +498,11 @@ export default function AlertsMenu() {
                       key={item.id}
                       className="border-b border-white/5 last:border-none"
                     >
-                      <div className="px-4 py-3 text-sm text-zinc-200 hover:bg-white/5">
+                      <div className="px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10">
                         <div className="min-w-0">
                           <Link
                             href={`/profile/${item.requester_id}`}
-                            className="underline-offset-2 hover:underline hover:text-amber-200"
+                            className="underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
                             onClick={() => setOpenPathname(null)}
                           >
                             <span className="accent-text font-semibold">
@@ -536,7 +536,7 @@ export default function AlertsMenu() {
                           </button>
                           <Link
                             href="/friends"
-                            className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-zinc-200 transition hover:border-white/30"
+                            className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                             onClick={() => setOpenPathname(null)}
                           >
                             Open
@@ -553,7 +553,7 @@ export default function AlertsMenu() {
                       key={item.id}
                       className="border-b border-white/5 last:border-none"
                     >
-                      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-zinc-200 hover:bg-white/5">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10">
                         <Link
                           href={`/profile/${item.actor_id}`}
                           className="min-w-0 flex-1 truncate"
@@ -572,7 +572,7 @@ export default function AlertsMenu() {
                           disabled={deletingId === item.id}
                           onClick={() => deleteNotification(item.id)}
                           aria-label="Dismiss alert"
-                          className="shrink-0 rounded-full border border-white/10 px-2 py-1 text-[10px] font-semibold text-zinc-300 transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="shrink-0 rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {deletingId === item.id ? "..." : "x"}
                         </button>
@@ -586,14 +586,14 @@ export default function AlertsMenu() {
                     key={item.id}
                     className="border-b border-white/5 last:border-none"
                   >
-                    <div className="px-4 py-3 text-sm text-zinc-200">
+                    <div className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 text-sm text-zinc-200">
+                        <div className="min-w-0 text-sm text-[var(--color-text-primary)]">
                           <span className="accent-text font-semibold">
                             {item.actor_name}
                           </span>{" "}
                           tagged you in{" "}
-                          <span className="text-zinc-100">
+                          <span className="text-[var(--color-text-primary)]">
                             {item.wine_name || "a wine"}
                           </span>
                         </div>
@@ -615,7 +615,7 @@ export default function AlertsMenu() {
                           className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-70 ${
                             confirmDeleteId === item.id
                               ? "border-rose-400/40 text-rose-200 hover:border-rose-300"
-                              : "border-white/10 text-zinc-300 hover:border-white/30"
+                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           {deletingId === item.id
@@ -628,7 +628,7 @@ export default function AlertsMenu() {
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <Link
                           href={`/entries/${item.entry_id}`}
-                          className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold text-zinc-200 transition hover:border-white/30"
+                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                           onClick={() => setOpenPathname(null)}
                         >
                           View
@@ -692,7 +692,7 @@ export default function AlertsMenu() {
                               setAddToCellarId(null);
                             }
                           }}
-                          className="rounded-full bg-amber-400 px-3 py-1 text-[11px] font-semibold text-zinc-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="rounded-full bg-[var(--color-accent-primary)] px-3 py-1 text-[11px] font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {addToCellarId === item.id
                             ? "Adding..."
@@ -706,7 +706,7 @@ export default function AlertsMenu() {
             </ul>
           )}
           {actionError ? (
-            <div className="border-t border-white/10 px-4 py-3 text-xs text-rose-200">
+            <div className="border-t border-[var(--color-border)] px-4 py-3 text-xs text-rose-200">
               {actionError}
             </div>
           ) : null}

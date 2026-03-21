@@ -12,6 +12,7 @@ import {
   type MatchBand,
   type MatchScore,
   type EffectiveWineProfile,
+  type CategoricalPreferenceVector,
   type UserPreferenceVector,
 } from "@/server/algorithm/types";
 
@@ -21,6 +22,107 @@ function clamp(value: number, min: number, max: number) {
 
 function roundScore(value: number) {
   return Number(value.toFixed(2));
+}
+
+function normalizeAffinityText(value: string | null | undefined) {
+  const normalized = (value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (
+    normalized === "united states" ||
+    normalized === "united states of america" ||
+    normalized === "u s" ||
+    normalized === "u s a" ||
+    normalized === "us"
+  ) {
+    return "usa";
+  }
+
+  return normalized;
+}
+
+function scoreAffinityText(
+  candidate: string | null | undefined,
+  affinities: Record<string, number>
+) {
+  const normalizedCandidate = normalizeAffinityText(candidate);
+  if (!normalizedCandidate) {
+    return 0;
+  }
+
+  let best = affinities[normalizedCandidate] ?? 0;
+  if (best > 0) {
+    return best;
+  }
+
+  const candidateTokens = new Set(normalizedCandidate.split(" "));
+
+  for (const [key, affinity] of Object.entries(affinities)) {
+    if (!key) {
+      continue;
+    }
+
+    if (key.includes(normalizedCandidate) || normalizedCandidate.includes(key)) {
+      best = Math.max(best, affinity * 0.85);
+      continue;
+    }
+
+    const keyTokens = key.split(" ");
+    const overlap = keyTokens.filter((token) => candidateTokens.has(token)).length;
+    if (overlap > 0) {
+      const overlapRatio = overlap / Math.max(keyTokens.length, candidateTokens.size);
+      best = Math.max(best, affinity * (0.6 + overlapRatio * 0.2));
+    }
+  }
+
+  return best;
+}
+
+function scoreAffinityList(
+  candidates: string[] | null | undefined,
+  affinities: Record<string, number>
+) {
+  if (!candidates || candidates.length === 0) {
+    return 0;
+  }
+
+  return candidates.reduce(
+    (best, candidate) => Math.max(best, scoreAffinityText(candidate, affinities)),
+    0
+  );
+}
+
+function computeCategoricalBonus(
+  wine: EffectiveWineProfile,
+  user: UserPreferenceVector
+) {
+  const categoryVector: CategoricalPreferenceVector = user.categorical;
+  const varietalMatch = scoreAffinityList(
+    wine.metadata.primary_grapes,
+    categoryVector.varietals
+  );
+  const regionMatch = Math.max(
+    scoreAffinityText(wine.metadata.canonical_sub_region, categoryVector.regions),
+    scoreAffinityText(wine.metadata.canonical_region, categoryVector.regions)
+  );
+  const countryMatch = scoreAffinityText(
+    wine.metadata.canonical_country,
+    categoryVector.countries
+  );
+
+  return roundScore(
+    varietalMatch * 12 * categoryVector.weights.varietal +
+      regionMatch * 8 * categoryVector.weights.region +
+      countryMatch * 5 * categoryVector.weights.country
+  );
 }
 
 function classifyScore(score: number): MatchBand {
@@ -97,7 +199,8 @@ export function computeMatchScore(
   const preBalanceScore =
     100 / (1 + Math.exp(SIGMOID_K * (distance - SIGMOID_MIDPOINT)));
   const balanceFactor = resolveBalanceFactor(wine.balance.overall);
-  const finalScore = clamp(preBalanceScore * balanceFactor, 0, 100);
+  const categoricalBonus = computeCategoricalBonus(wine, user);
+  const finalScore = clamp(preBalanceScore * balanceFactor + categoricalBonus, 0, 100);
   const confidence = computeConfidence(wine, user, knownAxisCount);
 
   return {

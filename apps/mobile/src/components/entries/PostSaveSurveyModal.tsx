@@ -87,7 +87,7 @@ export function PostSaveSurveyModal({
                   onSurveyHowWasItChange(value as SurveyHowWasItResponse | "")
                 }
                 placeholderLabel="Select one"
-                tone="amber"
+                tone="accent"
                 hideModalCloseAction
               />
               <SelectField
@@ -98,7 +98,7 @@ export function PostSaveSurveyModal({
                   onSurveyExpectationsChange(value as SurveyExpectationsResponse | "")
                 }
                 placeholderLabel="Select one"
-                tone="amber"
+                tone="accent"
                 hideModalCloseAction
               />
               <SelectField
@@ -109,7 +109,7 @@ export function PostSaveSurveyModal({
                   onSurveyDrinkAgainChange(value as SurveyDrinkAgainResponse | "")
                 }
                 placeholderLabel="Select one"
-                tone="amber"
+                tone="accent"
                 hideModalCloseAction
               />
 
@@ -128,7 +128,7 @@ export function PostSaveSurveyModal({
                 disabled={!canSubmitPostSaveSurvey || isSubmittingSurvey}
               >
                 {isSubmittingSurvey ? (
-                  <ActivityIndicator color={colors.champagne} />
+                  <ActivityIndicator color={colors.screenBg} />
                 ) : (
                   <AppText style={styles.submitButtonText}>Save and continue</AppText>
                 )}

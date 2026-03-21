@@ -46,7 +46,7 @@ export default function GroupedPostGallery({
         badge: slide.label,
       }))}
       heightClassName={heightClassName}
-      wrapperClassName="overflow-hidden rounded-2xl border border-white/10 bg-black/40"
+      wrapperClassName="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/40"
       header={(_active, activeIndex) => {
         const slide = slides[activeIndex] ?? slides[0];
         const isWineSlide = Boolean(slide?.entry_id);
@@ -58,20 +58,20 @@ export default function GroupedPostGallery({
         return (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/80">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent-secondary)]/80">
                 {title}
               </p>
-              <p className="mt-1 truncate text-sm font-semibold text-zinc-50">
+              <p className="mt-1 truncate text-sm font-semibold text-[var(--color-text-primary)]">
                 {slideTitle}
               </p>
-              <p className="mt-1 text-xs text-zinc-400">
+              <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                 {isWineSlide
                   ? slideMeta || "Wine details update as you swipe."
                   : `${slide?.label ?? "Photo"} slide`}
               </p>
             </div>
             {slide?.consumed_at ? (
-              <span className="shrink-0 text-[11px] text-zinc-400">
+              <span className="shrink-0 text-[11px] text-[var(--color-text-tertiary)]">
                 {formatConsumedDate(slide.consumed_at)}
               </span>
             ) : null}
@@ -83,7 +83,7 @@ export default function GroupedPostGallery({
           <span>
             {activeIndex + 1} of {slides.length}
           </span>
-          <span className="text-zinc-400">
+          <span className="text-[var(--color-text-tertiary)]">
             Swipe to move between wines and event photos
           </span>
         </>

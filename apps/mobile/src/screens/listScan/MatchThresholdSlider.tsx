@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(44,26,14,0.10)",
-    backgroundColor: "rgba(44, 26, 14, 0.05)",
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
     padding: 14,
     gap: 10,
   },
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   label: {
-    color: colors.fog,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2,
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   track: {
     height: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(44,26,14,0.10)",
+    backgroundColor: colors.border,
   },
   fill: {
     position: "absolute",
@@ -101,6 +101,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.success,
     borderWidth: 3,
-    borderColor: colors.champagne,
+    borderColor: colors.screenBg,
   },
 });
