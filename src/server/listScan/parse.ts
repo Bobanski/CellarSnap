@@ -292,6 +292,18 @@ const responseSchema = z.object({
         ])
         .nullable()
         .optional(),
+      section_type: z
+        .enum([
+          "sparkling",
+          "white",
+          "rose",
+          "orange",
+          "red",
+          "dessert_fortified",
+          "unknown",
+        ])
+        .nullable()
+        .optional(),
       price_display: z.string().nullable().optional(),
       price_value: z.number().nullable().optional(),
       varietals: z.array(z.string()).optional(),
@@ -808,6 +820,17 @@ function inferWineTypeFromContext(params: {
 }) {
   const context = buildInferenceContext(params);
 
+  if (
+    params.wineType === "sparkling" ||
+    params.wineType === "dessert_fortified" ||
+    params.wineType === "rose" ||
+    params.wineType === "orange" ||
+    params.wineType === "red" ||
+    params.wineType === "white"
+  ) {
+    return params.wineType;
+  }
+
   if (SPARKLING_WINE_PATTERN.test(context)) {
     return "sparkling";
   }
@@ -826,17 +849,6 @@ function inferWineTypeFromContext(params: {
   )?.wineType;
   if (appellationType) {
     return appellationType;
-  }
-
-  if (
-    params.wineType === "sparkling" ||
-    params.wineType === "dessert_fortified" ||
-    params.wineType === "rose" ||
-    params.wineType === "orange" ||
-    params.wineType === "red" ||
-    params.wineType === "white"
-  ) {
-    return params.wineType;
   }
 
   const varietalType = inferWineTypeFromVarietals(params.varietals);
@@ -920,13 +932,12 @@ function toPercent(value?: number | null, fallback = 0) {
 }
 
 function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
-  return parsed.wines
-    .map((wine, index) => {
+  return parsed.wines.flatMap((wine, index) => {
       const rawMenuLabel = stripLeadingListScanIdentifier(
         normalizeText(wine.menu_label) ?? ""
       );
       if (!rawMenuLabel) {
-        return null;
+        return [];
       }
 
       // Filter out garbage entries from OCR: bare numbers, price fragments,
@@ -937,7 +948,7 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         /^\.?\d{1,4}$/.test(rawMenuLabel.trim()) ||
         /^[.\s\d]+$/.test(rawMenuLabel.trim())
       ) {
-        return null;
+        return [];
       }
 
       let producer = normalizeProducerText(wine.producer) ?? normalizeText(wine.producer);
@@ -981,6 +992,7 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         menuLabel = wineName;
       }
       const regions = normalizeRegionFacetValues(wine.regions);
+      const suppliedSectionType = normalizeWineType(wine.section_type);
       const suppliedWineType = normalizeWineType(wine.wine_type);
       const suppliedVarietals = normalizeFacetValues(wine.varietals);
       const preliminaryWineType = inferWineTypeFromContext({
@@ -989,7 +1001,8 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         producer,
         regions,
         varietals: suppliedVarietals,
-        wineType: suppliedWineType,
+        wineType:
+          suppliedSectionType !== "unknown" ? suppliedSectionType : suppliedWineType,
       });
       const varietals = inferVarietalsFromContext({
         menuLabel,
@@ -1005,7 +1018,10 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         producer,
         regions,
         varietals,
-        wineType: preliminaryWineType,
+        wineType:
+          suppliedSectionType !== "unknown"
+            ? suppliedSectionType
+            : preliminaryWineType,
       });
       const context = buildInferenceContext({
         menuLabel,
@@ -1050,7 +1066,7 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
           wineType: resolvedWineType,
         })
       ) {
-        return null;
+        return [];
       }
 
       if (
@@ -1064,16 +1080,17 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
           wineType: resolvedWineType,
         })
       ) {
-        return null;
+        return [];
       }
 
-      return {
+      return [{
         id: createListScanId("wine"),
         source_order: index,
         menu_label: menuLabel,
         producer,
         wine_name: wineName,
         vintage,
+        section_type: suppliedSectionType !== "unknown" ? suppliedSectionType : null,
         wine_type: resolvedWineType,
         price_display: priceDisplay,
         price_value: priceValue,
@@ -1082,9 +1099,8 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         match_percent: 0,
         parse_confidence: parseConfidence,
         rationale,
-      } satisfies ListScanParsedWine;
-    })
-    .filter((wine): wine is ListScanParsedWine => wine !== null);
+      } satisfies ListScanParsedWine];
+    });
 }
 
 const LIST_SCAN_NOISE_LABEL_PATTERN =
@@ -3159,6 +3175,10 @@ function detectWineTypeFromSignals(
   return detectWineTypeFromText(value, currentType);
 }
 
+function resolveWineTypeFromSectionHeading(value: string) {
+  return detectWineTypeFromSignals(value, "unknown");
+}
+
 function extractRegionsFromFallbackContext(value: string) {
   const segments = value
     .split(",")
@@ -3242,7 +3262,10 @@ function buildHeuristicParsedResponse(params: {
       }
       if (WINE_SECTION_HEADING_PATTERN.test(headingText) || isMarkdownHeading) {
         inWineSection = true;
-        currentType = detectWineTypeFromSignals(headingText, currentType);
+        // Section headings should be able to switch the active section.
+        // Use a fresh context here so "WHITE" can override a prior
+        // "SPARKLING" block, while row-level inference remains sticky.
+        currentType = resolveWineTypeFromSectionHeading(headingText);
         buffer = [];
         continue;
       }
@@ -3342,6 +3365,7 @@ function buildHeuristicParsedResponse(params: {
           producer: null,
           wine_name: orphanName,
           vintage: orphanVintage,
+          section_type: currentType,
           wine_type: detectWineTypeFromSignals(orphanContext, currentType),
           price_display: priceDisplay,
           price_value: Number.isFinite(priceValue) ? priceValue : null,
@@ -3395,6 +3419,7 @@ function buildHeuristicParsedResponse(params: {
       producer: buffer[0] ?? null,
       wine_name: lineWithoutPrice ?? null,
       vintage,
+      section_type: currentType,
       wine_type: detectWineTypeFromSignals(combinedContext, currentType),
       price_display: priceDisplay,
       price_value: Number.isFinite(priceValue) ? priceValue : null,
@@ -3772,6 +3797,7 @@ export const __listScanTestUtils = {
   applyStubMatchPercents,
   cleanupNormalizedParsedWines,
   detectWineTypeFromSignals,
+  resolveWineTypeFromSectionHeading,
   extractJson,
   extractWineListTextFromHtml,
   buildPdfRecoveryParsedResponse,

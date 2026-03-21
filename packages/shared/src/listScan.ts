@@ -180,6 +180,7 @@ export const listScanParsedWineSchema = z.object({
   wine_name: z.string().nullable(),
   vintage: z.string().nullable(),
   wine_type: z.enum(LIST_SCAN_ALL_WINE_TYPES),
+  section_type: z.enum(LIST_SCAN_ALL_WINE_TYPES).nullable().optional(),
   price_display: z.string().nullable(),
   price_value: z.number().nullable(),
   varietals: z.array(z.string()),

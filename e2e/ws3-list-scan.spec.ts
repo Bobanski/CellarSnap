@@ -681,6 +681,14 @@ test.describe("WS3 list scan parse handler", () => {
     expect(display.producer).toBe("Bernard Levet");
   });
 
+  test("section headings can switch from sparkling to white", () => {
+    const sparkling = __listScanTestUtils.resolveWineTypeFromSectionHeading("## SPARKLING");
+    expect(sparkling).toBe("sparkling");
+
+    const switched = __listScanTestUtils.resolveWineTypeFromSectionHeading("## WHITE");
+    expect(switched).toBe("white");
+  });
+
   test("section headings stay authoritative over varietal-only context", () => {
     expect(
       __listScanTestUtils.detectWineTypeFromSignals("Chenin Blanc, France '21", "sparkling")
