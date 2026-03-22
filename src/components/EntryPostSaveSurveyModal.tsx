@@ -14,7 +14,7 @@ export type ExpectationsResponse =
   | "below_expectations"
   | "met_expectations"
   | "above_expectations";
-export type DrinkAgainResponse = "yes" | "no";
+export type EnjoymentIntentResponse = "seek_more" | "happily_again" | "if_poured" | "pass";
 
 export type SurveyEntryCard = {
   id: string;
@@ -31,7 +31,7 @@ export type SurveyComparisonCandidate = SurveyEntryCard & {
 export type PostSaveSurveySubmission = {
   how_was_it: HowWasItResponse;
   expectations?: ExpectationsResponse;
-  drink_again: DrinkAgainResponse;
+  enjoyment_intent: EnjoymentIntentResponse;
 };
 
 const HOW_WAS_IT_OPTIONS: { value: HowWasItResponse; label: string }[] = [
@@ -48,9 +48,11 @@ const EXPECTATIONS_OPTIONS: { value: ExpectationsResponse; label: string }[] = [
   { value: "above_expectations", label: "Above expectations" },
 ];
 
-const DRINK_AGAIN_OPTIONS: { value: DrinkAgainResponse; label: string }[] = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
+const ENJOYMENT_INTENT_OPTIONS: { value: EnjoymentIntentResponse; label: string }[] = [
+  { value: "seek_more", label: "I need to find more of this" },
+  { value: "happily_again", label: "I'd happily order this again" },
+  { value: "if_poured", label: "I'd drink it if someone poured it" },
+  { value: "pass", label: "I'll pass next time" },
 ];
 
 type EntryPostSaveSurveyModalProps = {
@@ -78,14 +80,14 @@ export default function EntryPostSaveSurveyModal({
   });
   const [howWasIt, setHowWasIt] = useState<HowWasItResponse | "">("");
   const [expectations, setExpectations] = useState<ExpectationsResponse | "">("");
-  const [drinkAgain, setDrinkAgain] = useState<DrinkAgainResponse | "">("");
+  const [enjoymentIntent, setEnjoymentIntent] = useState<EnjoymentIntentResponse | "">("");
 
   if (!isOpen || !entry) {
     return null;
   }
 
   const canSubmit = Boolean(
-    howWasIt && drinkAgain && (!includeExpectations || expectations)
+    howWasIt && enjoymentIntent && (!includeExpectations || expectations)
   );
 
   return (
@@ -143,17 +145,17 @@ export default function EntryPostSaveSurveyModal({
 
             <label className="block space-y-2">
               <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                Would you drink it again?
+                Would you seek this out again?
               </span>
               <select
-                value={drinkAgain}
+                value={enjoymentIntent}
                 onChange={(event) =>
-                  setDrinkAgain(event.target.value as DrinkAgainResponse | "")
+                  setEnjoymentIntent(event.target.value as EnjoymentIntentResponse | "")
                 }
                 className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
-                {DRINK_AGAIN_OPTIONS.map((option) => (
+                {ENJOYMENT_INTENT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -175,7 +177,7 @@ export default function EntryPostSaveSurveyModal({
                   ...(includeExpectations
                     ? { expectations: expectations as ExpectationsResponse }
                     : {}),
-                  drink_again: drinkAgain as DrinkAgainResponse,
+                  enjoyment_intent: enjoymentIntent as EnjoymentIntentResponse,
                 })
               }
               disabled={!canSubmit || isSubmitting}

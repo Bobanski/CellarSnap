@@ -11,12 +11,14 @@ const expectationsSchema = z.enum([
   "above_expectations",
 ]);
 const drinkAgainSchema = z.enum(["yes", "no"]);
+const enjoymentIntentSchema = z.enum(["seek_more", "happily_again", "if_poured", "pass"]);
 
 const createComparisonSchema = z
   .object({
     how_was_it: howWasItSchema,
     expectations: expectationsSchema.optional(),
-    drink_again: drinkAgainSchema,
+    drink_again: drinkAgainSchema.optional(),
+    enjoyment_intent: enjoymentIntentSchema.optional(),
     comparison_entry_id: z.string().uuid().optional(),
     response: responseSchema.optional(),
   })
@@ -38,7 +40,8 @@ function isSurveyColumnUnavailable(error: { message: string; code?: string | nul
   return (
     isMissingDbColumnError(error, "survey_how_was_it") ||
     isMissingDbColumnError(error, "survey_expectation_match") ||
-    isMissingDbColumnError(error, "survey_drink_again")
+    isMissingDbColumnError(error, "survey_drink_again") ||
+    isMissingDbColumnError(error, "survey_enjoyment_intent")
   );
 }
 
@@ -111,12 +114,13 @@ export function createComparisonPostHandler(
       .update({
         survey_how_was_it: payload.data.how_was_it,
         survey_expectation_match: payload.data.expectations ?? null,
-        survey_drink_again: payload.data.drink_again,
+        survey_drink_again: payload.data.drink_again ?? null,
+        survey_enjoyment_intent: payload.data.enjoyment_intent ?? null,
       })
       .eq("id", newEntryId)
       .eq("user_id", user.id)
       .select(
-        "id, survey_how_was_it, survey_expectation_match, survey_drink_again"
+        "id, survey_how_was_it, survey_expectation_match, survey_drink_again, survey_enjoyment_intent"
       )
       .single();
 

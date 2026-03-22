@@ -15,7 +15,8 @@ export async function persistPostSaveSurveyAnswers<TValue extends string>({
     .update({
       survey_how_was_it: answers.how_was_it,
       survey_expectation_match: answers.expectations ?? null,
-      survey_drink_again: answers.drink_again,
+      survey_drink_again: answers.drink_again ?? null,
+      survey_enjoyment_intent: answers.enjoyment_intent ?? null,
     })
     .eq("id", entryId)
     .eq("user_id", userId);
@@ -31,7 +32,8 @@ export async function persistPostSaveSurveyAnswers<TValue extends string>({
   const isSchemaIssue =
     message.includes("survey_how_was_it") ||
     message.includes("survey_expectation_match") ||
-    message.includes("survey_drink_again");
+    message.includes("survey_drink_again") ||
+    message.includes("survey_enjoyment_intent");
 
   return {
     ok: false as const,

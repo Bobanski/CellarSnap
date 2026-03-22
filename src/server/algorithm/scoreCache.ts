@@ -61,6 +61,7 @@ function toAlgorithmScoreResponse(row: CachedScoreRow): AlgorithmScoreResponse {
     confidence: row.confidence ?? 0,
     balance_factor: 0,
     age_factor: 1.0,
+    enjoyment_factor: 1.0,
     pre_balance_score: 0,
     effective_profile: row.effective_profile,
     axis_contributions: row.axis_breakdown,
