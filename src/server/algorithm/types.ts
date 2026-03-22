@@ -103,3 +103,13 @@ export type AssembleWineProfileInput = {
   classification: string | null;
   quality_tier: string | null;
 };
+
+export type NlpNotesExtraction = {
+  sensoryHints: Partial<Record<SensoryAxis, { value: number; confidence: number }>>;
+  descriptorClusters: {
+    primary: string[];
+    secondary: string[];
+  };
+  sentiment: number;
+  tokenCount: number;
+};
