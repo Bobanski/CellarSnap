@@ -6,7 +6,13 @@ import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { MIN_DISPLAY_CONFIDENCE } from "@/server/algorithm/constants";
-import { assembleWineProfile } from "@/server/algorithm/profileAssembly";
+import {
+  assembleWineProfile,
+  assembleWineProfileWithDataSource,
+  batchPrefetchProfileData,
+  createPreFetchedProfileDataSource,
+  createSupabaseProfileAssemblyDataSource,
+} from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import type {
   AssembleWineProfileInput,
@@ -62,6 +68,7 @@ type PreferenceEntryRow = {
   id: string;
   rating: number | null;
   advanced_notes: unknown;
+  vintage?: string | null;
   wine_type?: string | null;
   canonical_region?: string | null;
   canonical_sub_region?: string | null;
@@ -240,9 +247,10 @@ export async function defaultLoadUserPreferenceEntries(
   const selectAttempts = [
     {
       fields:
-        "id, rating, advanced_notes, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country",
+        "id, rating, advanced_notes, vintage, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country",
       includesWineType: true,
       missingColumns: [
+        "vintage",
         "wine_type",
         "canonical_region",
         "canonical_sub_region",
@@ -282,19 +290,66 @@ export async function defaultLoadUserPreferenceEntries(
     rows.map((row) => row.id)
   );
 
-  return rows.map((row) => ({
-    rating: row.rating ?? null,
-    advanced_notes: normalizeAdvancedNotes(row.advanced_notes),
-    wine_type: isWineType(row.wine_type) ? row.wine_type : null,
-    canonical_region: row.canonical_region ?? row.region ?? null,
-    canonical_sub_region: row.canonical_sub_region ?? row.appellation ?? null,
-    canonical_country: row.canonical_country ?? row.country ?? null,
-    region: row.region ?? null,
-    appellation: row.appellation ?? null,
-    country: row.country ?? null,
-    primary_grapes:
-      grapeMap.get(row.id)?.map((grape) => grape.name).join(", ") ?? null,
-  }));
+  const entriesWithType = rows.filter((row) => isWineType(row.wine_type));
+  const vintages = entriesWithType
+    .map((row) =>
+      row.vintage ? Number.parseInt(row.vintage, 10) || null : null
+    )
+    .filter((v): v is number => v !== null && Number.isFinite(v));
+  const profileMap = new Map<string, EffectiveWineProfile>();
+
+  if (entriesWithType.length > 0) {
+    const referenceSupabase = createSupabaseAdminClient();
+    const prefetchedData = await batchPrefetchProfileData(
+      createSupabaseProfileAssemblyDataSource(referenceSupabase),
+      entriesWithType.map((row) => row.wine_type as WineType),
+      vintages
+    );
+    const prefetchedDataSource = createPreFetchedProfileDataSource(prefetchedData);
+
+    await Promise.all(
+      entriesWithType.map(async (row) => {
+        const grapes = grapeMap.get(row.id)?.map((grape) => grape.name).join(", ") ?? null;
+        try {
+          const profile = await assembleWineProfileWithDataSource(
+            {
+              wine_type: row.wine_type as WineType,
+              canonical_region: row.canonical_region ?? row.region ?? null,
+              canonical_sub_region: row.canonical_sub_region ?? row.appellation ?? null,
+              canonical_country: row.canonical_country ?? row.country ?? null,
+              primary_grapes: grapes,
+              vintage: row.vintage ? Number.parseInt(row.vintage, 10) || null : null,
+              producer: null,
+              classification: null,
+              quality_tier: null,
+            },
+            prefetchedDataSource
+          );
+          profileMap.set(row.id, profile);
+        } catch {
+          // Swallow profile assembly failures so we can still fall back to manual notes.
+        }
+      })
+    );
+  }
+
+  return rows.map((row) => {
+    const profile = profileMap.get(row.id);
+    return {
+      rating: row.rating ?? null,
+      advanced_notes: normalizeAdvancedNotes(row.advanced_notes),
+      wine_type: isWineType(row.wine_type) ? row.wine_type : null,
+      canonical_region: row.canonical_region ?? row.region ?? null,
+      canonical_sub_region: row.canonical_sub_region ?? row.appellation ?? null,
+      canonical_country: row.canonical_country ?? row.country ?? null,
+      region: row.region ?? null,
+      appellation: row.appellation ?? null,
+      country: row.country ?? null,
+      primary_grapes:
+        grapeMap.get(row.id)?.map((grape) => grape.name).join(", ") ?? null,
+      assembled_sensory: profile?.sensory ?? null,
+    };
+  });
 }
 
 export const defaultAlgorithmScoreDependencies: AlgorithmScoreHandlerDependencies = {

@@ -1,6 +1,12 @@
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { assembleWineProfile } from "@/server/algorithm/profileAssembly";
+import {
+  assembleWineProfile,
+  assembleWineProfileWithDataSource,
+  batchPrefetchProfileData,
+  createPreFetchedProfileDataSource,
+  createSupabaseProfileAssemblyDataSource,
+} from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import type {
   AssembleWineProfileInput,
@@ -12,7 +18,10 @@ import {
   type RequestSupabaseClient,
 } from "@/app/api/algorithm/score/handler";
 import { writeCachedEntryScore } from "@/server/algorithm/scoreCache";
-import { buildUserPreferenceVector } from "@/server/algorithm/userPreferences";
+import {
+  buildUserPreferenceVector,
+  type PreferenceSourceEntry,
+} from "@/server/algorithm/userPreferences";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { WINE_TYPE_VALUES, type WineType } from "@/types/wine";
 
@@ -43,6 +52,69 @@ function isWineType(value: string | null | undefined): value is WineType {
   return WINE_TYPE_VALUES.includes(value as WineType);
 }
 
+async function ensurePreferenceEntriesHaveProfiles(
+  entries: PreferenceSourceEntry[]
+): Promise<PreferenceSourceEntry[]> {
+  const missingProfileEntries = entries.filter(
+    (entry) =>
+      isWineType(entry.wine_type ?? null) &&
+      typeof entry.assembled_sensory === "undefined"
+  );
+
+  if (missingProfileEntries.length === 0) {
+    return entries;
+  }
+
+  const referenceSupabase = createSupabaseAdminClient();
+  const prefetchedData = await batchPrefetchProfileData(
+    createSupabaseProfileAssemblyDataSource(referenceSupabase),
+    missingProfileEntries.map((entry) => entry.wine_type as WineType),
+    []
+  );
+  const prefetchedDataSource = createPreFetchedProfileDataSource(prefetchedData);
+  const profileMap = new Map<PreferenceSourceEntry, EffectiveWineProfile>();
+
+  await Promise.all(
+    missingProfileEntries.map(async (entry) => {
+      const primaryGrapes = Array.isArray(entry.primary_grapes)
+        ? entry.primary_grapes.filter(Boolean).join(", ")
+        : entry.primary_grapes ?? null;
+
+      try {
+        const profile = await assembleWineProfileWithDataSource(
+          {
+            wine_type: entry.wine_type as WineType,
+            canonical_region: entry.canonical_region ?? entry.region ?? null,
+            canonical_sub_region:
+              entry.canonical_sub_region ?? entry.appellation ?? null,
+            canonical_country: entry.canonical_country ?? entry.country ?? null,
+            primary_grapes: primaryGrapes,
+            vintage: null,
+            producer: null,
+            classification: entry.classification ?? null,
+            quality_tier: entry.classification ?? null,
+          },
+          prefetchedDataSource
+        );
+        profileMap.set(entry, profile);
+      } catch {
+        // Skip entries we cannot assemble profiles for.
+      }
+    })
+  );
+
+  return entries.map((entry) => {
+    const profile = profileMap.get(entry);
+    if (!profile) {
+      return entry;
+    }
+    return {
+      ...entry,
+      assembled_sensory: profile.sensory,
+    };
+  });
+}
+
 async function loadRecentScoreableEntries(
   supabase: RequestSupabaseClient,
   userId: string
@@ -53,6 +125,7 @@ async function loadRecentScoreableEntries(
         fields:
           "id, wine_type, canonical_region, canonical_sub_region, canonical_country, producer, classification, quality_tier, vintage",
         missingColumns: [
+          "vintage",
           "wine_type",
           "canonical_region",
           "canonical_sub_region",
@@ -61,7 +134,7 @@ async function loadRecentScoreableEntries(
         ] as const,
       },
       {
-        fields: "id, wine_type, region, appellation, country, producer, classification, vintage",
+        fields: "id, wine_type, region, appellation, country, producer, classification",
         missingColumns: [] as const,
       },
     ],
@@ -145,6 +218,9 @@ export async function refreshRecentUserScoreCache(
     supabase,
     userId
   );
+  const enrichedPreferenceEntries = await ensurePreferenceEntriesHaveProfiles(
+    preferenceEntries
+  );
   const primaryGrapeMap = await resolvedDependencies.fetchPrimaryGrapesByEntryId(
     supabase,
     recentEntries.map((entry) => entry.id)
@@ -161,7 +237,7 @@ export async function refreshRecentUserScoreCache(
     const userPreference =
       preferenceCache.get(entry.wine_type) ??
       resolvedDependencies.buildUserPreferenceVector(
-        preferenceEntries,
+        enrichedPreferenceEntries,
         entry.wine_type
       );
 

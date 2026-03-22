@@ -51,6 +51,7 @@ export type PreferenceSourceEntry = {
   country?: string | null;
   primary_grapes?: string | string[] | null;
   classification?: string | null;
+  assembled_sensory?: Partial<SensoryVector> | null;
 };
 
 const ADVANCED_NOTE_AXIS_MAP = {
@@ -322,12 +323,26 @@ function buildPreferenceSummary(entries: PreferenceSourceEntry[]): PreferenceSum
   let eventCount = 0;
 
   entries.forEach((entry) => {
-    if (!entry.advanced_notes) {
-      return;
-    }
-
     const noteWeight = normalizeRatingWeight(entry.rating);
     let contributed = false;
+
+    if (entry.assembled_sensory) {
+      (Object.keys(entry.assembled_sensory) as SensoryAxis[]).forEach((axis) => {
+        const value = entry.assembled_sensory?.[axis];
+        if (typeof value !== "number") {
+          return;
+        }
+
+        const current = accumulators.get(axis) ?? {
+          weightedSum: 0,
+          weightTotal: 0,
+        };
+        current.weightedSum += value * noteWeight;
+        current.weightTotal += noteWeight;
+        accumulators.set(axis, current);
+        contributed = true;
+      });
+    }
 
     (Object.keys(ADVANCED_NOTE_AXIS_MAP) as Array<keyof typeof ADVANCED_NOTE_AXIS_MAP>).forEach(
       (noteKey) => {
@@ -337,12 +352,13 @@ function buildPreferenceSummary(entries: PreferenceSourceEntry[]): PreferenceSum
         }
 
         const axis = ADVANCED_NOTE_AXIS_MAP[noteKey];
+        const overrideWeight = noteWeight * 1.5;
         const current = accumulators.get(axis) ?? {
           weightedSum: 0,
           weightTotal: 0,
         };
-        current.weightedSum += numericValue * noteWeight;
-        current.weightTotal += noteWeight;
+        current.weightedSum += numericValue * overrideWeight;
+        current.weightTotal += overrideWeight;
         accumulators.set(axis, current);
         contributed = true;
       }
