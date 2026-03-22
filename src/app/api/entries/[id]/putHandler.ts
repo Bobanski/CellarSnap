@@ -466,6 +466,9 @@ export function createEntryPutHandler(
             wine_type: isValidWineType(currentWineType) ? currentWineType : null,
             country:
               typeof updatedEntry.country === "string" ? updatedEntry.country : null,
+            primary_grapes: currentPrimaryGrapes
+              .map((grape) => grape.name)
+              .filter((name): name is string => typeof name === "string" && name.trim().length > 0),
             varietal: currentPrimaryGrapes[0]?.name ?? null,
           },
         });

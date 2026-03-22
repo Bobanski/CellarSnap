@@ -410,6 +410,32 @@ test.describe("WS2: Entry Normalization", () => {
     test("returns null for Napa Valley", () => {
       expect(inferWineType({ region: "Napa Valley", country: "US" })).toBeNull();
     });
+
+    test("returns red for Pinot Noir grapes", () => {
+      expect(inferWineType({ primary_grapes: "Pinot Noir" })).toBe("red");
+    });
+
+    test("returns white for Chardonnay grapes", () => {
+      expect(inferWineType({ primary_grapes: "Chardonnay" })).toBe("white");
+    });
+
+    test("returns red for a red blend", () => {
+      expect(
+        inferWineType({ primary_grapes: "Cabernet Sauvignon, Merlot" })
+      ).toBe("red");
+    });
+
+    test("returns null for mixed grape types", () => {
+      expect(
+        inferWineType({ primary_grapes: "Cabernet Sauvignon, Chardonnay" })
+      ).toBeNull();
+    });
+
+    test("keeps region priority over grape inference", () => {
+      expect(
+        inferWineType({ region: "Champagne", primary_grapes: "Pinot Noir" })
+      ).toBe("sparkling");
+    });
   });
 
   test.describe("createEntrySchema wine_type validation", () => {
@@ -527,6 +553,7 @@ test.describe("WS2: Entry Normalization", () => {
               canonical_country: "USA",
               canonical_sub_region: null,
               canonical_varietal: null,
+              wine_type: "red",
               resolution_confidence: 0.6,
               fallback_level: 4,
               region_alias_matched: true,
@@ -685,6 +712,7 @@ test.describe("WS2: Entry Normalization", () => {
               canonical_country: "USA",
               canonical_sub_region: null,
               canonical_varietal: "Cabernet Sauvignon",
+              wine_type: "red",
               resolution_confidence: 0.75,
               fallback_level: 3,
               region_alias_matched: true,
