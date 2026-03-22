@@ -788,6 +788,42 @@ test.describe("WS1 algorithm core", () => {
     expect(user.sensory.acidity).toBeGreaterThan(3);
   });
 
+  test("assembled sensory profiles contribute even without advanced notes", () => {
+    const user = buildUserPreferenceVector(
+      [
+        {
+          rating: 92,
+          wine_type: "red",
+          advanced_notes: null,
+          assembled_sensory: {
+            body: 5,
+            acidity: 2,
+            tannin: 4,
+            alcohol_perception: 3,
+            fruit_ripeness: 4,
+            oak_presence: 2,
+            earthy: 3,
+            mineral: 2,
+            savory: 3,
+            aromatic_intensity: 3,
+            sweetness_perception: 1,
+            bitterness_phenolic_grip: 2,
+            finish_length: 4,
+            concentration: 4,
+            complexity: 4,
+            freshness: 3,
+          },
+        },
+      ],
+      "red"
+    );
+
+    expect(user.event_count).toBe(1);
+    expect(user.sensory.body).toBe(5);
+    expect(user.sensory.acidity).toBe(2);
+    expect(user.sensory.freshness).toBe(3);
+  });
+
   test("age factor: old vintage (2000) returns 1.08", () => {
     const user = buildDenseUserPreferenceVector();
     const wine = buildProfileWithSensory({}, 4, 1, { vintage: 2000 });
