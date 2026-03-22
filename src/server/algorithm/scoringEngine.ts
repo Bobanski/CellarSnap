@@ -11,6 +11,7 @@ import {
   SENSORY_AXES,
   type MatchBand,
   type MatchScore,
+  type EnjoymentSignals,
   type EffectiveWineProfile,
   type CategoricalPreferenceVector,
   type UserPreferenceVector,
@@ -160,6 +161,49 @@ function computeAgeFactor(vintage: number | null): number {
   return 1.08;
 }
 
+const ENJOYMENT_INTENT_FACTOR: Record<string, number> = {
+  seek_more: 1.08,
+  happily_again: 1.04,
+  if_poured: 0.98,
+  pass: 0.92,
+};
+
+const HOW_WAS_IT_FACTOR: Record<string, number> = {
+  exceptional: 1.04,
+  good: 1.02,
+  okay: 1.0,
+  bad: 0.96,
+  awful: 0.92,
+};
+
+/**
+ * Composite enjoyment modifier from user's explicit signals.
+ * Combines rating, enjoyment intent (new 4-point scale), and how_was_it survey.
+ * Clamped to [0.80, 1.20] to prevent extreme swings.
+ */
+function computeEnjoymentFactor(signals: EnjoymentSignals | null): number {
+  if (!signals) return 1.0;
+
+  let ratingFactor = 1.0;
+  if (typeof signals.rating === "number") {
+    if (signals.rating >= 90) ratingFactor = 1.06;
+    else if (signals.rating >= 80) ratingFactor = 1.03;
+    else if (signals.rating >= 70) ratingFactor = 1.0;
+    else if (signals.rating >= 60) ratingFactor = 0.97;
+    else ratingFactor = 0.94;
+  }
+
+  const intentFactor = signals.enjoyment_intent
+    ? (ENJOYMENT_INTENT_FACTOR[signals.enjoyment_intent] ?? 1.0)
+    : 1.0;
+
+  const howFactor = signals.how_was_it
+    ? (HOW_WAS_IT_FACTOR[signals.how_was_it] ?? 1.0)
+    : 1.0;
+
+  return clamp(ratingFactor * intentFactor * howFactor, 0.80, 1.20);
+}
+
 function resolveBalanceFactor(overallBalance: number) {
   const roundedBalance = clamp(Math.round(overallBalance), 1, 5);
   return BALANCE_FACTOR_MAP[roundedBalance] ?? BALANCE_FACTOR_MAP[3];
@@ -183,7 +227,8 @@ function computeConfidence(
 
 export function computeMatchScore(
   wine: EffectiveWineProfile,
-  user: UserPreferenceVector
+  user: UserPreferenceVector,
+  enjoymentSignals?: EnjoymentSignals | null
 ): MatchScore {
   const axisContributions = {} as MatchScore["axis_contributions"];
   const totalPossibleWeight = SENSORY_AXES.reduce(
@@ -231,9 +276,10 @@ export function computeMatchScore(
     100 / (1 + Math.exp(SIGMOID_K * (distance - SIGMOID_MIDPOINT)));
   const balanceFactor = resolveBalanceFactor(wine.balance.overall);
   const ageFactor = computeAgeFactor(wine.metadata.vintage ?? null);
+  const enjoymentFactor = computeEnjoymentFactor(enjoymentSignals ?? null);
   const categoricalBonus = computeCategoricalBonus(wine, user);
   const finalScore = clamp(
-    preBalanceScore * balanceFactor * ageFactor + categoricalBonus,
+    preBalanceScore * balanceFactor * ageFactor * enjoymentFactor + categoricalBonus,
     0,
     100
   );
@@ -245,6 +291,7 @@ export function computeMatchScore(
     confidence,
     balance_factor: balanceFactor,
     age_factor: ageFactor,
+    enjoyment_factor: enjoymentFactor,
     pre_balance_score: roundScore(preBalanceScore),
     axis_contributions: axisContributions,
   };

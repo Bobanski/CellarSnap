@@ -10,7 +10,7 @@ import {
 import type {
   ComparisonResponse,
   PendingPostSaveSurvey,
-  SurveyDrinkAgainResponse,
+  SurveyEnjoymentIntentResponse,
   SurveyExpectationsResponse,
   SurveyHowWasItResponse,
 } from "@/src/lib/entryFlow/usePostSaveSurveyFlow";
@@ -26,16 +26,16 @@ export function PostSaveSurveyModal({
   postSaveSurveyStep,
   surveyHowWasIt,
   surveyExpectations,
-  surveyDrinkAgain,
+  surveyEnjoymentIntent,
   surveyErrorMessage,
   isSubmittingSurvey,
   canSubmitPostSaveSurvey,
   howWasItOptions,
   expectationsOptions,
-  drinkAgainOptions,
+  enjoymentIntentOptions,
   onSurveyHowWasItChange,
   onSurveyExpectationsChange,
-  onSurveyDrinkAgainChange,
+  onSurveyEnjoymentIntentChange,
   onSubmitPostSaveSurvey,
   onSkipPostSaveComparison,
   onSubmitPostSaveComparison,
@@ -44,16 +44,16 @@ export function PostSaveSurveyModal({
   postSaveSurveyStep: "survey" | "comparison";
   surveyHowWasIt: SurveyHowWasItResponse | "";
   surveyExpectations: SurveyExpectationsResponse | "";
-  surveyDrinkAgain: SurveyDrinkAgainResponse | "";
+  surveyEnjoymentIntent: SurveyEnjoymentIntentResponse | "";
   surveyErrorMessage: string | null;
   isSubmittingSurvey: boolean;
   canSubmitPostSaveSurvey: boolean;
   howWasItOptions: ReadonlyArray<ChipOption>;
   expectationsOptions: ReadonlyArray<ChipOption>;
-  drinkAgainOptions: ReadonlyArray<ChipOption>;
+  enjoymentIntentOptions: ReadonlyArray<ChipOption>;
   onSurveyHowWasItChange: (value: SurveyHowWasItResponse | "") => void;
   onSurveyExpectationsChange: (value: SurveyExpectationsResponse | "") => void;
-  onSurveyDrinkAgainChange: (value: SurveyDrinkAgainResponse | "") => void;
+  onSurveyEnjoymentIntentChange: (value: SurveyEnjoymentIntentResponse | "") => void;
   onSubmitPostSaveSurvey: () => Promise<void>;
   onSkipPostSaveComparison: () => void;
   onSubmitPostSaveComparison: (response: ComparisonResponse) => Promise<void>;
@@ -102,11 +102,11 @@ export function PostSaveSurveyModal({
                 hideModalCloseAction
               />
               <SelectField
-                label="Would you drink it again?"
-                value={surveyDrinkAgain}
-                options={drinkAgainOptions}
+                label="Would you seek this out again?"
+                value={surveyEnjoymentIntent}
+                options={enjoymentIntentOptions}
                 onChange={(value) =>
-                  onSurveyDrinkAgainChange(value as SurveyDrinkAgainResponse | "")
+                  onSurveyEnjoymentIntentChange(value as SurveyEnjoymentIntentResponse | "")
                 }
                 placeholderLabel="Select one"
                 tone="accent"

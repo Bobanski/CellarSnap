@@ -62,7 +62,7 @@ function makeComparisonSupabase(userId: string) {
                       return {
                         select(columns: string) {
                           expect(columns).toBe(
-                            "id, survey_how_was_it, survey_expectation_match, survey_drink_again"
+                            "id, survey_how_was_it, survey_expectation_match, survey_drink_again, survey_enjoyment_intent"
                           );
                           return {
                             single: async () => ({
@@ -71,7 +71,8 @@ function makeComparisonSupabase(userId: string) {
                                 survey_how_was_it: payload.survey_how_was_it,
                                 survey_expectation_match:
                                   payload.survey_expectation_match ?? null,
-                                survey_drink_again: payload.survey_drink_again,
+                                survey_drink_again: payload.survey_drink_again ?? null,
+                                survey_enjoyment_intent: payload.survey_enjoyment_intent ?? null,
                               },
                               error: null,
                             }),
@@ -182,6 +183,7 @@ test.describe("Bulk post-save survey contract", () => {
       survey_how_was_it: "good",
       survey_expectation_match: null,
       survey_drink_again: "yes",
+      survey_enjoyment_intent: null,
     });
     expect(supabase.state.comparisonInsertPayload).toEqual({
       user_id: "owner-1",
@@ -195,6 +197,7 @@ test.describe("Bulk post-save survey contract", () => {
         survey_how_was_it: "good",
         survey_expectation_match: null,
         survey_drink_again: "yes",
+        survey_enjoyment_intent: null,
       },
       feedback: {
         id: "feedback-1",

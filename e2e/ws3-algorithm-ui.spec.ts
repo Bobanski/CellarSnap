@@ -181,6 +181,7 @@ test.describe("WS3 algorithm UI support", () => {
               confidence: 0.88,
               balance_factor: 1,
               age_factor: 1.0,
+              enjoyment_factor: 1.0,
               pre_balance_score: 92,
               effective_profile: makeProfile(),
               axis_contributions: {
@@ -508,6 +509,7 @@ test.describe("WS3 algorithm UI support", () => {
           confidence: 0.86,
           balance_factor: 1,
           age_factor: 1.0,
+          enjoyment_factor: 1.0,
           pre_balance_score: 91.6,
           axis_contributions: {
             body: { user_value: 4, wine_value: 4, weight: 1.2, contribution: 0 },

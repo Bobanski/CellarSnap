@@ -7,6 +7,7 @@ export type AlgorithmScoreResponse = {
   confidence: number;
   balance_factor: number;
   age_factor: number;
+  enjoyment_factor: number;
   pre_balance_score: number;
   effective_profile: EffectiveWineProfile;
   axis_contributions: Record<

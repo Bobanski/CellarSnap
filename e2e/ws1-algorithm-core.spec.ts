@@ -836,4 +836,82 @@ test.describe("WS1 algorithm core", () => {
 
     expect(scoreWith.score).toBeGreaterThan(scoreWithout.score);
   });
+
+  test("enjoyment factor: no signals returns 1.0", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({});
+    const score = computeMatchScore(wine, user);
+    expect(score.enjoyment_factor).toBe(1.0);
+  });
+
+  test("enjoyment factor: null signals returns 1.0", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({});
+    const score = computeMatchScore(wine, user, null);
+    expect(score.enjoyment_factor).toBe(1.0);
+  });
+
+  test("enjoyment factor: strong positive signals boost score", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({});
+    const baseScore = computeMatchScore(wine, user);
+    const boostedScore = computeMatchScore(wine, user, {
+      rating: 95,
+      enjoyment_intent: "seek_more",
+      how_was_it: "exceptional",
+    });
+
+    expect(boostedScore.enjoyment_factor).toBeGreaterThan(1.0);
+    expect(boostedScore.enjoyment_factor).toBeLessThanOrEqual(1.20);
+    expect(boostedScore.score).toBeGreaterThan(baseScore.score);
+  });
+
+  test("enjoyment factor: negative signals reduce score", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({});
+    const baseScore = computeMatchScore(wine, user);
+    const reducedScore = computeMatchScore(wine, user, {
+      rating: 50,
+      enjoyment_intent: "pass",
+      how_was_it: "awful",
+    });
+
+    expect(reducedScore.enjoyment_factor).toBeLessThan(1.0);
+    expect(reducedScore.enjoyment_factor).toBeGreaterThanOrEqual(0.80);
+    expect(reducedScore.score).toBeLessThan(baseScore.score);
+  });
+
+  test("enjoyment factor: partial signals use neutral defaults for missing", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({});
+    const score = computeMatchScore(wine, user, {
+      rating: null,
+      enjoyment_intent: "happily_again",
+      how_was_it: null,
+    });
+
+    // Only intent factor applies: 1.0 * 1.04 * 1.0 = 1.04
+    expect(score.enjoyment_factor).toBeCloseTo(1.04, 5);
+  });
+
+  test("enjoyment factor: clamped to [0.80, 1.20]", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({});
+
+    // Max positive: 1.06 * 1.08 * 1.04 ≈ 1.189 (within range)
+    const maxPositive = computeMatchScore(wine, user, {
+      rating: 95,
+      enjoyment_intent: "seek_more",
+      how_was_it: "exceptional",
+    });
+    expect(maxPositive.enjoyment_factor).toBeLessThanOrEqual(1.20);
+
+    // Max negative: 0.94 * 0.92 * 0.92 ≈ 0.796 → clamped to 0.80
+    const maxNegative = computeMatchScore(wine, user, {
+      rating: 50,
+      enjoyment_intent: "pass",
+      how_was_it: "awful",
+    });
+    expect(maxNegative.enjoyment_factor).toBe(0.80);
+  });
 });

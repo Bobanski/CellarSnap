@@ -74,12 +74,19 @@ export type CategoricalPreferenceVector = {
   };
 };
 
+export type EnjoymentSignals = {
+  rating: number | null;
+  enjoyment_intent: "seek_more" | "happily_again" | "if_poured" | "pass" | null;
+  how_was_it: "exceptional" | "good" | "okay" | "bad" | "awful" | null;
+};
+
 export type MatchScore = {
   score: number;
   band: MatchBand;
   confidence: number;
   balance_factor: number;
   age_factor: number;
+  enjoyment_factor: number;
   pre_balance_score: number;
   axis_contributions: Record<SensoryAxis, AxisContribution>;
 };

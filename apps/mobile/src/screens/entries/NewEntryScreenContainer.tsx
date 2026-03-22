@@ -254,9 +254,11 @@ const EXPECTATIONS_OPTIONS: ChipOption[] = [
   { value: "above_expectations", label: "Above expectations" },
 ];
 
-const DRINK_AGAIN_OPTIONS: ChipOption[] = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
+const ENJOYMENT_INTENT_OPTIONS: ChipOption[] = [
+  { value: "seek_more", label: "I need to find more of this" },
+  { value: "happily_again", label: "I'd happily order this again" },
+  { value: "if_poured", label: "I'd drink it if someone poured it" },
+  { value: "pass", label: "I'll pass next time" },
 ];
 
 const BULK_GROUP_MODE_OPTIONS: GroupModeOption[] = [
@@ -506,7 +508,7 @@ export default function NewEntryScreen() {
     pendingPostSaveSurvey,
     surveyHowWasIt,
     surveyExpectations,
-    surveyDrinkAgain,
+    surveyEnjoymentIntent,
     postSaveSurveyStep,
     surveyErrorMessage,
     isSubmittingSurvey,
@@ -514,7 +516,7 @@ export default function NewEntryScreen() {
     beginPostSaveSurvey,
     setSurveyHowWasIt,
     setSurveyExpectations,
-    setSurveyDrinkAgain,
+    setSurveyEnjoymentIntent,
     submitPostSaveSurvey,
     submitPostSaveComparison,
     skipPostSaveComparison,
@@ -3077,16 +3079,16 @@ export default function NewEntryScreen() {
         postSaveSurveyStep={postSaveSurveyStep}
         surveyHowWasIt={surveyHowWasIt}
         surveyExpectations={surveyExpectations}
-        surveyDrinkAgain={surveyDrinkAgain}
+        surveyEnjoymentIntent={surveyEnjoymentIntent}
         surveyErrorMessage={surveyErrorMessage}
         isSubmittingSurvey={isSubmittingSurvey}
         canSubmitPostSaveSurvey={canSubmitPostSaveSurvey}
         howWasItOptions={HOW_WAS_IT_OPTIONS}
         expectationsOptions={EXPECTATIONS_OPTIONS}
-        drinkAgainOptions={DRINK_AGAIN_OPTIONS}
+        enjoymentIntentOptions={ENJOYMENT_INTENT_OPTIONS}
         onSurveyHowWasItChange={setSurveyHowWasIt}
         onSurveyExpectationsChange={setSurveyExpectations}
-        onSurveyDrinkAgainChange={setSurveyDrinkAgain}
+        onSurveyEnjoymentIntentChange={setSurveyEnjoymentIntent}
         onSubmitPostSaveSurvey={submitPostSaveSurvey}
         onSkipPostSaveComparison={skipPostSaveComparison}
         onSubmitPostSaveComparison={submitPostSaveComparison}

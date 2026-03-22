@@ -16,7 +16,7 @@ export type SurveyExpectationsResponse =
   | "below_expectations"
   | "met_expectations"
   | "above_expectations";
-export type SurveyDrinkAgainResponse = "yes" | "no";
+export type SurveyEnjoymentIntentResponse = "seek_more" | "happily_again" | "if_poured" | "pass";
 
 export type SurveyComparisonCandidate = {
   id: string;
@@ -39,7 +39,7 @@ export type PendingPostSaveSurvey = {
 type PostSaveSurveyAnswers = {
   how_was_it: SurveyHowWasItResponse;
   expectations: SurveyExpectationsResponse;
-  drink_again: SurveyDrinkAgainResponse;
+  enjoyment_intent: SurveyEnjoymentIntentResponse;
 };
 
 export function usePostSaveSurveyFlow({
@@ -57,8 +57,8 @@ export function usePostSaveSurveyFlow({
   const [surveyExpectations, setSurveyExpectations] = useState<
     SurveyExpectationsResponse | ""
   >("");
-  const [surveyDrinkAgain, setSurveyDrinkAgain] = useState<
-    SurveyDrinkAgainResponse | ""
+  const [surveyEnjoymentIntent, setSurveyEnjoymentIntent] = useState<
+    SurveyEnjoymentIntentResponse | ""
   >("");
   const [postSaveSurveyStep, setPostSaveSurveyStep] = useState<
     "survey" | "comparison"
@@ -71,7 +71,7 @@ export function usePostSaveSurveyFlow({
   const resetSurveyDraft = () => {
     setSurveyHowWasIt("");
     setSurveyExpectations("");
-    setSurveyDrinkAgain("");
+    setSurveyEnjoymentIntent("");
     setSavedSurveyAnswers(null);
     setPostSaveSurveyStep("survey");
     setSurveyErrorMessage(null);
@@ -101,7 +101,7 @@ export function usePostSaveSurveyFlow({
       return;
     }
 
-    if (!surveyHowWasIt || !surveyExpectations || !surveyDrinkAgain) {
+    if (!surveyHowWasIt || !surveyExpectations || !surveyEnjoymentIntent) {
       setSurveyErrorMessage("Please answer all 3 required questions.");
       return;
     }
@@ -113,7 +113,7 @@ export function usePostSaveSurveyFlow({
       const answers: PostSaveSurveyAnswers = {
         how_was_it: surveyHowWasIt,
         expectations: surveyExpectations,
-        drink_again: surveyDrinkAgain,
+        enjoyment_intent: surveyEnjoymentIntent,
       };
 
       const surveyResult = await persistPostSaveSurveyAnswers({
@@ -187,14 +187,14 @@ export function usePostSaveSurveyFlow({
   };
 
   const canSubmitPostSaveSurvey = Boolean(
-    surveyHowWasIt && surveyExpectations && surveyDrinkAgain
+    surveyHowWasIt && surveyExpectations && surveyEnjoymentIntent
   );
 
   return {
     pendingPostSaveSurvey,
     surveyHowWasIt,
     surveyExpectations,
-    surveyDrinkAgain,
+    surveyEnjoymentIntent,
     postSaveSurveyStep,
     surveyErrorMessage,
     isSubmittingSurvey,
@@ -202,7 +202,7 @@ export function usePostSaveSurveyFlow({
     beginPostSaveSurvey,
     setSurveyHowWasIt,
     setSurveyExpectations,
-    setSurveyDrinkAgain,
+    setSurveyEnjoymentIntent,
     submitPostSaveSurvey,
     submitPostSaveComparison,
     skipPostSaveComparison,

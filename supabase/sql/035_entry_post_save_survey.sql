@@ -45,3 +45,21 @@ comment on column public.wine_entries.survey_expectation_match is
 
 comment on column public.wine_entries.survey_drink_again is
   'Required post-save answer: Whether the user would drink the wine again.';
+
+do $$
+begin
+  create type public.entry_survey_enjoyment_intent as enum (
+    'seek_more',
+    'happily_again',
+    'if_poured',
+    'pass'
+  );
+exception
+  when duplicate_object then null;
+end $$;
+
+alter table public.wine_entries
+  add column if not exists survey_enjoyment_intent public.entry_survey_enjoyment_intent;
+
+comment on column public.wine_entries.survey_enjoyment_intent is
+  'Post-save answer: How enthusiastic is the user about drinking this wine again? Replaces binary drink_again.';

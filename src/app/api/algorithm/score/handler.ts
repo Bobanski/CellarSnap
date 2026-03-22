@@ -354,6 +354,7 @@ export function buildAlgorithmScoreResponse(params: {
     confidence: params.match.confidence,
     balance_factor: params.match.balance_factor,
     age_factor: params.match.age_factor,
+    enjoyment_factor: params.match.enjoyment_factor,
     pre_balance_score: params.match.pre_balance_score,
     effective_profile: params.effectiveProfile,
     axis_contributions: params.match.axis_contributions,

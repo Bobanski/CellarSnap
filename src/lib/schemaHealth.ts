@@ -103,6 +103,11 @@ const REQUIRED_COLUMNS: RequiredColumnCheck[] = [
     table: "wine_entries",
     column: "survey_drink_again",
   },
+  {
+    category: "post_save_survey",
+    table: "wine_entries",
+    column: "survey_enjoyment_intent",
+  },
 ];
 
 const REQUIRED_FUNCTIONS: RequiredFunctionCheck[] = [
