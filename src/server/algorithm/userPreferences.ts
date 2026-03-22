@@ -3,6 +3,7 @@ import {
   DEFAULT_AXIS_WEIGHTS,
   SHRINKAGE_CONSTANT,
 } from "@/server/algorithm/constants";
+import { extractFromNotes } from "@/server/algorithm/notesNlp";
 import type {
   CategoricalPreferenceVector,
   SensoryAxis,
@@ -42,6 +43,7 @@ type CategoricalSummary = {
 export type PreferenceSourceEntry = {
   rating: number | null;
   advanced_notes: AdvancedNotes | null;
+  notes?: string | null;
   wine_type?: WineType | null;
   canonical_region?: string | null;
   canonical_sub_region?: string | null;
@@ -363,6 +365,30 @@ function buildPreferenceSummary(entries: PreferenceSourceEntry[]): PreferenceSum
         contributed = true;
       }
     );
+
+    // NLP extraction from free-text tasting notes — 3rd signal layer.
+    // Lower weight (0.6×) than assembled_sensory (1.0×) and advanced_notes (1.5×)
+    // because NLP from free text is inherently less precise.
+    // Each axis hint is further scaled by its extraction confidence.
+    const nlpResult = extractFromNotes(entry.notes);
+    if (nlpResult) {
+      (Object.keys(nlpResult.sensoryHints) as SensoryAxis[]).forEach((axis) => {
+        const hint = nlpResult.sensoryHints[axis];
+        if (!hint || typeof hint.value !== "number") {
+          return;
+        }
+
+        const nlpWeight = noteWeight * 0.6 * hint.confidence;
+        const current = accumulators.get(axis) ?? {
+          weightedSum: 0,
+          weightTotal: 0,
+        };
+        current.weightedSum += hint.value * nlpWeight;
+        current.weightTotal += nlpWeight;
+        accumulators.set(axis, current);
+        contributed = true;
+      });
+    }
 
     if (contributed) {
       eventCount += 1;

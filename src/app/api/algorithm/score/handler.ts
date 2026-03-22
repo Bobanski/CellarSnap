@@ -68,6 +68,7 @@ type PreferenceEntryRow = {
   id: string;
   rating: number | null;
   advanced_notes: unknown;
+  notes?: string | null;
   vintage?: string | null;
   wine_type?: string | null;
   canonical_region?: string | null;
@@ -247,7 +248,7 @@ export async function defaultLoadUserPreferenceEntries(
   const selectAttempts = [
     {
       fields:
-        "id, rating, advanced_notes, vintage, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country",
+        "id, rating, advanced_notes, notes, vintage, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country",
       includesWineType: true,
       missingColumns: [
         "vintage",
@@ -258,7 +259,7 @@ export async function defaultLoadUserPreferenceEntries(
       ] as const,
     },
     {
-      fields: "id, rating, advanced_notes, region, appellation, country",
+      fields: "id, rating, advanced_notes, notes, region, appellation, country",
       includesWineType: false,
       missingColumns: [] as const,
     },
@@ -338,6 +339,7 @@ export async function defaultLoadUserPreferenceEntries(
     return {
       rating: row.rating ?? null,
       advanced_notes: normalizeAdvancedNotes(row.advanced_notes),
+      notes: row.notes ?? null,
       wine_type: isWineType(row.wine_type) ? row.wine_type : null,
       canonical_region: row.canonical_region ?? row.region ?? null,
       canonical_sub_region: row.canonical_sub_region ?? row.appellation ?? null,

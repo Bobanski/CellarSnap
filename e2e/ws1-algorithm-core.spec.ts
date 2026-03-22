@@ -950,4 +950,45 @@ test.describe("WS1 algorithm core", () => {
     });
     expect(maxNegative.enjoyment_factor).toBe(0.80);
   });
+
+  test("NLP tasting notes contribute to user preference vector", () => {
+    // Entry with notes describing a full-bodied, high-tannin wine but no advanced_notes
+    const entriesWithNotes = buildPreferenceEntries(90, {
+      advanced_notes: null,
+      notes: "Full bodied with firm tannins and high acidity. Rich and velvety.",
+    });
+    const entriesWithoutNotes = buildPreferenceEntries(90, {
+      advanced_notes: null,
+      notes: null,
+    });
+
+    const userWithNotes = buildUserPreferenceVector(entriesWithNotes, "red");
+    const userWithoutNotes = buildUserPreferenceVector(entriesWithoutNotes, "red");
+
+    // With notes, we should get sensory data extracted; without, nothing
+    const withNotesAxes = Object.keys(userWithNotes.sensory).length;
+    const withoutNotesAxes = Object.keys(userWithoutNotes.sensory).length;
+    expect(withNotesAxes).toBeGreaterThan(withoutNotesAxes);
+  });
+
+  test("NLP notes are lower weight than advanced_notes", () => {
+    // Entry with both advanced_notes (body: light) and free-text notes ("full bodied")
+    // Advanced notes at 1.5× weight should dominate over NLP at 0.6× weight
+    const entries = buildPreferenceEntries(90, {
+      advanced_notes: {
+        body: "light" as const,
+        acidity: null,
+        tannin: null,
+        alcohol: null,
+        sweetness: null,
+      },
+      notes: "Full bodied and rich, big and powerful",
+    });
+
+    const user = buildUserPreferenceVector(entries, "red");
+    // body axis: advanced_notes says light (1), NLP says full-bodied (~5)
+    // With 1.5× vs 0.6× weighting, result should be closer to 1 than to 5
+    expect(user.sensory.body).toBeDefined();
+    expect(user.sensory.body!).toBeLessThan(3);
+  });
 });
