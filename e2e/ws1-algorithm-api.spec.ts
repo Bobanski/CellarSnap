@@ -61,6 +61,8 @@ function makeProfile(): EffectiveWineProfile {
       canonical_region: "Bordeaux",
       canonical_sub_region: "Left Bank",
       primary_grapes: ["Cabernet Sauvignon", "Merlot"],
+      classification: null,
+      vintage: null,
     },
   };
 }

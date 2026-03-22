@@ -1,9 +1,9 @@
 import type { MatchBand, SensoryAxis } from "@/server/algorithm/types";
 
 export const DEFAULT_AXIS_WEIGHTS: Record<SensoryAxis, number> = {
-  body: 1.2,
-  acidity: 1.2,
-  tannin: 1.2,
+  body: 1.0,
+  acidity: 0.9,
+  tannin: 1.0,
   fruit_ripeness: 1.2,
   oak_presence: 1.0,
   concentration: 1.0,
@@ -14,7 +14,7 @@ export const DEFAULT_AXIS_WEIGHTS: Record<SensoryAxis, number> = {
   earthy: 0.8,
   mineral: 0.8,
   savory: 0.8,
-  alcohol_perception: 0.8,
+  alcohol_perception: 1.0,
   sweetness_perception: 0.6,
   bitterness_phenolic_grip: 0.6,
 };
@@ -39,8 +39,8 @@ export const SCORE_BANDS: readonly {
 
 export const MIN_DISPLAY_CONFIDENCE = 0.5;
 export const SHRINKAGE_CONSTANT = 10;
-export const SIGMOID_K = 0.8;
-export const SIGMOID_MIDPOINT = 3.0;
+export const SIGMOID_K = 0.65;
+export const SIGMOID_MIDPOINT = 3.5;
 
 export const FALLBACK_LEVEL_CONFIDENCE: Record<number, number> = {
   1: 0.95,

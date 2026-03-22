@@ -174,6 +174,8 @@ function buildProfileWithSensory(
       canonical_region: null,
       canonical_sub_region: null,
       primary_grapes: [],
+      classification: null,
+      vintage: null,
       ...metadataOverrides,
     },
   };
@@ -194,10 +196,12 @@ function buildDenseUserPreferenceVector(
       varietals: {},
       regions: {},
       countries: {},
+      classifications: {},
       weights: {
         varietal: 0,
         region: 0,
         country: 0,
+        classification: 0,
       },
       ...categoricalOverrides,
     },
@@ -608,10 +612,10 @@ test.describe("WS1 algorithm core", () => {
       0
     );
 
-    expect(contributionSum).toBeCloseTo(3.6, 5);
-    expect(score.axis_contributions.body.contribution).toBeCloseTo(1.2, 5);
-    expect(score.axis_contributions.acidity.contribution).toBeCloseTo(1.2, 5);
-    expect(score.axis_contributions.tannin.contribution).toBeCloseTo(1.2, 5);
+    expect(contributionSum).toBeCloseTo(2.9, 5);
+    expect(score.axis_contributions.body.contribution).toBeCloseTo(1.0, 5);
+    expect(score.axis_contributions.acidity.contribution).toBeCloseTo(0.9, 5);
+    expect(score.axis_contributions.tannin.contribution).toBeCloseTo(1.0, 5);
   });
 
   test("complexity participates in scoring when the user vector includes it", () => {
@@ -688,10 +692,12 @@ test.describe("WS1 algorithm core", () => {
         countries: {
           usa: 1,
         },
+        classifications: {},
         weights: {
           varietal: 1,
           region: 1,
           country: 1,
+          classification: 0,
         },
       }
     );
@@ -731,10 +737,12 @@ test.describe("WS1 algorithm core", () => {
           varietals: {},
           regions: {},
           countries: {},
+          classifications: {},
           weights: {
             varietal: 0,
             region: 0,
             country: 0,
+            classification: 0,
           },
         },
         event_count: 0,
@@ -778,5 +786,54 @@ test.describe("WS1 algorithm core", () => {
     expect(user.sensory.body).toBeLessThan(5);
     expect(user.sensory.body).toBeGreaterThan(1);
     expect(user.sensory.acidity).toBeGreaterThan(3);
+  });
+
+  test("age factor: old vintage (2000) returns 1.08", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({}, 4, 1, { vintage: 2000 });
+    const score = computeMatchScore(wine, user);
+    expect(score.age_factor).toBe(1.08);
+  });
+
+  test("age factor: recent vintage (2024) returns 0.97", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({}, 4, 1, { vintage: 2024 });
+    const score = computeMatchScore(wine, user);
+    expect(score.age_factor).toBe(0.97);
+  });
+
+  test("age factor: null vintage returns 1.0", () => {
+    const user = buildDenseUserPreferenceVector();
+    const wine = buildProfileWithSensory({}, 4, 1, { vintage: null });
+    const score = computeMatchScore(wine, user);
+    expect(score.age_factor).toBe(1.0);
+  });
+
+  test("classification bonus: matching classification scores higher", () => {
+    const user = buildDenseUserPreferenceVector(
+      {},
+      {
+        classifications: {
+          "grand cru": 1,
+        },
+        weights: {
+          varietal: 0,
+          region: 0,
+          country: 0,
+          classification: 1,
+        },
+      }
+    );
+    const wineWithClassification = buildProfileWithSensory({}, 4, 1, {
+      classification: "Grand Cru",
+    });
+    const wineWithoutClassification = buildProfileWithSensory({}, 4, 1, {
+      classification: null,
+    });
+
+    const scoreWith = computeMatchScore(wineWithClassification, user);
+    const scoreWithout = computeMatchScore(wineWithoutClassification, user);
+
+    expect(scoreWith.score).toBeGreaterThan(scoreWithout.score);
   });
 });

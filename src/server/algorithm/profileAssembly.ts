@@ -773,6 +773,8 @@ function normalizeProfileMetadata(
     canonical_region: input.canonical_region ?? null,
     canonical_sub_region: input.canonical_sub_region ?? null,
     primary_grapes: parseList(input.primary_grapes),
+    classification: input.classification ?? input.quality_tier ?? null,
+    vintage: input.vintage ?? null,
   };
 }
 
