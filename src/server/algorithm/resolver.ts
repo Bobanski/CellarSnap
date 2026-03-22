@@ -25,6 +25,7 @@ export type ResolverInput = {
   classification: string | null;
   wine_type: WineType | null;
   country: string | null;
+  primary_grapes?: string | string[] | null;
   varietal?: string | null;
 };
 
@@ -35,12 +36,73 @@ export type ResolverOutput = {
   canonical_country: string | null;
   canonical_sub_region: string | null;
   canonical_varietal: string | null;
+  wine_type: WineType | null;
   resolution_confidence: number;
   /** Fallback level 1–6 per D11 hierarchy. Level 6 = below confidence threshold (no score shown). */
   fallback_level: number;
   region_alias_matched: boolean;
   producer_alias_matched: boolean;
   resolution_source: "stub" | "alias_map" | "exact";
+};
+
+const GRAPE_TO_WINE_TYPE: Record<string, WineType> = {
+  // Red grapes
+  "cabernet sauvignon": "red",
+  merlot: "red",
+  "pinot noir": "red",
+  syrah: "red",
+  shiraz: "red",
+  grenache: "red",
+  tempranillo: "red",
+  sangiovese: "red",
+  nebbiolo: "red",
+  malbec: "red",
+  zinfandel: "red",
+  "cabernet franc": "red",
+  mourvedre: "red",
+  "petit verdot": "red",
+  gamay: "red",
+  barbera: "red",
+  dolcetto: "red",
+  primitivo: "red",
+  "nero d'avola": "red",
+  aglianico: "red",
+  "touriga nacional": "red",
+  carmenere: "red",
+  pinotage: "red",
+  cinsault: "red",
+  carignan: "red",
+  "nerello mascalese": "red",
+  corvina: "red",
+  montepulciano: "red",
+  carricante: "white",
+
+  // White grapes
+  chardonnay: "white",
+  "sauvignon blanc": "white",
+  riesling: "white",
+  "pinot grigio": "white",
+  "pinot gris": "white",
+  gewurztraminer: "white",
+  viognier: "white",
+  semillon: "white",
+  "chenin blanc": "white",
+  "gruner veltliner": "white",
+  albarino: "white",
+  vermentino: "white",
+  fiano: "white",
+  garganega: "white",
+  trebbiano: "white",
+  marsanne: "white",
+  roussanne: "white",
+  muscadet: "white",
+  "melon de bourgogne": "white",
+  torrontes: "white",
+  verdejo: "white",
+  godello: "white",
+  assyrtiko: "white",
+  furmint: "white",
+  glera: "sparkling",
 };
 
 function normalizeOptionalString(value: string | null | undefined) {
@@ -50,6 +112,48 @@ function normalizeOptionalString(value: string | null | undefined) {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeLookupValue(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function parseGrapeFieldValue(value: string | string[] | null | undefined) {
+  if (value == null) {
+    return [];
+  }
+
+  const rawValues = Array.isArray(value) ? value : value.split(/[;,/|]/g);
+  return rawValues
+    .map((entry) => normalizeOptionalString(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function inferWineTypeFromGrapes(value: string | string[] | null | undefined) {
+  const grapeValues = parseGrapeFieldValue(value);
+  if (grapeValues.length === 0) {
+    return null;
+  }
+
+  let inferredWineType: WineType | null = null;
+
+  for (const grape of grapeValues) {
+    const wineType = GRAPE_TO_WINE_TYPE[normalizeLookupValue(grape)];
+    if (!wineType) {
+      return null;
+    }
+
+    if (inferredWineType === null) {
+      inferredWineType = wineType;
+      continue;
+    }
+
+    if (inferredWineType !== wineType) {
+      return null;
+    }
+  }
+
+  return inferredWineType;
 }
 
 function deriveFallback({
@@ -125,6 +229,8 @@ export function createStubResolution(input: ResolverInput): ResolverOutput {
       country: canonical_country,
       region: canonical_region,
       classification: canonical_classification,
+      primary_grapes: input.primary_grapes,
+      varietal: canonical_varietal,
     });
   const fallback = deriveFallback({
     wineType: effectiveWineType,
@@ -141,6 +247,7 @@ export function createStubResolution(input: ResolverInput): ResolverOutput {
     canonical_country,
     canonical_sub_region: null,
     canonical_varietal,
+    wine_type: effectiveWineType,
     resolution_confidence: fallback.resolution_confidence,
     fallback_level: fallback.fallback_level,
     region_alias_matched: false,
@@ -174,6 +281,8 @@ export async function resolveEntryFields(
       country: canonical_country,
       region: canonical_sub_region ?? canonical_region ?? input.region,
       classification: canonical_classification,
+      primary_grapes: input.primary_grapes,
+      varietal: canonical_varietal,
     });
   const fallback = deriveFallback({
     wineType: effectiveWineType,
@@ -195,6 +304,7 @@ export async function resolveEntryFields(
     canonical_country,
     canonical_sub_region,
     canonical_varietal,
+    wine_type: effectiveWineType,
     resolution_confidence: fallback.resolution_confidence,
     fallback_level: fallback.fallback_level,
     region_alias_matched: Boolean(regionMatch),
@@ -217,6 +327,8 @@ export function inferWineType(fields: {
   country?: string | null;
   region?: string | null;
   classification?: string | null;
+  primary_grapes?: string | string[] | null;
+  varietal?: string | null;
 }): WineType | null {
   const classLower = (fields.classification ?? "").toLowerCase();
   const regionLower = (fields.region ?? "").toLowerCase();
@@ -259,6 +371,16 @@ export function inferWineType(fields: {
   }
   if (classLower.includes("ramato") || classLower.includes("orange wine")) {
     return "orange";
+  }
+
+  const primaryGrapeType = inferWineTypeFromGrapes(fields.primary_grapes);
+  if (primaryGrapeType) {
+    return primaryGrapeType;
+  }
+
+  const varietalType = inferWineTypeFromGrapes(fields.varietal);
+  if (varietalType) {
+    return varietalType;
   }
 
   return null;

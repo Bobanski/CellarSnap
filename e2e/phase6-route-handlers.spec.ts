@@ -803,6 +803,7 @@ test.describe("Phase 6 route handler regressions", () => {
             canonical_producer: "Domaine Test",
             canonical_classification: null,
             canonical_varietal: null,
+            wine_type: null,
             resolution_confidence: 0,
             fallback_level: 6,
             region_alias_matched: false,

@@ -405,6 +405,7 @@ export function createEntryPostHandler(
   const primaryGrapeIds = normalizePrimaryGrapeIds(payload.data.primary_grape_ids);
   let primaryGrapeIdsToPersist = primaryGrapeIds;
   let primaryVarietalName: string | null = null;
+  let primaryGrapeNames: string[] = [];
 
   if (primaryGrapeIds.length > 0) {
     const { data: grapeRows, error: grapeLookupError } = await supabase
@@ -437,6 +438,9 @@ export function createEntryPostHandler(
         ])
       );
       primaryVarietalName = grapeNameById.get(primaryGrapeIds[0]) ?? null;
+      primaryGrapeNames = primaryGrapeIds
+        .map((grapeId) => grapeNameById.get(grapeId) ?? null)
+        .filter((name): name is string => typeof name === "string" && name.trim().length > 0);
     }
   }
 
@@ -582,6 +586,7 @@ export function createEntryPostHandler(
         classification: payload.data.classification ?? null,
         wine_type: payload.data.wine_type ?? null,
         country: payload.data.country ?? null,
+        primary_grapes: primaryGrapeNames,
         varietal: primaryVarietalName,
       },
     });

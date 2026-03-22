@@ -143,6 +143,15 @@ test.describe("WS3 pocket sommelier", () => {
         { role: "user", content: "What about white options?" },
       ],
       {
+        query: "Recommend something from Piedmont.",
+        wineKnowledge: [],
+        generalKnowledge: [],
+        entryMatches: [],
+        userContext: {
+          relevantEntries: [],
+          recentFavorites: [],
+          preferenceSnippets: [],
+        },
         contextText: "User likes savory, high-acid wines.",
         sources: [],
       }
