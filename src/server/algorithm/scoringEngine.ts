@@ -117,16 +117,47 @@ function computeCategoricalBonus(
     wine.metadata.canonical_country,
     categoryVector.countries
   );
+  const classificationMatch = scoreAffinityText(
+    wine.metadata.classification,
+    categoryVector.classifications
+  );
 
   return roundScore(
-    varietalMatch * 12 * categoryVector.weights.varietal +
-      regionMatch * 8 * categoryVector.weights.region +
-      countryMatch * 5 * categoryVector.weights.country
+    varietalMatch * 8 * categoryVector.weights.varietal +
+      regionMatch * 12 * categoryVector.weights.region +
+      countryMatch * 6 * categoryVector.weights.country +
+      classificationMatch * 4 * categoryVector.weights.classification
   );
 }
 
 function classifyScore(score: number): MatchBand {
   return SCORE_BANDS.find((band) => score >= band.min)?.label ?? "not_your_style";
+}
+
+/**
+ * Conservative wine-age score modifier.
+ * Older wines tend to score higher (selection bias + aging benefit).
+ * Range: 0.95 (very young, < 2 years) to 1.08 (20+ years).
+ * Wines without vintage data get 1.0 (neutral).
+ */
+function computeAgeFactor(vintage: number | null): number {
+  if (vintage === null) {
+    return 1.0;
+  }
+
+  const currentYear = new Date().getUTCFullYear();
+  const age = currentYear - vintage;
+
+  if (age < 0 || age > 100) {
+    return 1.0; // Invalid vintage
+  }
+
+  if (age <= 1) return 0.95;
+  if (age <= 3) return 0.97;
+  if (age <= 5) return 1.0;
+  if (age <= 10) return 1.02;
+  if (age <= 20) return 1.05;
+  return 1.08;
 }
 
 function resolveBalanceFactor(overallBalance: number) {
@@ -199,8 +230,13 @@ export function computeMatchScore(
   const preBalanceScore =
     100 / (1 + Math.exp(SIGMOID_K * (distance - SIGMOID_MIDPOINT)));
   const balanceFactor = resolveBalanceFactor(wine.balance.overall);
+  const ageFactor = computeAgeFactor(wine.metadata.vintage ?? null);
   const categoricalBonus = computeCategoricalBonus(wine, user);
-  const finalScore = clamp(preBalanceScore * balanceFactor + categoricalBonus, 0, 100);
+  const finalScore = clamp(
+    preBalanceScore * balanceFactor * ageFactor + categoricalBonus,
+    0,
+    100
+  );
   const confidence = computeConfidence(wine, user, knownAxisCount);
 
   return {
@@ -208,6 +244,7 @@ export function computeMatchScore(
     band: classifyScore(finalScore),
     confidence,
     balance_factor: balanceFactor,
+    age_factor: ageFactor,
     pre_balance_score: roundScore(preBalanceScore),
     axis_contributions: axisContributions,
   };

@@ -64,6 +64,8 @@ function makeProfile(): EffectiveWineProfile {
       canonical_region: "Bordeaux",
       canonical_sub_region: "Left Bank",
       primary_grapes: ["Cabernet Sauvignon", "Merlot"],
+      classification: null,
+      vintage: null,
     },
   };
 }
@@ -178,6 +180,7 @@ test.describe("WS3 algorithm UI support", () => {
               band: "excellent",
               confidence: 0.88,
               balance_factor: 1,
+              age_factor: 1.0,
               pre_balance_score: 92,
               effective_profile: makeProfile(),
               axis_contributions: {
@@ -484,10 +487,12 @@ test.describe("WS3 algorithm UI support", () => {
               varietals: {},
               regions: {},
               countries: {},
+              classifications: {},
               weights: {
                 varietal: 0,
                 region: 0,
                 country: 0,
+                classification: 0,
               },
             },
             event_count: 4,
@@ -502,6 +507,7 @@ test.describe("WS3 algorithm UI support", () => {
           band: "excellent" as const,
           confidence: 0.86,
           balance_factor: 1,
+          age_factor: 1.0,
           pre_balance_score: 91.6,
           axis_contributions: {
             body: { user_value: 4, wine_value: 4, weight: 1.2, contribution: 0 },

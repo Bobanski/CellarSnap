@@ -54,6 +54,8 @@ export type EffectiveWineProfile = {
     canonical_region: string | null;
     canonical_sub_region: string | null;
     primary_grapes: string[];
+    classification: string | null;
+    vintage: number | null;
   };
 };
 
@@ -63,10 +65,12 @@ export type CategoricalPreferenceVector = {
   varietals: Record<string, number>;
   regions: Record<string, number>;
   countries: Record<string, number>;
+  classifications: Record<string, number>;
   weights: {
     varietal: number;
     region: number;
     country: number;
+    classification: number;
   };
 };
 
@@ -75,6 +79,7 @@ export type MatchScore = {
   band: MatchBand;
   confidence: number;
   balance_factor: number;
+  age_factor: number;
   pre_balance_score: number;
   axis_contributions: Record<SensoryAxis, AxisContribution>;
 };

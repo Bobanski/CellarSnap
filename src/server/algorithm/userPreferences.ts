@@ -30,10 +30,12 @@ type CategoricalSummary = {
   varietals: Record<string, number>;
   regions: Record<string, number>;
   countries: Record<string, number>;
+  classifications: Record<string, number>;
   eventCounts: {
     varietal: number;
     region: number;
     country: number;
+    classification: number;
   };
 };
 
@@ -48,6 +50,7 @@ export type PreferenceSourceEntry = {
   appellation?: string | null;
   country?: string | null;
   primary_grapes?: string | string[] | null;
+  classification?: string | null;
 };
 
 const ADVANCED_NOTE_AXIS_MAP = {
@@ -164,13 +167,16 @@ function buildCategoricalSummary(entries: PreferenceSourceEntry[]): CategoricalS
   const varietals = new Map<string, AffinityAccumulator>();
   const regions = new Map<string, AffinityAccumulator>();
   const countries = new Map<string, AffinityAccumulator>();
+  const classifications = new Map<string, AffinityAccumulator>();
   let varietalTotalWeight = 0;
   let regionTotalWeight = 0;
   let countryTotalWeight = 0;
+  let classificationTotalWeight = 0;
   const eventCounts = {
     varietal: 0,
     region: 0,
     country: 0,
+    classification: 0,
   };
 
   entries.forEach((entry) => {
@@ -204,12 +210,20 @@ function buildCategoricalSummary(entries: PreferenceSourceEntry[]): CategoricalS
       eventCounts.country += 1;
       countryValues.forEach((value) => addAffinityValue(countries, value, weight));
     }
+
+    const classificationValue = normalizePreferenceText(entry.classification);
+    if (classificationValue) {
+      classificationTotalWeight += weight;
+      eventCounts.classification += 1;
+      addAffinityValue(classifications, classificationValue, weight);
+    }
   });
 
   return {
     varietals: buildAffinityRecord(varietals, varietalTotalWeight),
     regions: buildAffinityRecord(regions, regionTotalWeight),
     countries: buildAffinityRecord(countries, countryTotalWeight),
+    classifications: buildAffinityRecord(classifications, classificationTotalWeight),
     eventCounts,
   };
 }
@@ -444,6 +458,11 @@ export function buildUserPreferenceVector(
       globalCategoricalSummary.countries,
       shrinkageWeight
     ),
+    classifications: mergeAffinityRecords(
+      typeCategoricalSummary.classifications,
+      globalCategoricalSummary.classifications,
+      shrinkageWeight
+    ),
     weights: {
       varietal: mergeCategoricalWeight(
         typeCategoricalSummary.eventCounts.varietal,
@@ -458,6 +477,11 @@ export function buildUserPreferenceVector(
       country: mergeCategoricalWeight(
         typeCategoricalSummary.eventCounts.country,
         globalCategoricalSummary.eventCounts.country,
+        shrinkageWeight
+      ),
+      classification: mergeCategoricalWeight(
+        typeCategoricalSummary.eventCounts.classification,
+        globalCategoricalSummary.eventCounts.classification,
         shrinkageWeight
       ),
     },
