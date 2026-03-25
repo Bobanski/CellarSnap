@@ -1969,6 +1969,7 @@ function baseInstructions(sourceHint: string) {
 async function createStructuredResponse(params: {
   sourceHint: string;
   userId: string;
+  model?: string;
   reasoningEffort?: StructuredResponseReasoningEffort;
   input:
     | string
@@ -1988,7 +1989,7 @@ async function createStructuredResponse(params: {
   try {
     const response = await openai.responses.create(
       {
-        model: "gpt-5-mini",
+        model: params.model ?? "gpt-5.4-mini",
         reasoning: { effort: params.reasoningEffort ?? "minimal" },
         max_output_tokens: 16000,
         text: {
@@ -3682,15 +3683,52 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     throw new Error("That URL did not contain readable list text.");
   }
 
-  // Fast path: parse directly from extracted text — no API call needed.
-  // The heuristic parser handles section headings, prices, vintages, and
-  // wine-type detection. Varietals and regions are filled in downstream by
-  // normalizeParsedWines + applyInferenceToWine.
+  // Compact the extracted text for the model input.
+  const compactedWineSectionText = compactWineSectionTextForModel(wineSectionText);
+  const modelInput = (compactedWineSectionText.trim() || wineSectionText).trim();
+
+  // Hybrid approach: heuristic layer extracts clean text from HTML,
+  // GPT-5.4 Mini handles the actual structuring — decomposing each wine
+  // into producer, wine name, grape, vintage, region, and wine_type.
+  // The heuristic parser is kept as a fallback if the GPT call fails.
+  try {
+    const parsed = await createStructuredResponse({
+      sourceHint: "text extracted from a restaurant wine-list webpage",
+      userId,
+      model: "gpt-5.4-mini",
+      reasoningEffort: "low",
+      input:
+        `URL: ${parsedUrl.toString()}\n` +
+        `Page title: ${title ?? "Unknown"}\n\n` +
+        "Extract every wine entry from this wine-list text. " +
+        "Each wine listing on the page must become exactly one wine object. " +
+        "Never merge two adjacent wines into one object, even if they share a section, producer, or region. " +
+        "Do not borrow a price, vintage, producer, varietal, or region from a neighboring entry. " +
+        "Preserve the wines in the exact order they appear on the page. " +
+        "section_type must reflect the section header each wine appears under (e.g. Sparkling, White, Red, Skin Contact). " +
+        "If a section is labeled Skin Contact or Orange, set section_type to orange. " +
+        "menu_label must reproduce the wine listing text as closely as possible, preserving the original word order including producer, wine name, grape variety, region, and vintage, but do not include prices in menu_label. " +
+        "Ignore navigation, booking widgets, opening hours, unrelated marketing copy, and any non-wine beverages.\n\n" +
+        modelInput,
+    });
+    (parsed as Record<string, unknown>)._urlDiag = {
+      fetchMs,
+      htmlMs,
+      extractMs,
+      contentType,
+      path: "html_gpt",
+    };
+    return parsed;
+  } catch (gptError) {
+    console.warn("[ListScan] GPT URL parse failed, falling back to heuristic:", gptError);
+  }
+
+  // Fallback: heuristic-only parsing if GPT call fails.
   const heuristic = buildHeuristicParsedResponse({
     text: wineSectionText,
     title,
     venueName: resolvedVenueName,
-    fallbackWarning: "",
+    fallbackWarning: "AI structuring was unavailable; results may be less accurate.",
   });
 
   if (heuristic.wines.length > 0) {
@@ -3699,54 +3737,10 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
       htmlMs,
       extractMs,
       contentType,
-      path: "html_heuristic",
+      path: "html_heuristic_fallback",
     };
     return heuristic;
   }
-
-  // If the section-aware heuristic found nothing, try from compacted text.
-  const compactedWineSectionText = compactWineSectionTextForModel(wineSectionText);
-  if (compactedWineSectionText.trim()) {
-    const compactedHeuristic = buildHeuristicParsedResponse({
-      text: compactedWineSectionText,
-      title,
-      venueName: resolvedVenueName,
-      fallbackWarning: "",
-    });
-    if (compactedHeuristic.wines.length > 0) {
-      (compactedHeuristic as Record<string, unknown>)._urlDiag = {
-        fetchMs,
-        htmlMs,
-        extractMs,
-        contentType,
-        path: "html_compacted_heuristic",
-      };
-      return compactedHeuristic;
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────────────
-  // OpenAI fallback (disabled — kept for reference / future re-enablement)
-  // ──────────────────────────────────────────────────────────────────────
-  // try {
-  //   return await createStructuredResponse({
-  //     sourceHint: "text extracted from a restaurant wine-list webpage",
-  //     userId,
-  //     input:
-  //       `URL: ${parsedUrl.toString()}\n` +
-  //       `Page title: ${title ?? "Unknown"}\n\n` +
-  //       "Extract every wine entry from this wine-list text. " +
-  //       "Each wine listing on the page must become exactly one wine object. " +
-  //       "Never merge two adjacent wines into one object, even if they share a section, producer, or region. " +
-  //       "Do not borrow a price, vintage, producer, varietal, or region from a neighboring entry. " +
-  //       "Preserve the wines in the exact order they appear on the page. " +
-  //       "menu_label must reproduce the wine listing text as closely as possible, preserving the original word order including producer, wine name, grape variety, region, and vintage, but do not include prices in menu_label. " +
-  //       "Ignore navigation, booking widgets, opening hours, unrelated marketing copy, and any non-wine beverages.\n\n" +
-  //       compactedWineSectionText,
-  //   });
-  // } catch (error) {
-  //   // ... OpenAI error handling was here
-  // }
 
   throw new Error("That URL did not contain readable wine-list text.");
 }
