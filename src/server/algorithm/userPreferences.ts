@@ -1,6 +1,9 @@
 import type { AdvancedNotes } from "@/lib/advancedNotes";
 import {
   DEFAULT_AXIS_WEIGHTS,
+  DYNAMIC_WEIGHT_MIN_ENTRIES,
+  MAX_DYNAMIC_WEIGHT_BOOST,
+  POPULATION_AXIS_MEANS,
   SHRINKAGE_CONSTANT,
 } from "@/server/algorithm/constants";
 import { extractFromNotes } from "@/server/algorithm/notesNlp";
@@ -370,7 +373,9 @@ function buildPreferenceSummary(entries: PreferenceSourceEntry[]): PreferenceSum
     // Lower weight (0.6×) than assembled_sensory (1.0×) and advanced_notes (1.5×)
     // because NLP from free text is inherently less precise.
     // Each axis hint is further scaled by its extraction confidence.
-    const nlpResult = extractFromNotes(entry.notes);
+    // Hints are validated against the wine's assembled profile to discard
+    // notes that contradict reality (e.g. "too acidic" on a low-acid wine).
+    const nlpResult = extractFromNotes(entry.notes, entry.assembled_sensory);
     if (nlpResult) {
       (Object.keys(nlpResult.sensoryHints) as SensoryAxis[]).forEach((axis) => {
         const hint = nlpResult.sensoryHints[axis];
@@ -436,6 +441,37 @@ function mergeAxisValue(
   return undefined;
 }
 
+/**
+ * Compute a dynamic boost for each sensory axis based on how much the user's
+ * preference deviates from the population mean.  Users with distinctive sensory
+ * profiles (e.g., consistently preferring high tannin) get those axes amplified.
+ * Users whose sensory profile is close to average get no boost — for them,
+ * categorical bonuses (region, varietal) naturally dominate the score.
+ *
+ * Returns a multiplier in [1.0, MAX_DYNAMIC_WEIGHT_BOOST].
+ */
+function computeDynamicBoost(
+  userValue: number,
+  axis: SensoryAxis,
+  eventCount: number
+): number {
+  if (eventCount < DYNAMIC_WEIGHT_MIN_ENTRIES) {
+    return 1.0;
+  }
+
+  const populationMean = POPULATION_AXIS_MEANS[axis];
+  const deviation = Math.abs(userValue - populationMean);
+
+  // deviation of ~0.5 on a 1-5 scale is meaningful; 1.0+ is very strong
+  // sigmoid-ish curve: starts boosting noticeably at 0.4, saturates around 1.2
+  const rawBoost = 1.0 + (deviation / (deviation + 0.6)) * (MAX_DYNAMIC_WEIGHT_BOOST - 1.0);
+
+  // confidence ramp: full boost at 15+ entries, partial before that
+  const confidenceRamp = Math.min(1.0, (eventCount - DYNAMIC_WEIGHT_MIN_ENTRIES) / 10);
+
+  return 1.0 + (rawBoost - 1.0) * confidenceRamp;
+}
+
 export function buildUserPreferenceVector(
   entries: PreferenceSourceEntry[],
   wineType: WineType
@@ -481,7 +517,8 @@ export function buildUserPreferenceVector(
             ? 0.35
             : 0;
 
-    weights[axis] = Number((DEFAULT_AXIS_WEIGHTS[axis] * observationWeight).toFixed(3));
+    const dynamicBoost = computeDynamicBoost(merged, axis, typeSummary.eventCount);
+    weights[axis] = Number((DEFAULT_AXIS_WEIGHTS[axis] * observationWeight * dynamicBoost).toFixed(3));
   });
 
   const categorical: CategoricalPreferenceVector = {

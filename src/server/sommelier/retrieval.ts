@@ -4,6 +4,8 @@ import {
   isMissingDbFunctionError,
 } from "@/lib/supabase/errors";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { POPULATION_AXIS_MEANS } from "@/server/algorithm/constants";
+import type { SensoryAxis } from "@/server/algorithm/types";
 import { buildUserPreferenceVector } from "@/server/algorithm/userPreferences";
 import type { PreferenceSourceEntry } from "@/server/algorithm/userPreferences";
 import { generateEmbedding } from "@/server/sommelier/embeddings";
@@ -216,23 +218,85 @@ function scoreUserEntry(entry: UserHistoryEntry, query: string) {
   return score;
 }
 
+/**
+ * Interpret a sensory axis value relative to the population mean.
+ * Returns a label like "high", "low", "very high", or "average".
+ */
+function interpretAxisLevel(axis: SensoryAxis, value: number): string {
+  const mean = POPULATION_AXIS_MEANS[axis];
+  const diff = value - mean;
+
+  if (diff > 0.8) return "very high";
+  if (diff > 0.35) return "high";
+  if (diff < -0.8) return "very low";
+  if (diff < -0.35) return "low";
+  return "average";
+}
+
+/**
+ * Build a rich preference summary snippet for Pocket Somm.
+ *
+ * Instead of dumping the first 4 raw axis numbers, this:
+ * 1. Sorts axes by deviation from population mean (most distinctive first)
+ * 2. Takes the top 6 most distinctive axes
+ * 3. Adds interpretive labels ("high", "very low", etc.)
+ * 4. Produces a natural-language summary the LLM can reason about
+ */
 function buildPreferenceSummarySnippet(
   wineType: WineType,
   entries: PreferenceSourceEntry[]
 ): PreferenceSnippet | null {
   const vector = buildUserPreferenceVector(entries, wineType);
-  const sensoryFragments = Object.entries(vector.sensory)
-    .slice(0, 4)
-    .map(([axis, value]) => `${axis.replace(/_/g, " ")} ${value}`);
 
-  if (vector.event_count === 0 || sensoryFragments.length === 0) {
+  if (vector.event_count === 0 || Object.keys(vector.sensory).length === 0) {
     return null;
+  }
+
+  // Sort axes by deviation from population mean (most distinctive first)
+  const rankedAxes = (Object.entries(vector.sensory) as Array<[SensoryAxis, number]>)
+    .map(([axis, value]) => ({
+      axis,
+      value,
+      deviation: Math.abs(value - POPULATION_AXIS_MEANS[axis]),
+      level: interpretAxisLevel(axis, value),
+    }))
+    .sort((a, b) => b.deviation - a.deviation);
+
+  // Top 6 most distinctive axes with interpretive labels
+  const distinctiveAxes = rankedAxes.slice(0, 6);
+  const sensoryFragments = distinctiveAxes.map(
+    (a) => `${a.axis.replace(/_/g, " ")} ${a.value.toFixed(1)} (${a.level})`
+  );
+
+  // Identify strong preferences (deviation > 0.35) for a natural-language intro
+  const strongPrefs = distinctiveAxes.filter((a) => a.deviation > 0.35);
+  let patternNote = "";
+  if (strongPrefs.length > 0) {
+    const highAxes = strongPrefs
+      .filter((a) => a.value > POPULATION_AXIS_MEANS[a.axis])
+      .map((a) => a.axis.replace(/_/g, " "));
+    const lowAxes = strongPrefs
+      .filter((a) => a.value < POPULATION_AXIS_MEANS[a.axis])
+      .map((a) => a.axis.replace(/_/g, " "));
+
+    const parts: string[] = [];
+    if (highAxes.length > 0) {
+      parts.push(`gravitates toward ${highAxes.join(", ")}`);
+    }
+    if (lowAxes.length > 0) {
+      parts.push(`avoids ${lowAxes.join(", ")}`);
+    }
+    if (parts.length > 0) {
+      patternNote = ` This user ${parts.join(" and ")}.`;
+    }
   }
 
   return {
     wineType,
     eventCount: vector.event_count,
-    summary: `User preferences for ${wineType}: ${sensoryFragments.join(", ")}.`,
+    summary:
+      `User preferences for ${wineType} (${vector.event_count} entries): ` +
+      `${sensoryFragments.join(", ")}.${patternNote}`,
   };
 }
 
@@ -321,7 +385,7 @@ export async function retrieveUserContext(
               .map((entry) => entry.wine_type)
               .filter((wineType): wineType is WineType => Boolean(wineType))
           )
-        ).slice(0, 2);
+        ).slice(0, 3);
 
   const preferenceSnippets = wineTypesToSummarize
     .map((wineType) => buildPreferenceSummarySnippet(wineType, preferenceEntries))

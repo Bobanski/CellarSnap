@@ -1,4 +1,4 @@
-import type { NlpNotesExtraction, SensoryAxis } from "./types";
+import type { NlpNotesExtraction, SensoryAxis, SensoryVector } from "./types";
 import {
   AROMA_CLUSTERS,
   DESCRIPTOR_LEXICON,
@@ -173,11 +173,74 @@ function scoreSentiment(text: string, tokenSet: Set<string>) {
 }
 
 /**
+ * Maximum allowed deviation between an NLP-extracted hint and the wine's
+ * actual assembled sensory value before the hint is discarded.
+ *
+ * Example: if the wine's assembled acidity is 1.8 (low) and the NLP hint
+ * says 4.5 ("very acidic"), the deviation is 2.7 which exceeds 1.8 —
+ * the user is probably misidentifying the sensation, so we discard it.
+ *
+ * This prevents preference drift from inaccurate tasting notes.
+ */
+const NLP_VALIDATION_MAX_DEVIATION = 1.8;
+
+/**
+ * Validate NLP-extracted sensory hints against the wine's actual assembled
+ * sensory profile.  Hints that diverge too far from reality are removed.
+ *
+ * Why: if a user writes "way too acidic" on a low-acid wine, they're
+ * probably picking up on something else (tannin grip, minerality, etc.).
+ * Incorporating that note would incorrectly skew their acidity preference.
+ */
+function validateHintsAgainstProfile(
+  hints: NlpNotesExtraction["sensoryHints"],
+  assembledSensory: Partial<SensoryVector> | null | undefined
+): NlpNotesExtraction["sensoryHints"] {
+  if (!assembledSensory) {
+    return hints;
+  }
+
+  const validated: NlpNotesExtraction["sensoryHints"] = {};
+
+  for (const [axisKey, hint] of Object.entries(hints) as Array<
+    [SensoryAxis, { value: number; confidence: number }]
+  >) {
+    if (!hint) {
+      continue;
+    }
+
+    const wineValue = assembledSensory[axisKey];
+
+    // If we don't have an assembled value for this axis, keep the hint
+    // (benefit of the doubt)
+    if (typeof wineValue !== "number") {
+      validated[axisKey] = hint;
+      continue;
+    }
+
+    const deviation = Math.abs(hint.value - wineValue);
+    if (deviation <= NLP_VALIDATION_MAX_DEVIATION) {
+      validated[axisKey] = hint;
+    }
+    // else: hint diverges too far from actual wine profile — discard
+  }
+
+  return validated;
+}
+
+/**
  * Extract sensory hints, descriptor clusters, and sentiment from free-text tasting notes.
  * Rule-based by design: the branch is small enough that a lexicon is more predictable
  * than a model call.
+ *
+ * When assembledSensory is provided, extracted sensory hints are validated against
+ * the wine's actual profile.  Hints that diverge too far are discarded to prevent
+ * inaccurate notes from skewing the user's preference vector.
  */
-export function extractFromNotes(notes: string | null | undefined): NlpNotesExtraction | null {
+export function extractFromNotes(
+  notes: string | null | undefined,
+  assembledSensory?: Partial<SensoryVector> | null
+): NlpNotesExtraction | null {
   if (!notes || notes.trim().length < 3) {
     return null;
   }
@@ -192,7 +255,8 @@ export function extractFromNotes(notes: string | null | undefined): NlpNotesExtr
 
   matchedDescriptorPhrases.forEach((phrase) => tokenSet.add(`descriptor:${phrase}`));
 
-  const sensoryHints = collectAxisHints(matchedDescriptorPhrases);
+  const rawHints = collectAxisHints(matchedDescriptorPhrases);
+  const sensoryHints = validateHintsAgainstProfile(rawHints, assembledSensory);
   const descriptorClusters = rankClusters(normalized, tokenSet);
   const sentiment = scoreSentiment(normalized, tokenSet);
   const tokenCount = tokenSet.size;
