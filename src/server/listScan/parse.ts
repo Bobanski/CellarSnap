@@ -1502,16 +1502,39 @@ function applyInferenceToWine(
   inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>>
 ) {
   const inferred = resolveInferenceForWine(wine, inferenceMap);
-  const regions = normalizeRegionFacetValues([
-    ...wine.regions,
+
+  // Regions: extracted data is source of truth.
+  // DB enrichment only ADDS regions the list didn't have — never replaces.
+  const extractedRegions = wine.regions;
+  const enrichmentRegions = [
     ...(inferred?.canonicalCountry ? [inferred.canonicalCountry] : []),
     ...(inferred?.canonicalRegion ? [inferred.canonicalRegion] : []),
     ...(inferred?.canonicalSubRegion ? [inferred.canonicalSubRegion] : []),
+  ];
+  const regions = normalizeRegionFacetValues([
+    ...extractedRegions,
+    ...enrichmentRegions,
   ]);
-  const varietals = uniqueValues([
-    ...wine.varietals,
-    ...(inferred?.grapes.length ? inferred.grapes : []),
-  ]);
+
+  // Varietals: extracted data is source of truth.
+  // DB grapes only fill gaps when the list didn't provide any.
+  const varietals =
+    wine.varietals.length > 0
+      ? wine.varietals
+      : uniqueValues([
+          ...wine.varietals,
+          ...(inferred?.grapes.length ? inferred.grapes : []),
+        ]);
+
+  // Wine type priority chain:
+  // 1. section_type from list headers (most authoritative — the list says it)
+  // 2. wine.wine_type from the parser (extracted per-wine signals)
+  // 3. contextWineType (re-inferred from extracted + enriched data)
+  // 4. DB inference from location/grapes (last resort gap-fill only)
+  const sectionType = wine.section_type ?? null;
+  const hasSectionType =
+    sectionType !== null && sectionType !== undefined && sectionType !== "unknown";
+
   const inferredWineTypeFromVarietals = varietals
     .map((varietal) =>
       inferenceMap.grapeToWineType.get(normalizeInferenceLookupValue(varietal)) ?? null
@@ -1533,21 +1556,27 @@ function applyInferenceToWine(
     !(isMixedRegionTypeHint(inferred?.canonicalRegion) && !inferred?.canonicalSubRegion)
       ? toListScanWineType(inferred?.wineType ?? null)
       : null;
-  const wineType =
-    wine.wine_type !== "unknown"
-      ? wine.wine_type
-      : contextWineType !== "unknown"
-        ? contextWineType
-        : inferredWineTypeFromLocation ?? inferredWineType ?? wine.wine_type;
+
+  const wineType: ListScanWineType =
+    hasSectionType && sectionType !== null && sectionType !== undefined
+      ? sectionType
+      : wine.wine_type !== "unknown"
+        ? wine.wine_type
+        : contextWineType !== "unknown"
+          ? contextWineType
+          : inferredWineTypeFromLocation ?? inferredWineType ?? wine.wine_type;
+
+  // Canonical country: extracted data takes priority over DB inference.
+  const canonicalCountry =
+    wine.canonical_country ??
+    normalizeListScanCountryLabel(inferred?.canonicalCountry) ??
+    null;
 
   return {
     ...wine,
     regions,
     varietals,
-    canonical_country:
-      normalizeListScanCountryLabel(inferred?.canonicalCountry) ??
-      wine.canonical_country ??
-      null,
+    canonical_country: canonicalCountry,
     wine_type: wineType,
     rationale: buildListScanRationale({
       wine_type: wineType,

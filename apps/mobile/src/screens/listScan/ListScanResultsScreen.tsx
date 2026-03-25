@@ -836,7 +836,6 @@ export default function ListScanResultsScreen() {
                         <View style={styles.tableRow}>
                           <View style={styles.tableWineColumn}>
                             <AppText
-                              numberOfLines={3}
                               style={[
                                 styles.tableWineText,
                                 highlighted ? styles.tableWineTextHighlighted : null,
@@ -845,12 +844,12 @@ export default function ListScanResultsScreen() {
                               {display.title}
                             </AppText>
                             {detailLine ? (
-                              <AppText numberOfLines={2} style={styles.tableSubText}>
+                              <AppText numberOfLines={3} style={styles.tableSubText}>
                                 {detailLine}
                               </AppText>
                             ) : null}
                             {metaLine ? (
-                              <AppText numberOfLines={1} style={styles.tableSubText}>
+                              <AppText numberOfLines={2} style={styles.tableSubText}>
                                 {metaLine}
                               </AppText>
                             ) : null}
@@ -1389,22 +1388,24 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
+    gap: 6,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   tableWineColumn: {
-    flex: 1.85,
+    flex: 1,
     minWidth: 0,
   },
   tablePriceColumn: {
-    width: 56,
+    width: 50,
     alignItems: "flex-end",
+    flexShrink: 0,
   },
   tableMatchColumn: {
-    width: 48,
+    width: 44,
     alignItems: "flex-end",
+    flexShrink: 0,
   },
   tableWineText: {
     color: colors.textPrimary,
