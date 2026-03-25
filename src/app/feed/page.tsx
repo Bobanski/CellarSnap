@@ -19,7 +19,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import AppImage from "@/components/AppImage";
 import MatchBadge from "@/components/MatchBadge";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
@@ -1018,9 +1018,9 @@ export default function FeedPage() {
     : [];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="overflow-x-hidden px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
-        <NavBar />
         <header className="space-y-2">
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Social feed
@@ -2030,6 +2030,7 @@ export default function FeedPage() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import SensoryRadarChart from "@/components/SensoryRadarChart";
 import { requirePrivateBetaFeatureUser } from "@/lib/access/privateBetaFeatures";
 import {
@@ -204,9 +204,9 @@ export default async function PalatePage() {
     : [];
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar activeHrefOverride="/palate" />
 
         <header className="space-y-3">
           <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
@@ -392,6 +392,7 @@ export default async function PalatePage() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

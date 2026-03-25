@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
+import AppShell from "@/components/AppShell";
 
 const CATEGORIES = [
   { value: "bug", label: "Bug report" },
@@ -62,7 +63,8 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-2xl space-y-8">
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]/70">
@@ -172,6 +174,7 @@ export default function FeedbackPage() {
           </Link>
         </footer>
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

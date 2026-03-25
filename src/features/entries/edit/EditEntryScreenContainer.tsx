@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppImage from "@/components/AppImage";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
@@ -1858,52 +1858,49 @@ export default function EditEntryPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-        </div>
-        <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading entry...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-3xl space-y-8">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+              Loading entry...
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-        </div>
-        <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            {errorMessage ?? "Entry unavailable."}
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-3xl space-y-8">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+              {errorMessage ?? "Entry unavailable."}
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (currentUserId && entry.user_id !== currentUserId) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-        </div>
-        <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
-          <Link
-            className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-            href={`/entries/${entry.id}`}
-          >
-            ← Back to entry
-          </Link>
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            You can only edit your own entries.
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-3xl space-y-8">
+            <Link
+              className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              href={`/entries/${entry.id}`}
+            >
+              ← Back to entry
+            </Link>
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+              You can only edit your own entries.
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -1931,11 +1928,9 @@ export default function EditEntryPage() {
   const showEditPhotosSection = false;
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
-      </div>
-      <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
+      <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
@@ -3026,6 +3021,7 @@ export default function EditEntryPage() {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

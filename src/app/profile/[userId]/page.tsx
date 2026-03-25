@@ -8,7 +8,7 @@ import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import type { WineEntryWithUrls } from "@/types/wine";
 import AppImage from "@/components/AppImage";
 import Photo from "@/components/Photo";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 
@@ -338,40 +338,42 @@ export default function FriendProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading profile...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+              Loading profile...
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (errorMessage || !profile) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <Link
-            className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-            href="/friends"
-          >
-            ← Back to Friends
-          </Link>
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            {errorMessage ?? "Profile not found."}
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <Link
+              className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              href="/friends"
+            >
+              ← Back to Friends
+            </Link>
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+              {errorMessage ?? "Profile not found."}
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
         <header className="space-y-2">
           <Link
             className="accent-link-hover inline-block text-sm font-medium text-[var(--color-text-tertiary)]"
@@ -727,6 +729,7 @@ export default function FriendProfilePage() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

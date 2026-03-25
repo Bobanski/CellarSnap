@@ -16,7 +16,7 @@ import {
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import ScoreBreakdown from "@/components/ScoreBreakdown";
@@ -508,27 +508,29 @@ export default function EntryDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-5xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading entry...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-5xl space-y-8">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+              Loading entry...
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-5xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            {errorMessage ?? "Entry unavailable."}
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-5xl space-y-8">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+              {errorMessage ?? "Entry unavailable."}
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -742,9 +744,9 @@ export default function EntryDetailPage() {
     scoreResult.preference_event_count < 5;
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        <NavBar activeHrefOverride={openedFromFeed ? "/feed" : null} />
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Link
@@ -1404,7 +1406,7 @@ export default function EntryDetailPage() {
 
       {shareToast ? (
         <div
-          className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
+          className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
             shareToast.kind === "success"
               ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
               : "border-rose-400/50 bg-rose-500/15 text-rose-100"
@@ -1415,6 +1417,7 @@ export default function EntryDetailPage() {
           {shareToast.message}
         </div>
       ) : null}
-    </div>
+      </div>
+    </AppShell>
   );
 }

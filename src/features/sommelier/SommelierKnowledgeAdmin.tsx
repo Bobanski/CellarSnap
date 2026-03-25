@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 
 type KnowledgeDocument = {
   id: string;
@@ -189,9 +189,9 @@ export default function SommelierKnowledgeAdmin() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar activeHrefOverride="/sommelier" />
         <section className="rounded-[2rem] border border-[var(--color-border)] bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-7">
           <p className="text-xs uppercase tracking-[0.32em] text-[var(--color-accent-secondary)]/70">
             Sommelier Knowledge
@@ -365,6 +365,7 @@ export default function SommelierKnowledgeAdmin() {
           )}
         </section>
       </div>
-    </main>
+      </div>
+    </AppShell>
   );
 }

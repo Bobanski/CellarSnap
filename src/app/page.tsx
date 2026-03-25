@@ -18,7 +18,7 @@ import {
 } from "@/lib/drinkingNow";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
@@ -497,21 +497,22 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
-            Loading...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
+              Loading...
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-10">
-        <NavBar />
 
         {/* ── Header ── */}
         <header className="space-y-3">
@@ -1054,6 +1055,7 @@ export default function HomePage() {
           )}
         </section>
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

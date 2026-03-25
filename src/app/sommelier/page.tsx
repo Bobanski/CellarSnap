@@ -1,4 +1,4 @@
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import SommelierChat from "@/features/sommelier/SommelierChat";
 import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -12,11 +12,12 @@ export default async function SommelierPage() {
   await assertPrivateBetaFeatureAccessAsync(supabase, user);
 
   return (
-    <main className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar activeHrefOverride="/sommelier" />
-        <SommelierChat />
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
+        <div className="mx-auto w-full max-w-6xl space-y-8">
+          <SommelierChat />
+        </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

@@ -5,7 +5,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppImage from "@/components/AppImage";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
@@ -3213,11 +3213,9 @@ export default function NewEntryPage() {
     (autofillStatus === "error" || autofillStatus === "timeout" || hasLowScanConfidence);
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
-      </div>
-      <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
+      <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2">
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             New entry
@@ -4414,6 +4412,7 @@ export default function NewEntryPage() {
         onSelect={submitPostSaveComparison}
         onSkip={skipPostSaveComparison}
       />
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LIST_SCAN_MAX_IMAGE_COUNT, type ListScanResult } from "@shared";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import { saveListScanResult } from "@/lib/listScan/storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -404,10 +404,8 @@ export default function ListScanIntakeScreen() {
     Boolean(scanProgress);
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-8 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-5xl space-y-6">
-        <NavBar />
-
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-3xl space-y-5">
           <header className="space-y-2">
             <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
@@ -618,6 +616,6 @@ export default function ListScanIntakeScreen() {
           </section>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
@@ -513,9 +513,9 @@ export default function EntriesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
         <header className="space-y-2">
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             My library
@@ -930,6 +930,7 @@ export default function EntriesPage() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

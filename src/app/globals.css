@@ -162,3 +162,17 @@ select optgroup {
     touch-action: manipulation;
   }
 }
+
+/* ─── BOTTOM TAB BAR ──────────────────────────────── */
+.bottom-tab-bar {
+  background-color: var(--color-surface-primary);
+  border-top: 0.5px solid rgba(123, 29, 58, 0.3);
+  padding: 6px 0 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* ─── APP HEADER ──────────────────────────────────── */
+.app-header {
+  background-color: var(--color-surface-primary);
+  border-bottom: 0.5px solid rgba(245, 237, 214, 0.06);
+}

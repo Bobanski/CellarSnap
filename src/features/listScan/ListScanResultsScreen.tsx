@@ -33,7 +33,7 @@ import {
 } from "@shared";
 import FacetMultiSelect from "@/features/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/features/listScan/RegionFilterSelect";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import { readListScanResult, saveListScanResult } from "@/lib/listScan/storage";
 
 const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
@@ -486,46 +486,48 @@ export default function ListScanResultsScreen() {
 
   if (result === undefined) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <ResultsLoadingSkeleton />
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <ResultsLoadingSkeleton />
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!result) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
-            {loadError ?? "This scan result is no longer available in the current session."}
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link
-                href="/list-scan"
-                className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
-              >
-                Scan another
-              </Link>
-              <Link
-                href={historyHref}
-                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-              >
-                My scans
-              </Link>
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
+              {loadError ?? "This scan result is no longer available in the current session."}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/list-scan"
+                  className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
+                >
+                  Scan another
+                </Link>
+                <Link
+                  href={historyHref}
+                  className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+                >
+                  My scans
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
 
         <header className="space-y-3">
           <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
@@ -1070,6 +1072,7 @@ export default function ListScanResultsScreen() {
           </div>
         </section>
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }
