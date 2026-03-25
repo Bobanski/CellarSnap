@@ -58,7 +58,7 @@ const BARE_PRICE_NUMBER_PATTERN = /(?:\d{1,3}(?:,\d{3})+|\d{1,5})(?:\.\d{1,2})?/
 const ABSOLUTE_NON_WINE_ENTRY_PATTERN =
   /\b(?:coffee|espresso|americano|macchiato|latte|flat white|cappuccino|cold brew|tea|herbal|water|sparkling water|soda|limeade|lemonade|juice|grape juice|shrub|arnold palmer|kombucha|beer|ale|ipa|pilsner|porter|stout|cider|spritz|michelada|mimosa|cognac|brandy|armagnac|grappa|liqueur|aperitif|digestif|corkage|non-alcoholic|zero-proof|soft beverage)\b/i;
 const NON_WINE_SECTION_HEADING_PATTERN =
-  /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|spirits?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed|email signup|newsletter|contact|hours|location|reservations?|private events?|gift cards?|careers?|about)\b/i;
+  /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|mocktails?|spirits?|flights?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed|email signup|newsletter|contact|hours|location|reservations?|private events?|gift cards?|careers?|about)\b/i;
 const WINE_SECTION_HEADING_PATTERN =
   /^##\s*(?:wines?|sparkling|white|red|rose|rosÃ©|orange|skin contact|dessert wine|fortified|sweet wines?|by the glass|half bottles?|large format|magnums?)\b/i;
 const WINE_SIGNAL_PATTERN =
@@ -2982,7 +2982,7 @@ function stripHtmlToText(html: string) {
     }
   );
 
-  const text = decodeHtmlEntities(
+  const rawText = decodeHtmlEntities(
     withHeadingMarkers
       .replace(/<\/(p|div|li|tr|section|article)>/gi, "\n")
       .replace(/<br\s*\/?>/gi, "\n")
@@ -2992,6 +2992,17 @@ function stripHtmlToText(html: string) {
       .replace(/\n{3,}/g, "\n\n")
       .replace(/[ \t]{2,}/g, " ")
       .trim()
+  );
+
+  // Convert markdown table headers into ## headings.
+  // Restaurant sites using BentoBox / js-md format often emit text like:
+  //   Sparkling |
+  //   ---|---
+  //   WINE ENTRY $88
+  // Convert the first line to ## Sparkling so downstream section detection works.
+  const text = rawText.replace(
+    /^([A-Za-z][A-Za-z &/\-]+?)\s*\|\s*\n\s*-{2,}\s*\|\s*-{2,}\s*$/gm,
+    (_match, heading: string) => `## ${heading.trim()}`
   );
 
   return {
