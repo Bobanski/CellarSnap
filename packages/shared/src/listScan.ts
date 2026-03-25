@@ -43,13 +43,14 @@ export const listScanWineTypeLabels: Record<ListScanWineType, string> = {
   sparkling: "Sparkling",
   white: "White",
   rose: "Rose",
-  orange: "Orange",
+  orange: "Skin Contact",
   red: "Red",
   dessert_fortified: "Dessert/Fortified",
   unknown: "Unknown",
 };
 
 const LIST_SCAN_COUNTRY_LABELS = new Map<string, string>([
+  // Full names
   ["usa", "USA"],
   ["u s", "USA"],
   ["u s a", "USA"],
@@ -82,6 +83,31 @@ const LIST_SCAN_COUNTRY_LABELS = new Map<string, string>([
   ["croatia", "Croatia"],
   ["romania", "Romania"],
   ["georgia", "Georgia"],
+  // Common wine-list abbreviations
+  ["fr", "France"],
+  ["it", "Italy"],
+  ["sp", "Spain"],
+  ["pt", "Portugal"],
+  ["de", "Germany"],
+  ["ger", "Germany"],
+  ["at", "Austria"],
+  ["aus", "Australia"],
+  ["au", "Australia"],
+  ["nz", "New Zealand"],
+  ["ar", "Argentina"],
+  ["cl", "Chile"],
+  ["za", "South Africa"],
+  ["sa", "South Africa"],
+  ["gr", "Greece"],
+  ["hu", "Hungary"],
+  ["ca", "USA"],
+  ["or", "USA"],
+  ["wa", "USA"],
+  ["ny", "USA"],
+  // US state abbreviations commonly seen on wine lists
+  ["california", "USA"],
+  ["oregon", "USA"],
+  ["washington", "USA"],
 ]);
 
 function normalizeCountryLookupValue(value: string | null | undefined) {
@@ -1112,6 +1138,7 @@ export function getListScanStructuredMeta(
     | "producer"
     | "regions"
     | "varietals"
+    | "canonical_country"
     | "parse_confidence"
   >
 ) {
@@ -1120,10 +1147,12 @@ export function getListScanStructuredMeta(
     resolvedType !== "unknown" ? listScanWineTypeLabels[resolvedType] : null;
   const primaryVarietal = wine.varietals[0] ?? null;
   const displayRegion = getListScanDisplayRegion(wine.regions);
+  const displayCountry = getListScanCountryLabel(wine);
   return {
     typeLabel,
     primaryVarietal,
     displayRegion,
+    displayCountry,
   };
 }
 

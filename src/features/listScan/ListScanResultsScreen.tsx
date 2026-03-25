@@ -859,12 +859,34 @@ export default function ListScanResultsScreen() {
                 (() => {
                   const display = getListScanDisplayLines(wine);
                   const structured = getListScanStructuredMeta(wine);
-                  const detailLine =
-                    display.subtitle ??
-                    [display.wineName, display.producer].filter(Boolean).join(" · ");
-                  const metaLine = [structured.primaryVarietal, structured.displayRegion]
+
+                  // Primary: Producer, Vintage — Region, Country
+                  const recProducer = display.producer;
+                  const recLocationParts = [
+                    structured.displayRegion,
+                    structured.displayCountry,
+                  ].filter(Boolean);
+                  const recLocation = recLocationParts.length > 0 ? recLocationParts.join(", ") : null;
+                  const recProducerVintage = [recProducer, wine.vintage]
                     .filter(Boolean)
-                    .join(" · ");
+                    .join(", ");
+                  const recPrimaryLine = [recProducerVintage, recLocation]
+                    .filter(Boolean)
+                    .join(" \u2014 ")
+                    || display.title;
+
+                  // Secondary: Varietal(s) · Wine Name
+                  const recVarietalLabel = wine.varietals.length > 0
+                    ? wine.varietals.join(" / ")
+                    : null;
+                  const recWineName = display.wineName &&
+                    display.wineName.localeCompare(recProducer ?? "", undefined, { sensitivity: "base" }) !== 0
+                      ? display.wineName
+                      : null;
+                  const recSecondaryLine = [recVarietalLabel, recWineName]
+                    .filter(Boolean)
+                    .join(" \u00b7 ") || null;
+
                   return (
                     <article
                       key={wine.id}
@@ -882,16 +904,11 @@ export default function ListScanResultsScreen() {
                       <div className="mt-3 flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <h3 className="text-base font-semibold leading-7 text-[var(--color-text-primary)] sm:text-lg">
-                            {display.title}
+                            {recPrimaryLine}
                           </h3>
-                          {detailLine ? (
+                          {recSecondaryLine ? (
                             <p className="mt-1 text-xs leading-6 text-[var(--color-text-secondary)] sm:text-sm">
-                              {detailLine}
-                            </p>
-                          ) : null}
-                          {metaLine ? (
-                            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                              {metaLine}
+                              {recSecondaryLine}
                             </p>
                           ) : null}
                         </div>
@@ -974,20 +991,34 @@ export default function ListScanResultsScreen() {
                     const highlighted = highlightedIds.has(wine.id);
                     const display = getListScanDisplayLines(wine);
                     const structured = getListScanStructuredMeta(wine);
-                    const sourceDetailLine = display.subtitle ?? display.wineName;
-                    const detailLine =
-                      sourceDetailLine &&
-                      sourceDetailLine.localeCompare(display.title, undefined, {
-                        sensitivity: "base",
-                      }) !== 0
-                        ? sourceDetailLine
-                        : null;
-                    const metaLine = [
-                      structured.primaryVarietal,
+
+                    // Primary: Producer, Vintage — Region, Country
+                    const producer = display.producer;
+                    const locationParts = [
                       structured.displayRegion,
-                    ]
+                      structured.displayCountry,
+                    ].filter(Boolean);
+                    const location = locationParts.length > 0 ? locationParts.join(", ") : null;
+                    const producerVintage = [producer, wine.vintage]
                       .filter(Boolean)
-                      .join(" · ");
+                      .join(", ");
+                    const primaryLine = [producerVintage, location]
+                      .filter(Boolean)
+                      .join(" \u2014 ")
+                      || display.title;
+
+                    // Secondary: Varietal(s) · Wine Name
+                    const varietalLabel = wine.varietals.length > 0
+                      ? wine.varietals.join(" / ")
+                      : null;
+                    const wineName = display.wineName &&
+                      display.wineName.localeCompare(producer ?? "", undefined, { sensitivity: "base" }) !== 0
+                        ? display.wineName
+                        : null;
+                    const secondaryLine = [varietalLabel, wineName]
+                      .filter(Boolean)
+                      .join(" \u00b7 ") || null;
+
                     const resolvedType = resolveListScanWineType(wine);
                     const showSectionHeader =
                       sortMode === "list_order" && resolvedType !== lastSectionType;
@@ -1011,16 +1042,11 @@ export default function ListScanResultsScreen() {
                                   : "font-medium text-[var(--color-text-primary)]"
                               }`}
                             >
-                              {display.title}
+                              {primaryLine}
                             </p>
-                            {detailLine ? (
+                            {secondaryLine ? (
                               <p className="mt-1 max-h-9 overflow-hidden break-words text-xs leading-4 text-[var(--color-text-secondary)] md:max-h-none md:truncate">
-                                {detailLine}
-                              </p>
-                            ) : null}
-                            {metaLine ? (
-                              <p className="mt-1 max-h-8 overflow-hidden break-words text-xs leading-4 text-[var(--color-text-tertiary)] md:max-h-none md:truncate">
-                                {metaLine}
+                                {secondaryLine}
                               </p>
                             ) : null}
                           </div>

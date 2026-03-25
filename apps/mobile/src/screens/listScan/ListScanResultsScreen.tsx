@@ -723,12 +723,34 @@ export default function ListScanResultsScreen() {
               {topRecommendations.map((wine, index) => {
                 const display = getListScanDisplayLines(wine);
                 const structured = getListScanStructuredMeta(wine);
-                const detailLine =
-                  display.subtitle ??
-                  [display.wineName, display.producer].filter(Boolean).join(" · ");
-                const metaLine = [structured.primaryVarietal, structured.displayRegion]
+
+                // Primary: Producer, Vintage — Region, Country
+                const recProducer = display.producer;
+                const recLocationParts = [
+                  structured.displayRegion,
+                  structured.displayCountry,
+                ].filter(Boolean);
+                const recLocation = recLocationParts.length > 0 ? recLocationParts.join(", ") : null;
+                const recProducerVintage = [recProducer, wine.vintage]
                   .filter(Boolean)
-                  .join(" · ");
+                  .join(", ");
+                const recPrimaryLine = [recProducerVintage, recLocation]
+                  .filter(Boolean)
+                  .join(" \u2014 ")
+                  || display.title;
+
+                // Secondary: Varietal(s) · Wine Name
+                const recVarietalLabel = wine.varietals.length > 0
+                  ? wine.varietals.join(" / ")
+                  : null;
+                const recWineName = display.wineName &&
+                  display.wineName.localeCompare(recProducer ?? "", undefined, { sensitivity: "base" }) !== 0
+                    ? display.wineName
+                    : null;
+                const recSecondaryLine = [recVarietalLabel, recWineName]
+                  .filter(Boolean)
+                  .join(" \u00b7 ") || null;
+
                 return (
                   <View key={wine.id} style={styles.recommendationCard}>
                     <View style={styles.recommendationTopRow}>
@@ -743,16 +765,11 @@ export default function ListScanResultsScreen() {
                     <View style={styles.recommendationTitleRow}>
                       <View style={styles.recommendationTitleWrap}>
                         <AppText numberOfLines={2} style={styles.recommendationTitle}>
-                          {display.title}
+                          {recPrimaryLine}
                         </AppText>
-                        {detailLine ? (
+                        {recSecondaryLine ? (
                           <AppText numberOfLines={2} style={styles.recommendationSubtitle}>
-                            {detailLine}
-                          </AppText>
-                        ) : null}
-                        {metaLine ? (
-                          <AppText numberOfLines={1} style={styles.recommendationMeta}>
-                            {metaLine}
+                            {recSecondaryLine}
                           </AppText>
                         ) : null}
                       </View>
@@ -804,22 +821,36 @@ export default function ListScanResultsScreen() {
                   let lastSectionType: string | null = null;
                   return filteredWines.map((wine) => {
                     const highlighted = highlightedIds.has(wine.id);
-                    const display = getListScanDisplayLines(wine);
                     const structured = getListScanStructuredMeta(wine);
-                    const sourceDetailLine = display.subtitle ?? display.wineName;
-                    const detailLine =
-                      sourceDetailLine &&
-                      sourceDetailLine.localeCompare(display.title, undefined, {
-                        sensitivity: "base",
-                      }) !== 0
-                        ? sourceDetailLine
-                        : null;
-                    const metaLine = [
-                      structured.primaryVarietal,
+                    const display = getListScanDisplayLines(wine);
+
+                    // Primary line: Producer, Vintage — Region, Country
+                    const producer = display.producer;
+                    const locationParts = [
                       structured.displayRegion,
-                    ]
+                      structured.displayCountry,
+                    ].filter(Boolean);
+                    const location = locationParts.length > 0 ? locationParts.join(", ") : null;
+                    const producerVintage = [producer, wine.vintage]
                       .filter(Boolean)
-                      .join(" · ");
+                      .join(", ");
+                    const primaryLine = [producerVintage, location]
+                      .filter(Boolean)
+                      .join(" \u2014 ")
+                      || display.title;
+
+                    // Secondary line: Varietal(s) · Wine Name (if distinct from producer)
+                    const varietalLabel = wine.varietals.length > 0
+                      ? wine.varietals.join(" / ")
+                      : null;
+                    const wineName = display.wineName &&
+                      display.wineName.localeCompare(producer ?? "", undefined, { sensitivity: "base" }) !== 0
+                        ? display.wineName
+                        : null;
+                    const secondaryLine = [varietalLabel, wineName]
+                      .filter(Boolean)
+                      .join(" \u00b7 ") || null;
+
                     const resolvedType = resolveListScanWineType(wine);
                     const showSectionHeader = resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
@@ -841,16 +872,11 @@ export default function ListScanResultsScreen() {
                                 highlighted ? styles.tableWineTextHighlighted : null,
                               ]}
                             >
-                              {display.title}
+                              {primaryLine}
                             </AppText>
-                            {detailLine ? (
-                              <AppText numberOfLines={3} style={styles.tableSubText}>
-                                {detailLine}
-                              </AppText>
-                            ) : null}
-                            {metaLine ? (
+                            {secondaryLine ? (
                               <AppText numberOfLines={2} style={styles.tableSubText}>
-                                {metaLine}
+                                {secondaryLine}
                               </AppText>
                             ) : null}
                           </View>
