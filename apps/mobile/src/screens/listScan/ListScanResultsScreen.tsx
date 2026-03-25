@@ -724,30 +724,26 @@ export default function ListScanResultsScreen() {
                 const display = getListScanDisplayLines(wine);
                 const structured = getListScanStructuredMeta(wine);
 
-                // Primary: Producer, Vintage — Region, Country
+                // Primary: Producer, 'VV
                 const recProducer = display.producer;
+                const recShortVintage = wine.vintage && /^\d{4}$/.test(wine.vintage)
+                  ? `'${wine.vintage.slice(2)}`
+                  : wine.vintage;
+                const recPrimaryLine = [recProducer, recShortVintage]
+                  .filter(Boolean)
+                  .join(", ")
+                  || display.title;
+
+                // Secondary: Varietal(s) · Region, Country
+                const recVarietalLabel = wine.varietals.length > 0
+                  ? wine.varietals.join(" / ")
+                  : null;
                 const recLocationParts = [
                   structured.displayRegion,
                   structured.displayCountry,
                 ].filter(Boolean);
                 const recLocation = recLocationParts.length > 0 ? recLocationParts.join(", ") : null;
-                const recProducerVintage = [recProducer, wine.vintage]
-                  .filter(Boolean)
-                  .join(", ");
-                const recPrimaryLine = [recProducerVintage, recLocation]
-                  .filter(Boolean)
-                  .join(" \u2014 ")
-                  || display.title;
-
-                // Secondary: Varietal(s) · Wine Name
-                const recVarietalLabel = wine.varietals.length > 0
-                  ? wine.varietals.join(" / ")
-                  : null;
-                const recWineName = display.wineName &&
-                  display.wineName.localeCompare(recProducer ?? "", undefined, { sensitivity: "base" }) !== 0
-                    ? display.wineName
-                    : null;
-                const recSecondaryLine = [recVarietalLabel, recWineName]
+                const recSecondaryLine = [recVarietalLabel, recLocation]
                   .filter(Boolean)
                   .join(" \u00b7 ") || null;
 
@@ -824,30 +820,26 @@ export default function ListScanResultsScreen() {
                     const structured = getListScanStructuredMeta(wine);
                     const display = getListScanDisplayLines(wine);
 
-                    // Primary line: Producer, Vintage — Region, Country
+                    // Primary line: Producer, 'VV
                     const producer = display.producer;
+                    const shortVintage = wine.vintage && /^\d{4}$/.test(wine.vintage)
+                      ? `'${wine.vintage.slice(2)}`
+                      : wine.vintage;
+                    const primaryLine = [producer, shortVintage]
+                      .filter(Boolean)
+                      .join(", ")
+                      || display.title;
+
+                    // Secondary line: Varietal(s) · Region, Country
+                    const varietalLabel = wine.varietals.length > 0
+                      ? wine.varietals.join(" / ")
+                      : null;
                     const locationParts = [
                       structured.displayRegion,
                       structured.displayCountry,
                     ].filter(Boolean);
                     const location = locationParts.length > 0 ? locationParts.join(", ") : null;
-                    const producerVintage = [producer, wine.vintage]
-                      .filter(Boolean)
-                      .join(", ");
-                    const primaryLine = [producerVintage, location]
-                      .filter(Boolean)
-                      .join(" \u2014 ")
-                      || display.title;
-
-                    // Secondary line: Varietal(s) · Wine Name (if distinct from producer)
-                    const varietalLabel = wine.varietals.length > 0
-                      ? wine.varietals.join(" / ")
-                      : null;
-                    const wineName = display.wineName &&
-                      display.wineName.localeCompare(producer ?? "", undefined, { sensitivity: "base" }) !== 0
-                        ? display.wineName
-                        : null;
-                    const secondaryLine = [varietalLabel, wineName]
+                    const secondaryLine = [varietalLabel, location]
                       .filter(Boolean)
                       .join(" \u00b7 ") || null;
 
