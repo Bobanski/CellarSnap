@@ -22,7 +22,6 @@ import MatchBadge from "@/components/MatchBadge";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
-import RatingBadge from "@/components/RatingBadge";
 import type {
   EntryGroup,
   GroupedEntrySlide,
@@ -1022,15 +1021,12 @@ export default function FeedPage() {
       <div className="overflow-x-hidden px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
         <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-            Social feed
+          <span className="block text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
+            Feed
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-            What the cellar is sipping.
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
+            What your people<br />are drinking.
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Discover what others are enjoying across the app.
-          </p>
         </header>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 backdrop-blur">
@@ -1209,14 +1205,14 @@ export default function FeedPage() {
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
-                    ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                    : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
+                    ? "rounded-[14px] border-[rgba(74,48,96,0.4)] bg-[#130d1e] hover:border-[rgba(74,48,96,0.7)]"
+                    : "rounded-2xl border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
@@ -1256,16 +1252,24 @@ export default function FeedPage() {
                         {entry.author_name}
                       </span>
                     </button>
+                    {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
+                      <span
+                        style={{
+                          background: "rgba(196, 96, 122, 0.1)",
+                          border: "0.5px solid rgba(196, 96, 122, 0.2)",
+                          color: "var(--color-accent-secondary)",
+                          fontSize: 11,
+                          padding: "2px 7px",
+                          borderRadius: 20,
+                        }}
+                        title={`${Math.round(matchScores[entry.id].score)}% match`}
+                      >
+                        {Math.round(matchScores[entry.id].score)}%
+                      </span>
+                    ) : null}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
-                        <MatchBadge
-                          score={matchScores[entry.id].score}
-                          band={matchScores[entry.id].band}
-                          compact
-                        />
-                      ) : null}
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
@@ -1390,7 +1394,20 @@ export default function FeedPage() {
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {typeof entry.rating === "number" &&
                     !Number.isNaN(entry.rating) ? (
-                      <RatingBadge rating={entry.rating} variant="text" />
+                      <span
+                        style={{
+                          background: "rgba(201, 168, 76, 0.1)",
+                          border: "0.5px solid rgba(201, 168, 76, 0.22)",
+                          color: "var(--color-accent-gold)",
+                          fontFamily: "var(--font-serif)",
+                          fontSize: 11,
+                          padding: "2px 6px",
+                          borderRadius: 6,
+                        }}
+                        title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
+                      >
+                        {Math.max(0, Math.min(100, Math.round(entry.rating)))}/100
+                      </span>
                     ) : null}
                     {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                   </div>
@@ -1528,6 +1545,18 @@ export default function FeedPage() {
                               >
                                 +
                               </button>
+                              {canComment && getCommentCount(entry) > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCommentsExpanded(entry.id);
+                                  }}
+                                  className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
+                                >
+                                  {getCommentCount(entry)} {getCommentCount(entry) === 1 ? "comment" : "comments"}
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                           {reactionPopupEntryId === entry.id ? (
