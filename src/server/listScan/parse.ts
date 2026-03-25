@@ -58,7 +58,7 @@ const BARE_PRICE_NUMBER_PATTERN = /(?:\d{1,3}(?:,\d{3})+|\d{1,5})(?:\.\d{1,2})?/
 const ABSOLUTE_NON_WINE_ENTRY_PATTERN =
   /\b(?:coffee|espresso|americano|macchiato|latte|flat white|cappuccino|cold brew|tea|herbal|water|sparkling water|soda|limeade|lemonade|juice|grape juice|shrub|arnold palmer|kombucha|beer|ale|ipa|pilsner|porter|stout|cider|spritz|michelada|mimosa|cognac|brandy|armagnac|grappa|liqueur|aperitif|digestif|corkage|non-alcoholic|zero-proof|soft beverage)\b/i;
 const NON_WINE_SECTION_HEADING_PATTERN =
-  /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|spirits?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed|email signup|newsletter|contact|hours|location|reservations?|private events?|gift cards?|careers?|about)\b/i;
+  /^##\s*(?:beer|beers|soft beverage|soft beverages|coffee|tea|cocktail|cocktails|mocktails?|spirits?|flights?|zero proof|zero-proof|non-alcoholic|non alcoholic|juice|juices|water|desserts?|mixed|email signup|newsletter|contact|hours|location|reservations?|private events?|gift cards?|careers?|about)\b/i;
 const WINE_SECTION_HEADING_PATTERN =
   /^##\s*(?:wines?|sparkling|white|red|rose|rosÃ©|orange|skin contact|dessert wine|fortified|sweet wines?|by the glass|half bottles?|large format|magnums?)\b/i;
 const WINE_SIGNAL_PATTERN =
@@ -1083,6 +1083,13 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         return [];
       }
 
+      // Section type is absolute authority for wine_type.
+      // The list says what category a wine is in — grape inference cannot override.
+      const finalWineType =
+        suppliedSectionType !== "unknown"
+          ? suppliedSectionType
+          : resolvedWineType;
+
       return [{
         id: createListScanId("wine"),
         source_order: index,
@@ -1091,7 +1098,7 @@ function normalizeParsedWines(parsed: ParsedResponse): ListScanParsedWine[] {
         wine_name: wineName,
         vintage,
         section_type: suppliedSectionType !== "unknown" ? suppliedSectionType : null,
-        wine_type: resolvedWineType,
+        wine_type: finalWineType,
         price_display: priceDisplay,
         price_value: priceValue,
         varietals: resolvedVarietals,
@@ -1502,52 +1509,87 @@ function applyInferenceToWine(
   inferenceMap: Awaited<ReturnType<typeof loadInferenceMap>>
 ) {
   const inferred = resolveInferenceForWine(wine, inferenceMap);
-  const regions = normalizeRegionFacetValues([
-    ...wine.regions,
+
+  // Regions: extracted data is source of truth.
+  // DB enrichment only ADDS regions the list didn't have — never replaces.
+  const extractedRegions = wine.regions;
+  const enrichmentRegions = [
     ...(inferred?.canonicalCountry ? [inferred.canonicalCountry] : []),
     ...(inferred?.canonicalRegion ? [inferred.canonicalRegion] : []),
     ...(inferred?.canonicalSubRegion ? [inferred.canonicalSubRegion] : []),
+  ];
+  const regions = normalizeRegionFacetValues([
+    ...extractedRegions,
+    ...enrichmentRegions,
   ]);
-  const varietals = uniqueValues([
-    ...wine.varietals,
-    ...(inferred?.grapes.length ? inferred.grapes : []),
-  ]);
-  const inferredWineTypeFromVarietals = varietals
-    .map((varietal) =>
-      inferenceMap.grapeToWineType.get(normalizeInferenceLookupValue(varietal)) ?? null
-    )
-    .filter((value): value is WineType => Boolean(value));
-  const uniqueWineTypes = Array.from(new Set(inferredWineTypeFromVarietals));
-  const inferredWineType =
-    uniqueWineTypes.length === 1 ? toListScanWineType(uniqueWineTypes[0]) : null;
-  const contextWineType = inferWineTypeFromContext({
-    menuLabel: wine.menu_label,
-    wineName: wine.wine_name,
-    producer: wine.producer,
-    regions,
-    varietals,
-    wineType: wine.wine_type,
-  });
-  const inferredWineTypeFromLocation =
-    toListScanWineType(inferred?.wineType ?? null) &&
-    !(isMixedRegionTypeHint(inferred?.canonicalRegion) && !inferred?.canonicalSubRegion)
-      ? toListScanWineType(inferred?.wineType ?? null)
-      : null;
-  const wineType =
-    wine.wine_type !== "unknown"
-      ? wine.wine_type
-      : contextWineType !== "unknown"
-        ? contextWineType
-        : inferredWineTypeFromLocation ?? inferredWineType ?? wine.wine_type;
+
+  // Varietals: extracted data is source of truth.
+  // DB grapes only fill gaps when the list didn't provide any.
+  const varietals =
+    wine.varietals.length > 0
+      ? wine.varietals
+      : uniqueValues([
+          ...wine.varietals,
+          ...(inferred?.grapes.length ? inferred.grapes : []),
+        ]);
+
+  // Wine type: section_type is ABSOLUTE authority.
+  // The list says what section a wine is in — no grape, context, or DB
+  // inference is allowed to override it. DB/context only fills the gap
+  // when section_type is absent.
+  const sectionType = wine.section_type ?? null;
+  const hasSectionType =
+    sectionType !== null && sectionType !== undefined && sectionType !== "unknown";
+
+  let wineType: ListScanWineType;
+
+  if (hasSectionType && sectionType !== null && sectionType !== undefined) {
+    // Section header wins unconditionally.
+    wineType = sectionType;
+  } else if (wine.wine_type !== "unknown") {
+    // Parser already determined a type (e.g. from per-wine cues).
+    wineType = wine.wine_type;
+  } else {
+    // No section, no per-wine cues — fall back to context then DB.
+    const contextWineType = inferWineTypeFromContext({
+      menuLabel: wine.menu_label,
+      wineName: wine.wine_name,
+      producer: wine.producer,
+      regions,
+      varietals,
+      wineType: wine.wine_type,
+    });
+    if (contextWineType !== "unknown") {
+      wineType = contextWineType;
+    } else {
+      const inferredWineTypeFromVarietals = varietals
+        .map((varietal) =>
+          inferenceMap.grapeToWineType.get(normalizeInferenceLookupValue(varietal)) ?? null
+        )
+        .filter((value): value is WineType => Boolean(value));
+      const uniqueWineTypes = Array.from(new Set(inferredWineTypeFromVarietals));
+      const inferredWineType =
+        uniqueWineTypes.length === 1 ? toListScanWineType(uniqueWineTypes[0]) : null;
+      const inferredWineTypeFromLocation =
+        toListScanWineType(inferred?.wineType ?? null) &&
+        !(isMixedRegionTypeHint(inferred?.canonicalRegion) && !inferred?.canonicalSubRegion)
+          ? toListScanWineType(inferred?.wineType ?? null)
+          : null;
+      wineType = inferredWineTypeFromLocation ?? inferredWineType ?? wine.wine_type;
+    }
+  }
+
+  // Canonical country: extracted data takes priority over DB inference.
+  const canonicalCountry =
+    wine.canonical_country ??
+    normalizeListScanCountryLabel(inferred?.canonicalCountry) ??
+    null;
 
   return {
     ...wine,
     regions,
     varietals,
-    canonical_country:
-      normalizeListScanCountryLabel(inferred?.canonicalCountry) ??
-      wine.canonical_country ??
-      null,
+    canonical_country: canonicalCountry,
     wine_type: wineType,
     rationale: buildListScanRationale({
       wine_type: wineType,
@@ -1913,8 +1955,9 @@ function baseInstructions(sourceHint: string) {
     "Preserve menu wording closely in menu_label, keep price_display as shown on the list, and set price_value to the primary numeric price when possible. " +
     "When a wine has both by-the-glass and by-the-bottle pricing, keep both prices in price_display in source order, formatted like $22/$110, and do not leave either price in menu_label. " +
     "Treat each wine entry block as exactly one wine object. A single wine may span multiple stacked rows, but blank space before the next item is a strong boundary between wines. Only merge lines when they clearly belong to the same entry, and never combine adjacent wines or borrow details from a neighboring row. " +
-    "Use section headers and visual layout to infer wine_type whenever possible; for example, wines listed under a Red section should be red even if the grape is omitted. " +
-    "wine_type must be one of sparkling, white, rose, orange, red, dessert_fortified, or unknown. " +
+    "section_type must capture the wine list section header (e.g. RED, WHITE, SPARKLING, ROSÉ) that a wine appears under. Set it to the matching enum value — red, white, sparkling, rose, orange, dessert_fortified — or null if there is no visible section header. This is critical: section_type is the primary signal for determining a wine's type. " +
+    "wine_type should reflect the per-wine type based on all available evidence (grape, appellation, label cues). If uncertain, set it to the same value as section_type rather than unknown. " +
+    "Both wine_type and section_type must be one of sparkling, white, rose, orange, red, dessert_fortified, unknown, or null. " +
     "varietals must contain canonical grape or blend names only when there is enough evidence. " +
     "regions must include any place-based identifiers found or strongly implied by the wine listing, from broad to specific, such as country, region, AVA, village, appellation, or area. " +
     "Exclude anything that is not a wine listing. Never return food, beer, cocktails, coffee, tea, water, juice, soda, or other non-wine beverages. " +
@@ -1926,6 +1969,7 @@ function baseInstructions(sourceHint: string) {
 async function createStructuredResponse(params: {
   sourceHint: string;
   userId: string;
+  model?: string;
   reasoningEffort?: StructuredResponseReasoningEffort;
   input:
     | string
@@ -1945,7 +1989,7 @@ async function createStructuredResponse(params: {
   try {
     const response = await openai.responses.create(
       {
-        model: "gpt-5-mini",
+        model: params.model ?? "gpt-5.4-mini",
         reasoning: { effort: params.reasoningEffort ?? "minimal" },
         max_output_tokens: 16000,
         text: {
@@ -1987,6 +2031,19 @@ async function createStructuredResponse(params: {
                           null,
                         ],
                       },
+                      section_type: {
+                        type: ["string", "null"],
+                        enum: [
+                          "sparkling",
+                          "white",
+                          "rose",
+                          "orange",
+                          "red",
+                          "dessert_fortified",
+                          "unknown",
+                          null,
+                        ],
+                      },
                       price_display: { type: ["string", "null"] },
                       price_value: { type: ["number", "null"] },
                       varietals: {
@@ -2005,6 +2062,7 @@ async function createStructuredResponse(params: {
                       "wine_name",
                       "vintage",
                       "wine_type",
+                      "section_type",
                       "price_display",
                       "price_value",
                       "varietals",
@@ -2938,7 +2996,7 @@ function stripHtmlToText(html: string) {
     }
   );
 
-  const text = decodeHtmlEntities(
+  const rawText = decodeHtmlEntities(
     withHeadingMarkers
       .replace(/<\/(p|div|li|tr|section|article)>/gi, "\n")
       .replace(/<br\s*\/?>/gi, "\n")
@@ -2948,6 +3006,17 @@ function stripHtmlToText(html: string) {
       .replace(/\n{3,}/g, "\n\n")
       .replace(/[ \t]{2,}/g, " ")
       .trim()
+  );
+
+  // Convert markdown table headers into ## headings.
+  // Restaurant sites using BentoBox / js-md format often emit text like:
+  //   Sparkling |
+  //   ---|---
+  //   WINE ENTRY $88
+  // Convert the first line to ## Sparkling so downstream section detection works.
+  const text = rawText.replace(
+    /^([A-Za-z][A-Za-z &/\-]+?)\s*\|\s*\n\s*-{2,}\s*\|\s*-{2,}\s*$/gm,
+    (_match, heading: string) => `## ${heading.trim()}`
   );
 
   return {
@@ -3614,15 +3683,52 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     throw new Error("That URL did not contain readable list text.");
   }
 
-  // Fast path: parse directly from extracted text — no API call needed.
-  // The heuristic parser handles section headings, prices, vintages, and
-  // wine-type detection. Varietals and regions are filled in downstream by
-  // normalizeParsedWines + applyInferenceToWine.
+  // Compact the extracted text for the model input.
+  const compactedWineSectionText = compactWineSectionTextForModel(wineSectionText);
+  const modelInput = (compactedWineSectionText.trim() || wineSectionText).trim();
+
+  // Hybrid approach: heuristic layer extracts clean text from HTML,
+  // GPT-5.4 Mini handles the actual structuring — decomposing each wine
+  // into producer, wine name, grape, vintage, region, and wine_type.
+  // The heuristic parser is kept as a fallback if the GPT call fails.
+  try {
+    const parsed = await createStructuredResponse({
+      sourceHint: "text extracted from a restaurant wine-list webpage",
+      userId,
+      model: "gpt-5.4-mini",
+      reasoningEffort: "low",
+      input:
+        `URL: ${parsedUrl.toString()}\n` +
+        `Page title: ${title ?? "Unknown"}\n\n` +
+        "Extract every wine entry from this wine-list text. " +
+        "Each wine listing on the page must become exactly one wine object. " +
+        "Never merge two adjacent wines into one object, even if they share a section, producer, or region. " +
+        "Do not borrow a price, vintage, producer, varietal, or region from a neighboring entry. " +
+        "Preserve the wines in the exact order they appear on the page. " +
+        "section_type must reflect the section header each wine appears under (e.g. Sparkling, White, Red, Skin Contact). " +
+        "If a section is labeled Skin Contact or Orange, set section_type to orange. " +
+        "menu_label must reproduce the wine listing text as closely as possible, preserving the original word order including producer, wine name, grape variety, region, and vintage, but do not include prices in menu_label. " +
+        "Ignore navigation, booking widgets, opening hours, unrelated marketing copy, and any non-wine beverages.\n\n" +
+        modelInput,
+    });
+    (parsed as Record<string, unknown>)._urlDiag = {
+      fetchMs,
+      htmlMs,
+      extractMs,
+      contentType,
+      path: "html_gpt",
+    };
+    return parsed;
+  } catch (gptError) {
+    console.warn("[ListScan] GPT URL parse failed, falling back to heuristic:", gptError);
+  }
+
+  // Fallback: heuristic-only parsing if GPT call fails.
   const heuristic = buildHeuristicParsedResponse({
     text: wineSectionText,
     title,
     venueName: resolvedVenueName,
-    fallbackWarning: "",
+    fallbackWarning: "AI structuring was unavailable; results may be less accurate.",
   });
 
   if (heuristic.wines.length > 0) {
@@ -3631,54 +3737,10 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
       htmlMs,
       extractMs,
       contentType,
-      path: "html_heuristic",
+      path: "html_heuristic_fallback",
     };
     return heuristic;
   }
-
-  // If the section-aware heuristic found nothing, try from compacted text.
-  const compactedWineSectionText = compactWineSectionTextForModel(wineSectionText);
-  if (compactedWineSectionText.trim()) {
-    const compactedHeuristic = buildHeuristicParsedResponse({
-      text: compactedWineSectionText,
-      title,
-      venueName: resolvedVenueName,
-      fallbackWarning: "",
-    });
-    if (compactedHeuristic.wines.length > 0) {
-      (compactedHeuristic as Record<string, unknown>)._urlDiag = {
-        fetchMs,
-        htmlMs,
-        extractMs,
-        contentType,
-        path: "html_compacted_heuristic",
-      };
-      return compactedHeuristic;
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────────────
-  // OpenAI fallback (disabled — kept for reference / future re-enablement)
-  // ──────────────────────────────────────────────────────────────────────
-  // try {
-  //   return await createStructuredResponse({
-  //     sourceHint: "text extracted from a restaurant wine-list webpage",
-  //     userId,
-  //     input:
-  //       `URL: ${parsedUrl.toString()}\n` +
-  //       `Page title: ${title ?? "Unknown"}\n\n` +
-  //       "Extract every wine entry from this wine-list text. " +
-  //       "Each wine listing on the page must become exactly one wine object. " +
-  //       "Never merge two adjacent wines into one object, even if they share a section, producer, or region. " +
-  //       "Do not borrow a price, vintage, producer, varietal, or region from a neighboring entry. " +
-  //       "Preserve the wines in the exact order they appear on the page. " +
-  //       "menu_label must reproduce the wine listing text as closely as possible, preserving the original word order including producer, wine name, grape variety, region, and vintage, but do not include prices in menu_label. " +
-  //       "Ignore navigation, booking widgets, opening hours, unrelated marketing copy, and any non-wine beverages.\n\n" +
-  //       compactedWineSectionText,
-  //   });
-  // } catch (error) {
-  //   // ... OpenAI error handling was here
-  // }
 
   throw new Error("That URL did not contain readable wine-list text.");
 }
