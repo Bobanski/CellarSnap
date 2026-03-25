@@ -1942,8 +1942,9 @@ function baseInstructions(sourceHint: string) {
     "Preserve menu wording closely in menu_label, keep price_display as shown on the list, and set price_value to the primary numeric price when possible. " +
     "When a wine has both by-the-glass and by-the-bottle pricing, keep both prices in price_display in source order, formatted like $22/$110, and do not leave either price in menu_label. " +
     "Treat each wine entry block as exactly one wine object. A single wine may span multiple stacked rows, but blank space before the next item is a strong boundary between wines. Only merge lines when they clearly belong to the same entry, and never combine adjacent wines or borrow details from a neighboring row. " +
-    "Use section headers and visual layout to infer wine_type whenever possible; for example, wines listed under a Red section should be red even if the grape is omitted. " +
-    "wine_type must be one of sparkling, white, rose, orange, red, dessert_fortified, or unknown. " +
+    "section_type must capture the wine list section header (e.g. RED, WHITE, SPARKLING, ROSÉ) that a wine appears under. Set it to the matching enum value — red, white, sparkling, rose, orange, dessert_fortified — or null if there is no visible section header. This is critical: section_type is the primary signal for determining a wine's type. " +
+    "wine_type should reflect the per-wine type based on all available evidence (grape, appellation, label cues). If uncertain, set it to the same value as section_type rather than unknown. " +
+    "Both wine_type and section_type must be one of sparkling, white, rose, orange, red, dessert_fortified, unknown, or null. " +
     "varietals must contain canonical grape or blend names only when there is enough evidence. " +
     "regions must include any place-based identifiers found or strongly implied by the wine listing, from broad to specific, such as country, region, AVA, village, appellation, or area. " +
     "Exclude anything that is not a wine listing. Never return food, beer, cocktails, coffee, tea, water, juice, soda, or other non-wine beverages. " +
@@ -2016,6 +2017,19 @@ async function createStructuredResponse(params: {
                           null,
                         ],
                       },
+                      section_type: {
+                        type: ["string", "null"],
+                        enum: [
+                          "sparkling",
+                          "white",
+                          "rose",
+                          "orange",
+                          "red",
+                          "dessert_fortified",
+                          "unknown",
+                          null,
+                        ],
+                      },
                       price_display: { type: ["string", "null"] },
                       price_value: { type: ["number", "null"] },
                       varietals: {
@@ -2034,6 +2048,7 @@ async function createStructuredResponse(params: {
                       "wine_name",
                       "vintage",
                       "wine_type",
+                      "section_type",
                       "price_display",
                       "price_value",
                       "varietals",

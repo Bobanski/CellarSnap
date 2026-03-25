@@ -1357,7 +1357,7 @@ const styles = StyleSheet.create({
   tableHead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 6,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -1370,14 +1370,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   tablePriceHead: {
-    width: 62,
-    textAlign: "center",
+    width: 50,
+    textAlign: "right",
+    flexShrink: 0,
   },
   tableMatchHead: {
-    width: 52,
+    width: 44,
     fontSize: 10,
     letterSpacing: 1.2,
     textAlign: "right",
+    flexShrink: 0,
   },
   tableWrap: {
     maxHeight: 420,
