@@ -233,7 +233,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
       <div
         className="flex transition-transform duration-300"
         style={{
-          aspectRatio: "4 / 4.2",
+          aspectRatio: "4 / 3",
           transform: `translateX(-${activeIndex * 100}%)`,
           touchAction: "pan-y",
         }}
