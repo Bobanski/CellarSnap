@@ -221,6 +221,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
   return (
     <div
       className="relative overflow-hidden bg-black/40"
+      style={{ aspectRatio: "4 / 3" }}
       onClickCapture={(event) => {
         if (!didSwipeRef.current) {
           return;
@@ -231,9 +232,8 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
       }}
     >
       <div
-        className="flex transition-transform duration-300"
+        className="flex h-full transition-transform duration-300"
         style={{
-          aspectRatio: "4 / 3",
           transform: `translateX(-${activeIndex * 100}%)`,
           touchAction: "pan-y",
         }}

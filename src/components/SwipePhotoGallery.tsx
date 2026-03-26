@@ -106,13 +106,15 @@ export default function SwipePhotoGallery({
           {header(active, activeIndex)}
         </div>
       ) : null}
-      <div className="relative">
+      <div
+        className="relative overflow-hidden"
+        style={heightClassName ? undefined : { aspectRatio: "4 / 3" }}
+      >
         <div
-          className={`flex ${heightClassName || ""} transition-transform duration-300`}
+          className={`flex ${heightClassName || "h-full"} transition-transform duration-300`}
           style={{
             transform: `translateX(-${activeIndex * 100}%)`,
             touchAction: "pan-y",
-            ...(heightClassName ? {} : { aspectRatio: "4 / 3" }),
           }}
           onTouchStart={(event) => {
             touchStartXRef.current = event.touches[0]?.clientX ?? null;
