@@ -232,8 +232,8 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
     >
       <div
         className="flex transition-transform duration-300"
-        style={{ aspectRatio: "1 / 1" }}
         style={{
+          aspectRatio: "4 / 5",
           transform: `translateX(-${activeIndex * 100}%)`,
           touchAction: "pan-y",
         }}
@@ -1284,9 +1284,9 @@ export default function FeedPage() {
                           border: "0.5px solid rgba(201, 168, 76, 0.22)",
                           color: "var(--color-accent-gold)",
                           fontFamily: "var(--font-serif)",
-                          fontSize: 15,
-                          fontWeight: 600,
-                          padding: "3px 8px",
+                          fontSize: 18,
+                          fontWeight: 700,
+                          padding: "4px 10px",
                           borderRadius: 6,
                         }}
                         title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}

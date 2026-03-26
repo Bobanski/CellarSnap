@@ -61,7 +61,7 @@ export default function SwipePhotoGallery({
   if (items.length === 0) {
     return (
       <div
-        className={`flex ${heightClassName || "aspect-square"} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-black/40 text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
+        className={`flex ${heightClassName || "aspect-[4/5]"} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-black/40 text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
       >
         {empty ?? "No photo"}
       </div>
@@ -112,7 +112,7 @@ export default function SwipePhotoGallery({
           style={{
             transform: `translateX(-${activeIndex * 100}%)`,
             touchAction: "pan-y",
-            ...(heightClassName ? {} : { aspectRatio: "1 / 1" }),
+            ...(heightClassName ? {} : { aspectRatio: "4 / 5" }),
           }}
           onTouchStart={(event) => {
             touchStartXRef.current = event.touches[0]?.clientX ?? null;

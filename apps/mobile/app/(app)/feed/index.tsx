@@ -1954,7 +1954,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   feedPhotoFrame: {
-    aspectRatio: 1,
+    aspectRatio: 4 / 5,
     borderRadius: 0,
     overflow: "hidden",
     backgroundColor: colors.surfacePrimary,
