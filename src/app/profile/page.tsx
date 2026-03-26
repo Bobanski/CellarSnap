@@ -85,6 +85,29 @@ function formatMemberSince(dateString: string | null): string {
   });
 }
 
+function ProfileGalleryImage({ src, alt }: { src: string; alt: string }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-zinc-700">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="m21 15-5-5L5 21" />
+        </svg>
+      </div>
+    );
+  }
+  return (
+    <AppImage
+      src={src}
+      alt={alt}
+      className="h-full w-full object-cover transition hover:scale-105"
+      onError={() => setErrored(true)}
+    />
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -400,6 +423,7 @@ export default function ProfilePage() {
       if (friendsRes.ok) {
         const data = await friendsRes.json();
         setFriends(data.friends ?? []);
+        setFriendCount(data.friends?.length ?? 0);
       }
       if (requestsRes.ok) {
         const data = await requestsRes.json();
@@ -1028,10 +1052,9 @@ export default function ProfilePage() {
                         className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]/10"
                       >
                         {entry.label_image_url ? (
-                          <AppImage
+                          <ProfileGalleryImage
                             src={entry.label_image_url}
                             alt={entry.wine_name || "Wine entry"}
-                            className="h-full w-full object-cover transition hover:scale-105"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-zinc-700">
@@ -1051,8 +1074,12 @@ export default function ProfilePage() {
                   </div>
                 ) : null}
 
-                {entriesLoading ? (
-                  <p className="mt-4 text-center text-sm text-[var(--color-text-tertiary)]">Loading entries...</p>
+                {entriesLoading && entries.length === 0 ? (
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 animate-pulse">
+                    {[...Array(10)].map((_, i) => (
+                      <div key={i} className="aspect-square rounded-lg bg-[var(--color-surface-raised)]" />
+                    ))}
+                  </div>
                 ) : null}
 
                 {entriesHasMore && !entriesLoading ? (
@@ -1080,10 +1107,9 @@ export default function ProfilePage() {
                         className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]/10"
                       >
                         {entry.label_image_url ? (
-                          <AppImage
+                          <ProfileGalleryImage
                             src={entry.label_image_url}
                             alt={entry.wine_name || "Wine entry"}
-                            className="h-full w-full object-cover transition hover:scale-105"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-zinc-700">
@@ -1103,8 +1129,12 @@ export default function ProfilePage() {
                   </div>
                 ) : null}
 
-                {taggedLoading ? (
-                  <p className="mt-4 text-center text-sm text-[var(--color-text-tertiary)]">Loading tagged entries...</p>
+                {taggedLoading && taggedEntries.length === 0 ? (
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 animate-pulse">
+                    {[...Array(10)].map((_, i) => (
+                      <div key={i} className="aspect-square rounded-lg bg-[var(--color-surface-raised)]" />
+                    ))}
+                  </div>
                 ) : null}
               </>
             ) : (

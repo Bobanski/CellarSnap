@@ -506,13 +506,28 @@ export default function EntryDetailPage() {
     }
   };
 
+  const openedFromFeed = searchParams.get("from") === "feed";
+  const profileContextUserId = searchParams.get("profile");
+  const openedFromProfile =
+    searchParams.get("from") === "profile" &&
+    typeof profileContextUserId === "string" &&
+    /^[0-9a-f-]{36}$/i.test(profileContextUserId);
+
   if (loading) {
     return (
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
-          <div className="mx-auto w-full max-w-5xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-              Loading entry...
+          <div className="animate-pulse space-y-6">
+            <div className="space-y-2">
+              <div className="h-3 w-32 rounded-full bg-[var(--color-surface-raised)]" />
+              <div className="h-8 w-64 rounded-full bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-40 rounded-full bg-[var(--color-surface-raised)]" />
+            </div>
+            <div className="h-80 rounded-3xl bg-[var(--color-surface-raised)]" />
+            <div className="space-y-4">
+              <div className="h-4 w-full rounded-full bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-5/6 rounded-full bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-3/4 rounded-full bg-[var(--color-surface-raised)]" />
             </div>
           </div>
         </div>
@@ -533,13 +548,6 @@ export default function EntryDetailPage() {
       </AppShell>
     );
   }
-
-  const openedFromFeed = searchParams.get("from") === "feed";
-  const profileContextUserId = searchParams.get("profile");
-  const openedFromProfile =
-    searchParams.get("from") === "profile" &&
-    typeof profileContextUserId === "string" &&
-    /^[0-9a-f-]{36}$/i.test(profileContextUserId);
   const isOwner = currentUserId === entry.user_id;
   const isTagged =
     !isOwner &&
@@ -785,7 +793,7 @@ export default function EntryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           <div className="space-y-0">
             <SwipePhotoGallery
               items={allGalleryItems}
@@ -875,120 +883,6 @@ export default function EntryDetailPage() {
                 </div>
               ) : null}
 
-              {commentsExpanded ? (
-                <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">Comments</p>
-                    <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Collapse</button>
-                  </div>
-                  {loadingComments ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Loading comments...</div>
-                  ) : !canComment ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Comments are private for this post.</div>
-                  ) : comments.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">No comments yet. Start the thread.</div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {comments.map((comment) => {
-                        const repliesOpen = Boolean(expandedReplies[comment.id]);
-                        const isDeleted = Boolean(comment.is_deleted);
-                        const deleting = deletingCommentId === comment.id;
-                        return (
-                          <li key={comment.id} className="rounded-xl border border-[var(--color-border)] bg-black/25 p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                {!isDeleted && comment.author_name ? (
-                                  <p className="text-xs font-semibold text-[var(--color-text-primary)]">{comment.author_name}</p>
-                                ) : null}
-                                <p className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${isDeleted ? "italic text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`}>
-                                  {isDeleted ? "[deleted]" : comment.body}
-                                </p>
-                              </div>
-                              <div className="flex shrink-0 items-center gap-2">
-                                <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(comment.created_at)}</span>
-                                {!isDeleted && currentUserId === comment.user_id ? (
-                                  <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
-                                    {deleting ? "Deleting..." : "Delete"}
-                                  </button>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
-                              {!isDeleted ? (
-                                <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]">Reply</button>
-                              ) : null}
-                              {comment.replies.length > 0 ? (
-                                <button type="button" onClick={() => setExpandedReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))} className="text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">
-                                  {repliesOpen ? "Hide replies" : `View ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`}
-                                </button>
-                              ) : null}
-                            </div>
-                            {repliesOpen && comment.replies.length > 0 ? (
-                              <div className="mt-2 space-y-2 border-l border-[var(--color-border)] pl-3">
-                                {comment.replies.map((reply) => {
-                                  const replyDeleted = Boolean(reply.is_deleted);
-                                  const deletingReply = deletingCommentId === reply.id;
-                                  return (
-                                    <div key={reply.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                          {!replyDeleted && reply.author_name ? <p className="text-xs font-semibold text-[var(--color-text-primary)]">{reply.author_name}</p> : null}
-                                          <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${replyDeleted ? "italic text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`}>{replyDeleted ? "[deleted]" : reply.body}</p>
-                                        </div>
-                                        <div className="flex shrink-0 items-center gap-2">
-                                          <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(reply.created_at)}</span>
-                                          {!replyDeleted && currentUserId === reply.user_id ? (
-                                            <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
-                                              {deletingReply ? "Deleting..." : "Delete"}
-                                            </button>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                  {commentError ? <p className="mt-2 text-xs text-rose-300">{commentError}</p> : null}
-                  <div className="mt-3 border-t border-[var(--color-border)] pt-3">
-                    {replyTarget ? (
-                      <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
-                        <span className="truncate">Replying to {replyTarget.author_name ?? "this thread"}</span>
-                        <button type="button" onClick={() => setReplyTargetId(null)} className="shrink-0 text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Cancel</button>
-                      </div>
-                    ) : null}
-                    <textarea
-                      value={commentDraft}
-                      onChange={(e) => setCommentDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                          e.preventDefault();
-                          void submitComment();
-                        }
-                      }}
-                      rows={2}
-                      placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
-                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                      disabled={!canComment || postingComment}
-                    />
-                    <div className="mt-2 flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => void submitComment()}
-                        disabled={!commentDraft.trim() || !canComment || postingComment}
-                        className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
 
@@ -1250,6 +1144,121 @@ export default function EntryDetailPage() {
               </details>
             ) : null}
           </div>
+
+          {commentsExpanded ? (
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">Comments</p>
+                <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Collapse</button>
+              </div>
+              {loadingComments ? (
+                <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Loading comments...</div>
+              ) : !canComment ? (
+                <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Comments are private for this post.</div>
+              ) : comments.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">No comments yet. Start the thread.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {comments.map((comment) => {
+                    const repliesOpen = Boolean(expandedReplies[comment.id]);
+                    const isDeleted = Boolean(comment.is_deleted);
+                    const deleting = deletingCommentId === comment.id;
+                    return (
+                      <li key={comment.id} className="rounded-xl border border-[var(--color-border)] bg-black/25 p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            {!isDeleted && comment.author_name ? (
+                              <p className="text-xs font-semibold text-[var(--color-text-primary)]">{comment.author_name}</p>
+                            ) : null}
+                            <p className={`mt-1.5 whitespace-pre-wrap text-sm leading-relaxed ${isDeleted ? "italic text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`}>
+                              {isDeleted ? "[deleted]" : comment.body}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(comment.created_at)}</span>
+                            {!isDeleted && currentUserId === comment.user_id ? (
+                              <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                {deleting ? "Deleting..." : "Delete"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+                          {!isDeleted ? (
+                            <button type="button" onClick={() => setReplyTargetId(comment.id)} className="font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]">Reply</button>
+                          ) : null}
+                          {comment.replies.length > 0 ? (
+                            <button type="button" onClick={() => setExpandedReplies((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))} className="text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">
+                              {repliesOpen ? "Hide replies" : `View ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`}
+                            </button>
+                          ) : null}
+                        </div>
+                        {repliesOpen && comment.replies.length > 0 ? (
+                          <div className="mt-2 space-y-2 border-l border-[var(--color-border)] pl-3">
+                            {comment.replies.map((reply) => {
+                              const replyDeleted = Boolean(reply.is_deleted);
+                              const deletingReply = deletingCommentId === reply.id;
+                              return (
+                                <div key={reply.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      {!replyDeleted && reply.author_name ? <p className="text-xs font-semibold text-[var(--color-text-primary)]">{reply.author_name}</p> : null}
+                                      <p className={`mt-1 whitespace-pre-wrap text-sm leading-relaxed ${replyDeleted ? "italic text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`}>{replyDeleted ? "[deleted]" : reply.body}</p>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                      <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(reply.created_at)}</span>
+                                      {!replyDeleted && currentUserId === reply.user_id ? (
+                                        <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                          {deletingReply ? "Deleting..." : "Delete"}
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {commentError ? <p className="mt-2 text-xs text-rose-300">{commentError}</p> : null}
+              <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+                {replyTarget ? (
+                  <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
+                    <span className="truncate">Replying to {replyTarget.author_name ?? "this thread"}</span>
+                    <button type="button" onClick={() => setReplyTargetId(null)} className="shrink-0 text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Cancel</button>
+                  </div>
+                ) : null}
+                <textarea
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                      e.preventDefault();
+                      void submitComment();
+                    }
+                  }}
+                  rows={2}
+                  placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
+                  className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                  disabled={!canComment || postingComment}
+                />
+                <div className="mt-2 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void submitComment()}
+                    disabled={!commentDraft.trim() || !canComment || postingComment}
+                    className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {errorMessage ? (

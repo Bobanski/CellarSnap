@@ -830,8 +830,17 @@ export default function EntriesPage() {
         </section>
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading your library...
+          <div className="grid gap-5 md:grid-cols-2 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5">
+                <div className="h-24 w-24 shrink-0 rounded-2xl bg-[var(--color-surface-raised)]" />
+                <div className="flex flex-1 flex-col gap-2 py-1">
+                  <div className="h-5 w-3/4 rounded-full bg-[var(--color-surface-raised)]" />
+                  <div className="h-3 w-1/2 rounded-full bg-[var(--color-surface-raised)]" />
+                  <div className="mt-auto h-3 w-1/3 rounded-full bg-[var(--color-surface-raised)]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : errorMessage ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">

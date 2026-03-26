@@ -395,6 +395,21 @@ function formatCommentDate(value: string) {
   });
 }
 
+function FeedCardSkeleton() {
+  return (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 animate-pulse">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-8 w-8 rounded-full bg-[var(--color-surface-raised)]" />
+        <div className="h-3 w-24 rounded-full bg-[var(--color-surface-raised)]" />
+        <div className="ml-auto h-3 w-10 rounded-full bg-[var(--color-surface-raised)]" />
+      </div>
+      <div className="h-60 rounded-2xl bg-[var(--color-surface-raised)] mb-4" />
+      <div className="h-5 w-3/4 rounded-full bg-[var(--color-surface-raised)] mb-2" />
+      <div className="h-3 w-1/2 rounded-full bg-[var(--color-surface-raised)]" />
+    </div>
+  );
+}
+
 export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -474,6 +489,41 @@ export default function FeedPage() {
 
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (!postMenuEntryId && !reportingEntryId) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPostMenuEntryId(null);
+        setReportingEntryId(null);
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [postMenuEntryId, reportingEntryId]);
+
+  useEffect(() => {
+    if (!postMenuEntryId) return;
+
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest("[data-post-menu]")) {
+        setPostMenuEntryId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [postMenuEntryId]);
+
+  useEffect(() => {
+    if (!postMenuEntryId) return;
+    const onScroll = () => setPostMenuEntryId(null);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [postMenuEntryId]);
 
   const toggleNotesExpanded = (entryId: string) => {
     setExpandedNotesByEntryId((current) => ({
@@ -1138,8 +1188,11 @@ export default function FeedPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading feed...
+          <div className="grid grid-cols-1 min-w-0 items-start gap-5 md:grid-cols-2">
+            <FeedCardSkeleton />
+            <FeedCardSkeleton />
+            <FeedCardSkeleton />
+            <FeedCardSkeleton />
           </div>
         ) : errorMessage ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
@@ -1201,7 +1254,7 @@ export default function FeedPage() {
             </section>
           ) : null}
 
-          <div className="grid min-w-0 items-start gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 min-w-0 items-start gap-5 md:grid-cols-2">
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
@@ -1272,9 +1325,10 @@ export default function FeedPage() {
                     <div className="flex items-center justify-end gap-1">
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
-                        <div className="relative">
+                        <div className="relative" data-post-menu>
                           <button
                             type="button"
+                            data-post-menu
                             onClick={(event) => {
                               event.stopPropagation();
                               setPostMenuEntryId((current) =>
@@ -1293,6 +1347,7 @@ export default function FeedPage() {
                           {postMenuEntryId === entry.id ? (
                             <div
                               className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
+                              data-post-menu
                               onClick={(event) => event.stopPropagation()}
                             >
                               <div className="px-3 pb-1">
