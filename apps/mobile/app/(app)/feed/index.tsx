@@ -1348,11 +1348,11 @@ export default function FeedScreen() {
           />
         }
       >
-        <AppTopBar activeHref="/(app)/feed" />
+        <AppTopBar />
 
         <View style={styles.header}>
           <AppText style={styles.eyebrow}>Social feed</AppText>
-          <AppText style={styles.title}>What the cellar is sipping.</AppText>
+          <AppText style={[styles.title, { fontSize: 18 }]}>What the cellar is sipping.</AppText>
           <AppText style={styles.subtitle}>
             Discover what others are enjoying across the app.
           </AppText>
@@ -1391,92 +1391,9 @@ export default function FeedScreen() {
               Friends only
             </AppText>
           </Pressable>
-          <Pressable
-            style={[
-              styles.searchToggleButton,
-              isFriendSearchOpen ? styles.searchToggleButtonActive : null,
-            ]}
-            onPress={toggleFriendSearch}
-            accessibilityRole="button"
-            accessibilityLabel={isFriendSearchOpen ? "Hide friend search" : "Show friend search"}
-          >
-            <AppText
-              style={[
-                styles.searchToggleIcon,
-                isFriendSearchOpen ? styles.searchToggleIconActive : null,
-              ]}
-            >
-              ⌕
-            </AppText>
-          </Pressable>
         </View>
 
-        {isFriendSearchOpen ? (
-          <View style={styles.friendSearchPanel}>
-            <View style={styles.friendSearchInputRow}>
-              <DoneTextInput
-                value={friendSearchQuery}
-                onChangeText={(value) => {
-                  setFriendSearchQuery(value);
-                  setSelectedFriendId(null);
-                  setSelectedFriendName(null);
-                  if (!value.trim()) {
-                    setFriendSearchResults([]);
-                    setIsFriendSearchLoading(false);
-                  }
-                }}
-                placeholder="Search by username or name"
-                placeholderTextColor={colors.textTertiary}
-                style={styles.friendSearchInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {friendSearchQuery.trim() || selectedFriendId ? (
-                <Pressable
-                  style={styles.friendSearchClearButton}
-                  onPress={clearFriendSearch}
-                >
-                  <AppText style={styles.friendSearchClearText}>Clear</AppText>
-                </Pressable>
-              ) : null}
-            </View>
 
-            {selectedFriendId ? (
-              <AppText style={styles.friendSearchSelectionText}>
-                Showing posts from {selectedFriendName ?? "this friend"}.
-              </AppText>
-            ) : null}
-
-            {friendSearchQuery.trim() ? (
-              <View style={styles.friendSearchResultsWrap}>
-                {isFriendSearchLoading ? (
-                  <AppText style={styles.friendSearchMetaText}>Searching...</AppText>
-                ) : friendSearchResults.length === 0 ? (
-                  <AppText style={styles.friendSearchMetaText}>
-                    No friends match your search.
-                  </AppText>
-                ) : (
-                  friendSearchResults.map((option) => {
-                    const displayName = getPublicProfileName(option);
-                    return (
-                      <Pressable
-                        key={option.id}
-                        style={styles.friendSearchResultRow}
-                        onPress={() => selectFriendFilter(option)}
-                      >
-                        <AppText style={styles.friendSearchResultText}>{displayName}</AppText>
-                      </Pressable>
-                    );
-                  })
-                )}
-              </View>
-            ) : (
-              <AppText style={styles.friendSearchMetaText}>
-                Search for a friend, then tap a result to filter the feed.
-              </AppText>
-            )}
-          </View>
-        ) : null}
 
         {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
         {moderationNotice ? (
@@ -2037,14 +1954,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   feedPhotoFrame: {
-    width: "100%",
-    aspectRatio: 7 / 5,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+    aspectRatio: 1,
+    borderRadius: 0,
     overflow: "hidden",
     backgroundColor: colors.surfacePrimary,
     position: "relative",
+    marginHorizontal: -14,
+    width: "auto",
   },
   feedPhotoTrack: {
     flexDirection: "row",

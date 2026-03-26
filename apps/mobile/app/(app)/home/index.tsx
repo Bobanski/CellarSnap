@@ -35,6 +35,7 @@ import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { colors } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/typography";
 
 type HomeEntryRow = {
   id: string;
@@ -1040,7 +1041,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <AppTopBar activeHref="/(app)/home" />
+          <AppTopBar />
           <View style={styles.loadingCard}>
             <ActivityIndicator color={colors.grenache} />
             <AppText style={styles.loadingText}>Loading...</AppText>
@@ -1062,22 +1063,16 @@ export default function HomeScreen() {
           />
         }
       >
-        <AppTopBar activeHref="/(app)/home" />
+        <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>
-            {isFirstTime ? "Getting started" : "Home"}
-          </AppText>
+          <AppText style={styles.eyebrow}>FEED</AppText>
           <AppText
             style={[styles.title, !isFirstTime ? styles.returningTitle : null]}
           >
             {isFirstTime
-              ? welcomeName
-                ? `Welcome to Cluster, ${welcomeName}.`
-                : "Welcome to Cluster."
-              : welcomeName
-                ? `Welcome back, ${welcomeName}.`
-                : "Welcome back."}
+              ? "Welcome to Cluster."
+              : "What your people are drinking."}
           </AppText>
           <AppText style={styles.subtitle}>
             {isFirstTime
@@ -1345,21 +1340,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    color: colors.rose,
-    fontSize: 11,
+    color: colors.accentSecondary,
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 30,
-    fontWeight: "700",
-    lineHeight: 36,
+    fontFamily: fonts.serif.light,
+    fontSize: 28,
+    lineHeight: 34,
   },
   returningTitle: {
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 28,
+    lineHeight: 34,
   },
   subtitle: {
     color: colors.textSecondary,
@@ -1553,16 +1548,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   entryCard: {
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
     padding: 13,
   },
   entryCardDrinkingNow: {
-    borderColor: "rgba(125,211,252,0.72)",
-    backgroundColor: "rgba(59, 130, 246, 0.08)",
-    shadowColor: colors.info,
+    borderColor: "rgba(74,48,96,0.4)",
+    backgroundColor: "#130d1e",
+    shadowColor: colors.accentPurple,
     shadowOpacity: 0.15,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 0 },
@@ -1676,9 +1671,14 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   ratingText: {
-    color: colors.rose,
-    fontSize: 13,
+    color: colors.accentGold,
+    fontSize: 12,
     fontWeight: "800",
+    backgroundColor: "rgba(201,168,76,0.1)",
+    borderRadius: 6,
+    overflow: "hidden",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   qprTag: {
     borderRadius: 999,

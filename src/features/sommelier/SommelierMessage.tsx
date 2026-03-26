@@ -36,19 +36,30 @@ export default function SommelierMessage({
   return (
     <div className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-3xl rounded-[1.75rem] border px-5 py-4 shadow-[0_18px_60px_-38px_rgba(0,0,0,0.9)] ${
-          isAssistant
-            ? "border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] text-[var(--color-text-primary)]"
-            : "border-[var(--color-accent-secondary)]/35 bg-[linear-gradient(180deg,rgba(251,191,36,0.20),rgba(146,64,14,0.20))] text-[var(--color-text-on-accent)]"
-        }`}
+        style={{
+          padding: "10px 13px",
+          fontSize: "11px",
+          lineHeight: 1.65,
+          maxWidth: "88%",
+          borderRadius: isAssistant
+            ? "14px 14px 14px 3px"
+            : "14px 14px 3px 14px",
+          ...(isAssistant
+            ? {
+                background: "var(--color-surface-primary)",
+                border: "0.5px solid var(--color-border)",
+                color: "var(--color-text-primary)",
+              }
+            : {
+                background: "var(--color-accent-primary)",
+                color: "var(--color-text-on-accent)",
+              }),
+        }}
       >
-        <p className="mb-2 text-[11px] uppercase tracking-[0.28em] text-[var(--color-text-tertiary)]">
-          {isAssistant ? "Pocket Sommelier" : "You"}
-        </p>
         {isAssistant && isStreaming && content.trim().length === 0 ? (
           <TypingIndicator />
         ) : (
-          <div className="text-sm leading-7 text-current">
+          <div className="text-current">
             <ReactMarkdown
               rehypePlugins={[rehypeSanitize]}
               components={{

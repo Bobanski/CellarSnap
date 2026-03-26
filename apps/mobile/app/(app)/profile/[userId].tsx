@@ -367,7 +367,7 @@ export default function UserProfileScreen() {
           />
         }
       >
-        <AppTopBar activeHref="/(app)/profile" />
+        <AppTopBar />
 
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <AppText style={styles.backButtonText}>{"<"} Back</AppText>

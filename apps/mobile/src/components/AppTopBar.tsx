@@ -1,25 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
-import { getPublicProfileName } from "@/src/lib/publicProfiles";
+import {
+  getPublicProfileInitial,
+  getPublicProfileName,
+} from "@/src/lib/publicProfiles";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
-
-type AppRoute =
-  | "/(app)/home"
-  | "/(app)/entries"
-  | "/(app)/feed"
-  | "/(app)/profile"
-  | "/(app)/sommelier";
-
-type NavItem = {
-  label: string;
-  href: AppRoute;
-};
+import { fonts } from "@/src/lib/typography";
 
 type TagAlert = {
   id: string;
@@ -39,13 +38,15 @@ type FriendRequestAlert = {
 
 type AlertItem = TagAlert | FriendRequestAlert;
 
-const NAV_ITEMS: NavItem[] = [
-  { label: "Home", href: "/(app)/home" },
-  { label: "My library", href: "/(app)/entries" },
-  { label: "Feed", href: "/(app)/feed" },
-  { label: "Sommelier", href: "/(app)/sommelier" },
-  { label: "Profile", href: "/(app)/profile" },
-];
+type MenuProfileData = {
+  displayName: string;
+  initial: string;
+  username: string | null;
+  entryCount: number;
+  friendCount: number;
+  countryCount: number;
+};
+
 const WEB_API_BASE_URL = getWebApiBaseUrl();
 
 function formatAlertDate(value: string) {
@@ -63,7 +64,7 @@ function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
 }
 
-export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
+export function AppTopBar() {
   const pathname = usePathname();
   const { user, signOut, hasPrivateBetaFeatureAccess } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,14 +78,58 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
   );
   const [dismissingTagId, setDismissingTagId] = useState<string | null>(null);
   const [addingToCellarId, setAddingToCellarId] = useState<string | null>(null);
-  const navItems = hasPrivateBetaFeatureAccess
-    ? NAV_ITEMS
-    : NAV_ITEMS.filter((item) => item.href !== "/(app)/sommelier");
+  const [menuProfile, setMenuProfile] = useState<MenuProfileData | null>(null);
 
   useEffect(() => {
     setMenuOpen(false);
     setAlertsOpen(false);
   }, [pathname]);
+
+  // Load profile data for menu overlay
+  const loadMenuProfile = useCallback(async () => {
+    if (!user) {
+      setMenuProfile(null);
+      return;
+    }
+
+    const [profileRes, entryCountRes, friendCountRes, countryRes] =
+      await Promise.all([
+        supabase
+          .from("public_profiles")
+          .select("display_name, username, first_name, last_name, email")
+          .eq("id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("wine_entries")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id),
+        supabase
+          .from("friendships")
+          .select("id", { count: "exact", head: true })
+          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
+        supabase
+          .from("wine_entries")
+          .select("country")
+          .eq("user_id", user.id)
+          .not("country", "is", null),
+      ]);
+
+    const profile = profileRes.data;
+    const uniqueCountries = new Set(
+      (countryRes.data ?? [])
+        .map((row: { country: string | null }) => row.country)
+        .filter(Boolean)
+    );
+
+    setMenuProfile({
+      displayName: getPublicProfileName(profile),
+      initial: getPublicProfileInitial(profile),
+      username: profile?.username ?? null,
+      entryCount: entryCountRes.count ?? 0,
+      friendCount: friendCountRes.count ?? 0,
+      countryCount: uniqueCountries.size,
+    });
+  }, [user]);
 
   const refreshAlertCount = useCallback(async () => {
     if (!user) {
@@ -148,7 +193,11 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
 
     if (notificationError || requestError) {
       setAlertsLoading(false);
-      setAlertsError(notificationError?.message ?? requestError?.message ?? "Unable to load alerts.");
+      setAlertsError(
+        notificationError?.message ??
+          requestError?.message ??
+          "Unable to load alerts."
+      );
       return;
     }
 
@@ -165,14 +214,21 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     }[];
 
     const actorIds = Array.from(new Set(tagRows.map((row) => row.actor_id)));
-    const requesterIds = Array.from(new Set(friendRows.map((row) => row.requester_id)));
+    const requesterIds = Array.from(
+      new Set(friendRows.map((row) => row.requester_id))
+    );
     const profileIds = Array.from(new Set([...actorIds, ...requesterIds]));
     const entryIds = Array.from(new Set(tagRows.map((row) => row.entry_id)));
 
     const [{ data: entryRows }, profileResponse] = await Promise.all([
       entryIds.length > 0
-        ? supabase.from("wine_entries").select("id, wine_name").in("id", entryIds)
-        : Promise.resolve({ data: [] as { id: string; wine_name: string | null }[] }),
+        ? supabase
+            .from("wine_entries")
+            .select("id, wine_name")
+            .in("id", entryIds)
+        : Promise.resolve({
+            data: [] as { id: string; wine_name: string | null }[],
+          }),
       profileIds.length > 0
         ? supabase
             .from("public_profiles")
@@ -197,7 +253,10 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
         }[]
       | null;
 
-    if (profileResponse.error && isMissingAvatarColumn(profileResponse.error.message)) {
+    if (
+      profileResponse.error &&
+      isMissingAvatarColumn(profileResponse.error.message)
+    ) {
       const fallback = profileIds.length
         ? await supabase
             .from("public_profiles")
@@ -262,14 +321,17 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     void loadAlerts();
   }, [alertsOpen, loadAlerts]);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+    void loadMenuProfile();
+  }, [menuOpen, loadMenuProfile]);
+
   const onSignOut = async () => {
+    setMenuOpen(false);
     await signOut();
     router.replace("/(auth)/sign-in");
-  };
-
-  const onOpenLegalPage = (path: "/privacy" | "/terms") => {
-    setMenuOpen(false);
-    router.push(path);
   };
 
   const onRespondToFriendRequest = async (
@@ -280,7 +342,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       return;
     }
     if (!WEB_API_BASE_URL) {
-      setAlertsError("Set EXPO_PUBLIC_WEB_API_BASE_URL to handle friend requests.");
+      setAlertsError(
+        "Set EXPO_PUBLIC_WEB_API_BASE_URL to handle friend requests."
+      );
       return;
     }
 
@@ -296,15 +360,12 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       action === "accept"
         ? `/api/friends/requests/${requestId}/accept`
         : `/api/friends/requests/${requestId}/decline`;
-    const response = await fetch(
-      `${WEB_API_BASE_URL}${endpoint}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const response = await fetch(`${WEB_API_BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as {
@@ -378,7 +439,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
       };
 
       if (!response.ok) {
-        setAlertsError(payload.error ?? "Unable to add this tasting right now.");
+        setAlertsError(
+          payload.error ?? "Unable to add this tasting right now."
+        );
         return;
       }
 
@@ -408,22 +471,27 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
     setAlertsError(null);
     const nowIso = new Date().toISOString();
 
-    const [{ error: notificationsError }, { error: requestsError }] = await Promise.all([
-      supabase
-        .from("wine_notifications")
-        .update({ seen_at: nowIso })
-        .eq("user_id", user.id)
-        .is("seen_at", null),
-      supabase
-        .from("friend_requests")
-        .update({ seen_at: nowIso })
-        .eq("recipient_id", user.id)
-        .eq("status", "pending")
-        .is("seen_at", null),
-    ]);
+    const [{ error: notificationsError }, { error: requestsError }] =
+      await Promise.all([
+        supabase
+          .from("wine_notifications")
+          .update({ seen_at: nowIso })
+          .eq("user_id", user.id)
+          .is("seen_at", null),
+        supabase
+          .from("friend_requests")
+          .update({ seen_at: nowIso })
+          .eq("recipient_id", user.id)
+          .eq("status", "pending")
+          .is("seen_at", null),
+      ]);
 
     if (notificationsError || requestsError) {
-      setAlertsError(notificationsError?.message ?? requestsError?.message ?? "Unable to mark alerts seen.");
+      setAlertsError(
+        notificationsError?.message ??
+          requestsError?.message ??
+          "Unable to mark alerts seen."
+      );
       return;
     }
 
@@ -442,15 +510,16 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.navRow}>
+      {/* ── Slim header bar ─────────────────────────── */}
+      <View style={styles.headerRow}>
         <Pressable
           onPress={() => router.push("/(app)/home")}
           accessibilityRole="button"
           accessibilityLabel="Go to home"
         >
-          <AppText style={styles.brand}>Cluster</AppText>
+          <AppText style={styles.wordmark}>cluster</AppText>
         </Pressable>
-        <View style={styles.navActions}>
+        <View style={styles.headerActions}>
           <Pressable
             style={styles.newBtn}
             onPress={() => router.push("/(app)/entries/new")}
@@ -480,11 +549,16 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             accessibilityRole="button"
             accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
           >
-            <Feather name={menuOpen ? "x" : "menu"} size={18} color={colors.textPrimary} />
+            <Feather
+              name={menuOpen ? "x" : "menu"}
+              size={18}
+              color={colors.textPrimary}
+            />
           </Pressable>
         </View>
       </View>
 
+      {/* ── Alerts panel ────────────────────────────── */}
       {alertsOpen ? (
         <View style={[styles.panel, styles.floatingPanel]}>
           <View style={styles.panelHeader}>
@@ -505,10 +579,15 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
             <View style={styles.alertList}>
               {alerts.map((alert) =>
                 alert.type === "friend_request" ? (
-                  <View key={`${alert.type}-${alert.id}`} style={styles.alertRow}>
+                  <View
+                    key={`${alert.type}-${alert.id}`}
+                    style={styles.alertRow}
+                  >
                     <View style={styles.alertBody}>
                       <AppText style={styles.alertLabel}>
-                        <AppText style={styles.alertActor}>{alert.requester_name}</AppText>
+                        <AppText style={styles.alertActor}>
+                          {alert.requester_name}
+                        </AppText>
                         {" sent a friend request"}
                       </AppText>
                       <AppText style={styles.alertDate}>
@@ -534,16 +613,23 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
                           void onRespondToFriendRequest(alert.id, "decline")
                         }
                       >
-                        <AppText style={styles.actionGhostText}>Decline</AppText>
+                        <AppText style={styles.actionGhostText}>
+                          Decline
+                        </AppText>
                       </Pressable>
                     </View>
                   </View>
                 ) : (
-                  <View key={`${alert.type}-${alert.id}`} style={styles.alertRow}>
+                  <View
+                    key={`${alert.type}-${alert.id}`}
+                    style={styles.alertRow}
+                  >
                     <View style={styles.alertTagHeader}>
                       <View style={styles.alertTagTextWrap}>
                         <AppText style={styles.alertLabel}>
-                          <AppText style={styles.alertActor}>{alert.actor_name}</AppText>
+                          <AppText style={styles.alertActor}>
+                            {alert.actor_name}
+                          </AppText>
                           {" tagged you in "}
                           <AppText style={styles.alertWineName}>
                             {alert.wine_name ?? "a wine"}
@@ -566,7 +652,9 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
                     <View style={styles.alertActions}>
                       <Pressable
                         style={styles.actionGhost}
-                        onPress={() => router.push(`/(app)/entries/${alert.entry_id}`)}
+                        onPress={() =>
+                          router.push(`/(app)/entries/${alert.entry_id}`)
+                        }
                       >
                         <AppText style={styles.actionGhostText}>View</AppText>
                       </Pressable>
@@ -590,70 +678,229 @@ export function AppTopBar({ activeHref }: { activeHref: AppRoute }) {
         </View>
       ) : null}
 
-      {menuOpen ? (
-        <View style={[styles.panel, styles.floatingPanel]}>
-          <View style={styles.menuList}>
-            {navItems.map((item) => (
+      {/* ── Menu overlay (full-screen modal) ────────── */}
+      <Modal
+        visible={menuOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <View style={menuStyles.backdrop}>
+          <View style={menuStyles.sheet}>
+            <View style={menuStyles.sheetHeader}>
+              <AppText style={styles.wordmark}>cluster</AppText>
               <Pressable
-                key={item.href}
-                style={[
-                  styles.menuItem,
-                  activeHref === item.href ? styles.menuItemActive : null,
-                ]}
-                onPress={() =>
-                  router.push(item.href as Parameters<typeof router.push>[0])
-                }
+                style={styles.iconButton}
+                onPress={() => setMenuOpen(false)}
               >
-                <AppText
-                  style={[
-                    styles.menuItemText,
-                    activeHref === item.href ? styles.menuItemTextActive : null,
-                  ]}
-                >
-                  {item.label}
-                </AppText>
-              </Pressable>
-            ))}
-            <Pressable style={styles.menuItem} onPress={() => void onSignOut()}>
-              <AppText style={styles.menuItemText}>Sign out</AppText>
-            </Pressable>
-            <View style={styles.menuLegalRow}>
-              <Pressable onPress={() => void onOpenLegalPage("/privacy")}>
-                <AppText style={styles.menuLegalLink}>Privacy</AppText>
-              </Pressable>
-              <AppText style={styles.menuLegalSeparator}>{" \u00B7 "}</AppText>
-              <Pressable onPress={() => void onOpenLegalPage("/terms")}>
-                <AppText style={styles.menuLegalLink}>Terms</AppText>
+                <Feather name="x" size={18} color={colors.textPrimary} />
               </Pressable>
             </View>
+
+            <ScrollView
+              style={menuStyles.scrollBody}
+              contentContainerStyle={menuStyles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* User card */}
+              {menuProfile ? (
+                <Pressable
+                  style={menuStyles.userCard}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    router.push("/(app)/profile");
+                  }}
+                >
+                  <View style={menuStyles.avatar}>
+                    <AppText style={menuStyles.avatarText}>
+                      {menuProfile.initial}
+                    </AppText>
+                  </View>
+                  <View style={menuStyles.userInfo}>
+                    <AppText style={menuStyles.userName}>
+                      {menuProfile.displayName}
+                    </AppText>
+                    {menuProfile.username ? (
+                      <AppText style={menuStyles.userHandle}>
+                        @{menuProfile.username}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </Pressable>
+              ) : null}
+
+              {/* Stats row */}
+              {menuProfile ? (
+                <View style={menuStyles.statsRow}>
+                  <View style={menuStyles.statItem}>
+                    <AppText style={menuStyles.statValue}>
+                      {menuProfile.entryCount}
+                    </AppText>
+                    <AppText style={menuStyles.statLabel}>Pours</AppText>
+                  </View>
+                  <View style={menuStyles.statDivider} />
+                  <View style={menuStyles.statItem}>
+                    <AppText style={menuStyles.statValue}>
+                      {menuProfile.friendCount}
+                    </AppText>
+                    <AppText style={menuStyles.statLabel}>Friends</AppText>
+                  </View>
+                  <View style={menuStyles.statDivider} />
+                  <View style={menuStyles.statItem}>
+                    <AppText style={menuStyles.statValue}>
+                      {menuProfile.countryCount}
+                    </AppText>
+                    <AppText style={menuStyles.statLabel}>Countries</AppText>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Account section */}
+              <View style={menuStyles.section}>
+                <AppText style={menuStyles.sectionTitle}>Account</AppText>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    router.push("/(app)/profile");
+                  }}
+                >
+                  <Feather
+                    name="user"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>Profile</AppText>
+                </Pressable>
+                {hasPrivateBetaFeatureAccess ? (
+                  <Pressable
+                    style={menuStyles.menuItem}
+                    onPress={() => {
+                      setMenuOpen(false);
+                      router.push("/(app)/sommelier");
+                    }}
+                  >
+                    <Feather
+                      name="compass"
+                      size={16}
+                      color={colors.textSecondary}
+                    />
+                    <AppText style={menuStyles.menuItemText}>
+                      My Palate
+                    </AppText>
+                    <View style={menuStyles.betaBadge}>
+                      <AppText style={menuStyles.betaBadgeText}>BETA</AppText>
+                    </View>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    router.push("/(app)/feed");
+                  }}
+                >
+                  <Feather
+                    name="users"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>Friends</AppText>
+                </Pressable>
+              </View>
+
+              {/* More section */}
+              <View style={menuStyles.section}>
+                <AppText style={menuStyles.sectionTitle}>More</AppText>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    toggleAlerts();
+                  }}
+                >
+                  <Feather
+                    name="bell"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>
+                    Notifications
+                  </AppText>
+                  {alertCount > 0 ? (
+                    <View style={menuStyles.countBadge}>
+                      <AppText style={menuStyles.countBadgeText}>
+                        {alertCount > 99 ? "99+" : alertCount}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </Pressable>
+                <Pressable style={menuStyles.menuItem}>
+                  <Feather
+                    name="message-square"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>Feedback</AppText>
+                </Pressable>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    router.push("/privacy" as Parameters<typeof router.push>[0]);
+                  }}
+                >
+                  <Feather
+                    name="shield"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>
+                    Privacy & Terms
+                  </AppText>
+                </Pressable>
+              </View>
+
+              {/* Sign out */}
+              <Pressable
+                style={menuStyles.signOutBtn}
+                onPress={() => void onSignOut()}
+              >
+                <Feather
+                  name="log-out"
+                  size={16}
+                  color={colors.textSecondary}
+                />
+                <AppText style={menuStyles.signOutText}>Sign out</AppText>
+              </Pressable>
+            </ScrollView>
           </View>
         </View>
-      ) : null}
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 12,
-    gap: 10,
     position: "relative",
     overflow: "visible",
     zIndex: 20,
   },
-  navRow: {
+  headerRow: {
+    height: 50,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  brand: {
+  wordmark: {
+    fontFamily: fonts.serif.light,
     color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 22,
+    letterSpacing: 7,
+    textTransform: "lowercase",
   },
-  navActions: {
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -665,7 +912,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   newBtnText: {
-    color: colors.screenBg,
+    color: colors.champagne,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -692,7 +939,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   alertBadgeText: {
-    color: colors.screenBg,
+    color: colors.champagne,
     fontSize: 9,
     fontWeight: "800",
   },
@@ -706,7 +953,7 @@ const styles = StyleSheet.create({
   },
   floatingPanel: {
     position: "absolute",
-    top: 44,
+    top: 54,
     left: 0,
     right: 0,
     zIndex: 40,
@@ -841,48 +1088,171 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   actionAmberText: {
-    color: colors.screenBg,
+    color: colors.champagne,
     fontSize: 11,
     fontWeight: "700",
   },
-  menuList: {
-    gap: 7,
+});
+
+const menuStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: colors.overlay,
   },
-  menuItem: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  sheet: {
+    flex: 1,
+    backgroundColor: colors.screenBg,
+    paddingTop: 60,
   },
-  menuItemActive: {
-    borderColor: "rgba(123,29,58,0.55)",
-    backgroundColor: "rgba(123,29,58,0.14)",
-  },
-  menuItemText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  menuItemTextActive: {
-    color: colors.accentPrimary,
-  },
-  menuLegalRow: {
-    paddingTop: 2,
+  sheetHeader: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  scrollBody: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 18,
+    paddingBottom: 40,
+    gap: 20,
+  },
+  userCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.accentPrimary,
     alignItems: "center",
     justifyContent: "center",
   },
-  menuLegalLink: {
+  avatarText: {
+    color: colors.champagne,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  userInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  userName: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  userHandle: {
     color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 1.2,
+    fontSize: 13,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+  },
+  statItem: {
+    alignItems: "center",
+    gap: 2,
+  },
+  statValue: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  statLabel: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    letterSpacing: 1,
     textTransform: "uppercase",
+    fontWeight: "500",
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.border,
+  },
+  section: {
+    gap: 4,
+  },
+  sectionTitle: {
+    color: colors.textTertiary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    marginBottom: 4,
+  },
+  menuItemText: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 14,
     fontWeight: "600",
   },
-  menuLegalSeparator: {
+  betaBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  betaBadgeText: {
+    color: colors.accentSecondary,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  countBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.accentPrimary,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  countBadgeText: {
+    color: colors.champagne,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  signOutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 8,
+  },
+  signOutText: {
     color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 1.2,
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

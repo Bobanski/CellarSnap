@@ -220,7 +220,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/40"
+      className="relative overflow-hidden bg-black/40"
       onClickCapture={(event) => {
         if (!didSwipeRef.current) {
           return;
@@ -231,7 +231,8 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
       }}
     >
       <div
-        className="flex h-60 transition-transform duration-300 md:h-84 lg:h-[25rem]"
+        className="flex transition-transform duration-300"
+        style={{ aspectRatio: "1 / 1" }}
         style={{
           transform: `translateX(-${activeIndex * 100}%)`,
           touchAction: "pan-y",
@@ -399,11 +400,8 @@ export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
-  const [feedSortMode, setFeedSortMode] = useState<"recent" | "best_match">("recent");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserOption[]>([]);
-  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedScope, setFeedScope] = useState<"public" | "friends">("public");
@@ -475,6 +473,15 @@ export default function FeedPage() {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  useEffect(() => {
+    if (!postMenuEntryId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPostMenuEntryId(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [postMenuEntryId]);
+
   const toggleNotesExpanded = (entryId: string) => {
     setExpandedNotesByEntryId((current) => ({
       ...current,
@@ -490,26 +497,7 @@ export default function FeedPage() {
     return commentCountByEntryId[entry.id] ?? entry.comment_count ?? 0;
   };
 
-  useEffect(() => {
-    const trimmedQuery = searchQuery.trim();
-    if (!trimmedQuery) return;
 
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      const response = await fetch(
-        `/api/users?search=${encodeURIComponent(trimmedQuery)}`,
-        { cache: "no-store" }
-      );
-      setSearching(false);
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.users ?? []);
-      } else {
-        setSearchResults([]);
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -992,89 +980,22 @@ export default function FeedPage() {
     }
   };
 
-  const activeFeedSortMode = hasPrivateBetaFeatureAccess ? feedSortMode : "recent";
-  const sortedEntries =
-    activeFeedSortMode === "best_match"
-      ? [...entries].sort((left, right) => {
-          const leftScore = canDisplayAlgorithmMatch(matchScores[left.id])
-            ? matchScores[left.id]?.score ?? -1
-            : -1;
-          const rightScore = canDisplayAlgorithmMatch(matchScores[right.id])
-            ? matchScores[right.id]?.score ?? -1
-            : -1;
-          return rightScore - leftScore;
-        })
-      : entries;
-
-  const bestMatchEntries = hasPrivateBetaFeatureAccess
-    ? [...entries]
-        .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
-        .sort(
-          (left, right) =>
-            (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0)
-        )
-        .slice(0, 3)
-    : [];
+  const sortedEntries = entries;
 
   return (
     <AppShell>
-      <div className="overflow-x-hidden px-6 py-6 text-[var(--color-text-primary)]">
+      <div className="overflow-x-hidden py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
-        <header className="space-y-2">
+        <header className="space-y-2 px-6">
           <span className="block text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
             Feed
           </span>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
-            What your people<br />are drinking.
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
+            What your people are drinking.
           </h1>
         </header>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 backdrop-blur">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-            Find a friend
-          </label>
-          <input
-            type="search"
-            placeholder="Search by username or name"
-            value={searchQuery}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearchQuery(value);
-              if (!value.trim()) {
-                setSearchResults([]);
-              }
-            }}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-            aria-describedby="search-results-desc"
-          />
-          <p id="search-results-desc" className="sr-only">
-            Search results appear below; click to open their profile.
-          </p>
-          {searchQuery.trim() && (
-            <div className="mt-3 space-y-1">
-              {searching ? (
-                <p className="text-sm text-[var(--color-text-tertiary)]">Searching...</p>
-              ) : searchResults.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-tertiary)]">No friends match your search.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {searchResults.map((u) => (
-                    <li key={u.id}>
-                      <Link
-                        href={`/profile/${u.id}`}
-                        className="block rounded-lg px-2 py-1.5 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
-                      >
-                        {u.display_name ?? "Unknown"}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 px-6">
           <button
             type="button"
             onClick={() => setFeedScope("public")}
@@ -1097,37 +1018,12 @@ export default function FeedPage() {
           >
             Friends only
           </button>
-          <div className="ml-auto inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setFeedSortMode("recent")}
-              className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                activeFeedSortMode === "recent"
-                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                  : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              Recent
-            </button>
-            {hasPrivateBetaFeatureAccess ? (
-              <button
-                type="button"
-                onClick={() => setFeedSortMode("best_match")}
-                className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                  activeFeedSortMode === "best_match"
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                Best match
-              </button>
-            ) : null}
-          </div>
+
         </div>
 
         {moderationNotice ? (
           <div
-            className={`rounded-xl border px-3 py-2 text-xs ${
+            className={`rounded-xl border px-3 py-2 text-xs mx-6 ${
               moderationNotice.kind === "success"
                 ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
                 : "border-rose-500/40 bg-rose-500/10 text-rose-100"
@@ -1138,8 +1034,26 @@ export default function FeedPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading feed...
+          <div className="space-y-4">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 animate-pulse"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-9 w-9 rounded-full bg-[var(--color-surface-raised)]" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3 w-28 rounded bg-[var(--color-surface-raised)]" />
+                    <div className="h-2.5 w-20 rounded bg-[var(--color-surface-raised)]" />
+                  </div>
+                </div>
+                <div className="aspect-[4/3] w-full rounded-xl bg-[var(--color-surface-raised)] mb-4" />
+                <div className="space-y-2">
+                  <div className="h-3 w-3/4 rounded bg-[var(--color-surface-raised)]" />
+                  <div className="h-3 w-1/2 rounded bg-[var(--color-surface-raised)]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : errorMessage ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
@@ -1151,72 +1065,34 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-          {hasPrivateBetaFeatureAccess && bestMatchEntries.length > 0 ? (
-            <section className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
-                    Best matches
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">
-                    Standout palate matches from this feed
-                  </h2>
-                </div>
-                {matchScoresLoading ? (
-                  <p className="text-xs text-[var(--color-text-tertiary)]">Refreshing scores...</p>
-                ) : null}
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                {bestMatchEntries.map((entry) => {
-                  const score = matchScores[entry.id];
-                  if (!score) {
-                    return null;
-                  }
-
-                  return (
-                    <button
-                      key={`feed-best-match-${entry.id}`}
-                      type="button"
-                      onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
-                      className="rounded-3xl border border-[var(--color-accent-secondary)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-secondary)]/40"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                            {entry.author_name}
-                          </p>
-                          <h3 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
-                            {entry.wine_name || "Untitled wine"}
-                          </h3>
-                          <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
-                            {entry.producer || "Unknown producer"}
-                          </p>
-                        </div>
-                        <MatchBadge score={score.score} band={score.band} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
-
-          <div className="grid min-w-0 items-start gap-5 md:grid-cols-2">
+          <div className="grid min-w-0 items-start gap-5">
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
-                    ? "rounded-[14px] border-[rgba(74,48,96,0.4)] bg-[#130d1e] hover:border-[rgba(74,48,96,0.7)]"
-                    : "rounded-2xl border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
+                    ? "rounded-none border-[rgba(74,48,96,0.4)] bg-[#130d1e] hover:border-[rgba(74,48,96,0.7)]"
+                    : "rounded-none border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
-                onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
+                onPointerDown={(event) => {
+                  pointerStartRef.current = { x: event.clientX, y: event.clientY };
+                }}
+                onClick={(event) => {
+                  const start = pointerStartRef.current;
+                  pointerStartRef.current = null;
+                  if (start) {
+                    const dx = Math.abs(event.clientX - start.x);
+                    const dy = Math.abs(event.clientY - start.y);
+                    if (dx > 10 || dy > 10) return;
+                  }
+                  router.push(`/entries/${entry.id}?from=feed`);
+                }}
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget) return;
                   if (event.key === "Enter" || event.key === " ") {
@@ -1291,10 +1167,16 @@ export default function FeedPage() {
                             </span>
                           </button>
                           {postMenuEntryId === entry.id ? (
-                            <div
-                              className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
-                              onClick={(event) => event.stopPropagation()}
-                            >
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setPostMenuEntryId(null)}
+                                aria-hidden="true"
+                              />
+                              <div
+                                className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
+                                onClick={(event) => event.stopPropagation()}
+                              >
                               <div className="px-3 pb-1">
                                 <label
                                   htmlFor={`post-report-reason-${entry.id}`}
@@ -1339,18 +1221,20 @@ export default function FeedPage() {
                                   ? "Reporting..."
                                   : "Report post"}
                               </button>
-                            </div>
+                              </div>
+                            </>
                           ) : null}
                         </div>
                       ) : null}
                     </div>
                   </div>
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 -mx-5">
                   {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
                     <GroupedPostGallery
                       title={entry.entry_group.title}
                       slides={entry.group_slides ?? []}
+                      heightClassName=""
                     />
                   ) : (
                     <EntryPhotoGallery entry={entry} />
@@ -1400,8 +1284,9 @@ export default function FeedPage() {
                           border: "0.5px solid rgba(201, 168, 76, 0.22)",
                           color: "var(--color-accent-gold)",
                           fontFamily: "var(--font-serif)",
-                          fontSize: 11,
-                          padding: "2px 6px",
+                          fontSize: 15,
+                          fontWeight: 600,
+                          padding: "3px 8px",
                           borderRadius: 6,
                         }}
                         title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}

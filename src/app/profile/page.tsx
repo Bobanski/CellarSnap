@@ -871,8 +871,20 @@ export default function ProfilePage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="mx-auto max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-              Loading profile...
+            <div className="mx-auto max-w-2xl animate-pulse rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+              <div className="flex items-center gap-4">
+                {/* Avatar placeholder */}
+                <div className="h-24 w-24 shrink-0 rounded-full bg-[var(--color-surface-raised)] sm:h-28 sm:w-28" />
+                {/* Text content placeholder */}
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="h-5 w-36 rounded-md bg-[var(--color-surface-raised)]" />
+                  <div className="h-3.5 w-24 rounded-md bg-[var(--color-surface-raised)]" />
+                  <div className="flex gap-6 pt-1">
+                    <div className="h-3.5 w-14 rounded-md bg-[var(--color-surface-raised)]" />
+                    <div className="h-3.5 w-14 rounded-md bg-[var(--color-surface-raised)]" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1052,7 +1064,14 @@ export default function ProfilePage() {
                 ) : null}
 
                 {entriesLoading ? (
-                  <p className="mt-4 text-center text-sm text-[var(--color-text-tertiary)]">Loading entries...</p>
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 animate-pulse">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <div
+                        key={i}
+                        className="aspect-square rounded-lg bg-[var(--color-surface-raised)]"
+                      />
+                    ))}
+                  </div>
                 ) : null}
 
                 {entriesHasMore && !entriesLoading ? (

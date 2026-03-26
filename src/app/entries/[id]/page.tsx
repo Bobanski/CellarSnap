@@ -510,9 +510,17 @@ export default function EntryDetailPage() {
     return (
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
-          <div className="mx-auto w-full max-w-5xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-              Loading entry...
+          <div className="mx-auto w-full max-w-5xl space-y-8 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-4 w-24 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-7 w-3/4 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-1/2 rounded bg-[var(--color-surface-raised)]" />
+            </div>
+            <div className="aspect-[4/3] w-full rounded-2xl bg-[var(--color-surface-raised)]" />
+            <div className="space-y-3">
+              <div className="h-4 w-full rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-5/6 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-2/3 rounded bg-[var(--color-surface-raised)]" />
             </div>
           </div>
         </div>
@@ -785,7 +793,7 @@ export default function EntryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           <div className="space-y-0">
             <SwipePhotoGallery
               items={allGalleryItems}

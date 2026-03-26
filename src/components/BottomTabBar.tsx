@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 
 function FeedIcon() {
@@ -33,12 +33,12 @@ function CellarIcon() {
 function LogFabIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <circle cx="13" cy="13" r="11.96" fill="#7B1D3A" opacity="0.95" />
-      <circle cx="13" cy="14.04" r="6.76" fill="#F5EDD6" opacity="0.9" />
-      <line x1="13" y1="7.28" x2="13" y2="5.72" stroke="#F5EDD6" strokeWidth="1.17" strokeLinecap="round" opacity="0.8" />
-      <path d="M13 5.72 Q15.86 4.42 16.9 5.46" stroke="#F5EDD6" strokeWidth="0.91" fill="none" strokeLinecap="round" opacity="0.65" />
-      <rect x="11.8" y="10.92" width="2.34" height="6.24" rx="0.78" fill="#7B1D3A" opacity="0.9" />
-      <rect x="9.16" y="13.06" width="7.8" height="2.08" rx="0.78" fill="#7B1D3A" opacity="0.9" />
+      <circle cx="13" cy="13" r="11.96" fill="#7B1D3A" />
+      <circle cx="13" cy="14.04" r="6.76" fill="#F5EDD6" />
+      <line x1="13" y1="7.28" x2="13" y2="5.72" stroke="#F5EDD6" strokeWidth="1.17" strokeLinecap="round" />
+      <path d="M13 5.72 Q15.86 4.42 16.9 5.46" stroke="#F5EDD6" strokeWidth="0.91" fill="none" strokeLinecap="round" />
+      <rect x="11.8" y="10.92" width="2.34" height="6.24" rx="0.78" fill="#7B1D3A" />
+      <rect x="9.16" y="13.06" width="7.8" height="2.08" rx="0.78" fill="#7B1D3A" />
     </svg>
   );
 }
@@ -82,15 +82,16 @@ const ALL_TABS: TabDef[] = [
   { label: "Scan", href: "/list-scan", icon: <ScanIcon />, betaOnly: true },
 ];
 
-function isTabActive(href: string, pathname: string): boolean {
+function isTabActive(href: string, pathname: string, fromFeed: boolean): boolean {
+  const onEntryDetail =
+    pathname.startsWith("/entries/") && !pathname.startsWith("/entries/new");
+
   if (href === "/feed") {
-    return pathname === "/feed" || pathname === "/";
+    return pathname === "/feed" || pathname === "/" || (fromFeed && onEntryDetail);
   }
   if (href === "/entries") {
-    return (
-      pathname === "/entries" ||
-      (pathname.startsWith("/entries/") && !pathname.startsWith("/entries/new"))
-    );
+    if (fromFeed && onEntryDetail) return false;
+    return pathname === "/entries" || onEntryDetail;
   }
   if (href === "/entries/new") {
     return pathname === "/entries/new";
@@ -100,16 +101,18 @@ function isTabActive(href: string, pathname: string): boolean {
 
 export default function BottomTabBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const fromFeed = searchParams.get("from") === "feed";
   const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
 
-  const tabs = hasPrivateBetaFeatureAccess
-    ? ALL_TABS
-    : ALL_TABS.filter((tab) => !tab.betaOnly);
+  const tabs = hasPrivateBetaFeatureAccess === false
+    ? ALL_TABS.filter((tab) => !tab.betaOnly)
+    : ALL_TABS;
 
   return (
     <nav className="bottom-tab-bar flex shrink-0 items-end justify-around">
       {tabs.map((tab) => {
-        const active = isTabActive(tab.href, pathname);
+        const active = isTabActive(tab.href, pathname, fromFeed);
 
         if (tab.isFab) {
           return (
@@ -153,7 +156,7 @@ export default function BottomTabBar() {
               className="flex h-8 w-8 items-center justify-center rounded-lg"
               style={{
                 background: active ? "rgba(196, 96, 122, 0.1)" : "transparent",
-                color: active ? "var(--color-accent-secondary)" : "#5A5350",
+                color: active ? "var(--color-accent-secondary)" : "var(--color-text-tertiary)",
               }}
             >
               {tab.icon}

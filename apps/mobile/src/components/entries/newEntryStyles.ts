@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 import { FIELD_ROW_GAP } from "@/src/lib/entryFlow/newEntryUtils";
 import { colors } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/typography";
 
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.screenBg },
@@ -25,12 +26,12 @@ export const styles = StyleSheet.create({
   pageHeader: { marginTop: 4, gap: 6 },
   eyebrow: {
     color: colors.accentSecondary,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: "uppercase",
   },
-  title: { color: colors.textPrimary, fontSize: 29, fontWeight: "700" },
+  title: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 28, lineHeight: 34 },
   subtitle: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   card: {
     borderRadius: 24,
@@ -573,13 +574,13 @@ export const styles = StyleSheet.create({
   block: { gap: 6 },
   selectCompactBlock: { gap: 0 },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  label: { color: colors.textPrimary, fontSize: 14, fontWeight: "600" },
+  label: { color: colors.textTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
   requiredStar: { color: colors.error, fontSize: 14, fontWeight: "700" },
   input: {
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.inputBg,
+    borderColor: colors.borderStrong,
+    backgroundColor: "rgba(245,237,214,0.04)",
     color: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1133,7 +1134,7 @@ export const styles = StyleSheet.create({
   actionRow: { flexDirection: "row", gap: 10 },
   submitButton: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 11,
     backgroundColor: colors.accentPrimary,
     alignItems: "center",
     justifyContent: "center",

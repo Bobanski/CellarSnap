@@ -6,8 +6,6 @@ import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
-import QprBadge from "@/components/QprBadge";
-import RatingBadge from "@/components/RatingBadge";
 import type { WineEntryWithUrls } from "@/types/wine";
 
 type SortBy = "consumed_at" | "rating" | "vintage";
@@ -136,14 +134,28 @@ function entryMatchesSearch(entry: WineEntryWithUrls, query: string): boolean {
   );
 }
 
-function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: number } }) {
-  const commentCount = (entry as Record<string, unknown>).comment_count as number | undefined;
+/* ─── Compact entry row for the new cellar design ─── */
+function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: number } }) {
+  const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
+  const producer = hideProducer ? null : entry.producer;
+  const metaParts = [producer, entry.region || entry.country].filter(Boolean);
+
   return (
     <Link
       href={`/entries/${entry.id}`}
-      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
+      className="group flex items-center gap-3 px-3.5 py-2.5"
+      style={{ borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)" }}
     >
-      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
+      {/* Thumbnail */}
+      <div
+        className="flex shrink-0 items-center justify-center overflow-hidden bg-black/40"
+        style={{
+          width: 64,
+          height: 76,
+          borderRadius: 8,
+          border: "0.5px solid var(--color-border)",
+        }}
+      >
         {entry.label_image_url ? (
           <Photo
             src={entry.label_image_url}
@@ -153,66 +165,52 @@ function EntryCard({ entry }: { entry: WineEntryWithUrls & { comment_count?: num
             loading="lazy"
           />
         ) : (
-          "No photo"
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="h-4 w-4 text-[var(--color-text-tertiary)]" aria-hidden="true">
+            <path d="M12 2C11 2 10 6 10 10c0 2 .5 3 2 3s2-1 2-3c0-4-1-8-2-8z" />
+            <path d="M10 13v7a2 2 0 0 0 4 0v-7" />
+          </svg>
         )}
       </div>
-      <div className="flex flex-1 flex-col justify-between">
-        <div>
-          <div className="flex items-start justify-between gap-2">
-            {entry.wine_name ? (
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{entry.wine_name}</h2>
-            ) : <span />}
-            {commentCount != null && commentCount > 0 ? (
-              <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[var(--color-text-tertiary)]">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true"><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
-                <span className="text-[11px] tabular-nums">{commentCount}</span>
-              </span>
-            ) : null}
-          </div>
-          {(() => {
-            const hideProducer = shouldHideProducerInEntryTile(
-              entry.wine_name,
-              entry.producer
-            );
-            const producer = hideProducer ? null : entry.producer;
-            if (!producer && !entry.vintage) {
-              return null;
-            }
-            return (
-              <p className="text-sm text-[var(--color-text-tertiary)]">
-                {producer ?? ""}
-                {producer && entry.vintage ? (
-                  <span className="text-[var(--color-text-tertiary)]">{" · "}{entry.vintage}</span>
-                ) : entry.vintage ? (
-                  <span className="text-[var(--color-text-tertiary)]">{entry.vintage}</span>
-                ) : null}
-              </p>
-            );
-          })()}
-          {[entry.country, entry.region, entry.appellation].filter(Boolean).length > 0 ? (
-            <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-              {[entry.country, entry.region, entry.appellation]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          ) : null}
-        </div>
-        <div className="mt-2 flex items-start justify-between gap-2 text-xs text-[var(--color-text-tertiary)]">
-          {((typeof entry.rating === "number" && !Number.isNaN(entry.rating)) ||
-            entry.qpr_level) ? (
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
-              {typeof entry.rating === "number" && !Number.isNaN(entry.rating) ? (
-                <RatingBadge rating={entry.rating} variant="text" />
-              ) : null}
-              {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-            </div>
-          ) : (
-            <span />
-          )}
-          <span className="shrink-0 text-right leading-tight sm:leading-normal">
-            {formatConsumedDate(entry.consumed_at)}
+
+      {/* Center: name + meta */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span
+          className="truncate text-[var(--color-text-primary)]"
+          style={{ fontFamily: "var(--font-serif)", fontSize: 13 }}
+        >
+          {entry.wine_name || "Unnamed wine"}
+        </span>
+        {metaParts.length > 0 ? (
+          <span
+            className="truncate text-[var(--color-text-secondary)]"
+            style={{ fontSize: 9 }}
+          >
+            {metaParts.join(" \u00B7 ")}
           </span>
-        </div>
+        ) : null}
+      </div>
+
+      {/* Right: rating + date */}
+      <div className="flex shrink-0 flex-col items-end gap-0.5">
+        {typeof entry.rating === "number" && !Number.isNaN(entry.rating) ? (
+          <span
+            className="inline-flex items-center justify-center"
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 11,
+              background: "rgba(201, 168, 76, 0.12)",
+              color: "var(--color-accent-gold)",
+              borderRadius: 4,
+              padding: "1px 6px",
+              lineHeight: 1.4,
+            }}
+          >
+            {entry.rating}
+          </span>
+        ) : null}
+        <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 8 }}>
+          {formatConsumedDate(entry.consumed_at)}
+        </span>
       </div>
     </Link>
   );
@@ -226,6 +224,7 @@ export default function EntriesPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchBarVisible, setSearchBarVisible] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("consumed_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [filterType, setFilterType] = useState<FilterType>("");
@@ -277,6 +276,20 @@ export default function EntriesPage() {
         .sort((a, b) => a - b)
         .map(String),
     };
+  }, [entries]);
+
+  /* ─── Stats computations ─── */
+  const stats = useMemo(() => {
+    const totalEntries = entries.length;
+    const ratingsArray = entries
+      .map((e) => e.rating)
+      .filter((r): r is number => typeof r === "number" && !Number.isNaN(r));
+    const avgRating =
+      ratingsArray.length > 0
+        ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length
+        : null;
+    const uniqueCountries = new Set(entries.map((e) => e.country).filter(Boolean)).size;
+    return { totalEntries, avgRating, uniqueCountries };
   }, [entries]);
 
   const filteredEntries = useMemo(() => {
@@ -470,7 +483,7 @@ export default function EntriesPage() {
   const sortOrderLabel =
     sortOrderOptions.find((option) => option.value === sortOrder)?.label ??
     "Newest first";
-  const sortSummary = `${sortByLabel} · ${sortOrderLabel}`;
+  const sortSummary = `${sortByLabel} \u00B7 ${sortOrderLabel}`;
 
   const filterSummary = (() => {
     if (!filterType) {
@@ -512,135 +525,244 @@ export default function EntriesPage() {
     setFilterMax("");
   };
 
+  /* ─── Pill style helpers ─── */
+  const pillActive =
+    "text-[var(--color-text-on-accent)] uppercase tracking-[1px]";
+  const pillInactive =
+    "text-[var(--color-text-secondary)] uppercase tracking-[1px]";
+
   return (
     <AppShell>
-      <div className="px-6 py-6 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-            My library
-          </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-            Curate your cellar library.
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Organize bottles by region, vintage, or varietal while keeping your filters.
-          </p>
-        </header>
+      <div className="px-5 pb-8 pt-6 text-[var(--color-text-primary)]">
+        <div className="mx-auto w-full max-w-2xl space-y-5">
 
-        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => toggleControlPanel("sort")}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
-                  activeControlPanel === "sort"
-                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                    : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-                }`}
-                aria-expanded={activeControlPanel === "sort"}
+          {/* ─── Page header ─── */}
+          <header>
+            <span
+              className="block uppercase"
+              style={{
+                fontSize: 9,
+                letterSpacing: 3,
+                color: "var(--color-accent-secondary)",
+              }}
+            >
+              Cellar
+            </span>
+            <h1
+              className="mt-1"
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 28,
+                fontWeight: 300,
+                color: "var(--color-text-primary)",
+                lineHeight: 1.2,
+              }}
+            >
+              Your collection.
+            </h1>
+          </header>
+
+          {/* ─── Stats row ─── */}
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { value: stats.totalEntries, label: "Entries" },
+              {
+                value: stats.avgRating !== null ? stats.avgRating.toFixed(1) : "\u2014",
+                label: "Avg rating",
+              },
+              { value: stats.uniqueCountries, label: "Countries" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="text-center"
+                style={{
+                  background: "var(--color-surface-primary)",
+                  border: "0.5px solid var(--color-border)",
+                  borderRadius: 12,
+                  padding: "12px 8px",
+                }}
               >
-                <span className="font-semibold">Sort</span>
-                <span className="hidden text-xs text-[var(--color-text-tertiary)] sm:inline">
-                  {sortSummary}
-                </span>
-                <svg
-                  viewBox="0 0 12 12"
-                  className={`h-3 w-3 transition ${activeControlPanel === "sort" ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
+                <span
+                  className="block"
+                  style={{
+                    fontFamily: "var(--font-serif)",
+                    fontSize: 26,
+                    fontWeight: 300,
+                    color: "var(--color-text-primary)",
+                    lineHeight: 1.2,
+                  }}
                 >
-                  <path d="M2 4.5 6 8l4-3.5" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => toggleControlPanel("filter")}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
-                  activeControlPanel === "filter"
-                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                    : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-                }`}
-                aria-expanded={activeControlPanel === "filter"}
-              >
-                <span className="font-semibold">Filter</span>
-                <span className="hidden text-xs text-[var(--color-text-tertiary)] sm:inline">
-                  {filterSummary}
+                  {stat.value}
                 </span>
-                <svg
-                  viewBox="0 0 12 12"
-                  className={`h-3 w-3 transition ${activeControlPanel === "filter" ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
+                <span
+                  className="mt-1 block uppercase"
+                  style={{
+                    fontSize: 8,
+                    letterSpacing: 1.5,
+                    color: "var(--color-text-tertiary)",
+                  }}
                 >
-                  <path d="M2 4.5 6 8l4-3.5" />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => toggleControlPanel("organize")}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
-                  activeControlPanel === "organize"
-                    ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                    : "border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-                }`}
-                aria-expanded={activeControlPanel === "organize"}
-              >
-                <span className="font-semibold">Organize</span>
-                <span className="hidden text-xs text-[var(--color-text-tertiary)] sm:inline">
-                  {organizeSummary}
+                  {stat.label}
                 </span>
-                <svg
-                  viewBox="0 0 12 12"
-                  className={`h-3 w-3 transition ${activeControlPanel === "organize" ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                >
-                  <path d="M2 4.5 6 8l4-3.5" />
-                </svg>
-              </button>
-            </div>
+              </div>
+            ))}
+          </div>
 
-            <div className="flex w-full max-w-md items-center gap-2">
+          {/* ─── Search bar ─── */}
+          {searchBarVisible && (
+            <div className="relative">
               <label htmlFor="library-search" className="sr-only">
                 Search your library
               </label>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
               <input
                 id="library-search"
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search wine, producer, region, or varietal"
-                className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                placeholder="Search wine, producer, region..."
+                className="w-full focus:outline-none"
+                autoFocus
+                style={{
+                  background: "rgba(245, 237, 214, 0.04)",
+                  border: "0.5px solid var(--color-border-strong)",
+                  borderRadius: 10,
+                  padding: "9px 12px 9px 32px",
+                  fontSize: 12,
+                  color: "var(--color-text-secondary)",
+                }}
               />
               {isSearchActive ? (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="shrink-0 rounded-full border border-[var(--color-border-strong)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: 1,
+                    color: "var(--color-text-tertiary)",
+                    textTransform: "uppercase",
+                  }}
                 >
                   Clear
                 </button>
               ) : null}
             </div>
+          )}
 
-            <span className="text-xs text-[var(--color-text-tertiary)]">
+          {/* ─── Sort / Filter / Organize pills ─── */}
+          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {([
+              { panel: "sort" as const, label: "Sort", summary: sortSummary },
+              { panel: "filter" as const, label: "Filter", summary: filterSummary },
+              { panel: "organize" as const, label: "Organize", summary: organizeSummary },
+            ]).map((item) => {
+              const isActive = activeControlPanel === item.panel;
+              return (
+                <button
+                  key={item.panel}
+                  type="button"
+                  onClick={() => toggleControlPanel(item.panel)}
+                  className={`shrink-0 transition ${isActive ? pillActive : pillInactive}`}
+                  style={{
+                    background: isActive
+                      ? "var(--color-accent-primary)"
+                      : "rgba(245, 237, 214, 0.05)",
+                    border: isActive
+                      ? "none"
+                      : "0.5px solid var(--color-border-strong)",
+                    borderRadius: 20,
+                    padding: "5px 12px",
+                    fontSize: 9,
+                    letterSpacing: 1,
+                  }}
+                  aria-expanded={isActive}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchBarVisible(!searchBarVisible);
+                if (!searchBarVisible) {
+                  setSearchQuery("");
+                }
+              }}
+              className="shrink-0"
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: "4px 8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+              aria-label="Toggle search"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  color: "var(--color-text-tertiary)",
+                }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+            </button>
+
+            <span
+              className="ml-auto shrink-0 self-center"
+              style={{
+                fontSize: 9,
+                letterSpacing: 1,
+                color: "var(--color-text-tertiary)",
+                textTransform: "uppercase",
+              }}
+            >
               {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
             </span>
           </div>
 
+          {/* ─── Control panel drawers ─── */}
           {activeControlPanel ? (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-black/25 p-4">
+            <div
+              style={{
+                background: "var(--color-surface-primary)",
+                border: "0.5px solid var(--color-border)",
+                borderRadius: 14,
+                padding: 14,
+              }}
+            >
               {activeControlPanel === "sort" ? (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    <p
+                      className="uppercase"
+                      style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                    >
                       Sort by
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -653,11 +775,21 @@ export default function EntriesPage() {
                           key={option.value}
                           type="button"
                           onClick={() => setSortBy(option.value)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                            sortBy === option.value
-                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
-                          }`}
+                          className={`transition uppercase ${sortBy === option.value ? pillActive : pillInactive}`}
+                          style={{
+                            background:
+                              sortBy === option.value
+                                ? "var(--color-accent-primary)"
+                                : "rgba(245, 237, 214, 0.05)",
+                            border:
+                              sortBy === option.value
+                                ? "none"
+                                : "0.5px solid var(--color-border-strong)",
+                            borderRadius: 20,
+                            padding: "5px 12px",
+                            fontSize: 9,
+                            letterSpacing: 1,
+                          }}
                         >
                           {option.label}
                         </button>
@@ -666,7 +798,10 @@ export default function EntriesPage() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    <p
+                      className="uppercase"
+                      style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                    >
                       Order
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -675,11 +810,21 @@ export default function EntriesPage() {
                           key={option.value}
                           type="button"
                           onClick={() => setSortOrder(option.value)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                            sortOrder === option.value
-                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
-                          }`}
+                          className={`transition uppercase ${sortOrder === option.value ? pillActive : pillInactive}`}
+                          style={{
+                            background:
+                              sortOrder === option.value
+                                ? "var(--color-accent-primary)"
+                                : "rgba(245, 237, 214, 0.05)",
+                            border:
+                              sortOrder === option.value
+                                ? "none"
+                                : "0.5px solid var(--color-border-strong)",
+                            borderRadius: 20,
+                            padding: "5px 12px",
+                            fontSize: 9,
+                            letterSpacing: 1,
+                          }}
                         >
                           {option.label}
                         </button>
@@ -692,7 +837,10 @@ export default function EntriesPage() {
               {activeControlPanel === "filter" ? (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    <p
+                      className="uppercase"
+                      style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                    >
                       Filter by
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -706,11 +854,21 @@ export default function EntriesPage() {
                           key={option.value || "none"}
                           type="button"
                           onClick={() => updateFilterType(option.value)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                            filterType === option.value
-                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
-                          }`}
+                          className={`transition uppercase ${filterType === option.value ? pillActive : pillInactive}`}
+                          style={{
+                            background:
+                              filterType === option.value
+                                ? "var(--color-accent-primary)"
+                                : "rgba(245, 237, 214, 0.05)",
+                            border:
+                              filterType === option.value
+                                ? "none"
+                                : "0.5px solid var(--color-border-strong)",
+                            borderRadius: 20,
+                            padding: "5px 12px",
+                            fontSize: 9,
+                            letterSpacing: 1,
+                          }}
                         >
                           {option.label}
                         </button>
@@ -720,13 +878,24 @@ export default function EntriesPage() {
 
                   {filterType === "country" ? (
                     <div className="max-w-xs">
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                      <label
+                        className="mb-1 block uppercase"
+                        style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                      >
                         Country
                       </label>
                       <select
-                        className="select-field w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                        className="select-field w-full focus:outline-none"
                         value={filterValue}
                         onChange={(event) => setFilterValue(event.target.value)}
+                        style={{
+                          background: "rgba(245, 237, 214, 0.04)",
+                          border: "0.5px solid var(--color-border-strong)",
+                          borderRadius: 10,
+                          padding: "9px 12px",
+                          fontSize: 12,
+                          color: "var(--color-text-secondary)",
+                        }}
                       >
                         <option value="">All countries</option>
                         {uniqueValues.country.map((country) => (
@@ -740,25 +909,44 @@ export default function EntriesPage() {
 
                   {filterType === "rating" || filterType === "vintage" ? (
                     <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                      <label
+                        className="mb-1 block uppercase"
+                        style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                      >
                         {filterType === "rating" ? "Rating range" : "Vintage range"}
                       </label>
                       <div className="flex flex-wrap items-center gap-2">
                         <input
-                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                          className="w-28 focus:outline-none"
                           type="number"
                           inputMode="numeric"
                           placeholder="Min"
                           value={filterMin}
                           onChange={(event) => setFilterMin(event.target.value)}
+                          style={{
+                            background: "rgba(245, 237, 214, 0.04)",
+                            border: "0.5px solid var(--color-border-strong)",
+                            borderRadius: 10,
+                            padding: "9px 12px",
+                            fontSize: 12,
+                            color: "var(--color-text-secondary)",
+                          }}
                         />
                         <input
-                          className="w-28 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                          className="w-28 focus:outline-none"
                           type="number"
                           inputMode="numeric"
                           placeholder="Max"
                           value={filterMax}
                           onChange={(event) => setFilterMax(event.target.value)}
+                          style={{
+                            background: "rgba(245, 237, 214, 0.04)",
+                            border: "0.5px solid var(--color-border-strong)",
+                            borderRadius: 10,
+                            padding: "9px 12px",
+                            fontSize: 12,
+                            color: "var(--color-text-secondary)",
+                          }}
                         />
                       </div>
                     </div>
@@ -769,7 +957,10 @@ export default function EntriesPage() {
               {activeControlPanel === "organize" ? (
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    <p
+                      className="uppercase"
+                      style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                    >
                       Library view
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -781,11 +972,21 @@ export default function EntriesPage() {
                           key={option.value}
                           type="button"
                           onClick={() => setLibraryViewMode(option.value)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                            libraryViewMode === option.value
-                              ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
-                          }`}
+                          className={`transition uppercase ${libraryViewMode === option.value ? pillActive : pillInactive}`}
+                          style={{
+                            background:
+                              libraryViewMode === option.value
+                                ? "var(--color-accent-primary)"
+                                : "rgba(245, 237, 214, 0.05)",
+                            border:
+                              libraryViewMode === option.value
+                                ? "none"
+                                : "0.5px solid var(--color-border-strong)",
+                            borderRadius: 20,
+                            padding: "5px 12px",
+                            fontSize: 9,
+                            letterSpacing: 1,
+                          }}
                         >
                           {option.label}
                         </button>
@@ -795,7 +996,10 @@ export default function EntriesPage() {
 
                   {libraryViewMode === "grouped" ? (
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                      <p
+                        className="uppercase"
+                        style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
+                      >
                         Group by
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -809,13 +1013,23 @@ export default function EntriesPage() {
                             type="button"
                             onClick={() => {
                               setGroupScheme(option.value);
-                              try { localStorage.setItem("libraryGroupScheme", option.value); } catch {}
+                              try { localStorage.setItem("libraryGroupScheme", option.value); } catch { /* noop */ }
                             }}
-                            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                              groupScheme === option.value
-                                ? "border-[var(--color-accent-secondary)]/70 bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-secondary)]"
-                                : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
-                            }`}
+                            className={`transition uppercase ${groupScheme === option.value ? pillActive : pillInactive}`}
+                            style={{
+                              background:
+                                groupScheme === option.value
+                                  ? "var(--color-accent-primary)"
+                                  : "rgba(245, 237, 214, 0.05)",
+                              border:
+                                groupScheme === option.value
+                                  ? "none"
+                                  : "0.5px solid var(--color-border-strong)",
+                              borderRadius: 20,
+                              padding: "5px 12px",
+                              fontSize: 9,
+                              letterSpacing: 1,
+                            }}
                           >
                             {option.label}
                           </button>
@@ -827,109 +1041,185 @@ export default function EntriesPage() {
               ) : null}
             </div>
           ) : null}
-        </section>
 
-        {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading your library...
-          </div>
-        ) : errorMessage ? (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            {errorMessage}
-          </div>
-        ) : sortedEntries.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
-            <p>
-              {isSearchActive
-                ? hasMore
-                  ? "No entries match this search yet. Try loading more."
-                  : "No entries match this search."
-                : isRangeFilterActive
-                  ? "There are no wines found in this range."
-                  : isFilterActive
-                    ? hasMore
-                      ? "No entries match this filter yet. Try loading more."
-                      : "No entries match this filter."
-                    : "Your library is empty. Add your first bottle!"}
-            </p>
-            {hasMore ? (
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="mt-4 inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
-              >
-                {loadingMore ? "Loading..." : "Load more"}
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <>
-            {libraryViewMode === "grouped" ? (
-              <div className="space-y-5">
-                {groupedEntries.map((group) => {
-                  const expanded = Boolean(expandedGroups[group.id]);
-                  const visibleEntries = expanded
-                    ? group.entries
-                    : group.entries.slice(0, GROUP_PREVIEW_COUNT);
-                  return (
-                    <section
-                      key={group.id}
-                      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4"
-                    >
-                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{group.label}</h2>
-                          <p className="text-xs text-[var(--color-text-tertiary)]">
-                            {group.entries.length} {group.entries.length === 1 ? "entry" : "entries"}
-                          </p>
-                        </div>
-                        {group.entries.length > GROUP_PREVIEW_COUNT ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedGroups((prev) => ({
-                                ...prev,
-                                [group.id]: !prev[group.id],
-                              }))
-                            }
-                            className="rounded-full border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
-                          >
-                            {expanded ? "Show less" : "See all"}
-                          </button>
-                        ) : null}
-                      </div>
-                      <div className="grid gap-5 md:grid-cols-2">
-                        {visibleEntries.map((entry) => (
-                          <EntryCard key={entry.id} entry={entry} />
-                        ))}
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="grid gap-5 md:grid-cols-2">
-                {sortedEntries.map((entry) => (
-                  <EntryCard key={entry.id} entry={entry} />
-                ))}
-              </div>
-            )}
-            {hasMore ? (
-              <div className="pt-2">
+          {/* ─── Entry list ─── */}
+          {loading ? (
+            <div
+              className="text-center"
+              style={{
+                background: "var(--color-surface-primary)",
+                border: "0.5px solid var(--color-border)",
+                borderRadius: 14,
+                padding: "24px 16px",
+                fontSize: 12,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Loading your library...
+            </div>
+          ) : errorMessage ? (
+            <div
+              style={{
+                borderRadius: 14,
+                border: "0.5px solid rgba(192, 57, 43, 0.3)",
+                background: "rgba(192, 57, 43, 0.08)",
+                padding: "24px 16px",
+                fontSize: 12,
+                color: "#e6a0a0",
+              }}
+            >
+              {errorMessage}
+            </div>
+          ) : sortedEntries.length === 0 ? (
+            <div
+              style={{
+                background: "var(--color-surface-primary)",
+                border: "0.5px solid var(--color-border)",
+                borderRadius: 14,
+                padding: "32px 16px",
+                fontSize: 12,
+                color: "var(--color-text-secondary)",
+                textAlign: "center",
+              }}
+            >
+              <p>
+                {isSearchActive
+                  ? hasMore
+                    ? "No entries match this search yet. Try loading more."
+                    : "No entries match this search."
+                  : isRangeFilterActive
+                    ? "There are no wines found in this range."
+                    : isFilterActive
+                      ? hasMore
+                        ? "No entries match this filter yet. Try loading more."
+                        : "No entries match this filter."
+                      : "Your library is empty. Add your first bottle!"}
+              </p>
+              {hasMore ? (
                 <button
                   type="button"
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
+                  className="mt-4 transition disabled:opacity-50"
+                  style={{
+                    background: "var(--color-accent-primary)",
+                    color: "var(--color-text-on-accent)",
+                    borderRadius: 20,
+                    padding: "5px 14px",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: 1,
+                    textTransform: "uppercase" as const,
+                  }}
                 >
                   {loadingMore ? "Loading..." : "Load more"}
                 </button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {libraryViewMode === "grouped" ? (
+                <div className="space-y-4">
+                  {groupedEntries.map((group) => {
+                    const expanded = Boolean(expandedGroups[group.id]);
+                    const visibleEntries = expanded
+                      ? group.entries
+                      : group.entries.slice(0, GROUP_PREVIEW_COUNT);
+                    return (
+                      <section
+                        key={group.id}
+                        style={{
+                          background: "var(--color-surface-primary)",
+                          border: "0.5px solid var(--color-border)",
+                          borderRadius: 14,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* Group header */}
+                        <div
+                          className="flex items-center justify-between"
+                          style={{ padding: "10px 14px 6px" }}
+                        >
+                          <span
+                            className="uppercase"
+                            style={{
+                              fontSize: 8,
+                              letterSpacing: 2,
+                              color: "var(--color-accent-secondary)",
+                            }}
+                          >
+                            {group.label} &middot; {group.entries.length}{" "}
+                            {group.entries.length === 1 ? "entry" : "entries"}
+                          </span>
+                          {group.entries.length > GROUP_PREVIEW_COUNT ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedGroups((prev) => ({
+                                  ...prev,
+                                  [group.id]: !prev[group.id],
+                                }))
+                              }
+                              style={{
+                                fontSize: 8,
+                                letterSpacing: 1,
+                                color: "var(--color-text-tertiary)",
+                                textTransform: "uppercase" as const,
+                              }}
+                            >
+                              {expanded ? "Show less" : "See all"}
+                            </button>
+                          ) : null}
+                        </div>
+                        {/* Entry rows */}
+                        <div>
+                          {visibleEntries.map((entry) => (
+                            <EntryRow key={entry.id} entry={entry} />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: "var(--color-surface-primary)",
+                    border: "0.5px solid var(--color-border)",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                  }}
+                >
+                  {sortedEntries.map((entry) => (
+                    <EntryRow key={entry.id} entry={entry} />
+                  ))}
+                </div>
+              )}
+              {hasMore ? (
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="transition disabled:opacity-50"
+                    style={{
+                      background: "var(--color-accent-primary)",
+                      color: "var(--color-text-on-accent)",
+                      borderRadius: 20,
+                      padding: "5px 14px",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: 1,
+                      textTransform: "uppercase" as const,
+                    }}
+                  >
+                    {loadingMore ? "Loading..." : "Load more"}
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
     </AppShell>
   );

@@ -22,6 +22,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/typography";
 
 type SortBy = "consumed_at" | "rating" | "vintage";
 type SortOrder = "asc" | "desc";
@@ -494,12 +495,36 @@ export default function EntriesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadEntries(true)} tintColor={colors.grenache} />}
       >
-        <AppTopBar activeHref="/(app)/entries" />
+        <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>My library</AppText>
-          <AppText style={styles.title}>Curate your cellar library.</AppText>
+          <AppText style={styles.eyebrow}>CELLAR</AppText>
+          <AppText style={styles.title}>Your collection.</AppText>
           <AppText style={styles.subtitle}>Organize bottles by region, vintage, or varietal while keeping your filters.</AppText>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <AppText style={styles.statNumber}>{sortedEntries.length}</AppText>
+            <AppText style={styles.statLabel}>ENTRIES</AppText>
+          </View>
+          <View style={styles.statCard}>
+            <AppText style={styles.statNumber}>
+              {sortedEntries.length > 0
+                ? Math.round(
+                    sortedEntries.reduce((sum, e) => sum + (e.rating ?? 0), 0) /
+                      sortedEntries.filter((e) => e.rating !== null).length
+                  ) || "—"
+                : "—"}
+            </AppText>
+            <AppText style={styles.statLabel}>AVG RATING</AppText>
+          </View>
+          <View style={styles.statCard}>
+            <AppText style={styles.statNumber}>
+              {new Set(sortedEntries.map((e) => e.country).filter(Boolean)).size}
+            </AppText>
+            <AppText style={styles.statLabel}>COUNTRIES</AppText>
+          </View>
         </View>
 
         <View style={styles.controls}>
@@ -526,7 +551,7 @@ export default function EntriesScreen() {
           {isSearchOpen ? (
             <View style={styles.searchPanel}>
               <View style={styles.searchRow}>
-                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} />
+                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
                 {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
               </View>
             </View>
@@ -602,9 +627,13 @@ const styles = StyleSheet.create({
   secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 10, paddingVertical: 7 },
   secondaryBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
   header: { gap: 6 },
-  eyebrow: { color: colors.rose, fontSize: 11, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
-  title: { color: colors.textPrimary, fontSize: 24, fontWeight: "700" },
+  eyebrow: { color: colors.accentSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 3, textTransform: "uppercase" },
+  title: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 28, lineHeight: 34 },
   subtitle: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  statsRow: { flexDirection: "row", gap: 10 },
+  statCard: { flex: 1, backgroundColor: colors.surfacePrimary, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, alignItems: "center", gap: 4 },
+  statNumber: { color: colors.textPrimary, fontFamily: fonts.serif.regular, fontSize: 24 },
+  statLabel: { color: colors.textTertiary, fontSize: 8, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
   controls: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 12, gap: 9 },
   controlButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap", alignItems: "center" },
   controlBtn: { borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 11, paddingVertical: 8 },
@@ -652,13 +681,13 @@ const styles = StyleSheet.create({
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   groupTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: "700" },
   groupCount: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
-  entryCard: { flexDirection: "row", gap: 14, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 14 },
-  photoBox: { width: 82, height: 82, borderRadius: 14, backgroundColor: colors.surfacePrimary, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  entryCard: { flexDirection: "row", gap: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 14 },
+  photoBox: { width: 100, height: 100, borderRadius: 14, backgroundColor: colors.surfacePrimary, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   photoImage: { width: "100%", height: "100%" },
   photoText: { color: colors.textSecondary, fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
   entryMain: { flex: 1, justifyContent: "space-between", gap: 8 },
-  entryTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "700" },
-  entrySubtitle: { marginTop: 3, color: colors.textSecondary, fontSize: 12 },
+  entryTitle: { color: colors.textPrimary, fontFamily: fonts.serif.regular, fontSize: 13 },
+  entrySubtitle: { marginTop: 3, color: colors.textSecondary, fontSize: 9 },
   ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
   ratingStack: { flex: 1, minWidth: 0, gap: 4 },
   qprTag: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden", fontSize: 8, fontWeight: "700", letterSpacing: 0.25, textTransform: "uppercase" },
@@ -668,6 +697,6 @@ const styles = StyleSheet.create({
   qpr_good_value: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
   qpr_absolute_steal: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
   entryMeta: { marginTop: 6, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
-  ratingText: { color: colors.rose, fontSize: 12, fontWeight: "800" },
+  ratingText: { color: colors.accentGold, fontSize: 12, fontWeight: "800", backgroundColor: "rgba(201,168,76,0.1)", borderRadius: 6, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 2 },
   entryDate: { color: colors.textSecondary, fontSize: 12, flexShrink: 0, textAlign: "right" },
 });

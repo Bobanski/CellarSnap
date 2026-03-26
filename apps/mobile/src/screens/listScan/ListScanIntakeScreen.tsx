@@ -19,6 +19,7 @@ import { AppText } from "@/src/components/AppText";
 import { requestListScan, type MobileListScanUpload } from "@/src/lib/api/listScan";
 import { saveListScanResult } from "@/src/lib/listScan/storage";
 import { colors } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/typography";
 
 type SelectedImage = {
   uri: string;
@@ -216,14 +217,13 @@ export default function ListScanIntakeScreen() {
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets
       >
-        <AppTopBar activeHref="/(app)/home" />
+        <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>List scan</AppText>
-          <AppText style={styles.title}>Scan or upload a wine list.</AppText>
+          <AppText style={styles.eyebrow}>LIST SCAN</AppText>
+          <AppText style={styles.title}>Scan any wine list.</AppText>
           <AppText style={styles.subtitle}>
-            Upload one or more list photos, choose a PDF, or paste a public wine-list
-            link.
+            Upload a photo, PDF, or URL and get instant recommendations.
           </AppText>
         </View>
 
@@ -342,17 +342,17 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    color: colors.accentPrimary,
-    fontSize: 11,
+    color: colors.accentSecondary,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 29,
+    fontFamily: fonts.serif.light,
+    fontSize: 28,
     lineHeight: 34,
-    fontWeight: "700",
   },
   subtitle: {
     color: colors.textSecondary,
@@ -380,20 +380,25 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   buttonStack: {
+    flexDirection: "row",
     gap: 10,
   },
   secondaryButton: {
-    borderRadius: 999,
+    flex: 1,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
   secondaryButtonText: {
     color: colors.textPrimary,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
+    textAlign: "center",
   },
   thumbnailWrap: {
     flexDirection: "row",
@@ -497,10 +502,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   submitButton: {
-    borderRadius: 999,
+    borderRadius: 11,
     backgroundColor: colors.accentPrimary,
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
   },

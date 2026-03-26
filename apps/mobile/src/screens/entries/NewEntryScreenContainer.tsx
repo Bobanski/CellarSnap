@@ -427,6 +427,7 @@ export default function NewEntryScreen() {
   const [lastScanConfidence, setLastScanConfidence] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showManualFields, setShowManualFields] = useState(false);
   const labelPhotoUri =
     uploadPhotos.find((photo) => photo.type === "label")?.uri ??
     uploadPhotos[0]?.uri ??
@@ -1567,6 +1568,7 @@ export default function NewEntryScreen() {
     setLineupWines([]);
     resetBulkGroupConfig();
     setBulkCreateMessage(null);
+    setShowManualFields(true);
     setUploadMessage(
       photoCount === 1
         ? "Extracting wine details. Please allow more time for larger lineups."
@@ -1974,7 +1976,7 @@ export default function NewEntryScreen() {
         </View>
 
         <View style={styles.pageHeader}>
-          <AppText style={styles.eyebrow}>New entry</AppText>
+          <AppText style={styles.eyebrow}>NEW ENTRY</AppText>
           <AppText style={styles.title}>Record a new pour.</AppText>
           <AppText style={styles.subtitle}>
             Capture the bottle, the place, and the people around it.
@@ -2601,12 +2603,24 @@ export default function NewEntryScreen() {
                 />
               </AdaptiveFieldRow>
 
-              <Accordion
-                title="Wine details"
-                description="Optional identity details for this bottle."
-                expanded={expanded.wine_details}
-                onToggle={() => toggleSection("wine_details")}
-              >
+              {!showManualFields && (
+                <Pressable
+                  onPress={() => setShowManualFields(true)}
+                  style={styles.ghostButton}
+                >
+                  <AppText style={[styles.ghostButtonText, { textDecorationLine: "underline" }]}>
+                    Don't have a picture of your wine? Manually enter your wine details
+                  </AppText>
+                </Pressable>
+              )}
+
+              {showManualFields && (
+                <Accordion
+                  title="Wine details"
+                  description="Optional identity details for this bottle."
+                  expanded={expanded.wine_details}
+                  onToggle={() => toggleSection("wine_details")}
+                >
                 <Field
                   label="Wine name"
                   value={form.wine_name}
@@ -2720,9 +2734,10 @@ export default function NewEntryScreen() {
                   ) : null}
                 </View>
               </Accordion>
+            )}
 
-              <Accordion
-                title="Location & date"
+            <Accordion
+              title="Location & date"
                 description="Where and when this bottle was consumed."
                 expanded={expanded.location_date}
                 onToggle={() => toggleSection("location_date")}

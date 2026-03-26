@@ -1891,7 +1891,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.screen}>
         <View style={styles.content}>
-          <AppTopBar activeHref="/(app)/profile" />
+          <AppTopBar />
           <View style={styles.loadingCard}>
             <ActivityIndicator color={colors.grenache} />
             <AppText style={styles.loadingText}>Loading profile...</AppText>
@@ -1905,7 +1905,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.screen}>
         <View style={styles.content}>
-          <AppTopBar activeHref="/(app)/profile" />
+          <AppTopBar />
           <View style={styles.errorCard}>
             <AppText style={styles.errorText}>
               {loadErrorMessage ?? "Unable to load profile."}
@@ -1929,7 +1929,7 @@ export default function ProfileScreen() {
           />
         }
       >
-        <AppTopBar activeHref="/(app)/profile" />
+        <AppTopBar />
 
         <View style={styles.identityCard}>
           <View style={styles.identityHeader}>

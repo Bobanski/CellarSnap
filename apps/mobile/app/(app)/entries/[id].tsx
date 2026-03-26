@@ -2853,7 +2853,7 @@ export default function EntryDetailScreen() {
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets
       >
-        <AppTopBar activeHref="/(app)/entries" />
+        <AppTopBar />
 
         <Pressable
           style={styles.backLink}

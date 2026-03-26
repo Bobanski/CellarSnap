@@ -365,6 +365,7 @@ export default function NewEntryPage() {
   >("group");
   const [bulkEntryTitle, setBulkEntryTitle] = useState("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
+  const [showManualFields, setShowManualFields] = useState(false);
 
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
@@ -1713,6 +1714,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[] | null;
     primary_grape_confidence?: number | null;
   }) => {
+    setShowManualFields(true);
     const normalizeAutofillText = (value?: string | null) => {
       if (typeof value !== "string") return "";
       const trimmed = value.trim();
@@ -3080,7 +3082,7 @@ export default function NewEntryPage() {
   const collapsibleSectionClassName =
     "group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4";
   const collapsibleSummaryClassName =
-    "cursor-pointer list-none select-none text-base font-medium text-[var(--color-text-primary)] [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90 sm:text-sm";
+    "cursor-pointer list-none select-none text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-[var(--color-text-tertiary)] before:transition-transform before:content-['▸'] group-open:before:rotate-90";
   const baseUploadGalleryItems = labelPhotos
     .map((photo, sourceIndex) => {
       const resolvedType =
@@ -3216,15 +3218,15 @@ export default function NewEntryPage() {
     <AppShell>
       <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-3xl space-y-8">
-        <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
+        <header className="space-y-1">
+          <span className="text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
             New entry
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+          <h1 className="font-serif text-[28px] font-light text-[var(--color-text-primary)]">
             Record a new pour.
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Capture the bottle, the place, and the people around it.
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Capture the bottle, the moment, the people.
           </p>
         </header>
 
@@ -3237,7 +3239,7 @@ export default function NewEntryPage() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 space-y-1">
                   <label
-                    className="block text-sm font-medium text-[var(--color-text-primary)]"
+                    className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)]"
                     htmlFor="label-upload"
                   >
                     Upload images
@@ -3786,7 +3788,7 @@ export default function NewEntryPage() {
                     <div className="space-y-1">
                       <label
                         htmlFor="drinking-now-toggle"
-                        className="block text-sm font-medium text-[var(--color-text-primary)]"
+                        className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)]"
                       >
                         Drinking Now
                       </label>
@@ -3812,25 +3814,25 @@ export default function NewEntryPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
+                  <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Notes</label>
                   <textarea
-                    className="mt-1 min-h-[120px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                    className="min-h-[120px] w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     {...register("notes")}
                   />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                    <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                       Rating (1-100) <span className="text-rose-400">*</span>
                     </label>
                     <input
                       type="text"
                       inputMode="numeric"
-                      className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 ${
+                      className={`w-20 rounded-[10px] border-[0.5px] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 ${
                         errors.rating
                           ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                          : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
+                          : "border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                       }`}
                       {...register("rating", {
                         validate: (value) => {
@@ -3858,27 +3860,57 @@ export default function NewEntryPage() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                    <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                       QPR (Quality : Price Ratio)
                     </label>
-                    <select
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                      {...register("qpr_level")}
-                    >
-                      <option value="">Not set</option>
-                      {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
+                    <Controller
+                      control={control}
+                      name="qpr_level"
+                      render={({ field }) => (
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
+                                field.value === value
+                                  ? "border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.15)] text-[var(--color-accent-gold)]"
+                                  : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                              }`}
+                              onClick={() => field.onChange(field.value === value ? "" : value)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    />
                   </div>
                   <input type="hidden" {...register("price_paid")} />
                   <input type="hidden" {...register("price_paid_currency")} />
                   <input type="hidden" {...register("price_paid_source")} />
                 </div>
 
-                <details className={collapsibleSectionClassName}>
+                {!showManualFields && (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualFields(true)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--color-accent-secondary)",
+                      fontSize: "13px",
+                      padding: "12px 0",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Don't have a picture of your wine? Manually enter your wine details
+                  </button>
+                )}
+
+                {showManualFields && (
+                  <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
                     Wine details
                   </summary>
@@ -3887,9 +3919,9 @@ export default function NewEntryPage() {
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Wine name</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Wine name</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("wine_name")}
                       />
                       {errors.wine_name ? (
@@ -3897,48 +3929,48 @@ export default function NewEntryPage() {
                       ) : null}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Producer</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Producer</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("producer")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Vintage</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Vintage</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("vintage")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Country</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Country</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("country")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Region</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Region</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("region")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                         Appellation
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("appellation")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                         Classification
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         placeholder="Optional (e.g. Premier Cru, DOCG)"
                         {...register("classification")}
                       />
@@ -3951,6 +3983,7 @@ export default function NewEntryPage() {
                     </div>
                   </div>
                 </details>
+                )}
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
@@ -3961,7 +3994,7 @@ export default function NewEntryPage() {
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Location</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Location</label>
                       <input type="hidden" {...register("location_place_id")} />
                       <Controller
                         control={control}
@@ -3982,7 +4015,7 @@ export default function NewEntryPage() {
                       />
                     </div>
                     <div className="md:justify-self-start">
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                         Consumed date
                       </label>
                       <Controller
@@ -3994,7 +4027,7 @@ export default function NewEntryPage() {
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                             required
                           />
                         )}
@@ -4065,10 +4098,10 @@ export default function NewEntryPage() {
                             value={friendSearch}
                             onChange={(e) => setFriendSearch(e.target.value)}
                             placeholder="Search friends..."
-                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           {searchResults.length > 0 && (
-                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
+                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
                               {searchResults.map((user) => (
                                 <button
                                   key={user.id}
@@ -4101,11 +4134,11 @@ export default function NewEntryPage() {
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     {ADVANCED_NOTE_FIELDS.map((field) => (
                       <div key={field.key}>
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                           {field.label}
                         </label>
                         <select
-                          className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                          className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           {...register(`advanced_notes.${field.key}` as const)}
                         >
                           <option value="">Not set</option>
@@ -4131,53 +4164,89 @@ export default function NewEntryPage() {
                   <div className="mt-4 grid gap-4 md:grid-cols-3">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                           Post visibility
                         </label>
                         <PrivacyBadge level={selectedEntryPrivacy} compact />
                       </div>
-                      <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("entry_privacy")}
-                      >
-                        {PRIVACY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={control}
+                        name="entry_privacy"
+                        render={({ field }) => (
+                          <div className="flex gap-1">
+                            {PRIVACY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
+                                  field.value === option.value
+                                    ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">Reactions</label>
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Reactions</label>
                         <PrivacyBadge level={selectedReactionPrivacy} compact />
                       </div>
-                      <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("reaction_privacy")}
-                      >
-                        {PRIVACY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={control}
+                        name="reaction_privacy"
+                        render={({ field }) => (
+                          <div className="flex gap-1">
+                            {PRIVACY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
+                                  field.value === option.value
+                                    ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">Comments</label>
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Comments</label>
                         <PrivacyBadge level={selectedCommentsPrivacy} compact />
                       </div>
-                      <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("comments_privacy")}
-                      >
-                        {PRIVACY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={control}
+                        name="comments_privacy"
+                        render={({ field }) => (
+                          <div className="flex gap-1">
+                            {PRIVACY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
+                                  field.value === option.value
+                                    ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
@@ -4192,14 +4261,14 @@ export default function NewEntryPage() {
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
-                    className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2 text-base font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
+                    className="rounded-[11px] bg-[var(--color-accent-primary)] px-5 py-3 text-xs font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={isSubmitting}
                   >
                     Save entry
                   </button>
                   <button
                     type="button"
-                    className="text-base font-medium text-[var(--color-text-secondary)] sm:text-sm"
+                    className="rounded-[11px] border-[0.5px] border-[var(--color-border-strong)] bg-transparent px-5 py-3 text-xs font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)]"
                     onClick={returnAfterCancel}
                   >
                     Cancel

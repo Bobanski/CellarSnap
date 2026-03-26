@@ -27,7 +27,7 @@ function buildSlideMeta(slide: GroupedEntrySlide) {
 export default function GroupedPostGallery({
   title,
   slides,
-  heightClassName = "h-60 md:h-84 lg:h-[25rem]",
+  heightClassName = "",
 }: {
   title: string;
   slides: GroupedEntrySlide[];
@@ -46,7 +46,7 @@ export default function GroupedPostGallery({
         badge: slide.label,
       }))}
       heightClassName={heightClassName}
-      wrapperClassName="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/40"
+      wrapperClassName="overflow-hidden bg-black/40"
       header={(_active, activeIndex) => {
         const slide = slides[activeIndex] ?? slides[0];
         const isWineSlide = Boolean(slide?.entry_id);

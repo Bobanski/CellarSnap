@@ -244,14 +244,7 @@ export default function SommelierChat() {
   return (
     <div className="space-y-6">
       {showSuggestions ? (
-        <div className="rounded-[1.75rem] border border-[var(--color-accent-secondary)]/20 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_40%),linear-gradient(180deg,rgba(251,191,36,0.10),rgba(120,53,15,0.10))] p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent-secondary)]/80">
-            Try asking
-          </p>
-          <div className="mt-4">
-            <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
-          </div>
-        </div>
+        <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
       ) : null}
 
       <div

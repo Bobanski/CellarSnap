@@ -19,6 +19,7 @@ import {
 } from "@/src/lib/api/sommelier";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { colors } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/typography";
 
 type ChatMessage = {
   id: string;
@@ -27,9 +28,8 @@ type ChatMessage = {
 };
 
 const DEFAULT_SUGGESTIONS = [
-  "What should I try next based on what I've liked lately?",
-  "Tell me about Barolo and what it usually tastes like.",
-  "What kind of wine would you pour with steak frites tonight?",
+  "Pair with my dinner",
+  "Help me pick a bottle",
 ];
 
 function createMessageId(prefix: "user" | "assistant") {
@@ -109,7 +109,7 @@ export default function SommelierScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppTopBar activeHref="/(app)/sommelier" />
+      <AppTopBar />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -120,6 +120,10 @@ export default function SommelierScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.header}>
+            <AppText style={styles.eyebrow}>POCKET SOMMELIER</AppText>
+            <AppText style={styles.headingTitle}>Your personal wine brain.</AppText>
+          </View>
           <View style={styles.chatStack}>
             {messages.map((message) => {
               const isAssistant = message.role === "assistant";
@@ -131,10 +135,10 @@ export default function SommelierScreen() {
                     isAssistant ? styles.assistantBubble : styles.userBubble,
                   ]}
                 >
-                  <AppText style={styles.messageLabel}>
+                  <AppText style={[styles.messageLabel, !isAssistant ? styles.userMessageLabel : null]}>
                     {isAssistant ? "Pocket Sommelier" : "You"}
                   </AppText>
-                  <AppText style={styles.messageText}>{message.content}</AppText>
+                  <AppText style={[styles.messageText, !isAssistant ? styles.userMessageText : null]}>{message.content}</AppText>
                 </View>
               );
             })}
@@ -213,6 +217,22 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 16,
   },
+  header: {
+    gap: 6,
+  },
+  eyebrow: {
+    color: colors.accentSecondary,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+  },
+  headingTitle: {
+    color: colors.textPrimary,
+    fontFamily: fonts.serif.light,
+    fontSize: 28,
+    lineHeight: 34,
+  },
   suggestionSection: {
     gap: 10,
   },
@@ -224,16 +244,19 @@ const styles = StyleSheet.create({
   },
   suggestionWrap: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: 12,
   },
   suggestionChip: {
+    flex: 1,
+    minHeight: 52,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surfacePrimary,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   suggestionText: {
     color: colors.textPrimary,
@@ -244,7 +267,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   messageBubble: {
-    borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -252,10 +274,14 @@ const styles = StyleSheet.create({
   assistantBubble: {
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
+    borderRadius: 14,
+    borderBottomLeftRadius: 3,
   },
   userBubble: {
     borderColor: "rgba(123,29,58,0.3)",
-    backgroundColor: "rgba(123,29,58,0.12)",
+    backgroundColor: colors.accentPrimary,
+    borderRadius: 14,
+    borderBottomRightRadius: 3,
   },
   messageLabel: {
     color: colors.textSecondary,
@@ -268,6 +294,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 15,
     lineHeight: 24,
+  },
+  userMessageLabel: {
+    color: colors.textOnAccent,
+    opacity: 0.7,
+  },
+  userMessageText: {
+    color: colors.textOnAccent,
   },
   typingText: {
     color: colors.rose,
@@ -290,7 +323,7 @@ const styles = StyleSheet.create({
   inputShell: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    backgroundColor: colors.limestone,
+    backgroundColor: colors.screenBg,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 18,

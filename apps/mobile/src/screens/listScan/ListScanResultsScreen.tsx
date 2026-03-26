@@ -405,7 +405,7 @@ export default function ListScanResultsScreen() {
     return (
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <AppTopBar activeHref="/(app)/home" />
+          <AppTopBar />
           <View style={styles.infoCard}>
             <AppText style={styles.infoText}>Loading scanned list...</AppText>
           </View>
@@ -418,7 +418,7 @@ export default function ListScanResultsScreen() {
     return (
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <AppTopBar activeHref="/(app)/home" />
+          <AppTopBar />
           <View style={styles.infoCard}>
             <AppText style={styles.infoText}>
               This scan result is no longer available in the current session.
@@ -447,7 +447,7 @@ export default function ListScanResultsScreen() {
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets
       >
-        <AppTopBar activeHref="/(app)/home" />
+        <AppTopBar />
 
         <View style={styles.header}>
           <AppText style={styles.eyebrow}>List results</AppText>

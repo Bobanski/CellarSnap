@@ -55,11 +55,13 @@ export default function SwipePhotoGallery({
     key: items[0] ? resolveItemKey(items[0], 0) : null,
   }));
   const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const didSwipeRef = useRef(false);
 
   if (items.length === 0) {
     return (
       <div
-        className={`flex ${heightClassName} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-black/40 text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
+        className={`flex ${heightClassName || "aspect-square"} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-black/40 text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
       >
         {empty ?? "No photo"}
       </div>
@@ -91,7 +93,13 @@ export default function SwipePhotoGallery({
 
   return (
     <div
-      className={`overflow-hidden rounded-3xl border border-[var(--color-border)] bg-black/40 ${wrapperClassName}`}
+      className={`overflow-hidden ${wrapperClassName || "rounded-3xl border border-[var(--color-border)] bg-black/40"}`}
+      onClickCapture={(event) => {
+        if (!didSwipeRef.current) return;
+        didSwipeRef.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
     >
       {header ? (
         <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-text-secondary)]">
@@ -100,22 +108,45 @@ export default function SwipePhotoGallery({
       ) : null}
       <div className="relative">
         <div
-          className={`flex ${heightClassName} transition-transform duration-300`}
-          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+          className={`flex ${heightClassName || ""} transition-transform duration-300`}
+          style={{
+            transform: `translateX(-${activeIndex * 100}%)`,
+            touchAction: "pan-y",
+            ...(heightClassName ? {} : { aspectRatio: "1 / 1" }),
+          }}
           onTouchStart={(event) => {
             touchStartXRef.current = event.touches[0]?.clientX ?? null;
+            touchStartYRef.current = event.touches[0]?.clientY ?? null;
+            didSwipeRef.current = false;
+          }}
+          onTouchMove={(event) => {
+            if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+            const point = event.touches[0];
+            if (!point) return;
+            const deltaX = Math.abs(point.clientX - touchStartXRef.current);
+            const deltaY = Math.abs(point.clientY - touchStartYRef.current);
+            if (deltaX > 10 || deltaY > 10) {
+              didSwipeRef.current = true;
+            }
           }}
           onTouchEnd={(event) => {
             if (items.length <= 1 || touchStartXRef.current === null) {
               touchStartXRef.current = null;
+              touchStartYRef.current = null;
               return;
             }
             const endX = event.changedTouches[0]?.clientX ?? touchStartXRef.current;
             const delta = touchStartXRef.current - endX;
             touchStartXRef.current = null;
+            touchStartYRef.current = null;
             if (Math.abs(delta) < 40) return;
+            didSwipeRef.current = true;
             if (delta > 0) goNext();
             else goPrev();
+          }}
+          onTouchCancel={() => {
+            touchStartXRef.current = null;
+            touchStartYRef.current = null;
           }}
         >
           {items.map((item, itemIndex) => {

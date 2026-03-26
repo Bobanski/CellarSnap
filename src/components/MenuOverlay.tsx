@@ -49,9 +49,10 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
               .select("id", { count: "exact", head: true })
               .eq("user_id", user.id),
             supabase
-              .from("friendships")
+              .from("friend_requests")
               .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id),
+              .eq("status", "accepted")
+              .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`),
             supabase
               .from("friend_requests")
               .select("id", { count: "exact", head: true })
@@ -232,11 +233,6 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
           More
         </p>
         <div className="space-y-1">
-          <MenuLink
-            href="/notifications"
-            label="Notifications"
-            onClose={onClose}
-          />
           <MenuLink
             href="/feedback"
             label="Feedback"

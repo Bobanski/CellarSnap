@@ -21,12 +21,13 @@ export default function SommelierInput({
   };
 
   return (
-    <div className="rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 shadow-[0_20px_80px_-45px_rgba(0,0,0,0.9)]">
+    <div className="flex items-center gap-2">
       <label htmlFor="sommelier-input" className="sr-only">
         Ask Pocket Sommelier a question
       </label>
-      <textarea
+      <input
         id="sommelier-input"
+        type="text"
         aria-label="Ask Pocket Sommelier a question"
         value={value}
         onChange={(event) => setValue(event.target.value)}
@@ -39,27 +40,48 @@ export default function SommelierInput({
           }
         }}
         disabled={disabled}
-        placeholder="Ask your sommelier about regions, pairings, or what you should try next..."
-        className="min-h-28 max-h-64 w-full resize-none rounded-xl border border-transparent bg-transparent px-2 py-1 text-sm leading-7 text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/40 focus:bg-white/[0.02] focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+        placeholder="Ask your sommelier..."
+        className="flex-1 outline-none transition focus:border-[var(--color-border-strong)]"
+        style={{
+          background: "rgba(245, 237, 214, 0.04)",
+          border: "0.5px solid var(--color-border-strong)",
+          borderRadius: "20px",
+          padding: "8px 13px",
+          fontSize: "11px",
+          color: "var(--color-text-secondary)",
+        }}
       />
-      <div className="mt-3 flex items-center justify-between gap-3 px-2">
-        <p className="text-xs text-[var(--color-text-tertiary)]">
-          Shift+Enter for a new line. Responses use your tasting history.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            submit().catch((error) => {
-              console.error("[Sommelier Input] Submission failed:", error);
-            });
-          }}
-          disabled={disabled || value.trim().length === 0}
-          aria-label={disabled ? "Pocket Sommelier is responding" : "Send message"}
-          className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/60 disabled:cursor-not-allowed disabled:opacity-60"
+      <button
+        type="button"
+        onClick={() => {
+          submit().catch((error) => {
+            console.error("[Sommelier Input] Submission failed:", error);
+          });
+        }}
+        disabled={disabled || value.trim().length === 0}
+        aria-label={disabled ? "Pocket Sommelier is responding" : "Send message"}
+        className="flex-shrink-0 flex items-center justify-center transition hover:opacity-80 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        style={{
+          width: "30px",
+          height: "30px",
+          borderRadius: "50%",
+          background: "var(--color-accent-primary)",
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-text-on-accent)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          {disabled ? "Thinking..." : "Send"}
-        </button>
-      </div>
+          <line x1="22" y1="2" x2="11" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+      </button>
     </div>
   );
 }
