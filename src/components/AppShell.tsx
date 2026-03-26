@@ -12,9 +12,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-dvh flex-col">
       <AppHeader onMenuOpen={() => setMenuOpen(true)} />
       <main className="flex-1 overflow-y-auto">{children}</main>
-      <Suspense fallback={null}>
-        <BottomTabBar />
-      </Suspense>
+      <div className="relative z-10" style={{ overflow: "visible" }}>
+        <Suspense fallback={null}>
+          <BottomTabBar />
+        </Suspense>
+      </div>
       <MenuOverlay open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>
   );

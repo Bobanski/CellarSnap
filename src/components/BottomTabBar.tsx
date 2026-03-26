@@ -110,7 +110,7 @@ export default function BottomTabBar() {
     : ALL_TABS;
 
   return (
-    <nav className="bottom-tab-bar flex shrink-0 items-end justify-around">
+    <nav className="bottom-tab-bar flex shrink-0 items-end justify-around" style={{ overflow: "visible" }}>
       {tabs.map((tab) => {
         const active = isTabActive(tab.href, pathname, fromFeed);
 
