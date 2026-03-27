@@ -105,8 +105,8 @@ export default function SommelierScreen() {
 
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
-  const renderComposer = (inline: boolean) => (
-    <View style={[styles.inputShell, inline ? styles.inlineInputShell : null]}>
+  const renderComposer = () => (
+    <View style={styles.inputShell}>
       <DoneTextInput
         value={value}
         onChangeText={setValue}
@@ -141,73 +141,79 @@ export default function SommelierScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.flex}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.page}>
           <View style={styles.header}>
             <AppText style={styles.eyebrow}>{SOMMELIER_EYEBROW}</AppText>
             <AppText style={styles.headingTitle}>{SOMMELIER_TITLE}</AppText>
             <AppText style={styles.headingSubtitle}>{SOMMELIER_SUBTITLE}</AppText>
           </View>
-          <View style={styles.chatStack}>
-            {messages.map((message) => {
-              const isAssistant = message.role === "assistant";
-              return (
-                <View
-                  key={message.id}
-                  style={[
-                    styles.messageBubble,
-                    isAssistant ? styles.assistantBubble : styles.userBubble,
-                  ]}
-                >
-                  <AppText style={[styles.messageLabel, !isAssistant ? styles.userMessageLabel : null]}>
-                    {isAssistant ? "Pocket Sommelier" : "You"}
-                  </AppText>
-                  <AppText style={[styles.messageText, !isAssistant ? styles.userMessageText : null]}>{message.content}</AppText>
+          <View style={styles.chatShell}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.flex}
+              contentContainerStyle={styles.messageContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.chatStack}>
+                {messages.map((message) => {
+                  const isAssistant = message.role === "assistant";
+                  return (
+                    <View
+                      key={message.id}
+                      style={[
+                        styles.messageBubble,
+                        isAssistant ? styles.assistantBubble : styles.userBubble,
+                      ]}
+                    >
+                      <AppText style={[styles.messageLabel, !isAssistant ? styles.userMessageLabel : null]}>
+                        {isAssistant ? "Pocket Sommelier" : "You"}
+                      </AppText>
+                      <AppText style={[styles.messageText, !isAssistant ? styles.userMessageText : null]}>
+                        {message.content}
+                      </AppText>
+                    </View>
+                  );
+                })}
+
+                {pending ? (
+                  <View style={[styles.messageBubble, styles.assistantBubble]}>
+                    <AppText style={styles.messageLabel}>Pocket Sommelier</AppText>
+                    <AppText style={styles.typingText}>Thinking...</AppText>
+                  </View>
+                ) : null}
+              </View>
+            </ScrollView>
+
+            <View style={styles.bottomDock}>
+              {showSuggestions ? (
+                <View style={styles.suggestionSection}>
+                  <AppText style={styles.suggestionEyebrow}>Try asking</AppText>
+                  <View style={styles.suggestionWrap}>
+                    {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
+                      <Pressable
+                        key={suggestion}
+                        style={styles.suggestionChip}
+                        onPress={() => void sendMessage(suggestion)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Ask: ${suggestion}`}
+                      >
+                        <AppText style={styles.suggestionText}>{suggestion}</AppText>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
-              );
-            })}
+              ) : null}
 
-            {pending ? (
-              <View style={[styles.messageBubble, styles.assistantBubble]}>
-                <AppText style={styles.messageLabel}>Pocket Sommelier</AppText>
-                <AppText style={styles.typingText}>Thinking...</AppText>
-              </View>
-            ) : null}
+              {error ? (
+                <View style={styles.errorCard}>
+                  <AppText style={styles.errorText}>{error}</AppText>
+                </View>
+              ) : null}
+
+              {renderComposer()}
+            </View>
           </View>
-
-          {showSuggestions ? (
-            <View style={styles.suggestionSection}>
-              <AppText style={styles.suggestionEyebrow}>Try asking</AppText>
-              <View style={styles.suggestionWrap}>
-                {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
-                  <Pressable
-                    key={suggestion}
-                    style={styles.suggestionChip}
-                    onPress={() => void sendMessage(suggestion)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ask: ${suggestion}`}
-                  >
-                    <AppText style={styles.suggestionText}>{suggestion}</AppText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          {error ? (
-            <View style={styles.errorCard}>
-              <AppText style={styles.errorText}>{error}</AppText>
-            </View>
-          ) : null}
-
-          {showSuggestions ? renderComposer(true) : null}
-        </ScrollView>
-
-        {!showSuggestions ? renderComposer(false) : null}
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -221,13 +227,22 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  content: {
+  page: {
+    flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 20,
-    gap: 14,
+    paddingTop: 12,
   },
   header: {
     gap: 4,
+    marginBottom: 12,
+  },
+  chatShell: {
+    flex: 1,
+    minHeight: 0,
+  },
+  messageContent: {
+    flexGrow: 1,
+    paddingBottom: 12,
   },
   eyebrow: {
     color: colors.accentSecondary,
@@ -257,12 +272,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   suggestionWrap: {
-    flexDirection: "column",
+    flexDirection: "row",
     gap: 8,
   },
   suggestionChip: {
-    width: "100%",
-    minHeight: 56,
+    flex: 1,
+    minHeight: 64,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -274,8 +289,8 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     color: colors.textPrimary,
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 14,
     textAlign: "center",
   },
   chatStack: {
@@ -285,18 +300,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    maxWidth: "90%",
   },
   assistantBubble: {
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
     borderRadius: 16,
     borderBottomLeftRadius: 3,
+    alignSelf: "flex-start",
   },
   userBubble: {
     borderColor: "rgba(123,29,58,0.3)",
     backgroundColor: colors.accentPrimary,
     borderRadius: 16,
     borderBottomRightRadius: 3,
+    alignSelf: "flex-end",
   },
   messageLabel: {
     color: colors.textSecondary,
@@ -336,19 +354,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   inputShell: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
     backgroundColor: colors.screenBg,
-    paddingHorizontal: 16,
-    paddingTop: 8,
     paddingBottom: 14,
+    paddingTop: 0,
     gap: 10,
   },
-  inlineInputShell: {
-    borderTopWidth: 0,
-    paddingHorizontal: 0,
-    paddingTop: 2,
-    paddingBottom: 8,
+  bottomDock: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   input: {
     minHeight: 88,

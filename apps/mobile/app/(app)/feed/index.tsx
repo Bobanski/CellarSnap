@@ -1365,8 +1365,8 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   scopePillActive: {
-    borderColor: "rgba(252,211,77,0.7)",
-    backgroundColor: "rgba(251,191,36,0.15)",
+    borderColor: "rgba(196,96,122,0.22)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   scopePillText: {
     color: colors.textSecondary,
@@ -1374,7 +1374,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   scopePillTextActive: {
-    color: colors.textPrimary,
+    color: colors.accentSecondary,
   },
   searchToggleButton: {
     width: 42,
@@ -1387,8 +1387,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   searchToggleButtonActive: {
-    borderColor: "rgba(252,211,77,0.7)",
-    backgroundColor: "rgba(251,191,36,0.15)",
+    borderColor: "rgba(196,96,122,0.22)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   searchToggleIcon: {
     color: colors.textSecondary,

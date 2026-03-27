@@ -1569,7 +1569,6 @@ export default function NewEntryScreen() {
     setLineupWines([]);
     resetBulkGroupConfig();
     setBulkCreateMessage(null);
-    setShowManualFields(true);
     setUploadMessage(
       photoCount === 1
         ? "Extracting wine details. Please allow more time for larger lineups."

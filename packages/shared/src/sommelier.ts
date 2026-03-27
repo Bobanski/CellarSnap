@@ -7,6 +7,7 @@ export const SOMMELIER_INTRO_MESSAGE =
 export const SOMMELIER_INPUT_PLACEHOLDER =
   "Ask about regions, pairings, or what you should try next...";
 export const SOMMELIER_DEFAULT_SUGGESTIONS = [
-  "Pair with my dinner",
-  "Help me pick a bottle",
+  "How does italian wine compare to french wine?",
+  "Tell me about the 2013 vintage in Napa Valley?",
+  "What's a good pairing to go with seafood pasta?",
 ] as const;

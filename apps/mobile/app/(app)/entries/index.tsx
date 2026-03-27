@@ -144,7 +144,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
         )}
       </View>
       <View style={styles.entryMain}>
-        <View>
+        <View style={styles.entryCopy}>
           <AppText style={styles.entryTitle}>{item.wine_name?.trim() || "Untitled wine"}</AppText>
           {producer || vintage ? (
             <AppText style={styles.entrySubtitle}>
@@ -588,18 +588,19 @@ const styles = StyleSheet.create({
   photoBox: { width: 108, height: 108, borderRadius: 16, backgroundColor: colors.surfacePrimary, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   photoImage: { width: "100%", height: "100%" },
   photoText: { color: colors.textSecondary, fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
-  entryMain: { flex: 1, justifyContent: "space-between", gap: 10 },
-  entryTitle: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 17, lineHeight: 22 },
-  entrySubtitle: { marginTop: 4, color: colors.textSecondary, fontSize: 11, lineHeight: 15 },
+  entryMain: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minWidth: 0 },
+  entryCopy: { flex: 1, minWidth: 0, justifyContent: "center" },
+  entryTitle: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 22, lineHeight: 28 },
+  entrySubtitle: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
   ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
-  ratingStack: { flex: 1, minWidth: 0, gap: 4 },
+  ratingStack: { minWidth: 0, gap: 4, alignItems: "flex-end" },
   qprTag: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden", fontSize: 8, fontWeight: "700", letterSpacing: 0.25, textTransform: "uppercase" },
   qpr_extortion: { borderColor: "rgba(192,57,43,0.4)", backgroundColor: "rgba(192,57,43,0.1)", color: colors.error },
   qpr_pricey: { borderColor: "rgba(192,57,43,0.4)", backgroundColor: "rgba(192,57,43,0.1)", color: colors.error },
   qpr_mid: { borderColor: "rgba(123,29,58,0.4)", backgroundColor: "rgba(123,29,58,0.1)", color: colors.rose },
   qpr_good_value: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
   qpr_absolute_steal: { borderColor: "rgba(45,125,70,0.4)", backgroundColor: "rgba(45,125,70,0.1)", color: colors.success },
-  entryMeta: { marginTop: 8, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
-  ratingText: { color: colors.accentGold, fontSize: 13, fontWeight: "800", backgroundColor: "rgba(201,168,76,0.1)", borderRadius: 6, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 3 },
+  entryMeta: { minWidth: 0, alignItems: "flex-end", justifyContent: "center", gap: 10 },
+  ratingText: { color: colors.accentGold, fontSize: 14, fontWeight: "800", backgroundColor: "rgba(201,168,76,0.1)", borderRadius: 6, overflow: "hidden", paddingHorizontal: 6, paddingVertical: 3 },
   entryDate: { color: colors.textSecondary, fontSize: 13, flexShrink: 0, textAlign: "right" },
 });
