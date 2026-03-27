@@ -6,7 +6,9 @@ import { colors } from "@/src/lib/theme";
 export default function AuthLayout() {
   const { isReady, session } = useAuth();
   const segments = useSegments();
-  const isResetPasswordScreen = segments[segments.length - 1] === "reset-password";
+  const currentSegment = segments[segments.length - 1] as string | undefined;
+  const isResetPasswordScreen = currentSegment === "reset-password";
+  const isFinishSignupScreen = currentSegment === "finish-signup";
 
   if (!isReady) {
     return (
@@ -23,7 +25,7 @@ export default function AuthLayout() {
     );
   }
 
-  if (session && !isResetPasswordScreen) {
+  if (session && !isResetPasswordScreen && !isFinishSignupScreen) {
     return <Redirect href="/(app)/home" />;
   }
 
@@ -32,6 +34,7 @@ export default function AuthLayout() {
       <Stack.Screen name="sign-in" />
       <Stack.Screen name="forgot-password" />
       <Stack.Screen name="sign-up" />
+      <Stack.Screen name="finish-signup" />
       <Stack.Screen name="verify-phone" />
     </Stack>
   );

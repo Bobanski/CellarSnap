@@ -77,7 +77,10 @@ export default function VerifyPhoneScreen() {
       }
 
       if (mode === "recovery") {
-        router.replace("/(auth)/reset-password");
+        router.replace({
+          pathname: "/(auth)/reset-password",
+          params: { phone: normalizedPhone },
+        });
         return;
       }
 
@@ -392,4 +395,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
