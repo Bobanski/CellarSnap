@@ -5,11 +5,11 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 import {
   Redirect,
 } from "expo-router";
@@ -103,6 +103,31 @@ export default function SommelierScreen() {
 
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
+  const renderComposer = (inline: boolean) => (
+    <View style={[styles.inputShell, inline ? styles.inlineInputShell : null]}>
+      <DoneTextInput
+        value={value}
+        onChangeText={setValue}
+        placeholder="Ask about regions, pairings, or what you should try next..."
+        placeholderTextColor={colors.textTertiary}
+        multiline
+        maxLength={1200}
+        style={styles.input}
+        editable={!pending}
+        accessibilityLabel="Ask Pocket Sommelier a question"
+      />
+      <Pressable
+        style={[styles.sendButton, pending || !value.trim() ? styles.sendButtonDisabled : null]}
+        onPress={() => void sendMessage(value)}
+        disabled={pending || !value.trim()}
+        accessibilityRole="button"
+        accessibilityLabel={pending ? "Pocket Sommelier is responding" : "Send message"}
+      >
+        <AppText style={styles.sendButtonText}>{pending ? "Thinking..." : "Send"}</AppText>
+      </Pressable>
+    </View>
+  );
+
   if (!hasPrivateBetaFeatureAccess) {
     return <Redirect href="/(app)/home" />;
   }
@@ -175,30 +200,11 @@ export default function SommelierScreen() {
               <AppText style={styles.errorText}>{error}</AppText>
             </View>
           ) : null}
+
+          {showSuggestions ? renderComposer(true) : null}
         </ScrollView>
 
-        <View style={styles.inputShell}>
-          <TextInput
-            value={value}
-            onChangeText={setValue}
-            placeholder="Ask about regions, pairings, or what you should try next..."
-            placeholderTextColor={colors.textTertiary}
-            multiline
-            maxLength={1200}
-            style={styles.input}
-            editable={!pending}
-            accessibilityLabel="Ask Pocket Sommelier a question"
-          />
-          <Pressable
-            style={[styles.sendButton, pending || !value.trim() ? styles.sendButtonDisabled : null]}
-            onPress={() => void sendMessage(value)}
-            disabled={pending || !value.trim()}
-            accessibilityRole="button"
-            accessibilityLabel={pending ? "Pocket Sommelier is responding" : "Send message"}
-          >
-            <AppText style={styles.sendButtonText}>{pending ? "Thinking..." : "Send"}</AppText>
-          </Pressable>
-        </View>
+        {!showSuggestions ? renderComposer(false) : null}
       </KeyboardAvoidingView>
     </View>
   );
@@ -325,13 +331,19 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.screenBg,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 18,
-    gap: 12,
+    paddingTop: 8,
+    paddingBottom: 14,
+    gap: 10,
+  },
+  inlineInputShell: {
+    borderTopWidth: 0,
+    paddingHorizontal: 0,
+    paddingTop: 2,
+    paddingBottom: 6,
   },
   input: {
-    minHeight: 96,
-    maxHeight: 180,
+    minHeight: 116,
+    maxHeight: 196,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
