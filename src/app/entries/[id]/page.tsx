@@ -766,10 +766,10 @@ export default function EntryDetailPage() {
             <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               Cellar entry
             </span>
-            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+            <h1 className="max-w-4xl text-5xl font-semibold leading-[0.96] text-[var(--color-text-primary)] sm:text-6xl lg:text-7xl">
               {entry.wine_name || "Untitled wine"}
             </h1>
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <p className="max-w-3xl text-2xl text-[var(--color-text-secondary)] sm:text-3xl">
               {entry.producer || "Unknown producer"}
             </p>
           </div>
@@ -1058,7 +1058,7 @@ export default function EntryDetailPage() {
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Date consumed
               </p>
-              <p className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
+              <p className="mt-1 text-3xl font-semibold text-[var(--color-text-primary)] sm:text-4xl">
                 {formatConsumedDate(entry.consumed_at)}
               </p>
             </div>
@@ -1118,8 +1118,8 @@ export default function EntryDetailPage() {
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Rating
               </p>
-              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
-                <RatingBadge rating={entry.rating} />
+              <p className="mt-1 text-[var(--color-text-tertiary)]">
+                <RatingBadge rating={entry.rating} variant="text" className="!text-3xl sm:!text-4xl" />
               </p>
             </div>
 

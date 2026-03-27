@@ -13,8 +13,8 @@ export default async function SommelierPage() {
 
   return (
     <AppShell>
-      <div className="px-6 py-6 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
+      <div className="h-full px-6 py-6 text-[var(--color-text-primary)]">
+        <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-8">
           <header className="space-y-1">
             <span
               className="block"

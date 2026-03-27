@@ -40,7 +40,7 @@ export default function SommelierMessage({
           padding: "10px 13px",
           fontSize: "11px",
           lineHeight: 1.65,
-          maxWidth: "88%",
+          maxWidth: isAssistant ? "78%" : "88%",
           borderRadius: isAssistant
             ? "14px 14px 14px 3px"
             : "14px 14px 3px 14px",

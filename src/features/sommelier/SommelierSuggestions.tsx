@@ -1,8 +1,9 @@
 "use client";
 
 const DEFAULT_SUGGESTIONS = [
-  "Pair with my dinner",
-  "Help me pick a bottle",
+  "How does italian wine compare to french wine?",
+  "Tell me about the 2013 vintage in Napa Valley?",
+  "What's a good pairing to go with seafood pasta?",
 ] as const;
 
 export default function SommelierSuggestions({
@@ -11,27 +12,31 @@ export default function SommelierSuggestions({
   onSelect: (prompt: string) => void;
 }) {
   return (
-    <div className="flex gap-3" aria-label="Suggested prompts">
+    <div className="grid grid-cols-3 gap-2" aria-label="Suggested prompts">
       {DEFAULT_SUGGESTIONS.map((suggestion) => (
         <button
           key={suggestion}
           type="button"
           onClick={() => onSelect(suggestion)}
           style={{
-            flex: 1,
-            minHeight: "52px",
+            minHeight: "56px",
+            width: "100%",
             background: "var(--color-surface-primary)",
             border: "0.5px solid var(--color-border)",
-            borderRadius: "11px",
-            padding: "10px",
+            borderRadius: "18px",
+            padding: "10px 12px",
             fontSize: "11px",
-            color: "var(--color-text-secondary)",
+            lineHeight: 1.25,
+            color: "var(--color-text-primary)",
             textAlign: "center",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            whiteSpace: "normal",
+            textWrap: "balance",
+            overflowWrap: "anywhere",
           }}
-          className="transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-primary)]/10 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
+          className="mx-auto transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-primary)]/10 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
         >
           {suggestion}
         </button>

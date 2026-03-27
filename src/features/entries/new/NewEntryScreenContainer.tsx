@@ -3783,6 +3783,19 @@ export default function NewEntryPage() {
             {/* Hide single-bottle form fields when lineup mode is active */}
             {showSingleBottleFields ? (
               <>
+                {!showManualFields ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualFields(true)}
+                    aria-expanded={showManualFields}
+                    className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                  >
+                    Don&apos;t have a pic? Manually enter details
+                  </button>
+                ) : null}
+
+                {showManualFields ? (
+                  <>
                 <div className="rounded-2xl border border-sky-300/20 bg-sky-950/20 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
@@ -3890,24 +3903,6 @@ export default function NewEntryPage() {
                   <input type="hidden" {...register("price_paid_currency")} />
                   <input type="hidden" {...register("price_paid_source")} />
                 </div>
-
-                {!showManualFields && (
-                  <button
-                    type="button"
-                    onClick={() => setShowManualFields(true)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "var(--color-accent-secondary)",
-                      fontSize: "13px",
-                      padding: "12px 0",
-                      cursor: "pointer",
-                      textDecoration: "underline",
-                    }}
-                  >
-                    Don't have a picture of your wine? Manually enter your wine details
-                  </button>
-                )}
 
                 {showManualFields && (
                   <details className={collapsibleSectionClassName}>
@@ -4274,6 +4269,8 @@ export default function NewEntryPage() {
                     Cancel
                   </button>
                 </div>
+                  </>
+                ) : null}
           </>
           ) : null}
         </form>

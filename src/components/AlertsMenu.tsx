@@ -454,7 +454,23 @@ export default function AlertsMenu() {
         onClick={toggleOpen}
         aria-label="Alerts"
       >
-        <span className="text-lg">🔔</span>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M15 17H9" />
+          <path d="M10 21a2 2 0 0 0 4 0" />
+          <path d="M7 8a5 5 0 0 1 10 0v4l2 3H5l2-3z" />
+          <path d="M8 3 6.5 4.5" />
+          <path d="M16 3 17.5 4.5" />
+        </svg>
         {displayCount > 0 ? (
           <span className="accent-count-badge absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-semibold">
             {displayCount}

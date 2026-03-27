@@ -242,17 +242,13 @@ export default function SommelierChat() {
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
   return (
-    <div className="space-y-6">
-      {showSuggestions ? (
-        <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
-      ) : null}
-
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-6">
       <div
         role="log"
         aria-live="polite"
         aria-label="Pocket Sommelier conversation"
         aria-relevant="additions text"
-        className="space-y-4"
+        className="min-h-0 flex-1 space-y-4"
       >
         {messages.map((message) => (
           <SommelierMessage
@@ -292,7 +288,13 @@ export default function SommelierChat() {
         </div>
       ) : null}
 
-      <SommelierInput disabled={pending} onSend={sendMessage} />
+      <div className="mt-auto space-y-3">
+        {showSuggestions ? (
+          <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
+        ) : null}
+
+        <SommelierInput disabled={pending} onSend={sendMessage} />
+      </div>
     </div>
   );
 }

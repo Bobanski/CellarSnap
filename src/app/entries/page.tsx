@@ -176,14 +176,14 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
       <div className="flex min-w-0 flex-1 flex-col">
         <span
           className="truncate text-[var(--color-text-primary)]"
-          style={{ fontFamily: "var(--font-serif)", fontSize: 13 }}
+          style={{ fontFamily: "var(--font-serif)", fontSize: 18 }}
         >
           {entry.wine_name || "Unnamed wine"}
         </span>
         {metaParts.length > 0 ? (
           <span
             className="truncate text-[var(--color-text-secondary)]"
-            style={{ fontSize: 9 }}
+            style={{ fontSize: 13 }}
           >
             {metaParts.join(" \u00B7 ")}
           </span>
@@ -197,7 +197,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
             className="inline-flex items-center justify-center"
             style={{
               fontFamily: "var(--font-serif)",
-              fontSize: 11,
+              fontSize: 16,
               background: "rgba(201, 168, 76, 0.12)",
               color: "var(--color-accent-gold)",
               borderRadius: 4,
@@ -208,7 +208,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
             {entry.rating}
           </span>
         ) : null}
-        <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 8 }}>
+        <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 12 }}>
           {formatConsumedDate(entry.consumed_at)}
         </span>
       </div>
@@ -552,7 +552,7 @@ export default function EntriesPage() {
               className="mt-1"
               style={{
                 fontFamily: "var(--font-serif)",
-                fontSize: 28,
+                fontSize: 44,
                 fontWeight: 300,
                 color: "var(--color-text-primary)",
                 lineHeight: 1.2,
@@ -579,14 +579,14 @@ export default function EntriesPage() {
                   background: "var(--color-surface-primary)",
                   border: "0.5px solid var(--color-border)",
                   borderRadius: 12,
-                  padding: "12px 8px",
+                  padding: "14px 8px",
                 }}
               >
                 <span
                   className="block"
                   style={{
                     fontFamily: "var(--font-serif)",
-                    fontSize: 26,
+                    fontSize: 38,
                     fontWeight: 300,
                     color: "var(--color-text-primary)",
                     lineHeight: 1.2,
@@ -597,8 +597,8 @@ export default function EntriesPage() {
                 <span
                   className="mt-1 block uppercase"
                   style={{
-                    fontSize: 8,
-                    letterSpacing: 1.5,
+                    fontSize: 10,
+                    letterSpacing: 1.8,
                     color: "var(--color-text-tertiary)",
                   }}
                 >
