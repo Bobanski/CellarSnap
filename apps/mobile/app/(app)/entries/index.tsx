@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
   photoText: { color: colors.textSecondary, fontSize: 11, textAlign: "center", paddingHorizontal: 6 },
   entryMain: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minWidth: 0 },
   entryCopy: { flex: 1, minWidth: 0, justifyContent: "center" },
-  entryTitle: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 22, lineHeight: 28 },
+  entryTitle: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 20, lineHeight: 26 },
   entrySubtitle: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
   ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
   ratingStack: { minWidth: 0, gap: 4, alignItems: "flex-end" },

@@ -6,7 +6,6 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import { Redirect, Tabs } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
@@ -18,7 +17,13 @@ function LogTabButton(props: Record<string, unknown>) {
   return (
     <Pressable onPress={onPress} style={fabStyles.wrapper}>
       <View style={fabStyles.circle}>
-        <Feather name="plus" size={22} color={colors.textPrimary} />
+        <View style={fabStyles.logGlyph}>
+          <View style={fabStyles.logInnerCircle} />
+          <View style={fabStyles.logStem} />
+          <View style={fabStyles.logCrossHorizontal} />
+          <View style={fabStyles.logCrossVertical} />
+          <View style={fabStyles.logTopArc} />
+        </View>
       </View>
       <AppText style={fabStyles.label}>LOG</AppText>
     </Pressable>
@@ -89,6 +94,54 @@ const fabStyles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 8,
+  },
+  logGlyph: {
+    width: 26,
+    height: 26,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logInnerCircle: {
+    position: "absolute",
+    width: 13.5,
+    height: 13.5,
+    borderRadius: 999,
+    backgroundColor: "#F5EDD6",
+    top: 6.5,
+  },
+  logStem: {
+    position: "absolute",
+    top: 6,
+    width: 1.2,
+    height: 6.2,
+    borderRadius: 999,
+    backgroundColor: "#F5EDD6",
+  },
+  logCrossHorizontal: {
+    position: "absolute",
+    top: 13.2,
+    width: 7.8,
+    height: 1.2,
+    borderRadius: 999,
+    backgroundColor: "#7B1D3A",
+  },
+  logCrossVertical: {
+    position: "absolute",
+    top: 10.9,
+    width: 1.2,
+    height: 6.3,
+    borderRadius: 999,
+    backgroundColor: "#7B1D3A",
+  },
+  logTopArc: {
+    position: "absolute",
+    top: 4.6,
+    width: 7.2,
+    height: 1.1,
+    borderRadius: 999,
+    backgroundColor: "#F5EDD6",
+    opacity: 0.45,
   },
   label: {
     fontSize: 8,

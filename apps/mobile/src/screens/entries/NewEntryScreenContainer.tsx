@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -19,7 +20,7 @@ import {
   type TextInput as ReactNativeTextInput,
   View
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
   createEntryInputSchema,
@@ -468,6 +469,12 @@ export default function NewEntryScreen() {
     activeCropPhoto?.originalUri ?? activeCropPhoto?.uri ?? null;
   const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
   const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
+
+  useFocusEffect(
+    useCallback(() => {
+      setShowManualFields(false);
+    }, [])
+  );
   const getCropGeometry = () => {
     if (!cropImageNaturalSize || cropFrameSize <= 0) {
       return null;
