@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  HOME_CIRCLE_ENTRIES_LIMIT,
+  HOME_RECENT_ENTRIES_LIMIT,
+} from "@shared";
 import { getFriendsOfFriendsIds } from "@/lib/access/entryVisibility";
 import {
   normalizePrivacyValue,
@@ -6,7 +10,7 @@ import {
 } from "@/lib/access/interactionVisibility";
 import { isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
@@ -51,15 +55,22 @@ function normalizeNullableString(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-export async function GET() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+function isMissingAvatarPathColumnError(message: string) {
+  return message.includes("avatar_path") || message.includes("column");
+}
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(request: Request) {
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
   }
+
+  const { supabase, user } = auth;
 
   const viewerIsTestAccount = await isTestAccount(supabase, user.id);
 
@@ -159,7 +170,7 @@ export async function GET() {
 
   const ownEntries = dedupeHomeEntries(
     ((ownEntriesResult.data ?? []) as HomeEntryRow[]).slice(0, 12)
-  ).slice(0, 3);
+  ).slice(0, HOME_RECENT_ENTRIES_LIMIT);
 
   const { data: friendRows } = await supabase
     .from("friend_requests")
@@ -228,7 +239,10 @@ export async function GET() {
     }
 
     const rawFriendEntries = (friendEntriesResult.data ?? []) as HomeEntryRow[];
-    friendEntries = dedupeHomeEntries(rawFriendEntries).slice(0, 6);
+    friendEntries = dedupeHomeEntries(rawFriendEntries).slice(
+      0,
+      HOME_CIRCLE_ENTRIES_LIMIT
+    );
   }
 
   const allEntries = [...ownEntries, ...friendEntries];
@@ -306,21 +320,68 @@ export async function GET() {
   const friendUserIds = Array.from(
     new Set([
       ...friendEntries.map((entry) => entry.user_id),
+      ...allEntries.flatMap((entry) =>
+        Array.isArray((entry as { tasted_with_user_ids?: unknown }).tasted_with_user_ids)
+          ? (((entry as { tasted_with_user_ids?: unknown }).tasted_with_user_ids as string[]) ??
+              [])
+          : []
+      ),
       ...Array.from(reactorUserIds),
     ])
   );
 
-  const { data: friendProfiles } =
-    friendUserIds.length > 0
-      ? await supabase
-          .from("public_profiles")
-          .select("id, display_name, email")
-          .in("id", friendUserIds)
-      : { data: [] };
+  let friendProfiles:
+    | {
+        id: string;
+        display_name: string | null;
+        email: string | null;
+        avatar_path?: string | null;
+      }[]
+    | null = [];
+
+  if (friendUserIds.length > 0) {
+    const profileResponse = await supabase
+      .from("public_profiles")
+      .select("id, display_name, email, avatar_path")
+      .in("id", friendUserIds);
+
+    if (!profileResponse.error) {
+      friendProfiles = profileResponse.data ?? [];
+    } else if (isMissingAvatarPathColumnError(profileResponse.error.message)) {
+      const fallbackResponse = await supabase
+        .from("public_profiles")
+        .select("id, display_name, email")
+        .in("id", friendUserIds);
+
+      if (fallbackResponse.error) {
+        return NextResponse.json(
+          { error: fallbackResponse.error.message },
+          { status: 500 }
+        );
+      }
+
+      friendProfiles = (fallbackResponse.data ?? []).map((profile) => ({
+        ...profile,
+        avatar_path: null,
+      }));
+    } else {
+      return NextResponse.json(
+        { error: profileResponse.error.message },
+        { status: 500 }
+      );
+    }
+  }
 
   const profileMap = new Map(
     (friendProfiles ?? []).map((profile) => [profile.id, profile])
   );
+  const avatarUrlEntries = await Promise.all(
+    (friendProfiles ?? []).map(async (profile) => [
+      profile.id,
+      await signPhotoUrl(profile.avatar_path ?? null, supabase),
+    ] as const)
+  );
+  const avatarUrlByUserId = new Map(avatarUrlEntries);
   const acceptedFriendIds = new Set(friendIds);
   const friendsOfFriendsIds = viewerIsTestAccount
     ? new Set<string>()
@@ -372,6 +433,13 @@ export async function GET() {
         consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
         created_at: normalizeNullableString(entry.created_at) ?? "",
         drinking_now: (entry as { drinking_now?: unknown }).drinking_now === true,
+        tasted_with_names: Array.isArray(
+          (entry as { tasted_with_user_ids?: unknown }).tasted_with_user_ids
+        )
+          ? (((entry as { tasted_with_user_ids?: unknown }).tasted_with_user_ids as string[]) ??
+              []
+            ).map((id) => getPublicProfileName(profileMap.get(id)))
+          : [],
         label_image_url: await signPhotoUrl(
           labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
           supabase
@@ -407,7 +475,15 @@ export async function GET() {
         consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
         created_at: normalizeNullableString(entry.created_at) ?? "",
         drinking_now: (entry as { drinking_now?: unknown }).drinking_now === true,
+        tasted_with_names: Array.isArray(
+          (entry as { tasted_with_user_ids?: unknown }).tasted_with_user_ids
+        )
+          ? (((entry as { tasted_with_user_ids?: unknown }).tasted_with_user_ids as string[]) ??
+              []
+            ).map((id) => getPublicProfileName(profileMap.get(id)))
+          : [],
         author_name: getPublicProfileName(profileMap.get(entry.user_id)),
+        author_avatar_url: avatarUrlByUserId.get(entry.user_id) ?? null,
         label_image_url: await signPhotoUrl(
           labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
           supabase

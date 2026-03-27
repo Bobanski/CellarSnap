@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getPublicSiteUrlFromRequest } from "@/lib/siteUrl";
 import { canManageEntryShare } from "@/server/shares/access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 
 type ShareRow = {
   id: string;
@@ -36,12 +37,14 @@ type SharePostHandlerDependencies = {
   createSupabaseServerClient: typeof createSupabaseServerClient;
   getPublicSiteUrlFromRequest: typeof getPublicSiteUrlFromRequest;
   getCurrentTimeMs: () => number;
+  requireRequestAuth: typeof requireRequestAuth;
 };
 
 const defaultSharePostHandlerDependencies: SharePostHandlerDependencies = {
   createSupabaseServerClient,
   getPublicSiteUrlFromRequest,
   getCurrentTimeMs: () => Date.now(),
+  requireRequestAuth,
 };
 
 export function createSharePostHandler(
@@ -53,14 +56,18 @@ export function createSharePostHandler(
   };
 
   return async function POST(request: Request) {
-    const supabase = await resolvedDependencies.createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let auth;
+    try {
+      auth = await resolvedDependencies.requireRequestAuth(request, undefined, {
+        createCookieClient: resolvedDependencies.createSupabaseServerClient,
+      });
+    } catch (error) {
+      if (error instanceof RequestAuthError) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      throw error;
     }
+    const { supabase, user } = auth;
 
     let body: unknown;
     try {

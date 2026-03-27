@@ -2,6 +2,11 @@ import AppShell from "@/components/AppShell";
 import SommelierChat from "@/features/sommelier/SommelierChat";
 import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  SOMMELIER_EYEBROW,
+  SOMMELIER_SUBTITLE,
+  SOMMELIER_TITLE,
+} from "@shared";
 
 export default async function SommelierPage() {
   const supabase = await createSupabaseServerClient();
@@ -25,7 +30,7 @@ export default async function SommelierPage() {
                 color: "var(--color-accent-secondary)",
               }}
             >
-              Pocket Sommelier
+              {SOMMELIER_EYEBROW}
             </span>
             <h1
               className="font-serif"
@@ -35,7 +40,7 @@ export default async function SommelierPage() {
                 color: "var(--color-text-primary)",
               }}
             >
-              Your personal wine brain.
+              {SOMMELIER_TITLE}
             </h1>
             <p
               style={{
@@ -43,7 +48,7 @@ export default async function SommelierPage() {
                 color: "var(--color-text-secondary)",
               }}
             >
-              Powered by your palate, your cellar, and wine knowledge.
+              {SOMMELIER_SUBTITLE}
             </p>
           </header>
           <SommelierChat />

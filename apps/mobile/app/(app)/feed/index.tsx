@@ -1,4 +1,16 @@
 import {
+  buildFeedEntryMetaFields as buildEntryMetaFields,
+  FEED_EYEBROW,
+  FEED_LOAD_MORE_LABEL,
+  FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
+  FEED_REACTION_EMOJIS as REACTION_EMOJIS,
+  FEED_SCOPE_LABELS,
+  FEED_SUBTITLE,
+  FEED_TITLE,
+  getFeedDisplayRatingLabel as getDisplayRating,
+  getFeedEmptyStateMessage,
+} from "@cellarsnap/shared";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -26,7 +38,6 @@ import {
 import type { FeedComment } from "@/src/lib/feed/comments";
 import {
   fetchFeedPage,
-  type FeedPhotoType,
   type FeedScope,
   type MobileFeedEntry,
   type QprLevel,
@@ -51,15 +62,6 @@ type UserOption = {
 };
 
 const PAGE_SIZE = 24;
-const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
-const PHOTO_TYPE_LABELS: Record<FeedPhotoType, string> = {
-  label: "Label",
-  place: "Place",
-  people: "People",
-  pairing: "Pairing",
-  lineup: "Lineup",
-  other_bottles: "Other bottle",
-};
 
 const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   extortion: "Extortion",
@@ -106,108 +108,6 @@ function formatCommentDate(value: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function normalizeMetaValue(value: string | null | undefined) {
-  const trimmed = value?.trim() ?? "";
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function toWordSet(value: string | null | undefined): Set<string> {
-  const normalized = value?.toLowerCase() ?? "";
-  const words = normalized.match(/[a-z0-9]+/g) ?? [];
-  return new Set(words.filter((word) => word.length >= 2));
-}
-
-function shouldHideProducerInEntryTile(
-  wineName: string | null | undefined,
-  producer: string | null | undefined
-) {
-  const wineWords = toWordSet(wineName);
-  const producerWords = toWordSet(producer);
-
-  if (wineWords.size === 0 || producerWords.size === 0) {
-    return false;
-  }
-
-  let sharedWordCount = 0;
-  for (const word of producerWords) {
-    if (!wineWords.has(word)) {
-      continue;
-    }
-    sharedWordCount += 1;
-    if (sharedWordCount >= 3) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function getPrimaryVarietal(entry: MobileFeedEntry) {
-  const grapes = Array.isArray(entry.primary_grapes) ? entry.primary_grapes : [];
-  if (grapes.length === 0) {
-    return null;
-  }
-  const sorted = [...grapes].sort((a, b) => a.position - b.position);
-  for (const grape of sorted) {
-    const value = normalizeMetaValue(grape.name);
-    if (value) {
-      return value;
-    }
-  }
-  return null;
-}
-
-function buildEntryMetaFields(entry: MobileFeedEntry) {
-  const wineName = normalizeMetaValue(entry.wine_name) ?? "";
-  const producer = normalizeMetaValue(entry.producer);
-  const vintage = normalizeMetaValue(entry.vintage);
-  const region = normalizeMetaValue(entry.region);
-  const country = normalizeMetaValue(entry.country);
-  const appellation = normalizeMetaValue(entry.appellation);
-  const varietal = getPrimaryVarietal(entry);
-
-  const hideProducer = shouldHideProducerInEntryTile(wineName, producer);
-  const nonVintagePriority = [
-    hideProducer ? null : producer,
-    region,
-    country,
-    appellation,
-    varietal,
-  ];
-
-  const fields: string[] = [];
-  const firstField = nonVintagePriority.find((value): value is string => Boolean(value));
-  if (firstField) {
-    fields.push(firstField);
-  }
-
-  if (vintage && fields.length > 0) {
-    fields.push(vintage);
-  }
-
-  if (fields.length < 2) {
-    for (const value of nonVintagePriority) {
-      if (!value || fields.includes(value)) {
-        continue;
-      }
-      fields.push(value);
-      if (fields.length >= 2) {
-        break;
-      }
-    }
-  }
-
-  return fields.slice(0, 2);
-}
-
-function getDisplayRating(rating: number | null): string | null {
-  if (typeof rating !== "number" || Number.isNaN(rating)) {
-    return null;
-  }
-  const normalized = Math.max(0, Math.min(100, Math.round(rating)));
-  return `${normalized}/100`;
 }
 
 function buildAuthorWithCompanionsLabel(item: MobileFeedEntry) {
@@ -1351,11 +1251,9 @@ export default function FeedScreen() {
         <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>Social feed</AppText>
-          <AppText style={[styles.title, { fontSize: 18 }]}>What the cellar is sipping.</AppText>
-          <AppText style={styles.subtitle}>
-            Discover what others are enjoying across the app.
-          </AppText>
+          <AppText style={styles.eyebrow}>{FEED_EYEBROW}</AppText>
+          <AppText style={[styles.title, { fontSize: 18 }]}>{FEED_TITLE}</AppText>
+          <AppText style={styles.subtitle}>{FEED_SUBTITLE}</AppText>
         </View>
 
         <View style={styles.scopeRow}>
@@ -1372,7 +1270,7 @@ export default function FeedScreen() {
                 feedScope === "public" ? styles.scopePillTextActive : null,
               ]}
             >
-              Public feed
+              {FEED_SCOPE_LABELS.public}
             </AppText>
           </Pressable>
           <Pressable
@@ -1388,7 +1286,7 @@ export default function FeedScreen() {
                 feedScope === "friends" ? styles.scopePillTextActive : null,
               ]}
             >
-              Friends only
+              {FEED_SCOPE_LABELS.friends}
             </AppText>
           </Pressable>
         </View>
@@ -1412,9 +1310,7 @@ export default function FeedScreen() {
         {visibleEntries.length === 0 ? (
           <View style={styles.emptyCard}>
             <AppText style={styles.emptyText}>
-              {selectedFriendId
-                ? `No posts from ${selectedFriendName ?? "this friend"} in this feed yet.`
-                : "No entries yet."}
+              {getFeedEmptyStateMessage(selectedFriendName, Boolean(selectedFriendId))}
             </AppText>
           </View>
         ) : (
@@ -1502,7 +1398,7 @@ export default function FeedScreen() {
             {isLoadingMore ? (
               <ActivityIndicator color={colors.textPrimary} />
             ) : (
-              <AppText style={styles.loadMoreText}>Load more</AppText>
+              <AppText style={styles.loadMoreText}>{FEED_LOAD_MORE_LABEL}</AppText>
             )}
           </Pressable>
         ) : null}

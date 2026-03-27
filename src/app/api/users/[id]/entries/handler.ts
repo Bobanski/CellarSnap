@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveProfileEntryAccess } from "@/server/users/profileVisibility";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 type UserEntriesGetHandlerDependencies = {
   createSupabaseServerClient: typeof createSupabaseServerClient;
+  requireRequestAuth: typeof requireRequestAuth;
   resolveProfileEntryAccess: typeof resolveProfileEntryAccess;
   signPhotoUrl: typeof signPhotoUrl;
 };
@@ -12,6 +14,7 @@ type UserEntriesGetHandlerDependencies = {
 const defaultUserEntriesGetHandlerDependencies: UserEntriesGetHandlerDependencies =
   {
     createSupabaseServerClient,
+    requireRequestAuth,
     resolveProfileEntryAccess,
     signPhotoUrl,
   };
@@ -25,16 +28,36 @@ export function createUserEntriesGetHandler(
   };
 
   return async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ id: string }> }
   ) {
-    const supabase = await resolvedDependencies.createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    let supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+    let user: { id: string };
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (dependencies.createSupabaseServerClient && !dependencies.requireRequestAuth) {
+      supabase = await resolvedDependencies.createSupabaseServerClient();
+      const {
+        data: { user: cookieUser },
+      } = await supabase.auth.getUser();
+
+      if (!cookieUser) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      user = cookieUser;
+    } else {
+      let auth;
+      try {
+        auth = await resolvedDependencies.requireRequestAuth(request);
+      } catch (error) {
+        if (error instanceof RequestAuthError) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        throw error;
+      }
+
+      supabase = auth.supabase;
+      user = auth.user;
     }
 
     const { id: userId } = await params;

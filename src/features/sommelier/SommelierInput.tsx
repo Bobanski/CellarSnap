@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SOMMELIER_INPUT_PLACEHOLDER } from "@shared";
 
 export default function SommelierInput({
   disabled,
@@ -40,7 +41,7 @@ export default function SommelierInput({
           }
         }}
         disabled={disabled}
-        placeholder="Ask your sommelier..."
+        placeholder={SOMMELIER_INPUT_PLACEHOLDER}
         className="flex-1 outline-none transition focus:border-[var(--color-border-strong)]"
         style={{
           background: "rgba(245, 237, 214, 0.04)",

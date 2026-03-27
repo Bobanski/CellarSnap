@@ -7,6 +7,14 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import {
+  SOMMELIER_DEFAULT_SUGGESTIONS,
+  SOMMELIER_EYEBROW,
+  SOMMELIER_INPUT_PLACEHOLDER,
+  SOMMELIER_INTRO_MESSAGE,
+  SOMMELIER_SUBTITLE,
+  SOMMELIER_TITLE,
+} from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -27,11 +35,6 @@ type ChatMessage = {
   content: string;
 };
 
-const DEFAULT_SUGGESTIONS = [
-  "Pair with my dinner",
-  "Help me pick a bottle",
-];
-
 function createMessageId(prefix: "user" | "assistant") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -42,8 +45,7 @@ export default function SommelierScreen() {
     {
       id: "intro",
       role: "assistant",
-      content:
-        "Ask about a bottle, a region, a pairing, or what you should try next.",
+      content: SOMMELIER_INTRO_MESSAGE,
     },
   ]);
   const [value, setValue] = useState("");
@@ -108,7 +110,7 @@ export default function SommelierScreen() {
       <DoneTextInput
         value={value}
         onChangeText={setValue}
-        placeholder="Ask about regions, pairings, or what you should try next..."
+        placeholder={SOMMELIER_INPUT_PLACEHOLDER}
         placeholderTextColor={colors.textTertiary}
         multiline
         maxLength={1200}
@@ -146,8 +148,9 @@ export default function SommelierScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <AppText style={styles.eyebrow}>POCKET SOMMELIER</AppText>
-            <AppText style={styles.headingTitle}>Your personal wine brain.</AppText>
+            <AppText style={styles.eyebrow}>{SOMMELIER_EYEBROW}</AppText>
+            <AppText style={styles.headingTitle}>{SOMMELIER_TITLE}</AppText>
+            <AppText style={styles.headingSubtitle}>{SOMMELIER_SUBTITLE}</AppText>
           </View>
           <View style={styles.chatStack}>
             {messages.map((message) => {
@@ -180,7 +183,7 @@ export default function SommelierScreen() {
             <View style={styles.suggestionSection}>
               <AppText style={styles.suggestionEyebrow}>Try asking</AppText>
               <View style={styles.suggestionWrap}>
-                {DEFAULT_SUGGESTIONS.map((suggestion) => (
+                {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
                   <Pressable
                     key={suggestion}
                     style={styles.suggestionChip}
@@ -238,6 +241,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif.light,
     fontSize: 28,
     lineHeight: 34,
+  },
+  headingSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
   },
   suggestionSection: {
     gap: 10,

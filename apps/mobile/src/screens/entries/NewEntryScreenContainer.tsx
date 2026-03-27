@@ -25,12 +25,16 @@ import {
   createEntryInputSchema,
   getTodayLocalYmd,
   isUnknownWineName,
+  NEW_ENTRY_BULK_COPY,
+  NEW_ENTRY_DRINKING_NOW_COPY,
+  NEW_ENTRY_HEADER_COPY,
+  NEW_ENTRY_PRIVACY_OPTIONS,
+  NEW_ENTRY_SINGLE_BOTTLE_COPY,
+  NEW_ENTRY_UPLOAD_COPY,
   normalizeGrapeLookupValue,
   normalizePrivacyLevel,
   normalizeProducerText,
   normalizeWineNameText,
-  PRIVACY_LEVEL_LABELS,
-  PRIVACY_LEVEL_VALUES,
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
   resolveLineupWineDisplayName,
@@ -235,10 +239,7 @@ const QPR_OPTIONS: ChipOption[] = [
   })),
 ];
 
-const PRIVACY_OPTIONS: ChipOption[] = PRIVACY_LEVEL_VALUES.map((value) => ({
-  value,
-  label: PRIVACY_LEVEL_LABELS[value],
-}));
+const PRIVACY_OPTIONS: ChipOption[] = [...NEW_ENTRY_PRIVACY_OPTIONS];
 
 const HOW_WAS_IT_OPTIONS: ChipOption[] = [
   { value: "awful", label: "Awful" },
@@ -1976,20 +1977,19 @@ export default function NewEntryScreen() {
         </View>
 
         <View style={styles.pageHeader}>
-          <AppText style={styles.eyebrow}>NEW ENTRY</AppText>
-          <AppText style={styles.title}>Record a new pour.</AppText>
+          <AppText style={styles.eyebrow}>{NEW_ENTRY_HEADER_COPY.eyebrow}</AppText>
+          <AppText style={styles.title}>{NEW_ENTRY_HEADER_COPY.title}</AppText>
           <AppText style={styles.subtitle}>
-            Capture the bottle, the place, and the people around it.
+            {NEW_ENTRY_HEADER_COPY.subtitle}
           </AppText>
         </View>
 
         <View style={styles.card}>
           <View style={styles.uploadBox}>
             <View style={styles.uploadTextWrap}>
-              <AppText style={styles.label}>Upload images</AppText>
+              <AppText style={styles.label}>{NEW_ENTRY_UPLOAD_COPY.label}</AppText>
               <AppText style={styles.hint}>
-                upload photos of the wine and anything else from the night - pairing, people,
-                place. we&apos;ll tag them
+                {NEW_ENTRY_UPLOAD_COPY.hint}
               </AppText>
             </View>
             {showProcessedGallery ? (
@@ -2084,7 +2084,7 @@ export default function NewEntryScreen() {
               </View>
             ) : uploadPhotos.length > 0 ? (
               <AppText style={styles.uploadWaitingText}>
-                Photos uploaded. Waiting for AI processing to complete...
+                {NEW_ENTRY_UPLOAD_COPY.waitingLabel}
               </AppText>
             ) : null}
             {showProcessedGallery && uploadPhotos.length > 0 ? (
@@ -2140,7 +2140,9 @@ export default function NewEntryScreen() {
                 onPress={() => void retryPhotoAnalysis()}
                 disabled={isAutofillLoading || isBulkCreating}
               >
-                <AppText style={styles.retryActionButtonText}>Re-scan</AppText>
+                <AppText style={styles.retryActionButtonText}>
+                  {NEW_ENTRY_UPLOAD_COPY.rescanLabel}
+                </AppText>
               </Pressable>
             ) : null}
             <Pressable
@@ -2152,15 +2154,17 @@ export default function NewEntryScreen() {
                 {isAutofillLoading
                   ? "Analyzing..."
                   : uploadPhotos.length > 0
-                  ? "Add images"
-                  : "Upload images"}
+                  ? NEW_ENTRY_UPLOAD_COPY.addImagesLabel
+                  : NEW_ENTRY_UPLOAD_COPY.uploadImagesLabel}
               </AppText>
             </Pressable>
             {isBulkLineupMode ? (
               <View style={styles.bulkLineupCard}>
                 <View style={styles.bulkLineupHeader}>
                   <AppText style={styles.bulkLineupTitle}>
-                    {showBulkEventDetailsStep ? "Event details" : "Lineup preview"}
+                    {showBulkEventDetailsStep
+                      ? NEW_ENTRY_BULK_COPY.eventDetailsTitle
+                      : NEW_ENTRY_BULK_COPY.lineupPreviewTitle}
                   </AppText>
                   <Pressable
                     style={styles.bulkBackButton}
@@ -2181,7 +2185,9 @@ export default function NewEntryScreen() {
                   <View style={styles.bulkGroupHeader}>
                     <View style={styles.bulkGroupHeaderRow}>
                       <AppText style={styles.bulkGroupTitle}>
-                        {showBulkEventDetailsStep ? "Event details" : "Group this bulk upload"}
+                        {showBulkEventDetailsStep
+                          ? NEW_ENTRY_BULK_COPY.eventDetailsTitle
+                          : NEW_ENTRY_BULK_COPY.groupThisBulkUploadTitle}
                       </AppText>
                       {!showBulkEventDetailsStep ? (
                         <Pressable
@@ -2197,7 +2203,9 @@ export default function NewEntryScreen() {
                   {showBulkEventDetailsStep ? (
                     <View style={styles.block}>
                       <View style={styles.block}>
-                        <AppText style={styles.bulkGroupFieldLabel}>Event name</AppText>
+                        <AppText style={styles.bulkGroupFieldLabel}>
+                          {NEW_ENTRY_BULK_COPY.eventNameLabel}
+                        </AppText>
                         <DoneTextInput
                           value={bulkEntryTitle}
                           onChangeText={(value) => {
@@ -2222,7 +2230,9 @@ export default function NewEntryScreen() {
                       </View>
 
                       <View style={styles.block}>
-                        <AppText style={styles.bulkGroupFieldLabel}>Event location</AppText>
+                        <AppText style={styles.bulkGroupFieldLabel}>
+                          {NEW_ENTRY_BULK_COPY.eventLocationLabel}
+                        </AppText>
                         <View style={styles.locationInputWrap}>
                           <DoneTextInput
                             ref={locationInputRef}
@@ -2291,7 +2301,9 @@ export default function NewEntryScreen() {
                       />
 
                       <View style={styles.block}>
-                        <AppText style={styles.bulkGroupFieldLabel}>Tasted with</AppText>
+                        <AppText style={styles.bulkGroupFieldLabel}>
+                          {NEW_ENTRY_BULK_COPY.tastedWithLabel}
+                        </AppText>
                         {isLoadingFriends ? (
                           <AppText style={styles.hint}>Loading friends...</AppText>
                         ) : null}
@@ -2338,7 +2350,7 @@ export default function NewEntryScreen() {
                             <DoneTextInput
                               value={friendSearch}
                               onChangeText={setFriendSearch}
-                              placeholder="Search friends"
+                              placeholder={NEW_ENTRY_BULK_COPY.searchFriendsPlaceholder}
                               placeholderTextColor={colors.textSecondary}
                               autoCapitalize="none"
                               autoCorrect={false}
@@ -2416,7 +2428,9 @@ export default function NewEntryScreen() {
                       </View>
                       {bulkEntryMode === "catch_up" ? (
                         <>
-                      <AppText style={styles.bulkGroupFieldLabel}>Group title</AppText>
+                      <AppText style={styles.bulkGroupFieldLabel}>
+                        {NEW_ENTRY_BULK_COPY.groupTitleLabel}
+                      </AppText>
                       <DoneTextInput
                         value={bulkEntryTitle}
                         onChangeText={(value) => {
@@ -2561,9 +2575,11 @@ export default function NewEntryScreen() {
             <>
               <View style={styles.drinkingNowCard}>
                 <View style={styles.drinkingNowCopy}>
-                  <AppText style={styles.drinkingNowTitle}>Drinking Now</AppText>
+                  <AppText style={styles.drinkingNowTitle}>
+                    {NEW_ENTRY_DRINKING_NOW_COPY.title}
+                  </AppText>
                   <AppText style={styles.drinkingNowDescription}>
-                    Friends will see a light blue glow on Home and Feed for 2.5 hours.
+                    {NEW_ENTRY_DRINKING_NOW_COPY.description}
                   </AppText>
                 </View>
                 <Switch
@@ -2596,7 +2612,7 @@ export default function NewEntryScreen() {
                   required
                 />
                 <SelectField
-                  label="QPR"
+                  label={NEW_ENTRY_SINGLE_BOTTLE_COPY.qprLabel}
                   value={form.qpr_level}
                   options={QPR_OPTIONS}
                   onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
@@ -2609,15 +2625,15 @@ export default function NewEntryScreen() {
                   style={styles.ghostButton}
                 >
                   <AppText style={[styles.ghostButtonText, { textDecorationLine: "underline" }]}>
-                    Don't have a picture of your wine? Manually enter your wine details
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.manualEntryCta}
                   </AppText>
                 </Pressable>
               )}
 
               {showManualFields && (
                 <Accordion
-                  title="Wine details"
-                  description="Optional identity details for this bottle."
+                  title={NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsTitle}
+                  description={NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsDescription}
                   expanded={expanded.wine_details}
                   onToggle={() => toggleSection("wine_details")}
                 >
@@ -2737,8 +2753,8 @@ export default function NewEntryScreen() {
             )}
 
             <Accordion
-              title="Location & date"
-                description="Where and when this bottle was consumed."
+                title={NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateTitle}
+                description={NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateDescription}
                 expanded={expanded.location_date}
                 onToggle={() => toggleSection("location_date")}
               >
@@ -2814,8 +2830,8 @@ export default function NewEntryScreen() {
               </Accordion>
 
               <Accordion
-                title="Tasted with"
-                description="Tag friends who were with you."
+                title={NEW_ENTRY_SINGLE_BOTTLE_COPY.tastedWithTitle}
+                description={NEW_ENTRY_SINGLE_BOTTLE_COPY.tastedWithDescription}
                 expanded={expanded.tasted_with}
                 onToggle={() => toggleSection("tasted_with")}
               >
@@ -2855,10 +2871,10 @@ export default function NewEntryScreen() {
                       ))}
                     </View>
                     <Field
-                      label="Search friends"
+                      label={NEW_ENTRY_SINGLE_BOTTLE_COPY.searchFriendsLabel}
                       value={friendSearch}
                       onChange={setFriendSearch}
-                      placeholder="Type 2+ letters..."
+                      placeholder={NEW_ENTRY_SINGLE_BOTTLE_COPY.searchFriendsPlaceholder}
                     />
                     {searchResults.length > 0 ? (
                       <View style={styles.chipWrap}>
@@ -2880,8 +2896,8 @@ export default function NewEntryScreen() {
               </Accordion>
 
               <Accordion
-                title="Advanced notes"
-                description="Optional structure for deeper tasting notes."
+                title={NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesTitle}
+                description={NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesDescription}
                 expanded={expanded.advanced_notes}
                 onToggle={() => toggleSection("advanced_notes")}
               >
@@ -2906,8 +2922,8 @@ export default function NewEntryScreen() {
               </Accordion>
 
               <Accordion
-                title="Visibility & interaction"
-                description="Set who can view the post, reactions, and comments."
+                title={NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityTitle}
+                description={NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityDescription}
                 expanded={expanded.visibility}
                 onToggle={() => toggleSection("visibility")}
               >
@@ -2916,26 +2932,26 @@ export default function NewEntryScreen() {
                 ) : null}
                 <View style={styles.visibilityGrid}>
                   <VisibilitySelect
-                    title="Post visibility"
+                    title={NEW_ENTRY_SINGLE_BOTTLE_COPY.postVisibilityLabel}
                     value={form.entry_privacy}
                     options={PRIVACY_OPTIONS}
                     onChange={(value) => updateField("entry_privacy", value as PrivacyLevel)}
                   />
                   <VisibilitySelect
-                    title="Reactions"
+                    title={NEW_ENTRY_SINGLE_BOTTLE_COPY.reactionsLabel}
                     value={form.reaction_privacy}
                     options={PRIVACY_OPTIONS}
                     onChange={(value) => updateField("reaction_privacy", value as PrivacyLevel)}
                   />
                   <VisibilitySelect
-                    title="Comments"
+                    title={NEW_ENTRY_SINGLE_BOTTLE_COPY.commentsLabel}
                     value={form.comments_privacy}
                     options={PRIVACY_OPTIONS}
                     onChange={(value) => updateField("comments_privacy", value as PrivacyLevel)}
                   />
                 </View>
                 <AppText style={styles.hint}>
-                  Privacy on reactions/comments controls both visibility and participation.
+                  {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityFootnote}
                 </AppText>
               </Accordion>
 
@@ -2950,14 +2966,18 @@ export default function NewEntryScreen() {
                   {isSubmitting ? (
                     <ActivityIndicator color={colors.screenBg} />
                   ) : (
-                    <AppText style={styles.submitButtonText}>Save entry</AppText>
+                    <AppText style={styles.submitButtonText}>
+                      {NEW_ENTRY_SINGLE_BOTTLE_COPY.saveEntryLabel}
+                    </AppText>
                   )}
                 </Pressable>
                 <Pressable
                   style={styles.cancelButton}
                   onPress={returnFromNewEntry}
                 >
-                  <AppText style={styles.cancelButtonText}>Cancel</AppText>
+                  <AppText style={styles.cancelButtonText}>
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
+                  </AppText>
                 </Pressable>
               </View>
             </>
@@ -3072,7 +3092,9 @@ export default function NewEntryScreen() {
             </AppText>
             <View style={styles.cropActionRow}>
               <Pressable style={styles.cancelButton} onPress={closeCropEditor}>
-                <AppText style={styles.cancelButtonText}>Cancel</AppText>
+                <AppText style={styles.cancelButtonText}>
+                  {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
+                </AppText>
               </Pressable>
               <Pressable
                 style={[styles.submitButton, isSavingCrop ? styles.submitButtonDisabled : null]}

@@ -14,7 +14,39 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import type { WineEntrySummary } from "@cellarsnap/shared";
+import {
+  compareEntryChronology,
+  createEntryLibraryGroupId,
+  entryMatchesLibrarySearch,
+  ENTRY_LIBRARY_GROUP_PREVIEW_COUNT,
+  ENTRIES_LIBRARY_ACTION_LABELS,
+  ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS,
+  ENTRIES_LIBRARY_FILTER_OPTIONS,
+  ENTRIES_LIBRARY_GROUP_OPTIONS,
+  ENTRIES_LIBRARY_HEADER,
+  ENTRIES_LIBRARY_INPUT_PLACEHOLDERS,
+  ENTRIES_LIBRARY_PANEL_LABELS,
+  ENTRIES_LIBRARY_SORT_OPTIONS,
+  ENTRIES_LIBRARY_STATS_LABELS,
+  ENTRIES_LIBRARY_VIEW_OPTIONS,
+  getEntriesCollectionStats,
+  getEntriesCountLabel,
+  getEntriesEmptyStateMessage,
+  getEntriesSortOrderOptions,
+  getEntryLibraryGroupLabel,
+  getEntryListDisplayRating,
+  QPR_LEVEL_LABELS,
+  shouldHideProducerInEntryTile,
+  toEntryVintageNumber,
+  type EntryLibraryControlPanel as ControlPanel,
+  type EntryLibraryFilterType as FilterType,
+  type EntryLibraryGroupScheme as GroupScheme,
+  type EntryLibrarySortBy as SortBy,
+  type EntryLibrarySortOrder as SortOrder,
+  type EntryLibraryViewMode as LibraryViewMode,
+  type QprLevel,
+  type WineEntrySummary,
+} from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
@@ -24,13 +56,6 @@ import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
 
-type SortBy = "consumed_at" | "rating" | "vintage";
-type SortOrder = "asc" | "desc";
-type FilterType = "vintage" | "country" | "rating" | "";
-type GroupScheme = "region" | "vintage" | "varietal";
-type LibraryViewMode = "grouped" | "all";
-type ControlPanel = "sort" | "filter" | "organize" | null;
-type QprLevel = "extortion" | "pricey" | "mid" | "good_value" | "absolute_steal";
 type PrimaryGrape = {
   id: string;
   name: string;
@@ -50,14 +75,6 @@ type EntryPrimaryGrapeRow = {
       }[]
     | null;
 };
-const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
-  extortion: "Extortion",
-  pricey: "Pricey",
-  mid: "Spot on",
-  good_value: "Good Value",
-  absolute_steal: "Absolute Steal",
-};
-
 type MobileEntry = WineEntrySummary & {
   label_image_path: string | null;
   label_image_url?: string | null;
@@ -75,98 +92,10 @@ type EntryGroup = {
   entries: MobileEntry[];
 };
 
-const GROUP_PREVIEW_COUNT = 4;
-
-function toWordSet(value: string | null | undefined): Set<string> {
-  const normalized = value?.toLowerCase() ?? "";
-  const words = normalized.match(/[a-z0-9]+/g) ?? [];
-  return new Set(words.filter((word) => word.length >= 2));
-}
-
-function shouldHideProducerInEntryTile(
-  wineName: string | null | undefined,
-  producer: string | null | undefined
-) {
-  const wineWords = toWordSet(wineName);
-  const producerWords = toWordSet(producer);
-
-  if (wineWords.size === 0 || producerWords.size === 0) {
-    return false;
-  }
-
-  let sharedWordCount = 0;
-  for (const word of producerWords) {
-    if (!wineWords.has(word)) {
-      continue;
-    }
-    sharedWordCount += 1;
-    if (sharedWordCount >= 3) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function formatConsumedDate(raw: string) {
   const date = new Date(`${raw}T00:00:00`);
   if (Number.isNaN(date.getTime())) return raw;
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
-
-function includesSearchValue(value: string | number | null | undefined, query: string) {
-  if (value === null || value === undefined) return false;
-  return String(value).toLowerCase().includes(query);
-}
-
-function toVintageNumber(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function compareEntryChronology(left: MobileEntry, right: MobileEntry): number {
-  const consumedDateSort = left.consumed_at.localeCompare(right.consumed_at);
-  if (consumedDateSort !== 0) {
-    return consumedDateSort;
-  }
-
-  const createdAtSort = left.created_at.localeCompare(right.created_at);
-  if (createdAtSort !== 0) {
-    return createdAtSort;
-  }
-
-  return left.id.localeCompare(right.id);
-}
-
-function normalizeLabel(value: string | null | undefined, fallback: string) {
-  const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : fallback;
-}
-
-function getGroupLabel(entry: MobileEntry, scheme: GroupScheme) {
-  if (scheme === "region") {
-    return (
-      entry.region?.trim() ||
-      entry.appellation?.trim() ||
-      entry.country?.trim() ||
-      "Unknown region"
-    );
-  }
-  if (scheme === "vintage") {
-    return normalizeLabel(entry.vintage, "Unknown vintage");
-  }
-  const primaryVarietal = entry.primary_grapes?.find(
-    (grape) => grape.name.trim().length > 0
-  )?.name.trim();
-  if (primaryVarietal) {
-    return primaryVarietal;
-  }
-  return entry.classification?.trim() || "Unknown varietal";
-}
-
-function createGroupId(scheme: GroupScheme, label: string) {
-  return `${scheme}:${label.toLowerCase()}`;
 }
 
 function normalizeVariety(
@@ -179,35 +108,6 @@ function normalizeVariety(
     return variety[0] ?? null;
   }
   return variety;
-}
-
-function entryMatchesSearch(entry: MobileEntry, query: string) {
-  if (!query) return true;
-  const fields: Array<string | number | null | undefined> = [
-    entry.wine_name,
-    entry.producer,
-    entry.vintage,
-    entry.country,
-    entry.region,
-    entry.appellation,
-    entry.classification,
-    entry.rating,
-    entry.qpr_level,
-  ];
-  if (fields.some((field) => includesSearchValue(field, query))) {
-    return true;
-  }
-  return Boolean(
-    entry.primary_grapes?.some((grape) => includesSearchValue(grape.name, query))
-  );
-}
-
-function getDisplayRating(rating: number | null): string | null {
-  if (typeof rating !== "number" || Number.isNaN(rating)) {
-    return null;
-  }
-  const normalizedRating = Math.max(0, Math.min(100, Math.round(rating)));
-  return `${normalizedRating}/100`;
 }
 
 function Pill({
@@ -230,7 +130,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
   const hideProducer = shouldHideProducerInEntryTile(item.wine_name, item.producer);
   const producer = hideProducer ? null : (item.producer?.trim() ?? null);
   const vintage = item.vintage?.trim() ?? null;
-  const displayRating = getDisplayRating(item.rating);
+  const displayRating = getEntryListDisplayRating(item.rating);
   return (
     <Pressable
       style={styles.entryCard}
@@ -302,6 +202,7 @@ export default function EntriesScreen() {
     () => Array.from(new Set(entries.map((entry) => entry.country).filter((value): value is string => !!value))).sort(),
     [entries]
   );
+  const stats = useMemo(() => getEntriesCollectionStats(entries), [entries]);
 
   const filteredEntries = useMemo(() => {
     if (!filterType) return entries;
@@ -316,7 +217,7 @@ export default function EntriesScreen() {
       const rangeMin = Math.min(min, max);
       const rangeMax = Math.max(min, max);
       return entries.filter((entry) => {
-        const value = filterType === "vintage" ? toVintageNumber(entry.vintage) : entry.rating ?? null;
+        const value = filterType === "vintage" ? toEntryVintageNumber(entry.vintage) : entry.rating ?? null;
         if (value === null || Number.isNaN(value)) return false;
         return value >= rangeMin && value <= rangeMax;
       });
@@ -325,7 +226,11 @@ export default function EntriesScreen() {
   }, [entries, filterMax, filterMin, filterType, filterValue]);
 
   const searchedEntries = useMemo(
-    () => (isSearchActive ? filteredEntries.filter((entry) => entryMatchesSearch(entry, normalizedSearchQuery)) : filteredEntries),
+    () => (
+      isSearchActive
+        ? filteredEntries.filter((entry) => entryMatchesLibrarySearch(entry, normalizedSearchQuery))
+        : filteredEntries
+    ),
     [filteredEntries, isSearchActive, normalizedSearchQuery]
   );
 
@@ -344,8 +249,8 @@ export default function EntriesScreen() {
     if (sortBy === "vintage") {
       return copy.sort((left, right) => {
         const numericSort =
-          (toVintageNumber(left.vintage) ?? -Infinity) -
-          (toVintageNumber(right.vintage) ?? -Infinity);
+          (toEntryVintageNumber(left.vintage) ?? -Infinity) -
+          (toEntryVintageNumber(right.vintage) ?? -Infinity);
         if (numericSort !== 0) {
           return mult * numericSort;
         }
@@ -359,8 +264,8 @@ export default function EntriesScreen() {
     if (libraryViewMode !== "grouped") return [];
     const groups = new Map<string, EntryGroup>();
     sortedEntries.forEach((entry) => {
-      const label = getGroupLabel(entry, groupScheme);
-      const id = createGroupId(groupScheme, label);
+      const label = getEntryLibraryGroupLabel(entry, groupScheme);
+      const id = createEntryLibraryGroupId(groupScheme, label);
       const existing = groups.get(id);
       if (existing) existing.entries.push(entry);
       else groups.set(id, { id, label, entries: [entry] });
@@ -480,6 +385,7 @@ export default function EntriesScreen() {
       return next;
     });
   };
+  const sortOrderOptions = getEntriesSortOrderOptions(sortBy);
 
   if (isLoading) {
     return (
@@ -498,40 +404,32 @@ export default function EntriesScreen() {
         <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>CELLAR</AppText>
-          <AppText style={styles.title}>Your collection.</AppText>
-          <AppText style={styles.subtitle}>Organize bottles by region, vintage, or varietal while keeping your filters.</AppText>
+          <AppText style={styles.eyebrow}>{ENTRIES_LIBRARY_HEADER.eyebrow}</AppText>
+          <AppText style={styles.title}>{ENTRIES_LIBRARY_HEADER.title}</AppText>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <AppText style={styles.statNumber}>{sortedEntries.length}</AppText>
-            <AppText style={styles.statLabel}>ENTRIES</AppText>
+            <AppText style={styles.statNumber}>{stats.totalEntries}</AppText>
+            <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.totalEntries}</AppText>
           </View>
           <View style={styles.statCard}>
             <AppText style={styles.statNumber}>
-              {sortedEntries.length > 0
-                ? Math.round(
-                    sortedEntries.reduce((sum, e) => sum + (e.rating ?? 0), 0) /
-                      sortedEntries.filter((e) => e.rating !== null).length
-                  ) || "—"
-                : "—"}
+              {stats.avgRating !== null ? stats.avgRating.toFixed(1) : "—"}
             </AppText>
-            <AppText style={styles.statLabel}>AVG RATING</AppText>
+            <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.avgRating}</AppText>
           </View>
           <View style={styles.statCard}>
-            <AppText style={styles.statNumber}>
-              {new Set(sortedEntries.map((e) => e.country).filter(Boolean)).size}
-            </AppText>
-            <AppText style={styles.statLabel}>COUNTRIES</AppText>
+            <AppText style={styles.statNumber}>{stats.uniqueCountries}</AppText>
+            <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.countries}</AppText>
           </View>
         </View>
 
         <View style={styles.controls}>
           <View style={styles.controlButtons}>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Sort</AppText></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Filter</AppText></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>Organize</AppText></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.sort}</AppText></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.filter}</AppText></Pressable>
+            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.organize}</AppText></Pressable>
             <Pressable
               style={[
                 styles.searchToggleButton,
@@ -551,38 +449,39 @@ export default function EntriesScreen() {
           {isSearchOpen ? (
             <View style={styles.searchPanel}>
               <View style={styles.searchRow}>
-                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search wine, producer, region, varietal" placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
-                {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>Clear</AppText></Pressable> : null}
+                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.search} placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
+                {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>{ENTRIES_LIBRARY_ACTION_LABELS.clearSearch}</AppText></Pressable> : null}
               </View>
             </View>
           ) : null}
 
           {activeControlPanel === "sort" ? (
             <View style={styles.panel}>
-              <AppText style={styles.panelLabel}>Sort by</AppText>
-              <View style={styles.pills}><Pill label="Date consumed" active={sortBy === "consumed_at"} onPress={() => setSortBy("consumed_at")} /><Pill label="Rating" active={sortBy === "rating"} onPress={() => setSortBy("rating")} /><Pill label="Vintage" active={sortBy === "vintage"} onPress={() => setSortBy("vintage")} /></View>
-              <AppText style={styles.panelLabel}>Order</AppText>
-              <View style={styles.pills}><Pill label={sortBy === "rating" ? "High to low" : "Newest first"} active={sortOrder === "desc"} onPress={() => setSortOrder("desc")} /><Pill label={sortBy === "rating" ? "Low to high" : "Oldest first"} active={sortOrder === "asc"} onPress={() => setSortOrder("asc")} /></View>
+              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.sortBy}</AppText>
+              <View style={styles.pills}>{ENTRIES_LIBRARY_SORT_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={sortBy === option.value} onPress={() => setSortBy(option.value)} />)}</View>
+              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.order}</AppText>
+              <View style={styles.pills}>{sortOrderOptions.map((option) => <Pill key={option.value} label={option.label} active={sortOrder === option.value} onPress={() => setSortOrder(option.value)} />)}</View>
             </View>
           ) : null}
 
           {activeControlPanel === "filter" ? (
             <View style={styles.panel}>
-              <AppText style={styles.panelLabel}>Filter by</AppText>
-              <View style={styles.pills}><Pill label="None" active={filterType === ""} onPress={() => updateFilterType("")} /><Pill label="Country" active={filterType === "country"} onPress={() => updateFilterType("country")} /><Pill label="Vintage range" active={filterType === "vintage"} onPress={() => updateFilterType("vintage")} /><Pill label="Rating range" active={filterType === "rating"} onPress={() => updateFilterType("rating")} /></View>
-              {filterType === "country" ? <View style={styles.pills}><Pill label="All countries" active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
-              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder="Max" placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
+              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.filterBy}</AppText>
+              <View style={styles.pills}>{ENTRIES_LIBRARY_FILTER_OPTIONS.map((option) => <Pill key={option.value || "none"} label={option.label} active={filterType === option.value} onPress={() => updateFilterType(option.value)} />)}</View>
+              {filterType === "country" ? <View style={styles.pills}><Pill label={ENTRIES_LIBRARY_ACTION_LABELS.allCountries} active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
+              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.min} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.max} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
             </View>
           ) : null}
 
           {activeControlPanel === "organize" ? (
             <View style={styles.panel}>
-              <AppText style={styles.panelLabel}>Library view</AppText>
-              <View style={styles.pills}><Pill label="Grouped" active={libraryViewMode === "grouped"} onPress={() => setLibraryViewMode("grouped")} /><Pill label="Full list" active={libraryViewMode === "all"} onPress={() => setLibraryViewMode("all")} /></View>
-              {libraryViewMode === "grouped" ? <View style={styles.pills}><Pill label="Region" active={groupScheme === "region"} onPress={() => setGroupScheme("region")} /><Pill label="Vintage" active={groupScheme === "vintage"} onPress={() => setGroupScheme("vintage")} /><Pill label="Varietal" active={groupScheme === "varietal"} onPress={() => setGroupScheme("varietal")} /></View> : null}
+              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.libraryView}</AppText>
+              <View style={styles.pills}>{ENTRIES_LIBRARY_VIEW_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={libraryViewMode === option.value} onPress={() => setLibraryViewMode(option.value)} />)}</View>
+              {libraryViewMode === "grouped" ? <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.groupBy}</AppText> : null}
+              {libraryViewMode === "grouped" ? <View style={styles.pills}>{ENTRIES_LIBRARY_GROUP_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={groupScheme === option.value} onPress={() => setGroupScheme(option.value)} />)}</View> : null}
             </View>
           ) : null}
-          <AppText style={styles.countText}>{sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}</AppText>
+          <AppText style={styles.countText}>{getEntriesCountLabel(sortedEntries.length)}</AppText>
         </View>
 
         {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
@@ -590,22 +489,26 @@ export default function EntriesScreen() {
         {sortedEntries.length === 0 ? (
           <View style={styles.emptyCard}>
             <AppText style={styles.emptyText}>
-              {isSearchActive ? "No entries match this search." : isRangeFilterActive ? "There are no wines found in this range." : isFilterActive ? "No entries match this filter." : "Your library is empty. Add your first bottle!"}
+              {getEntriesEmptyStateMessage({
+                isSearchActive,
+                isRangeFilterActive,
+                isFilterActive,
+              })}
             </AppText>
           </View>
         ) : libraryViewMode === "grouped" ? (
           <View style={styles.stack}>
             {groupedEntries.map((group) => {
               const expanded = Boolean(expandedGroups[group.id]);
-              const visible = expanded ? group.entries : group.entries.slice(0, GROUP_PREVIEW_COUNT);
+              const visible = expanded ? group.entries : group.entries.slice(0, ENTRY_LIBRARY_GROUP_PREVIEW_COUNT);
               return (
                 <View key={group.id} style={styles.groupCard}>
                   <View style={styles.groupHeader}>
                     <View>
                       <AppText style={styles.groupTitle}>{group.label}</AppText>
-                      <AppText style={styles.groupCount}>{group.entries.length} {group.entries.length === 1 ? "entry" : "entries"}</AppText>
+                      <AppText style={styles.groupCount}>{getEntriesCountLabel(group.entries.length)}</AppText>
                     </View>
-                    {group.entries.length > GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? "Show less" : "See all"}</AppText></Pressable> : null}
+                    {group.entries.length > ENTRY_LIBRARY_GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? ENTRIES_LIBRARY_ACTION_LABELS.showLess : ENTRIES_LIBRARY_ACTION_LABELS.seeAll}</AppText></Pressable> : null}
                   </View>
                   <View style={styles.stack}>{visible.map((item) => <EntryCard key={item.id} item={item} />)}</View>
                 </View>

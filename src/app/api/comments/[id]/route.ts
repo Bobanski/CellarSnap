@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import {
   executeSelectWithFallback,
   executeWithColumnFallback,
@@ -63,18 +64,20 @@ async function loadCommentById(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: commentId } = await params;
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   if (!commentId) {
     return NextResponse.json({ error: "Comment ID is required." }, { status: 400 });

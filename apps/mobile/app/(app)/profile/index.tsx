@@ -1,4 +1,4 @@
-import {
+﻿import {
   useCallback,
   useEffect,
   useMemo,
@@ -24,14 +24,22 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import {
   PHONE_FORMAT_MESSAGE,
-  PRIVACY_LEVEL_LABELS,
+  PROFILE_BADGE_DEFINITIONS,
+  PROFILE_GALLERY_MESSAGES,
+  PROFILE_GALLERY_TAB_LABELS,
+  PROFILE_NAME_DISPLAY_OPTIONS,
+  PROFILE_PRIVACY_OPTIONS,
+  PROFILE_SETTINGS_COPY,
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MIN_LENGTH,
   USERNAME_MIN_LENGTH_MESSAGE,
   formatPhoneForInput,
+  formatProfileMemberSince,
   isUsernameFormatValid,
   normalizePhone,
   normalizePrivacyLevel,
+  type ProfileBadgeDefinition,
+  type ProfileNameDisplayPreference,
   type PrivacyLevel,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
@@ -63,14 +71,7 @@ type Badge = {
   earned: boolean;
 };
 
-type BadgeConfig = {
-  id: string;
-  name: string;
-  symbol: string;
-  threshold: number;
-  orFilter?: string;
-  ilike?: [string, string];
-};
+type BadgeConfig = ProfileBadgeDefinition;
 
 type FriendProfile = {
   id: string;
@@ -119,7 +120,7 @@ type SearchUser = {
   email: string | null;
 };
 
-type NameDisplayPreference = "real_name" | "username";
+type NameDisplayPreference = ProfileNameDisplayPreference;
 
 type FriendRequestRow = {
   id: string;
@@ -132,110 +133,10 @@ type FriendRequestRow = {
 
 const PAGE_SIZE = 30;
 const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
-const BADGE_DEFINITIONS: BadgeConfig[] = [
-  {
-    id: "burgundy_royalty",
-    name: "Burgundy Royalty",
-    symbol: "👑",
-    threshold: 10,
-    orFilter: "region.ilike.%burgundy%,region.ilike.%bourgogne%",
-  },
-  {
-    id: "california_king",
-    name: "California King",
-    symbol: "☀️",
-    threshold: 10,
-    ilike: ["region", "%california%"],
-  },
-  {
-    id: "bordeaux_patron",
-    name: "Bordeaux Patron",
-    symbol: "🏰",
-    threshold: 10,
-    ilike: ["region", "%bordeaux%"],
-  },
-  {
-    id: "rioja_renegade",
-    name: "Rioja Renegade",
-    symbol: "🤠",
-    threshold: 10,
-    orFilter: "region.ilike.%rioja%,appellation.ilike.%rioja%",
-  },
-  {
-    id: "sangiovese_savage",
-    name: "Sangiovese Savage",
-    symbol: "🐺",
-    threshold: 10,
-    orFilter: "region.ilike.%chianti%,appellation.ilike.%chianti%",
-  },
-  {
-    id: "rhone_rider",
-    name: "Rhone Rider",
-    symbol: "🏇",
-    threshold: 10,
-    orFilter: "region.ilike.%rhone%,region.ilike.%rhône%",
-  },
-  {
-    id: "margaux_monarch",
-    name: "Margaux Monarch",
-    symbol: "👸",
-    threshold: 10,
-    ilike: ["appellation", "%margaux%"],
-  },
-  {
-    id: "chianti_connoisseur",
-    name: "Chianti Connoisseur",
-    symbol: "🍷",
-    threshold: 10,
-    orFilter: "region.ilike.%chianti%,appellation.ilike.%chianti%",
-  },
-  {
-    id: "mosel_maniac",
-    name: "Mosel Maniac",
-    symbol: "🌊",
-    threshold: 10,
-    ilike: ["region", "%mosel%"],
-  },
-  {
-    id: "champagne_champion",
-    name: "Champagne Champion",
-    symbol: "🥂",
-    threshold: 10,
-    ilike: ["region", "%champagne%"],
-  },
-];
-
-const PRIVACY_OPTIONS: Array<{ value: PrivacyLevel; label: string }> = [
-  { value: "public", label: PRIVACY_LEVEL_LABELS.public },
-  { value: "friends_of_friends", label: PRIVACY_LEVEL_LABELS.friends_of_friends },
-  { value: "friends", label: PRIVACY_LEVEL_LABELS.friends },
-  { value: "private", label: PRIVACY_LEVEL_LABELS.private },
-];
-
-const NAME_DISPLAY_OPTIONS: Array<{
-  value: NameDisplayPreference;
-  label: string;
-}> = [
-  { value: "real_name", label: "Real name" },
-  { value: "username", label: "Username" },
-];
+const BADGE_DEFINITIONS: BadgeConfig[] = [...PROFILE_BADGE_DEFINITIONS];
 
 function displayFriendName(profile: FriendProfile | null) {
   return getPublicProfileName(profile);
-}
-
-function formatMemberSince(value: string | null): string {
-  if (!value) {
-    return "Unknown";
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Unknown";
-  }
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
 }
 
 function getAvatarFallbackLetter(name: string | null, email: string | null) {
@@ -1958,7 +1859,7 @@ export default function ProfileScreen() {
                     setSettingsOpen(true);
                   }}
                 >
-                  <AppText style={styles.settingsIcon}>⚙︎</AppText>
+                  <AppText style={styles.settingsIcon}>âš™ï¸Ž</AppText>
                 </Pressable>
               </View>
               <AppText style={styles.fullName}>{fullName || " "}</AppText>
@@ -1967,11 +1868,11 @@ export default function ProfileScreen() {
               ) : null}
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <AppText style={styles.statValue}>{wineCount ?? "—"}</AppText>
+                  <AppText style={styles.statValue}>{wineCount ?? "â€”"}</AppText>
                   <AppText style={styles.statLabel}>wines</AppText>
                 </View>
                 <View style={styles.statItem}>
-                  <AppText style={styles.statValue}>{friendCount ?? "—"}</AppText>
+                  <AppText style={styles.statValue}>{friendCount ?? "â€”"}</AppText>
                   <AppText style={styles.statLabel}>friends</AppText>
                 </View>
               </View>
@@ -1989,7 +1890,7 @@ export default function ProfileScreen() {
                   galleryTab === "mine" ? styles.galleryToggleTextActive : null,
                 ]}
               >
-                My wines
+                {PROFILE_GALLERY_TAB_LABELS.mine}
               </AppText>
             </Pressable>
             <Pressable
@@ -2010,7 +1911,7 @@ export default function ProfileScreen() {
                   galleryTab === "tagged" ? styles.galleryToggleTextActive : null,
                 ]}
               >
-                Tagged
+                {PROFILE_GALLERY_TAB_LABELS.tagged}
               </AppText>
             </Pressable>
             <Pressable
@@ -2029,7 +1930,7 @@ export default function ProfileScreen() {
                   galleryTab === "friends" ? styles.galleryToggleTextActive : null,
                 ]}
               >
-                Friends
+                {PROFILE_GALLERY_TAB_LABELS.friends}
               </AppText>
             </Pressable>
           </View>
@@ -2066,14 +1967,18 @@ export default function ProfileScreen() {
               </View>
             ) : entriesLoading ? null : (
               <View style={styles.emptyCard}>
-                <AppText style={styles.emptyText}>No entries yet.</AppText>
+                <AppText style={styles.emptyText}>
+                  {PROFILE_GALLERY_MESSAGES.emptyEntries}
+                </AppText>
               </View>
             )}
 
             {entriesLoading ? (
               <View style={styles.inlineLoaderRow}>
                 <ActivityIndicator color={colors.grenache} />
-                <AppText style={styles.inlineLoaderText}>Loading entries...</AppText>
+                <AppText style={styles.inlineLoaderText}>
+                  {PROFILE_GALLERY_MESSAGES.loadingEntries}
+                </AppText>
               </View>
             ) : null}
 
@@ -2111,14 +2016,18 @@ export default function ProfileScreen() {
               </View>
             ) : taggedLoading ? null : (
               <View style={styles.emptyCard}>
-                <AppText style={styles.emptyText}>No tagged entries yet.</AppText>
+                <AppText style={styles.emptyText}>
+                  {PROFILE_GALLERY_MESSAGES.emptyTagged}
+                </AppText>
               </View>
             )}
 
             {taggedLoading ? (
               <View style={styles.inlineLoaderRow}>
                 <ActivityIndicator color={colors.grenache} />
-                <AppText style={styles.inlineLoaderText}>Loading tagged entries...</AppText>
+                <AppText style={styles.inlineLoaderText}>
+                  {PROFILE_GALLERY_MESSAGES.loadingTagged}
+                </AppText>
               </View>
             ) : null}
           </>
@@ -2131,7 +2040,9 @@ export default function ProfileScreen() {
             {friendsLoading ? (
               <View style={styles.loadingCardCompact}>
                 <ActivityIndicator color={colors.grenache} />
-                <AppText style={styles.loadingText}>Loading friends...</AppText>
+                <AppText style={styles.loadingText}>
+                  {PROFILE_GALLERY_MESSAGES.loadingFriends}
+                </AppText>
               </View>
             ) : (
               <View style={styles.friendsInlineBody}>
@@ -2140,7 +2051,7 @@ export default function ProfileScreen() {
                     label="Search users"
                     value={friendSearch}
                     onChangeText={setFriendSearch}
-                    placeholder="Search by username or name"
+                    placeholder={PROFILE_GALLERY_MESSAGES.searchPlaceholder}
                     autoCapitalize="none"
                   />
                   {searchError ? <AppText style={styles.errorText}>{searchError}</AppText> : null}
@@ -2316,7 +2227,9 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={styles.sectionBlockTopBorder}>
-                  <AppText style={styles.sectionTitle}>Your friends</AppText>
+                  <AppText style={styles.sectionTitle}>
+                    {PROFILE_SETTINGS_COPY.friendsSectionTitle}
+                  </AppText>
                   {friends.length === 0 ? (
                     <AppText style={styles.hintText}>
                       No friends yet. Search to add someone.
@@ -2401,7 +2314,7 @@ export default function ProfileScreen() {
             style={styles.modalCard}
           >
             <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>Settings</AppText>
+              <AppText style={styles.modalTitle}>{PROFILE_SETTINGS_COPY.title}</AppText>
               <Pressable style={styles.iconCircleSm} onPress={closeSettings}>
                 <Feather name="x" size={15} color={colors.textSecondary} />
               </Pressable>
@@ -2413,7 +2326,9 @@ export default function ProfileScreen() {
               keyboardShouldPersistTaps="handled"
             >
               <View style={styles.sectionBlock}>
-                <AppText style={styles.sectionTitle}>Edit profile</AppText>
+                <AppText style={styles.sectionTitle}>
+                  {PROFILE_SETTINGS_COPY.editProfileTitle}
+                </AppText>
 
                 <View style={styles.avatarEditRow}>
                   <View style={styles.avatarPickerCol}>
@@ -2508,9 +2423,11 @@ export default function ProfileScreen() {
                 </AppText>
 
                 <View style={styles.memberSinceRow}>
-                  <AppText style={styles.labelSmall}>Member since</AppText>
+                  <AppText style={styles.labelSmall}>
+                    {PROFILE_SETTINGS_COPY.memberSinceLabel}
+                  </AppText>
                   <AppText style={styles.memberSinceValue}>
-                    {formatMemberSince(profile.created_at)}
+                    {formatProfileMemberSince(profile.created_at)}
                   </AppText>
                 </View>
 
@@ -2529,16 +2446,20 @@ export default function ProfileScreen() {
                   {isSavingProfile ? (
                     <ActivityIndicator color={colors.textPrimary} />
                   ) : (
-                    <AppText style={styles.primaryButtonText}>Save profile</AppText>
+                    <AppText style={styles.primaryButtonText}>
+                      {PROFILE_SETTINGS_COPY.saveProfileLabel}
+                    </AppText>
                   )}
                 </Pressable>
               </View>
 
               {badges.length > 0 ? (
                 <View style={styles.sectionBlockTopBorder}>
-                  <AppText style={styles.sectionTitle}>Badges</AppText>
+                  <AppText style={styles.sectionTitle}>
+                    {PROFILE_SETTINGS_COPY.badgesTitle}
+                  </AppText>
                   <AppText style={styles.hintText}>
-                    Earn badges by logging 10 wines from a specific region or style.
+                    {PROFILE_SETTINGS_COPY.badgesDescription}
                   </AppText>
                   <View style={styles.badgeGrid}>
                     {badges.map((badge) => (
@@ -2565,10 +2486,11 @@ export default function ProfileScreen() {
               ) : null}
 
               <View style={styles.sectionBlockTopBorder}>
-                <AppText style={styles.sectionTitle}>Privacy settings</AppText>
+                <AppText style={styles.sectionTitle}>
+                  {PROFILE_SETTINGS_COPY.privacyTitle}
+                </AppText>
                 <AppText style={styles.hintText}>
-                  Choose how your name appears across the app and set defaults for new posts,
-                  reactions, and comments.
+                  {PROFILE_SETTINGS_COPY.privacyDescription}
                 </AppText>
 
                 <NameDisplayPreferenceSelector
@@ -2580,7 +2502,7 @@ export default function ProfileScreen() {
                   }}
                 />
                 <PrivacySelector
-                  title="Post visibility"
+                  title={PROFILE_SETTINGS_COPY.postVisibilityLabel}
                   value={entryPrivacyValue}
                   disabled={isSavingPrivacy}
                   onChange={(value) => {
@@ -2589,7 +2511,7 @@ export default function ProfileScreen() {
                   }}
                 />
                 <PrivacySelector
-                  title="Reactions"
+                  title={PROFILE_SETTINGS_COPY.reactionsLabel}
                   value={reactionPrivacyValue}
                   disabled={isSavingPrivacy}
                   onChange={(value) => {
@@ -2598,7 +2520,7 @@ export default function ProfileScreen() {
                   }}
                 />
                 <PrivacySelector
-                  title="Comments"
+                  title={PROFILE_SETTINGS_COPY.commentsLabel}
                   value={commentsPrivacyValue}
                   disabled={isSavingPrivacy}
                   onChange={(value) => {
@@ -2608,10 +2530,10 @@ export default function ProfileScreen() {
                 />
 
                 <AppText style={styles.hintText}>
-                  Reactions privacy controls who can see and react.
+                  {PROFILE_SETTINGS_COPY.reactionsHint}
                 </AppText>
                 <AppText style={styles.hintText}>
-                  Comments privacy controls who can see comments and comment.
+                  {PROFILE_SETTINGS_COPY.commentsHint}
                 </AppText>
                 {privacyMessage ? (
                   <AppText
@@ -2625,8 +2547,12 @@ export default function ProfileScreen() {
               <View style={styles.sectionBlockTopBorder}>
                 <View style={styles.rowBetween}>
                   <View style={styles.rowGrow}>
-                    <AppText style={styles.sectionTitle}>Password</AppText>
-                    <AppText style={styles.hintText}>Update your account password.</AppText>
+                    <AppText style={styles.sectionTitle}>
+                      {PROFILE_SETTINGS_COPY.passwordTitle}
+                    </AppText>
+                    <AppText style={styles.hintText}>
+                      {PROFILE_SETTINGS_COPY.passwordDescription}
+                    </AppText>
                   </View>
                   {!isPasswordOpen ? (
                     <Pressable
@@ -2637,7 +2563,9 @@ export default function ProfileScreen() {
                         setIsPasswordOpen(true);
                       }}
                     >
-                      <AppText style={styles.ghostButtonText}>Change password</AppText>
+                      <AppText style={styles.ghostButtonText}>
+                        {PROFILE_SETTINGS_COPY.changePasswordLabel}
+                      </AppText>
                     </Pressable>
                   ) : null}
                 </View>
@@ -2649,26 +2577,26 @@ export default function ProfileScreen() {
                 {isPasswordOpen ? (
                   <View style={styles.passwordForm}>
                     <LabeledInput
-                      label="Current password"
+                      label={PROFILE_SETTINGS_COPY.currentPasswordLabel}
                       value={currentPassword}
                       onChangeText={setCurrentPassword}
-                      placeholder="Enter your current password"
+                      placeholder={PROFILE_SETTINGS_COPY.currentPasswordPlaceholder}
                       secureTextEntry
                       autoCapitalize="none"
                     />
                     <LabeledInput
-                      label="New password"
+                      label={PROFILE_SETTINGS_COPY.newPasswordLabel}
                       value={newPassword}
                       onChangeText={setNewPassword}
-                      placeholder="Minimum 8 characters"
+                      placeholder={PROFILE_SETTINGS_COPY.newPasswordPlaceholder}
                       secureTextEntry
                       autoCapitalize="none"
                     />
                     <LabeledInput
-                      label="Confirm new password"
+                      label={PROFILE_SETTINGS_COPY.confirmPasswordLabel}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
-                      placeholder="Re-enter new password"
+                      placeholder={PROFILE_SETTINGS_COPY.confirmPasswordPlaceholder}
                       secureTextEntry
                       autoCapitalize="none"
                     />
@@ -2690,7 +2618,9 @@ export default function ProfileScreen() {
                         {isSavingPassword ? (
                           <ActivityIndicator color={colors.textPrimary} />
                         ) : (
-                          <AppText style={styles.primaryButtonText}>Update password</AppText>
+                          <AppText style={styles.primaryButtonText}>
+                            {PROFILE_SETTINGS_COPY.updatePasswordLabel}
+                          </AppText>
                         )}
                       </Pressable>
                       <Pressable
@@ -2714,7 +2644,9 @@ export default function ProfileScreen() {
               <View style={styles.sectionBlockTopBorder}>
                 <View style={styles.rowBetween}>
                   <View style={styles.rowGrow}>
-                    <AppText style={styles.sectionTitle}>Delete account</AppText>
+                    <AppText style={styles.sectionTitle}>
+                      {PROFILE_SETTINGS_COPY.deleteAccountTitle}
+                    </AppText>
                     <AppText style={styles.hintText}>
                       Permanently remove your account and all cellar content from
                       Cluster.
@@ -2729,7 +2661,9 @@ export default function ProfileScreen() {
                         setIsDeleteAccountOpen(true);
                       }}
                     >
-                      <AppText style={styles.declineButtonText}>Delete account</AppText>
+                      <AppText style={styles.declineButtonText}>
+                        {PROFILE_SETTINGS_COPY.deleteAccountLabel}
+                      </AppText>
                     </Pressable>
                   ) : null}
                 </View>
@@ -2833,9 +2767,11 @@ function NameDisplayPreferenceSelector({
 }) {
   return (
     <View style={styles.privacyBlock}>
-      <AppText style={styles.privacyLabel}>Name used across app</AppText>
+      <AppText style={styles.privacyLabel}>
+        {PROFILE_SETTINGS_COPY.nameUsedAcrossAppLabel}
+      </AppText>
       <View style={styles.privacyOptionWrap}>
-        {NAME_DISPLAY_OPTIONS.map((option) => (
+        {PROFILE_NAME_DISPLAY_OPTIONS.map((option) => (
           <Pressable
             key={`name-display-${option.value}`}
             onPress={() => onChange(option.value)}
@@ -2857,7 +2793,7 @@ function NameDisplayPreferenceSelector({
         ))}
       </View>
       <AppText style={styles.hintText}>
-        Real name uses your first name and last initial when available. Otherwise your username is shown.
+        {PROFILE_SETTINGS_COPY.nameUsedAcrossAppHint}
       </AppText>
     </View>
   );
@@ -2878,7 +2814,7 @@ function PrivacySelector({
     <View style={styles.privacyBlock}>
       <AppText style={styles.privacyLabel}>{title}</AppText>
       <View style={styles.privacyOptionWrap}>
-        {PRIVACY_OPTIONS.map((option) => (
+        {PROFILE_PRIVACY_OPTIONS.map((option) => (
           <Pressable
             key={`${title}-${option.value}`}
             onPress={() => onChange(option.value)}
@@ -3559,3 +3495,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
+
+

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canUserViewEntry, type EntryPrivacy } from "@/lib/access/entryVisibility";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
 
@@ -197,18 +198,20 @@ async function fetchCommentsForEntry(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: entryId } = await params;
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   let entry: EntryRow | null = null;
   try {
@@ -358,14 +361,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: entryId } = await params;
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   let body: unknown;
   try {

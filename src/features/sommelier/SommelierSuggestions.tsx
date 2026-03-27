@@ -1,10 +1,6 @@
 "use client";
 
-const DEFAULT_SUGGESTIONS = [
-  "How does italian wine compare to french wine?",
-  "Tell me about the 2013 vintage in Napa Valley?",
-  "What's a good pairing to go with seafood pasta?",
-] as const;
+import { SOMMELIER_DEFAULT_SUGGESTIONS } from "@shared";
 
 export default function SommelierSuggestions({
   onSelect,
@@ -12,8 +8,8 @@ export default function SommelierSuggestions({
   onSelect: (prompt: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2" aria-label="Suggested prompts">
-      {DEFAULT_SUGGESTIONS.map((suggestion) => (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Suggested prompts">
+      {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
         <button
           key={suggestion}
           type="button"

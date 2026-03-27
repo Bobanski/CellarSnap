@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   type GestureResponderEvent,
@@ -17,15 +18,20 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import {
+  ENTRY_MATCH_BAND_LABELS,
   PRICE_PAID_CURRENCY_LABELS,
   PRICE_PAID_CURRENCY_VALUES,
   PRICE_PAID_SOURCE_LABELS,
   PRICE_PAID_SOURCE_VALUES,
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
+  buildEntryGoogleMapsLocationUrl,
+  buildEntryLocationDisplayLabel,
+  buildEntryShareText,
   mapContextTagToPhotoType,
   normalizeProducerText,
   normalizeWineNameText,
+  type EntryMatchBand,
   type PricePaidCurrency,
   type PricePaidSource,
   type PrivacyLevel,
@@ -68,13 +74,18 @@ type EntryPhotoType =
 type EntryDetailRow = {
   id: string;
   user_id: string;
+  root_entry_id?: string | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
+  wine_type?: string | null;
   country: string | null;
   region: string | null;
   appellation: string | null;
   classification: string | null;
+  canonical_region?: string | null;
+  canonical_sub_region?: string | null;
+  canonical_country?: string | null;
   rating: number | null;
   price_paid: number | null;
   price_paid_currency: string | null;
@@ -93,6 +104,7 @@ type EntryDetailRow = {
   entry_group_id?: string | null;
   entry_privacy: PrivacyLevel;
   reaction_privacy?: PrivacyLevel | null;
+  viewer_log_entry_id?: string | null;
 };
 
 type EntryGroupMode = "event" | "catch_up";
@@ -171,6 +183,53 @@ type EntryPhotoItem = {
   type: EntryPhotoType;
   url: string | null;
   editable: boolean;
+};
+
+type EntryCommentReply = {
+  id: string;
+  entry_id: string;
+  user_id: string;
+  parent_comment_id: string | null;
+  author_name: string | null;
+  author_avatar_url?: string | null;
+  body: string;
+  created_at: string;
+  is_deleted?: boolean;
+};
+
+type EntryComment = {
+  id: string;
+  entry_id: string;
+  user_id: string;
+  author_name: string | null;
+  author_avatar_url?: string | null;
+  body: string;
+  created_at: string;
+  is_deleted?: boolean;
+  replies: EntryCommentReply[];
+};
+
+type EntryDetailApiEntry = Partial<EntryDetailRow> & {
+  reaction_counts?: Record<string, number>;
+  my_reactions?: string[];
+  reaction_users?: Record<string, string[]>;
+  comment_count?: number;
+  can_react?: boolean;
+  can_comment?: boolean;
+};
+
+type EntryAlgorithmScoreResponse = {
+  score: number;
+  band: EntryMatchBand;
+  confidence: number;
+  display_score: boolean;
+  confidence_warning: string | null;
+  preference_event_count: number;
+};
+
+type ShareToast = {
+  kind: "success" | "error";
+  message: string;
 };
 
 type CropGestureState =
@@ -289,6 +348,10 @@ const MONTH_LABELS = [
 ] as const;
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
+type ApiJsonResult<T> =
+  | { ok: true; payload: T }
+  | { ok: false; status: number; errorMessage: string };
+
 function parseYmd(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!match) return null;
@@ -328,6 +391,73 @@ function formatConsumedDate(raw: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatCommentDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+async function fetchWebApiJson<T>(
+  path: string,
+  init?: RequestInit
+): Promise<ApiJsonResult<T>> {
+  if (!WEB_API_BASE_URL) {
+    return {
+      ok: false,
+      status: 0,
+      errorMessage: "Web API unavailable.",
+    };
+  }
+
+  const token = await getAccessTokenForApi();
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      errorMessage: "Unauthorized",
+    };
+  }
+
+  try {
+    const response = await fetch(`${WEB_API_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(init?.headers ?? {}),
+      },
+    });
+    const payload = (await response.json().catch(() => ({}))) as T & {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        errorMessage: payload.error ?? "Request could not be completed.",
+      };
+    }
+
+    return {
+      ok: true,
+      payload: payload as T,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      errorMessage: "Request could not be completed.",
+    };
+  }
 }
 
 function getDisplayRating(rating: number | null): string | null {
@@ -500,36 +630,6 @@ function toOrdinal(value: number) {
   return `${value}th`;
 }
 
-function buildLocationDisplayLabel(locationText: string): string {
-  const normalized = locationText.trim();
-  if (!normalized) {
-    return normalized;
-  }
-
-  const parts = normalized
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) {
-    return normalized;
-  }
-
-  const name = parts[0];
-  const city = parts.length >= 4 ? parts[parts.length - 3] : parts[1];
-  if (!city || city.toLowerCase() === name.toLowerCase()) {
-    return name;
-  }
-
-  return `${name}, ${city}`;
-}
-
-function buildGoogleMapsLocationUrl(locationText: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    locationText
-  )}`;
-}
-
 function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
 }
@@ -635,17 +735,38 @@ function getAdvancedNoteRows(value: unknown): Array<{ label: string; value: stri
   );
 }
 
+function buildScorePayload(entry: EntryDetailRow, isOwner: boolean) {
+  return {
+    entry_id: isOwner ? entry.id : undefined,
+    wine_type:
+      typeof entry.wine_type === "string" && entry.wine_type.trim().length > 0
+        ? entry.wine_type
+        : undefined,
+    canonical_region: entry.canonical_region ?? entry.region ?? null,
+    canonical_sub_region: entry.canonical_sub_region ?? entry.appellation ?? null,
+    canonical_country: entry.canonical_country ?? entry.country ?? null,
+    primary_grapes: null,
+    vintage: entry.vintage ? Number(entry.vintage) || null : null,
+    producer: entry.producer ?? null,
+    classification: entry.classification ?? null,
+    quality_tier: entry.classification ?? null,
+  };
+}
+
 export default function EntryDetailScreen() {
   const params = useLocalSearchParams<{
     id?: string | string[];
     bulk?: string | string[];
     queue?: string | string[];
     index?: string | string[];
+    edit?: string | string[];
   }>();
-  const { user } = useAuth();
+  const { hasPrivateBetaFeatureAccess, user } = useAuth();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const bulkFlag = Array.isArray(params.bulk) ? params.bulk[0] : params.bulk;
   const queueParam = Array.isArray(params.queue) ? params.queue[0] : params.queue;
+  const editParam = Array.isArray(params.edit) ? params.edit[0] : params.edit;
+  const openEditOnLoad = editParam === "1";
   const bulkQueue = useMemo(() => {
     if (!queueParam) {
       return [] as string[];
@@ -768,16 +889,66 @@ export default function EntryDetailScreen() {
   const [photoEditError, setPhotoEditError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [canReact, setCanReact] = useState(false);
+  const [canComment, setCanComment] = useState(false);
   const [myReactions, setMyReactions] = useState<string[]>([]);
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
   const [reactionUsers, setReactionUsers] = useState<Record<string, string[]>>({});
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [comments, setComments] = useState<EntryComment[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [addingToLog, setAddingToLog] = useState(false);
+  const [addToLogEntryId, setAddToLogEntryId] = useState<string | null>(null);
+  const [addToLogMessage, setAddToLogMessage] = useState<string | null>(null);
+  const [addToLogError, setAddToLogError] = useState<string | null>(null);
+  const [scoreResult, setScoreResult] = useState<EntryAlgorithmScoreResponse | null>(null);
+  const [scoreLoading, setScoreLoading] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareToast, setShareToast] = useState<ShareToast | null>(null);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
+  const isOwner = Boolean(user?.id && entry?.user_id === user.id);
 
   useEffect(() => {
     setShowBulkMoreDetails(false);
   }, [entryId, isBulkReview]);
+
+  useEffect(() => {
+    setCanComment(false);
+    setCommentCount(0);
+    setCommentsExpanded(false);
+    setComments([]);
+    setCommentDraft("");
+    setReplyTargetId(null);
+    setExpandedReplies({});
+    setCommentError(null);
+    setAddToLogEntryId(null);
+    setAddToLogMessage(null);
+    setAddToLogError(null);
+    setScoreResult(null);
+    setScoreError(null);
+    setShareToast(null);
+  }, [entryId]);
+
+  useEffect(() => {
+    if (!shareToast) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShareToast(null);
+    }, 2600);
+
+    return () => clearTimeout(timer);
+  }, [shareToast]);
 
   const loadEntry = useCallback(async () => {
     if (!entryId) {
@@ -929,7 +1100,7 @@ export default function EntryDetailScreen() {
     const resolvedReactionPrivacy = (nextEntry.reaction_privacy ??
       nextEntry.entry_privacy ??
       "public") as PrivacyLevel;
-    const canEntryReact = user?.id
+    let canEntryReact = user?.id
       ? canViewerAccessByPrivacy({
           viewerUserId: user.id,
           ownerUserId: nextEntry.user_id,
@@ -938,8 +1109,8 @@ export default function EntryDetailScreen() {
           friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
         })
       : false;
-    const nextReactionCounts: Record<string, number> = {};
-    const nextMyReactions: string[] = [];
+    let nextReactionCounts: Record<string, number> = {};
+    let nextMyReactions: string[] = [];
     const reactionUserIds: Record<string, string[]> = {};
 
     const { data: reactionRows } = await supabase
@@ -974,10 +1145,56 @@ export default function EntryDetailScreen() {
       });
     }
 
-    const nextReactionUsers: Record<string, string[]> = {};
+    let nextReactionUsers: Record<string, string[]> = {};
     Object.entries(reactionUserIds).forEach(([emoji, ids]) => {
       nextReactionUsers[emoji] = ids.map((id) => getPublicProfileName(profileMap.get(id)));
     });
+
+    let webEntry: EntryDetailApiEntry | null = null;
+    if (WEB_API_BASE_URL) {
+      const response = await fetchWebApiJson<{ entry?: EntryDetailApiEntry }>(
+        `/api/entries/${entryId}`
+      );
+      if (response.ok && response.payload.entry) {
+        webEntry = response.payload.entry;
+      }
+    }
+
+    if (webEntry?.reaction_counts) {
+      nextReactionCounts = webEntry.reaction_counts;
+    }
+    if (Array.isArray(webEntry?.my_reactions)) {
+      nextMyReactions = webEntry.my_reactions;
+    }
+    if (webEntry?.reaction_users) {
+      nextReactionUsers = webEntry.reaction_users;
+    }
+    if (typeof webEntry?.can_react === "boolean") {
+      canEntryReact = webEntry.can_react;
+    }
+
+    const mergedEntry: EntryDetailRow = {
+      ...nextEntry,
+      root_entry_id:
+        typeof webEntry?.root_entry_id === "string" ? webEntry.root_entry_id : null,
+      wine_type: typeof webEntry?.wine_type === "string" ? webEntry.wine_type : null,
+      canonical_region:
+        typeof webEntry?.canonical_region === "string"
+          ? webEntry.canonical_region
+          : null,
+      canonical_sub_region:
+        typeof webEntry?.canonical_sub_region === "string"
+          ? webEntry.canonical_sub_region
+          : null,
+      canonical_country:
+        typeof webEntry?.canonical_country === "string"
+          ? webEntry.canonical_country
+          : null,
+      viewer_log_entry_id:
+        typeof webEntry?.viewer_log_entry_id === "string"
+          ? webEntry.viewer_log_entry_id
+          : null,
+    };
 
     setAuthorName(
       getPublicProfileName(authorProfile)
@@ -1001,8 +1218,13 @@ export default function EntryDetailScreen() {
     setMyReactions(canEntryReact ? nextMyReactions : []);
     setReactionCounts(canEntryReact ? nextReactionCounts : {});
     setReactionUsers(canEntryReact ? nextReactionUsers : {});
+    setCanComment(typeof webEntry?.can_comment === "boolean" ? webEntry.can_comment : false);
+    setCommentCount(typeof webEntry?.comment_count === "number" ? webEntry.comment_count : 0);
+    setAddToLogEntryId(mergedEntry.viewer_log_entry_id ?? null);
+    setAddToLogMessage(null);
+    setAddToLogError(null);
     setReactionPickerOpen(false);
-    setEntry({ ...nextEntry, primary_grapes: primaryGrapes });
+    setEntry({ ...mergedEntry, primary_grapes: primaryGrapes });
     setEntryGroup(nextEntryGroup);
     setSelectedPrimaryGrapes(primaryGrapes.map((grape) => ({ ...grape })));
     setSelectedTastedWithIds(nextEntry.tasted_with_user_ids ?? []);
@@ -1071,6 +1293,173 @@ export default function EntryDetailScreen() {
   useEffect(() => {
     void loadEntry();
   }, [loadEntry]);
+
+  useEffect(() => {
+    if (!entryId || loading || isBulkReview || !openEditOnLoad || !isOwner) {
+      return;
+    }
+
+    setOwnerEditOpen(true);
+    router.replace(`/(app)/entries/${entryId}` as never);
+  }, [entryId, isBulkReview, isOwner, loading, openEditOnLoad]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadScore = async () => {
+      if (!hasPrivateBetaFeatureAccess || !entry || !user?.id || !WEB_API_BASE_URL) {
+        if (!cancelled) {
+          setScoreResult(null);
+          setScoreError(null);
+          setScoreLoading(false);
+        }
+        return;
+      }
+
+      const payload = buildScorePayload(entry, user.id === entry.user_id);
+      if (!payload.entry_id && !payload.wine_type) {
+        if (!cancelled) {
+          setScoreResult(null);
+          setScoreError("We need more wine detail before we can score this bottle.");
+          setScoreLoading(false);
+        }
+        return;
+      }
+
+      setScoreLoading(true);
+      setScoreError(null);
+
+      const response = await fetchWebApiJson<EntryAlgorithmScoreResponse>(
+        "/api/algorithm/score",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      if (!response.ok) {
+        setScoreResult(null);
+        setScoreError("Unable to load the palate match right now.");
+        setScoreLoading(false);
+        return;
+      }
+
+      setScoreResult(response.payload);
+      setScoreLoading(false);
+    };
+
+    void loadScore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [entry, hasPrivateBetaFeatureAccess, user?.id]);
+
+  const openPalateProfile = useCallback(async () => {
+    if (!WEB_API_BASE_URL) {
+      return;
+    }
+
+    try {
+      await Linking.openURL(`${WEB_API_BASE_URL}/palate`);
+    } catch {
+      setScoreError("Unable to open the palate profile right now.");
+    }
+  }, []);
+
+  const onShare = useCallback(async () => {
+    if (!entryId || !WEB_API_BASE_URL) {
+      setShareToast({
+        kind: "error",
+        message: "Share is unavailable right now.",
+      });
+      return;
+    }
+
+    setSharing(true);
+    setShareToast(null);
+
+    try {
+      const response = await fetchWebApiJson<{ url?: string }>("/api/share", {
+        method: "POST",
+        body: JSON.stringify({ postId: entryId }),
+      });
+
+      if (!response.ok || typeof response.payload.url !== "string") {
+        setShareToast({
+          kind: "error",
+          message: response.ok
+            ? "Unable to create share link."
+            : response.errorMessage,
+        });
+        return;
+      }
+
+      const result = await Share.share({
+        message: `${buildEntryShareText()} ${response.payload.url}`,
+        url: response.payload.url,
+      });
+
+      if (result.action === Share.dismissedAction) {
+        return;
+      }
+
+      setShareToast({
+        kind: "success",
+        message: "Share link ready.",
+      });
+    } catch {
+      setShareToast({
+        kind: "error",
+        message: "Unable to create share link.",
+      });
+    } finally {
+      setSharing(false);
+    }
+  }, [entryId]);
+
+  const addToMyCellar = useCallback(async () => {
+    if (!entryId || addingToLog) {
+      return;
+    }
+
+    setAddToLogError(null);
+    setAddToLogMessage(null);
+    setAddingToLog(true);
+
+    try {
+      const response = await fetchWebApiJson<{
+        entry_id?: string;
+        already_exists?: boolean;
+      }>(`/api/entries/${entryId}/add-to-log`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        setAddToLogError(response.errorMessage);
+        return;
+      }
+
+      if (typeof response.payload.entry_id === "string") {
+        setAddToLogEntryId(response.payload.entry_id);
+        setAddToLogMessage(
+          response.payload.already_exists
+            ? "Already in your cellar."
+            : "Added to your cellar."
+        );
+        router.push(`/(app)/entries/${response.payload.entry_id}?edit=1` as never);
+        return;
+      }
+
+      setAddToLogMessage("Added to your cellar.");
+    } finally {
+      setAddingToLog(false);
+    }
+  }, [addingToLog, entryId]);
 
   const toggleReaction = useCallback(
     async (emoji: string) => {
@@ -1145,6 +1534,124 @@ export default function EntryDetailScreen() {
       setReactionPickerOpen(false);
     },
     [entryId, myReactions, user?.id, viewerReactionName]
+  );
+
+  const loadComments = useCallback(
+    async ({ force = false }: { force?: boolean } = {}) => {
+      if (!entryId || !WEB_API_BASE_URL) {
+        return;
+      }
+      if (loadingComments) {
+        return;
+      }
+      if (!force && comments.length > 0) {
+        return;
+      }
+
+      setLoadingComments(true);
+      setCommentError(null);
+
+      try {
+        const response = await fetchWebApiJson<{
+          comments?: EntryComment[];
+          comment_count?: number;
+          can_comment?: boolean;
+        }>(`/api/entries/${entryId}/comments`);
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            setCanComment(false);
+            setComments([]);
+            setCommentCount(0);
+            return;
+          }
+          setCommentError(response.errorMessage);
+          return;
+        }
+
+        const nextComments = Array.isArray(response.payload.comments)
+          ? response.payload.comments
+          : [];
+        setComments(nextComments);
+        setCommentCount(
+          typeof response.payload.comment_count === "number"
+            ? response.payload.comment_count
+            : nextComments.reduce((total, comment) => total + 1 + comment.replies.length, 0)
+        );
+        setCanComment(Boolean(response.payload.can_comment));
+      } finally {
+        setLoadingComments(false);
+      }
+    },
+    [comments.length, entryId, loadingComments]
+  );
+
+  const submitComment = useCallback(async () => {
+    if (!entryId || postingComment) {
+      return;
+    }
+
+    const body = commentDraft.trim();
+    if (!body) {
+      return;
+    }
+
+    setPostingComment(true);
+    setCommentError(null);
+    try {
+      const response = await fetchWebApiJson(`/api/entries/${entryId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({
+          body,
+          parent_comment_id: replyTargetId,
+        }),
+      });
+
+      if (!response.ok) {
+        setCommentError(response.errorMessage);
+        return;
+      }
+
+      if (replyTargetId) {
+        setExpandedReplies((current) => ({ ...current, [replyTargetId]: true }));
+      }
+      setCommentDraft("");
+      setReplyTargetId(null);
+      await loadComments({ force: true });
+    } finally {
+      setPostingComment(false);
+    }
+  }, [commentDraft, entryId, loadComments, postingComment, replyTargetId]);
+
+  const deleteComment = useCallback(
+    async (commentId: string) => {
+      if (deletingCommentId) {
+        return;
+      }
+
+      setDeletingCommentId(commentId);
+      setCommentError(null);
+
+      try {
+        const response = await fetchWebApiJson(`/api/comments/${commentId}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          setCommentError(response.errorMessage);
+          return;
+        }
+
+        if (replyTargetId === commentId) {
+          setReplyTargetId(null);
+        }
+
+        await loadComments({ force: true });
+      } finally {
+        setDeletingCommentId(null);
+      }
+    },
+    [deletingCommentId, loadComments, replyTargetId]
   );
 
   useEffect(() => {
@@ -1506,7 +2013,6 @@ export default function EntryDetailScreen() {
     });
   }, [photos]);
 
-  const isOwner = Boolean(user?.id && entry?.user_id === user.id);
   const hasMultiplePhotos = photos.length > 1;
   const isEditFormVisible = isBulkReview || (isOwner && ownerEditOpen);
   const activePhoto =
@@ -1573,7 +2079,7 @@ export default function EntryDetailScreen() {
   const hasLocation = locationText.length > 0;
   const canOpenLocation = hasLocation;
   const locationDisplayLabel = hasLocation
-    ? buildLocationDisplayLabel(locationText)
+    ? buildEntryLocationDisplayLabel(locationText)
     : "";
   const bulkActionsDisabled = deleting || isDeletingBulkQueue || isSavingBulkReview;
   const ownerEditActionsDisabled =
@@ -1603,6 +2109,17 @@ export default function EntryDetailScreen() {
     activePhoto && photos.length > 0
       ? photos.findIndex((photo) => photo.id === activePhoto.id) + 1
       : 0;
+  const isTagged =
+    !isOwner &&
+    typeof user?.id === "string" &&
+    Array.isArray(entry?.tasted_with_user_ids) &&
+    entry.tasted_with_user_ids.includes(user.id);
+  const isScoreProfileBuilding =
+    typeof scoreResult?.preference_event_count === "number" &&
+    scoreResult.preference_event_count < 5;
+  const replyTarget = replyTargetId
+    ? comments.find((comment) => comment.id === replyTargetId) ?? null
+    : null;
   const cropGeometry = getCropGeometry();
 
   const toggleEditSection = useCallback((section: EditAccordionKey) => {
@@ -2311,7 +2828,7 @@ export default function EntryDetailScreen() {
     if (!canOpenLocation) {
       return;
     }
-    const url = buildGoogleMapsLocationUrl(locationText);
+    const url = buildEntryGoogleMapsLocationUrl(locationText);
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
       await Linking.openURL(url);
@@ -3746,15 +4263,107 @@ export default function EntryDetailScreen() {
               </View>
             ) : (
               <View style={styles.detailsCard}>
-              {isOwner ? (
-                <View style={styles.ownerActionRow}>
+              <View style={styles.entryActionRow}>
+                <Pressable
+                  style={[
+                    styles.actionButton,
+                    styles.shareButton,
+                    (sharing || !WEB_API_BASE_URL) ? styles.actionButtonDisabled : null,
+                  ]}
+                  onPress={() => void onShare()}
+                  disabled={sharing || !WEB_API_BASE_URL}
+                >
+                  <AppText style={styles.shareButtonText}>
+                    {sharing ? "Sharing..." : "Share"}
+                  </AppText>
+                </Pressable>
+                {isOwner ? (
                   <Pressable
-                    style={styles.editButton}
+                    style={styles.actionButton}
                     onPress={startOwnerEdit}
                     disabled={deleting}
                   >
-                    <AppText style={styles.editButtonText}>Edit entry</AppText>
+                    <AppText style={styles.actionButtonText}>Edit entry</AppText>
                   </Pressable>
+                ) : null}
+              </View>
+              {shareToast ? (
+                <View
+                  style={[
+                    styles.inlineFeedbackCard,
+                    shareToast.kind === "success"
+                      ? styles.inlineFeedbackSuccess
+                      : styles.inlineFeedbackError,
+                  ]}
+                >
+                  <AppText style={styles.inlineFeedbackText}>{shareToast.message}</AppText>
+                </View>
+              ) : null}
+              {hasPrivateBetaFeatureAccess ? (
+                <View style={styles.palateCard}>
+                  <AppText style={styles.palateEyebrow}>Palate match</AppText>
+                  {scoreLoading ? (
+                    <AppText style={styles.palateDescription}>
+                      Calculating your palate match...
+                    </AppText>
+                  ) : scoreResult && !isScoreProfileBuilding && scoreResult.display_score ? (
+                    <>
+                      <View style={styles.palateScoreRow}>
+                        <View>
+                          <AppText style={styles.palateScoreValue}>
+                            {Math.max(0, Math.min(100, Math.round(scoreResult.score)))}%
+                          </AppText>
+                          <AppText style={styles.palateConfidenceText}>
+                            Confidence {Math.round(scoreResult.confidence * 100)}%
+                          </AppText>
+                        </View>
+                        <View style={styles.palateBandPill}>
+                          <AppText style={styles.palateBandText}>
+                            {ENTRY_MATCH_BAND_LABELS[scoreResult.band]}
+                          </AppText>
+                        </View>
+                      </View>
+                      <AppText style={styles.palateDescription}>
+                        {Math.max(0, Math.min(100, Math.round(scoreResult.score)))}% match to
+                        your palate.
+                      </AppText>
+                    </>
+                  ) : (
+                    <>
+                      <AppText style={styles.palateTitle}>
+                        {isScoreProfileBuilding
+                          ? "Build your palate profile"
+                          : "Match score not ready yet"}
+                      </AppText>
+                      <AppText style={styles.palateDescription}>
+                        {isScoreProfileBuilding
+                          ? `We need at least 5 scored entries with sensory notes. You currently have ${scoreResult?.preference_event_count ?? 0}.`
+                          : scoreError ??
+                            scoreResult?.confidence_warning ??
+                            "We need a little more profile detail before showing a stable match score."}
+                      </AppText>
+                      <View style={styles.palateButtonRow}>
+                        <Pressable
+                          style={styles.bulkPrimaryButton}
+                          onPress={() => router.push("/(app)/entries/new")}
+                        >
+                          <AppText style={styles.bulkPrimaryButtonText}>
+                            Log another wine
+                          </AppText>
+                        </Pressable>
+                        {WEB_API_BASE_URL ? (
+                          <Pressable
+                            style={styles.bulkSecondaryButton}
+                            onPress={() => void openPalateProfile()}
+                          >
+                            <AppText style={styles.bulkSecondaryButtonText}>
+                              View palate profile
+                            </AppText>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </>
+                  )}
                 </View>
               ) : null}
               <View style={styles.metaGrid}>
@@ -3940,6 +4549,209 @@ export default function EntryDetailScreen() {
                 ) : null}
               </View>
 
+              {WEB_API_BASE_URL ? (
+                <View style={styles.commentsCard}>
+                  <Pressable
+                    style={styles.commentsToggle}
+                    onPress={() => {
+                      const next = !commentsExpanded;
+                      setCommentsExpanded(next);
+                      if (next) {
+                        void loadComments({ force: comments.length === 0 });
+                      }
+                    }}
+                  >
+                    <AppText style={styles.commentsTitle}>Comments</AppText>
+                    <View style={styles.commentsToggleMeta}>
+                      {commentCount > 0 ? (
+                        <AppText style={styles.commentsCount}>{commentCount}</AppText>
+                      ) : null}
+                      <AppText style={styles.commentsToggleText}>
+                        {commentsExpanded ? "Collapse" : "Show"}
+                      </AppText>
+                    </View>
+                  </Pressable>
+
+                  {commentsExpanded ? (
+                    <View style={styles.commentsBody}>
+                      {loadingComments ? (
+                        <AppText style={styles.commentsHint}>Loading comments...</AppText>
+                      ) : !canComment ? (
+                        <AppText style={styles.commentsHint}>
+                          Comments are private for this post.
+                        </AppText>
+                      ) : comments.length === 0 ? (
+                        <AppText style={styles.commentsHint}>
+                          No comments yet. Start the thread.
+                        </AppText>
+                      ) : (
+                        <View style={styles.commentsList}>
+                          {comments.map((comment) => {
+                            const repliesOpen = Boolean(expandedReplies[comment.id]);
+                            const isDeleted = Boolean(comment.is_deleted);
+                            const deleting = deletingCommentId === comment.id;
+                            return (
+                              <View key={comment.id} style={styles.commentCard}>
+                                <View style={styles.commentHeader}>
+                                  <View style={styles.commentHeaderCopy}>
+                                    {!isDeleted && comment.author_name ? (
+                                      <AppText style={styles.commentAuthor}>
+                                        {comment.author_name}
+                                      </AppText>
+                                    ) : null}
+                                    <AppText
+                                      style={[
+                                        styles.commentBodyText,
+                                        isDeleted ? styles.commentBodyDeleted : null,
+                                      ]}
+                                    >
+                                      {isDeleted ? "[deleted]" : comment.body}
+                                    </AppText>
+                                  </View>
+                                  <View style={styles.commentHeaderMeta}>
+                                    <AppText style={styles.commentDate}>
+                                      {formatCommentDate(comment.created_at)}
+                                    </AppText>
+                                    {!isDeleted && user?.id === comment.user_id ? (
+                                      <Pressable
+                                        disabled={deleting}
+                                        onPress={() => void deleteComment(comment.id)}
+                                      >
+                                        <AppText style={styles.commentActionText}>
+                                          {deleting ? "Deleting..." : "Delete"}
+                                        </AppText>
+                                      </Pressable>
+                                    ) : null}
+                                  </View>
+                                </View>
+
+                                <View style={styles.commentActionsRow}>
+                                  {!isDeleted ? (
+                                    <Pressable onPress={() => setReplyTargetId(comment.id)}>
+                                      <AppText style={styles.commentActionText}>Reply</AppText>
+                                    </Pressable>
+                                  ) : null}
+                                  {comment.replies.length > 0 ? (
+                                    <Pressable
+                                      onPress={() =>
+                                        setExpandedReplies((current) => ({
+                                          ...current,
+                                          [comment.id]: !current[comment.id],
+                                        }))
+                                      }
+                                    >
+                                      <AppText style={styles.commentActionText}>
+                                        {repliesOpen
+                                          ? "Hide replies"
+                                          : `View ${comment.replies.length} ${
+                                              comment.replies.length === 1 ? "reply" : "replies"
+                                            }`}
+                                      </AppText>
+                                    </Pressable>
+                                  ) : null}
+                                </View>
+
+                                {repliesOpen && comment.replies.length > 0 ? (
+                                  <View style={styles.repliesList}>
+                                    {comment.replies.map((reply) => {
+                                      const replyDeleted = Boolean(reply.is_deleted);
+                                      const deletingReply = deletingCommentId === reply.id;
+                                      return (
+                                        <View key={reply.id} style={styles.replyCard}>
+                                          <View style={styles.commentHeader}>
+                                            <View style={styles.commentHeaderCopy}>
+                                              {!replyDeleted && reply.author_name ? (
+                                                <AppText style={styles.commentAuthor}>
+                                                  {reply.author_name}
+                                                </AppText>
+                                              ) : null}
+                                              <AppText
+                                                style={[
+                                                  styles.commentBodyText,
+                                                  replyDeleted ? styles.commentBodyDeleted : null,
+                                                ]}
+                                              >
+                                                {replyDeleted ? "[deleted]" : reply.body}
+                                              </AppText>
+                                            </View>
+                                            <View style={styles.commentHeaderMeta}>
+                                              <AppText style={styles.commentDate}>
+                                                {formatCommentDate(reply.created_at)}
+                                              </AppText>
+                                              {!replyDeleted && user?.id === reply.user_id ? (
+                                                <Pressable
+                                                  disabled={deletingReply}
+                                                  onPress={() => void deleteComment(reply.id)}
+                                                >
+                                                  <AppText style={styles.commentActionText}>
+                                                    {deletingReply ? "Deleting..." : "Delete"}
+                                                  </AppText>
+                                                </Pressable>
+                                              ) : null}
+                                            </View>
+                                          </View>
+                                        </View>
+                                      );
+                                    })}
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {commentError ? (
+                        <AppText style={styles.bulkReviewErrorText}>{commentError}</AppText>
+                      ) : null}
+
+                      {canComment ? (
+                        <View style={styles.commentComposer}>
+                          {replyTarget ? (
+                            <View style={styles.replyBanner}>
+                              <AppText style={styles.replyBannerText}>
+                                Replying to {replyTarget.author_name ?? "this thread"}
+                              </AppText>
+                              <Pressable onPress={() => setReplyTargetId(null)}>
+                                <AppText style={styles.commentActionText}>Cancel</AppText>
+                              </Pressable>
+                            </View>
+                          ) : null}
+                          <DoneTextInput
+                            value={commentDraft}
+                            onChangeText={setCommentDraft}
+                            multiline
+                            placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
+                            placeholderTextColor={colors.textSecondary}
+                            style={styles.commentInput}
+                          />
+                          <View style={styles.commentComposerActions}>
+                            <Pressable
+                              style={[
+                                styles.bulkPrimaryButton,
+                                !commentDraft.trim() || postingComment
+                                  ? styles.bulkButtonDisabled
+                                  : null,
+                              ]}
+                              onPress={() => void submitComment()}
+                              disabled={!commentDraft.trim() || postingComment}
+                            >
+                              <AppText style={styles.bulkPrimaryButtonText}>
+                                {postingComment
+                                  ? "Posting..."
+                                  : replyTarget
+                                  ? "Post reply"
+                                  : "Post comment"}
+                              </AppText>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
               {advancedNoteRows.length > 0 ? (
                 <View style={styles.advancedNotesBlock}>
                   <Pressable
@@ -3962,6 +4774,65 @@ export default function EntryDetailScreen() {
                     </View>
                   ) : null}
                 </View>
+              ) : null}
+
+              {isTagged ? (
+                addToLogEntryId ? (
+                  <View style={[styles.taggedCard, styles.taggedCardSuccess]}>
+                    <View style={styles.taggedCardHeader}>
+                      <View style={styles.taggedCardCopy}>
+                        <AppText style={styles.taggedTitle}>In your cellar</AppText>
+                        <AppText style={styles.taggedDescription}>
+                          This tasting has already been added to your cellar.
+                        </AppText>
+                      </View>
+                      <Pressable
+                        style={styles.bulkSecondaryButton}
+                        onPress={() =>
+                          router.push(`/(app)/entries/${addToLogEntryId}?edit=1` as never)
+                        }
+                      >
+                        <AppText style={styles.bulkSecondaryButtonText}>
+                          Edit in my cellar
+                        </AppText>
+                      </Pressable>
+                    </View>
+                    {addToLogMessage ? (
+                      <AppText style={styles.taggedSuccessText}>{addToLogMessage}</AppText>
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={styles.taggedCard}>
+                    <View style={styles.taggedCardHeader}>
+                      <View style={styles.taggedCardCopy}>
+                        <AppText style={styles.taggedTitle}>
+                          You were tagged in this tasting
+                        </AppText>
+                        <AppText style={styles.taggedDescription}>
+                          Add it to your cellar without creating a duplicate post in the feed.
+                        </AppText>
+                      </View>
+                      <Pressable
+                        style={[
+                          styles.bulkPrimaryButton,
+                          (addingToLog || !WEB_API_BASE_URL) ? styles.bulkButtonDisabled : null,
+                        ]}
+                        onPress={() => void addToMyCellar()}
+                        disabled={addingToLog || !WEB_API_BASE_URL}
+                      >
+                        <AppText style={styles.bulkPrimaryButtonText}>
+                          {addingToLog ? "Adding..." : "Add to my cellar"}
+                        </AppText>
+                      </Pressable>
+                    </View>
+                    {addToLogError ? (
+                      <AppText style={styles.taggedErrorText}>{addToLogError}</AppText>
+                    ) : null}
+                    {addToLogMessage ? (
+                      <AppText style={styles.taggedSuccessText}>{addToLogMessage}</AppText>
+                    ) : null}
+                  </View>
+                )
               ) : null}
 
               {isOwner && !isBulkReview ? (
@@ -4650,11 +5521,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accordionFields: { gap: 10 },
-  ownerActionRow: {
+  entryActionRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 8,
   },
-  editButton: {
+  actionButton: {
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(123,29,58,0.45)",
@@ -4662,10 +5535,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  editButtonText: {
+  actionButtonText: {
     color: colors.rose,
     fontSize: 12,
     fontWeight: "700",
+  },
+  shareButton: {
+    borderColor: "rgba(123,29,58,0.36)",
+    backgroundColor: "rgba(123,29,58,0.1)",
+  },
+  shareButtonText: {
+    color: colors.rose,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  actionButtonDisabled: {
+    opacity: 0.55,
   },
   headerBlock: {
     gap: 6,
@@ -4932,6 +5817,85 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 12,
   },
+  inlineFeedbackCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  inlineFeedbackSuccess: {
+    borderColor: "rgba(45,125,70,0.35)",
+    backgroundColor: "rgba(45,125,70,0.12)",
+  },
+  inlineFeedbackError: {
+    borderColor: "rgba(192,57,43,0.35)",
+    backgroundColor: "rgba(192,57,43,0.1)",
+  },
+  inlineFeedbackText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  palateCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    padding: 12,
+    gap: 10,
+  },
+  palateEyebrow: {
+    color: colors.rose,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  palateTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  palateDescription: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  palateScoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  palateScoreValue: {
+    color: colors.textPrimary,
+    fontSize: 32,
+    fontWeight: "700",
+    lineHeight: 36,
+  },
+  palateConfidenceText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  palateBandPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(123,29,58,0.4)",
+    backgroundColor: "rgba(123,29,58,0.14)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  palateBandText: {
+    color: colors.rose,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  palateButtonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   metaGrid: {
     gap: 10,
   },
@@ -5071,6 +6035,151 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 11,
   },
+  commentsCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    padding: 10,
+    gap: 10,
+  },
+  commentsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  commentsTitle: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  commentsToggleMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  commentsCount: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  commentsToggleText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  commentsBody: {
+    gap: 10,
+  },
+  commentsHint: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  commentsList: {
+    gap: 8,
+  },
+  commentCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    padding: 10,
+    gap: 8,
+  },
+  replyCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    padding: 8,
+  },
+  commentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  commentHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  commentHeaderMeta: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  commentAuthor: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  commentBodyText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  commentBodyDeleted: {
+    color: colors.textSecondary,
+    fontStyle: "italic",
+  },
+  commentDate: {
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  commentActionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  commentActionText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  repliesList: {
+    gap: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    paddingLeft: 10,
+  },
+  commentComposer: {
+    gap: 8,
+  },
+  replyBanner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  replyBannerText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    flex: 1,
+  },
+  commentInput: {
+    minHeight: 84,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    color: colors.textPrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    textAlignVertical: "top",
+    fontSize: 13,
+  },
+  commentComposerActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
   locationLinkText: {
     color: colors.rose,
     fontSize: 13,
@@ -5102,6 +6211,48 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.8,
+  },
+  taggedCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(123,29,58,0.28)",
+    backgroundColor: "rgba(123,29,58,0.1)",
+    padding: 12,
+    gap: 10,
+  },
+  taggedCardSuccess: {
+    borderColor: "rgba(45,125,70,0.34)",
+    backgroundColor: "rgba(45,125,70,0.12)",
+  },
+  taggedCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  taggedCardCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  taggedTitle: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  taggedDescription: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  taggedErrorText: {
+    color: colors.error,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  taggedSuccessText: {
+    color: colors.success,
+    fontSize: 12,
+    lineHeight: 16,
   },
   pickerModalRoot: {
     flex: 1,

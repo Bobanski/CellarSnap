@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getFriendRelationship } from "@/lib/friends/relationship";
 import { executeSelectWithFallback } from "@/server/db/compat";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 type ProfileSelectAttempt = {
@@ -92,17 +93,19 @@ async function selectProfile(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   const { id } = await params;
   if (!id) {

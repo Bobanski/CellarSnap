@@ -16,6 +16,11 @@ import {
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
+import {
+  buildEntryGoogleMapsLocationUrl,
+  buildEntryLocationDisplayLabel,
+  buildEntryShareText,
+} from "@shared";
 import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
@@ -63,34 +68,6 @@ async function copyTextToClipboard(value: string) {
   const copied = document.execCommand("copy");
   document.body.removeChild(textArea);
   return copied;
-}
-
-function buildShareText() {
-  return "Check out this wine post from my CellarSnap.";
-}
-
-function buildLocationDisplayLabel(locationText: string): string {
-  const normalized = locationText.trim();
-  if (!normalized) return normalized;
-
-  const parts = normalized
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) return normalized;
-
-  const name = parts[0];
-  const city = parts.length >= 4 ? parts[parts.length - 3] : parts[1];
-  if (!city || city.toLowerCase() === name.toLowerCase()) return name;
-
-  return `${name}, ${city}`;
-}
-
-function buildGoogleMapsLocationUrl(locationText: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    locationText
-  )}`;
 }
 
 function buildScorePayload(entry: EntryDetail, isOwner: boolean) {
@@ -456,7 +433,7 @@ export default function EntryDetailPage() {
       }
 
       const shareUrl = payload.url;
-      const shareText = buildShareText();
+      const shareText = buildEntryShareText();
 
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         try {
@@ -740,12 +717,12 @@ export default function EntryDetailPage() {
   const hasGoogleMapsLocation =
     hasLocation && locationPlaceId.length > 0;
   const locationDisplayLabel = hasLocation
-    ? buildLocationDisplayLabel(locationText)
+    ? buildEntryLocationDisplayLabel(locationText)
     : "";
   const hasExpandedLocation =
     hasLocation && locationDisplayLabel !== locationText;
   const locationMapsUrl = hasGoogleMapsLocation
-    ? buildGoogleMapsLocationUrl(locationText)
+    ? buildEntryGoogleMapsLocationUrl(locationText)
     : "";
   const isScoreProfileBuilding =
     typeof scoreResult?.preference_event_count === "number" &&

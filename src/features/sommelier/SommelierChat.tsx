@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useRef, useState } from "react";
+import { SOMMELIER_INTRO_MESSAGE } from "@shared";
 import SommelierInput from "@/features/sommelier/SommelierInput";
 import SommelierMessage from "@/features/sommelier/SommelierMessage";
 import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
@@ -65,8 +66,7 @@ export default function SommelierChat() {
     {
       id: "intro",
       role: "assistant",
-      content:
-        "I’m ready. Ask about a bottle, a region, a pairing, or what you should try next.",
+      content: SOMMELIER_INTRO_MESSAGE,
     },
   ]);
   const [pending, setPending] = useState(false);
@@ -227,7 +227,7 @@ export default function SommelierChat() {
                   content:
                     message.content.trim().length > 0
                       ? message.content
-                      : "I couldn’t finish that answer. Try again in a moment.",
+                      : "I couldn't finish that answer. Try again in a moment.",
                   isStreaming: false,
                 }
               : message

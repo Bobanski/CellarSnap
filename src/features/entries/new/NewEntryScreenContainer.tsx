@@ -42,6 +42,15 @@ import type {
   PrivacyLevel,
 } from "@/types/wine";
 import {
+  NEW_ENTRY_BULK_COPY,
+  NEW_ENTRY_DRINKING_NOW_COPY,
+  NEW_ENTRY_HEADER_COPY,
+  NEW_ENTRY_PHOTO_TYPE_OPTIONS,
+  NEW_ENTRY_PRIVACY_OPTIONS,
+  NEW_ENTRY_SINGLE_BOTTLE_COPY,
+  NEW_ENTRY_UPLOAD_COPY,
+} from "@shared";
+import {
   buildResolvedPhotoTypeMap,
   hasDominantSingleBottleFrame,
   hasLineupWineDetails,
@@ -91,13 +100,6 @@ type NewEntryForm = {
   advanced_notes: AdvancedNotesFormValues;
 };
 
-const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
-  { value: "public", label: "Public" },
-  { value: "friends_of_friends", label: "Friends of friends" },
-  { value: "friends", label: "Friends only" },
-  { value: "private", label: "Private" },
-];
-
 type CreateEntryResponse = {
   entry: SurveyEntryCard;
   comparison_candidate?: SurveyComparisonCandidate | null;
@@ -118,12 +120,7 @@ type SavedCropState = {
 };
 
 const PHOTO_TYPE_OPTIONS: { value: UploadPhotoType; label: string }[] = [
-  { value: "label", label: "Label" },
-  { value: "pairing", label: "Pairing" },
-  { value: "people", label: "People" },
-  { value: "other_bottles", label: "Other bottles" },
-  { value: "lineup", label: "Lineup" },
-  { value: "place", label: "Place" },
+  ...NEW_ENTRY_PHOTO_TYPE_OPTIONS,
 ];
 
 const GALLERY_TYPE_PRIORITY: Record<UploadPhotoType, number> = {
@@ -3220,13 +3217,13 @@ export default function NewEntryPage() {
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-1">
           <span className="text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
-            New entry
+            {NEW_ENTRY_HEADER_COPY.eyebrow}
           </span>
           <h1 className="font-serif text-[28px] font-light text-[var(--color-text-primary)]">
-            Record a new pour.
+            {NEW_ENTRY_HEADER_COPY.title}
           </h1>
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Capture the bottle, the moment, the people.
+            {NEW_ENTRY_HEADER_COPY.subtitle}
           </p>
         </header>
 
@@ -3242,10 +3239,10 @@ export default function NewEntryPage() {
                     className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)]"
                     htmlFor="label-upload"
                   >
-                    Upload images
+                    {NEW_ENTRY_UPLOAD_COPY.label}
                   </label>
                   <p className="text-xs text-[var(--color-text-tertiary)]">
-                    upload photos of the wine and anything else from the night - pairing, people, place. we&apos;ll tag them
+                    {NEW_ENTRY_UPLOAD_COPY.hint}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -3259,7 +3256,7 @@ export default function NewEntryPage() {
                         }
                       }}
                     >
-                      Re-scan
+                      {NEW_ENTRY_UPLOAD_COPY.rescanLabel}
                     </button>
                   ) : null}
                   <button
@@ -3269,8 +3266,8 @@ export default function NewEntryPage() {
                     disabled={!canAddLabelPhoto || autofillStatus === "loading"}
                   >
                     {labelPhotos.length > 0
-                      ? "Add images"
-                      : "Upload images"}
+                      ? NEW_ENTRY_UPLOAD_COPY.addImagesLabel
+                      : NEW_ENTRY_UPLOAD_COPY.uploadImagesLabel}
                   </button>
                 </div>
               </div>
@@ -3291,7 +3288,9 @@ export default function NewEntryPage() {
 
               {showProcessedGallery ? (
                 <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-[var(--color-text-primary)]">Current photos</p>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    {NEW_ENTRY_UPLOAD_COPY.currentPhotosLabel}
+                  </p>
                   <SwipePhotoGallery
                     items={uploadGalleryItemsWithOrderControl}
                     heightClassName="h-64 sm:h-80"
@@ -3342,7 +3341,7 @@ export default function NewEntryPage() {
                 </div>
               ) : labelPhotos.length > 0 ? (
                 <p className="mt-3 text-xs text-[var(--color-text-tertiary)]">
-                  Photos uploaded. Waiting for AI processing to complete...
+                  {NEW_ENTRY_UPLOAD_COPY.waitingLabel}
                 </p>
               ) : null}
 
@@ -3376,7 +3375,7 @@ export default function NewEntryPage() {
                 <div className="mt-4 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Lineup preview
+                      {NEW_ENTRY_BULK_COPY.lineupPreviewTitle}
                     </p>
                     <button
                       type="button"
@@ -3395,8 +3394,8 @@ export default function NewEntryPage() {
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {showBulkEventDetailsStep
-                            ? "Event details"
-                            : "Group this bulk upload"}
+                            ? NEW_ENTRY_BULK_COPY.eventDetailsTitle
+                            : NEW_ENTRY_BULK_COPY.groupThisBulkUploadTitle}
                         </p>
                         <p className="text-xs text-[var(--color-text-tertiary)]">
                           {showBulkEventDetailsStep
@@ -3459,7 +3458,7 @@ export default function NewEntryPage() {
                         <div className="md:col-span-2 space-y-4">
                           <div>
                             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                              Event name
+                              {NEW_ENTRY_BULK_COPY.eventNameLabel}
                             </label>
                             <input
                               type="text"
@@ -3490,7 +3489,7 @@ export default function NewEntryPage() {
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
                               <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                                Event location
+                                {NEW_ENTRY_BULK_COPY.eventLocationLabel}
                               </label>
                               <input type="hidden" {...register("location_place_id")} />
                               <div className="mt-2">
@@ -3536,7 +3535,7 @@ export default function NewEntryPage() {
 
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                              Tasted with
+                              {NEW_ENTRY_BULK_COPY.tastedWithLabel}
                             </p>
                             <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
                               These people will be tagged on every wine in the event.
@@ -3607,7 +3606,7 @@ export default function NewEntryPage() {
                                       onChange={(event) =>
                                         setFriendSearch(event.target.value)
                                       }
-                                      placeholder="Search friends"
+                                      placeholder={NEW_ENTRY_BULK_COPY.searchFriendsPlaceholder}
                                       className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                                     />
                                     {searchResults.length > 0 ? (
@@ -3683,7 +3682,7 @@ export default function NewEntryPage() {
                       ) : (
                         <div>
                           <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                            Group title
+                            {NEW_ENTRY_BULK_COPY.groupTitleLabel}
                           </label>
                           <input
                             type="text"
@@ -3790,7 +3789,7 @@ export default function NewEntryPage() {
                     aria-expanded={showManualFields}
                     className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                   >
-                    Don&apos;t have a pic? Manually enter details
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.manualEntryCta}
                   </button>
                 ) : null}
 
@@ -3803,11 +3802,10 @@ export default function NewEntryPage() {
                         htmlFor="drinking-now-toggle"
                         className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)]"
                       >
-                        Drinking Now
+                        {NEW_ENTRY_DRINKING_NOW_COPY.title}
                       </label>
                       <p className="text-xs text-[var(--color-text-tertiary)]">
-                        Friends see a light blue glow on Home and Feed for 2.5 hours after you
-                        post this pour.
+                        {NEW_ENTRY_DRINKING_NOW_COPY.description}
                       </p>
                     </div>
                     <Controller
@@ -3874,7 +3872,7 @@ export default function NewEntryPage() {
                   </div>
                   <div>
                     <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
-                      QPR (Quality : Price Ratio)
+                      {NEW_ENTRY_SINGLE_BOTTLE_COPY.qprLabel}
                     </label>
                     <Controller
                       control={control}
@@ -3907,10 +3905,10 @@ export default function NewEntryPage() {
                 {showManualFields && (
                   <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Wine details
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Optional identity details for this bottle.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
@@ -3982,10 +3980,10 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Location & date
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Where and when this bottle was consumed.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
@@ -4033,10 +4031,10 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Tasted with
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.tastedWithTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Tag friends who were with you.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.tastedWithDescription}
                   </p>
                   {users.length === 0 ? (
                     <p className="mt-3 text-sm text-[var(--color-text-tertiary)]">No other users yet.</p>
@@ -4092,7 +4090,7 @@ export default function NewEntryPage() {
                             type="text"
                             value={friendSearch}
                             onChange={(e) => setFriendSearch(e.target.value)}
-                            placeholder="Search friends..."
+                            placeholder={NEW_ENTRY_SINGLE_BOTTLE_COPY.searchFriendsPlaceholder}
                             className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           {searchResults.length > 0 && (
@@ -4121,10 +4119,10 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Advanced notes
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Optional structure for deeper tasting notes.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     {ADVANCED_NOTE_FIELDS.map((field) => (
@@ -4150,17 +4148,16 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Visibility & interaction
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Set who can view the post, view/react to reactions, and view/comment
-                    on comments.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-3">
                     <div>
                       <div className="flex items-center justify-between gap-2">
                         <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
-                          Post visibility
+                          {NEW_ENTRY_SINGLE_BOTTLE_COPY.postVisibilityLabel}
                         </label>
                         <PrivacyBadge level={selectedEntryPrivacy} compact />
                       </div>
@@ -4169,7 +4166,7 @@ export default function NewEntryPage() {
                         name="entry_privacy"
                         render={({ field }) => (
                           <div className="flex gap-1">
-                            {PRIVACY_OPTIONS.map((option) => (
+                          {NEW_ENTRY_PRIVACY_OPTIONS.map((option) => (
                               <button
                                 key={option.value}
                                 type="button"
@@ -4189,7 +4186,9 @@ export default function NewEntryPage() {
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Reactions</label>
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                          {NEW_ENTRY_SINGLE_BOTTLE_COPY.reactionsLabel}
+                        </label>
                         <PrivacyBadge level={selectedReactionPrivacy} compact />
                       </div>
                       <Controller
@@ -4197,7 +4196,7 @@ export default function NewEntryPage() {
                         name="reaction_privacy"
                         render={({ field }) => (
                           <div className="flex gap-1">
-                            {PRIVACY_OPTIONS.map((option) => (
+                          {NEW_ENTRY_PRIVACY_OPTIONS.map((option) => (
                               <button
                                 key={option.value}
                                 type="button"
@@ -4217,7 +4216,9 @@ export default function NewEntryPage() {
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Comments</label>
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                          {NEW_ENTRY_SINGLE_BOTTLE_COPY.commentsLabel}
+                        </label>
                         <PrivacyBadge level={selectedCommentsPrivacy} compact />
                       </div>
                       <Controller
@@ -4225,7 +4226,7 @@ export default function NewEntryPage() {
                         name="comments_privacy"
                         render={({ field }) => (
                           <div className="flex gap-1">
-                            {PRIVACY_OPTIONS.map((option) => (
+                          {NEW_ENTRY_PRIVACY_OPTIONS.map((option) => (
                               <button
                                 key={option.value}
                                 type="button"
@@ -4245,7 +4246,7 @@ export default function NewEntryPage() {
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Privacy on reactions/comments controls both visibility and participation.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityFootnote}
                   </p>
                 </details>
 
@@ -4259,14 +4260,14 @@ export default function NewEntryPage() {
                     className="rounded-[11px] bg-[var(--color-accent-primary)] px-5 py-3 text-xs font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={isSubmitting}
                   >
-                    Save entry
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.saveEntryLabel}
                   </button>
                   <button
                     type="button"
                     className="rounded-[11px] border-[0.5px] border-[var(--color-border-strong)] bg-transparent px-5 py-3 text-xs font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)]"
                     onClick={returnAfterCancel}
                   >
-                    Cancel
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
                   </button>
                 </div>
                   </>
@@ -4437,7 +4438,7 @@ export default function NewEntryPage() {
                     disabled={savingCrop}
                     className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
                   >
-                    Cancel
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
                   </button>
                   <button
                     type="button"

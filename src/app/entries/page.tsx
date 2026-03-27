@@ -3,17 +3,39 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatConsumedDate } from "@/lib/formatDate";
-import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
 import type { WineEntryWithUrls } from "@/types/wine";
-
-type SortBy = "consumed_at" | "rating" | "vintage";
-type SortOrder = "asc" | "desc";
-type FilterType = "vintage" | "country" | "rating" | "";
-type GroupScheme = "region" | "vintage" | "varietal";
-type LibraryViewMode = "grouped" | "all";
-type ControlPanel = "sort" | "filter" | "organize" | null;
+import {
+  compareEntryChronology,
+  createEntryLibraryGroupId,
+  entryMatchesLibrarySearch,
+  ENTRY_LIBRARY_GROUP_PREVIEW_COUNT,
+  ENTRIES_LIBRARY_ACTION_LABELS,
+  ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS,
+  ENTRIES_LIBRARY_FILTER_OPTIONS,
+  ENTRIES_LIBRARY_GROUP_OPTIONS,
+  ENTRIES_LIBRARY_HEADER,
+  ENTRIES_LIBRARY_INPUT_PLACEHOLDERS,
+  ENTRIES_LIBRARY_PANEL_LABELS,
+  ENTRIES_LIBRARY_SORT_OPTIONS,
+  ENTRIES_LIBRARY_STATS_LABELS,
+  ENTRIES_LIBRARY_VIEW_OPTIONS,
+  getEntriesCollectionStats,
+  getEntriesCountLabel,
+  getEntriesEmptyStateMessage,
+  getEntriesSortOrderOptions,
+  getEntryLibraryGroupLabel,
+  getEntryListDisplayRating,
+  shouldHideProducerInEntryTile,
+  toEntryVintageNumber,
+  type EntryLibraryControlPanel as ControlPanel,
+  type EntryLibraryFilterType as FilterType,
+  type EntryLibraryGroupScheme as GroupScheme,
+  type EntryLibrarySortBy as SortBy,
+  type EntryLibrarySortOrder as SortOrder,
+  type EntryLibraryViewMode as LibraryViewMode,
+} from "@shared";
 
 type EntryGroup = {
   id: string;
@@ -21,117 +43,8 @@ type EntryGroup = {
   entries: WineEntryWithUrls[];
 };
 
-const GROUP_PREVIEW_COUNT = 4;
-
-function normalizeLabel(value: string | null | undefined, fallback: string) {
-  const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : fallback;
-}
-
-function toVintageNumber(value: string | null | undefined): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function compareEntryChronology(a: WineEntryWithUrls, b: WineEntryWithUrls): number {
-  const consumedDateSort = a.consumed_at.localeCompare(b.consumed_at);
-  if (consumedDateSort !== 0) {
-    return consumedDateSort;
-  }
-
-  const createdAtSort = a.created_at.localeCompare(b.created_at);
-  if (createdAtSort !== 0) {
-    return createdAtSort;
-  }
-
-  return a.id.localeCompare(b.id);
-}
-
-function getGroupLabel(entry: WineEntryWithUrls, scheme: GroupScheme): string {
-  if (scheme === "region") {
-    const region = entry.region?.trim();
-    if (region) {
-      return region;
-    }
-
-    const appellation = entry.appellation?.trim();
-    if (appellation) {
-      return appellation;
-    }
-
-    const country = entry.country?.trim();
-    if (country) {
-      return country;
-    }
-
-    return "Unknown region";
-  }
-
-  if (scheme === "vintage") {
-    return normalizeLabel(entry.vintage, "Unknown vintage");
-  }
-
-  const primaryVarietal = entry.primary_grapes?.find(
-    (grape) => grape.name.trim().length > 0
-  )?.name.trim();
-  if (primaryVarietal) {
-    return primaryVarietal;
-  }
-
-  const classification = entry.classification?.trim();
-  if (classification) {
-    return classification;
-  }
-
-  return "Unknown varietal";
-}
-
-function createGroupId(scheme: GroupScheme, label: string): string {
-  return `${scheme}:${label.toLowerCase()}`;
-}
-
-function includesSearchValue(
-  value: string | number | null | undefined,
-  query: string
-): boolean {
-  if (value === null || value === undefined) {
-    return false;
-  }
-
-  return String(value).toLowerCase().includes(query);
-}
-
 function entryMatchesSearch(entry: WineEntryWithUrls, query: string): boolean {
-  if (!query) {
-    return true;
-  }
-
-  const directFields: Array<string | number | null | undefined> = [
-    entry.wine_name,
-    entry.producer,
-    entry.vintage,
-    entry.country,
-    entry.region,
-    entry.appellation,
-    entry.classification,
-    entry.notes,
-    entry.ai_notes_summary,
-    entry.location_text,
-    entry.rating,
-    entry.qpr_level,
-  ];
-
-  if (directFields.some((field) => includesSearchValue(field, query))) {
-    return true;
-  }
-
-  return Boolean(
-    entry.primary_grapes?.some((grape) => includesSearchValue(grape.name, query))
-  );
+  return entryMatchesLibrarySearch(entry, query);
 }
 
 /* ─── Compact entry row for the new cellar design ─── */
@@ -139,6 +52,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
   const producer = hideProducer ? null : entry.producer;
   const metaParts = [producer, entry.region || entry.country].filter(Boolean);
+  const displayRating = getEntryListDisplayRating(entry.rating);
 
   return (
     <Link
@@ -192,7 +106,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
 
       {/* Right: rating + date */}
       <div className="flex shrink-0 flex-col items-end gap-0.5">
-        {typeof entry.rating === "number" && !Number.isNaN(entry.rating) ? (
+        {displayRating ? (
           <span
             className="inline-flex items-center justify-center"
             style={{
@@ -205,7 +119,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
               lineHeight: 1.4,
             }}
           >
-            {entry.rating}
+            {displayRating}
           </span>
         ) : null}
         <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 12 }}>
@@ -257,7 +171,7 @@ export default function EntriesPage() {
     const ratings = new Set<number>();
 
     entries.forEach((entry) => {
-      const vintage = toVintageNumber(entry.vintage);
+      const vintage = toEntryVintageNumber(entry.vintage);
       if (vintage !== null) {
         vintages.add(vintage);
       }
@@ -279,18 +193,7 @@ export default function EntriesPage() {
   }, [entries]);
 
   /* ─── Stats computations ─── */
-  const stats = useMemo(() => {
-    const totalEntries = entries.length;
-    const ratingsArray = entries
-      .map((e) => e.rating)
-      .filter((r): r is number => typeof r === "number" && !Number.isNaN(r));
-    const avgRating =
-      ratingsArray.length > 0
-        ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length
-        : null;
-    const uniqueCountries = new Set(entries.map((e) => e.country).filter(Boolean)).size;
-    return { totalEntries, avgRating, uniqueCountries };
-  }, [entries]);
+  const stats = useMemo(() => getEntriesCollectionStats(entries), [entries]);
 
   const filteredEntries = useMemo(() => {
     if (!filterType) return entries;
@@ -310,7 +213,7 @@ export default function EntriesPage() {
       return entries.filter((entry) => {
         const value =
           filterType === "vintage"
-            ? toVintageNumber(entry.vintage)
+            ? toEntryVintageNumber(entry.vintage)
             : entry.rating ?? null;
         if (value === null || Number.isNaN(value)) return false;
         return value >= rangeMin && value <= rangeMax;
@@ -348,8 +251,8 @@ export default function EntriesPage() {
 
     if (sortBy === "vintage") {
       return copy.sort((a, b) => {
-        const aValue = toVintageNumber(a.vintage) ?? -Infinity;
-        const bValue = toVintageNumber(b.vintage) ?? -Infinity;
+        const aValue = toEntryVintageNumber(a.vintage) ?? -Infinity;
+        const bValue = toEntryVintageNumber(b.vintage) ?? -Infinity;
         const numericSort = aValue - bValue;
         if (numericSort !== 0) {
           return mult * numericSort;
@@ -369,8 +272,8 @@ export default function EntriesPage() {
     const groups = new Map<string, EntryGroup>();
 
     sortedEntries.forEach((entry) => {
-      const label = getGroupLabel(entry, groupScheme);
-      const id = createGroupId(groupScheme, label);
+      const label = getEntryLibraryGroupLabel(entry, groupScheme);
+      const id = createEntryLibraryGroupId(groupScheme, label);
       const existing = groups.get(id);
       if (existing) {
         existing.entries.push(entry);
@@ -467,19 +370,9 @@ export default function EntriesPage() {
   const sortByLabel =
     sortBy === "consumed_at"
       ? "Date"
-      : sortBy === "rating"
-        ? "Rating"
-        : "Vintage";
-  const sortOrderOptions: Array<{ value: SortOrder; label: string }> =
-    sortBy === "rating"
-      ? [
-          { value: "desc", label: "High to low" },
-          { value: "asc", label: "Low to high" },
-        ]
-      : [
-          { value: "desc", label: "Newest first" },
-          { value: "asc", label: "Oldest first" },
-        ];
+      : ENTRIES_LIBRARY_SORT_OPTIONS.find((option) => option.value === sortBy)?.label ??
+        "Date";
+  const sortOrderOptions = getEntriesSortOrderOptions(sortBy);
   const sortOrderLabel =
     sortOrderOptions.find((option) => option.value === sortOrder)?.label ??
     "Newest first";
@@ -505,13 +398,11 @@ export default function EntriesPage() {
 
   const organizeSummary =
     libraryViewMode === "all"
-      ? "Full list"
+      ? ENTRIES_LIBRARY_VIEW_OPTIONS.find((option) => option.value === "all")?.label ??
+        "Full list"
       : `Grouped by ${
-          groupScheme === "region"
-            ? "region"
-            : groupScheme === "vintage"
-              ? "vintage"
-              : "varietal"
+          ENTRIES_LIBRARY_GROUP_OPTIONS.find((option) => option.value === groupScheme)?.label.toLowerCase() ??
+          "region"
         }`;
 
   const toggleControlPanel = (panel: Exclude<ControlPanel, null>) => {
@@ -546,7 +437,7 @@ export default function EntriesPage() {
                 color: "var(--color-accent-secondary)",
               }}
             >
-              Cellar
+              {ENTRIES_LIBRARY_HEADER.eyebrow}
             </span>
             <h1
               className="mt-1"
@@ -558,19 +449,25 @@ export default function EntriesPage() {
                 lineHeight: 1.2,
               }}
             >
-              Your collection.
+              {ENTRIES_LIBRARY_HEADER.title}
             </h1>
           </header>
 
           {/* ─── Stats row ─── */}
           <div className="grid grid-cols-3 gap-2.5">
             {[
-              { value: stats.totalEntries, label: "Entries" },
+              {
+                value: stats.totalEntries,
+                label: ENTRIES_LIBRARY_STATS_LABELS.totalEntries,
+              },
               {
                 value: stats.avgRating !== null ? stats.avgRating.toFixed(1) : "\u2014",
-                label: "Avg rating",
+                label: ENTRIES_LIBRARY_STATS_LABELS.avgRating,
               },
-              { value: stats.uniqueCountries, label: "Countries" },
+              {
+                value: stats.uniqueCountries,
+                label: ENTRIES_LIBRARY_STATS_LABELS.countries,
+              },
             ].map((stat) => (
               <div
                 key={stat.label}
@@ -612,7 +509,7 @@ export default function EntriesPage() {
           {searchBarVisible && (
             <div className="relative">
               <label htmlFor="library-search" className="sr-only">
-                Search your library
+                {ENTRIES_LIBRARY_PANEL_LABELS.search}
               </label>
               <svg
                 viewBox="0 0 24 24"
@@ -632,7 +529,7 @@ export default function EntriesPage() {
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search wine, producer, region..."
+                placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.search}
                 className="w-full focus:outline-none"
                 autoFocus
                 style={{
@@ -656,7 +553,7 @@ export default function EntriesPage() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Clear
+                  {ENTRIES_LIBRARY_ACTION_LABELS.clearSearch}
                 </button>
               ) : null}
             </div>
@@ -665,9 +562,21 @@ export default function EntriesPage() {
           {/* ─── Sort / Filter / Organize pills ─── */}
           <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
             {([
-              { panel: "sort" as const, label: "Sort", summary: sortSummary },
-              { panel: "filter" as const, label: "Filter", summary: filterSummary },
-              { panel: "organize" as const, label: "Organize", summary: organizeSummary },
+              {
+                panel: "sort" as const,
+                label: ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.sort,
+                summary: sortSummary,
+              },
+              {
+                panel: "filter" as const,
+                label: ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.filter,
+                summary: filterSummary,
+              },
+              {
+                panel: "organize" as const,
+                label: ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.organize,
+                summary: organizeSummary,
+              },
             ]).map((item) => {
               const isActive = activeControlPanel === item.panel;
               return (
@@ -742,7 +651,7 @@ export default function EntriesPage() {
                 textTransform: "uppercase",
               }}
             >
-              {sortedEntries.length} {sortedEntries.length === 1 ? "entry" : "entries"}
+              {getEntriesCountLabel(sortedEntries.length)}
             </span>
           </div>
 
@@ -763,14 +672,10 @@ export default function EntriesPage() {
                       className="uppercase"
                       style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                     >
-                      Sort by
+                      {ENTRIES_LIBRARY_PANEL_LABELS.sortBy}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {([
-                        { value: "consumed_at" as SortBy, label: "Date consumed" },
-                        { value: "rating" as SortBy, label: "Rating" },
-                        { value: "vintage" as SortBy, label: "Vintage" },
-                      ]).map((option) => (
+                      {ENTRIES_LIBRARY_SORT_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           type="button"
@@ -802,7 +707,7 @@ export default function EntriesPage() {
                       className="uppercase"
                       style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                     >
-                      Order
+                      {ENTRIES_LIBRARY_PANEL_LABELS.order}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {sortOrderOptions.map((option) => (
@@ -841,15 +746,10 @@ export default function EntriesPage() {
                       className="uppercase"
                       style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                     >
-                      Filter by
+                      {ENTRIES_LIBRARY_PANEL_LABELS.filterBy}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {([
-                        { value: "" as FilterType, label: "None" },
-                        { value: "country" as FilterType, label: "Country" },
-                        { value: "vintage" as FilterType, label: "Vintage range" },
-                        { value: "rating" as FilterType, label: "Rating range" },
-                      ]).map((option) => (
+                      {ENTRIES_LIBRARY_FILTER_OPTIONS.map((option) => (
                         <button
                           key={option.value || "none"}
                           type="button"
@@ -882,7 +782,7 @@ export default function EntriesPage() {
                         className="mb-1 block uppercase"
                         style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                       >
-                        Country
+                        {ENTRIES_LIBRARY_PANEL_LABELS.country}
                       </label>
                       <select
                         className="select-field w-full focus:outline-none"
@@ -897,7 +797,7 @@ export default function EntriesPage() {
                           color: "var(--color-text-secondary)",
                         }}
                       >
-                        <option value="">All countries</option>
+                        <option value="">{ENTRIES_LIBRARY_ACTION_LABELS.allCountries}</option>
                         {uniqueValues.country.map((country) => (
                           <option key={country} value={country}>
                             {country}
@@ -913,14 +813,18 @@ export default function EntriesPage() {
                         className="mb-1 block uppercase"
                         style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                       >
-                        {filterType === "rating" ? "Rating range" : "Vintage range"}
+                        {
+                          ENTRIES_LIBRARY_FILTER_OPTIONS.find(
+                            (option) => option.value === filterType
+                          )?.label
+                        }
                       </label>
                       <div className="flex flex-wrap items-center gap-2">
                         <input
                           className="w-28 focus:outline-none"
                           type="number"
                           inputMode="numeric"
-                          placeholder="Min"
+                          placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.min}
                           value={filterMin}
                           onChange={(event) => setFilterMin(event.target.value)}
                           style={{
@@ -936,7 +840,7 @@ export default function EntriesPage() {
                           className="w-28 focus:outline-none"
                           type="number"
                           inputMode="numeric"
-                          placeholder="Max"
+                          placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.max}
                           value={filterMax}
                           onChange={(event) => setFilterMax(event.target.value)}
                           style={{
@@ -961,13 +865,10 @@ export default function EntriesPage() {
                       className="uppercase"
                       style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                     >
-                      Library view
+                      {ENTRIES_LIBRARY_PANEL_LABELS.libraryView}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {([
-                        { value: "grouped" as LibraryViewMode, label: "Grouped" },
-                        { value: "all" as LibraryViewMode, label: "Full list" },
-                      ]).map((option) => (
+                      {ENTRIES_LIBRARY_VIEW_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           type="button"
@@ -1000,14 +901,10 @@ export default function EntriesPage() {
                         className="uppercase"
                         style={{ fontSize: 8, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}
                       >
-                        Group by
+                        {ENTRIES_LIBRARY_PANEL_LABELS.groupBy}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {([
-                          { value: "region" as GroupScheme, label: "Region" },
-                          { value: "vintage" as GroupScheme, label: "Vintage" },
-                          { value: "varietal" as GroupScheme, label: "Varietal" },
-                        ]).map((option) => (
+                        {ENTRIES_LIBRARY_GROUP_OPTIONS.map((option) => (
                           <button
                             key={option.value}
                             type="button"
@@ -1055,7 +952,7 @@ export default function EntriesPage() {
                 color: "var(--color-text-secondary)",
               }}
             >
-              Loading your library...
+              {ENTRIES_LIBRARY_ACTION_LABELS.loading}
             </div>
           ) : errorMessage ? (
             <div
@@ -1083,17 +980,12 @@ export default function EntriesPage() {
               }}
             >
               <p>
-                {isSearchActive
-                  ? hasMore
-                    ? "No entries match this search yet. Try loading more."
-                    : "No entries match this search."
-                  : isRangeFilterActive
-                    ? "There are no wines found in this range."
-                    : isFilterActive
-                      ? hasMore
-                        ? "No entries match this filter yet. Try loading more."
-                        : "No entries match this filter."
-                      : "Your library is empty. Add your first bottle!"}
+                {getEntriesEmptyStateMessage({
+                  hasMore,
+                  isFilterActive,
+                  isRangeFilterActive,
+                  isSearchActive,
+                })}
               </p>
               {hasMore ? (
                 <button
@@ -1112,7 +1004,9 @@ export default function EntriesPage() {
                     textTransform: "uppercase" as const,
                   }}
                 >
-                  {loadingMore ? "Loading..." : "Load more"}
+                  {loadingMore
+                    ? ENTRIES_LIBRARY_ACTION_LABELS.loadingMore
+                    : ENTRIES_LIBRARY_ACTION_LABELS.loadMore}
                 </button>
               ) : null}
             </div>
@@ -1124,7 +1018,7 @@ export default function EntriesPage() {
                     const expanded = Boolean(expandedGroups[group.id]);
                     const visibleEntries = expanded
                       ? group.entries
-                      : group.entries.slice(0, GROUP_PREVIEW_COUNT);
+                      : group.entries.slice(0, ENTRY_LIBRARY_GROUP_PREVIEW_COUNT);
                     return (
                       <section
                         key={group.id}
@@ -1148,10 +1042,9 @@ export default function EntriesPage() {
                               color: "var(--color-accent-secondary)",
                             }}
                           >
-                            {group.label} &middot; {group.entries.length}{" "}
-                            {group.entries.length === 1 ? "entry" : "entries"}
+                            {group.label} &middot; {getEntriesCountLabel(group.entries.length)}
                           </span>
-                          {group.entries.length > GROUP_PREVIEW_COUNT ? (
+                          {group.entries.length > ENTRY_LIBRARY_GROUP_PREVIEW_COUNT ? (
                             <button
                               type="button"
                               onClick={() =>
@@ -1167,7 +1060,9 @@ export default function EntriesPage() {
                                 textTransform: "uppercase" as const,
                               }}
                             >
-                              {expanded ? "Show less" : "See all"}
+                              {expanded
+                                ? ENTRIES_LIBRARY_ACTION_LABELS.showLess
+                                : ENTRIES_LIBRARY_ACTION_LABELS.seeAll}
                             </button>
                           ) : null}
                         </div>
@@ -1213,7 +1108,9 @@ export default function EntriesPage() {
                       textTransform: "uppercase" as const,
                     }}
                   >
-                    {loadingMore ? "Loading..." : "Load more"}
+                    {loadingMore
+                      ? ENTRIES_LIBRARY_ACTION_LABELS.loadingMore
+                      : ENTRIES_LIBRARY_ACTION_LABELS.loadMore}
                   </button>
                 </div>
               ) : null}

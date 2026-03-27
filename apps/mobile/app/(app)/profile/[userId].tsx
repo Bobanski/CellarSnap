@@ -10,72 +10,78 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import {
+  PUBLIC_PROFILE_COPY,
+  PUBLIC_PROFILE_ENTRY_LIMIT,
+  QPR_LEVEL_LABELS,
+  type ProfileFriendStatus,
+  getFeedDisplayRatingLabel,
+  getPublicProfileEyebrow,
+  getPublicProfileSubtitle,
+  getPublicProfileTaggedEmpty,
+  getPublicProfileTaggedTitle,
+  getPublicProfileUploadedEmpty,
+  getPublicProfileUploadedTitle,
+  shouldHideProducerInEntryTile,
+} from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import {
+  acceptMobileFriendRequest,
+  deleteMobileFriendRequest,
+  fetchMobilePublicProfileBundle,
+  removeMobileFriend,
+  sendMobileFriendRequest,
+  updateMobileBlockedState,
+  type MobilePublicProfileEntry,
+  type MobilePublicProfileProfile,
+} from "@/src/lib/api/publicProfile";
 import {
   getPublicProfileInitial,
   getPublicProfileName,
 } from "@/src/lib/publicProfiles";
-import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
-import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
-import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { colors } from "@/src/lib/theme";
 
-type PublicProfile = {
-  id: string;
-  display_name: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  avatar_path: string | null;
-  avatar_url: string | null;
-};
-
-type EntryTile = {
-  id: string;
-  wine_name: string | null;
-  consumed_at: string;
-  label_image_path: string | null;
-  label_image_url: string | null;
+type EntryTile = MobilePublicProfileEntry;
+type PublicProfile = MobilePublicProfileProfile;
+type RelationshipPayload = {
+  friend_status?: ProfileFriendStatus;
+  incoming_request_id?: string | null;
+  outgoing_request_id?: string | null;
+  friend_request_id?: string | null;
 };
 
 function readRouteParam(value: string | string[] | undefined) {
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
+  if (Array.isArray(value)) return value[0] ?? null;
   return typeof value === "string" ? value : null;
 }
 
 function formatConsumedDate(raw: string) {
   const date = new Date(`${raw}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return raw;
-  }
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return Number.isNaN(date.getTime())
+    ? raw
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function isKnownMissingProfileColumn(message: string) {
-  return (
-    message.includes("first_name") ||
-    message.includes("last_name") ||
-    message.includes("avatar_path") ||
-    message.includes("column")
-  );
+function getEntryProducerLine(entry: EntryTile) {
+  const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
+  const producerLabel = entry.producer
+    ? hideProducer
+      ? null
+      : entry.producer
+    : PUBLIC_PROFILE_COPY.unknownProducerLabel;
+  if (!producerLabel && !entry.vintage) return null;
+  return producerLabel && entry.vintage
+    ? `${producerLabel} \u00B7 ${entry.vintage}`
+    : producerLabel ?? entry.vintage ?? null;
 }
 
-function isMissingBlocksTableError(message: string) {
-  const lower = message.toLowerCase();
-  return (
-    lower.includes("user_blocks") ||
-    lower.includes("relation") ||
-    lower.includes("does not exist") ||
-    lower.includes("column")
-  );
+function getEntryQprLabel(entry: EntryTile) {
+  if (!entry.qpr_level) return null;
+  return Object.prototype.hasOwnProperty.call(QPR_LEVEL_LABELS, entry.qpr_level)
+    ? QPR_LEVEL_LABELS[entry.qpr_level as keyof typeof QPR_LEVEL_LABELS]
+    : null;
 }
 
 export default function UserProfileScreen() {
@@ -85,153 +91,83 @@ export default function UserProfileScreen() {
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [entries, setEntries] = useState<EntryTile[]>([]);
+  const [taggedEntries, setTaggedEntries] = useState<EntryTile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [friendStatus, setFriendStatus] = useState<ProfileFriendStatus>("none");
+  const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
+  const [outgoingRequestId, setOutgoingRequestId] = useState<string | null>(null);
+  const [friendRequestId, setFriendRequestId] = useState<string | null>(null);
+  const [confirmingUnfriend, setConfirmingUnfriend] = useState(false);
+  const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [friendActionError, setFriendActionError] = useState<string | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockActionLoading, setBlockActionLoading] = useState(false);
   const [blockActionError, setBlockActionError] = useState<string | null>(null);
   const [blocksUnavailable, setBlocksUnavailable] = useState(false);
+  const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showAllTaggedEntries, setShowAllTaggedEntries] = useState(false);
 
+  const isOwnProfile = Boolean(user?.id && userId && user.id === userId);
   const fullName = useMemo(() => {
-    if (!profile) {
-      return "";
-    }
+    if (!profile) return "";
     return [profile.first_name?.trim() || null, profile.last_name?.trim() || null]
       .filter((value): value is string => Boolean(value))
       .join(" ");
   }, [profile]);
+  const displayedEntries = showAllEntries ? entries : entries.slice(0, PUBLIC_PROFILE_ENTRY_LIMIT);
+  const displayedTaggedEntries = showAllTaggedEntries
+    ? taggedEntries
+    : taggedEntries.slice(0, PUBLIC_PROFILE_ENTRY_LIMIT);
+
+  const applyRelationshipPayload = useCallback((payload: RelationshipPayload) => {
+    if (!payload.friend_status) return false;
+    setFriendStatus(payload.friend_status);
+    setIncomingRequestId(payload.incoming_request_id ?? null);
+    setOutgoingRequestId(payload.outgoing_request_id ?? null);
+    setFriendRequestId(payload.friend_request_id ?? null);
+    setConfirmingUnfriend(false);
+    return true;
+  }, []);
 
   const loadUserProfile = useCallback(
     async (refresh = false) => {
       if (!user?.id || !userId) {
+        setErrorMessage(PUBLIC_PROFILE_COPY.profileNotFound);
         setLoading(false);
         setRefreshing(false);
-        setErrorMessage("Profile not found.");
         return;
       }
 
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (refresh) setRefreshing(true);
+      else setLoading(true);
       setErrorMessage(null);
+      setFriendActionError(null);
       setBlockActionError(null);
 
       try {
-        const profileAttempt = await supabase
-          .from("public_profiles")
-          .select("id, display_name, first_name, last_name, email, avatar_path")
-          .eq("id", userId)
-          .maybeSingle();
-
-        let profileRow: {
-          id: string;
-          display_name: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          email: string | null;
-          avatar_path?: string | null;
-        } | null = profileAttempt.data;
-
-        if (profileAttempt.error) {
-          if (!isKnownMissingProfileColumn(profileAttempt.error.message)) {
-            throw new Error(profileAttempt.error.message);
-          }
-          const fallbackAttempt = await supabase
-            .from("public_profiles")
-            .select("id, display_name, email")
-            .eq("id", userId)
-            .maybeSingle();
-          if (fallbackAttempt.error) {
-            throw new Error(fallbackAttempt.error.message);
-          }
-          profileRow = fallbackAttempt.data
-            ? {
-                ...fallbackAttempt.data,
-                first_name: null,
-                last_name: null,
-                avatar_path: null,
-              }
-            : null;
-        }
-
-        if (!profileRow) {
-          setErrorMessage("Profile not found.");
+        const result = await fetchMobilePublicProfileBundle(userId);
+        if (!result.ok) {
+          setErrorMessage(result.errorMessage);
           setProfile(null);
           setEntries([]);
-          setIsBlocked(false);
+          setTaggedEntries([]);
           return;
         }
 
-        const entryResponse = await supabase
-          .from("wine_entries")
-          .select("id, wine_name, consumed_at, label_image_path, created_at")
-          .eq("user_id", userId)
-          .order("consumed_at", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(30);
-
-        if (entryResponse.error) {
-          throw new Error(entryResponse.error.message);
-        }
-
-        const entryRows = (entryResponse.data ?? []) as Array<{
-          id: string;
-          wine_name: string | null;
-          consumed_at: string;
-          label_image_path: string | null;
-        }>;
-        const [entryLabelById, avatarUrl] = await Promise.all([
-          resolveEntryLabelPhotos(entryRows, { supabaseClient: supabase }),
-          signPhotoUrl(profileRow.avatar_path, { supabaseClient: supabase }),
-        ]);
-
-        const nextEntries: EntryTile[] = entryRows.map((row) => {
-          const label = entryLabelById.get(row.id);
-          return {
-            id: row.id,
-            wine_name: row.wine_name,
-            consumed_at: row.consumed_at,
-            label_image_path: label?.path ?? null,
-            label_image_url: label?.signedUrl ?? null,
-          };
-        });
-
-        setProfile({
-          id: profileRow.id,
-          display_name: profileRow.display_name ?? null,
-          first_name: profileRow.first_name ?? null,
-          last_name: profileRow.last_name ?? null,
-          email: profileRow.email ?? null,
-          avatar_path: profileRow.avatar_path ?? null,
-          avatar_url: avatarUrl,
-        });
-        setEntries(nextEntries);
-
-        const blockState = await supabase
-          .from("user_blocks")
-          .select("blocker_id")
-          .eq("blocker_id", user.id)
-          .eq("blocked_id", userId)
-          .maybeSingle();
-
-        if (blockState.error) {
-          if (isMissingBlocksTableError(blockState.error.message)) {
-            setBlocksUnavailable(true);
-            setIsBlocked(false);
-          } else {
-            setBlocksUnavailable(false);
-            setBlockActionError("Unable to load block status.");
-            setIsBlocked(false);
-          }
-        } else {
-          setBlocksUnavailable(false);
-          setIsBlocked(Boolean(blockState.data));
-        }
-      } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Unable to load profile.");
+        setProfile(result.payload.profile);
+        setEntries(result.payload.entries);
+        setTaggedEntries(result.payload.taggedEntries);
+        setFriendStatus(result.payload.profile.friend_status ?? "none");
+        setIncomingRequestId(result.payload.profile.incoming_request_id ?? null);
+        setOutgoingRequestId(result.payload.profile.outgoing_request_id ?? null);
+        setFriendRequestId(result.payload.profile.friend_request_id ?? null);
+        setIsBlocked(result.payload.blocked);
+        setBlocksUnavailable(result.payload.blocksUnavailable);
+        setShowAllEntries(false);
+        setShowAllTaggedEntries(false);
+        setConfirmingUnfriend(false);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -241,9 +177,7 @@ export default function UserProfileScreen() {
   );
 
   useEffect(() => {
-    if (!user?.id || !userId) {
-      return;
-    }
+    if (!user?.id || !userId) return;
     if (userId === user.id) {
       router.replace("/(app)/profile");
       return;
@@ -251,105 +185,183 @@ export default function UserProfileScreen() {
     void loadUserProfile();
   }, [loadUserProfile, user?.id, userId]);
 
-  const toggleBlock = useCallback(async () => {
-    if (!user?.id || !userId || blockActionLoading || blocksUnavailable) {
-      return;
-    }
-
-    setBlockActionLoading(true);
-    setBlockActionError(null);
-
+  const sendFriendRequest = useCallback(async () => {
+    if (!userId || friendActionLoading) return;
+    setFriendActionLoading(true);
+    setFriendActionError(null);
     try {
-      if (isBlocked) {
-        const { error } = await supabase
-          .from("user_blocks")
-          .delete()
-          .eq("blocker_id", user.id)
-          .eq("blocked_id", userId);
-        if (error) {
-          if (isMissingBlocksTableError(error.message)) {
-            setBlocksUnavailable(true);
-            setBlockActionError("Blocking is temporarily unavailable.");
-            return;
-          }
-          throw new Error(error.message);
-        }
-
-        setIsBlocked(false);
-        await loadUserProfile(true);
+      const response = await sendMobileFriendRequest(userId);
+      if (!response.ok) {
+        setFriendActionError(response.errorMessage);
         return;
       }
+      if (!applyRelationshipPayload(response.payload)) {
+        setFriendActionError("Unexpected response while sending request.");
+      }
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }, [applyRelationshipPayload, friendActionLoading, userId]);
 
-      const { error: blockError } = await supabase.from("user_blocks").insert({
-        blocker_id: user.id,
-        blocked_id: userId,
-      });
+  const acceptRequest = useCallback(async () => {
+    if (!incomingRequestId || friendActionLoading) return;
+    setFriendActionLoading(true);
+    setFriendActionError(null);
+    try {
+      const response = await acceptMobileFriendRequest(incomingRequestId);
+      if (!response.ok) {
+        setFriendActionError(response.errorMessage);
+        return;
+      }
+      if (response.payload.success && response.payload.status === "accepted") {
+        setFriendStatus("friends");
+        setFriendRequestId(response.payload.request_id ?? incomingRequestId);
+        setIncomingRequestId(null);
+        setOutgoingRequestId(null);
+        setConfirmingUnfriend(false);
+        return;
+      }
+      setFriendActionError("Request was not accepted.");
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }, [friendActionLoading, incomingRequestId]);
 
-      if (blockError && blockError.code !== "23505") {
-        if (isMissingBlocksTableError(blockError.message)) {
-          setBlocksUnavailable(true);
-          setBlockActionError("Blocking is temporarily unavailable.");
+  const removeFriend = useCallback(async () => {
+    if (!userId || friendActionLoading) return;
+    setFriendActionLoading(true);
+    setFriendActionError(null);
+    try {
+      if (friendRequestId) {
+        const response = await deleteMobileFriendRequest(friendRequestId);
+        if (!response.ok) {
+          setFriendActionError(response.errorMessage);
           return;
         }
-        throw new Error(blockError.message);
+        setFriendStatus("none");
+        setIncomingRequestId(null);
+        setOutgoingRequestId(null);
+        setFriendRequestId(null);
+        setConfirmingUnfriend(false);
+        return;
       }
+      const response = await removeMobileFriend(userId);
+      if (!response.ok) {
+        setFriendActionError(response.errorMessage);
+        return;
+      }
+      if (!applyRelationshipPayload(response.payload)) {
+        setFriendActionError("Friend status did not update as expected.");
+      }
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }, [applyRelationshipPayload, friendActionLoading, friendRequestId, userId]);
 
-      const nowIso = new Date().toISOString();
-      await Promise.all([
-        supabase
-          .from("friend_requests")
-          .delete()
-          .eq("requester_id", user.id)
-          .eq("recipient_id", userId),
-        supabase
-          .from("friend_requests")
-          .delete()
-          .eq("requester_id", userId)
-          .eq("recipient_id", user.id),
-        supabase
-          .from("wine_notifications")
-          .update({ seen_at: nowIso })
-          .eq("user_id", user.id)
-          .eq("actor_id", userId)
-          .is("seen_at", null),
-      ]);
+  const cancelOutgoingRequest = useCallback(async () => {
+    if (!outgoingRequestId || friendActionLoading) return;
+    setFriendActionLoading(true);
+    setFriendActionError(null);
+    try {
+      const response = await deleteMobileFriendRequest(outgoingRequestId);
+      if (!response.ok) {
+        setFriendActionError(response.errorMessage);
+        return;
+      }
+      setFriendStatus("none");
+      setIncomingRequestId(null);
+      setOutgoingRequestId(null);
+      setFriendRequestId(null);
+      setConfirmingUnfriend(false);
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }, [friendActionLoading, outgoingRequestId]);
 
-      setIsBlocked(true);
-      setEntries([]);
-    } catch (error) {
-      setBlockActionError(
-        error instanceof Error ? error.message : "Unable to update block state."
-      );
+  const toggleBlock = useCallback(async () => {
+    if (!userId || blockActionLoading || blocksUnavailable) return;
+    setBlockActionLoading(true);
+    setBlockActionError(null);
+    try {
+      const response = await updateMobileBlockedState(userId, !isBlocked);
+      if (!response.ok) {
+        if (response.code === "BLOCKS_UNAVAILABLE") setBlocksUnavailable(true);
+        setBlockActionError(response.errorMessage);
+        return;
+      }
+      const nextBlocked = Boolean(response.payload.blocked);
+      setIsBlocked(nextBlocked);
+      if (nextBlocked) {
+        setFriendStatus("none");
+        setIncomingRequestId(null);
+        setOutgoingRequestId(null);
+        setFriendRequestId(null);
+        setConfirmingUnfriend(false);
+      } else {
+        await loadUserProfile(true);
+      }
     } finally {
       setBlockActionLoading(false);
     }
-  }, [blockActionLoading, blocksUnavailable, isBlocked, loadUserProfile, user?.id, userId]);
+  }, [blockActionLoading, blocksUnavailable, isBlocked, loadUserProfile, userId]);
 
   const handleToggleBlock = useCallback(() => {
     if (isBlocked) {
       void toggleBlock();
       return;
     }
-
-    Alert.alert(
-      "Block user?",
-      "You will no longer see each other's posts or comments.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Block",
-          style: "destructive",
-          onPress: () => {
-            void toggleBlock();
-          },
-        },
-      ]
-    );
+    Alert.alert("Block user?", "You will no longer see each other's posts or comments.", [
+      { text: PUBLIC_PROFILE_COPY.cancelLabel, style: "cancel" },
+      {
+        text: PUBLIC_PROFILE_COPY.blockUserLabel,
+        style: "destructive",
+        onPress: () => void toggleBlock(),
+      },
+    ]);
   }, [isBlocked, toggleBlock]);
+
+  const renderEntryCard = useCallback((entry: EntryTile, tagged: boolean) => {
+    const producerLine = getEntryProducerLine(entry);
+    const ratingLabel = getFeedDisplayRatingLabel(entry.rating);
+    const qprLabel = getEntryQprLabel(entry);
+    return (
+      <Pressable
+        key={entry.id}
+        onPress={() => router.push(`/(app)/entries/${entry.id}`)}
+        style={styles.entryCard}
+      >
+        <View style={styles.imageWrap}>
+          {entry.label_image_url ? (
+            <Image source={{ uri: entry.label_image_url }} style={styles.image} resizeMode="cover" />
+          ) : (
+            <AppText style={styles.imageFallback}>{PUBLIC_PROFILE_COPY.noPhotoLabel}</AppText>
+          )}
+        </View>
+        <View style={styles.entryBody}>
+          {tagged ? (
+            <AppText style={styles.entryAuthor}>
+              {PUBLIC_PROFILE_COPY.loggedByPrefix} {entry.author_name ?? "Unknown"}
+            </AppText>
+          ) : null}
+          <AppText style={styles.entryName} numberOfLines={2}>
+            {entry.wine_name ?? PUBLIC_PROFILE_COPY.untitledWineLabel}
+          </AppText>
+          {producerLine ? <AppText style={styles.entryMeta}>{producerLine}</AppText> : null}
+          <View style={styles.footer}>
+            <View style={styles.badges}>
+              {ratingLabel ? <AppText style={styles.badge}>{ratingLabel}</AppText> : null}
+              {qprLabel ? <AppText style={styles.badge}>{qprLabel}</AppText> : null}
+            </View>
+            <AppText style={styles.entryDate}>{formatConsumedDate(entry.consumed_at)}</AppText>
+          </View>
+        </View>
+      </Pressable>
+    );
+  }, []);
 
   if (loading) {
     return (
-      <View style={styles.loadingScreen}>
+      <View style={styles.centered}>
         <ActivityIndicator color={colors.grenache} />
       </View>
     );
@@ -360,127 +372,152 @@ export default function UserProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void loadUserProfile(true)}
-            tintColor={colors.grenache}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={() => void loadUserProfile(true)} />
         }
       >
         <AppTopBar />
-
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <AppText style={styles.backButtonText}>{"<"} Back</AppText>
         </Pressable>
 
         {errorMessage || !profile ? (
           <View style={styles.errorCard}>
-            <AppText style={styles.errorText}>{errorMessage ?? "Profile not found."}</AppText>
+            <AppText style={styles.errorText}>
+              {errorMessage ?? PUBLIC_PROFILE_COPY.profileNotFound}
+            </AppText>
           </View>
         ) : (
           <>
-            <View style={styles.profileCard}>
-              <View style={styles.profileHeader}>
-                <View style={styles.profileIdentity}>
+            <View style={styles.card}>
+              <AppText style={styles.eyebrow}>{getPublicProfileEyebrow(isOwnProfile)}</AppText>
+              <View style={styles.headerRow}>
+                <View style={styles.identity}>
                   <View style={styles.avatarWrap}>
                     {profile.avatar_url ? (
-                      <Image
-                        source={{ uri: profile.avatar_url }}
-                        style={styles.avatarImage}
-                        resizeMode="cover"
-                      />
+                      <Image source={{ uri: profile.avatar_url }} style={styles.avatar} resizeMode="cover" />
                     ) : (
-                      <AppText style={styles.avatarFallback}>
-                        {getPublicProfileInitial(profile)}
-                      </AppText>
+                      <AppText style={styles.avatarFallback}>{getPublicProfileInitial(profile)}</AppText>
                     )}
                   </View>
-                  <View style={styles.profileMeta}>
-                    <AppText style={styles.username}>
-                      {getPublicProfileName(profile)}
-                    </AppText>
+                  <View style={styles.identityText}>
+                    <AppText style={styles.username}>{getPublicProfileName(profile)}</AppText>
                     {fullName ? <AppText style={styles.fullName}>{fullName}</AppText> : null}
+                    <AppText style={styles.subtitle}>{getPublicProfileSubtitle(isOwnProfile)}</AppText>
                   </View>
                 </View>
-                {blocksUnavailable ? (
-                  <AppText style={styles.blockUnavailable}>
-                    Blocking unavailable
-                  </AppText>
-                ) : (
-                  <View style={styles.headerActions}>
-                    {isBlocked ? (
-                      <View style={styles.blockedChip}>
-                        <AppText style={styles.blockedChipText}>Blocked</AppText>
+
+                {!isOwnProfile ? (
+                  <View style={styles.actions}>
+                    {blocksUnavailable ? (
+                      <AppText style={styles.inlineError}>{PUBLIC_PROFILE_COPY.blockingUnavailable}</AppText>
+                    ) : isBlocked ? (
+                      <View style={styles.rowWrap}>
+                        <AppText style={[styles.badge, styles.badgeDanger]}>{PUBLIC_PROFILE_COPY.blockedLabel}</AppText>
+                        <Pressable style={styles.secondaryButton} onPress={handleToggleBlock} disabled={blockActionLoading}>
+                          <AppText style={styles.secondaryButtonText}>
+                            {blockActionLoading ? PUBLIC_PROFILE_COPY.updatingLabel : PUBLIC_PROFILE_COPY.unblockLabel}
+                          </AppText>
+                        </Pressable>
                       </View>
+                    ) : friendStatus === "friends" ? (
+                      confirmingUnfriend ? (
+                        <View style={styles.rowWrap}>
+                          <AppText style={styles.hint}>{PUBLIC_PROFILE_COPY.removeFriendPrompt}</AppText>
+                          <Pressable style={styles.primaryButton} onPress={() => void removeFriend()} disabled={friendActionLoading}>
+                            <AppText style={styles.primaryButtonText}>{PUBLIC_PROFILE_COPY.removeFriendConfirmLabel}</AppText>
+                          </Pressable>
+                          <Pressable style={styles.secondaryButton} onPress={() => setConfirmingUnfriend(false)} disabled={friendActionLoading}>
+                            <AppText style={styles.secondaryButtonText}>{PUBLIC_PROFILE_COPY.cancelLabel}</AppText>
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <View style={styles.rowWrap}>
+                          <AppText style={[styles.badge, styles.badgeSuccess]}>{PUBLIC_PROFILE_COPY.friendsLabel}</AppText>
+                          <Pressable style={styles.secondaryButton} onPress={() => setConfirmingUnfriend(true)}>
+                            <AppText style={styles.secondaryButtonText}>{PUBLIC_PROFILE_COPY.removeLabel}</AppText>
+                          </Pressable>
+                        </View>
+                      )
+                    ) : friendStatus === "request_sent" ? (
+                      <View style={styles.rowWrap}>
+                        <AppText style={styles.badge}>{PUBLIC_PROFILE_COPY.requestSentLabel}</AppText>
+                        <Pressable style={styles.secondaryButton} onPress={() => void cancelOutgoingRequest()} disabled={friendActionLoading}>
+                          <AppText style={styles.secondaryButtonText}>
+                            {friendActionLoading ? PUBLIC_PROFILE_COPY.cancellingLabel : PUBLIC_PROFILE_COPY.cancelLabel}
+                          </AppText>
+                        </Pressable>
+                      </View>
+                    ) : friendStatus === "request_received" ? (
+                      <Pressable style={styles.primaryButton} onPress={() => void acceptRequest()} disabled={friendActionLoading}>
+                        <AppText style={styles.primaryButtonText}>
+                          {friendActionLoading ? PUBLIC_PROFILE_COPY.acceptingLabel : PUBLIC_PROFILE_COPY.acceptFriendRequestLabel}
+                        </AppText>
+                      </Pressable>
+                    ) : (
+                      <Pressable style={styles.primaryButton} onPress={() => void sendFriendRequest()} disabled={friendActionLoading}>
+                        <AppText style={styles.primaryButtonText}>
+                          {friendActionLoading ? PUBLIC_PROFILE_COPY.sendingLabel : PUBLIC_PROFILE_COPY.addFriendLabel}
+                        </AppText>
+                      </Pressable>
+                    )}
+                    {!blocksUnavailable && !isBlocked ? (
+                      <Pressable onPress={handleToggleBlock} disabled={blockActionLoading}>
+                        <AppText style={styles.blockLink}>
+                          {blockActionLoading ? PUBLIC_PROFILE_COPY.updatingLabel : PUBLIC_PROFILE_COPY.blockUserLabel}
+                        </AppText>
+                      </Pressable>
                     ) : null}
-                    <Pressable
-                      style={[
-                        styles.blockButton,
-                        isBlocked ? styles.unblockButton : styles.blockActionButton,
-                        blockActionLoading ? styles.blockButtonDisabled : null,
-                      ]}
-                      disabled={blockActionLoading}
-                      onPress={handleToggleBlock}
-                    >
-                      <AppText style={styles.blockButtonText}>
-                        {blockActionLoading
-                          ? "Updating..."
-                          : isBlocked
-                            ? "Unblock"
-                            : "Block user"}
-                      </AppText>
-                    </Pressable>
                   </View>
-                )}
+                ) : null}
               </View>
 
-              {blockActionError ? (
-                <AppText style={styles.blockErrorText}>{blockActionError}</AppText>
-              ) : null}
+              {friendActionError ? <AppText style={styles.inlineError}>{friendActionError}</AppText> : null}
+              {blockActionError ? <AppText style={styles.inlineError}>{blockActionError}</AppText> : null}
             </View>
 
-            <View style={styles.section}>
-              <AppText style={styles.sectionTitle}>Recent posts</AppText>
-              {isBlocked ? (
-                <View style={styles.emptyCard}>
-                  <AppText style={styles.emptyText}>
-                    This user's content is hidden while blocked.
-                  </AppText>
-                </View>
-              ) : entries.length === 0 ? (
-                <View style={styles.emptyCard}>
-                  <AppText style={styles.emptyText}>No posts yet.</AppText>
-                </View>
-              ) : (
-                <View style={styles.entryGrid}>
-                  {entries.map((entry) => (
-                    <Pressable
-                      key={entry.id}
-                      onPress={() => router.push(`/(app)/entries/${entry.id}`)}
-                      style={styles.entryCard}
-                    >
-                      <View style={styles.entryImageWrap}>
-                        {entry.label_image_url ? (
-                          <Image
-                            source={{ uri: entry.label_image_url }}
-                            style={styles.entryImage}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <AppText style={styles.entryImageFallback}>No photo</AppText>
-                        )}
-                      </View>
-                      <AppText style={styles.entryName} numberOfLines={2}>
-                        {entry.wine_name ?? "Untitled wine"}
-                      </AppText>
-                      <AppText style={styles.entryDate}>
-                        {formatConsumedDate(entry.consumed_at)}
+            {!isOwnProfile && isBlocked ? (
+              <View style={styles.warningCard}>
+                <AppText style={styles.warningText}>{PUBLIC_PROFILE_COPY.blockedContentMessage}</AppText>
+              </View>
+            ) : (
+              <>
+                <View style={styles.section}>
+                  <AppText style={styles.sectionTitle}>{getPublicProfileUploadedTitle(isOwnProfile)}</AppText>
+                  {entries.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                      <AppText style={styles.emptyText}>{getPublicProfileUploadedEmpty(isOwnProfile)}</AppText>
+                    </View>
+                  ) : (
+                    displayedEntries.map((entry) => renderEntryCard(entry, false))
+                  )}
+                  {entries.length > PUBLIC_PROFILE_ENTRY_LIMIT ? (
+                    <Pressable style={styles.toggleButton} onPress={() => setShowAllEntries((prev) => !prev)}>
+                      <AppText style={styles.toggleButtonText}>
+                        {showAllEntries ? PUBLIC_PROFILE_COPY.showFewerEntriesLabel : PUBLIC_PROFILE_COPY.seeAllEntriesLabel}
                       </AppText>
                     </Pressable>
-                  ))}
+                  ) : null}
                 </View>
-              )}
-            </View>
+
+                <View style={styles.section}>
+                  <AppText style={styles.sectionTitle}>{getPublicProfileTaggedTitle(isOwnProfile)}</AppText>
+                  {taggedEntries.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                      <AppText style={styles.emptyText}>{getPublicProfileTaggedEmpty(isOwnProfile)}</AppText>
+                    </View>
+                  ) : (
+                    displayedTaggedEntries.map((entry) => renderEntryCard(entry, true))
+                  )}
+                  {taggedEntries.length > PUBLIC_PROFILE_ENTRY_LIMIT ? (
+                    <Pressable style={styles.toggleButton} onPress={() => setShowAllTaggedEntries((prev) => !prev)}>
+                      <AppText style={styles.toggleButtonText}>
+                        {showAllTaggedEntries ? PUBLIC_PROFILE_COPY.showFewerTaggedEntriesLabel : PUBLIC_PROFILE_COPY.seeAllTaggedEntriesLabel}
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -489,209 +526,54 @@ export default function UserProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.screenBg,
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: colors.screenBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 28,
-    gap: 12,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfacePrimary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  errorCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.4)",
-    backgroundColor: "rgba(251,113,133,0.12)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 13,
-  },
-  profileCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    padding: 12,
-    gap: 10,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  profileIdentity: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    flex: 1,
-  },
-  avatarWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 999,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-  },
-  avatarFallback: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  profileMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  username: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  fullName: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  blockUnavailable: {
-    color: colors.error,
-    fontSize: 12,
-    marginTop: 6,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-  },
-  blockedChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.4)",
-    backgroundColor: "rgba(251,113,133,0.12)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  blockedChipText: {
-    color: colors.error,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  blockButton: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  blockActionButton: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfacePrimary,
-  },
-  unblockButton: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfacePrimary,
-  },
-  blockButtonDisabled: {
-    opacity: 0.6,
-  },
-  blockButtonText: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  blockErrorText: {
-    color: colors.error,
-    fontSize: 12,
-    textAlign: "right",
-  },
-  section: {
-    gap: 8,
-  },
-  sectionTitle: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  emptyCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  entryGrid: {
-    gap: 10,
-  },
-  entryCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    padding: 10,
-    gap: 6,
-  },
-  entryImageWrap: {
-    width: "100%",
-    aspectRatio: 7 / 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-    backgroundColor: colors.surfacePrimary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  entryImage: {
-    width: "100%",
-    height: "100%",
-  },
-  entryImageFallback: {
-    color: colors.textSecondary,
-    fontSize: 11,
-  },
-  entryName: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  entryDate: {
-    color: colors.textSecondary,
-    fontSize: 11,
-  },
+  screen: { flex: 1, backgroundColor: colors.screenBg },
+  centered: { flex: 1, backgroundColor: colors.screenBg, alignItems: "center", justifyContent: "center" },
+  content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
+  backButton: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfacePrimary, paddingHorizontal: 12, paddingVertical: 6 },
+  backButtonText: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
+  errorCard: { borderRadius: 14, borderWidth: 1, borderColor: "rgba(251,113,133,0.4)", backgroundColor: "rgba(251,113,133,0.12)", paddingHorizontal: 12, paddingVertical: 10 },
+  errorText: { color: colors.error, fontSize: 13 },
+  card: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 14, gap: 10 },
+  eyebrow: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.8, textTransform: "uppercase" },
+  headerRow: { gap: 12 },
+  identity: { flexDirection: "row", gap: 12 },
+  avatarWrap: { width: 56, height: 56, borderRadius: 999, overflow: "hidden", borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, alignItems: "center", justifyContent: "center" },
+  avatar: { width: "100%", height: "100%" },
+  avatarFallback: { color: colors.textSecondary, fontSize: 18, fontWeight: "700" },
+  identityText: { flex: 1, gap: 3 },
+  username: { color: colors.textPrimary, fontSize: 19, fontWeight: "700" },
+  fullName: { color: colors.textSecondary, fontSize: 13 },
+  subtitle: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
+  actions: { gap: 8 },
+  rowWrap: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  hint: { color: colors.textSecondary, fontSize: 12 },
+  primaryButton: { alignSelf: "flex-start", borderRadius: 999, backgroundColor: colors.grenache, paddingHorizontal: 14, paddingVertical: 9 },
+  primaryButtonText: { color: colors.surfacePrimary, fontSize: 12, fontWeight: "700" },
+  secondaryButton: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfacePrimary, paddingHorizontal: 12, paddingVertical: 8 },
+  secondaryButtonText: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
+  badge: { borderRadius: 999, overflow: "hidden", borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: 10, fontWeight: "700", paddingHorizontal: 8, paddingVertical: 4 },
+  badgeDanger: { borderColor: "rgba(251,113,133,0.4)", backgroundColor: "rgba(251,113,133,0.12)", color: colors.error },
+  badgeSuccess: { borderColor: "rgba(52,211,153,0.35)", backgroundColor: "rgba(52,211,153,0.12)", color: "#b6f0d2" },
+  blockLink: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.1, textTransform: "uppercase" },
+  inlineError: { color: colors.error, fontSize: 12 },
+  warningCard: { borderRadius: 14, borderWidth: 1, borderColor: "rgba(251,113,133,0.3)", backgroundColor: "rgba(251,113,133,0.12)", paddingHorizontal: 12, paddingVertical: 10 },
+  warningText: { color: "#ffd7df", fontSize: 12, lineHeight: 18 },
+  section: { gap: 8 },
+  sectionTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700" },
+  emptyCard: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, paddingHorizontal: 12, paddingVertical: 10 },
+  emptyText: { color: colors.textSecondary, fontSize: 12 },
+  entryCard: { flexDirection: "row", gap: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 10 },
+  imageWrap: { width: 92, height: 92, borderRadius: 12, borderWidth: 1, borderColor: colors.border, overflow: "hidden", backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" },
+  image: { width: "100%", height: "100%" },
+  imageFallback: { color: colors.textSecondary, fontSize: 11 },
+  entryBody: { flex: 1, gap: 4 },
+  entryAuthor: { color: colors.textSecondary, fontSize: 11 },
+  entryName: { color: colors.textPrimary, fontSize: 14, fontWeight: "700" },
+  entryMeta: { color: colors.textSecondary, fontSize: 12 },
+  footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto" },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6, flex: 1 },
+  entryDate: { color: colors.textSecondary, fontSize: 11 },
+  toggleButton: { alignSelf: "center", borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfacePrimary, paddingHorizontal: 14, paddingVertical: 8 },
+  toggleButtonText: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
 });
+

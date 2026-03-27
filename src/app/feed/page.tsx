@@ -1,24 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   canDisplayAlgorithmMatch,
   fetchAlgorithmScoreBatch,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
+import {
+  buildFeedEntryMetaFields as buildEntryMetaFields,
+  DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
+  FEED_EYEBROW,
+  FEED_EMPTY_STATE_MESSAGE,
+  FEED_LOAD_MORE_LABEL,
+  FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
+  FEED_REACTION_EMOJIS as REACTION_EMOJIS,
+  FEED_REPORT_REASON_OPTIONS as REPORT_REASON_OPTIONS,
+  FEED_SCOPE_LABELS,
+  FEED_SUBTITLE,
+  FEED_TITLE,
+  type FeedReportReason as ReportReason,
+} from "@shared";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
   isDrinkingNowActive,
 } from "@/lib/drinkingNow";
-import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import AppImage from "@/components/AppImage";
-import MatchBadge from "@/components/MatchBadge";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
@@ -29,39 +40,18 @@ import type {
   WineEntryWithUrls,
 } from "@/types/wine";
 
-const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
-const PHOTO_TYPE_LABELS = {
-  label: "Label",
-  place: "Place",
-  people: "People",
-  pairing: "Pairing",
-  lineup: "Lineup",
-  other_bottles: "Other bottle",
-} as const;
-const REPORT_REASON_OPTIONS = [
-  { value: "spam", label: "Spam" },
-  { value: "harassment", label: "Harassment" },
-  { value: "hate", label: "Hate speech" },
-  { value: "nudity", label: "Nudity" },
-  { value: "misinfo", label: "False info" },
-  { value: "other", label: "Other" },
-] as const;
-
 function isDuplicateReportError(error: { code?: string | null; message?: string | null }) {
   return (
     error.code === "23505" ||
     (error.message ?? "").includes("content_reports_unique_active_")
   );
 }
-const DEFAULT_REPORT_REASON = REPORT_REASON_OPTIONS[0].value;
 const COLLAPSED_NOTES_STYLE: CSSProperties = {
   display: "-webkit-box",
   WebkitLineClamp: 2,
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
 };
-
-type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
 
 type FeedPhoto = {
   type: keyof typeof PHOTO_TYPE_LABELS;
@@ -108,75 +98,6 @@ type FeedComment = {
   is_deleted?: boolean;
   replies: FeedReply[];
 };
-
-type UserOption = {
-  id: string;
-  display_name: string | null;
-};
-
-function normalizeMetaValue(value: string | null | undefined) {
-  const trimmed = value?.trim() ?? "";
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function getPrimaryVarietal(entry: FeedEntry) {
-  const grapes = Array.isArray(entry.primary_grapes) ? entry.primary_grapes : [];
-  if (grapes.length === 0) {
-    return null;
-  }
-  const sorted = [...grapes].sort((a, b) => a.position - b.position);
-  for (const grape of sorted) {
-    const value = normalizeMetaValue(grape.name);
-    if (value) {
-      return value;
-    }
-  }
-  return null;
-}
-
-function buildEntryMetaFields(entry: FeedEntry) {
-  const wineName = normalizeMetaValue(entry.wine_name) ?? "";
-  const producer = normalizeMetaValue(entry.producer);
-  const vintage = normalizeMetaValue(entry.vintage);
-  const region = normalizeMetaValue(entry.region);
-  const country = normalizeMetaValue(entry.country);
-  const appellation = normalizeMetaValue(entry.appellation);
-  const varietal = getPrimaryVarietal(entry);
-
-  const hideProducer = shouldHideProducerInEntryTile(wineName, producer);
-  const nonVintagePriority = [
-    hideProducer ? null : producer,
-    region,
-    country,
-    appellation,
-    varietal,
-  ];
-
-  const fields: string[] = [];
-  const firstField = nonVintagePriority.find((value): value is string => Boolean(value));
-  if (firstField) {
-    fields.push(firstField);
-  }
-
-  // Vintage can only appear in the second slot.
-  if (vintage && fields.length > 0) {
-    fields.push(vintage);
-  }
-
-  if (fields.length < 2) {
-    for (const value of nonVintagePriority) {
-      if (!value || fields.includes(value)) {
-        continue;
-      }
-      fields.push(value);
-      if (fields.length >= 2) {
-        break;
-      }
-    }
-  }
-
-  return fields.slice(0, 2);
-}
 
 function buildFeedScoreBatchItems(entries: FeedEntry[]) {
   return entries
@@ -413,7 +334,7 @@ export default function FeedPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
-  const [matchScoresLoading, setMatchScoresLoading] = useState(false);
+  const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
@@ -988,11 +909,12 @@ export default function FeedPage() {
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
         <header className="space-y-2 px-6">
           <span className="block text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
-            Feed
+            {FEED_EYEBROW}
           </span>
           <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
-            What your people are drinking.
+            {FEED_TITLE}
           </h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">{FEED_SUBTITLE}</p>
         </header>
 
         <div className="flex flex-wrap items-center gap-2 px-6">
@@ -1005,7 +927,7 @@ export default function FeedPage() {
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
-            Public feed
+            {FEED_SCOPE_LABELS.public}
           </button>
           <button
             type="button"
@@ -1016,7 +938,7 @@ export default function FeedPage() {
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
-            Friends only
+            {FEED_SCOPE_LABELS.friends}
           </button>
 
         </div>
@@ -1061,7 +983,7 @@ export default function FeedPage() {
           </div>
         ) : entries.length === 0 ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            No entries yet.
+            {FEED_EMPTY_STATE_MESSAGE}
           </div>
         ) : (
           <>
@@ -1937,7 +1859,7 @@ export default function FeedPage() {
                 disabled={loadingMore}
                 className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
               >
-                {loadingMore ? "Loading…" : "Load more"}
+                {loadingMore ? "Loading..." : FEED_LOAD_MORE_LABEL}
               </button>
             </div>
           ) : null}

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getPublicProfileName } from "@/lib/publicProfiles";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import {
   canUserViewEntry,
@@ -11,23 +10,25 @@ import {
 import { resolveInteractionAccessForViewer } from "@/lib/access/interactionVisibility";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { createEntryPutHandler } from "./putHandler";
 import { createEntryDeleteHandler } from "./deleteHandler";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   const { data, error } = await supabase
     .from("wine_entries")
