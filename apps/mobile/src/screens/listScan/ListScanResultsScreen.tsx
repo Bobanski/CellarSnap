@@ -235,6 +235,7 @@ function FilterDropdown({
 export default function ListScanResultsScreen() {
   const params = useLocalSearchParams<{ scanId?: string }>();
   const { width } = useWindowDimensions();
+  const scanId = typeof params.scanId === "string" ? params.scanId : "";
   const [result, setResult] = useState<ListScanResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListScanFilters>(
@@ -251,7 +252,6 @@ export default function ListScanResultsScreen() {
     let cancelled = false;
 
     const load = async () => {
-      const scanId = typeof params.scanId === "string" ? params.scanId : "";
       if (!scanId) {
         if (!cancelled) {
           setLoading(false);
@@ -276,7 +276,19 @@ export default function ListScanResultsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [params.scanId]);
+  }, [scanId]);
+
+  const goToHistory = () => {
+    if (scanId) {
+      router.push({
+        pathname: "/(app)/list-scan/history",
+        params: { fromScanId: scanId },
+      } as any);
+      return;
+    }
+
+    router.push("/(app)/list-scan/history" as any);
+  };
 
   const derivedFacets = useMemo(
     () => (result ? deriveListScanFacets(result.wines) : null),
@@ -423,12 +435,17 @@ export default function ListScanResultsScreen() {
             <AppText style={styles.infoText}>
               This scan result is no longer available in the current session.
             </AppText>
-            <Pressable
-              style={styles.primaryButton}
-              onPress={() => router.replace("/(app)/list-scan")}
-            >
-              <AppText style={styles.primaryButtonText}>Start a new scan</AppText>
-            </Pressable>
+            <View style={styles.infoActions}>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.replace("/(app)/list-scan")}
+              >
+                <AppText style={styles.primaryButtonText}>Start a new scan</AppText>
+              </Pressable>
+              <Pressable style={styles.secondaryButton} onPress={goToHistory}>
+                <AppText style={styles.secondaryButtonText}>My scans</AppText>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -458,6 +475,17 @@ export default function ListScanResultsScreen() {
             Filter the parsed list, review the live top 3, and browse the full list
             in original order.
           </AppText>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.headerSecondaryButton}
+              onPress={() => router.replace("/(app)/list-scan")}
+            >
+              <AppText style={styles.headerSecondaryButtonText}>Scan another</AppText>
+            </Pressable>
+            <Pressable style={styles.headerPrimaryButton} onPress={goToHistory}>
+              <AppText style={styles.headerPrimaryButtonText}>My scans</AppText>
+            </Pressable>
+          </View>
         </View>
 
         {result.score_summary.warning ? (
@@ -923,6 +951,40 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 4,
+  },
+  headerPrimaryButton: {
+    borderRadius: 999,
+    backgroundColor: colors.accentPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerPrimaryButtonText: {
+    color: colors.screenBg,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  headerSecondaryButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerSecondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
   },
   eyebrow: {
     color: colors.accentSecondary,
@@ -1463,6 +1525,11 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
+  infoActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   infoCardCompact: {
     paddingVertical: 16,
   },
@@ -1470,6 +1537,22 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+  },
+  secondaryButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
   },
   primaryButton: {
     alignSelf: "flex-start",

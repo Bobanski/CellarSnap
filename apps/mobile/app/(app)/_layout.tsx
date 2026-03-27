@@ -144,6 +144,10 @@ export default function AppLayout() {
         options={{ href: null }}
       />
       <Tabs.Screen
+        name="list-scan/history"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="entries/[id]"
         options={{ href: null }}
       />
