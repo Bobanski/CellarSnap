@@ -108,7 +108,7 @@ export default function SignUpScreen() {
       }
 
       if (data.session) {
-        router.replace("/(app)/home");
+        router.replace("/(app)/feed");
         return;
       }
 
@@ -213,7 +213,7 @@ export default function SignUpScreen() {
       }
 
       if (data.session) {
-        router.replace("/(app)/home");
+        router.replace("/(app)/feed");
         return;
       }
 
@@ -254,7 +254,7 @@ export default function SignUpScreen() {
 
     try {
       await signInWithApple();
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch (error) {
       const errorCode =
         typeof error === "object" &&

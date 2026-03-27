@@ -52,7 +52,7 @@ export default function ListScanHistoryScreen() {
 
   useEffect(() => {
     if (!hasPrivateBetaFeatureAccess) {
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     }
   }, [hasPrivateBetaFeatureAccess]);
 

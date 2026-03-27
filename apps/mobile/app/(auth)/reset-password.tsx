@@ -153,7 +153,7 @@ export default function ResetPasswordScreen() {
       }
 
       setInfoMessage("Password updated. Redirecting to your cellar...");
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch {
       setErrorMessage("Unable to update password right now.");
     } finally {

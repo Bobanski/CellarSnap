@@ -191,7 +191,7 @@ export default function FinishSignupScreen() {
       }
 
       setInfoMessage("Account created. Taking you home...");
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch {
       setErrorMessage("Unable to finish signup right now. Please try again.");
     } finally {

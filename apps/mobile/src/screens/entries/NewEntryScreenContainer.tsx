@@ -1965,9 +1965,9 @@ export default function NewEntryScreen() {
       >
         <View style={styles.navRow}>
           <Pressable
-            onPress={() => router.push("/(app)/home")}
+            onPress={() => router.push("/(app)/feed")}
             accessibilityRole="button"
-            accessibilityLabel="Go to home"
+            accessibilityLabel="Go to feed"
           >
             <AppText style={styles.navBrand}>Cluster</AppText>
           </Pressable>
@@ -2573,61 +2573,63 @@ export default function NewEntryScreen() {
 
           {!isBulkLineupMode ? (
             <>
-              <View style={styles.drinkingNowCard}>
-                <View style={styles.drinkingNowCopy}>
-                  <AppText style={styles.drinkingNowTitle}>
-                    {NEW_ENTRY_DRINKING_NOW_COPY.title}
-                  </AppText>
-                  <AppText style={styles.drinkingNowDescription}>
-                    {NEW_ENTRY_DRINKING_NOW_COPY.description}
-                  </AppText>
-                </View>
-                <Switch
-                  value={form.drinking_now}
-                  onValueChange={(value) => updateField("drinking_now", value)}
-                  trackColor={{
-                    false: colors.borderStrong,
-                    true: "rgba(123,29,58,0.38)",
-                  }}
-                  thumbColor={form.drinking_now ? colors.info : colors.surfaceRaised}
-                  ios_backgroundColor={colors.borderStrong}
-                />
-              </View>
-
-              <Field
-                label="Notes"
-                value={form.notes}
-                onChange={(value) => updateField("notes", value)}
-                multiline
-                placeholder="Optional tasting notes"
-              />
-
-              <AdaptiveFieldRow minColumnWidth={170}>
-                <Field
-                  label="Rating (1-100)"
-                  value={form.rating}
-                  onChange={(value) => updateField("rating", value)}
-                  keyboardType="number-pad"
-                  placeholder="Required"
-                  required
-                />
-                <SelectField
-                  label={NEW_ENTRY_SINGLE_BOTTLE_COPY.qprLabel}
-                  value={form.qpr_level}
-                  options={QPR_OPTIONS}
-                  onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
-                />
-              </AdaptiveFieldRow>
-
-              {!showManualFields && (
+              {!showManualFields ? (
                 <Pressable
                   onPress={() => setShowManualFields(true)}
-                  style={styles.ghostButton}
+                  style={styles.manualEntryButton}
                 >
-                  <AppText style={[styles.ghostButtonText, { textDecorationLine: "underline" }]}>
+                  <AppText style={styles.manualEntryButtonText}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.manualEntryCta}
                   </AppText>
                 </Pressable>
+              ) : (
+                <>
+                  <View style={styles.drinkingNowCard}>
+                    <View style={styles.drinkingNowCopy}>
+                      <AppText style={styles.drinkingNowTitle}>
+                        {NEW_ENTRY_DRINKING_NOW_COPY.title}
+                      </AppText>
+                      <AppText style={styles.drinkingNowDescription}>
+                        {NEW_ENTRY_DRINKING_NOW_COPY.description}
+                      </AppText>
+                    </View>
+                    <Switch
+                      value={form.drinking_now}
+                      onValueChange={(value) => updateField("drinking_now", value)}
+                      trackColor={{
+                        false: colors.borderStrong,
+                        true: "rgba(123,29,58,0.38)",
+                      }}
+                      thumbColor={form.drinking_now ? colors.info : colors.surfaceRaised}
+                      ios_backgroundColor={colors.borderStrong}
+                    />
+                  </View>
+
+                  <Field
+                    label="Notes"
+                    value={form.notes}
+                    onChange={(value) => updateField("notes", value)}
+                    multiline
+                    placeholder="Optional tasting notes"
+                  />
+
+                  <AdaptiveFieldRow minColumnWidth={170}>
+                    <Field
+                      label="Rating (1-100)"
+                      value={form.rating}
+                      onChange={(value) => updateField("rating", value)}
+                      keyboardType="number-pad"
+                      placeholder="Required"
+                      required
+                    />
+                    <SelectField
+                      label={NEW_ENTRY_SINGLE_BOTTLE_COPY.qprLabel}
+                      value={form.qpr_level}
+                      options={QPR_OPTIONS}
+                      onChange={(value) => updateField("qpr_level", value as QprLevel | "")}
+                    />
+                  </AdaptiveFieldRow>
+                </>
               )}
 
               {showManualFields && (

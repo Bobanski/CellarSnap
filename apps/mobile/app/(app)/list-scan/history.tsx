@@ -6,7 +6,7 @@ export default function ListScanHistoryRoute() {
   const { hasPrivateBetaFeatureAccess } = useAuth();
 
   if (!hasPrivateBetaFeatureAccess) {
-    return <Redirect href="/(app)/home" />;
+    return <Redirect href="/(app)/feed" />;
   }
 
   return <ListScanHistoryScreen />;

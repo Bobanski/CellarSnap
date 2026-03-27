@@ -46,20 +46,10 @@ import {
   REPORT_REASON_OPTIONS,
   useFeedInteractions,
 } from "@/src/lib/feed/useFeedInteractions";
-import { getPublicProfileName } from "@/src/lib/publicProfiles";
-import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
-
-type UserOption = {
-  id: string;
-  display_name: string | null;
-  username?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  name_display_preference?: "real_name" | "username" | null;
-};
+import { fonts } from "@/src/lib/typography";
 
 const PAGE_SIZE = 24;
 
@@ -70,24 +60,6 @@ const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   good_value: "Good Value",
   absolute_steal: "Absolute Steal",
 };
-
-function sanitizeUserSearch(search: string) {
-  return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function buildTokenAndFilter(tokens: string[], fields: string[]) {
-  const cleaned = tokens.map((token) => token.trim()).filter(Boolean).slice(0, 4);
-  if (cleaned.length <= 1) {
-    return null;
-  }
-
-  const tokenOr = (token: string) => {
-    const pattern = `%${token}%`;
-    return `or(${fields.map((field) => `${field}.ilike.${pattern}`).join(",")})`;
-  };
-
-  return `and(${cleaned.map(tokenOr).join(",")})`;
-}
 
 function formatConsumedDate(raw: string) {
   const date = new Date(`${raw}T00:00:00`);
@@ -923,12 +895,6 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const viewerUserId = user?.id ?? null;
   const [feedScope, setFeedScope] = useState<FeedScope>("public");
-  const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
-  const [friendSearchQuery, setFriendSearchQuery] = useState("");
-  const [friendSearchResults, setFriendSearchResults] = useState<UserOption[]>([]);
-  const [isFriendSearchLoading, setIsFriendSearchLoading] = useState(false);
-  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
-  const [selectedFriendName, setSelectedFriendName] = useState<string | null>(null);
   const [entries, setEntries] = useState<MobileFeedEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1013,98 +979,7 @@ export default function FeedScreen() {
     [clearFeedScrollIdleTimer]
   );
 
-  const visibleEntries = useMemo(() => {
-    if (!selectedFriendId) {
-      return entries;
-    }
-    return entries.filter((entry) => entry.user_id === selectedFriendId);
-  }, [entries, selectedFriendId]);
-
-  useEffect(() => {
-    if (!isFriendSearchOpen || !viewerUserId) {
-      return;
-    }
-
-    const trimmedQuery = friendSearchQuery.trim();
-    if (!trimmedQuery) {
-      return;
-    }
-
-    let isCancelled = false;
-    const timer = setTimeout(async () => {
-      setIsFriendSearchLoading(true);
-      const search = sanitizeUserSearch(trimmedQuery);
-      const pattern = `%${search}%`;
-      const tokens = search.split(" ").filter(Boolean);
-      const tokenAndFilter = buildTokenAndFilter(tokens, [
-        "display_name",
-        "username",
-        "first_name",
-        "last_name",
-      ]);
-
-      const baseFilters = [
-        `display_name.ilike.${pattern}`,
-        `username.ilike.${pattern}`,
-        `first_name.ilike.${pattern}`,
-        `last_name.ilike.${pattern}`,
-        tokenAndFilter,
-      ]
-        .filter(Boolean)
-        .join(",");
-
-      const firstAttempt = await supabase
-        .from("public_profiles")
-        .select(
-          "id, display_name, username, first_name, last_name, name_display_preference"
-        )
-        .neq("id", viewerUserId)
-        .or(baseFilters)
-        .order("display_name", { ascending: true })
-        .limit(25);
-
-      let data = firstAttempt.data as UserOption[] | null;
-      let error = firstAttempt.error;
-
-      if (
-        error &&
-        (error.message.includes("username") ||
-          error.message.includes("first_name") ||
-          error.message.includes("last_name") ||
-          error.message.includes("name_display_preference"))
-      ) {
-        const fallbackTokenAndFilter = buildTokenAndFilter(tokens, ["display_name"]);
-        const fallbackFilters = [`display_name.ilike.${pattern}`, fallbackTokenAndFilter]
-          .filter(Boolean)
-          .join(",");
-        const fallbackAttempt = await supabase
-          .from("public_profiles")
-          .select("id, display_name")
-          .neq("id", viewerUserId)
-          .or(fallbackFilters)
-          .order("display_name", { ascending: true })
-          .limit(25);
-        data = fallbackAttempt.data as UserOption[] | null;
-        error = fallbackAttempt.error;
-      }
-
-      if (isCancelled) {
-        return;
-      }
-
-      if (error) {
-        setFriendSearchResults([]);
-      } else {
-        setFriendSearchResults((data ?? []) as UserOption[]);
-      }
-      setIsFriendSearchLoading(false);
-    }, 200);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timer);
-    };
-  }, [friendSearchQuery, isFriendSearchOpen, viewerUserId]);
+  const visibleEntries = useMemo(() => entries, [entries]);
 
   const loadFeed = useCallback(
     async (refresh = false) => {
@@ -1182,33 +1057,6 @@ export default function FeedScreen() {
     setHasMore(result.hasMore);
     setNextCursor(result.nextCursor);
     setIsLoadingMore(false);
-  };
-
-  const clearFriendSearch = () => {
-    setFriendSearchQuery("");
-    setFriendSearchResults([]);
-    setIsFriendSearchLoading(false);
-    setSelectedFriendId(null);
-    setSelectedFriendName(null);
-  };
-
-  const toggleFriendSearch = () => {
-    setIsFriendSearchOpen((current) => {
-      const next = !current;
-      if (!next) {
-        clearFriendSearch();
-      }
-      return next;
-    });
-  };
-
-  const selectFriendFilter = (option: UserOption) => {
-    const displayName = getPublicProfileName(option);
-    setFeedScope("friends");
-    setSelectedFriendId(option.id);
-    setSelectedFriendName(displayName);
-    setFriendSearchQuery(displayName);
-    setFriendSearchResults([]);
   };
 
   if (isLoading) {
@@ -1309,9 +1157,7 @@ export default function FeedScreen() {
 
         {visibleEntries.length === 0 ? (
           <View style={styles.emptyCard}>
-            <AppText style={styles.emptyText}>
-              {getFeedEmptyStateMessage(selectedFriendName, Boolean(selectedFriendId))}
-            </AppText>
+            <AppText style={styles.emptyText}>{getFeedEmptyStateMessage(null, false)}</AppText>
           </View>
         ) : (
           <View style={styles.feedStack}>
@@ -1485,7 +1331,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   header: {
-    gap: 6,
+    gap: 5,
   },
   eyebrow: {
     color: colors.rose,
@@ -1496,12 +1342,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "700",
+    fontFamily: fonts.serif.light,
+    fontSize: 22,
+    lineHeight: 28,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 18,
   },
   scopeRow: {

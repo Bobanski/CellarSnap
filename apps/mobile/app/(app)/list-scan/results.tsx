@@ -6,7 +6,7 @@ export default function ListScanResultsRoute() {
   const { hasPrivateBetaFeatureAccess } = useAuth();
 
   if (!hasPrivateBetaFeatureAccess) {
-    return <Redirect href="/(app)/home" />;
+    return <Redirect href="/(app)/feed" />;
   }
 
   return <ListScanResultsScreen />;

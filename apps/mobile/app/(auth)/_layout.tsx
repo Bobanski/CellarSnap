@@ -26,7 +26,7 @@ export default function AuthLayout() {
   }
 
   if (session && !isResetPasswordScreen && !isFinishSignupScreen) {
-    return <Redirect href="/(app)/home" />;
+    return <Redirect href="/(app)/feed" />;
   }
 
   return (

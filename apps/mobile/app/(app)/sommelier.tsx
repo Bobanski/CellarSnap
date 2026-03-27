@@ -131,7 +131,7 @@ export default function SommelierScreen() {
   );
 
   if (!hasPrivateBetaFeatureAccess) {
-    return <Redirect href="/(app)/home" />;
+    return <Redirect href="/(app)/feed" />;
   }
 
   return (
@@ -223,11 +223,11 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
-    gap: 16,
+    paddingBottom: 20,
+    gap: 14,
   },
   header: {
-    gap: 6,
+    gap: 4,
   },
   eyebrow: {
     color: colors.accentSecondary,
@@ -239,75 +239,76 @@ const styles = StyleSheet.create({
   headingTitle: {
     color: colors.textPrimary,
     fontFamily: fonts.serif.light,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 24,
+    lineHeight: 30,
   },
   headingSubtitle: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
   },
   suggestionSection: {
-    gap: 10,
+    gap: 8,
   },
   suggestionEyebrow: {
     color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 1.8,
+    fontSize: 10,
+    letterSpacing: 1.6,
     textTransform: "uppercase",
   },
   suggestionWrap: {
-    flexDirection: "row",
-    gap: 12,
+    flexDirection: "column",
+    gap: 8,
   },
   suggestionChip: {
-    flex: 1,
-    minHeight: 52,
-    borderRadius: 999,
+    width: "100%",
+    minHeight: 56,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.surfacePrimary,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     justifyContent: "center",
     alignItems: "center",
   },
   suggestionText: {
     color: colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: "center",
   },
   chatStack: {
-    gap: 12,
+    gap: 10,
   },
   messageBubble: {
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   assistantBubble: {
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
-    borderRadius: 14,
+    borderRadius: 16,
     borderBottomLeftRadius: 3,
   },
   userBubble: {
     borderColor: "rgba(123,29,58,0.3)",
     backgroundColor: colors.accentPrimary,
-    borderRadius: 14,
+    borderRadius: 16,
     borderBottomRightRadius: 3,
   },
   messageLabel: {
     color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 1.8,
+    fontSize: 10,
+    letterSpacing: 1.6,
     textTransform: "uppercase",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   messageText: {
     color: colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 20,
   },
   userMessageLabel: {
     color: colors.textOnAccent,
@@ -318,8 +319,8 @@ const styles = StyleSheet.create({
   },
   typingText: {
     color: colors.rose,
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 20,
   },
   errorCard: {
     borderRadius: 18,
@@ -347,20 +348,20 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     paddingHorizontal: 0,
     paddingTop: 2,
-    paddingBottom: 6,
+    paddingBottom: 8,
   },
   input: {
-    minHeight: 116,
-    maxHeight: 196,
+    minHeight: 88,
+    maxHeight: 164,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
     color: colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 22,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    fontSize: 13,
+    lineHeight: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     textAlignVertical: "top",
   },
   sendButton: {

@@ -513,9 +513,9 @@ export function AppTopBar() {
       {/* ── Slim header bar ─────────────────────────── */}
       <View style={styles.headerRow}>
         <Pressable
-          onPress={() => router.push("/(app)/home")}
+          onPress={() => router.push("/(app)/feed")}
           accessibilityRole="button"
-          accessibilityLabel="Go to home"
+          accessibilityLabel="Go to feed"
         >
           <AppText style={styles.wordmark}>cluster</AppText>
         </Pressable>

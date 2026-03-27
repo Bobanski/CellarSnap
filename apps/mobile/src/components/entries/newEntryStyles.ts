@@ -445,6 +445,21 @@ export const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: 2,
   },
+  manualEntryButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  manualEntryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
   ghostButtonText: {
     color: colors.textPrimary,
     fontSize: 11,
