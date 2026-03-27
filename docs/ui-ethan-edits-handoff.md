@@ -83,30 +83,7 @@
 
 ## What is still left
 
-### 1. List-scan parity
-
-- This is the biggest remaining product surface that still clearly drifts.
-- Main files:
-  - `src/app/list-scan/page.tsx`
-  - `src/app/list-scan/results/page.tsx`
-  - `src/app/list-scan/history/page.tsx`
-  - `apps/mobile/app/(app)/list-scan/index.tsx`
-  - `apps/mobile/app/(app)/list-scan/results.tsx`
-
-### 2. Auth/onboarding parity
-
-- Web and mobile auth/onboarding flows are still separate and not fully reconciled.
-- Main web files:
-  - `src/app/login/page.tsx`
-  - `src/app/signup/page.tsx`
-  - `src/app/forgot-password/page.tsx`
-  - `src/app/reset-password/page.tsx`
-  - `src/app/verify-phone/page.tsx`
-  - `src/app/finish-signup/page.tsx`
-- Main mobile area:
-  - `apps/mobile/app/(auth)`
-
-### 3. Lower-priority legal/static drift
+### 1. Lower-priority legal/static drift
 
 - `src/app/privacy/page.tsx`
 - `src/app/terms/page.tsx`
@@ -115,9 +92,23 @@
 
 ## Recommended next move
 
-1. Continue with list-scan parity first.
-2. After that, reconcile auth/onboarding.
-3. Leave legal/static pages for the end.
+1. If you want the Ethan handoff fully buttoned up, finish the privacy/terms parity.
+2. Otherwise, the core list-scan and auth/onboarding work for this branch set is effectively done.
+
+## Completed Since Handoff
+
+### List-scan parity
+
+- Mobile history now exists and is reachable from results.
+- Mobile results now match web sort behavior more closely.
+- This bucket is no longer the primary gap for this branch.
+
+### Auth/onboarding parity
+
+- Mobile phone recovery now flows into reset-password correctly.
+- Mobile reset-password supports both email and phone recovery.
+- Mobile email onboarding now has a finish-signup step that aligns more closely with web.
+- This bucket is also effectively closed for the current branch set.
 
 ## Quick resume commands
 
