@@ -26,10 +26,12 @@ import {
   listScanWineTypeLabels,
   sanitizeListScanFilters,
   resolveListScanWineType,
+  sortListScanWines,
   type ListScanFilterAccentTone,
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
+  type ListScanSortMode,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -242,6 +244,7 @@ export default function ListScanResultsScreen() {
     createDefaultListScanFilters()
   );
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
   const [priceOpen, setPriceOpen] = useState(false);
   const [wineTypeOpen, setWineTypeOpen] = useState(false);
   const [varietalOpen, setVarietalOpen] = useState(false);
@@ -319,8 +322,14 @@ export default function ListScanResultsScreen() {
   const hasVarietalOptions = availableVarietals.length > 0;
   const hasRegionOptions = regionGroups.length > 0;
   const filteredWines = useMemo(
-    () => (result ? filterListScanWines(result.wines, visibleFilters) : []),
-    [result, visibleFilters]
+    () =>
+      result
+        ? sortListScanWines(
+            filterListScanWines(result.wines, visibleFilters),
+            sortMode
+          )
+        : [],
+    [result, sortMode, visibleFilters]
   );
   const topRecommendations = useMemo(
     () => getTopListScanRecommendations(filteredWines, 3),
@@ -338,6 +347,8 @@ export default function ListScanResultsScreen() {
         : 0,
     [availableWineTypes, derivedFacets, visibleFilters]
   );
+  const fullListTitle =
+    sortMode === "match" ? "Filtered wines by best match" : "Filtered wines in list order";
 
   useEffect(() => {
     let isActive = true;
@@ -824,12 +835,40 @@ export default function ListScanResultsScreen() {
         <View style={styles.sectionCard}>
           <View>
             <AppText style={styles.sectionEyebrow}>Full list</AppText>
-            <AppText style={styles.sectionTitle}>
-              Filtered wines in uploaded list order
-            </AppText>
+            <AppText style={styles.sectionTitle}>{fullListTitle}</AppText>
             <AppText style={styles.sectionCounterBelow}>
               {filteredWines.length} of {result.wines.length} shown
             </AppText>
+          </View>
+
+          <View style={styles.sortToggleGroup}>
+            {(
+              [
+                { value: "list_order", label: "List Order" },
+                { value: "match", label: "Best Match" },
+              ] as const
+            ).map((option) => {
+              const active = sortMode === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  style={[
+                    styles.sortToggleButton,
+                    active ? styles.sortToggleButtonActive : null,
+                  ]}
+                  onPress={() => setSortMode(option.value)}
+                >
+                  <AppText
+                    style={[
+                      styles.sortToggleButtonText,
+                      active ? styles.sortToggleButtonTextActive : null,
+                    ]}
+                  >
+                    {option.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
           </View>
 
           <View style={styles.tableHead}>
@@ -872,7 +911,8 @@ export default function ListScanResultsScreen() {
                       .join(" \u00b7 ") || null;
 
                     const resolvedType = resolveListScanWineType(wine);
-                    const showSectionHeader = resolvedType !== lastSectionType;
+                    const showSectionHeader =
+                      sortMode === "list_order" && resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
 
                     return (
@@ -1138,6 +1178,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     marginTop: 4,
+  },
+  sortToggleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    padding: 4,
+  },
+  sortToggleButton: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  sortToggleButtonActive: {
+    backgroundColor: colors.surfacePrimary,
+  },
+  sortToggleButtonText: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  sortToggleButtonTextActive: {
+    color: colors.textPrimary,
   },
   tableSectionHeader: {
     paddingVertical: 8,
