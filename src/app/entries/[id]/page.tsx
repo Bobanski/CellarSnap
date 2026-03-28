@@ -815,11 +815,19 @@ export default function EntryDetailPage() {
 
         <div className="space-y-6">
           <div className="space-y-0">
+            {allGalleryItems.some((item) => item.url) ? (
             <SwipePhotoGallery
-              items={allGalleryItems}
+              items={allGalleryItems.filter((item) => item.url)}
               empty={photosLoading ? "Loading photos..." : "No photos uploaded."}
               wrapperClassName="rounded-b-none"
             />
+            ) : !photosLoading ? null : (
+            <SwipePhotoGallery
+              items={[]}
+              empty="Loading photos..."
+              wrapperClassName="rounded-b-none"
+            />
+            )}
             <div className="rounded-b-3xl border border-t-0 border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4" ref={reactionMenuRef}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {canComment ? (

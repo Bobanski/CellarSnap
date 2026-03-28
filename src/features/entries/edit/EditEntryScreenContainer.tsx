@@ -139,6 +139,7 @@ export default function EditEntryPage() {
       .map((id) => id.trim())
       .filter((id) => id.length > 0);
   }, [searchParams]);
+  const isFromCellar = searchParams.get("from_cellar") === "1";
   const isBulkReview =
     searchParams.get("bulk") === "1" &&
     typeof entryId === "string" &&
@@ -1934,17 +1935,21 @@ export default function EditEntryPage() {
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-              {isBulkReview ? "Bulk review" : "Edit entry"}
+              {isFromCellar ? "From your cellar" : isBulkReview ? "Bulk review" : "Edit entry"}
             </span>
             <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-              {isBulkReview
-                ? "Review this wine before posting."
-                : "Refine your tasting notes."}
+              {isFromCellar
+                ? "Log this wine."
+                : isBulkReview
+                  ? "Review this wine before posting."
+                  : "Refine your tasting notes."}
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              {isBulkReview
-                ? `Wine ${bulkProgressLabel ?? "1/1"} in your bulk queue.`
-                : "Update tasting details or photos."}
+              {isFromCellar
+                ? "Add your tasting notes, photos, and rating. Opening with other wines? You can add more after saving."
+                : isBulkReview
+                  ? `Wine ${bulkProgressLabel ?? "1/1"} in your bulk queue.`
+                  : "Update tasting details or photos."}
             </p>
           </div>
         </header>
@@ -3005,7 +3010,7 @@ export default function EditEntryPage() {
                 ? nextBulkEntryId
                   ? "Next wine"
                   : "Finish review"
-                : "Save changes"}
+                : isFromCellar ? "Log this wine" : "Save changes"}
             </button>
             {isBulkReview ? (
               <button
@@ -3015,6 +3020,28 @@ export default function EditEntryPage() {
                 disabled={isSubmitting || isDeletingEntry || isDeletingBulkQueue}
               >
                 {isDeletingBulkQueue ? "Canceling bulk..." : "Cancel bulk entry"}
+              </button>
+            ) : isFromCellar ? (
+              <button
+                type="button"
+                className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-error)] transition cursor-pointer"
+                onClick={async () => {
+                  if (!confirm("Cancel this entry? The wine will remain in your cellar.")) return;
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                      await fetch(`/api/entries/${entry.id}`, {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${session.access_token}` },
+                      }).catch(() => null);
+                    }
+                  } catch {
+                    // Best-effort
+                  }
+                  router.push("/entries");
+                }}
+              >
+                Cancel
               </button>
             ) : (
               <Link

@@ -199,7 +199,7 @@ export default function NewEntryPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        router.push(`/entries/${data.consumed_entry_id}?from_cellar=1`);
+        router.push(`/entries/${data.consumed_entry_id}/edit?from_cellar=1`);
       }
     } finally {
       setCellarDrinking(false);
