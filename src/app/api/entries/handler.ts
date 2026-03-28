@@ -67,6 +67,9 @@ const ENTRY_OPTIONAL_INSERT_COLUMNS = [
   "comments_scope",
   "reaction_privacy",
   "comments_privacy",
+  "entry_status",
+  "cellar_quantity",
+  "bottle_format",
 ] as const;
 
 type EntryPostHandlerDependencies = {
@@ -98,6 +101,7 @@ async function getRandomComparisonCandidate({
     .from("wine_entries")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
+    .eq("entry_status", "consumed")
     .neq("id", newEntryId);
 
   if (countError || !count || count <= 0) {
@@ -110,6 +114,7 @@ async function getRandomComparisonCandidate({
     .from("wine_entries")
     .select("id, wine_name, producer, vintage, consumed_at, label_image_path")
     .eq("user_id", userId)
+    .eq("entry_status", "consumed")
     .neq("id", newEntryId)
     .order("created_at", { ascending: false })
     .range(randomOffset, randomOffset)
@@ -187,6 +192,7 @@ export async function GET(request: Request) {
       .from("wine_entries")
       .select(fields)
       .eq("user_id", user.id)
+      .eq("entry_status", "consumed")
       .order(sortBy, { ascending: false });
 
     if (cursor) {
@@ -293,7 +299,8 @@ export async function GET(request: Request) {
   const { count: totalCount } = await supabase
     .from("wine_entries")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("entry_status", "consumed");
 
   return NextResponse.json({ entries, next_cursor, has_more, total_count: totalCount ?? 0 });
 }
@@ -483,6 +490,18 @@ export function createEntryPostHandler(
 
   if (payload.data.is_feed_visible !== undefined) {
     insertPayload.is_feed_visible = payload.data.is_feed_visible;
+  }
+
+  if (payload.data.entry_status !== undefined) {
+    insertPayload.entry_status = payload.data.entry_status;
+  }
+
+  if (payload.data.cellar_quantity !== undefined) {
+    insertPayload.cellar_quantity = payload.data.cellar_quantity;
+  }
+
+  if (payload.data.bottle_format !== undefined) {
+    insertPayload.bottle_format = payload.data.bottle_format;
   }
 
     const insertResult = await resolvedDependencies.executeWithColumnFallback({

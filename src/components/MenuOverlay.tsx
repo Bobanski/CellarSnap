@@ -45,7 +45,8 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             supabase
               .from("wine_entries")
               .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id),
+              .eq("user_id", user.id)
+              .eq("entry_status", "consumed"),
             supabase
               .from("friend_requests")
               .select("id", { count: "exact", head: true })

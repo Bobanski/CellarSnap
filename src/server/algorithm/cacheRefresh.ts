@@ -123,7 +123,8 @@ async function loadRecentScoreableEntries(
     attempts: [
       {
         fields:
-          "id, wine_type, canonical_region, canonical_sub_region, canonical_country, producer, classification, quality_tier, vintage",
+          "id, wine_type, canonical_region, canonical_sub_region, canonical_country, producer, classification, quality_tier, vintage, entry_status",
+        withEntryStatusFilter: true,
         missingColumns: [
           "vintage",
           "wine_type",
@@ -131,19 +132,27 @@ async function loadRecentScoreableEntries(
           "canonical_sub_region",
           "canonical_country",
           "quality_tier",
+          "entry_status",
         ] as const,
       },
       {
         fields: "id, wine_type, region, appellation, country, producer, classification",
+        withEntryStatusFilter: false,
         missingColumns: [] as const,
       },
     ],
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
-      const response = await supabase
+      let query = supabase
         .from("wine_entries")
         .select(attempt.fields)
-        .eq("user_id", userId)
+        .eq("user_id", userId);
+
+      if (attempt.withEntryStatusFilter) {
+        query = query.eq("entry_status", "consumed");
+      }
+
+      const response = await query
         .order("consumed_at", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(RECENT_SCORE_REFRESH_LIMIT * 2);

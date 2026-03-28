@@ -91,7 +91,8 @@ export function createUserEntriesGetHandler(
     let entriesQuery = supabase
       .from("wine_entries")
       .select("*")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("entry_status", "consumed");
 
     if (user.id !== userId) {
       entriesQuery = entriesQuery.in("entry_privacy", allowedPrivacies);

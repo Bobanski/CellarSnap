@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./cellar";
 export * from "./date";
 export * from "./entries";
 export * from "./entriesLibrary";

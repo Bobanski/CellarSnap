@@ -177,13 +177,19 @@ export async function GET(request: Request) {
   const buildEntriesQuery = ({
     fields,
     withTastingSupport,
+    withEntryStatusFilter,
     cursor,
   }: {
     fields: string;
     withTastingSupport: boolean;
+    withEntryStatusFilter: boolean;
     cursor: { createdAt: string; id: string | null } | null;
   }) => {
     let query = supabase.from("wine_entries").select(fields);
+
+    if (withEntryStatusFilter) {
+      query = query.eq("entry_status", "consumed");
+    }
 
     if (viewerIsTestAccount) {
       query = query.neq("user_id", user.id);
@@ -236,29 +242,34 @@ export async function GET(request: Request) {
         {
           fields: extendedSelectFields,
           withTastingSupport: true,
+          withEntryStatusFilter: true,
           hasDrinkingNowColumn: true,
           missingColumns: [
             "drinking_now",
             "is_feed_visible",
             "root_entry_id",
             "entry_group_id",
+            "entry_status",
           ] as const,
         },
         {
           fields: extendedSelectFieldsWithoutDrinkingNow,
           withTastingSupport: true,
+          withEntryStatusFilter: true,
           hasDrinkingNowColumn: false,
-          missingColumns: ["is_feed_visible", "root_entry_id", "entry_group_id"] as const,
+          missingColumns: ["is_feed_visible", "root_entry_id", "entry_group_id", "entry_status"] as const,
         },
         {
           fields: baseSelectFields,
           withTastingSupport: false,
+          withEntryStatusFilter: false,
           hasDrinkingNowColumn: true,
           missingColumns: ["drinking_now"] as const,
         },
         {
           fields: baseSelectFieldsWithoutDrinkingNow,
           withTastingSupport: false,
+          withEntryStatusFilter: false,
           hasDrinkingNowColumn: false,
           missingColumns: [] as const,
         },
@@ -269,6 +280,7 @@ export async function GET(request: Request) {
         const result = await buildEntriesQuery({
           fields: attempt.fields,
           withTastingSupport: attempt.withTastingSupport,
+          withEntryStatusFilter: attempt.withEntryStatusFilter,
           cursor: queryCursor,
         })
           .order("created_at", { ascending: false })

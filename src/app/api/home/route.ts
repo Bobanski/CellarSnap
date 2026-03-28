@@ -125,16 +125,24 @@ export async function GET(request: Request) {
   const { count: totalEntryCount } = await supabase
     .from("wine_entries")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("entry_status", "consumed");
 
   const ownEntriesResult = await executeSelectWithFallback({
     attempts: [
       {
         withFeedVisibilityFilter: true,
+        withEntryStatusFilter: true,
+        missingColumns: ["is_feed_visible", "entry_status"] as const,
+      },
+      {
+        withFeedVisibilityFilter: true,
+        withEntryStatusFilter: false,
         missingColumns: ["is_feed_visible"] as const,
       },
       {
         withFeedVisibilityFilter: false,
+        withEntryStatusFilter: false,
         missingColumns: [] as const,
       },
     ],
@@ -151,6 +159,10 @@ export async function GET(request: Request) {
 
       if (attempt.withFeedVisibilityFilter) {
         query = query.eq("is_feed_visible", true);
+      }
+
+      if (attempt.withEntryStatusFilter) {
+        query = query.eq("entry_status", "consumed");
       }
 
       const response = await query;
@@ -189,7 +201,7 @@ export async function GET(request: Request) {
   let friendEntries: HomeEntryRow[] = [];
 
   if (viewerIsTestAccount || friendIds.length > 0) {
-    const buildFriendQuery = (withFeedVisibilityFilter: boolean) => {
+    const buildFriendQuery = (withFeedVisibilityFilter: boolean, withEntryStatusFilter: boolean) => {
       let query = supabase
         .from("wine_entries")
         .select("*")
@@ -206,6 +218,10 @@ export async function GET(request: Request) {
         query = query.eq("is_feed_visible", true);
       }
 
+      if (withEntryStatusFilter) {
+        query = query.eq("entry_status", "consumed");
+      }
+
       return query;
     };
 
@@ -213,17 +229,24 @@ export async function GET(request: Request) {
       attempts: [
         {
           withFeedVisibilityFilter: true,
+          withEntryStatusFilter: true,
+          missingColumns: ["is_feed_visible", "entry_status"] as const,
+        },
+        {
+          withFeedVisibilityFilter: true,
+          withEntryStatusFilter: false,
           missingColumns: ["is_feed_visible"] as const,
         },
         {
           withFeedVisibilityFilter: false,
+          withEntryStatusFilter: false,
           missingColumns: [] as const,
         },
       ],
       getFallbackColumns: (attempt) => attempt.missingColumns,
       fallbackOnAnyMissingColumn: true,
       attempt: async (attempt) => {
-        const response = await buildFriendQuery(attempt.withFeedVisibilityFilter);
+        const response = await buildFriendQuery(attempt.withFeedVisibilityFilter, attempt.withEntryStatusFilter);
         return {
           data: response.data,
           error: response.error,

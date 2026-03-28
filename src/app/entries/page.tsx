@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
 import type { WineEntryWithUrls } from "@/types/wine";
 import {
+  CELLAR_TAB_LABELS,
+  CELLAR_COPY,
+  type CellarEntry,
   compareEntryChronology,
   createEntryLibraryGroupId,
   entryMatchesLibrarySearch,
@@ -130,7 +134,446 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
   );
 }
 
+type CellarTab = "consumed" | "cellaring";
+
+/* ─── Cellar entry card for the grid ─── */
+function CellarEntryCard({
+  entry,
+  onSelect,
+}: {
+  entry: CellarEntry;
+  onSelect: (entry: CellarEntry) => void;
+}) {
+  const formatLabel =
+    entry.bottle_format && entry.bottle_format !== "750ml"
+      ? entry.bottle_format
+      : null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(entry)}
+      className="group flex items-center gap-3 px-3.5 py-2.5 w-full text-left"
+      style={{ borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)" }}
+    >
+      {/* Thumbnail */}
+      <div
+        className="flex shrink-0 items-center justify-center overflow-hidden bg-black/40"
+        style={{
+          width: 64,
+          height: 76,
+          borderRadius: 8,
+          border: "0.5px solid var(--color-border)",
+        }}
+      >
+        {entry.label_image_url ? (
+          <Photo
+            src={entry.label_image_url}
+            alt={entry.wine_name ?? entry.producer ?? "Wine label"}
+            containerClassName="h-full w-full"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="h-4 w-4 text-[var(--color-text-tertiary)]" aria-hidden="true">
+            <path d="M12 2C11 2 10 6 10 10c0 2 .5 3 2 3s2-1 2-3c0-4-1-8-2-8z" />
+            <path d="M10 13v7a2 2 0 0 0 4 0v-7" />
+          </svg>
+        )}
+      </div>
+
+      {/* Center: name + meta */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span
+          className="truncate text-[var(--color-text-primary)]"
+          style={{ fontFamily: "var(--font-serif)", fontSize: 18 }}
+        >
+          {entry.wine_name || "Unnamed wine"}
+        </span>
+        {(entry.producer || entry.region || entry.country) ? (
+          <span
+            className="truncate text-[var(--color-text-secondary)]"
+            style={{ fontSize: 13 }}
+          >
+            {[entry.producer, entry.region || entry.country].filter(Boolean).join(" \u00B7 ")}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Right: quantity + format */}
+      <div className="flex shrink-0 flex-col items-end gap-0.5">
+        <span
+          className="inline-flex items-center justify-center"
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 14,
+            background: "rgba(196, 96, 122, 0.12)",
+            color: "var(--color-accent-secondary)",
+            borderRadius: 4,
+            padding: "1px 6px",
+            lineHeight: 1.4,
+          }}
+        >
+          {CELLAR_COPY.bottlesRemaining(entry.cellar_quantity)}
+        </span>
+        {formatLabel ? (
+          <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 11 }}>
+            {formatLabel}
+          </span>
+        ) : null}
+        {entry.vintage ? (
+          <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 12 }}>
+            {entry.vintage}
+          </span>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
+/* ─── Detail overlay for a cellar entry ─── */
+function CellarDetailOverlay({
+  entry,
+  onClose,
+  onDrink,
+  drinking,
+}: {
+  entry: CellarEntry;
+  onClose: () => void;
+  onDrink: (entry: CellarEntry) => void;
+  drinking: boolean;
+}) {
+  const metaParts = [
+    entry.producer,
+    entry.region,
+    entry.country,
+    entry.appellation,
+  ].filter(Boolean);
+
+  const formatLabel =
+    entry.bottle_format && entry.bottle_format !== "750ml"
+      ? entry.bottle_format
+      : "750ml";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      style={{ background: "var(--color-overlay)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-md"
+        style={{
+          background: "var(--color-surface-primary)",
+          border: "0.5px solid var(--color-border-strong)",
+          borderRadius: "18px 18px 0 0",
+          padding: "28px 24px 32px",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4"
+          style={{ color: "var(--color-text-tertiary)", fontSize: 13 }}
+          aria-label="Close"
+        >
+          &#10005;
+        </button>
+
+        {/* Wine name */}
+        <h2
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 28,
+            fontWeight: 400,
+            color: "var(--color-text-primary)",
+            lineHeight: 1.2,
+          }}
+        >
+          {entry.wine_name || "Unnamed wine"}
+        </h2>
+
+        {/* Meta */}
+        {metaParts.length > 0 ? (
+          <p
+            className="mt-1"
+            style={{ fontSize: 14, color: "var(--color-text-secondary)" }}
+          >
+            {metaParts.join(" \u00B7 ")}
+          </p>
+        ) : null}
+
+        {/* Details grid */}
+        <div
+          className="mt-5 grid grid-cols-2 gap-3"
+          style={{ fontSize: 13 }}
+        >
+          {entry.vintage ? (
+            <div>
+              <span className="block uppercase" style={{ fontSize: 9, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}>
+                Vintage
+              </span>
+              <span style={{ color: "var(--color-text-primary)" }}>{entry.vintage}</span>
+            </div>
+          ) : null}
+          {entry.wine_type ? (
+            <div>
+              <span className="block uppercase" style={{ fontSize: 9, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}>
+                Type
+              </span>
+              <span style={{ color: "var(--color-text-primary)" }}>{entry.wine_type}</span>
+            </div>
+          ) : null}
+          <div>
+            <span className="block uppercase" style={{ fontSize: 9, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}>
+              Quantity
+            </span>
+            <span style={{ color: "var(--color-text-primary)" }}>
+              {CELLAR_COPY.bottlesRemaining(entry.cellar_quantity)}
+            </span>
+          </div>
+          <div>
+            <span className="block uppercase" style={{ fontSize: 9, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}>
+              Format
+            </span>
+            <span style={{ color: "var(--color-text-primary)" }}>{formatLabel}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={() => onDrink(entry)}
+            disabled={drinking || entry.cellar_quantity <= 0}
+            className="flex-1 transition disabled:opacity-50"
+            style={{
+              background: "var(--color-accent-primary)",
+              color: "var(--color-text-on-accent)",
+              borderRadius: 10,
+              padding: "12px 16px",
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: 0.5,
+              border: "none",
+              cursor: drinking ? "wait" : "pointer",
+            }}
+          >
+            {drinking ? "Opening\u2026" : CELLAR_COPY.drinkButton}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Cellar view ─── */
+function CellarView() {
+  const router = useRouter();
+  const [cellarEntries, setCellarEntries] = useState<CellarEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<CellarEntry | null>(null);
+  const [drinking, setDrinking] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCellar = async () => {
+      if (isMounted) {
+        setLoading(true);
+        setErrorMessage(null);
+      }
+
+      try {
+        const response = await fetch("/api/cellar", { cache: "no-store" });
+        if (!response.ok) {
+          if (isMounted) {
+            setErrorMessage("Unable to load your cellar.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (isMounted) {
+          setCellarEntries(data.entries ?? []);
+          setLoading(false);
+        }
+      } catch {
+        if (isMounted) {
+          setErrorMessage("Unable to load your cellar.");
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCellar().catch(() => null);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleDrink = useCallback(
+    async (entry: CellarEntry) => {
+      setDrinking(true);
+      try {
+        const response = await fetch("/api/cellar/drink", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cellar_entry_id: entry.id }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          alert(data.error || "Something went wrong. Please try again.");
+          return;
+        }
+
+        const data = await response.json();
+        // Navigate to the new consumed entry's edit page for tasting notes
+        router.push(`/entries/${data.consumed_entry_id}/edit`);
+      } catch {
+        alert("Network error. Please try again.");
+      } finally {
+        setDrinking(false);
+      }
+    },
+    [router]
+  );
+
+  if (loading) {
+    return (
+      <div
+        className="text-center"
+        style={{
+          background: "var(--color-surface-primary)",
+          border: "0.5px solid var(--color-border)",
+          borderRadius: 14,
+          padding: "24px 16px",
+          fontSize: 12,
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        Loading cellar&hellip;
+      </div>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <div
+        style={{
+          borderRadius: 14,
+          border: "0.5px solid rgba(192, 57, 43, 0.3)",
+          background: "rgba(192, 57, 43, 0.08)",
+          padding: "24px 16px",
+          fontSize: 12,
+          color: "#e6a0a0",
+        }}
+      >
+        {errorMessage}
+      </div>
+    );
+  }
+
+  if (cellarEntries.length === 0) {
+    return (
+      <div
+        style={{
+          background: "var(--color-surface-primary)",
+          border: "0.5px solid var(--color-border)",
+          borderRadius: 14,
+          padding: "40px 16px",
+          textAlign: "center",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 22,
+            fontWeight: 400,
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {CELLAR_COPY.emptyTitle}
+        </p>
+        <p
+          className="mt-2"
+          style={{ fontSize: 13, color: "var(--color-text-secondary)" }}
+        >
+          {CELLAR_COPY.emptySubtitle}
+        </p>
+        <p
+          className="mt-4"
+          style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}
+        >
+          Coming soon &mdash; for now, use the Log flow to add wines.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Coming soon note */}
+      <p
+        className="text-center"
+        style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}
+      >
+        Adding to cellar coming soon &mdash; for now, use the Log flow.
+      </p>
+
+      {/* Count */}
+      <div className="flex justify-end">
+        <span
+          style={{
+            fontSize: 9,
+            letterSpacing: 1,
+            color: "var(--color-text-tertiary)",
+            textTransform: "uppercase",
+          }}
+        >
+          {cellarEntries.length} wine{cellarEntries.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {/* Entry list */}
+      <div
+        style={{
+          background: "var(--color-surface-primary)",
+          border: "0.5px solid var(--color-border)",
+          borderRadius: 14,
+          overflow: "hidden",
+        }}
+      >
+        {cellarEntries.map((entry) => (
+          <CellarEntryCard
+            key={entry.id}
+            entry={entry}
+            onSelect={setSelectedEntry}
+          />
+        ))}
+      </div>
+
+      {/* Detail overlay */}
+      {selectedEntry ? (
+        <CellarDetailOverlay
+          entry={selectedEntry}
+          onClose={() => setSelectedEntry(null)}
+          onDrink={handleDrink}
+          drinking={drinking}
+        />
+      ) : null}
+    </>
+  );
+}
+
 export default function EntriesPage() {
+  const [activeTab, setActiveTab] = useState<CellarTab>("consumed");
   const [entries, setEntries] = useState<WineEntryWithUrls[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -452,6 +895,29 @@ export default function EntriesPage() {
               {ENTRIES_LIBRARY_HEADER.title}
             </h1>
           </header>
+
+          {/* ─── Consumed / Cellar tab toggle ─── */}
+          <div className="flex items-center justify-center gap-2">
+            {(["consumed", "cellaring"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                  activeTab === tab
+                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
+                }`}
+              >
+                {CELLAR_TAB_LABELS[tab]}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "cellaring" ? (
+            <CellarView />
+          ) : (
+          <>
 
           {/* ─── Stats row ─── */}
           <div className="grid grid-cols-3 gap-2.5">
@@ -1115,6 +1581,8 @@ export default function EntriesPage() {
                 </div>
               ) : null}
             </>
+          )}
+          </>
           )}
         </div>
       </div>

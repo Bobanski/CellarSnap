@@ -191,6 +191,11 @@ export const createEntrySchema = z
     skip_comparison_candidate: z.boolean().optional(),
     entry_group_mode: entryGroupModeSchema.optional(),
     entry_group_title: optionalTrimmedString.nullable().optional(),
+    entry_status: z.enum(["consumed", "cellaring"]).optional(),
+    cellar_quantity: z.number().int().min(1).max(9999).optional(),
+    bottle_format: z
+      .enum(["375ml", "750ml", "1.5L", "3L", "5L", "6L", "other"])
+      .optional(),
   })
   .superRefine((data, ctx) => {
     const hasPrice = data.price_paid !== undefined;
