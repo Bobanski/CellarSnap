@@ -20,6 +20,9 @@ import {
   buildEntryGoogleMapsLocationUrl,
   buildEntryLocationDisplayLabel,
   buildEntryShareText,
+  grapeProfileUrl,
+  producerProfileUrl,
+  regionProfileUrl,
 } from "@shared";
 import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
@@ -750,7 +753,16 @@ export default function EntryDetailPage() {
               {entry.wine_name || "Untitled wine"}
             </h1>
             <p className="max-w-3xl text-2xl text-[var(--color-text-secondary)] sm:text-3xl">
-              {entry.producer || "Unknown producer"}
+              {entry.producer ? (
+                <Link
+                  href={producerProfileUrl(entry.producer)}
+                  className="transition hover:text-[var(--color-accent-secondary)] hover:underline"
+                >
+                  {entry.producer}
+                </Link>
+              ) : (
+                "Unknown producer"
+              )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -1170,7 +1182,16 @@ export default function EntryDetailPage() {
                   Country
                 </p>
                 <p className="text-sm text-[var(--color-text-primary)]">
-                  {entry.country || "Not set"}
+                  {entry.country ? (
+                    <Link
+                      href={regionProfileUrl(entry.country)}
+                      className="transition hover:text-[var(--color-accent-secondary)] hover:underline"
+                    >
+                      {entry.country}
+                    </Link>
+                  ) : (
+                    "Not set"
+                  )}
                 </p>
               </div>
             ) : null}
@@ -1181,7 +1202,16 @@ export default function EntryDetailPage() {
                   Region
                 </p>
                 <p className="text-sm text-[var(--color-text-primary)]">
-                  {entry.region || "Not set"}
+                  {entry.region ? (
+                    <Link
+                      href={regionProfileUrl(entry.region)}
+                      className="transition hover:text-[var(--color-accent-secondary)] hover:underline"
+                    >
+                      {entry.region}
+                    </Link>
+                  ) : (
+                    "Not set"
+                  )}
                 </p>
               </div>
             ) : null}
@@ -1192,7 +1222,14 @@ export default function EntryDetailPage() {
                   Appellation
                 </p>
                 <p className="text-sm text-[var(--color-text-primary)]">
-                  {entry.appellation || "Not set"}
+                  {entry.appellation ? (
+                    <Link
+                      href={regionProfileUrl(entry.appellation)}
+                      className="hover:text-[var(--color-accent-secondary)] hover:underline transition"
+                    >
+                      {entry.appellation}
+                    </Link>
+                  ) : "Not set"}
                 </p>
               </div>
             ) : null}
@@ -1214,7 +1251,21 @@ export default function EntryDetailPage() {
                   Primary grapes
                 </p>
                 <p className="text-sm text-[var(--color-text-primary)]">
-                  {primaryGrapeDisplay || "Not set"}
+                  {entry.primary_grapes && entry.primary_grapes.length > 0
+                    ? [...entry.primary_grapes]
+                        .sort((a, b) => a.position - b.position)
+                        .map((grape, i, arr) => (
+                          <span key={grape.name}>
+                            <Link
+                              href={grapeProfileUrl(grape.name)}
+                              className="transition hover:text-[var(--color-accent-secondary)] hover:underline"
+                            >
+                              {grape.name}
+                            </Link>
+                            {i < arr.length - 1 ? ", " : ""}
+                          </span>
+                        ))
+                    : "Not set"}
                 </p>
               </div>
             ) : null}

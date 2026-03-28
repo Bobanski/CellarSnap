@@ -1,5 +1,6 @@
 import { z } from "zod";
 import Link from "next/link";
+import { grapeProfileUrl, regionProfileUrl } from "@shared";
 import AppShell from "@/components/AppShell";
 import SensoryRadarChart from "@/components/SensoryRadarChart";
 import { requirePrivateBetaFeatureUser } from "@/lib/access/privateBetaFeatures";
@@ -575,9 +576,12 @@ export default async function PalatePage() {
                   <div className="space-y-2">
                     {topGrapes.map((grape, i) => (
                       <div key={grape.name} className="flex items-center justify-between">
-                        <span className={`text-sm ${i === 0 ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
+                        <Link
+                          href={grapeProfileUrl(grape.name)}
+                          className={`text-sm transition hover:text-[var(--color-accent-secondary)] hover:underline ${i === 0 ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}
+                        >
                           {grape.name}
-                        </span>
+                        </Link>
                         <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--color-text-tertiary)]">
                           {grape.count}
                         </span>
@@ -602,9 +606,12 @@ export default async function PalatePage() {
                   <div className="space-y-2">
                     {regionStats.slice(0, 4).map((r, i) => (
                       <div key={r.region} className="flex items-center justify-between gap-2">
-                        <span className={`text-sm ${i === 0 ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
+                        <Link
+                          href={regionProfileUrl(r.region)}
+                          className={`text-sm transition hover:text-[var(--color-accent-secondary)] hover:underline ${i === 0 ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}
+                        >
                           {r.region}
-                        </span>
+                        </Link>
                         {r.delta > 0.5 ? (
                           <span className="text-[10px] font-semibold text-emerald-400">
                             Rates {Math.abs(r.delta).toFixed(1)} pts higher
