@@ -10,7 +10,7 @@ import type {
 type ResponsesClient = OpenAI;
 
 export const SOMMELIER_MODEL = "gpt-5-mini";
-export const SOMMELIER_MAX_OUTPUT_TOKENS = 220;
+export const SOMMELIER_MAX_OUTPUT_TOKENS = 500;
 
 export const SOMMELIER_SYSTEM_PROMPT = [
   "You are CellarSnap's pocket sommelier: a knowledgeable, approachable wine expert.",
