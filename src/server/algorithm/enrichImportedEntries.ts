@@ -163,7 +163,7 @@ export async function enrichImportedEntries(
           region: entry.region,
           producer: entry.producer,
           classification: entry.classification,
-          wine_type: entry.wine_type,
+          wine_type: entry.wine_type as "red" | "white" | "rose" | "sparkling" | "orange" | "sweet" | null,
           country: entry.country,
           primary_grapes: entry.primary_grapes
             ? entry.primary_grapes.split(",").map((g) => g.trim()).filter(Boolean)
