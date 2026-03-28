@@ -91,6 +91,16 @@ export const DYNAMIC_WEIGHT_MIN_ENTRIES = 5;
 export const SIGMOID_K = 0.65;
 export const SIGMOID_MIDPOINT = 3.5;
 
+/**
+ * Number of real wine entries at which survey seeds are fully faded out.
+ * Below this, survey data blends with entry-derived preferences.
+ * Above this, survey data is ignored entirely.
+ */
+export const SURVEY_FADE_THRESHOLD = 15;
+
+/** Default adventurousness when no survey exists. Neutral (no modifier). */
+export const DEFAULT_ADVENTUROUSNESS = 5;
+
 export const FALLBACK_LEVEL_CONFIDENCE: Record<number, number> = {
   1: 0.95,
   2: 0.85,

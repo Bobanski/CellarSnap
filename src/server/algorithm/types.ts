@@ -97,6 +97,9 @@ export type UserPreferenceVector = {
   weights: Partial<Record<SensoryAxis, number>>;
   categorical: CategoricalPreferenceVector;
   event_count: number;
+  /** Adventurousness from the taste survey (1–10, default 5).
+   *  Low = stick to familiar categories, High = explore via sensory similarity. */
+  adventurousness: number;
 };
 
 export type AssembleWineProfileInput = {

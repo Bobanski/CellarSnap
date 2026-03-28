@@ -1,11 +1,20 @@
 import type { AdvancedNotes } from "@/lib/advancedNotes";
 import {
+  DEFAULT_ADVENTUROUSNESS,
   DEFAULT_AXIS_WEIGHTS,
   DYNAMIC_WEIGHT_MIN_ENTRIES,
   MAX_DYNAMIC_WEIGHT_BOOST,
   POPULATION_AXIS_MEANS,
   SHRINKAGE_CONSTANT,
+  SURVEY_FADE_THRESHOLD,
 } from "@/server/algorithm/constants";
+import {
+  blendAffinityRecords,
+  blendSensoryVectors,
+  buildSurveyCategoricalVector,
+  buildSurveySensoryVector,
+  type TasteSurveyRow,
+} from "@/server/algorithm/surveySeeding";
 import { extractFromNotes } from "@/server/algorithm/notesNlp";
 import type {
   CategoricalPreferenceVector,
@@ -474,7 +483,8 @@ function computeDynamicBoost(
 
 export function buildUserPreferenceVector(
   entries: PreferenceSourceEntry[],
-  wineType: WineType
+  wineType: WineType,
+  survey?: TasteSurveyRow | null
 ): UserPreferenceVector {
   const typeEntries = entries.filter((entry) => entry.wine_type === wineType);
   const effectiveTypeEntries = typeEntries.length > 0 ? typeEntries : entries;
@@ -489,6 +499,19 @@ export function buildUserPreferenceVector(
   const globalCategoricalSummary =
     typeEntries.length > 0 ? buildCategoricalSummary(entries) : typeCategoricalSummary;
 
+  // ── Survey blending ──────────────────────────────────────────────
+  // When the user has few entries, survey answers supplement the
+  // preference vector. The survey weight fades linearly to 0 as the
+  // user logs more wines.
+  const hasSurvey = survey?.completed_at != null;
+  const surveyWeight = hasSurvey
+    ? Math.max(0, 1 - typeSummary.eventCount / SURVEY_FADE_THRESHOLD)
+    : 0;
+  const surveySensory = hasSurvey ? buildSurveySensoryVector(survey) : {};
+  const surveyCategorical = hasSurvey
+    ? buildSurveyCategoricalVector(survey)
+    : null;
+
   const sensory: Partial<SensoryVector> = {};
   const weights: Partial<Record<SensoryAxis, number>> = {};
 
@@ -500,14 +523,30 @@ export function buildUserPreferenceVector(
       shrinkageWeight
     );
 
-    if (merged === undefined) {
+    // If no entry data exists for this axis, fall back to survey seed
+    const entryValue = merged;
+    const surveyValue = surveySensory[axis];
+
+    let finalValue: number | undefined;
+    if (entryValue !== undefined && surveyValue !== undefined && surveyWeight > 0) {
+      // Blend entry data with survey seed
+      finalValue = entryValue * (1 - surveyWeight) + surveyValue * surveyWeight;
+    } else if (entryValue !== undefined) {
+      finalValue = entryValue;
+    } else if (surveyValue !== undefined && surveyWeight > 0) {
+      // Pure survey seed (no entry data for this axis)
+      finalValue = surveyValue;
+    }
+
+    if (finalValue === undefined) {
       return;
     }
 
-    sensory[axis] = merged;
+    sensory[axis] = finalValue;
 
     const typeObserved = typeSummary.observedAxes.has(axis);
     const globalObserved = globalSummary.observedAxes.has(axis);
+    const hasSurveyValue = surveyValue !== undefined && surveyWeight > 0;
     const observationWeight =
       typeObserved && globalObserved
         ? 0.75 + shrinkageWeight * 0.25
@@ -515,33 +554,49 @@ export function buildUserPreferenceVector(
           ? 0.6 + shrinkageWeight * 0.4
           : globalObserved
             ? 0.35
-            : 0;
+            : hasSurveyValue
+              ? 0.3 * surveyWeight
+              : 0;
 
-    const dynamicBoost = computeDynamicBoost(merged, axis, typeSummary.eventCount);
+    const dynamicBoost = computeDynamicBoost(finalValue, axis, typeSummary.eventCount);
     weights[axis] = Number((DEFAULT_AXIS_WEIGHTS[axis] * observationWeight * dynamicBoost).toFixed(3));
   });
 
+  // ── Build categorical vector with survey blending ─────────────
+  const entryVarietals = mergeAffinityRecords(
+    typeCategoricalSummary.varietals,
+    globalCategoricalSummary.varietals,
+    shrinkageWeight
+  );
+  const entryRegions = mergeAffinityRecords(
+    typeCategoricalSummary.regions,
+    globalCategoricalSummary.regions,
+    shrinkageWeight
+  );
+  const entryCountries = mergeAffinityRecords(
+    typeCategoricalSummary.countries,
+    globalCategoricalSummary.countries,
+    shrinkageWeight
+  );
+  const entryClassifications = mergeAffinityRecords(
+    typeCategoricalSummary.classifications,
+    globalCategoricalSummary.classifications,
+    shrinkageWeight
+  );
+
   const categorical: CategoricalPreferenceVector = {
-    varietals: mergeAffinityRecords(
-      typeCategoricalSummary.varietals,
-      globalCategoricalSummary.varietals,
-      shrinkageWeight
-    ),
-    regions: mergeAffinityRecords(
-      typeCategoricalSummary.regions,
-      globalCategoricalSummary.regions,
-      shrinkageWeight
-    ),
-    countries: mergeAffinityRecords(
-      typeCategoricalSummary.countries,
-      globalCategoricalSummary.countries,
-      shrinkageWeight
-    ),
-    classifications: mergeAffinityRecords(
-      typeCategoricalSummary.classifications,
-      globalCategoricalSummary.classifications,
-      shrinkageWeight
-    ),
+    varietals: surveyCategorical && surveyWeight > 0
+      ? blendAffinityRecords(entryVarietals, surveyCategorical.varietals, surveyWeight)
+      : entryVarietals,
+    regions: surveyCategorical && surveyWeight > 0
+      ? blendAffinityRecords(entryRegions, surveyCategorical.regions, surveyWeight)
+      : entryRegions,
+    countries: surveyCategorical && surveyWeight > 0
+      ? blendAffinityRecords(entryCountries, surveyCategorical.countries, surveyWeight)
+      : entryCountries,
+    classifications: surveyCategorical && surveyWeight > 0
+      ? blendAffinityRecords(entryClassifications, surveyCategorical.classifications, surveyWeight)
+      : entryClassifications,
     weights: {
       varietal: mergeCategoricalWeight(
         typeCategoricalSummary.eventCounts.varietal,
@@ -572,5 +627,6 @@ export function buildUserPreferenceVector(
     weights,
     categorical,
     event_count: typeSummary.eventCount,
+    adventurousness: survey?.adventurousness ?? DEFAULT_ADVENTUROUSNESS,
   };
 }

@@ -16,6 +16,7 @@ import {
   type CategoricalPreferenceVector,
   type UserPreferenceVector,
 } from "@/server/algorithm/types";
+import { computeAdventurousnessMultiplier } from "@/server/algorithm/surveySeeding";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -123,12 +124,20 @@ function computeCategoricalBonus(
     categoryVector.classifications
   );
 
-  return roundScore(
+  const rawBonus =
     varietalMatch * 8 * categoryVector.weights.varietal +
-      regionMatch * 12 * categoryVector.weights.region +
-      countryMatch * 6 * categoryVector.weights.country +
-      classificationMatch * 4 * categoryVector.weights.classification
+    regionMatch * 12 * categoryVector.weights.region +
+    countryMatch * 6 * categoryVector.weights.country +
+    classificationMatch * 4 * categoryVector.weights.classification;
+
+  // Adventurousness modulates how much categorical familiarity matters.
+  // Low adventurousness → boost the bonus (stick to what you know).
+  // High adventurousness → reduce it (let sensory similarity drive).
+  const adventurenessMultiplier = computeAdventurousnessMultiplier(
+    user.adventurousness
   );
+
+  return roundScore(rawBonus * adventurenessMultiplier);
 }
 
 function classifyScore(score: number): MatchBand {
