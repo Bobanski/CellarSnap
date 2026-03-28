@@ -16,15 +16,30 @@ import {
 } from "react-native";
 import { router, useFocusEffect, type RelativePathString } from "expo-router";
 import {
+  FEED_REACTION_EMOJIS,
+  HOME_ACTION_LABELS,
+  HOME_CIRCLE_ENTRIES_LIMIT,
+  HOME_EMPTY_STATE_COPY,
+  HOME_HEADER_COPY,
+  HOME_PRIVACY_ONBOARDING_COPY,
+  HOME_PRIVACY_OPTION_DESCRIPTIONS,
+  HOME_PRIVACY_OPTION_VALUES,
+  HOME_RECENT_ENTRIES_LIMIT,
+  HOME_SECTION_LABELS,
   PRIVACY_LEVEL_LABELS,
   QPR_LEVEL_LABELS,
+  getFeedDisplayRatingLabel,
+  type HomeApiResponse,
   normalizePrivacyLevel,
+  type HomeApiCircleEntry,
+  type HomeApiRecentEntry,
   type PrivacyLevel,
   type QprLevel,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import { AppText } from "@/src/components/AppText";
+import { fetchMobileHomeFromApi } from "@/src/lib/api/home";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
@@ -35,6 +50,7 @@ import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { colors } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/typography";
 
 type HomeEntryRow = {
   id: string;
@@ -88,31 +104,8 @@ type HomeInteractionSettingsRow = {
   reaction_privacy?: string | null;
 };
 
-type RecentEntry = {
-  id: string;
-  wine_name: string | null;
-  producer: string | null;
-  vintage: string | null;
-  rating: number | null;
-  qpr_level: QprLevel | null;
-  consumed_at: string;
-  created_at: string;
-  drinking_now: boolean;
-  tasted_with_names: string[];
-  label_image_url: string | null;
-  can_react: boolean;
-  my_reactions: string[];
-  reaction_counts: Record<string, number>;
-  reaction_users: Record<string, string[]>;
-};
-
-type CircleEntry = RecentEntry & {
-  user_id: string;
-  author_name: string;
-  author_avatar_url: string | null;
-};
-
-const REACTION_EMOJIS = ["\u{1F377}", "\u{1F525}", "\u2764\uFE0F", "\u{1F440}", "\u{1F91D}"] as const;
+type RecentEntry = HomeApiRecentEntry;
+type CircleEntry = HomeApiCircleEntry;
 
 function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
@@ -143,19 +136,6 @@ function canViewerAccessByHomePrivacy({
 
   return acceptedFriendIds.has(ownerUserId);
 }
-
-const PRIVACY_OPTIONS: Array<{
-  value: PrivacyLevel;
-  description: string;
-}> = [
-  { value: "public", description: "Visible to everyone" },
-  {
-    value: "friends_of_friends",
-    description: "Visible to friends and their friends",
-  },
-  { value: "friends", description: "Visible only to accepted friends" },
-  { value: "private", description: "Visible only to you" },
-];
 
 const PRIVACY_TONES: Record<
   PrivacyLevel,
@@ -227,14 +207,6 @@ function formatConsumedDate(raw: string) {
   });
 }
 
-function getDisplayRating(rating: number | null): string | null {
-  if (typeof rating !== "number" || Number.isNaN(rating)) {
-    return null;
-  }
-  const normalized = Math.max(0, Math.min(100, Math.round(rating)));
-  return `${normalized}/100`;
-}
-
 function buildOwnerWithCompanionsLabel(ownerLabel: string, companionNames: string[]) {
   return companionNames.length > 0 ? `${ownerLabel} + ${companionNames.join(", ")}` : ownerLabel;
 }
@@ -261,7 +233,7 @@ function HomeEntryCard({
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
   const producer = hideProducer ? null : entry.producer?.trim() || null;
   const vintage = entry.vintage?.trim() || null;
-  const displayRating = getDisplayRating(entry.rating);
+  const displayRating = getFeedDisplayRatingLabel(entry.rating);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const ownerWithCompanionsLabel = buildOwnerWithCompanionsLabel(
     ownerLabel,
@@ -414,7 +386,7 @@ function HomeEntryCard({
                 }}
               >
                 <View style={styles.reactionPickerRow}>
-                  {REACTION_EMOJIS.map((emoji) => {
+                  {FEED_REACTION_EMOJIS.map((emoji) => {
                     const selected = entry.my_reactions.includes(emoji);
                     return (
                       <Pressable
@@ -453,7 +425,6 @@ function HomeEntryCard({
 export default function HomeScreen() {
   const { user, hasPrivateBetaFeatureAccess } = useAuth();
   const hasLoadedHomeRef = useRef(false);
-  const [welcomeName, setWelcomeName] = useState<string | null>(null);
   const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
   const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
   const [privacyConfirmedAt, setPrivacyConfirmedAt] = useState<string | null>(null);
@@ -480,6 +451,19 @@ export default function HomeScreen() {
     };
   }, []);
 
+  const applyHomePayload = useCallback((payload: HomeApiResponse) => {
+    const firstName = payload.firstName?.trim() ?? "";
+    const displayName = payload.displayName?.trim() ?? "";
+
+    setViewerReactionName(displayName || firstName || null);
+    setDefaultEntryPrivacy(normalizePrivacyLevel(payload.defaultEntryPrivacy, "public"));
+    setPrivacyConfirmedAt(payload.privacyConfirmedAt ?? null);
+    setTotalEntryCount(payload.totalEntryCount ?? 0);
+    setFriendCount(payload.friendCount ?? 0);
+    setRecentEntries(payload.recentEntries ?? []);
+    setCircleEntries(payload.circleEntries ?? []);
+  }, []);
+
   const loadHome = useCallback(
     async (refresh = false) => {
       if (!user) {
@@ -495,6 +479,12 @@ export default function HomeScreen() {
       setErrorMessage(null);
 
       try {
+        const apiResult = await fetchMobileHomeFromApi();
+        if (apiResult.ok) {
+          applyHomePayload(apiResult.payload);
+          return;
+        }
+
         const { data: profileWithPrivacy, error: profileError } = await supabase
           .from("profiles")
           .select("display_name, first_name, default_entry_privacy, privacy_confirmed_at")
@@ -558,7 +548,7 @@ export default function HomeScreen() {
             .eq("user_id", user.id)
             .order("consumed_at", { ascending: false })
             .order("created_at", { ascending: false })
-            .limit(3);
+            .limit(HOME_RECENT_ENTRIES_LIMIT);
           return {
             data: (response.data ?? []).map((row) => ({
               ...(row as unknown as HomeEntryRow),
@@ -623,7 +613,7 @@ export default function HomeScreen() {
               .in("user_id", friendIds)
               .in("entry_privacy", ["public", "friends_of_friends", "friends"])
               .order("created_at", { ascending: false })
-              .limit(6);
+              .limit(HOME_CIRCLE_ENTRIES_LIMIT);
 
             if (includeFeedVisibility) {
               query = query.eq("is_feed_visible", true);
@@ -860,27 +850,23 @@ export default function HomeScreen() {
           };
         });
 
-        const firstName =
-          typeof profile?.first_name === "string" ? profile.first_name.trim() : "";
-        const displayName =
-          typeof profile?.display_name === "string"
-            ? profile.display_name.trim()
-            : "";
-
-        setWelcomeName(firstName || displayName || null);
-        setViewerReactionName(displayName || firstName || null);
-        setDefaultEntryPrivacy(
-          normalizePrivacyLevel(profile?.default_entry_privacy, "public")
-        );
-        setPrivacyConfirmedAt(
-          typeof profile?.privacy_confirmed_at === "string"
-            ? profile.privacy_confirmed_at
-            : null
-        );
-        setTotalEntryCount(totalCount ?? 0);
-        setFriendCount(friendIds.length);
-        setRecentEntries(recent);
-        setCircleEntries(circle);
+        applyHomePayload({
+          firstName: typeof profile?.first_name === "string" ? profile.first_name : null,
+          displayName:
+            typeof profile?.display_name === "string" ? profile.display_name : null,
+          defaultEntryPrivacy: normalizePrivacyLevel(
+            profile?.default_entry_privacy,
+            "public"
+          ),
+          privacyConfirmedAt:
+            typeof profile?.privacy_confirmed_at === "string"
+              ? profile.privacy_confirmed_at
+              : null,
+          totalEntryCount: totalCount ?? 0,
+          friendCount: friendIds.length,
+          recentEntries: recent,
+          circleEntries: circle,
+        });
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "Unable to load home right now."
@@ -890,7 +876,7 @@ export default function HomeScreen() {
         setIsRefreshing(false);
       }
     },
-    [user]
+    [applyHomePayload, user]
   );
 
   useFocusEffect(
@@ -1040,7 +1026,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <AppTopBar activeHref="/(app)/home" />
+          <AppTopBar />
           <View style={styles.loadingCard}>
             <ActivityIndicator color={colors.grenache} />
             <AppText style={styles.loadingText}>Loading...</AppText>
@@ -1062,27 +1048,21 @@ export default function HomeScreen() {
           />
         }
       >
-        <AppTopBar activeHref="/(app)/home" />
+        <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>
-            {isFirstTime ? "Getting started" : "Home"}
-          </AppText>
+          <AppText style={styles.eyebrow}>{HOME_HEADER_COPY.eyebrow}</AppText>
           <AppText
             style={[styles.title, !isFirstTime ? styles.returningTitle : null]}
           >
             {isFirstTime
-              ? welcomeName
-                ? `Welcome to Cluster, ${welcomeName}.`
-                : "Welcome to Cluster."
-              : welcomeName
-                ? `Welcome back, ${welcomeName}.`
-                : "Welcome back."}
+              ? HOME_HEADER_COPY.firstTimeTitle
+              : HOME_HEADER_COPY.returningTitle}
           </AppText>
           <AppText style={styles.subtitle}>
             {isFirstTime
-              ? "Your personal wine journal. Snap a label, log the moment, share with friends."
-              : "What's happening in your wine world right now?"}
+              ? HOME_HEADER_COPY.firstTimeSubtitle
+              : HOME_HEADER_COPY.returningSubtitle}
           </AppText>
         </View>
 
@@ -1095,23 +1075,23 @@ export default function HomeScreen() {
         {!privacyConfirmedAt ? (
           <View style={styles.onboardingCard}>
             <AppText style={styles.onboardingEyebrow}>
-              Onboarding privacy check
+              {HOME_PRIVACY_ONBOARDING_COPY.eyebrow}
             </AppText>
             <AppText style={styles.onboardingTitle}>
-              Confirm who should see new entries by default
+              {HOME_PRIVACY_ONBOARDING_COPY.title}
             </AppText>
             <AppText style={styles.onboardingSubtitle}>
-              You can still override visibility per entry at any time.
+              {HOME_PRIVACY_ONBOARDING_COPY.subtitle}
             </AppText>
 
             <View style={styles.privacyOptions}>
-              {PRIVACY_OPTIONS.map((option) => {
-                const selected = defaultEntryPrivacy === option.value;
-                const tone = PRIVACY_TONES[option.value];
+              {HOME_PRIVACY_OPTION_VALUES.map((value) => {
+                const selected = defaultEntryPrivacy === value;
+                const tone = PRIVACY_TONES[value];
                 return (
                   <Pressable
-                    key={option.value}
-                    onPress={() => setDefaultEntryPrivacy(option.value)}
+                    key={value}
+                    onPress={() => setDefaultEntryPrivacy(value)}
                     style={[
                       styles.privacyOption,
                       selected ? styles.privacyOptionSelected : null,
@@ -1132,11 +1112,11 @@ export default function HomeScreen() {
                           { color: tone.textColor },
                         ]}
                       >
-                        {PRIVACY_LEVEL_LABELS[option.value]}
+                        {PRIVACY_LEVEL_LABELS[value]}
                       </AppText>
                     </View>
                     <AppText style={styles.privacyDescription}>
-                      {option.description}
+                      {HOME_PRIVACY_OPTION_DESCRIPTIONS[value]}
                     </AppText>
                   </Pressable>
                 );
@@ -1157,8 +1137,8 @@ export default function HomeScreen() {
             >
               <AppText style={styles.confirmPrivacyButtonText}>
                 {savingPrivacyOnboarding
-                  ? "Saving..."
-                  : "Confirm default privacy"}
+                  ? HOME_PRIVACY_ONBOARDING_COPY.savingLabel
+                  : HOME_PRIVACY_ONBOARDING_COPY.confirmLabel}
               </AppText>
             </Pressable>
           </View>
@@ -1168,21 +1148,25 @@ export default function HomeScreen() {
           <View style={styles.heroCard}>
             <AppText style={styles.heroTitle}>Record your first pour</AppText>
             <AppText style={styles.heroSubtitle}>
-              Snap a photo of the label and we'll autofill the details. Or jot
-              down what you're drinking.
+              Snap a photo of the label and we&apos;ll autofill the details. Or jot
+              down what you&apos;re drinking.
             </AppText>
             <Pressable
               style={styles.primaryButton}
               onPress={() => router.push("/(app)/entries/new")}
             >
-              <AppText style={styles.primaryButtonText}>+ Record a new pour</AppText>
+              <AppText style={styles.primaryButtonText}>
+                {HOME_ACTION_LABELS.recordNewPour}
+              </AppText>
             </Pressable>
             {hasPrivateBetaFeatureAccess ? (
               <Pressable
                 style={styles.secondaryCtaButton}
                 onPress={() => router.push("../list-scan" as RelativePathString)}
               >
-                <AppText style={styles.secondaryCtaButtonText}>Scan/Upload a list</AppText>
+                <AppText style={styles.secondaryCtaButtonText}>
+                  {HOME_ACTION_LABELS.scanUploadList}
+                </AppText>
               </Pressable>
             ) : null}
           </View>
@@ -1192,7 +1176,9 @@ export default function HomeScreen() {
               style={styles.inlineCtaButton}
               onPress={() => router.push("/(app)/entries/new")}
             >
-              <AppText style={styles.inlineCtaButtonText}>+ Record a new pour</AppText>
+              <AppText style={styles.inlineCtaButtonText}>
+                {HOME_ACTION_LABELS.recordNewPour}
+              </AppText>
             </Pressable>
             {hasPrivateBetaFeatureAccess ? (
               <Pressable
@@ -1200,7 +1186,7 @@ export default function HomeScreen() {
                 onPress={() => router.push("../list-scan" as RelativePathString)}
               >
                 <AppText style={styles.inlineSecondaryCtaButtonText}>
-                  Scan/Upload a list
+                  {HOME_ACTION_LABELS.scanUploadList}
                 </AppText>
               </Pressable>
             ) : null}
@@ -1211,7 +1197,9 @@ export default function HomeScreen() {
 
         {!isFirstTime ? (
           <View style={styles.section}>
-            <AppText style={styles.sectionLabel}>Recent from you</AppText>
+            <AppText style={styles.sectionLabel}>
+              {HOME_SECTION_LABELS.recentFromYou}
+            </AppText>
             <View style={styles.cardStack}>
               {recentEntries.length > 0 ? (
                 recentEntries.map((entry) => (
@@ -1231,13 +1219,15 @@ export default function HomeScreen() {
                 ))
               ) : (
                 <View style={styles.emptyCard}>
-                  <AppText style={styles.emptyText}>No recent entries yet.</AppText>
+                  <AppText style={styles.emptyText}>
+                    {HOME_EMPTY_STATE_COPY.noRecentEntries}
+                  </AppText>
                 </View>
               )}
             </View>
             <Pressable onPress={() => router.push("/(app)/entries")}>
               <AppText style={[styles.inlineLink, styles.inlineLinkCompact]}>
-                View my library {"\u2192"}
+                {HOME_ACTION_LABELS.viewMyLibrary}
               </AppText>
             </Pressable>
           </View>
@@ -1250,7 +1240,9 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <AppText style={styles.sectionLabel}>From your circle</AppText>
+          <AppText style={styles.sectionLabel}>
+            {HOME_SECTION_LABELS.fromYourCircle}
+          </AppText>
 
           {circleEntries.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -1258,24 +1250,26 @@ export default function HomeScreen() {
                 <>
                   <AppText style={styles.emptyText}>
                     {isFirstTime
-                      ? "Cluster is better with friends. Add the people you drink with and see what they're enjoying."
-                      : "You haven't added any friends yet."}
+                      ? HOME_EMPTY_STATE_COPY.noFriendsFirstTime
+                      : HOME_EMPTY_STATE_COPY.noFriendsReturning}
                   </AppText>
                   <Pressable
                     style={styles.secondaryButton}
                     onPress={() => router.push("/(app)/feed")}
                   >
-                    <AppText style={styles.secondaryButtonText}>Find friends</AppText>
+                    <AppText style={styles.secondaryButtonText}>
+                      {HOME_ACTION_LABELS.findFriends}
+                    </AppText>
                   </Pressable>
                 </>
               ) : (
                 <>
                   <AppText style={styles.emptyText}>
-                    Your friends haven't posted anything yet. Check back soon!
+                    {HOME_EMPTY_STATE_COPY.noCirclePosts}
                   </AppText>
                   <Pressable onPress={() => router.push("/(app)/feed")}>
                     <AppText style={[styles.inlineLink, styles.inlineLinkHighlight]}>
-                      Browse the public feed -&gt;
+                      {HOME_ACTION_LABELS.browsePublicFeed}
                     </AppText>
                   </Pressable>
                 </>
@@ -1304,7 +1298,7 @@ export default function HomeScreen() {
               </View>
               <Pressable onPress={() => router.push("/(app)/feed")}>
                 <AppText style={[styles.inlineLink, styles.inlineLinkCompact]}>
-                  View full feed {"\u2192"}
+                  {HOME_ACTION_LABELS.viewFullFeed}
                 </AppText>
               </Pressable>
             </>
@@ -1345,21 +1339,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    color: colors.rose,
-    fontSize: 11,
+    color: colors.accentSecondary,
+    fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: "uppercase",
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 30,
-    fontWeight: "700",
-    lineHeight: 36,
+    fontFamily: fonts.serif.light,
+    fontSize: 28,
+    lineHeight: 34,
   },
   returningTitle: {
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 28,
+    lineHeight: 34,
   },
   subtitle: {
     color: colors.textSecondary,
@@ -1553,16 +1547,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   entryCard: {
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
     padding: 13,
   },
   entryCardDrinkingNow: {
-    borderColor: "rgba(125,211,252,0.72)",
-    backgroundColor: "rgba(59, 130, 246, 0.08)",
-    shadowColor: colors.info,
+    borderColor: "rgba(74,48,96,0.4)",
+    backgroundColor: "#130d1e",
+    shadowColor: colors.accentPurple,
     shadowOpacity: 0.15,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 0 },
@@ -1676,9 +1670,14 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   ratingText: {
-    color: colors.rose,
-    fontSize: 13,
+    color: colors.accentGold,
+    fontSize: 12,
     fontWeight: "800",
+    backgroundColor: "rgba(201,168,76,0.1)",
+    borderRadius: 6,
+    overflow: "hidden",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   qprTag: {
     borderRadius: 999,

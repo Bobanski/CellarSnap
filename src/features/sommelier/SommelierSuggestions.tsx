@@ -1,11 +1,6 @@
 "use client";
 
-const DEFAULT_SUGGESTIONS = [
-  "What should I try next based on what I've liked lately?",
-  "Tell me about Barolo and what it usually tastes like.",
-  "What kind of wine would you pour with steak frites tonight?",
-  "What regions should I explore if I like structured red Bordeaux?",
-] as const;
+import { SOMMELIER_DEFAULT_SUGGESTIONS } from "@shared";
 
 export default function SommelierSuggestions({
   onSelect,
@@ -13,13 +8,31 @@ export default function SommelierSuggestions({
   onSelect: (prompt: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2" aria-label="Suggested prompts">
-      {DEFAULT_SUGGESTIONS.map((suggestion) => (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Suggested prompts">
+      {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
         <button
           key={suggestion}
           type="button"
           onClick={() => onSelect(suggestion)}
-          className="rounded-full border border-white/12 bg-[var(--color-surface-primary)]/10 px-4 py-2 text-left text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-primary)]/10 hover:text-[var(--color-text-on-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
+          style={{
+            minHeight: "56px",
+            width: "100%",
+            background: "var(--color-surface-primary)",
+            border: "0.5px solid var(--color-border)",
+            borderRadius: "18px",
+            padding: "10px 12px",
+            fontSize: "11px",
+            lineHeight: 1.25,
+            color: "var(--color-text-primary)",
+            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            whiteSpace: "normal",
+            textWrap: "balance",
+            overflowWrap: "anywhere",
+          }}
+          className="mx-auto transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-primary)]/10 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
         >
           {suggestion}
         </button>

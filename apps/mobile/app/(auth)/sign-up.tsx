@@ -93,18 +93,6 @@ export default function SignUpScreen() {
       setErrorMessage("A valid email address is required.");
       return;
     }
-    if (password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters.");
-      return;
-    }
-    if (password.length > 72) {
-      setErrorMessage("Password must be 72 characters or fewer.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage("Passwords do not match.");
-      return;
-    }
 
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -112,20 +100,22 @@ export default function SignUpScreen() {
     try {
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
-        password,
-        options: { emailRedirectTo: buildAuthRedirectUrl() },
-      });
+        options: { emailRedirectTo: buildAuthRedirectUrl("finish-signup") },
+      } as never);
       if (error) {
         setErrorMessage(error.message);
         return;
       }
 
       if (data.session) {
-        router.replace("/(app)/home");
+        router.replace("/(app)/feed");
         return;
       }
 
-      setInfoMessage("Check your email to confirm your account.");
+      router.push({
+        pathname: "/(auth)/finish-signup",
+        params: { email: normalizedEmail },
+      } as never);
     } catch {
       setErrorMessage("Unable to create account right now.");
     } finally {
@@ -223,7 +213,7 @@ export default function SignUpScreen() {
       }
 
       if (data.session) {
-        router.replace("/(app)/home");
+        router.replace("/(app)/feed");
         return;
       }
 
@@ -264,7 +254,7 @@ export default function SignUpScreen() {
 
     try {
       await signInWithApple();
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch (error) {
       const errorCode =
         typeof error === "object" &&
@@ -303,7 +293,7 @@ export default function SignUpScreen() {
             <AppText style={styles.subtitle}>
               {authMode === "phone"
                 ? "Create your account with username, phone, email, and password."
-                : "Create your account with email and password."}
+                : "Enter your email to get started. We'll send a confirmation code, then you'll set your username and password."}
             </AppText>
           </View>
 
@@ -358,30 +348,36 @@ export default function SignUpScreen() {
             />
           )}
 
-          <Field
-            label="Password"
-            value={password}
-            onChange={setPassword}
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoComplete="new-password"
-            textContentType="newPassword"
-            placeholder="********"
-          />
-          <Pressable onPress={() => setShowPassword((previous) => !previous)}>
-            <AppText style={styles.toggleText}>{showPassword ? "Hide password" : "Show password"}</AppText>
-          </Pressable>
+          {authMode === "phone" ? (
+            <>
+              <Field
+                label="Password"
+                value={password}
+                onChange={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                placeholder="********"
+              />
+              <Pressable onPress={() => setShowPassword((previous) => !previous)}>
+                <AppText style={styles.toggleText}>
+                  {showPassword ? "Hide password" : "Show password"}
+                </AppText>
+              </Pressable>
 
-          <Field
-            label="Confirm password"
-            value={confirmPassword}
-            onChange={setConfirmPassword}
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoComplete="new-password"
-            textContentType="newPassword"
-            placeholder="********"
-          />
+              <Field
+                label="Confirm password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                placeholder="********"
+              />
+            </>
+          ) : null}
 
           {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
           {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
@@ -420,7 +416,9 @@ export default function SignUpScreen() {
           ) : null}
 
           <AppText style={styles.termsText}>
-            By selecting Create Account, you agree to our privacy and terms policies.
+            {authMode === "phone"
+              ? "By selecting Create Account, you agree to our privacy and terms policies."
+              : "By selecting Send confirmation code, you'll continue signup on the next screen after verifying your email."}
           </AppText>
 
           <Link href="/(auth)/sign-in" style={styles.linkButtonText}>

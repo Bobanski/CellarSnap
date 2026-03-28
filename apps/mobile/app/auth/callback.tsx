@@ -22,7 +22,7 @@ export default function AuthCallbackScreen() {
           const result = await handleIncomingAuthUrl(currentUrl);
           isRecovery = result.isRecovery;
         }
-        router.replace(isRecovery ? "/(auth)/reset-password" : "/(app)/home");
+        router.replace(isRecovery ? "/(auth)/reset-password" : "/(app)/feed");
       } catch (callbackError) {
         setError(
           callbackError instanceof Error
@@ -51,4 +51,3 @@ export default function AuthCallbackScreen() {
     </View>
   );
 }
-

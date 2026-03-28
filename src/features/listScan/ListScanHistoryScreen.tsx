@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 
 type ListScanHistoryItem = {
   scan_id: string;
@@ -24,6 +24,9 @@ export default function ListScanHistoryScreen() {
   const [isSignedOut, setIsSignedOut] = useState(false);
   const [backToScanId, setBackToScanId] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  // Snapshot current time once per data load so we avoid calling Date.now() during render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const renderNow = useMemo(() => Date.now(), [items]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -137,16 +140,38 @@ export default function ListScanHistoryScreen() {
   }, [loadHistory]);
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
 
-        <header className="space-y-3">
-          <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-            List scan
+        <header className="space-y-1">
+          <span
+            className="block"
+            style={{
+              fontSize: "9px",
+              textTransform: "uppercase",
+              letterSpacing: "3px",
+              color: "var(--color-accent-secondary)",
+            }}
+          >
+            List Scan
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">My scans</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <h1
+            className="font-serif"
+            style={{
+              fontSize: "28px",
+              fontWeight: 300,
+              color: "var(--color-text-primary)",
+            }}
+          >
+            My scans
+          </h1>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary)",
+            }}
+          >
             Revisit previously scanned wine lists across devices.
           </p>
           {backToScanId ? (
@@ -204,33 +229,81 @@ export default function ListScanHistoryScreen() {
             </Link>
           </section>
         ) : (
-          <section className="grid gap-4 md:grid-cols-2">
-            {items.map((item) => (
-              <Link
-                key={item.scan_id}
-                href={`/list-scan/results?scanId=${encodeURIComponent(item.scan_id)}`}
-                className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-white/7"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                  {item.source_type}
-                </p>
-                <h2 className="mt-3 text-xl font-semibold text-[var(--color-text-primary)]">
-                  {item.venue_name || item.list_title || item.source_label || "Saved scan"}
-                </h2>
-                <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                  {item.wine_count} wine{item.wine_count === 1 ? "" : "s"} scanned
-                  {typeof item.overall_confidence === "number"
-                    ? `, ${item.overall_confidence}% confidence`
-                    : ""}
-                </p>
-                <p className="mt-3 text-xs text-[var(--color-text-tertiary)]">
-                  {new Date(item.scanned_at).toLocaleString()}
-                </p>
-              </Link>
-            ))}
+          <section className="flex flex-col">
+            {items.map((item) => {
+              const title =
+                item.venue_name || item.list_title || item.source_label || "Saved scan";
+              const elapsed = renderNow - new Date(item.scanned_at).getTime();
+              const daysAgo = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+              const timeLabel =
+                daysAgo === 0
+                  ? "today"
+                  : daysAgo === 1
+                  ? "1 day ago"
+                  : `${daysAgo} days ago`;
+              const meta = `${item.wine_count} wine${item.wine_count === 1 ? "" : "s"} parsed \u00B7 ${timeLabel}`;
+
+              return (
+                <Link
+                  key={item.scan_id}
+                  href={`/list-scan/results?scanId=${encodeURIComponent(item.scan_id)}`}
+                  className="flex items-center transition hover:bg-white/[0.03]"
+                  style={{
+                    gap: "10px",
+                    padding: "11px 14px",
+                    borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)",
+                  }}
+                >
+                  <span
+                    className="flex items-center justify-center flex-shrink-0"
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      background: "rgba(123, 29, 58, 0.12)",
+                      border: "0.5px solid rgba(196, 96, 122, 0.15)",
+                      fontSize: "14px",
+                    }}
+                    aria-hidden="true"
+                  >
+                    🍷
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="truncate"
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--color-text-primary)",
+                      }}
+                    >
+                      {title}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "9px",
+                        color: "var(--color-text-tertiary)",
+                      }}
+                    >
+                      {meta}
+                    </p>
+                  </div>
+                  <span
+                    className="flex-shrink-0"
+                    style={{
+                      color: "var(--color-text-tertiary)",
+                      fontSize: "14px",
+                    }}
+                    aria-hidden="true"
+                  >
+                    ›
+                  </span>
+                </Link>
+              );
+            })}
           </section>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

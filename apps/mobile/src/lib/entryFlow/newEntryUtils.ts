@@ -1,14 +1,13 @@
-import { normalizeConfidence, type PrivacyLevel } from "@cellarsnap/shared";
+import {
+  NEW_ENTRY_PHOTO_TYPE_OPTIONS,
+  normalizeConfidence,
+  type NewEntryUploadPhotoType,
+  type PrivacyLevel,
+} from "@cellarsnap/shared";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { colors } from "@/src/lib/theme";
 
-export type UploadPhotoType =
-  | "label"
-  | "place"
-  | "people"
-  | "pairing"
-  | "lineup"
-  | "other_bottles";
+export type UploadPhotoType = NewEntryUploadPhotoType;
 
 export type LegacyUploadPhotoType = "label" | "place" | "pairing";
 
@@ -30,12 +29,7 @@ export const PHOTO_TYPE_LABELS: Record<UploadPhotoType, string> = {
 };
 
 export const PHOTO_TYPE_OPTIONS: Array<{ value: UploadPhotoType; label: string }> = [
-  { value: "label", label: "Label" },
-  { value: "place", label: "Place" },
-  { value: "people", label: "People" },
-  { value: "pairing", label: "Pairing" },
-  { value: "lineup", label: "Lineup" },
-  { value: "other_bottles", label: "Other bottle" },
+  ...NEW_ENTRY_PHOTO_TYPE_OPTIONS,
 ];
 
 export const LEGACY_UPLOAD_COLUMN_BY_TYPE: Record<

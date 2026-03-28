@@ -6,6 +6,11 @@ import {
   type SetStateAction,
 } from "react";
 import {
+  DEFAULT_FEED_REPORT_REASON,
+  FEED_REPORT_REASON_OPTIONS,
+  type FeedReportReason,
+} from "@cellarsnap/shared";
+import {
   countComments,
   fetchFeedComments,
   type FeedComment,
@@ -13,17 +18,9 @@ import {
 import type { MobileFeedEntry } from "@/src/lib/feed/feedPage";
 import { supabase } from "@/src/lib/supabase";
 
-export const REPORT_REASON_OPTIONS = [
-  { value: "spam", label: "Spam" },
-  { value: "harassment", label: "Harassment" },
-  { value: "hate", label: "Hate speech" },
-  { value: "nudity", label: "Nudity" },
-  { value: "misinfo", label: "False info" },
-  { value: "other", label: "Other" },
-] as const;
-
-export type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
-export const DEFAULT_REPORT_REASON: ReportReason = REPORT_REASON_OPTIONS[0].value;
+export const REPORT_REASON_OPTIONS = FEED_REPORT_REASON_OPTIONS;
+export type ReportReason = FeedReportReason;
+export const DEFAULT_REPORT_REASON: ReportReason = DEFAULT_FEED_REPORT_REASON;
 
 function isDuplicateReportError(error: { code?: string | null; message?: string | null }) {
   return (

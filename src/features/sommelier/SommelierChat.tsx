@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useRef, useState } from "react";
+import { SOMMELIER_INTRO_MESSAGE } from "@shared";
 import SommelierInput from "@/features/sommelier/SommelierInput";
 import SommelierMessage from "@/features/sommelier/SommelierMessage";
 import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
@@ -65,8 +66,7 @@ export default function SommelierChat() {
     {
       id: "intro",
       role: "assistant",
-      content:
-        "I’m ready. Ask about a bottle, a region, a pairing, or what you should try next.",
+      content: SOMMELIER_INTRO_MESSAGE,
     },
   ]);
   const [pending, setPending] = useState(false);
@@ -227,7 +227,7 @@ export default function SommelierChat() {
                   content:
                     message.content.trim().length > 0
                       ? message.content
-                      : "I couldn’t finish that answer. Try again in a moment.",
+                      : "I couldn't finish that answer. Try again in a moment.",
                   isStreaming: false,
                 }
               : message
@@ -242,24 +242,13 @@ export default function SommelierChat() {
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
   return (
-    <div className="space-y-6">
-      {showSuggestions ? (
-        <div className="rounded-[1.75rem] border border-[var(--color-accent-secondary)]/20 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_40%),linear-gradient(180deg,rgba(251,191,36,0.10),rgba(120,53,15,0.10))] p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent-secondary)]/80">
-            Try asking
-          </p>
-          <div className="mt-4">
-            <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
-          </div>
-        </div>
-      ) : null}
-
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-6">
       <div
         role="log"
         aria-live="polite"
         aria-label="Pocket Sommelier conversation"
         aria-relevant="additions text"
-        className="space-y-4"
+        className="min-h-0 flex-1 space-y-4"
       >
         {messages.map((message) => (
           <SommelierMessage
@@ -299,7 +288,13 @@ export default function SommelierChat() {
         </div>
       ) : null}
 
-      <SommelierInput disabled={pending} onSend={sendMessage} />
+      <div className="mt-auto space-y-3">
+        {showSuggestions ? (
+          <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
+        ) : null}
+
+        <SommelierInput disabled={pending} onSend={sendMessage} />
+      </div>
     </div>
   );
 }

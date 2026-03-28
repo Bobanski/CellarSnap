@@ -26,10 +26,12 @@ import {
   listScanWineTypeLabels,
   sanitizeListScanFilters,
   resolveListScanWineType,
+  sortListScanWines,
   type ListScanFilterAccentTone,
   type ListScanFilters,
   type ListScanFilterableWineType,
   type ListScanResult,
+  type ListScanSortMode,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -235,12 +237,14 @@ function FilterDropdown({
 export default function ListScanResultsScreen() {
   const params = useLocalSearchParams<{ scanId?: string }>();
   const { width } = useWindowDimensions();
+  const scanId = typeof params.scanId === "string" ? params.scanId : "";
   const [result, setResult] = useState<ListScanResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ListScanFilters>(
     createDefaultListScanFilters()
   );
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
   const [priceOpen, setPriceOpen] = useState(false);
   const [wineTypeOpen, setWineTypeOpen] = useState(false);
   const [varietalOpen, setVarietalOpen] = useState(false);
@@ -251,7 +255,6 @@ export default function ListScanResultsScreen() {
     let cancelled = false;
 
     const load = async () => {
-      const scanId = typeof params.scanId === "string" ? params.scanId : "";
       if (!scanId) {
         if (!cancelled) {
           setLoading(false);
@@ -276,7 +279,19 @@ export default function ListScanResultsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [params.scanId]);
+  }, [scanId]);
+
+  const goToHistory = () => {
+    if (scanId) {
+      router.push({
+        pathname: "/(app)/list-scan/history",
+        params: { fromScanId: scanId },
+      } as any);
+      return;
+    }
+
+    router.push("/(app)/list-scan/history" as any);
+  };
 
   const derivedFacets = useMemo(
     () => (result ? deriveListScanFacets(result.wines) : null),
@@ -307,8 +322,14 @@ export default function ListScanResultsScreen() {
   const hasVarietalOptions = availableVarietals.length > 0;
   const hasRegionOptions = regionGroups.length > 0;
   const filteredWines = useMemo(
-    () => (result ? filterListScanWines(result.wines, visibleFilters) : []),
-    [result, visibleFilters]
+    () =>
+      result
+        ? sortListScanWines(
+            filterListScanWines(result.wines, visibleFilters),
+            sortMode
+          )
+        : [],
+    [result, sortMode, visibleFilters]
   );
   const topRecommendations = useMemo(
     () => getTopListScanRecommendations(filteredWines, 3),
@@ -326,6 +347,8 @@ export default function ListScanResultsScreen() {
         : 0,
     [availableWineTypes, derivedFacets, visibleFilters]
   );
+  const fullListTitle =
+    sortMode === "match" ? "Filtered wines by best match" : "Filtered wines in list order";
 
   useEffect(() => {
     let isActive = true;
@@ -405,7 +428,7 @@ export default function ListScanResultsScreen() {
     return (
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <AppTopBar activeHref="/(app)/home" />
+          <AppTopBar />
           <View style={styles.infoCard}>
             <AppText style={styles.infoText}>Loading scanned list...</AppText>
           </View>
@@ -418,17 +441,22 @@ export default function ListScanResultsScreen() {
     return (
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content}>
-          <AppTopBar activeHref="/(app)/home" />
+          <AppTopBar />
           <View style={styles.infoCard}>
             <AppText style={styles.infoText}>
               This scan result is no longer available in the current session.
             </AppText>
-            <Pressable
-              style={styles.primaryButton}
-              onPress={() => router.replace("/(app)/list-scan")}
-            >
-              <AppText style={styles.primaryButtonText}>Start a new scan</AppText>
-            </Pressable>
+            <View style={styles.infoActions}>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.replace("/(app)/list-scan")}
+              >
+                <AppText style={styles.primaryButtonText}>Start a new scan</AppText>
+              </Pressable>
+              <Pressable style={styles.secondaryButton} onPress={goToHistory}>
+                <AppText style={styles.secondaryButtonText}>My scans</AppText>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -447,7 +475,7 @@ export default function ListScanResultsScreen() {
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets
       >
-        <AppTopBar activeHref="/(app)/home" />
+        <AppTopBar />
 
         <View style={styles.header}>
           <AppText style={styles.eyebrow}>List results</AppText>
@@ -458,6 +486,17 @@ export default function ListScanResultsScreen() {
             Filter the parsed list, review the live top 3, and browse the full list
             in original order.
           </AppText>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.headerSecondaryButton}
+              onPress={() => router.replace("/(app)/list-scan")}
+            >
+              <AppText style={styles.headerSecondaryButtonText}>Scan another</AppText>
+            </Pressable>
+            <Pressable style={styles.headerPrimaryButton} onPress={goToHistory}>
+              <AppText style={styles.headerPrimaryButtonText}>My scans</AppText>
+            </Pressable>
+          </View>
         </View>
 
         {result.score_summary.warning ? (
@@ -796,12 +835,40 @@ export default function ListScanResultsScreen() {
         <View style={styles.sectionCard}>
           <View>
             <AppText style={styles.sectionEyebrow}>Full list</AppText>
-            <AppText style={styles.sectionTitle}>
-              Filtered wines in uploaded list order
-            </AppText>
+            <AppText style={styles.sectionTitle}>{fullListTitle}</AppText>
             <AppText style={styles.sectionCounterBelow}>
               {filteredWines.length} of {result.wines.length} shown
             </AppText>
+          </View>
+
+          <View style={styles.sortToggleGroup}>
+            {(
+              [
+                { value: "list_order", label: "List Order" },
+                { value: "match", label: "Best Match" },
+              ] as const
+            ).map((option) => {
+              const active = sortMode === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  style={[
+                    styles.sortToggleButton,
+                    active ? styles.sortToggleButtonActive : null,
+                  ]}
+                  onPress={() => setSortMode(option.value)}
+                >
+                  <AppText
+                    style={[
+                      styles.sortToggleButtonText,
+                      active ? styles.sortToggleButtonTextActive : null,
+                    ]}
+                  >
+                    {option.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
           </View>
 
           <View style={styles.tableHead}>
@@ -844,7 +911,8 @@ export default function ListScanResultsScreen() {
                       .join(" \u00b7 ") || null;
 
                     const resolvedType = resolveListScanWineType(wine);
-                    const showSectionHeader = resolvedType !== lastSectionType;
+                    const showSectionHeader =
+                      sortMode === "list_order" && resolvedType !== lastSectionType;
                     lastSectionType = resolvedType;
 
                     return (
@@ -923,6 +991,40 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 4,
+  },
+  headerPrimaryButton: {
+    borderRadius: 999,
+    backgroundColor: colors.accentPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerPrimaryButtonText: {
+    color: colors.screenBg,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  headerSecondaryButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerSecondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
   },
   eyebrow: {
     color: colors.accentSecondary,
@@ -1076,6 +1178,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     marginTop: 4,
+  },
+  sortToggleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    padding: 4,
+  },
+  sortToggleButton: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  sortToggleButtonActive: {
+    backgroundColor: colors.surfacePrimary,
+  },
+  sortToggleButtonText: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  sortToggleButtonTextActive: {
+    color: colors.textPrimary,
   },
   tableSectionHeader: {
     paddingVertical: 8,
@@ -1463,6 +1594,11 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
+  infoActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   infoCardCompact: {
     paddingVertical: 16,
   },
@@ -1470,6 +1606,22 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+  },
+  secondaryButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
   },
   primaryButton: {
     alignSelf: "flex-start",

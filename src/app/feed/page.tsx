@@ -1,28 +1,38 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   canDisplayAlgorithmMatch,
   fetchAlgorithmScoreBatch,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
+import {
+  buildFeedEntryMetaFields as buildEntryMetaFields,
+  DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
+  FEED_EYEBROW,
+  FEED_EMPTY_STATE_MESSAGE,
+  FEED_LOAD_MORE_LABEL,
+  FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
+  FEED_REACTION_EMOJIS as REACTION_EMOJIS,
+  FEED_REPORT_REASON_OPTIONS as REPORT_REASON_OPTIONS,
+  FEED_SCOPE_LABELS,
+  FEED_SUBTITLE,
+  FEED_TITLE,
+  type FeedReportReason as ReportReason,
+} from "@shared";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
   isDrinkingNowActive,
 } from "@/lib/drinkingNow";
-import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 import AppImage from "@/components/AppImage";
-import MatchBadge from "@/components/MatchBadge";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
-import RatingBadge from "@/components/RatingBadge";
 import type {
   EntryGroup,
   GroupedEntrySlide,
@@ -30,39 +40,18 @@ import type {
   WineEntryWithUrls,
 } from "@/types/wine";
 
-const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
-const PHOTO_TYPE_LABELS = {
-  label: "Label",
-  place: "Place",
-  people: "People",
-  pairing: "Pairing",
-  lineup: "Lineup",
-  other_bottles: "Other bottle",
-} as const;
-const REPORT_REASON_OPTIONS = [
-  { value: "spam", label: "Spam" },
-  { value: "harassment", label: "Harassment" },
-  { value: "hate", label: "Hate speech" },
-  { value: "nudity", label: "Nudity" },
-  { value: "misinfo", label: "False info" },
-  { value: "other", label: "Other" },
-] as const;
-
 function isDuplicateReportError(error: { code?: string | null; message?: string | null }) {
   return (
     error.code === "23505" ||
     (error.message ?? "").includes("content_reports_unique_active_")
   );
 }
-const DEFAULT_REPORT_REASON = REPORT_REASON_OPTIONS[0].value;
 const COLLAPSED_NOTES_STYLE: CSSProperties = {
   display: "-webkit-box",
   WebkitLineClamp: 2,
   WebkitBoxOrient: "vertical",
   overflow: "hidden",
 };
-
-type ReportReason = (typeof REPORT_REASON_OPTIONS)[number]["value"];
 
 type FeedPhoto = {
   type: keyof typeof PHOTO_TYPE_LABELS;
@@ -110,75 +99,6 @@ type FeedComment = {
   replies: FeedReply[];
 };
 
-type UserOption = {
-  id: string;
-  display_name: string | null;
-};
-
-function normalizeMetaValue(value: string | null | undefined) {
-  const trimmed = value?.trim() ?? "";
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function getPrimaryVarietal(entry: FeedEntry) {
-  const grapes = Array.isArray(entry.primary_grapes) ? entry.primary_grapes : [];
-  if (grapes.length === 0) {
-    return null;
-  }
-  const sorted = [...grapes].sort((a, b) => a.position - b.position);
-  for (const grape of sorted) {
-    const value = normalizeMetaValue(grape.name);
-    if (value) {
-      return value;
-    }
-  }
-  return null;
-}
-
-function buildEntryMetaFields(entry: FeedEntry) {
-  const wineName = normalizeMetaValue(entry.wine_name) ?? "";
-  const producer = normalizeMetaValue(entry.producer);
-  const vintage = normalizeMetaValue(entry.vintage);
-  const region = normalizeMetaValue(entry.region);
-  const country = normalizeMetaValue(entry.country);
-  const appellation = normalizeMetaValue(entry.appellation);
-  const varietal = getPrimaryVarietal(entry);
-
-  const hideProducer = shouldHideProducerInEntryTile(wineName, producer);
-  const nonVintagePriority = [
-    hideProducer ? null : producer,
-    region,
-    country,
-    appellation,
-    varietal,
-  ];
-
-  const fields: string[] = [];
-  const firstField = nonVintagePriority.find((value): value is string => Boolean(value));
-  if (firstField) {
-    fields.push(firstField);
-  }
-
-  // Vintage can only appear in the second slot.
-  if (vintage && fields.length > 0) {
-    fields.push(vintage);
-  }
-
-  if (fields.length < 2) {
-    for (const value of nonVintagePriority) {
-      if (!value || fields.includes(value)) {
-        continue;
-      }
-      fields.push(value);
-      if (fields.length >= 2) {
-        break;
-      }
-    }
-  }
-
-  return fields.slice(0, 2);
-}
-
 function buildFeedScoreBatchItems(entries: FeedEntry[]) {
   return entries
     .filter((entry) => Boolean(entry.wine_type))
@@ -221,7 +141,8 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/40"
+      className="relative overflow-hidden bg-black/40"
+      style={{ aspectRatio: "4 / 3" }}
       onClickCapture={(event) => {
         if (!didSwipeRef.current) {
           return;
@@ -232,7 +153,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
       }}
     >
       <div
-        className="flex h-60 transition-transform duration-300 md:h-84 lg:h-[25rem]"
+        className="flex h-full transition-transform duration-300"
         style={{
           transform: `translateX(-${activeIndex * 100}%)`,
           touchAction: "pan-y",
@@ -400,11 +321,8 @@ export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
-  const [feedSortMode, setFeedSortMode] = useState<"recent" | "best_match">("recent");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserOption[]>([]);
-  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedScope, setFeedScope] = useState<"public" | "friends">("public");
@@ -416,7 +334,7 @@ export default function FeedPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
-  const [matchScoresLoading, setMatchScoresLoading] = useState(false);
+  const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
@@ -476,6 +394,15 @@ export default function FeedPage() {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  useEffect(() => {
+    if (!postMenuEntryId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPostMenuEntryId(null);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [postMenuEntryId]);
+
   const toggleNotesExpanded = (entryId: string) => {
     setExpandedNotesByEntryId((current) => ({
       ...current,
@@ -491,26 +418,7 @@ export default function FeedPage() {
     return commentCountByEntryId[entry.id] ?? entry.comment_count ?? 0;
   };
 
-  useEffect(() => {
-    const trimmedQuery = searchQuery.trim();
-    if (!trimmedQuery) return;
 
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      const response = await fetch(
-        `/api/users?search=${encodeURIComponent(trimmedQuery)}`,
-        { cache: "no-store" }
-      );
-      setSearching(false);
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.users ?? []);
-      } else {
-        setSearchResults([]);
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -993,92 +901,23 @@ export default function FeedPage() {
     }
   };
 
-  const activeFeedSortMode = hasPrivateBetaFeatureAccess ? feedSortMode : "recent";
-  const sortedEntries =
-    activeFeedSortMode === "best_match"
-      ? [...entries].sort((left, right) => {
-          const leftScore = canDisplayAlgorithmMatch(matchScores[left.id])
-            ? matchScores[left.id]?.score ?? -1
-            : -1;
-          const rightScore = canDisplayAlgorithmMatch(matchScores[right.id])
-            ? matchScores[right.id]?.score ?? -1
-            : -1;
-          return rightScore - leftScore;
-        })
-      : entries;
-
-  const bestMatchEntries = hasPrivateBetaFeatureAccess
-    ? [...entries]
-        .filter((entry) => canDisplayAlgorithmMatch(matchScores[entry.id]))
-        .sort(
-          (left, right) =>
-            (matchScores[right.id]?.score ?? 0) - (matchScores[left.id]?.score ?? 0)
-        )
-        .slice(0, 3)
-    : [];
+  const sortedEntries = entries;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="overflow-x-hidden py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl min-w-0 space-y-8">
-        <NavBar />
-        <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-            Social feed
+        <header className="space-y-2 px-6">
+          <span className="block text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
+            {FEED_EYEBROW}
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-            What the cellar is sipping.
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
+            {FEED_TITLE}
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Discover what others are enjoying across the app.
-          </p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{FEED_SUBTITLE}</p>
         </header>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 backdrop-blur">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-            Find a friend
-          </label>
-          <input
-            type="search"
-            placeholder="Search by username or name"
-            value={searchQuery}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearchQuery(value);
-              if (!value.trim()) {
-                setSearchResults([]);
-              }
-            }}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-            aria-describedby="search-results-desc"
-          />
-          <p id="search-results-desc" className="sr-only">
-            Search results appear below; click to open their profile.
-          </p>
-          {searchQuery.trim() && (
-            <div className="mt-3 space-y-1">
-              {searching ? (
-                <p className="text-sm text-[var(--color-text-tertiary)]">Searching...</p>
-              ) : searchResults.length === 0 ? (
-                <p className="text-sm text-[var(--color-text-tertiary)]">No friends match your search.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {searchResults.map((u) => (
-                    <li key={u.id}>
-                      <Link
-                        href={`/profile/${u.id}`}
-                        className="block rounded-lg px-2 py-1.5 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]"
-                      >
-                        {u.display_name ?? "Unknown"}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 px-6">
           <button
             type="button"
             onClick={() => setFeedScope("public")}
@@ -1088,7 +927,7 @@ export default function FeedPage() {
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
-            Public feed
+            {FEED_SCOPE_LABELS.public}
           </button>
           <button
             type="button"
@@ -1099,39 +938,14 @@ export default function FeedPage() {
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
-            Friends only
+            {FEED_SCOPE_LABELS.friends}
           </button>
-          <div className="ml-auto inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setFeedSortMode("recent")}
-              className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                activeFeedSortMode === "recent"
-                  ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                  : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              Recent
-            </button>
-            {hasPrivateBetaFeatureAccess ? (
-              <button
-                type="button"
-                onClick={() => setFeedSortMode("best_match")}
-                className={`rounded-full px-3 py-1.5 font-semibold transition ${
-                  activeFeedSortMode === "best_match"
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                Best match
-              </button>
-            ) : null}
-          </div>
+
         </div>
 
         {moderationNotice ? (
           <div
-            className={`rounded-xl border px-3 py-2 text-xs ${
+            className={`rounded-xl border px-3 py-2 text-xs mx-6 ${
               moderationNotice.kind === "success"
                 ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
                 : "border-rose-500/40 bg-rose-500/10 text-rose-100"
@@ -1142,8 +956,26 @@ export default function FeedPage() {
         ) : null}
 
         {loading ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading feed...
+          <div className="space-y-4">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 animate-pulse"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-9 w-9 rounded-full bg-[var(--color-surface-raised)]" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3 w-28 rounded bg-[var(--color-surface-raised)]" />
+                    <div className="h-2.5 w-20 rounded bg-[var(--color-surface-raised)]" />
+                  </div>
+                </div>
+                <div className="aspect-[4/3] w-full rounded-xl bg-[var(--color-surface-raised)] mb-4" />
+                <div className="space-y-2">
+                  <div className="h-3 w-3/4 rounded bg-[var(--color-surface-raised)]" />
+                  <div className="h-3 w-1/2 rounded bg-[var(--color-surface-raised)]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : errorMessage ? (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
@@ -1151,76 +983,38 @@ export default function FeedPage() {
           </div>
         ) : entries.length === 0 ? (
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            No entries yet.
+            {FEED_EMPTY_STATE_MESSAGE}
           </div>
         ) : (
           <>
-          {hasPrivateBetaFeatureAccess && bestMatchEntries.length > 0 ? (
-            <section className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
-                    Best matches
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold text-[var(--color-text-primary)]">
-                    Standout palate matches from this feed
-                  </h2>
-                </div>
-                {matchScoresLoading ? (
-                  <p className="text-xs text-[var(--color-text-tertiary)]">Refreshing scores...</p>
-                ) : null}
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                {bestMatchEntries.map((entry) => {
-                  const score = matchScores[entry.id];
-                  if (!score) {
-                    return null;
-                  }
-
-                  return (
-                    <button
-                      key={`feed-best-match-${entry.id}`}
-                      type="button"
-                      onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
-                      className="rounded-3xl border border-[var(--color-accent-secondary)]/20 bg-gradient-to-br from-[var(--color-accent-primary)]/12 to-transparent p-5 text-left transition hover:border-[var(--color-accent-secondary)]/40"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                            {entry.author_name}
-                          </p>
-                          <h3 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
-                            {entry.wine_name || "Untitled wine"}
-                          </h3>
-                          <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
-                            {entry.producer || "Unknown producer"}
-                          </p>
-                        </div>
-                        <MatchBadge score={score.score} band={score.band} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
-
-          <div className="grid min-w-0 items-start gap-5 md:grid-cols-2">
+          <div className="grid min-w-0 items-start gap-5">
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
-                    ? "border-sky-300/60 bg-sky-950/40 shadow-[0_0_38px_-12px_rgba(125,211,252,0.55)] hover:border-sky-200/80"
-                    : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
+                    ? "rounded-none border-[rgba(74,48,96,0.4)] bg-[#130d1e] hover:border-[rgba(74,48,96,0.7)]"
+                    : "rounded-none border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
-                onClick={() => router.push(`/entries/${entry.id}?from=feed`)}
+                onPointerDown={(event) => {
+                  pointerStartRef.current = { x: event.clientX, y: event.clientY };
+                }}
+                onClick={(event) => {
+                  const start = pointerStartRef.current;
+                  pointerStartRef.current = null;
+                  if (start) {
+                    const dx = Math.abs(event.clientX - start.x);
+                    const dy = Math.abs(event.clientY - start.y);
+                    if (dx > 10 || dy > 10) return;
+                  }
+                  router.push(`/entries/${entry.id}?from=feed`);
+                }}
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget) return;
                   if (event.key === "Enter" || event.key === " ") {
@@ -1256,16 +1050,24 @@ export default function FeedPage() {
                         {entry.author_name}
                       </span>
                     </button>
+                    {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
+                      <span
+                        style={{
+                          background: "rgba(196, 96, 122, 0.1)",
+                          border: "0.5px solid rgba(196, 96, 122, 0.2)",
+                          color: "var(--color-accent-secondary)",
+                          fontSize: 11,
+                          padding: "2px 7px",
+                          borderRadius: 20,
+                        }}
+                        title={`${Math.round(matchScores[entry.id].score)}% match`}
+                      >
+                        {Math.round(matchScores[entry.id].score)}%
+                      </span>
+                    ) : null}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
-                        <MatchBadge
-                          score={matchScores[entry.id].score}
-                          band={matchScores[entry.id].band}
-                          compact
-                        />
-                      ) : null}
                       <span>{formatConsumedDate(entry.consumed_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
@@ -1287,10 +1089,16 @@ export default function FeedPage() {
                             </span>
                           </button>
                           {postMenuEntryId === entry.id ? (
-                            <div
-                              className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
-                              onClick={(event) => event.stopPropagation()}
-                            >
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setPostMenuEntryId(null)}
+                                aria-hidden="true"
+                              />
+                              <div
+                                className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
+                                onClick={(event) => event.stopPropagation()}
+                              >
                               <div className="px-3 pb-1">
                                 <label
                                   htmlFor={`post-report-reason-${entry.id}`}
@@ -1335,18 +1143,20 @@ export default function FeedPage() {
                                   ? "Reporting..."
                                   : "Report post"}
                               </button>
-                            </div>
+                              </div>
+                            </>
                           ) : null}
                         </div>
                       ) : null}
                     </div>
                   </div>
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 -mx-5">
                   {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
                     <GroupedPostGallery
                       title={entry.entry_group.title}
                       slides={entry.group_slides ?? []}
+                      heightClassName=""
                     />
                   ) : (
                     <EntryPhotoGallery entry={entry} />
@@ -1390,7 +1200,21 @@ export default function FeedPage() {
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {typeof entry.rating === "number" &&
                     !Number.isNaN(entry.rating) ? (
-                      <RatingBadge rating={entry.rating} variant="text" />
+                      <span
+                        style={{
+                          background: "rgba(201, 168, 76, 0.1)",
+                          border: "0.5px solid rgba(201, 168, 76, 0.22)",
+                          color: "var(--color-accent-gold)",
+                          fontFamily: "var(--font-serif)",
+                          fontSize: 18,
+                          fontWeight: 700,
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                        }}
+                        title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
+                      >
+                        {Math.max(0, Math.min(100, Math.round(entry.rating)))}/100
+                      </span>
                     ) : null}
                     {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                   </div>
@@ -1528,6 +1352,18 @@ export default function FeedPage() {
                               >
                                 +
                               </button>
+                              {canComment && getCommentCount(entry) > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCommentsExpanded(entry.id);
+                                  }}
+                                  className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
+                                >
+                                  {getCommentCount(entry)} {getCommentCount(entry) === 1 ? "comment" : "comments"}
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                           {reactionPopupEntryId === entry.id ? (
@@ -2023,13 +1859,14 @@ export default function FeedPage() {
                 disabled={loadingMore}
                 className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
               >
-                {loadingMore ? "Loading…" : "Load more"}
+                {loadingMore ? "Loading..." : FEED_LOAD_MORE_LABEL}
               </button>
             </div>
           ) : null}
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

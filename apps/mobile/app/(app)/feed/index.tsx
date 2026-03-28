@@ -1,4 +1,16 @@
 import {
+  buildFeedEntryMetaFields as buildEntryMetaFields,
+  FEED_EYEBROW,
+  FEED_LOAD_MORE_LABEL,
+  FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
+  FEED_REACTION_EMOJIS as REACTION_EMOJIS,
+  FEED_SCOPE_LABELS,
+  FEED_SUBTITLE,
+  FEED_TITLE,
+  getFeedDisplayRatingLabel as getDisplayRating,
+  getFeedEmptyStateMessage,
+} from "@cellarsnap/shared";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -26,7 +38,6 @@ import {
 import type { FeedComment } from "@/src/lib/feed/comments";
 import {
   fetchFeedPage,
-  type FeedPhotoType,
   type FeedScope,
   type MobileFeedEntry,
   type QprLevel,
@@ -35,31 +46,12 @@ import {
   REPORT_REASON_OPTIONS,
   useFeedInteractions,
 } from "@/src/lib/feed/useFeedInteractions";
-import { getPublicProfileName } from "@/src/lib/publicProfiles";
-import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
-
-type UserOption = {
-  id: string;
-  display_name: string | null;
-  username?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  name_display_preference?: "real_name" | "username" | null;
-};
+import { fonts } from "@/src/lib/typography";
 
 const PAGE_SIZE = 24;
-const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
-const PHOTO_TYPE_LABELS: Record<FeedPhotoType, string> = {
-  label: "Label",
-  place: "Place",
-  people: "People",
-  pairing: "Pairing",
-  lineup: "Lineup",
-  other_bottles: "Other bottle",
-};
 
 const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   extortion: "Extortion",
@@ -68,24 +60,6 @@ const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
   good_value: "Good Value",
   absolute_steal: "Absolute Steal",
 };
-
-function sanitizeUserSearch(search: string) {
-  return search.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function buildTokenAndFilter(tokens: string[], fields: string[]) {
-  const cleaned = tokens.map((token) => token.trim()).filter(Boolean).slice(0, 4);
-  if (cleaned.length <= 1) {
-    return null;
-  }
-
-  const tokenOr = (token: string) => {
-    const pattern = `%${token}%`;
-    return `or(${fields.map((field) => `${field}.ilike.${pattern}`).join(",")})`;
-  };
-
-  return `and(${cleaned.map(tokenOr).join(",")})`;
-}
 
 function formatConsumedDate(raw: string) {
   const date = new Date(`${raw}T00:00:00`);
@@ -106,108 +80,6 @@ function formatCommentDate(value: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function normalizeMetaValue(value: string | null | undefined) {
-  const trimmed = value?.trim() ?? "";
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function toWordSet(value: string | null | undefined): Set<string> {
-  const normalized = value?.toLowerCase() ?? "";
-  const words = normalized.match(/[a-z0-9]+/g) ?? [];
-  return new Set(words.filter((word) => word.length >= 2));
-}
-
-function shouldHideProducerInEntryTile(
-  wineName: string | null | undefined,
-  producer: string | null | undefined
-) {
-  const wineWords = toWordSet(wineName);
-  const producerWords = toWordSet(producer);
-
-  if (wineWords.size === 0 || producerWords.size === 0) {
-    return false;
-  }
-
-  let sharedWordCount = 0;
-  for (const word of producerWords) {
-    if (!wineWords.has(word)) {
-      continue;
-    }
-    sharedWordCount += 1;
-    if (sharedWordCount >= 3) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function getPrimaryVarietal(entry: MobileFeedEntry) {
-  const grapes = Array.isArray(entry.primary_grapes) ? entry.primary_grapes : [];
-  if (grapes.length === 0) {
-    return null;
-  }
-  const sorted = [...grapes].sort((a, b) => a.position - b.position);
-  for (const grape of sorted) {
-    const value = normalizeMetaValue(grape.name);
-    if (value) {
-      return value;
-    }
-  }
-  return null;
-}
-
-function buildEntryMetaFields(entry: MobileFeedEntry) {
-  const wineName = normalizeMetaValue(entry.wine_name) ?? "";
-  const producer = normalizeMetaValue(entry.producer);
-  const vintage = normalizeMetaValue(entry.vintage);
-  const region = normalizeMetaValue(entry.region);
-  const country = normalizeMetaValue(entry.country);
-  const appellation = normalizeMetaValue(entry.appellation);
-  const varietal = getPrimaryVarietal(entry);
-
-  const hideProducer = shouldHideProducerInEntryTile(wineName, producer);
-  const nonVintagePriority = [
-    hideProducer ? null : producer,
-    region,
-    country,
-    appellation,
-    varietal,
-  ];
-
-  const fields: string[] = [];
-  const firstField = nonVintagePriority.find((value): value is string => Boolean(value));
-  if (firstField) {
-    fields.push(firstField);
-  }
-
-  if (vintage && fields.length > 0) {
-    fields.push(vintage);
-  }
-
-  if (fields.length < 2) {
-    for (const value of nonVintagePriority) {
-      if (!value || fields.includes(value)) {
-        continue;
-      }
-      fields.push(value);
-      if (fields.length >= 2) {
-        break;
-      }
-    }
-  }
-
-  return fields.slice(0, 2);
-}
-
-function getDisplayRating(rating: number | null): string | null {
-  if (typeof rating !== "number" || Number.isNaN(rating)) {
-    return null;
-  }
-  const normalized = Math.max(0, Math.min(100, Math.round(rating)));
-  return `${normalized}/100`;
 }
 
 function buildAuthorWithCompanionsLabel(item: MobileFeedEntry) {
@@ -1023,12 +895,6 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const viewerUserId = user?.id ?? null;
   const [feedScope, setFeedScope] = useState<FeedScope>("public");
-  const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
-  const [friendSearchQuery, setFriendSearchQuery] = useState("");
-  const [friendSearchResults, setFriendSearchResults] = useState<UserOption[]>([]);
-  const [isFriendSearchLoading, setIsFriendSearchLoading] = useState(false);
-  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
-  const [selectedFriendName, setSelectedFriendName] = useState<string | null>(null);
   const [entries, setEntries] = useState<MobileFeedEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1113,98 +979,7 @@ export default function FeedScreen() {
     [clearFeedScrollIdleTimer]
   );
 
-  const visibleEntries = useMemo(() => {
-    if (!selectedFriendId) {
-      return entries;
-    }
-    return entries.filter((entry) => entry.user_id === selectedFriendId);
-  }, [entries, selectedFriendId]);
-
-  useEffect(() => {
-    if (!isFriendSearchOpen || !viewerUserId) {
-      return;
-    }
-
-    const trimmedQuery = friendSearchQuery.trim();
-    if (!trimmedQuery) {
-      return;
-    }
-
-    let isCancelled = false;
-    const timer = setTimeout(async () => {
-      setIsFriendSearchLoading(true);
-      const search = sanitizeUserSearch(trimmedQuery);
-      const pattern = `%${search}%`;
-      const tokens = search.split(" ").filter(Boolean);
-      const tokenAndFilter = buildTokenAndFilter(tokens, [
-        "display_name",
-        "username",
-        "first_name",
-        "last_name",
-      ]);
-
-      const baseFilters = [
-        `display_name.ilike.${pattern}`,
-        `username.ilike.${pattern}`,
-        `first_name.ilike.${pattern}`,
-        `last_name.ilike.${pattern}`,
-        tokenAndFilter,
-      ]
-        .filter(Boolean)
-        .join(",");
-
-      const firstAttempt = await supabase
-        .from("public_profiles")
-        .select(
-          "id, display_name, username, first_name, last_name, name_display_preference"
-        )
-        .neq("id", viewerUserId)
-        .or(baseFilters)
-        .order("display_name", { ascending: true })
-        .limit(25);
-
-      let data = firstAttempt.data as UserOption[] | null;
-      let error = firstAttempt.error;
-
-      if (
-        error &&
-        (error.message.includes("username") ||
-          error.message.includes("first_name") ||
-          error.message.includes("last_name") ||
-          error.message.includes("name_display_preference"))
-      ) {
-        const fallbackTokenAndFilter = buildTokenAndFilter(tokens, ["display_name"]);
-        const fallbackFilters = [`display_name.ilike.${pattern}`, fallbackTokenAndFilter]
-          .filter(Boolean)
-          .join(",");
-        const fallbackAttempt = await supabase
-          .from("public_profiles")
-          .select("id, display_name")
-          .neq("id", viewerUserId)
-          .or(fallbackFilters)
-          .order("display_name", { ascending: true })
-          .limit(25);
-        data = fallbackAttempt.data as UserOption[] | null;
-        error = fallbackAttempt.error;
-      }
-
-      if (isCancelled) {
-        return;
-      }
-
-      if (error) {
-        setFriendSearchResults([]);
-      } else {
-        setFriendSearchResults((data ?? []) as UserOption[]);
-      }
-      setIsFriendSearchLoading(false);
-    }, 200);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timer);
-    };
-  }, [friendSearchQuery, isFriendSearchOpen, viewerUserId]);
+  const visibleEntries = useMemo(() => entries, [entries]);
 
   const loadFeed = useCallback(
     async (refresh = false) => {
@@ -1284,33 +1059,6 @@ export default function FeedScreen() {
     setIsLoadingMore(false);
   };
 
-  const clearFriendSearch = () => {
-    setFriendSearchQuery("");
-    setFriendSearchResults([]);
-    setIsFriendSearchLoading(false);
-    setSelectedFriendId(null);
-    setSelectedFriendName(null);
-  };
-
-  const toggleFriendSearch = () => {
-    setIsFriendSearchOpen((current) => {
-      const next = !current;
-      if (!next) {
-        clearFriendSearch();
-      }
-      return next;
-    });
-  };
-
-  const selectFriendFilter = (option: UserOption) => {
-    const displayName = getPublicProfileName(option);
-    setFeedScope("friends");
-    setSelectedFriendId(option.id);
-    setSelectedFriendName(displayName);
-    setFriendSearchQuery(displayName);
-    setFriendSearchResults([]);
-  };
-
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
@@ -1348,14 +1096,12 @@ export default function FeedScreen() {
           />
         }
       >
-        <AppTopBar activeHref="/(app)/feed" />
+        <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>Social feed</AppText>
-          <AppText style={styles.title}>What the cellar is sipping.</AppText>
-          <AppText style={styles.subtitle}>
-            Discover what others are enjoying across the app.
-          </AppText>
+          <AppText style={styles.eyebrow}>{FEED_EYEBROW}</AppText>
+          <AppText style={[styles.title, { fontSize: 18 }]}>{FEED_TITLE}</AppText>
+          <AppText style={styles.subtitle}>{FEED_SUBTITLE}</AppText>
         </View>
 
         <View style={styles.scopeRow}>
@@ -1372,7 +1118,7 @@ export default function FeedScreen() {
                 feedScope === "public" ? styles.scopePillTextActive : null,
               ]}
             >
-              Public feed
+              {FEED_SCOPE_LABELS.public}
             </AppText>
           </Pressable>
           <Pressable
@@ -1388,95 +1134,12 @@ export default function FeedScreen() {
                 feedScope === "friends" ? styles.scopePillTextActive : null,
               ]}
             >
-              Friends only
-            </AppText>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.searchToggleButton,
-              isFriendSearchOpen ? styles.searchToggleButtonActive : null,
-            ]}
-            onPress={toggleFriendSearch}
-            accessibilityRole="button"
-            accessibilityLabel={isFriendSearchOpen ? "Hide friend search" : "Show friend search"}
-          >
-            <AppText
-              style={[
-                styles.searchToggleIcon,
-                isFriendSearchOpen ? styles.searchToggleIconActive : null,
-              ]}
-            >
-              ⌕
+              {FEED_SCOPE_LABELS.friends}
             </AppText>
           </Pressable>
         </View>
 
-        {isFriendSearchOpen ? (
-          <View style={styles.friendSearchPanel}>
-            <View style={styles.friendSearchInputRow}>
-              <DoneTextInput
-                value={friendSearchQuery}
-                onChangeText={(value) => {
-                  setFriendSearchQuery(value);
-                  setSelectedFriendId(null);
-                  setSelectedFriendName(null);
-                  if (!value.trim()) {
-                    setFriendSearchResults([]);
-                    setIsFriendSearchLoading(false);
-                  }
-                }}
-                placeholder="Search by username or name"
-                placeholderTextColor={colors.textTertiary}
-                style={styles.friendSearchInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {friendSearchQuery.trim() || selectedFriendId ? (
-                <Pressable
-                  style={styles.friendSearchClearButton}
-                  onPress={clearFriendSearch}
-                >
-                  <AppText style={styles.friendSearchClearText}>Clear</AppText>
-                </Pressable>
-              ) : null}
-            </View>
 
-            {selectedFriendId ? (
-              <AppText style={styles.friendSearchSelectionText}>
-                Showing posts from {selectedFriendName ?? "this friend"}.
-              </AppText>
-            ) : null}
-
-            {friendSearchQuery.trim() ? (
-              <View style={styles.friendSearchResultsWrap}>
-                {isFriendSearchLoading ? (
-                  <AppText style={styles.friendSearchMetaText}>Searching...</AppText>
-                ) : friendSearchResults.length === 0 ? (
-                  <AppText style={styles.friendSearchMetaText}>
-                    No friends match your search.
-                  </AppText>
-                ) : (
-                  friendSearchResults.map((option) => {
-                    const displayName = getPublicProfileName(option);
-                    return (
-                      <Pressable
-                        key={option.id}
-                        style={styles.friendSearchResultRow}
-                        onPress={() => selectFriendFilter(option)}
-                      >
-                        <AppText style={styles.friendSearchResultText}>{displayName}</AppText>
-                      </Pressable>
-                    );
-                  })
-                )}
-              </View>
-            ) : (
-              <AppText style={styles.friendSearchMetaText}>
-                Search for a friend, then tap a result to filter the feed.
-              </AppText>
-            )}
-          </View>
-        ) : null}
 
         {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
         {moderationNotice ? (
@@ -1494,11 +1157,7 @@ export default function FeedScreen() {
 
         {visibleEntries.length === 0 ? (
           <View style={styles.emptyCard}>
-            <AppText style={styles.emptyText}>
-              {selectedFriendId
-                ? `No posts from ${selectedFriendName ?? "this friend"} in this feed yet.`
-                : "No entries yet."}
-            </AppText>
+            <AppText style={styles.emptyText}>{getFeedEmptyStateMessage(null, false)}</AppText>
           </View>
         ) : (
           <View style={styles.feedStack}>
@@ -1585,7 +1244,7 @@ export default function FeedScreen() {
             {isLoadingMore ? (
               <ActivityIndicator color={colors.textPrimary} />
             ) : (
-              <AppText style={styles.loadMoreText}>Load more</AppText>
+              <AppText style={styles.loadMoreText}>{FEED_LOAD_MORE_LABEL}</AppText>
             )}
           </Pressable>
         ) : null}
@@ -1672,7 +1331,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   header: {
-    gap: 6,
+    gap: 5,
   },
   eyebrow: {
     color: colors.rose,
@@ -1683,12 +1342,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: "700",
+    fontFamily: fonts.serif.light,
+    fontSize: 22,
+    lineHeight: 28,
   },
   subtitle: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 18,
   },
   scopeRow: {
@@ -1705,8 +1365,8 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   scopePillActive: {
-    borderColor: "rgba(252,211,77,0.7)",
-    backgroundColor: "rgba(251,191,36,0.15)",
+    borderColor: "rgba(196,96,122,0.22)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   scopePillText: {
     color: colors.textSecondary,
@@ -1714,7 +1374,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   scopePillTextActive: {
-    color: colors.textPrimary,
+    color: colors.accentSecondary,
   },
   searchToggleButton: {
     width: 42,
@@ -1727,8 +1387,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   searchToggleButtonActive: {
-    borderColor: "rgba(252,211,77,0.7)",
-    backgroundColor: "rgba(251,191,36,0.15)",
+    borderColor: "rgba(196,96,122,0.22)",
+    backgroundColor: "rgba(123,29,58,0.14)",
   },
   searchToggleIcon: {
     color: colors.textSecondary,
@@ -2037,14 +1697,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   feedPhotoFrame: {
-    width: "100%",
-    aspectRatio: 7 / 5,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+    aspectRatio: 4 / 3,
+    borderRadius: 0,
     overflow: "hidden",
     backgroundColor: colors.surfacePrimary,
     position: "relative",
+    marginHorizontal: -14,
+    width: "auto",
   },
   feedPhotoTrack: {
     flexDirection: "row",

@@ -99,7 +99,7 @@ export default function SignInScreen() {
         return;
       }
 
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch {
       setErrorMessage("Unable to sign in. Check your connection and try again.");
       setInfoMessage(null);
@@ -119,7 +119,7 @@ export default function SignInScreen() {
 
     try {
       await signInWithApple();
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch (error) {
       const errorCode =
         typeof error === "object" &&

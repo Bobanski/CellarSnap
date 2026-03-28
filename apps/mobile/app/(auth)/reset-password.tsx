@@ -11,6 +11,7 @@ import {
   View
 } from "react-native";
 import { Link, router, useLocalSearchParams } from "expo-router";
+import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { AppText } from "@/src/components/AppText";
@@ -19,12 +20,19 @@ import { colors } from "@/src/lib/theme";
 const INPUT_SELECTION_COLOR = colors.textSecondary;
 
 export default function ResetPasswordScreen() {
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; phone?: string }>();
   const defaultEmail = useMemo(
     () => (typeof params.email === "string" ? params.email.trim().toLowerCase() : ""),
     [params.email]
   );
+  const defaultPhone = useMemo(() => {
+    const raw = typeof params.phone === "string" ? params.phone : "";
+    const normalized = normalizePhone(raw);
+    return normalized ?? raw;
+  }, [params.phone]);
+  const isPhoneRecovery = Boolean(defaultPhone);
   const [email, setEmail] = useState(defaultEmail);
+  const [phone, setPhone] = useState(defaultPhone);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,6 +47,7 @@ export default function ResetPasswordScreen() {
     let isMounted = true;
 
     setEmail((previous) => previous || defaultEmail);
+    setPhone((previous) => previous || defaultPhone);
     void (async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -55,7 +64,7 @@ export default function ResetPasswordScreen() {
     return () => {
       isMounted = false;
     };
-  }, [defaultEmail]);
+  }, [defaultEmail, defaultPhone]);
 
   const updatePassword = async () => {
     if (password.length < 8) {
@@ -78,22 +87,37 @@ export default function ResetPasswordScreen() {
     try {
       if (!hasSession) {
         const normalizedEmail = email.trim().toLowerCase();
+        const normalizedPhone = normalizePhone(phone);
         const normalizedCode = code.trim();
 
-        if (!normalizedEmail || !normalizedEmail.includes("@")) {
+        if (isPhoneRecovery) {
+          if (!normalizedPhone) {
+            setErrorMessage(PHONE_FORMAT_MESSAGE);
+            return;
+          }
+        } else if (!normalizedEmail || !normalizedEmail.includes("@")) {
           setErrorMessage("A valid email is required.");
           return;
         }
+
         if (!normalizedCode) {
           setErrorMessage("Recovery code is required.");
           return;
         }
 
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          email: normalizedEmail,
-          token: normalizedCode,
-          type: "recovery",
-        });
+        const { error: verifyError } = await supabase.auth.verifyOtp(
+          isPhoneRecovery
+            ? {
+                phone: normalizedPhone!,
+                token: normalizedCode,
+                type: "sms",
+              }
+            : {
+                email: normalizedEmail,
+                token: normalizedCode,
+                type: "recovery",
+              }
+        );
         if (verifyError) {
           setErrorMessage(verifyError.message);
           return;
@@ -114,8 +138,22 @@ export default function ResetPasswordScreen() {
         return;
       }
 
+      if (isPhoneRecovery) {
+        try {
+          window.sessionStorage.removeItem("pendingRecoveryPhone");
+        } catch {
+          // Ignore storage failures.
+        }
+      } else {
+        try {
+          window.sessionStorage.removeItem("pendingRecoveryEmail");
+        } catch {
+          // Ignore storage failures.
+        }
+      }
+
       setInfoMessage("Password updated. Redirecting to your cellar...");
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch {
       setErrorMessage("Unable to update password right now.");
     } finally {
@@ -145,17 +183,19 @@ export default function ResetPasswordScreen() {
               {!hasSession ? (
                 <>
                   <View style={styles.formField}>
-                    <AppText style={styles.label}>Email address</AppText>
+                    <AppText style={styles.label}>
+                      {isPhoneRecovery ? "Phone number" : "Email address"}
+                    </AppText>
                     <DoneTextInput
-                      value={email}
-                      onChangeText={setEmail}
+                      value={isPhoneRecovery ? phone : email}
+                      onChangeText={isPhoneRecovery ? setPhone : setEmail}
                       autoCapitalize="none"
                       autoCorrect={false}
-                      autoComplete="email"
-                      textContentType="emailAddress"
+                      autoComplete={isPhoneRecovery ? "tel" : "email"}
+                      textContentType={isPhoneRecovery ? "telephoneNumber" : "emailAddress"}
                       selectionColor={INPUT_SELECTION_COLOR}
-                      keyboardType="email-address"
-                      placeholder="you@example.com"
+                      keyboardType={isPhoneRecovery ? "phone-pad" : "email-address"}
+                      placeholder={isPhoneRecovery ? "(555) 123-4567" : "you@example.com"}
                       placeholderTextColor={colors.textTertiary}
                       style={styles.input}
                     />
@@ -420,4 +460,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

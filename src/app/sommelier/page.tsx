@@ -1,7 +1,12 @@
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import SommelierChat from "@/features/sommelier/SommelierChat";
 import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  SOMMELIER_EYEBROW,
+  SOMMELIER_SUBTITLE,
+  SOMMELIER_TITLE,
+} from "@shared";
 
 export default async function SommelierPage() {
   const supabase = await createSupabaseServerClient();
@@ -12,11 +17,43 @@ export default async function SommelierPage() {
   await assertPrivateBetaFeatureAccessAsync(supabase, user);
 
   return (
-    <main className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar activeHrefOverride="/sommelier" />
-        <SommelierChat />
+    <AppShell>
+      <div className="h-full px-6 py-6 text-[var(--color-text-primary)]">
+        <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-8">
+          <header className="space-y-1">
+            <span
+              className="block"
+              style={{
+                fontSize: "9px",
+                textTransform: "uppercase",
+                letterSpacing: "3px",
+                color: "var(--color-accent-secondary)",
+              }}
+            >
+              {SOMMELIER_EYEBROW}
+            </span>
+            <h1
+              className="font-serif"
+              style={{
+                fontSize: "28px",
+                fontWeight: 300,
+                color: "var(--color-text-primary)",
+              }}
+            >
+              {SOMMELIER_TITLE}
+            </h1>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              {SOMMELIER_SUBTITLE}
+            </p>
+          </header>
+          <SommelierChat />
+        </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

@@ -3,8 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  PROFILE_GALLERY_MESSAGES,
+  PROFILE_GALLERY_TAB_LABELS,
+  PROFILE_NAME_DISPLAY_OPTIONS,
+  PROFILE_PRIVACY_OPTIONS,
+  PROFILE_SETTINGS_COPY,
+  formatProfileMemberSince,
+  getProfileBadgeRequirementText,
+  type ProfileNameDisplayPreference,
+} from "@shared";
 import AppImage from "@/components/AppImage";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
 import type { PrivacyLevel } from "@/types/wine";
@@ -20,7 +30,7 @@ import {
   PHONE_FORMAT_MESSAGE,
 } from "@/lib/validation/phone";
 
-type NameDisplayPreference = "real_name" | "username";
+type NameDisplayPreference = ProfileNameDisplayPreference;
 
 type Profile = {
   id: string;
@@ -61,29 +71,6 @@ type FriendMutationPayload = {
   request_id?: string;
   error?: string;
 };
-
-const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
-  { value: "public", label: "Public" },
-  { value: "friends_of_friends", label: "Friends of friends" },
-  { value: "friends", label: "Friends only" },
-  { value: "private", label: "Private" },
-];
-const NAME_DISPLAY_OPTIONS: {
-  value: NameDisplayPreference;
-  label: string;
-}[] = [
-  { value: "real_name", label: "Real name" },
-  { value: "username", label: "Username" },
-];
-
-function formatMemberSince(dateString: string | null): string {
-  if (!dateString) return "Unknown";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -136,34 +123,6 @@ export default function ProfilePage() {
       return next;
     });
   }, []);
-
-  const badgeRequirementText = (badge: Badge) => {
-    const n = badge.threshold;
-    switch (badge.id) {
-      case "burgundy_bitch":
-        return `Log ${n} wines from Burgundy (Bourgogne counts).`;
-      case "california_king":
-        return `Log ${n} wines from California.`;
-      case "bordeaux_hoe":
-        return `Log ${n} wines from Bordeaux.`;
-      case "rioja_renegade":
-        return `Log ${n} wines from Rioja.`;
-      case "sangiovese_savage":
-        return `Log ${n} wines from Chianti.`;
-      case "rhone_rider":
-        return `Log ${n} wines from the Rh\u00f4ne.`;
-      case "margaux_monarch":
-        return `Log ${n} wines from Margaux.`;
-      case "chianti_connoisseur":
-        return `Log ${n} wines from Chianti.`;
-      case "mosel_maniac":
-        return `Log ${n} wines from the Mosel.`;
-      case "champagne_champion":
-        return `Log ${n} wines from Champagne.`;
-      default:
-        return `Log ${n} qualifying wines to earn this badge.`;
-    }
-  };
 
   // Privacy state
   const [entryPrivacyValue, setEntryPrivacyValue] = useState<PrivacyLevel>("public");
@@ -868,27 +827,41 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <div className="mx-auto max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading profile...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="mx-auto max-w-2xl animate-pulse rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+              <div className="flex items-center gap-4">
+                {/* Avatar placeholder */}
+                <div className="h-24 w-24 shrink-0 rounded-full bg-[var(--color-surface-raised)] sm:h-28 sm:w-28" />
+                {/* Text content placeholder */}
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="h-5 w-36 rounded-md bg-[var(--color-surface-raised)]" />
+                  <div className="h-3.5 w-24 rounded-md bg-[var(--color-surface-raised)]" />
+                  <div className="flex gap-6 pt-1">
+                    <div className="h-3.5 w-14 rounded-md bg-[var(--color-surface-raised)]" />
+                    <div className="h-3.5 w-14 rounded-md bg-[var(--color-surface-raised)]" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <div className="mx-auto max-w-2xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            {loadErrorMessage ?? "Unable to load profile."}
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="mx-auto max-w-2xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+              {loadErrorMessage ?? "Unable to load profile."}
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -900,9 +873,9 @@ export default function ProfilePage() {
     .join(" ");
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
         <div className="mx-auto max-w-2xl space-y-6">
           {/* ── Identity Card ── */}
           <div className="relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
@@ -975,7 +948,7 @@ export default function ProfilePage() {
                     : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                 }`}
               >
-                My wines
+                {PROFILE_GALLERY_TAB_LABELS.mine}
               </button>
               <button
                 type="button"
@@ -989,7 +962,7 @@ export default function ProfilePage() {
                     : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                 }`}
               >
-                Tagged
+                {PROFILE_GALLERY_TAB_LABELS.tagged}
               </button>
               <button
                 type="button"
@@ -1003,7 +976,7 @@ export default function ProfilePage() {
                     : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                 }`}
               >
-                Friends
+                {PROFILE_GALLERY_TAB_LABELS.friends}
               </button>
             </div>
 
@@ -1045,12 +1018,19 @@ export default function ProfilePage() {
                   </div>
                 ) : !entriesLoading ? (
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-center text-sm text-[var(--color-text-tertiary)]">
-                    No entries yet.
+                    {PROFILE_GALLERY_MESSAGES.emptyEntries}
                   </div>
                 ) : null}
 
                 {entriesLoading ? (
-                  <p className="mt-4 text-center text-sm text-[var(--color-text-tertiary)]">Loading entries...</p>
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 animate-pulse">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <div
+                        key={i}
+                        className="aspect-square rounded-lg bg-[var(--color-surface-raised)]"
+                      />
+                    ))}
+                  </div>
                 ) : null}
 
                 {entriesHasMore && !entriesLoading ? (
@@ -1097,12 +1077,14 @@ export default function ProfilePage() {
                   </div>
                 ) : !taggedLoading ? (
                   <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-center text-sm text-[var(--color-text-tertiary)]">
-                    No tagged entries yet.
+                    {PROFILE_GALLERY_MESSAGES.emptyTagged}
                   </div>
                 ) : null}
 
                 {taggedLoading ? (
-                  <p className="mt-4 text-center text-sm text-[var(--color-text-tertiary)]">Loading tagged entries...</p>
+                  <p className="mt-4 text-center text-sm text-[var(--color-text-tertiary)]">
+                    {PROFILE_GALLERY_MESSAGES.loadingTagged}
+                  </p>
                 ) : null}
               </>
             ) : (
@@ -1112,7 +1094,9 @@ export default function ProfilePage() {
                 ) : null}
 
                 {friendsLoading ? (
-                  <p className="text-sm text-[var(--color-text-tertiary)]">Loading friends...</p>
+                  <p className="text-sm text-[var(--color-text-tertiary)]">
+                    {PROFILE_GALLERY_MESSAGES.loadingFriends}
+                  </p>
                 ) : (
                   <div className="space-y-6">
                     {/* ── Search ── */}
@@ -1120,14 +1104,16 @@ export default function ProfilePage() {
                       <input
                         value={friendSearch}
                         onChange={(e) => setFriendSearch(e.target.value)}
-                        placeholder="Search by username or name"
+                        placeholder={PROFILE_GALLERY_MESSAGES.searchPlaceholder}
                         className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       />
                       {searchError ? (
                         <p className="mt-2 text-sm text-rose-200">{searchError}</p>
                       ) : null}
                       {searchLoading ? (
-                        <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">Searching...</p>
+                        <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">
+                          {PROFILE_GALLERY_MESSAGES.searchingFriends}
+                        </p>
                       ) : null}
                       {searchResults.length > 0 ? (
                         <div className="mt-3 space-y-2">
@@ -1381,7 +1367,7 @@ export default function ProfilePage() {
                     {/* ── Friends list ── */}
                     <div className="border-t border-[var(--color-border)] pt-4">
                       <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                        Your friends
+                        {PROFILE_SETTINGS_COPY.friendsSectionTitle}
                       </h3>
                       {friends.length === 0 ? (
                         <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">
@@ -1477,7 +1463,9 @@ export default function ProfilePage() {
             <div className="relative w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
               {/* Header */}
               <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Settings</h2>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  {PROFILE_SETTINGS_COPY.title}
+                </h2>
                 <button
                   type="button"
                   onClick={closeSettings}
@@ -1494,7 +1482,7 @@ export default function ProfilePage() {
                 {/* ── Edit Profile ── */}
                 <div className="space-y-5">
                   <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                    Edit profile
+                    {PROFILE_SETTINGS_COPY.editProfileTitle}
                   </h3>
 
                   {requiresUsernameSetup && isEditing ? (
@@ -1664,10 +1652,10 @@ export default function ProfilePage() {
                   {/* Member since (read-only) */}
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Member since
+                      {PROFILE_SETTINGS_COPY.memberSinceLabel}
                     </p>
                     <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                      {formatMemberSince(profile.created_at ?? null)}
+                      {formatProfileMemberSince(profile.created_at ?? null)}
                     </p>
                   </div>
 
@@ -1685,7 +1673,7 @@ export default function ProfilePage() {
                       onClick={saveProfile}
                       className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                     >
-                      {isSavingUsername ? "Saving\u2026" : "Save profile"}
+                      {isSavingUsername ? "Saving\u2026" : PROFILE_SETTINGS_COPY.saveProfileLabel}
                     </button>
                   </div>
                 </div>
@@ -1694,10 +1682,10 @@ export default function ProfilePage() {
                 {badges.length > 0 ? (
                   <div className="space-y-3 border-t border-[var(--color-border)] pt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Badges
+                      {PROFILE_SETTINGS_COPY.badgesTitle}
                     </h3>
                     <p className="text-xs text-[var(--color-text-tertiary)]">
-                      Earn badges by logging 10 wines from a specific region or style.
+                      {PROFILE_SETTINGS_COPY.badgesDescription}
                     </p>
 
                     <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -1712,7 +1700,7 @@ export default function ProfilePage() {
                             : "border-white/5 bg-[var(--color-surface-muted)] opacity-45 grayscale";
 
                         if (badge.earned) {
-                          const requirement = badgeRequirementText(badge);
+                          const requirement = getProfileBadgeRequirementText(badge);
                           return (
                             <button
                               key={badge.id}
@@ -1786,11 +1774,10 @@ export default function ProfilePage() {
                 {profile.default_entry_privacy !== null && profile.default_entry_privacy !== undefined ? (
                   <div className="space-y-3 border-t border-[var(--color-border)] pt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Privacy settings
+                      {PROFILE_SETTINGS_COPY.privacyTitle}
                     </h3>
                     <p className="text-xs text-[var(--color-text-tertiary)]">
-                      Choose how your name appears across the app and set defaults for new posts,
-                      reactions, and comments.
+                      {PROFILE_SETTINGS_COPY.privacyDescription}
                     </p>
 
                     <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1799,7 +1786,7 @@ export default function ProfilePage() {
                           htmlFor="name-display-preference-select"
                           className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]"
                         >
-                          Name used across app
+                          {PROFILE_SETTINGS_COPY.nameUsedAcrossAppLabel}
                         </label>
                         <select
                           id="name-display-preference-select"
@@ -1814,15 +1801,14 @@ export default function ProfilePage() {
                           disabled={isSavingPrivacy}
                           className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
-                          {NAME_DISPLAY_OPTIONS.map((option) => (
+                          {PROFILE_NAME_DISPLAY_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
                               {option.label}
                             </option>
                           ))}
                         </select>
                         <p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">
-                          Real name uses your first name and last initial when available.
-                          Otherwise your username is shown.
+                          {PROFILE_SETTINGS_COPY.nameUsedAcrossAppHint}
                         </p>
                       </div>
                       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
@@ -1830,7 +1816,7 @@ export default function ProfilePage() {
                           htmlFor="default-entry-privacy-select"
                           className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]"
                         >
-                          Post visibility
+                          {PROFILE_SETTINGS_COPY.postVisibilityLabel}
                         </label>
                         <select
                           id="default-entry-privacy-select"
@@ -1845,7 +1831,7 @@ export default function ProfilePage() {
                           disabled={isSavingPrivacy}
                           className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
-                          {PRIVACY_OPTIONS.map((option) => (
+                          {PROFILE_PRIVACY_OPTIONS.map((option) => (
                             <option key={`entry-${option.value}`} value={option.value}>
                               {option.label}
                             </option>
@@ -1857,7 +1843,7 @@ export default function ProfilePage() {
                           htmlFor="default-reaction-privacy-select"
                           className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]"
                         >
-                          Reactions
+                          {PROFILE_SETTINGS_COPY.reactionsLabel}
                         </label>
                         <select
                           id="default-reaction-privacy-select"
@@ -1872,7 +1858,7 @@ export default function ProfilePage() {
                           disabled={isSavingPrivacy}
                           className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
-                          {PRIVACY_OPTIONS.map((option) => (
+                          {PROFILE_PRIVACY_OPTIONS.map((option) => (
                             <option key={`reaction-${option.value}`} value={option.value}>
                               {option.label}
                             </option>
@@ -1884,7 +1870,7 @@ export default function ProfilePage() {
                           htmlFor="default-comments-privacy-select"
                           className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]"
                         >
-                          Comments
+                          {PROFILE_SETTINGS_COPY.commentsLabel}
                         </label>
                         <select
                           id="default-comments-privacy-select"
@@ -1899,7 +1885,7 @@ export default function ProfilePage() {
                           disabled={isSavingPrivacy}
                           className="mt-2 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 disabled:opacity-50"
                         >
-                          {PRIVACY_OPTIONS.map((option) => (
+                          {PROFILE_PRIVACY_OPTIONS.map((option) => (
                             <option key={`comments-${option.value}`} value={option.value}>
                               {option.label}
                             </option>
@@ -1909,8 +1895,8 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="mt-3 space-y-1 text-[11px] text-[var(--color-text-tertiary)]">
-                      <p>Reactions privacy controls who can see and react.</p>
-                      <p>Comments privacy controls who can see the comments UI and comment.</p>
+                      <p>{PROFILE_SETTINGS_COPY.reactionsHint}</p>
+                      <p>{PROFILE_SETTINGS_COPY.commentsHint}</p>
                     </div>
 
                     {privacyMessage ? (
@@ -1924,10 +1910,10 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                        Password
+                        {PROFILE_SETTINGS_COPY.passwordTitle}
                       </h3>
                       <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                        Update your account password.
+                        {PROFILE_SETTINGS_COPY.passwordDescription}
                       </p>
                     </div>
 
@@ -1940,7 +1926,7 @@ export default function ProfilePage() {
                         }}
                         className="shrink-0 rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                       >
-                        Change password
+                        {PROFILE_SETTINGS_COPY.changePasswordLabel}
                       </button>
                     ) : null}
                   </div>
@@ -1957,7 +1943,7 @@ export default function ProfilePage() {
                           className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]"
                           htmlFor="current-password"
                         >
-                          Current password
+                          {PROFILE_SETTINGS_COPY.currentPasswordLabel}
                         </label>
                         <div className="relative">
                           <input
@@ -1966,7 +1952,7 @@ export default function ProfilePage() {
                             autoComplete="current-password"
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="Enter your current password"
+                            placeholder={PROFILE_SETTINGS_COPY.currentPasswordPlaceholder}
                             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           <button
@@ -1986,7 +1972,7 @@ export default function ProfilePage() {
                           className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]"
                           htmlFor="new-password"
                         >
-                          New password
+                          {PROFILE_SETTINGS_COPY.newPasswordLabel}
                         </label>
                         <div className="relative">
                           <input
@@ -1995,7 +1981,7 @@ export default function ProfilePage() {
                             autoComplete="new-password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Minimum 8 characters"
+                            placeholder={PROFILE_SETTINGS_COPY.newPasswordPlaceholder}
                             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           <button
@@ -2015,7 +2001,7 @@ export default function ProfilePage() {
                           className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]"
                           htmlFor="confirm-password"
                         >
-                          Confirm new password
+                          {PROFILE_SETTINGS_COPY.confirmPasswordLabel}
                         </label>
                         <div className="relative">
                           <input
@@ -2024,7 +2010,7 @@ export default function ProfilePage() {
                             autoComplete="new-password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Re-enter new password"
+                            placeholder={PROFILE_SETTINGS_COPY.confirmPasswordPlaceholder}
                             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           <button
@@ -2049,14 +2035,16 @@ export default function ProfilePage() {
                           onClick={savePassword}
                           className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {isSavingPassword ? "Updating..." : "Update password"}
+                          {isSavingPassword
+                            ? "Updating..."
+                            : PROFILE_SETTINGS_COPY.updatePasswordLabel}
                         </button>
                         <button
                           type="button"
                           onClick={cancelPasswordChange}
                           className="text-sm font-medium text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]"
                         >
-                          Cancel
+                          {PROFILE_SETTINGS_COPY.cancelLabel}
                         </button>
                       </div>
                     </div>
@@ -2069,5 +2057,6 @@ export default function ProfilePage() {
       ) : null}
 
     </div>
+    </AppShell>
   );
 }

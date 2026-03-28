@@ -5,7 +5,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppImage from "@/components/AppImage";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
@@ -41,6 +41,15 @@ import type {
   PrimaryGrape,
   PrivacyLevel,
 } from "@/types/wine";
+import {
+  NEW_ENTRY_BULK_COPY,
+  NEW_ENTRY_DRINKING_NOW_COPY,
+  NEW_ENTRY_HEADER_COPY,
+  NEW_ENTRY_PHOTO_TYPE_OPTIONS,
+  NEW_ENTRY_PRIVACY_OPTIONS,
+  NEW_ENTRY_SINGLE_BOTTLE_COPY,
+  NEW_ENTRY_UPLOAD_COPY,
+} from "@shared";
 import {
   buildResolvedPhotoTypeMap,
   hasDominantSingleBottleFrame,
@@ -91,13 +100,6 @@ type NewEntryForm = {
   advanced_notes: AdvancedNotesFormValues;
 };
 
-const PRIVACY_OPTIONS: { value: PrivacyLevel; label: string }[] = [
-  { value: "public", label: "Public" },
-  { value: "friends_of_friends", label: "Friends of friends" },
-  { value: "friends", label: "Friends only" },
-  { value: "private", label: "Private" },
-];
-
 type CreateEntryResponse = {
   entry: SurveyEntryCard;
   comparison_candidate?: SurveyComparisonCandidate | null;
@@ -118,12 +120,7 @@ type SavedCropState = {
 };
 
 const PHOTO_TYPE_OPTIONS: { value: UploadPhotoType; label: string }[] = [
-  { value: "label", label: "Label" },
-  { value: "pairing", label: "Pairing" },
-  { value: "people", label: "People" },
-  { value: "other_bottles", label: "Other bottles" },
-  { value: "lineup", label: "Lineup" },
-  { value: "place", label: "Place" },
+  ...NEW_ENTRY_PHOTO_TYPE_OPTIONS,
 ];
 
 const GALLERY_TYPE_PRIORITY: Record<UploadPhotoType, number> = {
@@ -365,6 +362,7 @@ export default function NewEntryPage() {
   >("group");
   const [bulkEntryTitle, setBulkEntryTitle] = useState("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
+  const [showManualFields, setShowManualFields] = useState(false);
 
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
@@ -1713,6 +1711,7 @@ export default function NewEntryPage() {
     primary_grape_suggestions?: string[] | null;
     primary_grape_confidence?: number | null;
   }) => {
+    setShowManualFields(true);
     const normalizeAutofillText = (value?: string | null) => {
       if (typeof value !== "string") return "";
       const trimmed = value.trim();
@@ -3080,7 +3079,7 @@ export default function NewEntryPage() {
   const collapsibleSectionClassName =
     "group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4";
   const collapsibleSummaryClassName =
-    "cursor-pointer list-none select-none text-base font-medium text-[var(--color-text-primary)] [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90 sm:text-sm";
+    "cursor-pointer list-none select-none text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-[var(--color-text-tertiary)] before:transition-transform before:content-['▸'] group-open:before:rotate-90";
   const baseUploadGalleryItems = labelPhotos
     .map((photo, sourceIndex) => {
       const resolvedType =
@@ -3213,20 +3212,18 @@ export default function NewEntryPage() {
     (autofillStatus === "error" || autofillStatus === "timeout" || hasLowScanConfidence);
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
-      </div>
-      <div className="mx-auto w-full max-w-3xl space-y-8 pt-8">
-        <header className="space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-            New entry
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
+      <div className="mx-auto w-full max-w-3xl space-y-8">
+        <header className="space-y-1">
+          <span className="text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
+            {NEW_ENTRY_HEADER_COPY.eyebrow}
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-            Record a new pour.
+          <h1 className="font-serif text-[28px] font-light text-[var(--color-text-primary)]">
+            {NEW_ENTRY_HEADER_COPY.title}
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Capture the bottle, the place, and the people around it.
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            {NEW_ENTRY_HEADER_COPY.subtitle}
           </p>
         </header>
 
@@ -3239,13 +3236,13 @@ export default function NewEntryPage() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 space-y-1">
                   <label
-                    className="block text-sm font-medium text-[var(--color-text-primary)]"
+                    className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)]"
                     htmlFor="label-upload"
                   >
-                    Upload images
+                    {NEW_ENTRY_UPLOAD_COPY.label}
                   </label>
                   <p className="text-xs text-[var(--color-text-tertiary)]">
-                    upload photos of the wine and anything else from the night - pairing, people, place. we&apos;ll tag them
+                    {NEW_ENTRY_UPLOAD_COPY.hint}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -3259,7 +3256,7 @@ export default function NewEntryPage() {
                         }
                       }}
                     >
-                      Re-scan
+                      {NEW_ENTRY_UPLOAD_COPY.rescanLabel}
                     </button>
                   ) : null}
                   <button
@@ -3269,8 +3266,8 @@ export default function NewEntryPage() {
                     disabled={!canAddLabelPhoto || autofillStatus === "loading"}
                   >
                     {labelPhotos.length > 0
-                      ? "Add images"
-                      : "Upload images"}
+                      ? NEW_ENTRY_UPLOAD_COPY.addImagesLabel
+                      : NEW_ENTRY_UPLOAD_COPY.uploadImagesLabel}
                   </button>
                 </div>
               </div>
@@ -3291,7 +3288,9 @@ export default function NewEntryPage() {
 
               {showProcessedGallery ? (
                 <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium text-[var(--color-text-primary)]">Current photos</p>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    {NEW_ENTRY_UPLOAD_COPY.currentPhotosLabel}
+                  </p>
                   <SwipePhotoGallery
                     items={uploadGalleryItemsWithOrderControl}
                     heightClassName="h-64 sm:h-80"
@@ -3342,7 +3341,7 @@ export default function NewEntryPage() {
                 </div>
               ) : labelPhotos.length > 0 ? (
                 <p className="mt-3 text-xs text-[var(--color-text-tertiary)]">
-                  Photos uploaded. Waiting for AI processing to complete...
+                  {NEW_ENTRY_UPLOAD_COPY.waitingLabel}
                 </p>
               ) : null}
 
@@ -3376,7 +3375,7 @@ export default function NewEntryPage() {
                 <div className="mt-4 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Lineup preview
+                      {NEW_ENTRY_BULK_COPY.lineupPreviewTitle}
                     </p>
                     <button
                       type="button"
@@ -3395,8 +3394,8 @@ export default function NewEntryPage() {
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {showBulkEventDetailsStep
-                            ? "Event details"
-                            : "Group this bulk upload"}
+                            ? NEW_ENTRY_BULK_COPY.eventDetailsTitle
+                            : NEW_ENTRY_BULK_COPY.groupThisBulkUploadTitle}
                         </p>
                         <p className="text-xs text-[var(--color-text-tertiary)]">
                           {showBulkEventDetailsStep
@@ -3459,7 +3458,7 @@ export default function NewEntryPage() {
                         <div className="md:col-span-2 space-y-4">
                           <div>
                             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                              Event name
+                              {NEW_ENTRY_BULK_COPY.eventNameLabel}
                             </label>
                             <input
                               type="text"
@@ -3490,7 +3489,7 @@ export default function NewEntryPage() {
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
                               <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                                Event location
+                                {NEW_ENTRY_BULK_COPY.eventLocationLabel}
                               </label>
                               <input type="hidden" {...register("location_place_id")} />
                               <div className="mt-2">
@@ -3536,7 +3535,7 @@ export default function NewEntryPage() {
 
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                              Tasted with
+                              {NEW_ENTRY_BULK_COPY.tastedWithLabel}
                             </p>
                             <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
                               These people will be tagged on every wine in the event.
@@ -3607,7 +3606,7 @@ export default function NewEntryPage() {
                                       onChange={(event) =>
                                         setFriendSearch(event.target.value)
                                       }
-                                      placeholder="Search friends"
+                                      placeholder={NEW_ENTRY_BULK_COPY.searchFriendsPlaceholder}
                                       className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                                     />
                                     {searchResults.length > 0 ? (
@@ -3683,7 +3682,7 @@ export default function NewEntryPage() {
                       ) : (
                         <div>
                           <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                            Group title
+                            {NEW_ENTRY_BULK_COPY.groupTitleLabel}
                           </label>
                           <input
                             type="text"
@@ -3783,18 +3782,30 @@ export default function NewEntryPage() {
             {/* Hide single-bottle form fields when lineup mode is active */}
             {showSingleBottleFields ? (
               <>
+                {!showManualFields ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualFields(true)}
+                    aria-expanded={showManualFields}
+                    className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                  >
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.manualEntryCta}
+                  </button>
+                ) : null}
+
+                {showManualFields ? (
+                  <>
                 <div className="rounded-2xl border border-sky-300/20 bg-sky-950/20 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
                       <label
                         htmlFor="drinking-now-toggle"
-                        className="block text-sm font-medium text-[var(--color-text-primary)]"
+                        className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)]"
                       >
-                        Drinking Now
+                        {NEW_ENTRY_DRINKING_NOW_COPY.title}
                       </label>
                       <p className="text-xs text-[var(--color-text-tertiary)]">
-                        Friends see a light blue glow on Home and Feed for 2.5 hours after you
-                        post this pour.
+                        {NEW_ENTRY_DRINKING_NOW_COPY.description}
                       </p>
                     </div>
                     <Controller
@@ -3814,25 +3825,25 @@ export default function NewEntryPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
+                  <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Notes</label>
                   <textarea
-                    className="mt-1 min-h-[120px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                    className="min-h-[120px] w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     {...register("notes")}
                   />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                    <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                       Rating (1-100) <span className="text-rose-400">*</span>
                     </label>
                     <input
                       type="text"
                       inputMode="numeric"
-                      className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 ${
+                      className={`w-20 rounded-[10px] border-[0.5px] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 ${
                         errors.rating
                           ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
-                          : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
+                          : "border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                       }`}
                       {...register("rating", {
                         validate: (value) => {
@@ -3860,38 +3871,50 @@ export default function NewEntryPage() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                      QPR (Quality : Price Ratio)
+                    <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                      {NEW_ENTRY_SINGLE_BOTTLE_COPY.qprLabel}
                     </label>
-                    <select
-                      className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                      {...register("qpr_level")}
-                    >
-                      <option value="">Not set</option>
-                      {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
+                    <Controller
+                      control={control}
+                      name="qpr_level"
+                      render={({ field }) => (
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
+                                field.value === value
+                                  ? "border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.15)] text-[var(--color-accent-gold)]"
+                                  : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                              }`}
+                              onClick={() => field.onChange(field.value === value ? "" : value)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    />
                   </div>
                   <input type="hidden" {...register("price_paid")} />
                   <input type="hidden" {...register("price_paid_currency")} />
                   <input type="hidden" {...register("price_paid_source")} />
                 </div>
 
-                <details className={collapsibleSectionClassName}>
+                {showManualFields && (
+                  <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Wine details
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Optional identity details for this bottle.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Wine name</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Wine name</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("wine_name")}
                       />
                       {errors.wine_name ? (
@@ -3899,48 +3922,48 @@ export default function NewEntryPage() {
                       ) : null}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Producer</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Producer</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("producer")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Vintage</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Vintage</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("vintage")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Country</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Country</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("country")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Region</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Region</label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("region")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                         Appellation
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("appellation")}
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                         Classification
                       </label>
                       <input
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         placeholder="Optional (e.g. Premier Cru, DOCG)"
                         {...register("classification")}
                       />
@@ -3953,17 +3976,18 @@ export default function NewEntryPage() {
                     </div>
                   </div>
                 </details>
+                )}
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Location & date
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Where and when this bottle was consumed.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">Location</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Location</label>
                       <input type="hidden" {...register("location_place_id")} />
                       <Controller
                         control={control}
@@ -3984,7 +4008,7 @@ export default function NewEntryPage() {
                       />
                     </div>
                     <div className="md:justify-self-start">
-                      <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                         Consumed date
                       </label>
                       <Controller
@@ -3996,7 +4020,7 @@ export default function NewEntryPage() {
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                             required
                           />
                         )}
@@ -4007,10 +4031,10 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Tasted with
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.tastedWithTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Tag friends who were with you.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.tastedWithDescription}
                   </p>
                   {users.length === 0 ? (
                     <p className="mt-3 text-sm text-[var(--color-text-tertiary)]">No other users yet.</p>
@@ -4066,11 +4090,11 @@ export default function NewEntryPage() {
                             type="text"
                             value={friendSearch}
                             onChange={(e) => setFriendSearch(e.target.value)}
-                            placeholder="Search friends..."
-                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                            placeholder={NEW_ENTRY_SINGLE_BOTTLE_COPY.searchFriendsPlaceholder}
+                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           {searchResults.length > 0 && (
-                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
+                            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
                               {searchResults.map((user) => (
                                 <button
                                   key={user.id}
@@ -4095,19 +4119,19 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Advanced notes
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Optional structure for deeper tasting notes.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     {ADVANCED_NOTE_FIELDS.map((field) => (
                       <div key={field.key}>
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
                           {field.label}
                         </label>
                         <select
-                          className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                          className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           {...register(`advanced_notes.${field.key}` as const)}
                         >
                           <option value="">Not set</option>
@@ -4124,66 +4148,105 @@ export default function NewEntryPage() {
 
                 <details className={collapsibleSectionClassName}>
                   <summary className={collapsibleSummaryClassName}>
-                    Visibility & interaction
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityTitle}
                   </summary>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Set who can view the post, view/react to reactions, and view/comment
-                    on comments.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityDescription}
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-3">
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                          Post visibility
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                          {NEW_ENTRY_SINGLE_BOTTLE_COPY.postVisibilityLabel}
                         </label>
                         <PrivacyBadge level={selectedEntryPrivacy} compact />
                       </div>
-                      <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("entry_privacy")}
-                      >
-                        {PRIVACY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={control}
+                        name="entry_privacy"
+                        render={({ field }) => (
+                          <div className="flex gap-1">
+                          {NEW_ENTRY_PRIVACY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
+                                  field.value === option.value
+                                    ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">Reactions</label>
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                          {NEW_ENTRY_SINGLE_BOTTLE_COPY.reactionsLabel}
+                        </label>
                         <PrivacyBadge level={selectedReactionPrivacy} compact />
                       </div>
-                      <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("reaction_privacy")}
-                      >
-                        {PRIVACY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={control}
+                        name="reaction_privacy"
+                        render={({ field }) => (
+                          <div className="flex gap-1">
+                          {NEW_ENTRY_PRIVACY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
+                                  field.value === option.value
+                                    ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">Comments</label>
+                        <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                          {NEW_ENTRY_SINGLE_BOTTLE_COPY.commentsLabel}
+                        </label>
                         <PrivacyBadge level={selectedCommentsPrivacy} compact />
                       </div>
-                      <select
-                        className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("comments_privacy")}
-                      >
-                        {PRIVACY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={control}
+                        name="comments_privacy"
+                        render={({ field }) => (
+                          <div className="flex gap-1">
+                          {NEW_ENTRY_PRIVACY_OPTIONS.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
+                                  field.value === option.value
+                                    ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                    Privacy on reactions/comments controls both visibility and participation.
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityFootnote}
                   </p>
                 </details>
 
@@ -4194,19 +4257,21 @@ export default function NewEntryPage() {
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
-                    className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2 text-base font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
+                    className="rounded-[11px] bg-[var(--color-accent-primary)] px-5 py-3 text-xs font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={isSubmitting}
                   >
-                    Save entry
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.saveEntryLabel}
                   </button>
                   <button
                     type="button"
-                    className="text-base font-medium text-[var(--color-text-secondary)] sm:text-sm"
+                    className="rounded-[11px] border-[0.5px] border-[var(--color-border-strong)] bg-transparent px-5 py-3 text-xs font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)]"
                     onClick={returnAfterCancel}
                   >
-                    Cancel
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
                   </button>
                 </div>
+                  </>
+                ) : null}
           </>
           ) : null}
         </form>
@@ -4373,7 +4438,7 @@ export default function NewEntryPage() {
                     disabled={savingCrop}
                     className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
                   >
-                    Cancel
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
                   </button>
                   <button
                     type="button"
@@ -4414,6 +4479,7 @@ export default function NewEntryPage() {
         onSelect={submitPostSaveComparison}
         onSkip={skipPostSaveComparison}
       />
-    </div>
+      </div>
+    </AppShell>
   );
 }

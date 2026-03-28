@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LIST_SCAN_MAX_IMAGE_COUNT, type ListScanResult } from "@shared";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 import { saveListScanResult } from "@/lib/listScan/storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -404,21 +404,38 @@ export default function ListScanIntakeScreen() {
     Boolean(scanProgress);
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-8 text-[var(--color-text-primary)]">
-      <div className="mx-auto w-full max-w-5xl space-y-6">
-        <NavBar />
-
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
         <div className="mx-auto w-full max-w-3xl space-y-5">
-          <header className="space-y-2">
-            <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
-              List scan
+          <header className="space-y-1">
+            <span
+              className="block"
+              style={{
+                fontSize: "9px",
+                textTransform: "uppercase",
+                letterSpacing: "3px",
+                color: "var(--color-accent-secondary)",
+              }}
+            >
+              List Scan
             </span>
-            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-              Scan or upload a wine list.
+            <h1
+              className="font-serif"
+              style={{
+                fontSize: "28px",
+                fontWeight: 300,
+                color: "var(--color-text-primary)",
+              }}
+            >
+              Scan any wine list.
             </h1>
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Upload one or more list photos, choose a PDF, or paste a public wine-list
-              link.
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              Upload a photo, PDF, or URL and get instant recommendations.
             </p>
           </header>
 
@@ -441,31 +458,119 @@ export default function ListScanIntakeScreen() {
               </div>
             ) : null}
 
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                Upload
-              </p>
-              <p className="text-sm text-[var(--color-text-tertiary)]">
-                Use up to {LIST_SCAN_MAX_IMAGE_COUNT} photos for multi-page lists, or choose one PDF.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
+            <div className="flex gap-3">
               <button
                 type="button"
-                className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  background: "var(--color-surface-primary)",
+                  border: "0.5px solid var(--color-border)",
+                  borderRadius: "12px",
+                  padding: "16px 10px",
+                  textAlign: "center",
+                }}
                 onClick={() => imageInputRef.current?.click()}
                 disabled={isSubmitting}
               >
-                Choose photo
+                <span style={{ fontSize: "20px", opacity: 0.6 }} aria-hidden="true">
+                  📷
+                </span>
+                <span
+                  className="mt-1 block"
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--color-text-primary)",
+                    fontWeight: 500,
+                  }}
+                >
+                  Photo
+                </span>
+                <span
+                  className="mt-0.5 block"
+                  style={{
+                    fontSize: "8px",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
+                  Up to {LIST_SCAN_MAX_IMAGE_COUNT} images
+                </span>
               </button>
+
               <button
                 type="button"
-                className="rounded-full border border-[var(--color-border)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  background: "var(--color-surface-primary)",
+                  border: "0.5px solid var(--color-border)",
+                  borderRadius: "12px",
+                  padding: "16px 10px",
+                  textAlign: "center",
+                }}
                 onClick={() => pdfInputRef.current?.click()}
                 disabled={isSubmitting}
               >
-                Choose PDF
+                <span style={{ fontSize: "20px", opacity: 0.6 }} aria-hidden="true">
+                  📄
+                </span>
+                <span
+                  className="mt-1 block"
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--color-text-primary)",
+                    fontWeight: 500,
+                  }}
+                >
+                  PDF
+                </span>
+                <span
+                  className="mt-0.5 block"
+                  style={{
+                    fontSize: "8px",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
+                  Single file
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="flex-1 transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  background: "var(--color-surface-primary)",
+                  border: "0.5px solid var(--color-border)",
+                  borderRadius: "12px",
+                  padding: "16px 10px",
+                  textAlign: "center",
+                }}
+                onClick={() => {
+                  const urlInput = document.getElementById("list-scan-url-input");
+                  urlInput?.focus();
+                }}
+                disabled={isSubmitting}
+              >
+                <span style={{ fontSize: "20px", opacity: 0.6 }} aria-hidden="true">
+                  🔗
+                </span>
+                <span
+                  className="mt-1 block"
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--color-text-primary)",
+                    fontWeight: 500,
+                  }}
+                >
+                  URL
+                </span>
+                <span
+                  className="mt-0.5 block"
+                  style={{
+                    fontSize: "8px",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
+                  Public link
+                </span>
               </button>
             </div>
 
@@ -548,9 +653,10 @@ export default function ListScanIntakeScreen() {
 
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                Public wine list link
+                Or paste a public wine list link
               </p>
               <input
+                id="list-scan-url-input"
                 value={urlValue}
                 onChange={(event) => {
                   setUrlValue(event.target.value);
@@ -618,6 +724,6 @@ export default function ListScanIntakeScreen() {
           </section>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

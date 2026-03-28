@@ -16,7 +16,12 @@ import {
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
-import NavBar from "@/components/NavBar";
+import {
+  buildEntryGoogleMapsLocationUrl,
+  buildEntryLocationDisplayLabel,
+  buildEntryShareText,
+} from "@shared";
+import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
 import ScoreBreakdown from "@/components/ScoreBreakdown";
@@ -63,34 +68,6 @@ async function copyTextToClipboard(value: string) {
   const copied = document.execCommand("copy");
   document.body.removeChild(textArea);
   return copied;
-}
-
-function buildShareText() {
-  return "Check out this wine post from my CellarSnap.";
-}
-
-function buildLocationDisplayLabel(locationText: string): string {
-  const normalized = locationText.trim();
-  if (!normalized) return normalized;
-
-  const parts = normalized
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) return normalized;
-
-  const name = parts[0];
-  const city = parts.length >= 4 ? parts[parts.length - 3] : parts[1];
-  if (!city || city.toLowerCase() === name.toLowerCase()) return name;
-
-  return `${name}, ${city}`;
-}
-
-function buildGoogleMapsLocationUrl(locationText: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    locationText
-  )}`;
 }
 
 function buildScorePayload(entry: EntryDetail, isOwner: boolean) {
@@ -456,7 +433,7 @@ export default function EntryDetailPage() {
       }
 
       const shareUrl = payload.url;
-      const shareText = buildShareText();
+      const shareText = buildEntryShareText();
 
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         try {
@@ -508,27 +485,37 @@ export default function EntryDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-5xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading entry...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-5xl space-y-8 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-4 w-24 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-7 w-3/4 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-1/2 rounded bg-[var(--color-surface-raised)]" />
+            </div>
+            <div className="aspect-[4/3] w-full rounded-2xl bg-[var(--color-surface-raised)]" />
+            <div className="space-y-3">
+              <div className="h-4 w-full rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-5/6 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-2/3 rounded bg-[var(--color-surface-raised)]" />
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-5xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
-            {errorMessage ?? "Entry unavailable."}
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-5xl space-y-8">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+              {errorMessage ?? "Entry unavailable."}
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -730,21 +717,21 @@ export default function EntryDetailPage() {
   const hasGoogleMapsLocation =
     hasLocation && locationPlaceId.length > 0;
   const locationDisplayLabel = hasLocation
-    ? buildLocationDisplayLabel(locationText)
+    ? buildEntryLocationDisplayLabel(locationText)
     : "";
   const hasExpandedLocation =
     hasLocation && locationDisplayLabel !== locationText;
   const locationMapsUrl = hasGoogleMapsLocation
-    ? buildGoogleMapsLocationUrl(locationText)
+    ? buildEntryGoogleMapsLocationUrl(locationText)
     : "";
   const isScoreProfileBuilding =
     typeof scoreResult?.preference_event_count === "number" &&
     scoreResult.preference_event_count < 5;
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        <NavBar activeHrefOverride={openedFromFeed ? "/feed" : null} />
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="space-y-2">
             <Link
@@ -756,10 +743,10 @@ export default function EntryDetailPage() {
             <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               Cellar entry
             </span>
-            <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+            <h1 className="max-w-4xl text-5xl font-semibold leading-[0.96] text-[var(--color-text-primary)] sm:text-6xl lg:text-7xl">
               {entry.wine_name || "Untitled wine"}
             </h1>
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <p className="max-w-3xl text-2xl text-[var(--color-text-secondary)] sm:text-3xl">
               {entry.producer || "Unknown producer"}
             </p>
           </div>
@@ -783,7 +770,7 @@ export default function EntryDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           <div className="space-y-0">
             <SwipePhotoGallery
               items={allGalleryItems}
@@ -1048,7 +1035,7 @@ export default function EntryDetailPage() {
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Date consumed
               </p>
-              <p className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
+              <p className="mt-1 text-3xl font-semibold text-[var(--color-text-primary)] sm:text-4xl">
                 {formatConsumedDate(entry.consumed_at)}
               </p>
             </div>
@@ -1108,8 +1095,8 @@ export default function EntryDetailPage() {
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Rating
               </p>
-              <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">
-                <RatingBadge rating={entry.rating} />
+              <p className="mt-1 text-[var(--color-text-tertiary)]">
+                <RatingBadge rating={entry.rating} variant="text" className="!text-3xl sm:!text-4xl" />
               </p>
             </div>
 
@@ -1404,7 +1391,7 @@ export default function EntryDetailPage() {
 
       {shareToast ? (
         <div
-          className={`fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
+          className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
             shareToast.kind === "success"
               ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
               : "border-rose-400/50 bg-rose-500/15 text-rose-100"
@@ -1415,6 +1402,7 @@ export default function EntryDetailPage() {
           {shareToast.message}
         </div>
       ) : null}
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -77,7 +77,10 @@ export default function VerifyPhoneScreen() {
       }
 
       if (mode === "recovery") {
-        router.replace("/(auth)/reset-password");
+        router.replace({
+          pathname: "/(auth)/reset-password",
+          params: { phone: normalizedPhone },
+        });
         return;
       }
 
@@ -99,7 +102,7 @@ export default function VerifyPhoneScreen() {
         }
       }
 
-      router.replace("/(app)/home");
+      router.replace("/(app)/feed");
     } catch {
       setErrorMessage("Unable to verify code right now.");
       setInfoMessage(null);
@@ -392,4 +395,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

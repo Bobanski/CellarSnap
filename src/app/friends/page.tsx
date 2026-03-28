@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import NavBar from "@/components/NavBar";
+import AppShell from "@/components/AppShell";
 
 type Profile = {
   id: string;
@@ -243,21 +243,22 @@ export default function FriendsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
-        <div className="mx-auto w-full max-w-6xl space-y-8">
-          <NavBar />
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            Loading friends...
+      <AppShell>
+        <div className="px-6 py-6 text-[var(--color-text-primary)]">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+              Loading friends...
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-screen-bg)] px-6 py-10 text-[var(--color-text-primary)]">
+    <AppShell>
+      <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <NavBar />
         <header className="space-y-2">
           <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Friends
@@ -549,6 +550,7 @@ export default function FriendsPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }

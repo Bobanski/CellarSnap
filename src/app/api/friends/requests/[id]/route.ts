@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import {
   applyFriendTransition,
   FriendTransitionError,
@@ -47,22 +47,24 @@ function transitionErrorResponse(error: unknown) {
  *   - unfriending / removing an accepted friendship (either side deletes)
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let auth;
+  try {
+    auth = await requireRequestAuth(request);
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   const { id } = await params;
 
   // Verify the request exists and the user is a party to it
-  const { data: request, error: fetchError } = await supabase
+  const { data: requestRow, error: fetchError } = await supabase
     .from("friend_requests")
     .select("id, requester_id, recipient_id, status")
     .eq("id", id)
@@ -72,17 +74,19 @@ export async function DELETE(
     return NextResponse.json({ error: fetchError.message }, { status: 500 });
   }
 
-  if (!request) {
+  if (!requestRow) {
     return NextResponse.json({ error: "Request not found." }, { status: 404 });
   }
 
-  if (request.requester_id !== user.id && request.recipient_id !== user.id) {
+  if (requestRow.requester_id !== user.id && requestRow.recipient_id !== user.id) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
-  if (request.status === "pending" || request.status === "accepted") {
+  if (requestRow.status === "pending" || requestRow.status === "accepted") {
     const targetUserId =
-      request.requester_id === user.id ? request.recipient_id : request.requester_id;
+      requestRow.requester_id === user.id
+        ? requestRow.recipient_id
+        : requestRow.requester_id;
 
     try {
       await applyFriendTransition(supabase, targetUserId, "remove");
@@ -92,8 +96,8 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      request_id: request.id,
-      status: request.status,
+      request_id: requestRow.id,
+      status: requestRow.status,
     });
   }
 
@@ -119,7 +123,7 @@ export async function DELETE(
 
   return NextResponse.json({
     success: true,
-    request_id: request.id,
-    status: request.status,
+    request_id: requestRow.id,
+    status: requestRow.status,
   });
 }
