@@ -1,4 +1,5 @@
 import { z } from "zod";
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import SensoryRadarChart from "@/components/SensoryRadarChart";
 import { requirePrivateBetaFeatureUser } from "@/lib/access/privateBetaFeatures";
@@ -155,6 +156,14 @@ export default async function PalatePage() {
 
   const viewer = await requirePrivateBetaFeatureUser(supabase, user);
 
+  // Check taste survey existence
+  const { data: surveyData } = await supabase
+    .from("taste_survey_responses")
+    .select("id")
+    .eq("user_id", viewer.id)
+    .maybeSingle();
+  const hasTasteSurvey = surveyData != null;
+
   const rows = await loadPalateRows(viewer.id);
   const preferenceEntries: PreferenceSourceEntry[] = rows.map((row) => ({
     rating: row.rating ?? null,
@@ -220,6 +229,30 @@ export default async function PalatePage() {
             here is a simple read on your style right now.
           </p>
         </header>
+
+        {/* Survey prompt or edit button */}
+        {hasTasteSurvey ? (
+          <div>
+            <Link
+              href="/taste-survey"
+              className="inline-block rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)] hover:text-[var(--color-accent-secondary)]"
+            >
+              Edit Taste Preferences
+            </Link>
+          </div>
+        ) : (
+          <section className="rounded-2xl border border-[var(--color-accent-rose)] bg-[var(--color-accent-soft)] p-5">
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+              Take the taste quiz to sharpen your matches
+            </p>
+            <Link
+              href="/taste-survey"
+              className="mt-3 inline-block rounded-xl bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
+            >
+              Set up my preferences
+            </Link>
+          </section>
+        )}
 
         {!primaryProfile ? (
           <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8">

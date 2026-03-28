@@ -201,6 +201,12 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             onClose={onClose}
           />
           <MenuLink
+            href="/palate"
+            label="My Palate"
+            subtitle="Sensory profile & taste preferences"
+            onClose={onClose}
+          />
+          <MenuLink
             href="/friends"
             label="Friends"
             subtitle="Requests, search, suggestions"
