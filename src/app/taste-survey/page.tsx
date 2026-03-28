@@ -7,6 +7,7 @@ import {
   STARTER_GRAPES,
   STARTER_REGIONS,
   WINE_REGIONS,
+  COMMON_GRAPES,
   SENSORY_LOVE_OPTIONS,
   SENSORY_AVOID_OPTIONS,
   BUDGET_RESTAURANT_OPTIONS,
@@ -15,6 +16,7 @@ import {
   ADVENTUROUSNESS_MAX,
   ADVENTUROUSNESS_DEFAULT,
   TASTE_SURVEY_STEP_COUNT,
+  describeAdventurousness,
   emptyTasteSurveyDraft,
   draftToPayload,
   rowToDraft,
@@ -28,19 +30,25 @@ function toggleInArray(arr: string[], item: string): string[] {
   return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
 }
 
+function searchGrapesLocal(query: string): string[] {
+  const lowerQ = query.toLowerCase();
+  return COMMON_GRAPES.filter((g) => g.toLowerCase().includes(lowerQ)).slice(0, 8);
+}
+
 async function searchGrapesApi(query: string): Promise<string[]> {
   try {
     const supabase = createSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return [];
+    if (!session) return searchGrapesLocal(query);
     const res = await fetch(`/api/grapes?q=${encodeURIComponent(query)}&limit=8`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
-    if (!res.ok) return [];
+    if (!res.ok) return searchGrapesLocal(query);
     const data = await res.json();
-    return (data.grapes ?? []).map((g: { name: string }) => g.name);
+    const results = (data.grapes ?? []).map((g: { name: string }) => g.name);
+    return results.length > 0 ? results : searchGrapesLocal(query);
   } catch {
-    return [];
+    return searchGrapesLocal(query);
   }
 }
 
@@ -254,8 +262,8 @@ function StepWineTypes({
     <>
       <StepHeader
         eyebrow="TASTE PROFILE"
-        title="What do you drink?"
-        subtitle="Tap every type you enjoy."
+        title="What do you typically drink?"
+        subtitle="Select the types of wine you enjoy most often."
       />
       <ChipSelect
         options={WINE_TYPE_OPTIONS}
@@ -278,11 +286,11 @@ function StepGrapes({
   return (
     <>
       <StepHeader
-        title="Grapes you love"
-        subtitle="Pick the varietals you always reach for."
+        title="What are your favorite grapes?"
+        subtitle="Pick all the varietals you tend to reach for."
       />
       <SearchChipSelect
-        starterOptions={STARTER_GRAPES}
+        starterOptions={[]}
         selected={draft.varietals}
         onToggle={(item) =>
           update({ varietals: toggleInArray(draft.varietals, item) })
@@ -338,7 +346,7 @@ function StepLoves({
   return (
     <>
       <StepHeader
-        title="What do you love in a wine?"
+        title="What styles of wine do you love most?"
         subtitle="Tap the styles that speak to you."
       />
       <ChipSelect
@@ -362,7 +370,7 @@ function StepAvoids({
   return (
     <>
       <StepHeader
-        title="What do you avoid?"
+        title="And what styles of wine do you tend to avoid?"
         subtitle="The styles that never quite work for you."
       />
       <ChipSelect
@@ -406,9 +414,6 @@ function StepDetails({
 
       <SectionLabel>How adventurous are you?</SectionLabel>
       <div className="flex flex-col gap-3">
-        <p className="text-center text-2xl font-bold text-[var(--color-accent-secondary)]">
-          {draft.adventurousness}
-        </p>
         <input
           type="range"
           min={ADVENTUROUSNESS_MIN}
@@ -420,7 +425,7 @@ function StepDetails({
           }
           className="w-full accent-[var(--color-accent-secondary)]"
         />
-        <div className="flex justify-between text-[11px] font-semibold text-[var(--color-text-tertiary)]">
+        <div className="flex justify-between text-[13px] font-bold text-[var(--color-text-secondary)]">
           <span>I know what I like</span>
           <span>Always exploring</span>
         </div>
@@ -453,7 +458,7 @@ function StepReview({
         .filter(Boolean)
         .join(", "),
     },
-    { label: "Adventurousness", value: `${draft.adventurousness}/10` },
+    { label: "Adventurousness", value: describeAdventurousness(draft.adventurousness) },
   ];
 
   return (
@@ -461,7 +466,7 @@ function StepReview({
       <StepHeader
         eyebrow="REVIEW & CONFIRM"
         title="Your taste profile"
-        subtitle="Here's what we heard. You can always edit this later."
+        subtitle="Here's your taste profile for now. You can always come back and edit this later."
       />
 
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] p-5 space-y-4">
@@ -709,7 +714,7 @@ export default function TasteSurveyPage() {
             {isSubmitting ? (
               <span className="inline-block w-4 h-4 border-2 border-[var(--color-screen-bg)] border-t-transparent rounded-full animate-spin" />
             ) : isLastStep ? (
-              "Lock in my profile"
+              "Save my profile"
             ) : (
               "Next"
             )}

@@ -24,16 +24,32 @@ export const STARTER_GRAPES = [
   "Grenache",
 ] as const;
 
+/** Common grape varietals for offline/fallback search. */
+export const COMMON_GRAPES = [
+  "Pinot Noir", "Cabernet Sauvignon", "Chardonnay", "Sauvignon Blanc",
+  "Syrah / Shiraz", "Nebbiolo", "Riesling", "Grenache", "Merlot",
+  "Malbec", "Tempranillo", "Sangiovese", "Barbera", "Mourvèdre",
+  "Gamay", "Pinot Grigio", "Viognier", "Chenin Blanc", "Gewürztraminer",
+  "Grüner Veltliner", "Albariño", "Vermentino", "Garnacha", "Cabernet Franc",
+  "Petit Verdot", "Carménère", "Pinotage", "Touriga Nacional", "Nero d'Avola",
+  "Primitivo", "Zinfandel", "Dolcetto", "Aglianico", "Corvina",
+  "Trebbiano", "Fiano", "Greco", "Arneis", "Cortese",
+  "Muscat", "Sémillon", "Marsanne", "Roussanne", "Petite Sirah",
+  "Carignan", "Cinsault", "Tannat", "Blaufränkisch", "Zweigelt",
+  "Furmint", "Assyrtiko", "Xinomavro", "Agiorgitiko",
+  "Torrontés", "Bonarda", "Melon de Bourgogne", "Pinot Blanc",
+  "Pinot Meunier", "Trousseau", "Poulsard", "Savagnin",
+] as const;
+
 // ─── Step 3: Starter regions ────────────────────────────────
 export const STARTER_REGIONS = [
   "France",
   "Italy",
   "California",
   "Spain",
-  "Oregon",
-  "Australia",
-  "Argentina",
-  "Germany",
+  "Bordeaux",
+  "Napa Valley",
+  "Burgundy",
 ] as const;
 
 /** Comprehensive list of wine countries and sub-regions for local search. */
@@ -84,32 +100,27 @@ export const WINE_REGIONS = [
 
 // ���── Step 4: Sensory loves ──��───────────────────────────────
 export const SENSORY_LOVE_OPTIONS = [
-  "Big and full-bodied",
-  "Light and delicate",
-  "High acidity, crisp",
-  "Smooth and round",
-  "Rich and oaky",
-  "Fruit-forward",
-  "Earthy and funky",
-  "Mineral-driven",
-  "Complex and layered",
-  "Long, lingering finish",
-  "Aromatic and perfumed",
-  "Savory, umami notes",
+  "Rich and oaky whites",
+  "Crisp, high acidity whites",
+  "Light and delicate reds",
+  "Fruit-forward wines",
+  "Complex and layered wines",
+  "Aromatic and perfumed wines",
+  "Savory, umami wines",
+  "Mineral-driven wines",
+  "Powerful and fruity reds",
 ] as const;
 
 export type SensoryLoveOption = (typeof SENSORY_LOVE_OPTIONS)[number];
 
 // ─── Step 5: Sensory avoids ─────────────────────────────────
 export const SENSORY_AVOID_OPTIONS = [
-  "Overly oaky",
-  "Very tannic / grippy",
-  "Too acidic / sour",
+  "Overly oaky whites",
+  "Too acidic",
+  "Very tannic / grippy reds",
   "Jammy / overripe fruit",
-  "Hot / high alcohol",
   "Very sweet",
-  "Too bitter / astringent",
-  "Thin and watery",
+  "High alcohol",
 ] as const;
 
 export type SensoryAvoidOption = (typeof SENSORY_AVOID_OPTIONS)[number];
@@ -124,11 +135,11 @@ export const BUDGET_RESTAURANT_OPTIONS = [
 ] as const;
 
 export const BUDGET_RETAIL_OPTIONS = [
-  "Under $15",
-  "$15 – $25",
-  "$25 – $40",
+  "Under $20",
+  "$20 – $40",
   "$40 – $75",
-  "$75+",
+  "$75 – $125",
+  "$125+",
 ] as const;
 
 export type BudgetRestaurantOption = (typeof BUDGET_RESTAURANT_OPTIONS)[number];
@@ -217,6 +228,12 @@ export function rowToDraft(row: TasteSurveyPayload): TasteSurveyDraft {
     adventurousness: row.adventurousness,
     freeText: row.free_text ?? "",
   };
+}
+
+export function describeAdventurousness(value: number): string {
+  if (value <= 3) return "I know what I like";
+  if (value <= 6) return "Somewhat adventurous";
+  return "Always exploring";
 }
 
 export const TASTE_SURVEY_STEP_COUNT = 7;

@@ -168,6 +168,11 @@ export const surveyStyles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
+  sliderLabelBold: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   sliderValue: {
     color: colors.accentSecondary,
     fontSize: 22,

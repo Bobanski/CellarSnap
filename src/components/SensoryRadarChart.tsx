@@ -7,20 +7,61 @@ type RadarPoint = {
   user: number | null;
 };
 
-function toCoordinates(value: number, index: number, total: number, radius: number, center: number) {
-  const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-  const normalized = Math.max(0, Math.min(5, value)) / 5;
-  const pointRadius = normalized * radius;
-  const x = center + Math.cos(angle) * pointRadius;
-  const y = center + Math.sin(angle) * pointRadius;
-  return `${x},${y}`;
+function computeDynamicScale(points: RadarPoint[]) {
+  const values = points
+    .flatMap((p) => [p.user, p.wine])
+    .filter((v): v is number => v !== null);
+  if (values.length === 0) return { min: 1, max: 5 };
+
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  // Pad by ~0.5 beyond the data range, rounded to nearest 0.5, clamped to 1-5
+  const scaleMin = Math.max(1, Math.floor((dataMin - 0.5) * 2) / 2);
+  const scaleMax = Math.min(5, Math.ceil((dataMax + 0.5) * 2) / 2);
+  // Ensure at least 1.5 range so the chart isn't too zoomed in
+  if (scaleMax - scaleMin < 1.5) {
+    const mid = (scaleMin + scaleMax) / 2;
+    return {
+      min: Math.max(1, mid - 0.75),
+      max: Math.min(5, mid + 0.75),
+    };
+  }
+  return { min: scaleMin, max: scaleMax };
 }
 
-function buildPolygon(points: RadarPoint[], accessor: "wine" | "user", radius: number, center: number) {
+function toCoordinates(
+  value: number,
+  index: number,
+  total: number,
+  radius: number,
+  center: number,
+  scaleMin: number,
+  scaleMax: number
+) {
+  const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
+  const range = scaleMax - scaleMin;
+  // Min sits at 10% radius so it's still visible, max at 100%
+  const normalized = 0.10 + ((Math.max(scaleMin, Math.min(scaleMax, value)) - scaleMin) / range) * 0.90;
+  const pointRadius = normalized * radius;
+  return {
+    x: center + Math.cos(angle) * pointRadius,
+    y: center + Math.sin(angle) * pointRadius,
+  };
+}
+
+function buildPolygonPath(
+  points: RadarPoint[],
+  accessor: "wine" | "user",
+  radius: number,
+  center: number,
+  scaleMin: number,
+  scaleMax: number
+) {
   return points
-    .map((point, index) =>
-      toCoordinates(point[accessor] ?? 0, index, points.length, radius, center)
-    )
+    .map((point, index) => {
+      const { x, y } = toCoordinates(point[accessor] ?? scaleMin, index, points.length, radius, center, scaleMin, scaleMax);
+      return `${x},${y}`;
+    })
     .join(" ");
 }
 
@@ -33,75 +74,89 @@ export default function SensoryRadarChart({
   wineLabel?: string;
   userLabel?: string;
 }) {
-  const size = 380;
+  if (points.length === 0) return null;
+
+  const size = 420;
   const center = size / 2;
-  const radius = 102;
-  const rings = [1, 2, 3, 4, 5];
+  const radius = 140;
+  const { min: scaleMin, max: scaleMax } = computeDynamicScale(points);
+  const range = scaleMax - scaleMin;
+  // Generate ~4 ring lines evenly spaced within the dynamic scale
+  const ringCount = 4;
+  const rings = Array.from({ length: ringCount }, (_, i) =>
+    Number((scaleMin + ((i + 1) / ringCount) * range).toFixed(1))
+  );
+  // Find which ring is closest to the neutral value (3.0) for highlighting
+  const neutralRing = rings.reduce((closest, ring) =>
+    Math.abs(ring - 3) < Math.abs(closest - 3) ? ring : closest
+  );
 
   return (
-    <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
-            Sensory map
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Very Low to Very High labels are grouped into broader tasting dimensions.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
-          <span className="inline-flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-accent-primary)]" />
+    <div className="rounded-2xl border border-[var(--color-border)] bg-black/20 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
+          Sensory map
+        </p>
+        <div className="flex items-center gap-4 text-[10px] text-[var(--color-text-tertiary)]">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[var(--color-surface-hover)]" />
             {wineLabel}
           </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#C4607A" }} />
             {userLabel}
           </span>
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-white/5 bg-[var(--color-screen-bg)] px-2 py-2">
+      <div className="rounded-xl bg-[var(--color-screen-bg)] p-3">
         <svg
           viewBox={`0 0 ${size} ${size}`}
           role="img"
           aria-label={`${wineLabel} compared with ${userLabel}`}
-          className="h-auto w-full"
+          className="h-auto w-full max-w-[400px] mx-auto"
         >
+          {/* Grid rings */}
           {rings.map((ring) => (
             <polygon
               key={ring}
               points={points
-                .map((point, index) => toCoordinates(ring, index, points.length, radius, center))
+                .map((_, index) => {
+                  const { x, y } = toCoordinates(ring, index, points.length, radius, center, scaleMin, scaleMax);
+                  return `${x},${y}`;
+                })
                 .join(" ")}
               fill="none"
-              stroke="rgba(255,255,255,0.08)"
-              strokeWidth="1"
+              stroke={ring === neutralRing ? "rgba(196, 96, 122, 0.14)" : "rgba(196, 96, 122, 0.05)"}
+              strokeWidth={ring === neutralRing ? "1.5" : "1"}
             />
           ))}
 
+          {/* Spoke lines + labels */}
           {points.map((point, index) => {
             const angle = (Math.PI * 2 * index) / points.length - Math.PI / 2;
-            const labelRadius = radius + 34;
-            const x = center + Math.cos(angle) * labelRadius;
-            const y = center + Math.sin(angle) * labelRadius;
+            const spokeEnd = toCoordinates(scaleMax, index, points.length, radius, center, scaleMin, scaleMax);
+            const labelRadius = radius + 28;
+            const lx = center + Math.cos(angle) * labelRadius;
+            const ly = center + Math.sin(angle) * labelRadius;
             return (
               <g key={point.key}>
                 <line
                   x1={center}
                   y1={center}
-                  x2={center + Math.cos(angle) * radius}
-                  y2={center + Math.sin(angle) * radius}
-                  stroke="rgba(255,255,255,0.08)"
+                  x2={spokeEnd.x}
+                  y2={spokeEnd.y}
+                  stroke="rgba(196, 96, 122, 0.05)"
                   strokeWidth="1"
                 />
                 <text
-                  x={x}
-                  y={y}
-                  textAnchor={x < center - 12 ? "end" : x > center + 12 ? "start" : "middle"}
+                  x={lx}
+                  y={ly}
+                  textAnchor={lx < center - 15 ? "end" : lx > center + 15 ? "start" : "middle"}
                   dominantBaseline="middle"
-                  fill="rgba(228,228,231,0.92)"
-                  fontSize="11"
+                  fill="rgba(155, 147, 168, 0.9)"
+                  fontSize="10.5"
+                  fontWeight="500"
                 >
                   {point.label}
                 </text>
@@ -109,18 +164,40 @@ export default function SensoryRadarChart({
             );
           })}
 
+          {/* Neutral baseline — subtle dashed */}
           <polygon
-            points={buildPolygon(points, "wine", radius, center)}
-            fill="rgba(251,191,36,0.18)"
-            stroke="#fbbf24"
-            strokeWidth="2"
+            points={buildPolygonPath(points, "wine", radius, center, scaleMin, scaleMax)}
+            fill="rgba(196, 96, 122, 0.03)"
+            stroke="rgba(196, 96, 122, 0.18)"
+            strokeWidth="1"
+            strokeDasharray="4 4"
           />
+
+          {/* User palate — vivid fill + stroke */}
           <polygon
-            points={buildPolygon(points, "user", radius, center)}
-            fill="rgba(52,211,153,0.14)"
-            stroke="#34d399"
-            strokeWidth="2"
+            points={buildPolygonPath(points, "user", radius, center, scaleMin, scaleMax)}
+            fill="rgba(196, 96, 122, 0.12)"
+            stroke="#C4607A"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
           />
+
+          {/* Data point dots */}
+          {points.map((point, index) => {
+            if (point.user === null) return null;
+            const { x, y } = toCoordinates(point.user, index, points.length, radius, center, scaleMin, scaleMax);
+            return (
+              <circle
+                key={`dot-${point.key}`}
+                cx={x}
+                cy={y}
+                r="3.5"
+                fill="#C4607A"
+                stroke="var(--color-screen-bg)"
+                strokeWidth="1.5"
+              />
+            );
+          })}
         </svg>
       </div>
     </div>

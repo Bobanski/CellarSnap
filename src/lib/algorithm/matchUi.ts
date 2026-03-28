@@ -259,59 +259,47 @@ export function buildUserVectorFromContributions(
 export function buildPalateStyleFamilies(
   sensory: Partial<Record<SensoryAxis, number | null | undefined>>
 ) {
+  // Score each family by how much its axes deviate above neutral (3.0).
+  // Only positive deviations count — we want to capture what you lean into,
+  // not penalize normal-range values.
+  function deviationScore(...axes: SensoryAxis[]) {
+    return axes.reduce((sum, axis) => {
+      const val = sensory[axis];
+      if (typeof val !== "number") return sum;
+      return sum + Math.max(0, val - 3);
+    }, 0);
+  }
+
   const styleScores = [
     {
       label: "Rich and plush",
-      score:
-        (sensory.body ?? 0) +
-        (sensory.fruit_ripeness ?? 0) +
-        (sensory.concentration ?? 0) +
-        (sensory.oak_presence ?? 0),
+      score: deviationScore("body", "fruit_ripeness", "concentration", "oak_presence"),
     },
     {
       label: "Bright and lifted",
-      score:
-        (sensory.acidity ?? 0) +
-        (sensory.freshness ?? 0) +
-        (sensory.aromatic_intensity ?? 0) +
-        (sensory.mineral ?? 0),
+      score: deviationScore("acidity", "freshness", "aromatic_intensity", "mineral"),
     },
     {
       label: "Savory and structured",
-      score:
-        (sensory.tannin ?? 0) +
-        (sensory.earthy ?? 0) +
-        (sensory.savory ?? 0) +
-        (sensory.finish_length ?? 0),
+      score: deviationScore("tannin", "earthy", "savory", "finish_length"),
     },
     {
       label: "Elegant and layered",
-      score:
-        (sensory.complexity ?? 0) +
-        (sensory.aromatic_intensity ?? 0) +
-        (sensory.freshness ?? 0) +
-        (sensory.finish_length ?? 0),
+      score: deviationScore("complexity", "aromatic_intensity", "freshness", "finish_length"),
     },
     {
-      label: "Textural and grippy",
-      score:
-        (sensory.bitterness_phenolic_grip ?? 0) +
-        (sensory.tannin ?? 0) +
-        (sensory.body ?? 0) +
-        (sensory.alcohol_perception ?? 0),
+      label: "Bold and powerful",
+      score: deviationScore("body", "tannin", "alcohol_perception", "concentration"),
     },
   ];
 
   const sorted = styleScores.sort((left, right) => right.score - left.score);
-  
-  // If all scores are zero (no sensory signal), return empty array
-  if (sorted[0]?.score === 0) {
-    return [];
-  }
-  
-  return sorted
-    .slice(0, 3)
-    .map((item) => item.label);
+
+  // Only return families with meaningful signal (deviation > 0.3)
+  const meaningful = sorted.filter((item) => item.score > 0.3);
+  if (meaningful.length === 0) return [];
+
+  return meaningful.slice(0, 3).map((item) => item.label);
 }
 
 export function describePreferenceStrength(eventCount: number) {

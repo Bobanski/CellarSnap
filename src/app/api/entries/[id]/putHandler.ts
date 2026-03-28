@@ -15,6 +15,7 @@ import { persistEntryResolution } from "@/server/algorithm/persistEntryResolutio
 import { isValidWineType } from "@/server/algorithm/resolver";
 import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
 import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
+import { resolveEntrySensoryProfile } from "@/server/algorithm/resolveEntrySensory";
 
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
@@ -491,6 +492,30 @@ export function createEntryPutHandler(
       },
     ]);
     const groupedPost = groupedPostData.get(id);
+
+    // Re-materialize the sensory profile after canonical fields may have changed.
+    try {
+      const grapeNames = currentPrimaryGrapes
+        .map((g) => g.name)
+        .filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+        .join(", ") || null;
+      await resolveEntrySensoryProfile(supabase, id, {
+        id,
+        wine_type: (updatedEntry as Record<string, unknown>).wine_type as string | null ?? null,
+        canonical_region: (updatedEntry as Record<string, unknown>).canonical_region as string | null ?? null,
+        canonical_sub_region: (updatedEntry as Record<string, unknown>).canonical_sub_region as string | null ?? null,
+        canonical_country: (updatedEntry as Record<string, unknown>).canonical_country as string | null ?? null,
+        region: (updatedEntry as Record<string, unknown>).region as string | null ?? null,
+        appellation: (updatedEntry as Record<string, unknown>).appellation as string | null ?? null,
+        country: (updatedEntry as Record<string, unknown>).country as string | null ?? null,
+        vintage: (updatedEntry as Record<string, unknown>).vintage as string | null ?? null,
+        producer: (updatedEntry as Record<string, unknown>).producer as string | null ?? null,
+        classification: (updatedEntry as Record<string, unknown>).classification as string | null ?? null,
+        primary_grapes: grapeNames,
+      });
+    } catch {
+      // Sensory resolution is best-effort.
+    }
 
     try {
       await invalidateUserScoreCache(supabase, user.id);

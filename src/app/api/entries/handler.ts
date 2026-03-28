@@ -16,6 +16,7 @@ import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
 import { persistEntryResolution } from "@/server/algorithm/persistEntryResolution";
 import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
 import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
+import { resolveEntrySensoryProfile } from "@/server/algorithm/resolveEntrySensory";
 
 type RequestSupabaseClient = Awaited<ReturnType<typeof requireRequestAuth>>["supabase"];
 
@@ -596,6 +597,27 @@ export function createEntryPostHandler(
     }
   } catch {
     // Resolution is best-effort and should not block entry creation.
+  }
+
+  // Materialize the 16-axis sensory profile from base_profiles + modifiers.
+  // Best-effort — entry creation continues even if assembly fails.
+  try {
+    await resolveEntrySensoryProfile(supabase, data.id, {
+      id: data.id,
+      wine_type: createdEntry.wine_type as string | null ?? null,
+      canonical_region: createdEntry.canonical_region as string | null ?? null,
+      canonical_sub_region: createdEntry.canonical_sub_region as string | null ?? null,
+      canonical_country: createdEntry.canonical_country as string | null ?? null,
+      region: createdEntry.region as string | null ?? null,
+      appellation: createdEntry.appellation as string | null ?? null,
+      country: createdEntry.country as string | null ?? null,
+      vintage: createdEntry.vintage as string | null ?? null,
+      producer: createdEntry.producer as string | null ?? null,
+      classification: createdEntry.classification as string | null ?? null,
+      primary_grapes: primaryGrapeNames,
+    });
+  } catch {
+    // Sensory resolution is best-effort.
   }
 
   try {

@@ -776,6 +776,20 @@ export function AppTopBar() {
                   style={menuStyles.menuItem}
                   onPress={() => {
                     setMenuOpen(false);
+                    router.push("/(app)/palate" as Parameters<typeof router.push>[0]);
+                  }}
+                >
+                  <Feather
+                    name="activity"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>My Palate</AppText>
+                </Pressable>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
                     router.push("/(app)/friends");
                   }}
                 >

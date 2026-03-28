@@ -20,6 +20,7 @@ import {
   STARTER_GRAPES,
   STARTER_REGIONS,
   WINE_REGIONS,
+  COMMON_GRAPES,
   SENSORY_LOVE_OPTIONS,
   SENSORY_AVOID_OPTIONS,
   BUDGET_RESTAURANT_OPTIONS,
@@ -27,6 +28,7 @@ import {
   ADVENTUROUSNESS_MIN,
   ADVENTUROUSNESS_MAX,
   TASTE_SURVEY_STEP_COUNT,
+  describeAdventurousness,
 } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
@@ -95,21 +97,27 @@ function ChipSingleSelect({
   );
 }
 
-// ─── Grape API search ────────────────────────────────────────
+// ─── Grape search (API with local fallback) ─────────────────
+function searchGrapesLocal(query: string): string[] {
+  const lowerQ = query.toLowerCase();
+  return COMMON_GRAPES.filter((g) => g.toLowerCase().includes(lowerQ)).slice(0, 8);
+}
+
 async function searchGrapesApi(query: string): Promise<string[]> {
   const baseUrl = getWebApiBaseUrl();
   const accessToken = await getAccessTokenForApi();
-  if (!baseUrl || !accessToken) return [];
+  if (!baseUrl || !accessToken) return searchGrapesLocal(query);
   try {
     const res = await fetch(
       `${baseUrl}/api/grapes?q=${encodeURIComponent(query)}&limit=8`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    if (!res.ok) return [];
+    if (!res.ok) return searchGrapesLocal(query);
     const data = await res.json();
-    return (data.grapes ?? []).map((g: { name: string }) => g.name);
+    const results = (data.grapes ?? []).map((g: { name: string }) => g.name);
+    return results.length > 0 ? results : searchGrapesLocal(query);
   } catch {
-    return [];
+    return searchGrapesLocal(query);
   }
 }
 
@@ -236,8 +244,8 @@ function StepWineTypes() {
     <>
       <View style={s.headerBlock}>
         <AppText style={s.eyebrow}>TASTE PROFILE</AppText>
-        <AppText style={s.title}>What do you drink?</AppText>
-        <AppText style={s.subtitle}>Tap every type you enjoy.</AppText>
+        <AppText style={s.title}>What do you typically drink?</AppText>
+        <AppText style={s.subtitle}>Select the types of wine you enjoy most often.</AppText>
       </View>
       <ChipSelect
         options={WINE_TYPE_OPTIONS}
@@ -262,13 +270,13 @@ function StepGrapes() {
   return (
     <>
       <View style={s.headerBlock}>
-        <AppText style={s.title}>Grapes you love</AppText>
+        <AppText style={s.title}>What are your favorite grapes?</AppText>
         <AppText style={s.subtitle}>
-          Pick the varietals you always reach for.
+          Pick all the varietals you tend to reach for.
         </AppText>
       </View>
       <SearchChipSelect
-        starterOptions={STARTER_GRAPES}
+        starterOptions={[]}
         selected={draft.varietals}
         onToggle={toggle}
         onAdd={add}
@@ -313,7 +321,7 @@ function StepLoves() {
   return (
     <>
       <View style={s.headerBlock}>
-        <AppText style={s.title}>What do you love in a wine?</AppText>
+        <AppText style={s.title}>What styles of wine do you love most?</AppText>
         <AppText style={s.subtitle}>Tap the styles that speak to you.</AppText>
       </View>
       <ChipSelect
@@ -334,7 +342,7 @@ function StepAvoids() {
   return (
     <>
       <View style={s.headerBlock}>
-        <AppText style={s.title}>What do you avoid?</AppText>
+        <AppText style={s.title}>And what styles of wine do you tend to avoid?</AppText>
         <AppText style={s.subtitle}>
           The styles that never quite work for you.
         </AppText>
@@ -385,7 +393,6 @@ function StepDetails() {
         How adventurous are you?
       </AppText>
       <View style={s.sliderSection}>
-        <AppText style={s.sliderValue}>{draft.adventurousness}</AppText>
         <Slider
           minimumValue={ADVENTUROUSNESS_MIN}
           maximumValue={ADVENTUROUSNESS_MAX}
@@ -397,8 +404,8 @@ function StepDetails() {
           thumbTintColor={colors.accentSecondary}
         />
         <View style={s.sliderLabelRow}>
-          <AppText style={s.sliderLabel}>I know what I like</AppText>
-          <AppText style={s.sliderLabel}>Always exploring</AppText>
+          <AppText style={s.sliderLabelBold}>I know what I like</AppText>
+          <AppText style={s.sliderLabelBold}>Always exploring</AppText>
         </View>
       </View>
     </>
@@ -423,7 +430,7 @@ function StepReview() {
         .filter(Boolean)
         .join(", "),
     },
-    { label: "Adventurousness", value: `${draft.adventurousness}/10` },
+    { label: "Adventurousness", value: describeAdventurousness(draft.adventurousness) },
   ];
 
   return (
@@ -432,7 +439,7 @@ function StepReview() {
         <AppText style={s.eyebrow}>REVIEW & CONFIRM</AppText>
         <AppText style={s.title}>Your taste profile</AppText>
         <AppText style={s.subtitle}>
-          Here's what we heard. You can always edit this later.
+          Here's your taste profile for now. You can always come back and edit this later.
         </AppText>
       </View>
 
@@ -572,7 +579,7 @@ export default function TasteSurveyScreen() {
               <ActivityIndicator color={colors.textOnAccent} />
             ) : (
               <AppText style={s.nextButtonText}>
-                {isLastStep ? "Lock in my profile" : "Next"}
+                {isLastStep ? "Save my profile" : "Next"}
               </AppText>
             )}
           </Pressable>

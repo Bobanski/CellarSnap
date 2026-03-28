@@ -11,7 +11,6 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -55,7 +54,6 @@ import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrl, signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
-import { getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import { fetchTasteSurvey } from "@/src/lib/api/tasteSurvey";
 import { colors } from "@/src/lib/theme";
 
@@ -1886,30 +1884,21 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* ── My Palate card ── */}
-          <Pressable
-            style={styles.palateProfileCard}
-            onPress={() => {
-              const baseUrl = getWebApiBaseUrl();
-              if (hasTasteSurvey === false) {
-                router.push("/(app)/taste-survey");
-              } else if (baseUrl) {
-                void Linking.openURL(`${baseUrl}/palate`);
-              }
-            }}
-          >
-            <AppText style={styles.palateProfileEyebrow}>MY PALATE</AppText>
-            <AppText style={styles.palateProfileSubtitle}>
-              {wineCount && wineCount > 0
-                ? `Your taste DNA based on ${wineCount} wines`
-                : "Your taste DNA based on your survey answers"}
-            </AppText>
-            <AppText style={styles.palateProfileCta}>
-              {hasTasteSurvey === false
-                ? "Set up taste preferences \u2192"
-                : "View full profile \u2192"}
-            </AppText>
-          </Pressable>
+          {/* ── Set up taste preferences prompt (only if no survey) ── */}
+          {hasTasteSurvey === false ? (
+            <Pressable
+              style={styles.palateProfileCard}
+              onPress={() => router.push("/(app)/taste-survey")}
+            >
+              <AppText style={styles.palateProfileEyebrow}>TASTE PROFILE</AppText>
+              <AppText style={styles.palateProfileSubtitle}>
+                Take the taste quiz to get personalized wine matches
+              </AppText>
+              <AppText style={styles.palateProfileCta}>
+                Set up taste preferences {"\u2192"}
+              </AppText>
+            </Pressable>
+          ) : null}
 
           <View style={styles.galleryToggle}>
             <Pressable
@@ -1963,6 +1952,14 @@ export default function ProfileScreen() {
                 ]}
               >
                 {PROFILE_GALLERY_TAB_LABELS.friends}
+              </AppText>
+            </Pressable>
+            <Pressable
+              style={styles.galleryToggleBtn}
+              onPress={() => router.push("/(app)/palate")}
+            >
+              <AppText style={styles.galleryToggleText}>
+                My Palate
               </AppText>
             </Pressable>
           </View>
@@ -2880,7 +2877,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 40,
-    gap: 14,
+    gap: 10,
   },
   identityCard: {
     position: "relative",
@@ -3551,5 +3548,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     marginTop: 4,
+  },
+  palateTabContent: {
+    gap: 14,
+    paddingHorizontal: 2,
+  },
+  palateEditButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  palateEditButtonText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
   },
 });

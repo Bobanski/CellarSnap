@@ -435,6 +435,10 @@ export default function AppLayout() {
         name="taste-survey"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="palate"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
