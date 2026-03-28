@@ -614,7 +614,7 @@ export function createEntryPostHandler(
       vintage: createdEntry.vintage as string | null ?? null,
       producer: createdEntry.producer as string | null ?? null,
       classification: createdEntry.classification as string | null ?? null,
-      primary_grapes: primaryGrapeNames,
+      primary_grapes: primaryGrapeNames.join(", ") || null,
     });
   } catch {
     // Sensory resolution is best-effort.
