@@ -1,6 +1,6 @@
 export const FEED_EYEBROW = "Feed";
 export const FEED_TITLE = "What your people are drinking.";
-export const FEED_SUBTITLE = "Discover what others are enjoying across the app.";
+export const FEED_SUBTITLE = "Discover what the community is enjoying.";
 export const FEED_SCOPE_LABELS = {
   public: "Public feed",
   friends: "Friends only",

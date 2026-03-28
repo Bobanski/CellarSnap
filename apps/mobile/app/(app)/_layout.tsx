@@ -104,11 +104,11 @@ const fabStyles = StyleSheet.create({
   },
   logInnerCircle: {
     position: "absolute",
-    width: 13.5,
-    height: 13.5,
+    width: 16.5,
+    height: 16.5,
     borderRadius: 999,
     backgroundColor: "#F5EDD6",
-    top: 6.5,
+    top: 4.8,
   },
   logStem: {
     position: "absolute",

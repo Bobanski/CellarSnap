@@ -136,7 +136,9 @@ export default function SommelierScreen() {
 
   return (
     <View style={styles.screen}>
-      <AppTopBar />
+      <View style={styles.topBarWrap}>
+        <AppTopBar />
+      </View>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -223,6 +225,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.screenBg,
+  },
+  topBarWrap: {
+    paddingHorizontal: 18,
   },
   flex: {
     flex: 1,
