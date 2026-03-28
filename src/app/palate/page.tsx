@@ -586,7 +586,7 @@ export default async function PalatePage() {
               {/* Top regions */}
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
                 <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
-                  Favorite regions
+                  Top regions
                 </p>
                 {regionStats.length > 0 ? (
                   <div className="space-y-2">
@@ -595,11 +595,17 @@ export default async function PalatePage() {
                         <span className={`text-sm ${i === 0 ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
                           {r.region}
                         </span>
-                        {r.delta > 2 ? (
-                          <span className="text-[10px] font-semibold text-emerald-400">Rates higher</span>
-                        ) : r.delta < -2 ? (
-                          <span className="text-[10px] font-semibold text-[var(--color-text-tertiary)]">Rates lower</span>
-                        ) : null}
+                        {r.delta > 0.5 ? (
+                          <span className="text-[10px] font-semibold text-emerald-400">
+                            Rates {Math.abs(r.delta).toFixed(1)} higher
+                          </span>
+                        ) : r.delta < -0.5 ? (
+                          <span className="text-[10px] font-semibold text-[var(--color-text-tertiary)]">
+                            Rates {Math.abs(r.delta).toFixed(1)} lower
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-[var(--color-text-tertiary)]">On par</span>
+                        )}
                       </div>
                     ))}
                   </div>

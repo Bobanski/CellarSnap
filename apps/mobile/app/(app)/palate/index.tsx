@@ -363,16 +363,14 @@ export default function PalateScreen() {
               </View>
 
               <View style={ps.card}>
-                <AppText style={ps.cardLabel}>FAVORITE REGIONS</AppText>
+                <AppText style={ps.cardLabel}>TOP REGIONS</AppText>
                 {data.regionStats.length > 0 ? (
                   data.regionStats.slice(0, 4).map((r, i) => (
                     <View key={r.region} style={ps.statRow}>
                       <AppText style={[ps.statName, i === 0 && ps.statNameBold]}>{r.region}</AppText>
-                      {(r as { deltaLabel?: string | null }).deltaLabel ? (
-                        <AppText style={[ps.deltaText, r.delta > 0 && ps.deltaPositive]}>
-                          {(r as { deltaLabel: string }).deltaLabel}
-                        </AppText>
-                      ) : null}
+                      <AppText style={[ps.deltaText, r.delta > 0.5 && ps.deltaPositive]}>
+                        {(r as { deltaLabel?: string }).deltaLabel ?? "On par"}
+                      </AppText>
                     </View>
                   ))
                 ) : data.surveyFallback?.regions.length ? (

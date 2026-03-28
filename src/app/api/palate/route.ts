@@ -215,7 +215,11 @@ export async function GET(request: Request) {
         count: v.count,
         avgRating: Number((v.total / v.count).toFixed(1)),
         delta,
-        deltaLabel: delta > 2 ? "Rates higher" : delta < -2 ? "Rates lower" : null,
+        deltaLabel: delta > 0.5
+          ? `Rates ${Math.abs(delta).toFixed(1)} higher`
+          : delta < -0.5
+            ? `Rates ${Math.abs(delta).toFixed(1)} lower`
+            : "On par",
       };
     })
     .filter((r) => r.count >= 2)
