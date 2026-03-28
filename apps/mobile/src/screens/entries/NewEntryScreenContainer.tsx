@@ -2642,7 +2642,8 @@ export default function NewEntryScreen() {
                 </>
               )}
 
-              {showManualFields && (
+              {showManualFields ? (
+                <>
                 <Accordion
                   title={NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsTitle}
                   description={NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsDescription}
@@ -2762,7 +2763,6 @@ export default function NewEntryScreen() {
                   ) : null}
                 </View>
               </Accordion>
-            )}
 
             <Accordion
                 title={NEW_ENTRY_SINGLE_BOTTLE_COPY.locationDateTitle}
@@ -2966,6 +2966,8 @@ export default function NewEntryScreen() {
                   {NEW_ENTRY_SINGLE_BOTTLE_COPY.visibilityFootnote}
                 </AppText>
               </Accordion>
+                </>
+              ) : null}
 
               {errorMessage ? <AppText style={styles.error}>{errorMessage}</AppText> : null}
 
