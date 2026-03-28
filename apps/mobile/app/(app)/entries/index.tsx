@@ -5,6 +5,7 @@ import {
   useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -38,6 +39,11 @@ import {
   QPR_LEVEL_LABELS,
   shouldHideProducerInEntryTile,
   toEntryVintageNumber,
+  CELLAR_TAB_LABELS,
+  CELLAR_COPY,
+  BOTTLE_FORMAT_OPTIONS,
+  type CellarEntry,
+  type EntryStatus,
   type EntryLibraryControlPanel as ControlPanel,
   type EntryLibraryFilterType as FilterType,
   type EntryLibraryGroupScheme as GroupScheme,
@@ -47,6 +53,7 @@ import {
   type QprLevel,
   type WineEntrySummary,
 } from "@cellarsnap/shared";
+import { fetchCellarEntries, drinkFromCellar } from "@/src/lib/api/cellar";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
@@ -173,12 +180,79 @@ function EntryCard({ item }: { item: MobileEntry }) {
   );
 }
 
+function getBottleFormatLabel(format: string | null): string | null {
+  if (!format || format === "750ml") return null;
+  const option = BOTTLE_FORMAT_OPTIONS.find((o) => o.value === format);
+  return option ? option.label : format;
+}
+
+function CellarEntryCard({
+  item,
+  onDrink,
+}: {
+  item: CellarEntry;
+  onDrink: (entry: CellarEntry) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const producer = item.producer?.trim() ?? null;
+  const vintage = item.vintage?.trim() ?? null;
+  const formatLabel = getBottleFormatLabel(item.bottle_format);
+
+  return (
+    <Pressable
+      style={styles.entryCard}
+      onPress={() => setExpanded((prev) => !prev)}
+    >
+      <View style={styles.photoBox}>
+        {item.label_image_url ? (
+          <Image source={{ uri: item.label_image_url }} style={styles.photoImage} resizeMode="cover" />
+        ) : (
+          <AppText style={styles.photoText}>No photo</AppText>
+        )}
+      </View>
+      <View style={styles.entryMain}>
+        <View style={styles.entryCopy}>
+          <AppText style={styles.entryTitle}>{item.wine_name?.trim() || "Untitled wine"}</AppText>
+          {producer || vintage ? (
+            <AppText style={styles.entrySubtitle}>
+              {producer ?? ""}
+              {producer && vintage ? ` · ${vintage}` : vintage ?? ""}
+            </AppText>
+          ) : null}
+          <View style={styles.cellarMetaRow}>
+            <View style={styles.quantityBadge}>
+              <AppText style={styles.quantityBadgeText}>
+                {CELLAR_COPY.bottlesRemaining(item.cellar_quantity)}
+              </AppText>
+            </View>
+            {formatLabel ? (
+              <AppText style={styles.cellarFormatText}>{formatLabel}</AppText>
+            ) : null}
+          </View>
+          {expanded ? (
+            <Pressable
+              style={styles.drinkButton}
+              onPress={() => onDrink(item)}
+            >
+              <AppText style={styles.drinkButtonText}>{CELLAR_COPY.drinkButton}</AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function EntriesScreen() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<EntryStatus>("consumed");
   const [entries, setEntries] = useState<MobileEntry[]>([]);
+  const [cellarEntries, setCellarEntries] = useState<CellarEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCellarLoading, setIsCellarLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDrinking, setIsDrinking] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("consumed_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -357,6 +431,51 @@ export default function EntriesScreen() {
     [user]
   );
 
+  const loadCellarEntries = useCallback(
+    async (refresh = false) => {
+      if (!user) return;
+      if (!refresh) setIsCellarLoading(true);
+      setErrorMessage(null);
+
+      const result = await fetchCellarEntries();
+      if (result.ok) {
+        setCellarEntries(result.entries);
+      } else {
+        setErrorMessage(result.errorMessage);
+      }
+      setIsCellarLoading(false);
+    },
+    [user]
+  );
+
+  const handleDrink = useCallback(
+    async (entry: CellarEntry) => {
+      if (isDrinking) return;
+      Alert.alert(
+        CELLAR_COPY.drinkButton,
+        `Mark one bottle of ${entry.wine_name?.trim() || "this wine"} as consumed?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes, drink it",
+            onPress: async () => {
+              setIsDrinking(true);
+              const result = await drinkFromCellar(entry.id);
+              setIsDrinking(false);
+              if (result.ok) {
+                void loadCellarEntries(true);
+                router.push(`/(app)/entries/${result.consumedEntryId}`);
+              } else {
+                Alert.alert("Error", result.errorMessage);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [isDrinking, loadCellarEntries]
+  );
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       void loadEntries();
@@ -364,6 +483,12 @@ export default function EntriesScreen() {
 
     return () => clearTimeout(timeoutId);
   }, [loadEntries]);
+
+  useEffect(() => {
+    if (activeTab === "cellaring") {
+      void loadCellarEntries();
+    }
+  }, [activeTab, loadCellarEntries]);
 
   const updateFilterType = (newFilterType: FilterType) => {
     setFilterType(newFilterType);
@@ -399,7 +524,7 @@ export default function EntriesScreen() {
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadEntries(true)} tintColor={colors.grenache} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { if (activeTab === "cellaring") { void loadCellarEntries(true); } else { void loadEntries(true); } }} tintColor={colors.grenache} />}
       >
         <AppTopBar />
 
@@ -408,116 +533,160 @@ export default function EntriesScreen() {
           <AppText style={styles.title}>{ENTRIES_LIBRARY_HEADER.title}</AppText>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <AppText style={styles.statNumber}>{stats.totalEntries}</AppText>
-            <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.totalEntries}</AppText>
-          </View>
-          <View style={styles.statCard}>
-            <AppText style={styles.statNumber}>
-              {stats.avgRating !== null ? stats.avgRating.toFixed(1) : "—"}
+        <View style={styles.tabToggle}>
+          <Pressable
+            style={[styles.tabToggleBtn, activeTab === "consumed" ? styles.tabToggleBtnActive : null]}
+            onPress={() => setActiveTab("consumed")}
+          >
+            <AppText style={[styles.tabToggleText, activeTab === "consumed" ? styles.tabToggleTextActive : null]}>
+              {CELLAR_TAB_LABELS.consumed}
             </AppText>
-            <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.avgRating}</AppText>
-          </View>
-          <View style={styles.statCard}>
-            <AppText style={styles.statNumber}>{stats.uniqueCountries}</AppText>
-            <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.countries}</AppText>
-          </View>
+          </Pressable>
+          <Pressable
+            style={[styles.tabToggleBtn, activeTab === "cellaring" ? styles.tabToggleBtnActive : null]}
+            onPress={() => setActiveTab("cellaring")}
+          >
+            <AppText style={[styles.tabToggleText, activeTab === "cellaring" ? styles.tabToggleTextActive : null]}>
+              {CELLAR_TAB_LABELS.cellaring}
+            </AppText>
+          </Pressable>
         </View>
 
-        <View style={styles.controls}>
-          <View style={styles.controlButtons}>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.sort}</AppText></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.filter}</AppText></Pressable>
-            <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.organize}</AppText></Pressable>
-            <Pressable
-              style={[
-                styles.searchToggleButton,
-                isSearchOpen ? styles.searchToggleButtonActive : null,
-              ]}
-              onPress={toggleSearch}
-              accessibilityRole="button"
-              accessibilityLabel={isSearchOpen ? "Hide search" : "Show search"}
-            >
-              <Feather
-                name="search"
-                size={14}
-                color={isSearchOpen ? colors.rose : colors.textSecondary}
-              />
-            </Pressable>
-          </View>
-          {isSearchOpen ? (
-            <View style={styles.searchPanel}>
-              <View style={styles.searchRow}>
-                <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.search} placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
-                {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>{ENTRIES_LIBRARY_ACTION_LABELS.clearSearch}</AppText></Pressable> : null}
+        {activeTab === "cellaring" ? (
+          isCellarLoading ? (
+            <View style={styles.cellarLoadingWrap}>
+              <ActivityIndicator color={colors.grenache} />
+            </View>
+          ) : errorMessage ? (
+            <AppText style={styles.errorText}>{errorMessage}</AppText>
+          ) : cellarEntries.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.emptyTitle}</AppText>
+              <AppText style={styles.emptyText}>{CELLAR_COPY.emptySubtitle}</AppText>
+            </View>
+          ) : (
+            <View style={styles.stack}>
+              {cellarEntries.map((item) => (
+                <CellarEntryCard key={item.id} item={item} onDrink={handleDrink} />
+              ))}
+            </View>
+          )
+        ) : null}
+
+        {activeTab === "consumed" ? (
+          <>
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <AppText style={styles.statNumber}>{stats.totalEntries}</AppText>
+                <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.totalEntries}</AppText>
+              </View>
+              <View style={styles.statCard}>
+                <AppText style={styles.statNumber}>
+                  {stats.avgRating !== null ? stats.avgRating.toFixed(1) : "—"}
+                </AppText>
+                <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.avgRating}</AppText>
+              </View>
+              <View style={styles.statCard}>
+                <AppText style={styles.statNumber}>{stats.uniqueCountries}</AppText>
+                <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.countries}</AppText>
               </View>
             </View>
-          ) : null}
 
-          {activeControlPanel === "sort" ? (
-            <View style={styles.panel}>
-              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.sortBy}</AppText>
-              <View style={styles.pills}>{ENTRIES_LIBRARY_SORT_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={sortBy === option.value} onPress={() => setSortBy(option.value)} />)}</View>
-              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.order}</AppText>
-              <View style={styles.pills}>{sortOrderOptions.map((option) => <Pill key={option.value} label={option.label} active={sortOrder === option.value} onPress={() => setSortOrder(option.value)} />)}</View>
-            </View>
-          ) : null}
-
-          {activeControlPanel === "filter" ? (
-            <View style={styles.panel}>
-              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.filterBy}</AppText>
-              <View style={styles.pills}>{ENTRIES_LIBRARY_FILTER_OPTIONS.map((option) => <Pill key={option.value || "none"} label={option.label} active={filterType === option.value} onPress={() => updateFilterType(option.value)} />)}</View>
-              {filterType === "country" ? <View style={styles.pills}><Pill label={ENTRIES_LIBRARY_ACTION_LABELS.allCountries} active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
-              {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.min} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.max} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
-            </View>
-          ) : null}
-
-          {activeControlPanel === "organize" ? (
-            <View style={styles.panel}>
-              <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.libraryView}</AppText>
-              <View style={styles.pills}>{ENTRIES_LIBRARY_VIEW_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={libraryViewMode === option.value} onPress={() => setLibraryViewMode(option.value)} />)}</View>
-              {libraryViewMode === "grouped" ? <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.groupBy}</AppText> : null}
-              {libraryViewMode === "grouped" ? <View style={styles.pills}>{ENTRIES_LIBRARY_GROUP_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={groupScheme === option.value} onPress={() => setGroupScheme(option.value)} />)}</View> : null}
-            </View>
-          ) : null}
-          <AppText style={styles.countText}>{getEntriesCountLabel(sortedEntries.length)}</AppText>
-        </View>
-
-        {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
-
-        {sortedEntries.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <AppText style={styles.emptyText}>
-              {getEntriesEmptyStateMessage({
-                isSearchActive,
-                isRangeFilterActive,
-                isFilterActive,
-              })}
-            </AppText>
-          </View>
-        ) : libraryViewMode === "grouped" ? (
-          <View style={styles.stack}>
-            {groupedEntries.map((group) => {
-              const expanded = Boolean(expandedGroups[group.id]);
-              const visible = expanded ? group.entries : group.entries.slice(0, ENTRY_LIBRARY_GROUP_PREVIEW_COUNT);
-              return (
-                <View key={group.id} style={styles.groupCard}>
-                  <View style={styles.groupHeader}>
-                    <View>
-                      <AppText style={styles.groupTitle}>{group.label}</AppText>
-                      <AppText style={styles.groupCount}>{getEntriesCountLabel(group.entries.length)}</AppText>
-                    </View>
-                    {group.entries.length > ENTRY_LIBRARY_GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? ENTRIES_LIBRARY_ACTION_LABELS.showLess : ENTRIES_LIBRARY_ACTION_LABELS.seeAll}</AppText></Pressable> : null}
+            <View style={styles.controls}>
+              <View style={styles.controlButtons}>
+                <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.sort}</AppText></Pressable>
+                <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.filter}</AppText></Pressable>
+                <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.organize}</AppText></Pressable>
+                <Pressable
+                  style={[
+                    styles.searchToggleButton,
+                    isSearchOpen ? styles.searchToggleButtonActive : null,
+                  ]}
+                  onPress={toggleSearch}
+                  accessibilityRole="button"
+                  accessibilityLabel={isSearchOpen ? "Hide search" : "Show search"}
+                >
+                  <Feather
+                    name="search"
+                    size={14}
+                    color={isSearchOpen ? colors.rose : colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
+              {isSearchOpen ? (
+                <View style={styles.searchPanel}>
+                  <View style={styles.searchRow}>
+                    <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.search} placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
+                    {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>{ENTRIES_LIBRARY_ACTION_LABELS.clearSearch}</AppText></Pressable> : null}
                   </View>
-                  <View style={styles.stack}>{visible.map((item) => <EntryCard key={item.id} item={item} />)}</View>
                 </View>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.stack}>{sortedEntries.map((item) => <EntryCard key={item.id} item={item} />)}</View>
-        )}
+              ) : null}
+
+              {activeControlPanel === "sort" ? (
+                <View style={styles.panel}>
+                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.sortBy}</AppText>
+                  <View style={styles.pills}>{ENTRIES_LIBRARY_SORT_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={sortBy === option.value} onPress={() => setSortBy(option.value)} />)}</View>
+                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.order}</AppText>
+                  <View style={styles.pills}>{sortOrderOptions.map((option) => <Pill key={option.value} label={option.label} active={sortOrder === option.value} onPress={() => setSortOrder(option.value)} />)}</View>
+                </View>
+              ) : null}
+
+              {activeControlPanel === "filter" ? (
+                <View style={styles.panel}>
+                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.filterBy}</AppText>
+                  <View style={styles.pills}>{ENTRIES_LIBRARY_FILTER_OPTIONS.map((option) => <Pill key={option.value || "none"} label={option.label} active={filterType === option.value} onPress={() => updateFilterType(option.value)} />)}</View>
+                  {filterType === "country" ? <View style={styles.pills}><Pill label={ENTRIES_LIBRARY_ACTION_LABELS.allCountries} active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
+                  {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.min} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.max} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
+                </View>
+              ) : null}
+
+              {activeControlPanel === "organize" ? (
+                <View style={styles.panel}>
+                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.libraryView}</AppText>
+                  <View style={styles.pills}>{ENTRIES_LIBRARY_VIEW_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={libraryViewMode === option.value} onPress={() => setLibraryViewMode(option.value)} />)}</View>
+                  {libraryViewMode === "grouped" ? <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.groupBy}</AppText> : null}
+                  {libraryViewMode === "grouped" ? <View style={styles.pills}>{ENTRIES_LIBRARY_GROUP_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={groupScheme === option.value} onPress={() => setGroupScheme(option.value)} />)}</View> : null}
+                </View>
+              ) : null}
+              <AppText style={styles.countText}>{getEntriesCountLabel(sortedEntries.length)}</AppText>
+            </View>
+
+            {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+
+            {sortedEntries.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <AppText style={styles.emptyText}>
+                  {getEntriesEmptyStateMessage({
+                    isSearchActive,
+                    isRangeFilterActive,
+                    isFilterActive,
+                  })}
+                </AppText>
+              </View>
+            ) : libraryViewMode === "grouped" ? (
+              <View style={styles.stack}>
+                {groupedEntries.map((group) => {
+                  const expanded = Boolean(expandedGroups[group.id]);
+                  const visible = expanded ? group.entries : group.entries.slice(0, ENTRY_LIBRARY_GROUP_PREVIEW_COUNT);
+                  return (
+                    <View key={group.id} style={styles.groupCard}>
+                      <View style={styles.groupHeader}>
+                        <View>
+                          <AppText style={styles.groupTitle}>{group.label}</AppText>
+                          <AppText style={styles.groupCount}>{getEntriesCountLabel(group.entries.length)}</AppText>
+                        </View>
+                        {group.entries.length > ENTRY_LIBRARY_GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? ENTRIES_LIBRARY_ACTION_LABELS.showLess : ENTRIES_LIBRARY_ACTION_LABELS.seeAll}</AppText></Pressable> : null}
+                      </View>
+                      <View style={styles.stack}>{visible.map((item) => <EntryCard key={item.id} item={item} />)}</View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.stack}>{sortedEntries.map((item) => <EntryCard key={item.id} item={item} />)}</View>
+            )}
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -620,5 +789,77 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif.italic,
     flexShrink: 0,
     textAlign: "right",
+  },
+  tabToggle: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  tabToggleBtn: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  tabToggleBtnActive: {
+    backgroundColor: colors.surfacePrimary,
+    borderColor: colors.borderStrong,
+  },
+  tabToggleText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  tabToggleTextActive: {
+    color: colors.textPrimary,
+  },
+  cellarLoadingWrap: {
+    paddingVertical: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cellarEmptyTitle: {
+    color: colors.textPrimary,
+    fontFamily: fonts.serif.light,
+    fontSize: 19,
+    lineHeight: 25,
+    marginBottom: 4,
+  },
+  cellarMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  quantityBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  quantityBadgeText: {
+    color: colors.accentSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  cellarFormatText: {
+    color: colors.textTertiary,
+    fontSize: 11,
+  },
+  drinkButton: {
+    marginTop: 10,
+    borderRadius: 999,
+    backgroundColor: colors.accentPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    alignSelf: "flex-start",
+  },
+  drinkButtonText: {
+    color: colors.textOnAccent,
+    fontSize: 13,
+    fontWeight: "700",
   },
 });
