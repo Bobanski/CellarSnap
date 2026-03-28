@@ -19,6 +19,7 @@ import {
   WINE_TYPE_OPTIONS,
   STARTER_GRAPES,
   STARTER_REGIONS,
+  WINE_REGIONS,
   SENSORY_LOVE_OPTIONS,
   SENSORY_AVOID_OPTIONS,
   BUDGET_RESTAURANT_OPTIONS,
@@ -27,6 +28,7 @@ import {
   ADVENTUROUSNESS_MAX,
   TASTE_SURVEY_STEP_COUNT,
 } from "@cellarsnap/shared";
+import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
 // ─── helpers ─────────────────────────────────────────────────
 function toggleInArray(arr: string[], item: string): string[] {
@@ -93,6 +95,30 @@ function ChipSingleSelect({
   );
 }
 
+// ─── Grape API search ────────────────────────────────────────
+async function searchGrapesApi(query: string): Promise<string[]> {
+  const baseUrl = getWebApiBaseUrl();
+  const accessToken = await getAccessTokenForApi();
+  if (!baseUrl || !accessToken) return [];
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/grapes?q=${encodeURIComponent(query)}&limit=8`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.grapes ?? []).map((g: { name: string }) => g.name);
+  } catch {
+    return [];
+  }
+}
+
+// ─── Region local search ─────────────────────────────────────
+function searchRegionsLocal(query: string): string[] {
+  const lowerQ = query.toLowerCase();
+  return WINE_REGIONS.filter((r) => r.toLowerCase().includes(lowerQ)).slice(0, 8);
+}
+
 // ─── Search + chip combo for grapes/regions ──────────────────
 function SearchChipSelect({
   starterOptions,
@@ -100,12 +126,14 @@ function SearchChipSelect({
   onToggle,
   onAdd,
   placeholder,
+  onSearch,
 }: {
   starterOptions: readonly string[];
   selected: string[];
   onToggle: (item: string) => void;
   onAdd: (item: string) => void;
   placeholder: string;
+  onSearch?: (query: string) => Promise<string[]> | string[];
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<string[]>([]);
@@ -115,20 +143,32 @@ function SearchChipSelect({
       setResults([]);
       return;
     }
-    const timer = setTimeout(() => {
-      const lowerQ = query.toLowerCase();
-      const matched = [...starterOptions].filter(
-        (item) =>
-          item.toLowerCase().includes(lowerQ) && !selected.includes(item)
-      );
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      let matched: string[];
+      if (onSearch) {
+        matched = await onSearch(query);
+      } else {
+        const lowerQ = query.toLowerCase();
+        matched = [...starterOptions].filter(
+          (item) => item.toLowerCase().includes(lowerQ)
+        );
+      }
+      if (cancelled) return;
+      // Filter out already-selected
+      matched = matched.filter((item) => !selected.includes(item));
+      // If no matches, offer to add as custom text
       if (matched.length === 0 && query.trim()) {
         setResults([query.trim()]);
       } else {
-        setResults(matched.slice(0, 6));
+        setResults(matched.slice(0, 8));
       }
     }, 200);
-    return () => clearTimeout(timer);
-  }, [query, starterOptions, selected]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, starterOptions, selected, onSearch]);
 
   return (
     <View style={{ gap: 12 }}>
@@ -233,6 +273,7 @@ function StepGrapes() {
         onToggle={toggle}
         onAdd={add}
         placeholder="Search for a grape..."
+        onSearch={searchGrapesApi}
       />
     </>
   );
@@ -261,6 +302,7 @@ function StepRegions() {
         onToggle={toggle}
         onAdd={add}
         placeholder="Search countries or regions..."
+        onSearch={async (q) => searchRegionsLocal(q)}
       />
     </>
   );

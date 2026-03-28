@@ -6,6 +6,7 @@ import {
   WINE_TYPE_OPTIONS,
   STARTER_GRAPES,
   STARTER_REGIONS,
+  WINE_REGIONS,
   SENSORY_LOVE_OPTIONS,
   SENSORY_AVOID_OPTIONS,
   BUDGET_RESTAURANT_OPTIONS,
@@ -25,6 +26,27 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 // ─── helpers ─────────────────────────────────────────────────
 function toggleInArray(arr: string[], item: string): string[] {
   return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
+}
+
+async function searchGrapesApi(query: string): Promise<string[]> {
+  try {
+    const supabase = createSupabaseBrowserClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return [];
+    const res = await fetch(`/api/grapes?q=${encodeURIComponent(query)}&limit=8`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.grapes ?? []).map((g: { name: string }) => g.name);
+  } catch {
+    return [];
+  }
+}
+
+function searchRegionsLocal(query: string): string[] {
+  const lowerQ = query.toLowerCase();
+  return WINE_REGIONS.filter((r) => r.toLowerCase().includes(lowerQ)).slice(0, 8);
 }
 
 // ─── Chip components ─────────────────────────────────────────
@@ -127,12 +149,14 @@ function SearchChipSelect({
   onToggle,
   onAdd,
   placeholder,
+  onSearch,
 }: {
   starterOptions: readonly string[];
   selected: string[];
   onToggle: (item: string) => void;
   onAdd: (item: string) => void;
   placeholder: string;
+  onSearch?: (query: string) => Promise<string[]> | string[];
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<string[]>([]);
@@ -142,19 +166,30 @@ function SearchChipSelect({
       setResults([]);
       return;
     }
-    const timer = setTimeout(() => {
-      const lowerQ = query.toLowerCase();
-      const matched = [...starterOptions].filter(
-        (item) => item.toLowerCase().includes(lowerQ) && !selected.includes(item)
-      );
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      let matched: string[];
+      if (onSearch) {
+        matched = await onSearch(query);
+      } else {
+        const lowerQ = query.toLowerCase();
+        matched = [...starterOptions].filter(
+          (item) => item.toLowerCase().includes(lowerQ)
+        );
+      }
+      if (cancelled) return;
+      matched = matched.filter((item) => !selected.includes(item));
       if (matched.length === 0 && query.trim()) {
         setResults([query.trim()]);
       } else {
-        setResults(matched.slice(0, 6));
+        setResults(matched.slice(0, 8));
       }
     }, 200);
-    return () => clearTimeout(timer);
-  }, [query, starterOptions, selected]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, starterOptions, selected, onSearch]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -257,6 +292,7 @@ function StepGrapes({
             update({ varietals: [...draft.varietals, item] });
         }}
         placeholder="Search for a grape..."
+        onSearch={searchGrapesApi}
       />
     </>
   );
@@ -286,6 +322,7 @@ function StepRegions({
             update({ regions: [...draft.regions, item] });
         }}
         placeholder="Search countries or regions..."
+        onSearch={async (q) => searchRegionsLocal(q)}
       />
     </>
   );

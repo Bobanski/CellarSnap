@@ -36,6 +36,52 @@ export const STARTER_REGIONS = [
   "Germany",
 ] as const;
 
+/** Comprehensive list of wine countries and sub-regions for local search. */
+export const WINE_REGIONS = [
+  // Countries
+  "France", "Italy", "Spain", "Portugal", "Germany", "Austria",
+  "Australia", "New Zealand", "Argentina", "Chile", "South Africa",
+  "Greece", "Hungary", "Canada", "Mexico", "England", "Uruguay",
+  "Brazil", "Israel", "Lebanon", "Switzerland", "Slovenia", "Croatia",
+  "Romania", "Georgia", "USA",
+  // France
+  "Bordeaux", "Burgundy", "Champagne", "Rhône Valley", "Loire Valley",
+  "Alsace", "Languedoc", "Provence", "Beaujolais", "Jura", "Savoie",
+  "Southwest France", "Corsica",
+  // Italy
+  "Tuscany", "Piedmont", "Veneto", "Sicily", "Sardinia", "Lombardy",
+  "Trentino-Alto Adige", "Friuli-Venezia Giulia", "Campania", "Puglia",
+  "Abruzzo", "Umbria", "Emilia-Romagna", "Marche", "Basilicata", "Calabria",
+  // Spain
+  "Rioja", "Ribera del Duero", "Priorat", "Rías Baixas", "Rueda",
+  "Jerez", "Penedès", "Navarra", "La Mancha", "Toro", "Galicia",
+  // Portugal
+  "Douro Valley", "Alentejo", "Dão", "Vinho Verde", "Madeira", "Bairrada",
+  // Germany
+  "Mosel", "Rheingau", "Pfalz", "Rheinhessen", "Baden", "Nahe", "Franken",
+  // Austria
+  "Wachau", "Kamptal", "Kremstal", "Burgenland", "Styria",
+  // USA
+  "California", "Oregon", "Washington State", "New York", "Virginia", "Texas",
+  "Napa Valley", "Sonoma", "Paso Robles", "Santa Barbara", "Mendocino",
+  "Willamette Valley", "Walla Walla", "Columbia Valley",
+  "Finger Lakes", "Long Island",
+  // Australia
+  "Barossa Valley", "McLaren Vale", "Hunter Valley", "Margaret River",
+  "Yarra Valley", "Clare Valley", "Eden Valley", "Coonawarra", "Tasmania",
+  // New Zealand
+  "Marlborough", "Central Otago", "Hawke's Bay", "Martinborough", "Waipara",
+  // Argentina
+  "Mendoza", "Salta", "Patagonia", "Uco Valley",
+  // Chile
+  "Maipo Valley", "Colchagua Valley", "Casablanca Valley", "Rapel Valley",
+  // South Africa
+  "Stellenbosch", "Swartland", "Franschhoek", "Constantia", "Paarl", "Elgin",
+  // Other
+  "Santorini", "Naoussa", "Tokaj", "Okanagan Valley", "Niagara Peninsula",
+  "Bekaa Valley", "Kakheti",
+] as const;
+
 // ���── Step 4: Sensory loves ──��───────────────────────────────
 export const SENSORY_LOVE_OPTIONS = [
   "Big and full-bodied",
