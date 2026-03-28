@@ -19,7 +19,7 @@ import {
   rowToDraft,
   type TasteSurveyDraft,
   type TasteSurveyRow,
-} from "@cellarsnap/shared";
+} from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 // ─── helpers ─────────────────────────────────────────────────

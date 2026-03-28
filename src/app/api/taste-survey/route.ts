@@ -3,7 +3,7 @@ import {
   RequestAuthError,
   requireRequestAuth,
 } from "@/server/auth/requestAuth";
-import type { TasteSurveyPayload, TasteSurveyRow } from "@cellarsnap/shared";
+import type { TasteSurveyPayload, TasteSurveyRow } from "@shared";
 
 // ─── GET /api/taste-survey ──────────────────────────────────
 // Returns the user's existing survey responses, or null if none.
