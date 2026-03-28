@@ -116,7 +116,7 @@ const fabStyles = StyleSheet.create({
     width: 1.2,
     height: 6.2,
     borderRadius: 999,
-    backgroundColor: "#F5EDD6",
+    backgroundColor: colors.textPrimary,
   },
   logCrossHorizontal: {
     position: "absolute",
@@ -124,7 +124,7 @@ const fabStyles = StyleSheet.create({
     width: 7.8,
     height: 1.2,
     borderRadius: 999,
-    backgroundColor: "#7B1D3A",
+    backgroundColor: colors.textPrimary,
   },
   logCrossVertical: {
     position: "absolute",
@@ -132,7 +132,7 @@ const fabStyles = StyleSheet.create({
     width: 1.2,
     height: 6.3,
     borderRadius: 999,
-    backgroundColor: "#7B1D3A",
+    backgroundColor: colors.textPrimary,
   },
   logTopArc: {
     position: "absolute",
@@ -140,7 +140,7 @@ const fabStyles = StyleSheet.create({
     width: 7.2,
     height: 1.1,
     borderRadius: 999,
-    backgroundColor: "#F5EDD6",
+    backgroundColor: colors.textPrimary,
     opacity: 0.45,
   },
   label: {

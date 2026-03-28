@@ -470,6 +470,10 @@ export default function NewEntryScreen() {
   const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
   const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
 
+  useEffect(() => {
+    setShowManualFields(false);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       setShowManualFields(false);
