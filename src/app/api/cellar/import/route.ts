@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { enrichImportedEntries } from "@/server/algorithm/enrichImportedEntries";
 
 const MAX_ROWS = 500;
 
@@ -370,6 +371,28 @@ export async function POST(request: Request) {
     }
   }
 
+  // --- Enrich imported entries ---
+  // Canonical resolution, wine type inference, sensory profile assembly
+  const enrichmentEntries = entryIds.map((id, i) => ({
+    id,
+    wine_name: entryInserts[i]?.wine_name as string | null ?? null,
+    producer: entryInserts[i]?.producer as string | null ?? null,
+    vintage: entryInserts[i]?.vintage as string | null ?? null,
+    country: entryInserts[i]?.country as string | null ?? null,
+    region: entryInserts[i]?.region as string | null ?? null,
+    appellation: entryInserts[i]?.appellation as string | null ?? null,
+    classification: entryInserts[i]?.classification as string | null ?? null,
+    wine_type: entryInserts[i]?.wine_type as string | null ?? null,
+    primary_grapes: rowGrapeId[i] ? null : null, // grapes already linked via entry_primary_grapes
+  }));
+
+  let enrichment = null;
+  try {
+    enrichment = await enrichImportedEntries(supabase, user.id, enrichmentEntries);
+  } catch {
+    errors.push("Enrichment partially failed — entries imported but may lack sensory profiles.");
+  }
+
   // --- Build response ---
   const duplicateCount = rowDuplicateOf.filter((d) => d !== null).length;
 
@@ -378,6 +401,14 @@ export async function POST(request: Request) {
     duplicates: duplicateCount,
     grapes_matched: grapesMatched,
     custom_fields_created: customFieldsCreated,
+    enrichment: enrichment
+      ? {
+          resolved: enrichment.resolved,
+          sensory_assembled: enrichment.sensoryAssembled,
+          wine_types_inferred: enrichment.wineTypesInferred,
+          ambiguous_entries: enrichment.ambiguousEntries,
+        }
+      : null,
     errors,
   });
 }

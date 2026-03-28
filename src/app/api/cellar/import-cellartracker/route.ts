@@ -3,6 +3,7 @@ import { z } from "zod";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import Papa from "papaparse";
+import { enrichImportedEntries } from "@/server/algorithm/enrichImportedEntries";
 
 const MAX_ENTRIES = 500;
 
@@ -663,6 +664,29 @@ export async function POST(request: Request) {
     }
   }
 
+  // --- Enrich imported entries ---
+  const allEntryIds = [...cellarEntryIds, ...notesEntryIds];
+  const allInserts = [...cellarInserts, ...notesInserts];
+  const enrichmentEntries = allEntryIds.map((id, i) => ({
+    id,
+    wine_name: allInserts[i]?.wine_name as string | null ?? null,
+    producer: allInserts[i]?.producer as string | null ?? null,
+    vintage: allInserts[i]?.vintage as string | null ?? null,
+    country: allInserts[i]?.country as string | null ?? null,
+    region: allInserts[i]?.region as string | null ?? null,
+    appellation: allInserts[i]?.appellation as string | null ?? null,
+    classification: allInserts[i]?.classification as string | null ?? null,
+    wine_type: allInserts[i]?.wine_type as string | null ?? null,
+    primary_grapes: null as string | null,
+  }));
+
+  let enrichment = null;
+  try {
+    enrichment = await enrichImportedEntries(supabase, user.id, enrichmentEntries);
+  } catch {
+    errors.push("Enrichment partially failed — entries imported but may lack sensory profiles.");
+  }
+
   // --- Response ---
   return NextResponse.json({
     cellar_imported: cellarEntryIds.length,
@@ -670,6 +694,14 @@ export async function POST(request: Request) {
     duplicates: duplicateCount,
     grapes_matched: grapesMatched,
     custom_fields_created: customFieldsCreated,
+    enrichment: enrichment
+      ? {
+          resolved: enrichment.resolved,
+          sensory_assembled: enrichment.sensoryAssembled,
+          wine_types_inferred: enrichment.wineTypesInferred,
+          ambiguous_entries: enrichment.ambiguousEntries,
+        }
+      : null,
     errors,
   });
 }
