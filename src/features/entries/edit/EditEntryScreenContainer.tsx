@@ -2097,14 +2097,9 @@ export default function EditEntryPage() {
             </div>
           </div>
           ) : (
-          <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-center">
-            <p className="text-xs text-[var(--color-text-tertiary)]">
-              No photos yet
-            </p>
-            <p className="mt-1 text-[10px] text-[var(--color-text-tertiary)]">
-              Add photos from the Edit photos section below
-            </p>
-          </div>
+          <p className="text-[11px] text-[var(--color-text-tertiary)]">
+            No photos — add via Edit photos below
+          </p>
           )}
 
           <div>
