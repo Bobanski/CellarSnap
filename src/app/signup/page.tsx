@@ -276,7 +276,7 @@ export default function SignupPage() {
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Create account
           </span>
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Join CellarSnap</h1>
+          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Join Cluster</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
             {isPhoneMode
               ? "Create your account with username, phone, email, and password."

@@ -103,7 +103,7 @@ export default function NavBar({
           href="/"
           className="accent-link-hover text-lg font-semibold tracking-tight text-[var(--color-text-primary)] transition"
         >
-          CellarSnap
+          Cluster
         </Link>
 
         <div className="flex items-center gap-2">

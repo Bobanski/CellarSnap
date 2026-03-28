@@ -37,7 +37,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
           }}
         >
           <div style={{ fontSize: 24, letterSpacing: "0.22em", color: "#fcd34d" }}>
-            CELLARSNAP
+            CLUSTER
           </div>
           <div style={{ marginTop: "20px", fontWeight: 700 }}>Link expired</div>
         </div>
@@ -53,7 +53,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
   const title = vintage ? `${wineName} (${vintage})` : wineName;
   const ratingText =
     typeof share.rating === "number" ? `Rating ${share.rating}/100` : "No rating";
-  const noteText = share.notePreview ?? "Shared from CellarSnap";
+  const noteText = share.notePreview ?? "Shared from Cluster";
   const labelImageUrl = share.labelImageOgUrl ?? share.labelImageUrl;
 
   return new ImageResponse(
@@ -143,7 +143,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
                   marginBottom: "20px",
                 }}
               >
-                CELLARSNAP
+                CLUSTER
               </div>
               <div
                 style={{

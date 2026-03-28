@@ -130,8 +130,8 @@ function buildMetadataTitle(entry: EntryRow) {
   const vintage = normalizeText(entry.vintage);
 
   return vintage
-    ? `${name} (${vintage}) — CellarSnap`
-    : `${name} — CellarSnap`;
+    ? `${name} (${vintage}) — Cluster`
+    : `${name} — Cluster`;
 }
 
 function buildMetadataDescription(entry: EntryRow) {
@@ -159,7 +159,7 @@ function buildMetadataDescription(entry: EntryRow) {
   }
 
   if (fragments.length === 0) {
-    fragments.push("Shared from CellarSnap.");
+    fragments.push("Shared from Cluster.");
   }
 
   return truncateClean(fragments.join(" • "), 180);

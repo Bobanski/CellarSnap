@@ -116,7 +116,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">CellarSnap</h1>
+            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Cluster</h1>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               A private cellar journal with a social pour.
             </p>

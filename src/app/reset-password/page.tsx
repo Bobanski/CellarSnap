@@ -244,7 +244,7 @@ export default function ResetPasswordPage() {
             Set a new password
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Choose a new password to regain access to CellarSnap.
+            Choose a new password to regain access to Cluster.
           </p>
         </div>
 

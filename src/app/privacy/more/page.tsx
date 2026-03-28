@@ -19,7 +19,7 @@ export default function PrivacyMorePage() {
             </Link>
           </div>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
-            Privacy Policy - CellarSnap
+            Privacy Policy - Cluster
           </h1>
           <p className="text-sm text-[var(--color-text-tertiary)]">Last updated: {LAST_UPDATED}</p>
         </header>
@@ -28,7 +28,7 @@ export default function PrivacyMorePage() {
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Overview</h2>
             <p>
-              CellarSnap is a web and mobile application that allows users to log wine entries,
+              Cluster is a web and mobile application that allows users to log wine entries,
               upload photos, and connect with friends.
             </p>
             <p>This Privacy Policy explains what information we collect and how it is used.</p>
@@ -37,7 +37,7 @@ export default function PrivacyMorePage() {
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Information We Collect</h2>
             <p>
-              CellarSnap stores the account details and wine-log content needed to operate the
+              Cluster stores the account details and wine-log content needed to operate the
               application, including:
             </p>
             <ul className="list-disc space-y-1 pl-5">
@@ -56,13 +56,13 @@ export default function PrivacyMorePage() {
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--color-text-primary)]">SMS Authentication</h2>
             <p>
-              If you provide your phone number to log into your account, CellarSnap may send a
+              If you provide your phone number to log into your account, Cluster may send a
               one-time verification code via SMS to authenticate your login.
             </p>
             <ul className="list-disc space-y-1 pl-5">
               <li>Messages are transactional only</li>
               <li>Messages are sent only when initiated by the user</li>
-              <li>CellarSnap does not send marketing or promotional messages</li>
+              <li>Cluster does not send marketing or promotional messages</li>
             </ul>
             <p>
               You may reply STOP to opt out of SMS messages at any time. Reply HELP for
@@ -82,7 +82,7 @@ export default function PrivacyMorePage() {
 
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Data Sharing</h2>
-            <p>CellarSnap does not sell personal information.</p>
+            <p>Cluster does not sell personal information.</p>
             <p>
               Information may be processed by trusted service providers necessary to operate the
               application, including:

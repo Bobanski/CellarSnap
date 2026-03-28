@@ -1526,7 +1526,7 @@ export default function ProfilePage() {
 
                   {requiresUsernameSetup && isEditing ? (
                     <p className="rounded-xl border border-[var(--color-accent-secondary)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-2 text-sm text-[var(--color-accent-secondary)]">
-                      Set a username to continue using CellarSnap.
+                      Set a username to continue using Cluster.
                     </p>
                   ) : null}
 
@@ -1578,7 +1578,7 @@ export default function ProfilePage() {
                       Full name
                     </label>
                     <p className="mb-2 text-xs text-[var(--color-text-tertiary)]">
-                      Your first and last name are shown to friends in CellarSnap.
+                      Your first and last name are shown to friends in Cluster.
                     </p>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input

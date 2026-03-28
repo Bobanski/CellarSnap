@@ -24,7 +24,7 @@ export default function TermsPage() {
 
         <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
           <p>
-            CellarSnap is currently provided as a friends-and-family test product.
+            Cluster is currently provided as a friends-and-family test product.
             Features may change quickly, and service availability is not guaranteed.
           </p>
           <p>
@@ -41,7 +41,7 @@ export default function TermsPage() {
             or platform security during testing.
           </p>
           <p>
-            By using CellarSnap, you agree to these terms and the accompanying privacy
+            By using Cluster, you agree to these terms and the accompanying privacy
             policy.
           </p>
         </section>

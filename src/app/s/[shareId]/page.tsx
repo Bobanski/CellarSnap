@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
   const imageUrl = `${siteUrl}/s/${shareId}/opengraph-image`;
 
   if (!share) {
-    const title = "Link expired — CellarSnap";
+    const title = "Link expired — Cluster";
     const description = "This share link is no longer available.";
 
     return {
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
         title,
         description,
         url: pageUrl,
-        siteName: "CellarSnap",
+        siteName: "Cluster",
         images: [
           {
             url: imageUrl,
@@ -75,7 +75,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       title: share.metadataTitle,
       description: share.metadataDescription,
       url: pageUrl,
-      siteName: "CellarSnap",
+      siteName: "Cluster",
       images: [
         {
           url: imageUrl,
@@ -108,7 +108,7 @@ export default async function SharePage({ params }: SharePageProps) {
         <div className="w-full max-w-xl space-y-8 rounded-3xl border border-[var(--color-border)] bg-black/25 p-8 text-center backdrop-blur">
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
-              CellarSnap share
+              Cluster share
             </p>
             <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">Link expired</h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
@@ -178,7 +178,7 @@ export default async function SharePage({ params }: SharePageProps) {
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-2 text-center">
           <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
-            CellarSnap share
+            Cluster share
           </p>
           <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">{displayTitle}</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">Read-only shared wine post</p>
@@ -240,7 +240,7 @@ export default async function SharePage({ params }: SharePageProps) {
 
         <section className="rounded-2xl border border-[var(--color-border)] bg-black/25 p-5 text-center">
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Want to see more tasting details and posts on CellarSnap?
+            Want to see more tasting details and posts on Cluster?
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
             <Link

@@ -405,7 +405,7 @@ function ManualExportTab() {
     {
       number: 7,
       title: "Upload here",
-      description: "Come back to CellarSnap and upload the file using our CSV upload tool.",
+      description: "Come back to Cluster and upload the file using our CSV upload tool.",
     },
   ];
 

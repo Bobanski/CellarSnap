@@ -24,7 +24,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
           <p>
-            CellarSnap stores the account details and wine-log content needed to run the
+            Cluster stores the account details and wine-log content needed to run the
             app, including profile info, entries, photos, social relationships, and
             feedback submissions.
           </p>
