@@ -190,8 +190,8 @@ export default function FinishSignupScreen() {
         return;
       }
 
-      setInfoMessage("Account created. Taking you home...");
-      router.replace("/(app)/feed");
+      setInfoMessage("Account created. Let's build your taste profile...");
+      router.replace("/(app)/taste-survey");
     } catch {
       setErrorMessage("Unable to finish signup right now. Please try again.");
     } finally {

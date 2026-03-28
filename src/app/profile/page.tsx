@@ -146,6 +146,9 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Taste survey state
+  const [hasTasteSurvey, setHasTasteSurvey] = useState<boolean | null>(null);
+
   // Settings modal state
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -486,6 +489,14 @@ export default function ProfilePage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.badges) setBadges(data.badges);
+      })
+      .catch(() => null);
+
+    // Check taste survey existence
+    fetch("/api/taste-survey", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        setHasTasteSurvey(data?.survey != null);
       })
       .catch(() => null);
   }, [loadProfile, loadEntries]);
@@ -936,6 +947,26 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* ── My Palate card ── */}
+            <Link
+              href={hasTasteSurvey === false ? "/taste-survey" : "/palate"}
+              className="mt-5 block rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 transition hover:border-[var(--color-border-strong)]"
+            >
+              <p className="text-[9px] font-bold uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
+                MY PALATE
+              </p>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                {wineCount && wineCount > 0
+                  ? `Your taste DNA based on ${wineCount} wines`
+                  : "Your taste DNA based on your survey answers"}
+              </p>
+              <p className="mt-3 text-xs font-semibold text-[var(--color-accent-primary)]">
+                {hasTasteSurvey === false
+                  ? "Set up taste preferences \u2192"
+                  : "View full profile \u2192"}
+              </p>
+            </Link>
 
             {/* Gallery toggle */}
             <div className="mt-5 flex items-center justify-center gap-2">

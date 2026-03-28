@@ -102,7 +102,7 @@ export default function VerifyPhoneScreen() {
         }
       }
 
-      router.replace("/(app)/feed");
+      router.replace("/(app)/taste-survey");
     } catch {
       setErrorMessage("Unable to verify code right now.");
       setInfoMessage(null);

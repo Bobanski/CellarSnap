@@ -302,8 +302,8 @@ export default function FinishSignupPage() {
         // Ignore storage failures.
       }
 
-      setMessage("Account created. Taking you home...");
-      router.push("/");
+      setMessage("Account created. Let's build your taste profile...");
+      router.replace("/taste-survey");
     } finally {
       submitGuardRef.current = false;
     }
