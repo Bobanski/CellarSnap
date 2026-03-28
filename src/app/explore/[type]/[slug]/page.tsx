@@ -413,11 +413,10 @@ export default function ExploreProfilePage() {
                       key={i}
                       className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--color-border)]"
                     >
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={url}
                         alt={`Label photo ${i + 1}`}
-                        width={56}
-                        height={56}
                         className="h-full w-full object-cover"
                       />
                     </div>
