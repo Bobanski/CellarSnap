@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
+import CellarTable from "@/features/entries/CellarTable";
 import type { WineEntryWithUrls } from "@/types/wine";
 import {
   CELLAR_TAB_LABELS,
@@ -369,6 +370,8 @@ function CellarDetailOverlay({
   );
 }
 
+type CellarViewMode = "cards" | "table";
+
 /* ─── Cellar view ─── */
 function CellarView() {
   const router = useRouter();
@@ -377,6 +380,13 @@ function CellarView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<CellarEntry | null>(null);
   const [drinking, setDrinking] = useState(false);
+  const [viewMode, setViewMode] = useState<CellarViewMode>("cards");
+
+  const handleUpdateEntry = useCallback((id: string, updates: Partial<CellarEntry>) => {
+    setCellarEntries((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
+    );
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -507,28 +517,101 @@ function CellarView() {
         >
           {CELLAR_COPY.emptySubtitle}
         </p>
-        <p
-          className="mt-4"
-          style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}
-        >
-          Coming soon &mdash; for now, use the Log flow to add wines.
-        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link
+            href="/cellar/add"
+            className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
+          >
+            Enter manually
+          </Link>
+          <Link
+            href="/entries/new?cellar=1"
+            className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+          >
+            Scan label(s)
+          </Link>
+          <button
+            type="button"
+            disabled
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-tertiary)] opacity-60 cursor-not-allowed"
+            title="Coming soon"
+          >
+            Upload CSV / Excel
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      {/* Coming soon note */}
-      <p
-        className="text-center"
-        style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}
-      >
-        Adding to cellar coming soon &mdash; for now, use the Log flow.
-      </p>
+      {/* Add to cellar options */}
+      <div className="flex flex-wrap justify-center gap-2">
+        <Link
+          href="/cellar/add"
+          className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
+        >
+          Enter manually
+        </Link>
+        <Link
+          href="/entries/new?cellar=1"
+          className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+        >
+          Scan label(s)
+        </Link>
+        <button
+          type="button"
+          disabled
+          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] opacity-60 cursor-not-allowed"
+          title="Coming soon"
+        >
+          Upload CSV / Excel
+        </button>
+      </div>
 
-      {/* Count */}
-      <div className="flex justify-end">
+      {/* Count + view toggle */}
+      <div className="flex items-center justify-between">
+        {/* View toggle */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("cards")}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition"
+            style={{
+              background: viewMode === "cards" ? "var(--color-surface-hover)" : "transparent",
+              color: viewMode === "cards" ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+            }}
+            aria-label="Card view"
+            title="Card view"
+          >
+            {/* Grid icon */}
+            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+              <rect x="1" y="1" width="6" height="6" rx="1" />
+              <rect x="9" y="1" width="6" height="6" rx="1" />
+              <rect x="1" y="9" width="6" height="6" rx="1" />
+              <rect x="9" y="9" width="6" height="6" rx="1" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("table")}
+            className="flex h-7 w-7 items-center justify-center rounded-md transition"
+            style={{
+              background: viewMode === "table" ? "var(--color-surface-hover)" : "transparent",
+              color: viewMode === "table" ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+            }}
+            aria-label="Table view"
+            title="Table view"
+          >
+            {/* List/table icon */}
+            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
+              <rect x="1" y="2" width="14" height="2" rx="0.5" />
+              <rect x="1" y="7" width="14" height="2" rx="0.5" />
+              <rect x="1" y="12" width="14" height="2" rx="0.5" />
+            </svg>
+          </button>
+        </div>
+
         <span
           style={{
             fontSize: 9,
@@ -541,23 +624,27 @@ function CellarView() {
         </span>
       </div>
 
-      {/* Entry list */}
-      <div
-        style={{
-          background: "var(--color-surface-primary)",
-          border: "0.5px solid var(--color-border)",
-          borderRadius: 14,
-          overflow: "hidden",
-        }}
-      >
-        {cellarEntries.map((entry) => (
-          <CellarEntryCard
-            key={entry.id}
-            entry={entry}
-            onSelect={setSelectedEntry}
-          />
-        ))}
-      </div>
+      {/* Entry list or table */}
+      {viewMode === "table" ? (
+        <CellarTable entries={cellarEntries} onUpdateEntry={handleUpdateEntry} />
+      ) : (
+        <div
+          style={{
+            background: "var(--color-surface-primary)",
+            border: "0.5px solid var(--color-border)",
+            borderRadius: 14,
+            overflow: "hidden",
+          }}
+        >
+          {cellarEntries.map((entry) => (
+            <CellarEntryCard
+              key={entry.id}
+              entry={entry}
+              onSelect={setSelectedEntry}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Detail overlay */}
       {selectedEntry ? (
