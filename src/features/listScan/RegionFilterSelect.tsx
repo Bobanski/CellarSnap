@@ -117,7 +117,7 @@ export default function RegionFilterSelect({
                 {regionGroups.map((group) => {
                   const isActive = selectedCountry === group.country;
                   const chipClasses = isActive
-                    ? "border border-emerald-400/50 bg-emerald-400/12 text-emerald-200"
+                    ? "border border-[var(--color-success)]/50 bg-[var(--color-success)]/12 text-[var(--color-success)]"
                     : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-white/25";
 
                   return (
@@ -140,7 +140,7 @@ export default function RegionFilterSelect({
 
               {/* Sub-regions for selected country */}
               {selectedCountry && expandedGroup && expandedGroup.subRegions.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[#171210] p-2">
+                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-2">
                   <div className="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                     Regions in {selectedCountry}
                   </div>
@@ -153,7 +153,7 @@ export default function RegionFilterSelect({
                           type="button"
                           className={`w-[140px] shrink-0 rounded-xl border px-2.5 py-1.5 text-left text-xs transition ${
                             isSelected
-                              ? "border-emerald-400/40 bg-emerald-400/12 text-emerald-200"
+                              ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/12 text-[var(--color-success)]"
                               : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-secondary)] hover:border-white/20 hover:bg-white/8"
                           }`}
                           onClick={() => handleSubRegionToggle(region)}

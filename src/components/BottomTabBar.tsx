@@ -33,12 +33,12 @@ function CellarIcon() {
 function LogFabIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <circle cx="13" cy="13" r="11.96" fill="#7B1D3A" />
-      <circle cx="13" cy="14.04" r="6.76" fill="#F5EDD6" />
-      <line x1="13" y1="7.28" x2="13" y2="5.72" stroke="#F5EDD6" strokeWidth="1.17" strokeLinecap="round" />
-      <path d="M13 5.72 Q15.86 4.42 16.9 5.46" stroke="#F5EDD6" strokeWidth="0.91" fill="none" strokeLinecap="round" />
-      <rect x="11.8" y="10.92" width="2.34" height="6.24" rx="0.78" fill="#7B1D3A" />
-      <rect x="9.16" y="13.06" width="7.8" height="2.08" rx="0.78" fill="#7B1D3A" />
+      <circle cx="13" cy="13" r="11.96" style={{ fill: "var(--color-accent-primary)" }} />
+      <circle cx="13" cy="14.04" r="6.76" style={{ fill: "var(--color-text-primary)" }} />
+      <line x1="13" y1="7.28" x2="13" y2="5.72" style={{ stroke: "var(--color-text-primary)" }} strokeWidth="1.17" strokeLinecap="round" />
+      <path d="M13 5.72 Q15.86 4.42 16.9 5.46" style={{ stroke: "var(--color-text-primary)" }} strokeWidth="0.91" fill="none" strokeLinecap="round" />
+      <rect x="11.8" y="10.92" width="2.34" height="6.24" rx="0.78" style={{ fill: "var(--color-accent-primary)" }} />
+      <rect x="9.16" y="13.06" width="7.8" height="2.08" rx="0.78" style={{ fill: "var(--color-accent-primary)" }} />
     </svg>
   );
 }
@@ -61,7 +61,7 @@ function ScanIcon() {
       <line x1="7" y1="6" x2="13" y2="6" stroke="currentColor" strokeWidth="0.8" opacity="0.5" />
       <line x1="7" y1="9" x2="12" y2="9" stroke="currentColor" strokeWidth="0.8" opacity="0.4" />
       <line x1="7" y1="12" x2="13" y2="12" stroke="currentColor" strokeWidth="0.8" opacity="0.5" />
-      <line x1="2" y1="10" x2="18" y2="10" stroke="#C4607A" strokeWidth="1.2" opacity="0.6" strokeDasharray="1.5 1.5" />
+      <line x1="2" y1="10" x2="18" y2="10" style={{ stroke: "var(--color-accent-secondary)" }} strokeWidth="1.2" opacity="0.6" strokeDasharray="1.5 1.5" />
     </svg>
   );
 }

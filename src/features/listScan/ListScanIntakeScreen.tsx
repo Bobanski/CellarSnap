@@ -609,7 +609,7 @@ export default function ListScanIntakeScreen() {
                 {imagePreviews.map((preview, index) => (
                   <div
                     key={preview.key}
-                    className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[#171210]"
+                    className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]"
                   >
                     <div
                       className="absolute inset-0 bg-cover bg-center"
@@ -633,7 +633,7 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             {selectedPdf ? (
-              <div className="relative flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3">
+              <div className="relative flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-3">
                 <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                   PDF
                 </span>
@@ -663,12 +663,12 @@ export default function ListScanIntakeScreen() {
                   setErrorMessage(null);
                 }}
                 placeholder="https://restaurant.com/wine-list"
-                className="w-full rounded-2xl border border-[var(--color-border)] bg-[#171210] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
               />
             </div>
 
             {errorMessage ? (
-              <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+              <div className="rounded-2xl border border-[var(--color-error)]/20 bg-[var(--color-error)]/10 px-4 py-3 text-sm text-[var(--color-error)]">
                 {errorMessage}
               </div>
             ) : null}

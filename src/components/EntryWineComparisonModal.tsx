@@ -84,7 +84,7 @@ export default function EntryWineComparisonModal({
           </div>
 
           {errorMessage ? (
-            <p className="mt-5 text-sm text-rose-300 sm:mt-6">{errorMessage}</p>
+            <p className="mt-5 text-sm text-[var(--color-error)] sm:mt-6">{errorMessage}</p>
           ) : null}
 
           <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">

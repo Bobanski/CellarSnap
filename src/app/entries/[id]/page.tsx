@@ -510,7 +510,7 @@ export default function EntryDetailPage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-5xl space-y-8">
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            <div className="rounded-2xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-sm text-[var(--color-error)]">
               {errorMessage ?? "Entry unavailable."}
             </div>
           </div>
@@ -939,7 +939,7 @@ export default function EntryDetailPage() {
                       })}
                     </ul>
                   )}
-                  {commentError ? <p className="mt-2 text-xs text-rose-300">{commentError}</p> : null}
+                  {commentError ? <p className="mt-2 text-xs text-[var(--color-error)]">{commentError}</p> : null}
                   <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                     {replyTarget ? (
                       <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
@@ -1238,18 +1238,18 @@ export default function EntryDetailPage() {
         </div>
 
         {errorMessage ? (
-          <p className="text-sm text-rose-300">{errorMessage}</p>
+          <p className="text-sm text-[var(--color-error)]">{errorMessage}</p>
         ) : null}
 
         {isTagged ? (
           addToLogEntryId ? (
-            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-6">
+            <div className="rounded-2xl border border-[var(--color-success)]/25 bg-[var(--color-success)]/10 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-emerald-100">
+                  <h2 className="text-sm font-semibold text-[var(--color-success)]">
                     In your cellar
                   </h2>
-                  <p className="mt-1 text-xs text-emerald-100/70">
+                  <p className="mt-1 text-xs text-[var(--color-success)]/70">
                     This tasting has already been added to your cellar.
                   </p>
                 </div>
@@ -1263,7 +1263,7 @@ export default function EntryDetailPage() {
                 </div>
               </div>
               {addToLogMessage ? (
-                <p className="mt-3 text-sm text-emerald-300">{addToLogMessage}</p>
+                <p className="mt-3 text-sm text-[var(--color-success)]">{addToLogMessage}</p>
               ) : null}
             </div>
           ) : (
@@ -1323,10 +1323,10 @@ export default function EntryDetailPage() {
                 </div>
               </div>
               {addToLogError ? (
-                <p className="mt-3 text-sm text-rose-300">{addToLogError}</p>
+                <p className="mt-3 text-sm text-[var(--color-error)]">{addToLogError}</p>
               ) : null}
               {addToLogMessage ? (
-                <p className="mt-3 text-sm text-emerald-300">{addToLogMessage}</p>
+                <p className="mt-3 text-sm text-[var(--color-success)]">{addToLogMessage}</p>
               ) : null}
             </div>
           )
@@ -1393,8 +1393,8 @@ export default function EntryDetailPage() {
         <div
           className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
             shareToast.kind === "success"
-              ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
-              : "border-rose-400/50 bg-rose-500/15 text-rose-100"
+              ? "border-[var(--color-success)]/50 bg-[var(--color-success)]/15 text-[var(--color-success)]"
+              : "border-[var(--color-error)]/50 bg-[var(--color-error)]/15 text-[var(--color-error)]"
           }`}
           role="status"
           aria-live="polite"

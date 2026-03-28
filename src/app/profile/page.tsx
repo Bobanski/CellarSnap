@@ -867,7 +867,7 @@ export default function ProfilePage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="mx-auto max-w-2xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            <div className="mx-auto max-w-2xl rounded-2xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-sm text-[var(--color-error)]">
               {loadErrorMessage ?? "Unable to load profile."}
             </div>
           </div>
@@ -1012,7 +1012,7 @@ export default function ProfilePage() {
             </div>
 
             {usernameSuccess ? (
-              <p className="mt-4 text-sm text-emerald-200">{usernameSuccess}</p>
+              <p className="mt-4 text-sm text-[var(--color-success)]">{usernameSuccess}</p>
             ) : null}
 
           </div>
@@ -1121,7 +1121,7 @@ export default function ProfilePage() {
             ) : (
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 sm:p-5">
                 {friendError ? (
-                  <p className="mb-4 text-sm text-rose-200">{friendError}</p>
+                  <p className="mb-4 text-sm text-[var(--color-error)]">{friendError}</p>
                 ) : null}
 
                 {friendsLoading ? (
@@ -1139,7 +1139,7 @@ export default function ProfilePage() {
                         className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       />
                       {searchError ? (
-                        <p className="mt-2 text-sm text-rose-200">{searchError}</p>
+                        <p className="mt-2 text-sm text-[var(--color-error)]">{searchError}</p>
                       ) : null}
                       {searchLoading ? (
                         <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">
@@ -1161,7 +1161,7 @@ export default function ProfilePage() {
                                 <div>
                                   <p className="text-sm font-medium text-[var(--color-text-primary)]">{label}</p>
                                   {isFriend ? (
-                                    <p className="text-xs text-emerald-200">Already friends</p>
+                                    <p className="text-xs text-[var(--color-success)]">Already friends</p>
                                   ) : isOutgoing ? (
                                     <p className="text-xs text-[var(--color-accent-secondary)]">Request sent</p>
                                   ) : isIncoming ? (
@@ -1247,7 +1247,7 @@ export default function ProfilePage() {
                                       onClick={() =>
                                         respondToRequest(req.id, "decline")
                                       }
-                                      className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:opacity-50"
+                                      className="rounded-full border border-[var(--color-error)]/40 px-3 py-1 text-xs font-semibold text-[var(--color-error)] transition hover:border-[var(--color-error)] disabled:opacity-50"
                                     >
                                       Decline
                                     </button>
@@ -1559,7 +1559,7 @@ export default function ProfilePage() {
                         Choose picture
                       </button>
                       {avatarError ? (
-                        <p className="text-sm text-rose-200">{avatarError}</p>
+                        <p className="text-sm text-[var(--color-error)]">{avatarError}</p>
                       ) : null}
                     </div>
                   </div>
@@ -1691,10 +1691,10 @@ export default function ProfilePage() {
                   </div>
 
                   {usernameError ? (
-                    <p className="text-sm text-rose-200">{usernameError}</p>
+                    <p className="text-sm text-[var(--color-error)]">{usernameError}</p>
                   ) : null}
                   {usernameSuccess ? (
-                    <p className="text-sm text-emerald-200">{usernameSuccess}</p>
+                    <p className="text-sm text-[var(--color-success)]">{usernameSuccess}</p>
                   ) : null}
 
                   <div className="flex items-center gap-3">
@@ -1931,7 +1931,7 @@ export default function ProfilePage() {
                     </div>
 
                     {privacyMessage ? (
-                      <p className="mt-3 text-sm text-emerald-200">{privacyMessage}</p>
+                      <p className="mt-3 text-sm text-[var(--color-success)]">{privacyMessage}</p>
                     ) : null}
                   </div>
                 ) : null}
@@ -1963,7 +1963,7 @@ export default function ProfilePage() {
                   </div>
 
                   {passwordSuccess && !isPasswordOpen ? (
-                    <p className="text-sm text-emerald-200">{passwordSuccess}</p>
+                    <p className="text-sm text-[var(--color-success)]">{passwordSuccess}</p>
                   ) : null}
 
                   {isPasswordOpen ? (
@@ -2056,7 +2056,7 @@ export default function ProfilePage() {
                       </div>
 
                       {passwordError ? (
-                        <p className="text-sm text-rose-200">{passwordError}</p>
+                        <p className="text-sm text-[var(--color-error)]">{passwordError}</p>
                       ) : null}
 
                       <div className="flex items-center gap-3">

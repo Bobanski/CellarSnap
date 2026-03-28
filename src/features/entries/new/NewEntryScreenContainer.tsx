@@ -3324,7 +3324,7 @@ export default function NewEntryPage() {
                             ) : null}
                             <button
                               type="button"
-                              className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-200"
+                              className="rounded-full border border-[var(--color-border)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-primary)] transition hover:border-[var(--color-error)] hover:text-[var(--color-error)]"
                               onClick={() => {
                                 if (activePhotoIndex >= 0) {
                                   removeLabelPhotoAtIndex(activePhotoIndex);
@@ -3359,8 +3359,8 @@ export default function NewEntryPage() {
                   <p
                     className={`mt-3 text-sm ${
                       autofillStatus === "error" || autofillStatus === "timeout"
-                        ? "text-rose-300"
-                        : "text-emerald-300"
+                        ? "text-[var(--color-error)]"
+                        : "text-[var(--color-success)]"
                     }`}
                     role="status"
                     aria-live="polite"
@@ -3411,7 +3411,7 @@ export default function NewEntryPage() {
                         >
                           i
                         </button>
-                        <div className="pointer-events-none absolute right-0 top-9 z-20 hidden w-72 rounded-2xl border border-[var(--color-border)] bg-[#181311] p-3 text-left text-xs text-[var(--color-text-secondary)] shadow-2xl group-hover:block">
+                        <div className="pointer-events-none absolute right-0 top-9 z-20 hidden w-72 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-3 text-left text-xs text-[var(--color-text-secondary)] shadow-2xl group-hover:block">
                           <p className="font-semibold text-[var(--color-text-primary)]">Event</p>
                           <p className="mt-1">
                             Use this for one tasting, dinner, or wine event. Every wine in the group shares the same consumed date.
@@ -3472,7 +3472,7 @@ export default function NewEntryPage() {
                               placeholder="Stuytown tasting"
                               className={`mt-2 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
                                 bulkEntryConfigError
-                                  ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                                  ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
                                   : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                               }`}
                             />
@@ -3480,7 +3480,7 @@ export default function NewEntryPage() {
                               This name becomes the grouped event title in Home and Feed.
                             </p>
                             {bulkEntryConfigError ? (
-                              <p className="mt-2 text-xs text-rose-300">
+                              <p className="mt-2 text-xs text-[var(--color-error)]">
                                 {bulkEntryConfigError}
                               </p>
                             ) : null}
@@ -3696,7 +3696,7 @@ export default function NewEntryPage() {
                             placeholder="Past 2 weeks"
                             className={`mt-2 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
                               bulkEntryConfigError
-                                ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                                ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
                                 : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                             }`}
                           />
@@ -3704,7 +3704,7 @@ export default function NewEntryPage() {
                             This title will be shown on the grouped post in Home and Feed.
                           </p>
                           {bulkEntryConfigError ? (
-                            <p className="mt-2 text-xs text-rose-300">
+                            <p className="mt-2 text-xs text-[var(--color-error)]">
                               {bulkEntryConfigError}
                             </p>
                           ) : null}
@@ -3835,14 +3835,14 @@ export default function NewEntryPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
-                      Rating (1-100) <span className="text-rose-400">*</span>
+                      Rating (1-100) <span className="text-[var(--color-error)]">*</span>
                     </label>
                     <input
                       type="text"
                       inputMode="numeric"
                       className={`w-20 rounded-[10px] border-[0.5px] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 ${
                         errors.rating
-                          ? "border-rose-400/50 focus:border-rose-300 focus:ring-rose-300/30"
+                          ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
                           : "border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                       }`}
                       {...register("rating", {
@@ -3861,7 +3861,7 @@ export default function NewEntryPage() {
                       })}
                     />
                     {errors.rating?.message ? (
-                      <p className="mt-1 text-xs font-semibold text-rose-400">
+                      <p className="mt-1 text-xs font-semibold text-[var(--color-error)]">
                         {errors.rating.message}
                       </p>
                     ) : (
@@ -3918,7 +3918,7 @@ export default function NewEntryPage() {
                         {...register("wine_name")}
                       />
                       {errors.wine_name ? (
-                        <p className="mt-1 text-xs text-rose-300">{errors.wine_name.message}</p>
+                        <p className="mt-1 text-xs text-[var(--color-error)]">{errors.wine_name.message}</p>
                       ) : null}
                     </div>
                     <div>
@@ -4251,7 +4251,7 @@ export default function NewEntryPage() {
                 </details>
 
                 {errorMessage ? (
-                  <p className="text-sm text-rose-300">{errorMessage}</p>
+                  <p className="text-sm text-[var(--color-error)]">{errorMessage}</p>
                 ) : null}
 
                 <div className="flex items-center gap-3">
@@ -4287,7 +4287,7 @@ export default function NewEntryPage() {
             disabled={savingCrop}
           />
           <div className="relative h-full overflow-y-auto p-3 pt-4 sm:flex sm:items-center sm:justify-center sm:p-4">
-            <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[#161412] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+            <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-primary)] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">

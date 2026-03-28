@@ -685,7 +685,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                     />
                   ) : null}
 
@@ -719,7 +719,7 @@ export default function ListScanResultsScreen() {
                           };
                         })
                       }
-                      className="rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                     />
                   ) : null}
                 </div>
@@ -827,7 +827,7 @@ export default function ListScanResultsScreen() {
                             : current.min_match_percent,
                         }));
                       }}
-                      className="w-24 rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-center text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-emerald-300/60 focus:outline-none"
+                      className="w-24 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-2 text-center text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-emerald-300/60 focus:outline-none"
                     />
                     <span className="text-sm text-[var(--color-text-secondary)]">%</span>
                   </div>

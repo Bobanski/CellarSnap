@@ -50,7 +50,7 @@ export default function PriceCurrencySelect({
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className="inline-flex h-10 items-center gap-1 rounded-l-xl border border-white bg-white px-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100"
+        className="inline-flex h-10 items-center gap-1 rounded-l-xl border border-white bg-white px-3 text-sm font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)]"
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}

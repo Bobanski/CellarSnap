@@ -88,7 +88,7 @@ export default function FacetMultiSelect({
     if (tone === "red") {
       return "border-[#4A3060]/60 bg-[#4A3060]/70 text-[#f3eef8]";
     }
-    return "border-emerald-400/40 bg-emerald-400/10 text-emerald-100";
+    return "border-[var(--color-success)]/40 bg-[var(--color-success)]/10 text-[var(--color-success)]";
   };
 
   const getSuggestionClasses = (tone: FacetOptionTone) => {
@@ -172,11 +172,11 @@ export default function FacetMultiSelect({
                     removeOption(selected[selected.length - 1]);
                   }
                 }}
-                className="w-full rounded-xl border border-[var(--color-border)] bg-[#171210] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
               />
 
               {filteredOptions.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[#171210] p-2">
+                <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-2">
                   <div className="flex max-h-[160px] flex-col flex-wrap gap-1.5">
                     {filteredOptions.map((option) => {
                       const tone = getOptionTone?.(option) ?? "neutral";
