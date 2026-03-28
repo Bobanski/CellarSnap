@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     flexGrow: 1,
-    paddingBottom: 12,
+    paddingBottom: 190,
   },
   eyebrow: {
     color: colors.accentSecondary,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    maxWidth: "90%",
+    maxWidth: "88%",
   },
   assistantBubble: {
     borderColor: colors.border,
@@ -511,6 +511,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 20,
+    alignSelf: "stretch",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   userMessageLabel: {
     color: colors.textOnAccent,

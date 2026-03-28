@@ -80,7 +80,7 @@ const fabStyles = StyleSheet.create({
   wrapper: {
     alignItems: "center",
     justifyContent: "flex-end",
-    top: -14,
+    top: 4,
   },
   circle: {
     width: 48,

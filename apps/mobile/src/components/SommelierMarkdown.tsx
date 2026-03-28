@@ -139,32 +139,46 @@ export default function SommelierMarkdown({ content }: { content: string }) {
 const styles = StyleSheet.create({
   wrapper: {
     gap: 8,
+    width: "100%",
   },
   block: {
     gap: 6,
+    width: "100%",
   },
   paragraph: {
     color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 20,
+    alignSelf: "stretch",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   heading1: {
     color: colors.textPrimary,
     fontFamily: fonts.serif.light,
     fontSize: 17,
     lineHeight: 22,
+    alignSelf: "stretch",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   heading2: {
     color: colors.textPrimary,
     fontFamily: fonts.sans.medium,
     fontSize: 14,
     lineHeight: 20,
+    alignSelf: "stretch",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   heading3: {
     color: colors.textPrimary,
     fontFamily: fonts.sans.medium,
     fontSize: 13,
     lineHeight: 18,
+    alignSelf: "stretch",
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   boldInline: {
     color: colors.textPrimary,
@@ -174,6 +188,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
+    width: "100%",
   },
   bullet: {
     color: colors.textPrimary,
@@ -189,5 +204,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 20,
+    flexShrink: 1,
+    flexWrap: "wrap",
+    alignSelf: "stretch",
   },
 });
