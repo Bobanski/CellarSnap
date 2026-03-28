@@ -1926,7 +1926,7 @@ export default function EditEntryPage() {
     "group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4";
   const collapsibleSummaryClassName =
     "cursor-pointer list-none select-none text-sm font-medium text-[var(--color-text-primary)] [&::-webkit-details-marker]:hidden before:mr-2 before:inline-block before:text-white before:transition-transform before:content-['▸'] group-open:before:rotate-90";
-  const showEditPhotosSection = false;
+  const showEditPhotosSection = true;
 
   return (
     <AppShell>
@@ -1946,11 +1946,19 @@ export default function EditEntryPage() {
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
               {isFromCellar
-                ? "Add your tasting notes, photos, and rating. Opening with other wines? You can add more after saving."
+                ? "Add your tasting notes, photos, and rating."
                 : isBulkReview
                   ? `Wine ${bulkProgressLabel ?? "1/1"} in your bulk queue.`
                   : "Update tasting details or photos."}
             </p>
+            {isFromCellar && (
+              <Link
+                href="/entries/new"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] hover:text-[var(--color-text-primary)] transition"
+              >
+                Opening with other wines? Add more to this event {"\u2192"}
+              </Link>
+            )}
           </div>
         </header>
 
@@ -2102,9 +2110,18 @@ export default function EditEntryPage() {
             </div>
           </div>
           ) : (
-          <p className="text-[11px] text-[var(--color-text-tertiary)]">
-            No photos — add via Edit photos below
-          </p>
+          <button
+            type="button"
+            onClick={() => addPhotoInputRef.current?.click()}
+            className="flex items-center gap-2 rounded-xl border border-dashed border-[var(--color-border-strong)] px-4 py-3 text-sm text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-primary)] hover:text-[var(--color-text-primary)] cursor-pointer"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            Add photos
+          </button>
           )}
 
           <div>
