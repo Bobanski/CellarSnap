@@ -63,6 +63,21 @@ export default function SommelierMessage({
             <ReactMarkdown
               rehypePlugins={[rehypeSanitize]}
               components={{
+                h1: ({ children }) => (
+                  <h1 className="mb-2 text-[1.05rem] font-semibold leading-tight text-[var(--color-text-primary)] last:mb-0">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="mb-2 text-[0.98rem] font-semibold leading-tight text-[var(--color-text-primary)] last:mb-0">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="mb-2 text-[0.94rem] font-semibold leading-tight text-[var(--color-text-primary)] last:mb-0">
+                    {children}
+                  </h3>
+                ),
                 p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
                 ul: ({ children }) => (
                   <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>

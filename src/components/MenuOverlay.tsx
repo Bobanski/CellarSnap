@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 
 type MenuOverlayProps = {
   open: boolean;
@@ -22,7 +21,6 @@ type UserStats = {
 export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
   const [stats, setStats] = useState<UserStats | null>(null);
 
   useEffect(() => {
@@ -202,14 +200,6 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             subtitle="Edit name, bio, avatar, privacy"
             onClose={onClose}
           />
-          {hasPrivateBetaFeatureAccess ? (
-            <MenuLink
-              href="/palate"
-              label="My Palate"
-              subtitle="Sensory profile & preference map"
-              onClose={onClose}
-            />
-          ) : null}
           <MenuLink
             href="/friends"
             label="Friends"

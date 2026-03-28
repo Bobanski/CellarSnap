@@ -66,7 +66,7 @@ function isMissingAvatarColumn(message: string) {
 
 export function AppTopBar() {
   const pathname = usePathname();
-  const { user, signOut, hasPrivateBetaFeatureAccess } = useAuth();
+  const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
@@ -772,32 +772,11 @@ export function AppTopBar() {
                   />
                   <AppText style={menuStyles.menuItemText}>Profile</AppText>
                 </Pressable>
-                {hasPrivateBetaFeatureAccess ? (
-                  <Pressable
-                    style={menuStyles.menuItem}
-                    onPress={() => {
-                      setMenuOpen(false);
-                      router.push("/(app)/sommelier");
-                    }}
-                  >
-                    <Feather
-                      name="compass"
-                      size={16}
-                      color={colors.textSecondary}
-                    />
-                    <AppText style={menuStyles.menuItemText}>
-                      My Palate
-                    </AppText>
-                    <View style={menuStyles.betaBadge}>
-                      <AppText style={menuStyles.betaBadgeText}>BETA</AppText>
-                    </View>
-                  </Pressable>
-                ) : null}
                 <Pressable
                   style={menuStyles.menuItem}
                   onPress={() => {
                     setMenuOpen(false);
-                    router.push("/(app)/feed");
+                    router.push("/(app)/friends");
                   }}
                 >
                   <Feather

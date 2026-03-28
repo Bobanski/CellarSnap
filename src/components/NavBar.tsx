@@ -12,12 +12,11 @@ const NAV_ITEMS = [
   { label: "List scan", href: "/list-scan" },
   { label: "My library", href: "/entries" },
   { label: "Feed", href: "/feed" },
-  { label: "Palate", href: "/palate" },
   { label: "Sommelier", href: "/sommelier" },
   { label: "Profile", href: "/profile" },
   { label: "Feedback", href: "/feedback" },
 ];
-const PRIVATE_BETA_NAV_HREFS = new Set(["/list-scan", "/palate", "/sommelier"]);
+const PRIVATE_BETA_NAV_HREFS = new Set(["/list-scan", "/sommelier"]);
 
 function isItemActive({
   href,

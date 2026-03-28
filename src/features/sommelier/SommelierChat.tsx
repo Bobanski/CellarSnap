@@ -75,6 +75,24 @@ export default function SommelierChat() {
   const [lastSubmittedPrompt, setLastSubmittedPrompt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  const resetChat = () => {
+    setMessages([
+      {
+        id: "intro",
+        role: "assistant",
+        content: SOMMELIER_INTRO_MESSAGE,
+      },
+    ]);
+    setPending(false);
+    setError(null);
+    setConversationId(null);
+    setLastSubmittedPrompt(null);
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "auto",
+      block: "end",
+    });
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: "auto",
@@ -242,13 +260,26 @@ export default function SommelierChat() {
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-6">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={resetChat}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/35 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Clear chat"
+        >
+          <span aria-hidden="true">×</span>
+          <span>Clear chat</span>
+        </button>
+      </div>
+
       <div
         role="log"
         aria-live="polite"
         aria-label="Pocket Sommelier conversation"
         aria-relevant="additions text"
-        className="min-h-0 flex-1 space-y-4"
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 pb-6"
       >
         {messages.map((message) => (
           <SommelierMessage
@@ -288,7 +319,7 @@ export default function SommelierChat() {
         </div>
       ) : null}
 
-      <div className="mt-auto space-y-3">
+      <div className="shrink-0 space-y-3">
         {showSuggestions ? (
           <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
         ) : null}

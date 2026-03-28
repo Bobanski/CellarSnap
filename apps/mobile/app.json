@@ -24,6 +24,7 @@
     "android": {
       "package": "com.cellarsnap.mobile",
       "versionCode": 1,
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0C0810"

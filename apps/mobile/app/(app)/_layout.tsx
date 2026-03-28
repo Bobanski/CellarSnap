@@ -80,7 +80,7 @@ const fabStyles = StyleSheet.create({
   wrapper: {
     alignItems: "center",
     justifyContent: "flex-end",
-    top: -14,
+    top: -2,
   },
   circle: {
     width: 48,
@@ -345,6 +345,7 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: colors.surfacePrimary,
           borderTopColor: "rgba(123, 29, 58, 0.3)",
@@ -420,6 +421,10 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="profile/index"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="friends"
         options={{ href: null }}
       />
       <Tabs.Screen

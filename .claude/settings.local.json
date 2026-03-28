@@ -9,7 +9,16 @@
       "Bash(npx next:*)",
       "mcp__github__create_pull_request",
       "mcp__github__merge_pull_request",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(brew list:*)"
     ]
   }
 }
