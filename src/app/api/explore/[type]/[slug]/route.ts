@@ -395,11 +395,13 @@ async function fetchSensoryData(
     return null;
   }
 
+  const rows = data as unknown as Record<string, unknown>[];
+
   // Average sensory values across matching rows
   const result: Record<string, number | null> = {};
   for (const field of SENSORY_FIELDS) {
-    const values = data
-      .map((row: Record<string, unknown>) => row[field])
+    const values = rows
+      .map((row) => row[field])
       .filter((v): v is number => typeof v === "number");
     result[field] = values.length > 0
       ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10
