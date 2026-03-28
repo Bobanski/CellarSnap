@@ -470,6 +470,7 @@ function StepUpload({
   rows,
   parseError,
   onNext,
+  onClearFile,
 }: {
   isDragOver: boolean;
   onDrop: (e: React.DragEvent) => void;
