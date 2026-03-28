@@ -185,7 +185,7 @@ export async function enrichImportedEntries(
       result.ambiguousEntries.push({
         id: entry.id,
         wine_name: entry.wine_name,
-        grape: entry.primary_grapes,
+        grape: entry.primary_grapes ?? null,
       });
     }
     if (type) {
