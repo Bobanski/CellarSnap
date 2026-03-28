@@ -545,12 +545,10 @@ const s = StyleSheet.create({
 
   // At a Glance
   glanceRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "column",
     gap: 10,
   },
   infoCard: {
-    flex: 1,
     minWidth: 100,
     borderRadius: 16,
     borderWidth: 1,

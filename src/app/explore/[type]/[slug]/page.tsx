@@ -366,7 +366,7 @@ export default function ExploreProfilePage() {
 
           {/* ── At a Glance ── */}
           {glanceItems.length > 0 && (
-            <section className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <section className="flex flex-col gap-3">
               {glanceItems.map((item) => (
                 <div
                   key={item.label}
