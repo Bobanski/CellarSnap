@@ -57,7 +57,8 @@ export async function POST(request: Request) {
   const grapeMap = new Map<string, string>();
   if (grapeRows) {
     for (const row of grapeRows) {
-      const name = (row as { entry_id: string; grape_varieties: { name: string } | null }).grape_varieties?.name;
+      const gv = (row as unknown as { entry_id: string; grape_varieties: { name: string } | { name: string }[] | null }).grape_varieties;
+      const name = Array.isArray(gv) ? gv[0]?.name : gv?.name;
       if (name) {
         const existing = grapeMap.get(row.entry_id);
         grapeMap.set(row.entry_id, existing ? `${existing}, ${name}` : name);
