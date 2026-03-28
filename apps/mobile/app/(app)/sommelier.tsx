@@ -11,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   SOMMELIER_DEFAULT_SUGGESTIONS,
   SOMMELIER_EYEBROW,
@@ -61,8 +60,8 @@ function TypingIndicator() {
 
     const baseOpacity = 0.45;
     const activeOpacity = 1;
-    const stepDuration = 180;
-    const stepPause = 110;
+    const stepDuration = 120;
+    const stepPause = 60;
 
     const runStep = (activeIndex: number) => {
       if (cancelled) {
@@ -128,7 +127,6 @@ function TypingIndicator() {
 
 export default function SommelierScreen() {
   const { hasPrivateBetaFeatureAccess } = useAuth();
-  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "intro",
@@ -149,11 +147,14 @@ export default function SommelierScreen() {
 
   useEffect(() => {
     const showKeyboard = () => setIsKeyboardVisible(true);
-    const hideKeyboard = () => setIsKeyboardVisible(false);
+    const hideKeyboard = () => {
+      // Delay the state change slightly so layout doesn't jump
+      // before KeyboardAvoidingView finishes its animation.
+      setTimeout(() => setIsKeyboardVisible(false), 50);
+    };
     const subscriptions = [
-      Keyboard.addListener("keyboardDidShow", showKeyboard),
       Keyboard.addListener("keyboardWillShow", showKeyboard),
-      Keyboard.addListener("keyboardDidHide", hideKeyboard),
+      Keyboard.addListener("keyboardDidShow", showKeyboard),
       Keyboard.addListener("keyboardWillHide", hideKeyboard),
     ];
 
@@ -270,7 +271,7 @@ export default function SommelierScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 18 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 84 : 0}
       >
         <View style={styles.page}>
           <View style={styles.header}>
@@ -336,7 +337,7 @@ export default function SommelierScreen() {
               </View>
             </ScrollView>
 
-            <View style={[styles.bottomDock, { bottom: 12 + insets.bottom }]}>
+            <View style={styles.bottomDock}>
               {showSuggestions ? (
                 <View style={styles.suggestionSection}>
                   <AppText style={styles.suggestionEyebrow}>Try asking</AppText>
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     flexGrow: 1,
-    paddingBottom: 220,
+    paddingBottom: 12,
   },
   eyebrow: {
     color: colors.accentSecondary,
@@ -545,14 +546,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   bottomDock: {
-    position: "absolute",
-    left: 16,
-    right: 16,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: 10,
     paddingTop: 10,
-    paddingBottom: 14,
+    paddingBottom: 6,
     backgroundColor: colors.screenBg,
   },
   composerRow: {
