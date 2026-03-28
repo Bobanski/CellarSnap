@@ -216,9 +216,9 @@ export async function GET(request: Request) {
         avgRating: Number((v.total / v.count).toFixed(1)),
         delta,
         deltaLabel: delta > 0.5
-          ? `Rates ${Math.abs(delta).toFixed(1)} higher`
+          ? `Rates ${Math.abs(delta).toFixed(1)} pts higher`
           : delta < -0.5
-            ? `Rates ${Math.abs(delta).toFixed(1)} lower`
+            ? `Rates ${Math.abs(delta).toFixed(1)} pts lower`
             : "On par",
       };
     })

@@ -597,11 +597,11 @@ export default async function PalatePage() {
                         </span>
                         {r.delta > 0.5 ? (
                           <span className="text-[10px] font-semibold text-emerald-400">
-                            Rates {Math.abs(r.delta).toFixed(1)} higher
+                            Rates {Math.abs(r.delta).toFixed(1)} pts higher
                           </span>
                         ) : r.delta < -0.5 ? (
                           <span className="text-[10px] font-semibold text-[var(--color-text-tertiary)]">
-                            Rates {Math.abs(r.delta).toFixed(1)} lower
+                            Rates {Math.abs(r.delta).toFixed(1)} pts lower
                           </span>
                         ) : (
                           <span className="text-[10px] text-[var(--color-text-tertiary)]">On par</span>
