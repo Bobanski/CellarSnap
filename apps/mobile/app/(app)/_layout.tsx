@@ -431,6 +431,10 @@ export default function AppLayout() {
         name="profile/[userId]"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="taste-survey"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
