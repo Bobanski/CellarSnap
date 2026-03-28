@@ -1974,6 +1974,7 @@ export default function EditEntryPage() {
             </div>
           ) : null}
 
+          {allDisplayPhotos.length > 0 ? (
           <div>
             <p className="text-sm font-medium text-[var(--color-text-primary)]">Current photos</p>
             <div className="mt-2">
@@ -2095,6 +2096,16 @@ export default function EditEntryPage() {
               />
             </div>
           </div>
+          ) : (
+          <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-center">
+            <p className="text-xs text-[var(--color-text-tertiary)]">
+              No photos yet
+            </p>
+            <p className="mt-1 text-[10px] text-[var(--color-text-tertiary)]">
+              Add photos from the Edit photos section below
+            </p>
+          </div>
+          )}
 
           <div>
             <label className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
