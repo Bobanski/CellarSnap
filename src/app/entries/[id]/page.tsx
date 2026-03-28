@@ -117,6 +117,9 @@ export default function EntryDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareToast, setShareToast] = useState<ShareToast | null>(null);
+  const [fromCellarBanner, setFromCellarBanner] = useState(
+    searchParams.get("from_cellar") === "1"
+  );
 
   // Reactions & comments state
   const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
@@ -769,6 +772,46 @@ export default function EntryDetailPage() {
             ) : null}
           </div>
         </div>
+
+        {fromCellarBanner ? (
+          <div className="rounded-2xl border border-[var(--color-accent-rose)] bg-[var(--color-accent-soft)] p-5 space-y-4">
+            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
+              🍷 Opened from your cellar
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+                href={`/entries/${entry.id}/edit`}
+              >
+                Add photos from tonight
+              </Link>
+              <Link
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+                href={`/entries/${entry.id}/edit`}
+              >
+                Add tasting notes
+              </Link>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-[var(--color-text-secondary)]">Opening with other wines?</p>
+              <Link
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] inline-block"
+                href="/entries/new"
+              >
+                Add more wines to this event
+              </Link>
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition"
+                onClick={() => setFromCellarBanner(false)}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="space-y-6">
           <div className="space-y-0">

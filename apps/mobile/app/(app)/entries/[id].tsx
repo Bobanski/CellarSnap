@@ -760,6 +760,7 @@ export default function EntryDetailScreen() {
     queue?: string | string[];
     index?: string | string[];
     edit?: string | string[];
+    from_cellar?: string | string[];
   }>();
   const { hasPrivateBetaFeatureAccess, user } = useAuth();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -767,6 +768,8 @@ export default function EntryDetailScreen() {
   const queueParam = Array.isArray(params.queue) ? params.queue[0] : params.queue;
   const editParam = Array.isArray(params.edit) ? params.edit[0] : params.edit;
   const openEditOnLoad = editParam === "1";
+  const fromCellarParam = Array.isArray(params.from_cellar) ? params.from_cellar[0] : params.from_cellar;
+  const [fromCellarBanner, setFromCellarBanner] = useState(fromCellarParam === "1");
   const bulkQueue = useMemo(() => {
     if (!queueParam) {
       return [] as string[];
@@ -3401,6 +3404,54 @@ export default function EntryDetailScreen() {
                 <AppText style={styles.bulkReviewDescription}>
                   Review this entry, then continue to the next wine.
                 </AppText>
+              </View>
+            ) : null}
+            {fromCellarBanner ? (
+              <View style={styles.fromCellarBanner}>
+                <AppText style={styles.fromCellarHeading}>
+                  🍷 Opened from your cellar
+                </AppText>
+                <View style={styles.fromCellarActions}>
+                  <Pressable
+                    style={styles.fromCellarPill}
+                    onPress={() =>
+                      router.push(`/(app)/entries/${entryId}?edit=1`)
+                    }
+                  >
+                    <AppText style={styles.fromCellarPillText}>
+                      Add photos from tonight
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    style={styles.fromCellarPill}
+                    onPress={() =>
+                      router.push(`/(app)/entries/${entryId}?edit=1`)
+                    }
+                  >
+                    <AppText style={styles.fromCellarPillText}>
+                      Add tasting notes
+                    </AppText>
+                  </Pressable>
+                </View>
+                <AppText style={styles.fromCellarSubtext}>
+                  Opening with other wines?
+                </AppText>
+                <Pressable
+                  style={styles.fromCellarPill}
+                  onPress={() => router.push("/(app)/entries/new")}
+                >
+                  <AppText style={styles.fromCellarPillText}>
+                    Add more wines to this event
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  style={styles.fromCellarDismiss}
+                  onPress={() => setFromCellarBanner(false)}
+                >
+                  <AppText style={styles.fromCellarDismissText}>
+                    Dismiss
+                  </AppText>
+                </Pressable>
               </View>
             ) : null}
             <View style={styles.headerBlock}>
@@ -6405,5 +6456,50 @@ const styles = StyleSheet.create({
   calendarCellTextSelected: {
     color: colors.textPrimary,
     fontWeight: "700",
+  },
+  fromCellarBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.rose,
+    backgroundColor: colors.accentSoft,
+    padding: 18,
+    gap: 12,
+  },
+  fromCellarHeading: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  fromCellarActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  fromCellarPill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  fromCellarPillText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  fromCellarSubtext: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
+  fromCellarDismiss: {
+    alignSelf: "flex-end",
+    paddingVertical: 4,
+  },
+  fromCellarDismissText: {
+    color: colors.textTertiary,
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

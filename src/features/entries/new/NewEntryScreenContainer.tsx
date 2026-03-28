@@ -159,6 +159,7 @@ export default function NewEntryPage() {
     label_image_url: string | null;
   };
   const [cellarWines, setCellarWines] = useState<CellarWine[]>([]);
+  const [cellarLoading, setCellarLoading] = useState(true);
   const [cellarPickerOpen, setCellarPickerOpen] = useState(false);
   const [cellarDrinking, setCellarDrinking] = useState(false);
 
@@ -177,6 +178,8 @@ export default function NewEntryPage() {
         }
       } catch {
         // Best-effort
+      } finally {
+        setCellarLoading(false);
       }
     })();
   }, [supabase]);
@@ -196,7 +199,7 @@ export default function NewEntryPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        router.push(`/entries/${data.consumed_entry_id}/edit`);
+        router.push(`/entries/${data.consumed_entry_id}?from_cellar=1`);
       }
     } finally {
       setCellarDrinking(false);
@@ -3280,8 +3283,8 @@ export default function NewEntryPage() {
           </p>
         </header>
 
-        {/* Drink from cellar option */}
-        {cellarWines.length > 0 && (
+        {/* Drink from cellar option — show skeleton while loading, hide if no wines */}
+        {(cellarLoading || cellarWines.length > 0) && (
           <div className="space-y-2">
             <button
               type="button"
@@ -3296,7 +3299,9 @@ export default function NewEntryPage() {
                   Drink from my cellar
                 </p>
                 <p className="text-xs text-[var(--color-text-tertiary)]">
-                  {cellarWines.length} wine{cellarWines.length !== 1 ? "s" : ""} ready to open
+                  {cellarLoading
+                    ? "Checking your cellar..."
+                    : `${cellarWines.length} wine${cellarWines.length !== 1 ? "s" : ""} ready to open`}
                 </p>
               </div>
               <span className="ml-auto text-xs font-semibold text-[var(--color-accent-secondary)]">

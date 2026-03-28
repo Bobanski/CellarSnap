@@ -52,7 +52,7 @@ export default function NewEntryScreen() {
             const result = await drinkFromCellar(entry.id);
             setDrinking(false);
             if (result.ok) {
-              router.replace(`/(app)/entries/${result.consumedEntryId}`);
+              router.replace(`/(app)/entries/${result.consumedEntryId}?from_cellar=1`);
             } else {
               Alert.alert("Error", result.errorMessage);
             }
