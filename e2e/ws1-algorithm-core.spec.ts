@@ -206,6 +206,7 @@ function buildDenseUserPreferenceVector(
       ...categoricalOverrides,
     },
     event_count: 25,
+    adventurousness: 5,
   };
 }
 
@@ -746,6 +747,7 @@ test.describe("WS1 algorithm core", () => {
           },
         },
         event_count: 0,
+        adventurousness: 5,
       }
     );
 
