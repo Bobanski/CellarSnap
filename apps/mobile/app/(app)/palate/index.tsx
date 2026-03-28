@@ -263,13 +263,13 @@ export default function PalateScreen() {
     );
   }
 
-  // Gate: require at least 8 entries
+  // Gate: require at least 8 entries for full dashboard
   if (data.gated) {
     return (
       <View style={[ps.screen, ps.center, { paddingHorizontal: 24, gap: 14 }]}>
         <AppText style={ps.emptyTitle}>Almost there</AppText>
         <AppText style={ps.emptySubtitle}>
-          Log {data.entriesNeeded} more {data.entriesNeeded === 1 ? "wine" : "wines"} to unlock your palate profile.
+          Log {data.entriesNeeded} more {data.entriesNeeded === 1 ? "wine" : "wines"} to unlock your full palate profile.
           You have {data.totalRated} so far.
         </AppText>
         <Pressable
@@ -277,6 +277,14 @@ export default function PalateScreen() {
           onPress={() => router.push("/(app)/entries/new")}
         >
           <AppText style={ps.primaryBtnText}>Log a wine</AppText>
+        </Pressable>
+        <Pressable
+          style={ps.backBtn}
+          onPress={() => router.push("/(app)/taste-survey")}
+        >
+          <AppText style={ps.editLinkText}>
+            {data.hasSurvey ? "Edit taste preferences \u2192" : "Take the taste quiz \u2192"}
+          </AppText>
         </Pressable>
         <Pressable style={ps.backBtn} onPress={() => router.back()}>
           <AppText style={ps.backBtnText}>Go back</AppText>
@@ -566,6 +574,7 @@ const ps = StyleSheet.create({
     paddingHorizontal: 24, paddingVertical: 14,
   },
   primaryBtnText: { color: colors.textOnAccent, fontSize: 14, fontWeight: "700" },
+  editLinkText: { color: colors.accentSecondary, fontSize: 12, fontWeight: "600" },
   backBtn: { paddingVertical: 8 },
   backBtnText: { color: colors.textTertiary, fontSize: 13, fontWeight: "600" },
 });

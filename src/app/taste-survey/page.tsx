@@ -174,29 +174,34 @@ function SearchChipSelect({
       setResults([]);
       return;
     }
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      let matched: string[];
-      if (onSearch) {
-        matched = await onSearch(query);
-      } else {
-        const lowerQ = query.toLowerCase();
-        matched = [...starterOptions].filter(
-          (item) => item.toLowerCase().includes(lowerQ)
-        );
-      }
-      if (cancelled) return;
+
+    const applyResults = (matched: string[]) => {
       matched = matched.filter((item) => !selected.includes(item));
       if (matched.length === 0 && query.trim()) {
         setResults([query.trim()]);
       } else {
         setResults(matched.slice(0, 8));
       }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
     };
+
+    if (onSearch) {
+      const result = onSearch(query);
+      if (result instanceof Promise) {
+        let cancelled = false;
+        const timer = setTimeout(() => {
+          result.then((matched) => { if (!cancelled) applyResults(matched); });
+        }, 150);
+        return () => { cancelled = true; clearTimeout(timer); };
+      }
+      applyResults(result);
+      return;
+    }
+
+    const lowerQ = query.toLowerCase();
+    const matched = [...starterOptions].filter(
+      (item) => item.toLowerCase().includes(lowerQ)
+    );
+    applyResults(matched);
   }, [query, starterOptions, selected, onSearch]);
 
   return (
@@ -289,6 +294,29 @@ function StepGrapes({
         title="What are your favorite grapes?"
         subtitle="Pick all the varietals you tend to reach for."
       />
+      <div className="flex flex-wrap gap-1.5">
+        {["Cabernet Sauvignon", "Merlot", "Pinot Noir", "Grenache", "Syrah / Shiraz", "Chardonnay", "Sauvignon Blanc", "Riesling"].map((grape) => {
+          const active = draft.varietals.includes(grape);
+          return (
+            <button
+              key={grape}
+              type="button"
+              onClick={() =>
+                active
+                  ? update({ varietals: draft.varietals.filter((v) => v !== grape) })
+                  : update({ varietals: [...draft.varietals, grape] })
+              }
+              className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold transition cursor-pointer ${
+                active
+                  ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-rose)] text-[var(--color-accent-secondary)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-tinted)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
+              }`}
+            >
+              {grape}
+            </button>
+          );
+        })}
+      </div>
       <SearchChipSelect
         starterOptions={[]}
         selected={draft.varietals}
@@ -299,7 +327,7 @@ function StepGrapes({
           if (!draft.varietals.includes(item))
             update({ varietals: [...draft.varietals, item] });
         }}
-        placeholder="Search for a grape..."
+        placeholder="Search for more grapes..."
         onSearch={searchGrapesApi}
       />
     </>
@@ -655,7 +683,7 @@ export default function TasteSurveyPage() {
             onClick={() => router.replace("/")}
             className="text-xs font-semibold text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer"
           >
-            Skip for now
+            Skip survey for now
           </button>
         </div>
 
@@ -721,14 +749,14 @@ export default function TasteSurveyPage() {
           </button>
         </div>
 
-        {/* Skip */}
-        {!isLastStep && step > 1 && (
+        {/* Skip to next step — centered below navigation */}
+        {!isLastStep && (
           <button
             type="button"
             onClick={() => setStep((s) => Math.min(s + 1, TASTE_SURVEY_STEP_COUNT))}
-            className="self-center text-xs font-semibold text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer"
+            className="self-center rounded-full border border-[var(--color-border)] px-5 py-2 text-[13px] font-semibold text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)] cursor-pointer transition"
           >
-            Skip this step
+            Skip to next step
           </button>
         )}
       </div>

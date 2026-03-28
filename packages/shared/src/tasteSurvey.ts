@@ -119,7 +119,7 @@ export const SENSORY_AVOID_OPTIONS = [
   "Too acidic",
   "Very tannic / grippy reds",
   "Jammy / overripe fruit",
-  "Very sweet",
+  "Too sweet / overripe",
   "High alcohol",
 ] as const;
 

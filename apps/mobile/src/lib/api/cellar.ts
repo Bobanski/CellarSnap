@@ -43,7 +43,7 @@ export async function fetchCellarEntries(): Promise<
     };
   }
 
-  return { ok: true, entries: (payload as CellarEntry[]) ?? [] };
+  return { ok: true, entries: ((payload as { entries?: CellarEntry[] })?.entries ?? []) };
 }
 
 type DrinkResponse = { consumed_entry_id: string };

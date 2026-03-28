@@ -24,7 +24,7 @@ export const DEFAULT_AXIS_WEIGHTS: Record<SensoryAxis, number> = {
   mineral: 0.8,
   savory: 0.8,
   alcohol_perception: 0.9,
-  sweetness_perception: 0.6,
+  sweetness_perception: 0.3,
   bitterness_phenolic_grip: 0.6,
 };
 

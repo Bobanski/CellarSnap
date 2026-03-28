@@ -151,31 +151,36 @@ function SearchChipSelect({
       setResults([]);
       return;
     }
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      let matched: string[];
-      if (onSearch) {
-        matched = await onSearch(query);
-      } else {
-        const lowerQ = query.toLowerCase();
-        matched = [...starterOptions].filter(
-          (item) => item.toLowerCase().includes(lowerQ)
-        );
-      }
-      if (cancelled) return;
-      // Filter out already-selected
+
+    const applyResults = (matched: string[]) => {
       matched = matched.filter((item) => !selected.includes(item));
-      // If no matches, offer to add as custom text
       if (matched.length === 0 && query.trim()) {
         setResults([query.trim()]);
       } else {
         setResults(matched.slice(0, 8));
       }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
     };
+
+    // If onSearch returns a Promise, debounce. If sync (local list), run instantly.
+    if (onSearch) {
+      const result = onSearch(query);
+      if (result instanceof Promise) {
+        let cancelled = false;
+        const timer = setTimeout(() => {
+          result.then((matched) => { if (!cancelled) applyResults(matched); });
+        }, 150);
+        return () => { cancelled = true; clearTimeout(timer); };
+      }
+      applyResults(result);
+      return;
+    }
+
+    // Local filter — instant
+    const lowerQ = query.toLowerCase();
+    const matched = [...starterOptions].filter(
+      (item) => item.toLowerCase().includes(lowerQ)
+    );
+    applyResults(matched);
   }, [query, starterOptions, selected, onSearch]);
 
   return (
@@ -275,12 +280,28 @@ function StepGrapes() {
           Pick all the varietals you tend to reach for.
         </AppText>
       </View>
+      <View style={s.chipWrap}>
+        {(["Cabernet Sauvignon", "Merlot", "Pinot Noir", "Grenache", "Syrah / Shiraz", "Chardonnay", "Sauvignon Blanc", "Riesling"] as const).map((grape) => {
+          const active = draft.varietals.includes(grape);
+          return (
+            <Pressable
+              key={grape}
+              style={[s.chipSmall, active && s.chipActive]}
+              onPress={() => (active ? toggle(grape) : add(grape))}
+            >
+              <AppText style={[s.chipSmallText, active && s.chipTextActive]}>
+                {grape}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
       <SearchChipSelect
         starterOptions={[]}
         selected={draft.varietals}
         onToggle={toggle}
         onAdd={add}
-        placeholder="Search for a grape..."
+        placeholder="Search for more grapes..."
         onSearch={searchGrapesApi}
       />
     </>
@@ -534,7 +555,7 @@ export default function TasteSurveyScreen() {
             style={s.skipButton}
             onPress={() => router.replace("/(app)/feed")}
           >
-            <AppText style={s.skipText}>Skip for now</AppText>
+            <AppText style={s.skipText}>Skip survey for now</AppText>
           </Pressable>
         </View>
 
@@ -585,10 +606,10 @@ export default function TasteSurveyScreen() {
           </Pressable>
         </View>
 
-        {/* Skip (optional steps) */}
-        {!isLastStep && step > 1 && (
-          <Pressable style={s.skipButton} onPress={goNext}>
-            <AppText style={s.skipText}>Skip this step</AppText>
+        {/* Skip to next step — centered below navigation */}
+        {!isLastStep && (
+          <Pressable style={s.skipStepButton} onPress={goNext}>
+            <AppText style={s.skipStepText}>Skip to next step</AppText>
           </Pressable>
         )}
       </ScrollView>

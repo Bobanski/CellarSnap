@@ -149,6 +149,59 @@ function toOrdinal(value: number) {
 export default function NewEntryPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
+  type CellarWine = {
+    id: string;
+    wine_name: string | null;
+    producer: string | null;
+    vintage: string | null;
+    region: string | null;
+    cellar_quantity: number;
+    label_image_url: string | null;
+  };
+  const [cellarWines, setCellarWines] = useState<CellarWine[]>([]);
+  const [cellarPickerOpen, setCellarPickerOpen] = useState(false);
+  const [cellarDrinking, setCellarDrinking] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch("/api/cellar", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.ok) {
+          const payload = await res.json();
+          const entries = (payload?.entries ?? []) as CellarWine[];
+          setCellarWines(entries.filter((e) => (e.cellar_quantity ?? 0) > 0));
+        }
+      } catch {
+        // Best-effort
+      }
+    })();
+  }, [supabase]);
+
+  const handleDrinkFromCellar = async (wine: CellarWine) => {
+    setCellarDrinking(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch("/api/cellar/drink", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ cellar_entry_id: wine.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/entries/${data.consumed_entry_id}/edit`);
+      }
+    } finally {
+      setCellarDrinking(false);
+    }
+  };
   const {
     control,
     register,
@@ -3227,9 +3280,77 @@ export default function NewEntryPage() {
           </p>
         </header>
 
+        {/* Drink from cellar option */}
+        {cellarWines.length > 0 && (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setCellarPickerOpen((v) => !v)}
+              className="flex w-full items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] p-4 text-left transition hover:border-[var(--color-accent-primary)] cursor-pointer"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-surface-raised)] text-lg">
+                🍷
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                  Drink from my cellar
+                </p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">
+                  {cellarWines.length} wine{cellarWines.length !== 1 ? "s" : ""} ready to open
+                </p>
+              </div>
+              <span className="ml-auto text-xs font-semibold text-[var(--color-accent-secondary)]">
+                {cellarPickerOpen ? "\u2303" : "\u2304"}
+              </span>
+            </button>
+
+            {cellarPickerOpen && (
+              <div className="max-h-64 overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
+                {cellarDrinking && (
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-accent-secondary)] border-t-transparent" />
+                    <span className="text-sm text-[var(--color-text-secondary)]">Opening bottle...</span>
+                  </div>
+                )}
+                {!cellarDrinking && cellarWines.map((wine) => (
+                  <button
+                    key={wine.id}
+                    type="button"
+                    onClick={() => handleDrinkFromCellar(wine)}
+                    className="flex w-full items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 text-left transition hover:bg-[var(--color-surface-hover)] last:border-b-0 cursor-pointer"
+                  >
+                    {wine.label_image_url ? (
+                      <img
+                        src={wine.label_image_url}
+                        alt=""
+                        className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-hover)] text-sm">
+                        🍷
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
+                        {wine.wine_name ?? "Unknown wine"}
+                      </p>
+                      <p className="truncate text-xs text-[var(--color-text-tertiary)]">
+                        {[wine.producer, wine.vintage, wine.region].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-text-tertiary)]">
+                      {wine.cellar_quantity}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <form
           noValidate
-            className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
+            className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]"
             onSubmit={onSubmit}
           >
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">

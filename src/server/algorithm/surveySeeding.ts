@@ -54,12 +54,17 @@ const LOVE_AXIS_MAP: Record<string, Partial<Record<SensoryAxis, number>>> = {
 // for the same axis if both are present.
 
 const AVOID_AXIS_MAP: Record<string, Partial<Record<SensoryAxis, number>>> = {
+  "Overly oaky whites": { oak_presence: 1.5 },
   "Overly oaky": { oak_presence: 1.5 },
+  "Very tannic / grippy reds": { tannin: 1.8, bitterness_phenolic_grip: 1.8 },
   "Very tannic / grippy": { tannin: 1.8, bitterness_phenolic_grip: 1.8 },
+  "Too acidic": { acidity: 1.8 },
   "Too acidic / sour": { acidity: 1.8 },
   "Jammy / overripe fruit": { fruit_ripeness: 1.8 },
+  "High alcohol": { alcohol_perception: 1.8 },
   "Hot / high alcohol": { alcohol_perception: 1.8 },
-  "Very sweet": { sweetness_perception: 1.5 },
+  "Too sweet / overripe": { concentration: 1.8, fruit_ripeness: 1.8 },
+  "Very sweet": { concentration: 1.8, fruit_ripeness: 1.8 },
   "Too bitter / astringent": { bitterness_phenolic_grip: 1.5 },
   "Thin and watery": { body: 4.0, concentration: 4.0 },
 };

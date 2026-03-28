@@ -88,6 +88,19 @@ export const surveyStyles = StyleSheet.create({
   chipTextActive: {
     color: colors.accentSecondary,
   },
+  chipSmall: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  chipSmallText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
 
   // ─── Selected chip pills (removable) ──────────────────────
   selectedChipWrap: {
@@ -281,10 +294,30 @@ export const surveyStyles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
+  skipButtonCentered: {
+    alignSelf: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  skipStepButton: {
+    alignSelf: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+  },
+  skipStepText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+  },
   skipText: {
     color: colors.textTertiary,
     fontSize: 12,
     fontWeight: "600",
+    textAlign: "center",
   },
 
   // ─── Error ─────────────────────────────────────────────────

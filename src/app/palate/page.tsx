@@ -378,8 +378,12 @@ export default async function PalatePage() {
 
   // Standout axes: split into "leans into" (above 3.0, sorted high→low)
   // and "avoids" (below 2.5, sorted low→high). Skip the bland middle.
+  // Exclude sweetness_perception from display — it's categorical in wine, not a
+  // meaningful sensory preference axis for most drinkers
+  const HIDDEN_PALATE_AXES = new Set(["sweetness_perception"]);
   const allAxes = primaryProfile
     ? Object.entries(primaryProfile.profile.sensory)
+        .filter(([axis]) => !HIDDEN_PALATE_AXES.has(axis))
         .map(([axis, val]) => ({ axis: axis as keyof typeof SENSORY_AXIS_LABELS, value: val ?? 3 }))
     : [];
   const leansInto = allAxes
@@ -394,7 +398,7 @@ export default async function PalatePage() {
   // Radar — 5 dimensions matching the original meta-groups
   const PALATE_RADAR_GROUPS: { key: string; label: string; axes: SensoryAxis[] }[] = [
     { key: "structure",  label: "Structure",  axes: ["body", "acidity", "tannin", "alcohol_perception"] },
-    { key: "flavor",     label: "Flavor",     axes: ["fruit_ripeness", "sweetness_perception", "bitterness_phenolic_grip"] },
+    { key: "flavor",     label: "Flavor",     axes: ["fruit_ripeness", "bitterness_phenolic_grip"] },
     { key: "aromatics",  label: "Aromatics",  axes: ["aromatic_intensity", "oak_presence"] },
     { key: "earth",      label: "Earth",      axes: ["earthy", "mineral", "savory"] },
     { key: "quality",    label: "Quality",    axes: ["finish_length", "concentration", "complexity", "freshness"] },
@@ -458,7 +462,7 @@ export default async function PalatePage() {
   if (totalRated < MIN_ENTRIES_FOR_PALATE) {
     return (
       <AppShell>
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-5 px-6 text-center">
           <h1
             className="text-2xl font-light text-[var(--color-text-primary)]"
             style={{ fontFamily: "var(--font-serif)" }}
@@ -466,14 +470,20 @@ export default async function PalatePage() {
             Almost there
           </h1>
           <p className="max-w-md text-sm text-[var(--color-text-secondary)]">
-            Log {entriesNeeded} more {entriesNeeded === 1 ? "wine" : "wines"} to unlock your palate profile.
+            Log {entriesNeeded} more {entriesNeeded === 1 ? "wine" : "wines"} to unlock your full palate profile.
             You have {totalRated} so far.
           </p>
           <Link
             href="/entries/new"
-            className="mt-2 rounded-xl bg-[var(--color-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
+            className="rounded-xl bg-[var(--color-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
           >
             Log a wine
+          </Link>
+          <Link
+            href="/taste-survey"
+            className="text-xs font-semibold text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-secondary)] transition"
+          >
+            {hasSurvey ? "Edit taste preferences \u2192" : "Take the taste quiz \u2192"}
           </Link>
         </div>
       </AppShell>

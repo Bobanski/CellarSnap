@@ -381,6 +381,7 @@ function CellarView() {
   const [selectedEntry, setSelectedEntry] = useState<CellarEntry | null>(null);
   const [drinking, setDrinking] = useState(false);
   const [viewMode, setViewMode] = useState<CellarViewMode>("cards");
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   const handleUpdateEntry = useCallback((id: string, updates: Partial<CellarEntry>) => {
     setCellarEntries((prev) =>
@@ -517,27 +518,42 @@ function CellarView() {
         >
           {CELLAR_COPY.emptySubtitle}
         </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Link
-            href="/cellar/add"
-            className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
-          >
-            Enter manually
-          </Link>
-          <Link
-            href="/entries/new?cellar=1"
-            className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-          >
-            Scan label(s)
-          </Link>
+        <div className="mt-5 flex flex-col items-center gap-3">
           <button
             type="button"
-            disabled
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-tertiary)] opacity-60 cursor-not-allowed"
-            title="Coming soon"
+            onClick={() => setAddMenuOpen((v) => !v)}
+            className="rounded-xl bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)] cursor-pointer"
           >
-            Upload CSV / Excel
+            {CELLAR_COPY.addButton}
           </button>
+          {addMenuOpen && (
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link
+                href="/cellar/add"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              >
+                Enter manually
+              </Link>
+              <Link
+                href="/entries/new?cellar=1"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              >
+                Scan label(s)
+              </Link>
+              <Link
+                href="/cellar/upload"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              >
+                Upload CSV / Excel
+              </Link>
+              <Link
+                href="/cellar/import-cellartracker"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              >
+                Import from CellarTracker
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -545,28 +561,43 @@ function CellarView() {
 
   return (
     <>
-      {/* Add to cellar options */}
-      <div className="flex flex-wrap justify-center gap-2">
-        <Link
-          href="/cellar/add"
-          className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
-        >
-          Enter manually
-        </Link>
-        <Link
-          href="/entries/new?cellar=1"
-          className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-        >
-          Scan label(s)
-        </Link>
+      {/* Add to cellar */}
+      <div className="flex flex-col items-center gap-2">
         <button
           type="button"
-          disabled
-          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] opacity-60 cursor-not-allowed"
-          title="Coming soon"
+          onClick={() => setAddMenuOpen((v) => !v)}
+          className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)] cursor-pointer"
         >
-          Upload CSV / Excel
+          {CELLAR_COPY.addButton}
         </button>
+        {addMenuOpen && (
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link
+              href="/cellar/add"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+            >
+              Enter manually
+            </Link>
+            <Link
+              href="/entries/new?cellar=1"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+            >
+              Scan label(s)
+            </Link>
+            <Link
+              href="/cellar/upload"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+            >
+              Upload CSV / Excel
+            </Link>
+            <Link
+              href="/cellar/import-cellartracker"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+            >
+              Import from CellarTracker
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Count + view toggle */}

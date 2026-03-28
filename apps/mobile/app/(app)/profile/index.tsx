@@ -1956,7 +1956,13 @@ export default function ProfileScreen() {
             </Pressable>
             <Pressable
               style={styles.galleryToggleBtn}
-              onPress={() => router.push("/(app)/palate")}
+              onPress={() => {
+                if (hasTasteSurvey === false || (wineCount ?? 0) < 8) {
+                  router.push("/(app)/taste-survey");
+                } else {
+                  router.push("/(app)/palate");
+                }
+              }}
             >
               <AppText style={styles.galleryToggleText}>
                 My Palate

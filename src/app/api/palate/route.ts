@@ -51,7 +51,7 @@ type EntryRow = z.infer<typeof entryRowSchema>;
 
 const PALATE_RADAR_GROUPS: { key: string; label: string; axes: SensoryAxis[] }[] = [
   { key: "structure", label: "Structure", axes: ["body", "acidity", "tannin", "alcohol_perception"] },
-  { key: "flavor", label: "Flavor", axes: ["fruit_ripeness", "sweetness_perception", "bitterness_phenolic_grip"] },
+  { key: "flavor", label: "Flavor", axes: ["fruit_ripeness", "bitterness_phenolic_grip"] },
   { key: "aromatics", label: "Aromatics", axes: ["aromatic_intensity", "oak_presence"] },
   { key: "earth", label: "Earth", axes: ["earthy", "mineral", "savory"] },
   { key: "quality", label: "Quality", axes: ["finish_length", "concentration", "complexity", "freshness"] },
@@ -261,9 +261,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // Standout axes
+  // Standout axes — exclude sweetness (categorical, not a useful preference axis)
+  const HIDDEN_PALATE_AXES = new Set(["sweetness_perception"]);
   const allAxes = primaryProfile
     ? Object.entries(primaryProfile.profile.sensory)
+        .filter(([axis]) => !HIDDEN_PALATE_AXES.has(axis))
         .map(([axis, val]) => ({
           axis,
           label: SENSORY_AXIS_LABELS[axis as keyof typeof SENSORY_AXIS_LABELS] ?? axis,

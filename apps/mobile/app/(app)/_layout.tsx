@@ -439,6 +439,14 @@ export default function AppLayout() {
         name="palate"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="cellar-add"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="cellar-import-ct"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

@@ -246,6 +246,7 @@ function CellarEntryCard({
 export default function EntriesScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<EntryStatus>("consumed");
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [entries, setEntries] = useState<MobileEntry[]>([]);
   const [cellarEntries, setCellarEntries] = useState<CellarEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -563,9 +564,77 @@ export default function EntriesScreen() {
             <View style={styles.emptyCard}>
               <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.emptyTitle}</AppText>
               <AppText style={styles.emptyText}>{CELLAR_COPY.emptySubtitle}</AppText>
+              <Pressable
+                style={styles.addCellarButton}
+                onPress={() => setAddMenuOpen((v) => !v)}
+              >
+                <AppText style={styles.addCellarButtonText}>{CELLAR_COPY.addButton}</AppText>
+              </Pressable>
+              {addMenuOpen && (
+                <View style={styles.addOptionsColumn}>
+                  <Pressable
+                    style={styles.addCellarSecondary}
+                    onPress={() => router.push("/(app)/cellar-add")}
+                  >
+                    <Feather name="edit-3" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                    <AppText style={styles.addCellarSecondaryText}>Enter manually</AppText>
+                  </Pressable>
+                  <Pressable
+                    style={styles.addCellarSecondary}
+                    onPress={() => router.push("/(app)/entries/new")}
+                  >
+                    <Feather name="camera" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                    <AppText style={styles.addCellarSecondaryText}>Scan label(s)</AppText>
+                  </Pressable>
+                  <Pressable
+                    style={styles.addCellarSecondary}
+                    onPress={() => router.push("/(app)/cellar-import-ct")}
+                  >
+                    <Feather name="download" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                    <AppText style={styles.addCellarSecondaryText}>Import from CellarTracker</AppText>
+                  </Pressable>
+                  <Pressable style={styles.addCellarDisabled} disabled>
+                    <AppText style={styles.addCellarDisabledText}>Upload CSV — use desktop</AppText>
+                  </Pressable>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.stack}>
+              <View style={styles.addOptionsColumn}>
+                <Pressable
+                  style={styles.addCellarButton}
+                  onPress={() => setAddMenuOpen((v) => !v)}
+                >
+                  <Feather name="plus" size={14} color={colors.textOnAccent} style={{ marginRight: 5 }} />
+                  <AppText style={styles.addCellarButtonText}>{CELLAR_COPY.addButton}</AppText>
+                </Pressable>
+                {addMenuOpen && (
+                  <View style={styles.addOptionsRow}>
+                    <Pressable
+                      style={styles.addCellarSecondary}
+                      onPress={() => router.push("/(app)/cellar-add")}
+                    >
+                      <Feather name="edit-3" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                      <AppText style={styles.addCellarSecondaryText}>Enter manually</AppText>
+                    </Pressable>
+                    <Pressable
+                      style={styles.addCellarSecondary}
+                      onPress={() => router.push("/(app)/entries/new")}
+                    >
+                      <Feather name="camera" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                      <AppText style={styles.addCellarSecondaryText}>Scan</AppText>
+                    </Pressable>
+                    <Pressable
+                      style={styles.addCellarSecondary}
+                      onPress={() => router.push("/(app)/cellar-import-ct")}
+                    >
+                      <Feather name="download" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                      <AppText style={styles.addCellarSecondaryText}>Import CT</AppText>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
               {cellarEntries.map((item) => (
                 <CellarEntryCard key={item.id} item={item} onDrink={handleDrink} />
               ))}
@@ -861,5 +930,54 @@ const styles = StyleSheet.create({
     color: colors.textOnAccent,
     fontSize: 13,
     fontWeight: "700",
+  },
+  addOptionsColumn: {
+    alignItems: "center",
+    gap: 8,
+  },
+  addOptionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  addCellarButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    backgroundColor: colors.accentPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  addCellarButtonText: {
+    color: colors.textOnAccent,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  addCellarSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  addCellarSecondaryText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  addCellarDisabled: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    opacity: 0.5,
+  },
+  addCellarDisabledText: {
+    color: colors.textTertiary,
+    fontSize: 11,
   },
 });

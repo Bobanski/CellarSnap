@@ -950,7 +950,13 @@ export default function ProfilePage() {
 
             {/* ── My Palate card ── */}
             <Link
-              href={hasTasteSurvey === false ? "/taste-survey" : "/palate"}
+              href={
+                hasTasteSurvey === false
+                  ? "/taste-survey"
+                  : (wineCount ?? 0) >= 8
+                    ? "/palate"
+                    : "/taste-survey"
+              }
               className="mt-5 block rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 transition hover:border-[var(--color-border-strong)]"
             >
               <p className="text-[9px] font-bold uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
@@ -964,7 +970,9 @@ export default function ProfilePage() {
               <p className="mt-3 text-xs font-semibold text-[var(--color-accent-primary)]">
                 {hasTasteSurvey === false
                   ? "Set up taste preferences \u2192"
-                  : "View full profile \u2192"}
+                  : (wineCount ?? 0) >= 8
+                    ? "View full profile \u2192"
+                    : "Edit taste preferences \u2192"}
               </p>
             </Link>
 
