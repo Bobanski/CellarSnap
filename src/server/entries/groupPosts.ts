@@ -40,6 +40,7 @@ type SlideEntryRow = {
   region: string | null;
   appellation: string | null;
   consumed_at: string;
+  created_at: string;
 };
 
 type GroupedPostPayload = {
@@ -122,7 +123,7 @@ export async function resolveGroupedPostData(
       ? await supabase
           .from("wine_entries")
           .select(
-            "id, wine_name, producer, vintage, country, region, appellation, consumed_at"
+            "id, wine_name, producer, vintage, country, region, appellation, consumed_at, created_at"
           )
           .in("id", slideEntryIds)
       : { data: [] as SlideEntryRow[], error: null };
