@@ -595,16 +595,11 @@ export default async function PalatePage() {
                         <span className={`text-sm ${i === 0 ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
                           {r.region}
                         </span>
-                        <div className="flex items-center gap-2">
-                          {r.delta !== 0 ? (
-                            <span className={`text-[10px] font-semibold ${r.delta > 0 ? "text-emerald-400" : "text-[var(--color-text-tertiary)]"}`}>
-                              {r.delta > 0 ? "+" : ""}{r.delta}
-                            </span>
-                          ) : null}
-                          <span className="text-[10px] text-[var(--color-text-tertiary)]">
-                            {r.count} wines
-                          </span>
-                        </div>
+                        {r.delta > 2 ? (
+                          <span className="text-[10px] font-semibold text-emerald-400">Rates higher</span>
+                        ) : r.delta < -2 ? (
+                          <span className="text-[10px] font-semibold text-[var(--color-text-tertiary)]">Rates lower</span>
+                        ) : null}
                       </div>
                     ))}
                   </div>

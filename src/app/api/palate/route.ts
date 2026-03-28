@@ -208,12 +208,16 @@ export async function GET(request: Request) {
     rows.reduce((s, r) => s + (typeof r.rating === "number" ? r.rating : 0), 0) /
     Math.max(rows.filter((r) => typeof r.rating === "number").length, 1);
   const regionStats = [...regionCounts.entries()]
-    .map(([region, v]) => ({
-      region,
-      count: v.count,
-      avgRating: Number((v.total / v.count).toFixed(1)),
-      delta: Number((v.total / v.count - overallAvg).toFixed(1)),
-    }))
+    .map(([region, v]) => {
+      const delta = Number((v.total / v.count - overallAvg).toFixed(1));
+      return {
+        region,
+        count: v.count,
+        avgRating: Number((v.total / v.count).toFixed(1)),
+        delta,
+        deltaLabel: delta > 2 ? "Rates higher" : delta < -2 ? "Rates lower" : null,
+      };
+    })
     .filter((r) => r.count >= 2)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);

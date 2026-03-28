@@ -70,6 +70,7 @@ export type GroupedEntrySlide = {
   region: string | null;
   appellation: string | null;
   consumed_at: string | null;
+  created_at: string | null;
 };
 
 export type WineEntry = {

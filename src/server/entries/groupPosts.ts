@@ -193,6 +193,7 @@ export async function resolveGroupedPostData(
           region: slideEntry?.region ?? null,
           appellation: slideEntry?.appellation ?? null,
           consumed_at: slideEntry?.consumed_at ?? null,
+          created_at: slideEntry?.created_at ?? null,
         } satisfies GroupedEntrySlide;
       })
       .filter((slide): slide is GroupedEntrySlide => slide !== null);

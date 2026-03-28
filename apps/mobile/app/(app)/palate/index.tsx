@@ -368,14 +368,11 @@ export default function PalateScreen() {
                   data.regionStats.slice(0, 4).map((r, i) => (
                     <View key={r.region} style={ps.statRow}>
                       <AppText style={[ps.statName, i === 0 && ps.statNameBold]}>{r.region}</AppText>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        {r.delta !== 0 ? (
-                          <AppText style={[ps.deltaText, r.delta > 0 && ps.deltaPositive]}>
-                            {r.delta > 0 ? "+" : ""}{r.delta}
-                          </AppText>
-                        ) : null}
-                        <AppText style={ps.countText}>{r.count}</AppText>
-                      </View>
+                      {(r as { deltaLabel?: string | null }).deltaLabel ? (
+                        <AppText style={[ps.deltaText, r.delta > 0 && ps.deltaPositive]}>
+                          {(r as { deltaLabel: string }).deltaLabel}
+                        </AppText>
+                      ) : null}
                     </View>
                   ))
                 ) : data.surveyFallback?.regions.length ? (

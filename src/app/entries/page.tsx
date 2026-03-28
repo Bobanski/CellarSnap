@@ -112,8 +112,8 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
             style={{
               fontFamily: "var(--font-serif)",
               fontSize: 16,
-              background: "rgba(201, 168, 76, 0.12)",
-              color: "var(--color-accent-gold)",
+              background: "rgba(196, 96, 122, 0.12)",
+              color: "var(--color-accent-secondary)",
               borderRadius: 4,
               padding: "1px 6px",
               lineHeight: 1.4,
@@ -123,7 +123,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
           </span>
         ) : null}
         <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 12 }}>
-          {formatConsumedDate(entry.consumed_at)}
+          {formatConsumedDate(entry.created_at)}
         </span>
       </div>
     </Link>

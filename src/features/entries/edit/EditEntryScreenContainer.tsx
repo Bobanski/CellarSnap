@@ -1952,7 +1952,7 @@ export default function EditEntryPage() {
         <form
           id="entry-edit-form"
           noValidate
-          className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur"
+          className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]"
           onSubmit={onSubmit}
         >
           {isBulkReview ? (
