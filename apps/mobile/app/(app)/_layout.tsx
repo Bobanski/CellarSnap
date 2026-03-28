@@ -447,6 +447,10 @@ export default function AppLayout() {
         name="cellar-import-ct"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="explore"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

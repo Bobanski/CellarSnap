@@ -36,6 +36,7 @@ import {
   type PricePaidSource,
   type PrivacyLevel,
   type QprLevel,
+  toExploreSlug,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
@@ -3488,9 +3489,17 @@ export default function EntryDetailScreen() {
                   {entry.wine_name?.trim() || "Untitled wine"}
                 </AppText>
               )}
-              <AppText style={styles.subtitle}>
-                {entry.producer?.trim() || "Unknown producer"}
-              </AppText>
+              {entry.producer?.trim() ? (
+                <Pressable
+                  onPress={() => {
+                    router.push(`/(app)/explore/producer/${toExploreSlug(entry.producer!)}` as never);
+                  }}
+                >
+                  <AppText style={styles.subtitle}>{entry.producer.trim()}</AppText>
+                </Pressable>
+              ) : (
+                <AppText style={styles.subtitle}>Unknown producer</AppText>
+              )}
             </View>
 
             <View
@@ -4477,21 +4486,49 @@ export default function EntryDetailScreen() {
                 {isOwner || entry.country ? (
                   <View style={styles.metaItem}>
                     <AppText style={styles.metaLabel}>Country</AppText>
-                    <AppText style={styles.metaValue}>{entry.country || "Not set"}</AppText>
+                    {entry.country ? (
+                      <Pressable
+                        onPress={() => {
+                          router.push(`/(app)/explore/region/${toExploreSlug(entry.country!)}` as never);
+                        }}
+                      >
+                        <AppText style={styles.metaValue}>{entry.country}</AppText>
+                      </Pressable>
+                    ) : (
+                      <AppText style={styles.metaValue}>Not set</AppText>
+                    )}
                   </View>
                 ) : null}
 
                 {isOwner || entry.region ? (
                   <View style={styles.metaItem}>
                     <AppText style={styles.metaLabel}>Region</AppText>
-                    <AppText style={styles.metaValue}>{entry.region || "Not set"}</AppText>
+                    {entry.region ? (
+                      <Pressable
+                        onPress={() => {
+                          router.push(`/(app)/explore/region/${toExploreSlug(entry.region!)}` as never);
+                        }}
+                      >
+                        <AppText style={styles.metaValue}>{entry.region}</AppText>
+                      </Pressable>
+                    ) : (
+                      <AppText style={styles.metaValue}>Not set</AppText>
+                    )}
                   </View>
                 ) : null}
 
                 {isOwner || entry.appellation ? (
                   <View style={styles.metaItem}>
                     <AppText style={styles.metaLabel}>Appellation</AppText>
-                    <AppText style={styles.metaValue}>{entry.appellation || "Not set"}</AppText>
+                    {entry.appellation ? (
+                      <Pressable onPress={() => {
+                        router.push(`/(app)/explore/region/${toExploreSlug(entry.appellation!)}` as never);
+                      }}>
+                        <AppText style={[styles.metaValue, styles.metaLink]}>{entry.appellation}</AppText>
+                      </Pressable>
+                    ) : (
+                      <AppText style={styles.metaValue}>Not set</AppText>
+                    )}
                   </View>
                 ) : null}
 
@@ -4507,9 +4544,26 @@ export default function EntryDetailScreen() {
                 {isOwner || primaryGrapeDisplay ? (
                   <View style={styles.metaItem}>
                     <AppText style={styles.metaLabel}>Primary grapes</AppText>
-                    <AppText style={styles.metaValue}>
-                      {primaryGrapeDisplay || "Not set"}
-                    </AppText>
+                    {entry.primary_grapes.length > 0 ? (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                        {[...entry.primary_grapes]
+                          .sort((a, b) => a.position - b.position)
+                          .map((grape, i, arr) => (
+                            <Pressable
+                              key={grape.id}
+                              onPress={() => {
+                                router.push(`/(app)/explore/grape/${toExploreSlug(grape.name)}` as never);
+                              }}
+                            >
+                              <AppText style={styles.metaValue}>
+                                {grape.name}{i < arr.length - 1 ? ", " : ""}
+                              </AppText>
+                            </Pressable>
+                          ))}
+                      </View>
+                    ) : (
+                      <AppText style={styles.metaValue}>Not set</AppText>
+                    )}
                   </View>
                 ) : null}
 
@@ -5964,6 +6018,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 18,
+  },
+  metaLink: {
+    color: colors.accentSecondary,
+    textDecorationLine: "underline",
   },
   qprTag: {
     alignSelf: "flex-start",
