@@ -1974,7 +1974,7 @@ export default function EditEntryPage() {
             </div>
           ) : null}
 
-          {allDisplayPhotos.length > 0 ? (
+          {allDisplayPhotos.some((p) => p.signed_url) ? (
           <div>
             <p className="text-sm font-medium text-[var(--color-text-primary)]">Current photos</p>
             <div className="mt-2">
