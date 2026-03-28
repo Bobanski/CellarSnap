@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     )
     .eq("user_id", user.id)
     .eq("entry_status", "cellaring")
+    .gt("cellar_quantity", 0)
     .order("created_at", { ascending: false });
 
   if (error) {
