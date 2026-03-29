@@ -327,14 +327,30 @@ function RegionPage({
       {(c.most_loved_producer || c.best_qpr_producer) ? (
         <View style={[r.section, { backgroundColor: nextBg() }]}>
           <AppText style={r.sectionLabel}>COMMUNITY PULSE</AppText>
-          <View style={r.communityCardRow}>
+
+          {/* QPR distribution bar */}
+          <AppText style={r.qprBarLabel}>QPR across community logs</AppText>
+          <View style={r.qprBar}>
+            <View style={[r.qprSegment, { flex: 4, backgroundColor: "rgba(184,48,96,0.75)" }]} />
+            <View style={[r.qprSegment, { flex: 18, backgroundColor: "rgba(92,85,80,0.75)" }]} />
+            <View style={[r.qprSegment, { flex: 52, backgroundColor: "rgba(61,107,79,0.75)" }]} />
+            <View style={[r.qprSegment, { flex: 26, backgroundColor: "rgba(123,29,58,0.75)" }]} />
+          </View>
+          <View style={r.qprLegendRow}>
+            <AppText style={[r.qprLegendText, { color: VERDOT }]}>Spot On</AppText>
+            <AppText style={[r.qprLegendText, { color: GRENACHE }]}>Good Value</AppText>
+            <AppText style={[r.qprLegendText, { color: FOG }]}>Pricey</AppText>
+          </View>
+
+          {/* Producer cards */}
+          <View style={[r.communityCardRow, { marginTop: 10 }]}>
             {c.most_loved_producer ? (
               <Pressable
                 style={r.communityCard}
                 onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.most_loved_producer!.name)}`)}
               >
                 <AppText style={r.communityCardWine}>{c.most_loved_producer.name}</AppText>
-                <AppText style={r.communityCardSub}>Most loved · {c.most_loved_producer.avg_rating}</AppText>
+                <AppText style={r.communityCardSub}>Most loved · {c.most_loved_producer.avg_rating} avg</AppText>
               </Pressable>
             ) : null}
             {c.best_qpr_producer ? (
@@ -343,7 +359,7 @@ function RegionPage({
                 onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.best_qpr_producer!.name)}`)}
               >
                 <AppText style={r.communityCardWine}>{c.best_qpr_producer.name}</AppText>
-                <AppText style={r.communityCardSub}>Best QPR · {c.best_qpr_producer.avg_rating}</AppText>
+                <AppText style={r.communityCardSub}>Best QPR</AppText>
               </Pressable>
             ) : null}
           </View>
@@ -353,7 +369,7 @@ function RegionPage({
       {/* ── Layer 10: Based on your palate ────────────── */}
       {c.recommendation_picks && c.recommendation_picks.length > 0 ? (
         <View style={[r.section, { backgroundColor: nextBg() }]}>
-          <AppText style={r.sectionLabel}>BASED ON YOUR PALATE, YOU'D ALSO LOVE</AppText>
+          <AppText style={r.sectionLabel}>IF YOU LIKE THIS, YOU MAY ALSO ENJOY...</AppText>
           <View style={r.recCardRow}>
             {c.recommendation_picks.map((rec) => (
               <Pressable
@@ -677,6 +693,32 @@ const r = StyleSheet.create({
   logAnotherText: {
     fontSize: 9,
     color: ROSE,
+    fontWeight: "500",
+  },
+
+  // QPR bar
+  qprBarLabel: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.4)",
+    marginBottom: 5,
+  },
+  qprBar: {
+    flexDirection: "row",
+    height: 5,
+    borderRadius: 3,
+    overflow: "hidden",
+    gap: 1,
+  },
+  qprSegment: {
+    height: "100%",
+  },
+  qprLegendRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 5,
+  },
+  qprLegendText: {
+    fontSize: 8,
     fontWeight: "500",
   },
 

@@ -23,7 +23,7 @@ const GUIDE_LEVELS = [0.33, 0.66, 1.0];
 const LABEL_COLOR = "rgba(245,237,214,0.5)";
 const GUIDE_COLOR = "rgba(245,237,214,0.1)";
 const ROSE = "#C4607A";
-const LABEL_OFFSET = 16;
+const LABEL_PAD = 28;
 
 function getAngle(i: number): number {
   return (i * 2 * Math.PI) / N - Math.PI / 2;
@@ -48,13 +48,16 @@ export default function FlavorRadar({
   personalData,
   size = 200,
 }: FlavorRadarProps) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxRadius = size / 2 - LABEL_OFFSET - 8;
+  // Use a larger viewBox so labels never clip, but keep the visual size the same
+  const padding = LABEL_PAD;
+  const vbSize = size + padding * 2;
+  const cx = vbSize / 2;
+  const cy = vbSize / 2;
+  const maxRadius = size / 2 - 10;
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <Svg width={size} height={size} viewBox={`0 0 ${vbSize} ${vbSize}`}>
         {/* Concentric guide pentagons */}
         {GUIDE_LEVELS.map((level) => (
           <Polygon
@@ -62,7 +65,7 @@ export default function FlavorRadar({
             points={polygonPoints(cx, cy, maxRadius * level)}
             fill="none"
             stroke={GUIDE_COLOR}
-            strokeWidth={1}
+            strokeWidth={0.5}
           />
         ))}
 
@@ -77,7 +80,7 @@ export default function FlavorRadar({
               x2={x}
               y2={y}
               stroke={GUIDE_COLOR}
-              strokeWidth={1}
+              strokeWidth={0.5}
             />
           );
         })}
@@ -86,9 +89,9 @@ export default function FlavorRadar({
         <Polygon
           points={polygonPoints(cx, cy, maxRadius, data)}
           fill={accentColor}
-          fillOpacity={0.3}
+          fillOpacity={0.25}
           stroke={accentColor}
-          strokeWidth={1.5}
+          strokeWidth={1}
         />
 
         {/* Personal overlay polygon */}
@@ -102,9 +105,9 @@ export default function FlavorRadar({
           />
         )}
 
-        {/* Axis labels */}
+        {/* Axis labels — placed well outside the pentagon */}
         {AXES.map((label, i) => {
-          const [x, y] = getPoint(cx, cy, maxRadius + LABEL_OFFSET, i);
+          const [x, y] = getPoint(cx, cy, maxRadius + 14, i);
           const angle = getAngle(i);
           let textAnchor: "start" | "middle" | "end" = "middle";
           if (Math.cos(angle) > 0.1) textAnchor = "start";
@@ -115,9 +118,9 @@ export default function FlavorRadar({
               key={label}
               x={x}
               y={y}
-              fill={LABEL_COLOR}
-              fontSize={11}
-              fontWeight="500"
+              fill="rgba(245,237,214,0.35)"
+              fontSize={10}
+              fontWeight="400"
               textAnchor={textAnchor}
               alignmentBaseline="central"
             >
