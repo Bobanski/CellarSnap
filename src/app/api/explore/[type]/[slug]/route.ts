@@ -62,9 +62,11 @@ Write a JSON object with these fields:
 - appellations: array of 3-5 notable sub-regions or appellations
 - style: typical wine style description (2-3 sentences)
 - classification: brief note on the classification system if applicable (1-2 sentences, or null)
+- notable_producers: array of 3-5 objects, each with "name" (string) and "why" (one-line description of what makes them notable)
 - food_pairings: array of 4-6 regional food pairings
 - fun_fact: one interesting fact
 - related_regions: array of 3-4 similar/related regions
+- related_grapes: array of 2-3 grapes a lover of this region would also enjoy
 
 Return ONLY valid JSON.`;
 }

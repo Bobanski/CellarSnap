@@ -11,6 +11,11 @@ export type HeroImageAttribution = {
 
 export type SensoryData = Record<string, number>;
 
+export type NotableProducer = {
+  name: string;
+  why: string;
+};
+
 export type ProfileContent = {
   tagline?: string;
   origin?: string;
@@ -30,6 +35,7 @@ export type ProfileContent = {
   related_grapes?: string[];
   related_regions?: string[];
   related_producers?: string[];
+  notable_producers?: NotableProducer[];
   founded?: string;
   grapes?: string[];
   aging_potential?: string;

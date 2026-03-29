@@ -14,6 +14,11 @@ type HeroImageAttribution = {
   url: string;
 };
 
+type NotableProducer = {
+  name: string;
+  why: string;
+};
+
 type ProfileContent = {
   tagline?: string;
   origin?: string;
@@ -34,6 +39,7 @@ type ProfileContent = {
   related_grapes?: string[];
   related_regions?: string[];
   related_producers?: string[];
+  notable_producers?: NotableProducer[];
   classification?: string;
   region?: string;
   style?: string;
@@ -193,41 +199,6 @@ function getGlanceItems(profile: Profile): GlanceItem[] {
   return items;
 }
 
-function getRelatedItems(profile: Profile): { name: string; slug: string; type: ProfileType }[] {
-  const { content, type } = profile;
-  const items: { name: string; slug: string; type: ProfileType }[] = [];
-
-  const relatedGrapes = content.related_grapes ?? [];
-  const relatedRegions = content.related_regions ?? [];
-  const relatedProducers = content.related_producers ?? [];
-
-  for (const name of relatedGrapes) {
-    items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
-  }
-  for (const name of relatedRegions) {
-    items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "region" });
-  }
-  for (const name of relatedProducers) {
-    items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "producer" });
-  }
-
-  // If no explicit related items, fall back to key_grapes / key_wines as cross-links
-  if (items.length === 0) {
-    if (type === "region" && content.key_grapes) {
-      for (const name of content.key_grapes.slice(0, 4)) {
-        items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
-      }
-    }
-    if (type === "producer" && content.grapes) {
-      for (const name of content.grapes.slice(0, 4)) {
-        items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
-      }
-    }
-  }
-
-  return items;
-}
-
 // ─── Main page ──────────────────────────────────────────────
 
 export default function ExploreProfilePage() {
@@ -292,14 +263,37 @@ export default function ExploreProfilePage() {
 
   const { profile, personal_stats } = data;
   const glanceItems = getGlanceItems(profile);
-  const relatedItems = getRelatedItems(profile);
   const hasSensory = profile.sensory_data && Object.keys(profile.sensory_data).length > 0;
   const hasPersonalStats = personal_stats && personal_stats.entry_count > 0;
   const foodPairings = profile.content.food_pairings ?? [];
+  const notableProducers = profile.content.notable_producers ?? [];
+  const keyGrapes = profile.content.key_grapes ?? [];
+  const appellations = profile.content.appellations ?? [];
+  const keyRegions = profile.content.key_regions ?? [];
+  const keyWines = profile.content.key_wines ?? [];
+  const grapes = profile.content.grapes ?? [];
+
+  // Build "you'd also love" items from related_grapes + related_regions
+  const alsoLoveItems: { name: string; slug: string; type: ProfileType }[] = [];
+  for (const name of (profile.content.related_grapes ?? []).slice(0, 2)) {
+    alsoLoveItems.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
+  }
+  for (const name of (profile.content.related_regions ?? []).slice(0, 1)) {
+    alsoLoveItems.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "region" });
+  }
+
+  // Build a simple sensory summary for the preference bridge
+  const topSensoryTraits = hasSensory && profile.sensory_data
+    ? Object.entries(profile.sensory_data)
+        .filter(([, val]) => typeof val === "number")
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([axis]) => SENSORY_AXIS_LABELS[axis] ?? axis)
+    : [];
 
   return (
     <div className="min-h-screen bg-[var(--color-surface-primary)] text-[var(--color-text-primary)]">
-      {/* ── Hero Section ── */}
+      {/* ── 1. Hero Section ── */}
       <section className="relative w-full" style={{ aspectRatio: "16 / 9", maxHeight: 420 }}>
         {profile.hero_image_url ? (
           <>
@@ -362,26 +356,83 @@ export default function ExploreProfilePage() {
 
       {/* ── Content ── */}
       <div className="px-5 py-6">
-        <div className="mx-auto w-full max-w-[800px] space-y-6">
+        <div className="mx-auto w-full max-w-[800px] space-y-8">
 
-          {/* ── At a Glance ── */}
-          {glanceItems.length > 0 && (
-            <section className="flex flex-col gap-3">
-              {glanceItems.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 space-y-1"
-                >
-                  <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
-                    {item.label}
-                  </p>
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.value}</p>
-                </div>
-              ))}
+          {/* ── 2. The Story ── */}
+          {(profile.content.origin || profile.content.characteristics || profile.content.style || profile.content.climate) && (
+            <section className="space-y-4">
+              <h2
+                className="text-[28px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                The Story
+              </h2>
+              <div className="space-y-3">
+                {profile.type === "grape" && (
+                  <>
+                    {profile.content.origin && (
+                      <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                        {profile.content.origin}
+                      </p>
+                    )}
+                    {profile.content.characteristics && (
+                      <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                        {profile.content.characteristics}
+                      </p>
+                    )}
+                  </>
+                )}
+                {profile.type === "region" && (
+                  <>
+                    {profile.content.climate && (
+                      <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                        {profile.content.climate}
+                      </p>
+                    )}
+                    {profile.content.style && (
+                      <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                        {profile.content.style}
+                      </p>
+                    )}
+                  </>
+                )}
+                {profile.type === "producer" && (
+                  <>
+                    {profile.content.style && (
+                      <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                        {profile.content.style}
+                      </p>
+                    )}
+                    {profile.content.origin && (
+                      <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                        {profile.content.origin}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              {profile.content.aging_potential && profile.type === "grape" && (
+                <p className="text-[15px] leading-[1.7] text-[var(--color-text-secondary)]">
+                  <span className="font-semibold text-[var(--color-text-primary)]">Aging potential:</span>{" "}
+                  {profile.content.aging_potential}
+                </p>
+              )}
             </section>
           )}
 
-          {/* ── Your History ── */}
+          {/* ── 3. Fun Fact ── */}
+          {profile.content.fun_fact && (
+            <div className="rounded-2xl border border-[var(--color-accent-rose)] bg-[var(--color-accent-soft)] p-5">
+              <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-accent-secondary)] mb-2">
+                Did you know?
+              </p>
+              <p className="text-[15px] leading-[1.7] text-[var(--color-text-primary)]">
+                {profile.content.fun_fact}
+              </p>
+            </div>
+          )}
+
+          {/* ── 4. Your History (if logged) ── */}
           {hasPersonalStats && (
             <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
               <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
@@ -426,58 +477,33 @@ export default function ExploreProfilePage() {
             </section>
           )}
 
-          {/* ── The Story ── */}
-          {(profile.content.origin || profile.content.characteristics || profile.content.style) && (
-            <section className="space-y-4">
-              <h2
-                className="text-[24px] font-light text-[var(--color-text-primary)]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                The Story
-              </h2>
-              {profile.content.origin && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {profile.content.origin}
-                </p>
-              )}
-              {profile.content.characteristics && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {profile.content.characteristics}
-                </p>
-              )}
-              {profile.content.style && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {profile.content.style}
-                </p>
-              )}
-              {profile.content.aging_potential && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  <span className="font-semibold text-[var(--color-text-primary)]">Aging potential:</span>{" "}
-                  {profile.content.aging_potential}
-                </p>
-              )}
-              {profile.content.fun_fact && (
-                <div className="rounded-2xl border border-[var(--color-accent-rose)] bg-[var(--color-accent-soft)] p-5">
-                  <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-accent-secondary)] mb-2">
-                    Did you know?
-                  </p>
-                  <p className="text-sm leading-relaxed text-[var(--color-text-primary)]">
-                    {profile.content.fun_fact}
-                  </p>
-                </div>
-              )}
+          {/* ── 5. Preference Bridge (if no logs) ── */}
+          {!hasPersonalStats && topSensoryTraits.length > 0 && (
+            <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-2">
+              <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
+                Based on your palate
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                You might enjoy {profile.display_name} because{" "}
+                {profile.type === "grape" ? "this grape" : profile.type === "region" ? "wines from here" : "this producer"}{" "}
+                tends toward{" "}
+                <span className="font-semibold text-[var(--color-text-primary)]">
+                  {topSensoryTraits.join(", ")}
+                </span>
+                {" "}&mdash; traits that align well with adventurous palates.
+              </p>
             </section>
           )}
 
-          {/* ── Sensory Profile ── */}
-          {hasSensory && profile.sensory_data && (
+          {/* ── 6. Sensory Profile ── */}
+          {hasSensory && profile.sensory_data && profile.type !== "producer" && (
             <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-4">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
-                  Sensory profile
+                  Typical sensory signature
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                  Typical sensory profile for {profile.display_name}
+                  Sensory profile for {profile.display_name}
                 </p>
               </div>
               <div className="space-y-3">
@@ -495,7 +521,170 @@ export default function ExploreProfilePage() {
             </section>
           )}
 
-          {/* ── Food Pairings ── */}
+          {/* ── 7. Notable Producers (regions only) ── */}
+          {profile.type === "region" && notableProducers.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Notable Producers
+              </h2>
+              <div className="flex flex-col gap-2">
+                {notableProducers.map((producer) => (
+                  <Link
+                    key={producer.name}
+                    href={`/explore/producer/${producer.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 transition hover:border-[var(--color-accent-secondary)]"
+                  >
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-secondary)] transition">
+                      {producer.name}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-tertiary)]">
+                      {producer.why}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 8a. Key Grapes (regions) ── */}
+          {profile.type === "region" && keyGrapes.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Key Grapes
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {keyGrapes.map((grape) => (
+                  <Link
+                    key={grape}
+                    href={`/explore/grape/${grape.toLowerCase().replace(/\s+/g, "-")}`}
+                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+                  >
+                    {grape}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 8b. Key Regions (grapes) ── */}
+          {profile.type === "grape" && keyRegions.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Key Regions
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {keyRegions.map((region) => (
+                  <Link
+                    key={region}
+                    href={`/explore/region/${region.toLowerCase().replace(/\s+/g, "-")}`}
+                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+                  >
+                    {region}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 8c. Key Wines (producers) ── */}
+          {profile.type === "producer" && keyWines.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Key Wines
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {keyWines.map((wine) => (
+                  <Chip key={wine}>{wine}</Chip>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 8d. Grapes Used (producers) ── */}
+          {profile.type === "producer" && grapes.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Grapes Used
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {grapes.map((grape) => (
+                  <Link
+                    key={grape}
+                    href={`/explore/grape/${grape.toLowerCase().replace(/\s+/g, "-")}`}
+                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+                  >
+                    {grape}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 9. Key Appellations (regions) ── */}
+          {profile.type === "region" && appellations.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                Key Appellations
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {appellations.map((appellation) => (
+                  <Link
+                    key={appellation}
+                    href={`/explore/region/${appellation.toLowerCase().replace(/\s+/g, "-")}`}
+                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+                  >
+                    {appellation}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 10. Based on Your Palate / You'd Also Love ── */}
+          {alsoLoveItems.length > 0 && (
+            <section className="space-y-3">
+              <h2
+                className="text-[24px] font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                You&apos;d also love
+              </h2>
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                Based on the flavour profile of {profile.display_name}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {alsoLoveItems.map((item) => (
+                  <Link
+                    key={`${item.type}-${item.slug}`}
+                    href={`/explore/${item.type}/${item.slug}`}
+                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── 11. Food Pairings ── */}
           {foodPairings.length > 0 && (
             <section className="space-y-3">
               <h2
@@ -512,24 +701,26 @@ export default function ExploreProfilePage() {
             </section>
           )}
 
-          {/* ── Related ── */}
-          {relatedItems.length > 0 && (
+          {/* ── 12. At a Glance ── */}
+          {glanceItems.length > 0 && (
             <section className="space-y-3">
               <h2
                 className="text-[24px] font-light text-[var(--color-text-primary)]"
                 style={{ fontFamily: "var(--font-serif)" }}
               >
-                Related
+                At a Glance
               </h2>
-              <div className="flex flex-wrap gap-2">
-                {relatedItems.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.slug}`}
-                    href={`/explore/${item.type}/${item.slug}`}
-                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+              <div className="flex flex-col gap-3">
+                {glanceItems.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 space-y-1"
                   >
-                    {item.name}
-                  </Link>
+                    <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
+                      {item.label}
+                    </p>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.value}</p>
+                  </div>
                 ))}
               </div>
             </section>

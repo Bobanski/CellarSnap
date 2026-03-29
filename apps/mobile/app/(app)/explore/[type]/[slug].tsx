@@ -207,28 +207,26 @@ export default function ExploreProfileScreen() {
       glanceCards.push({ label: "Classification", value: c.classification });
   }
 
-  // Story text
+  // Story text — type-adaptive
   const storyParts: string[] = [];
-  if (c.origin) storyParts.push(c.origin);
-  if (c.characteristics) storyParts.push(c.characteristics);
-  if (c.style) storyParts.push(c.style);
+  if (profileType === "grape") {
+    if (c.origin) storyParts.push(c.origin);
+    if (c.characteristics) storyParts.push(c.characteristics);
+  } else if (profileType === "region") {
+    if (c.climate) storyParts.push(c.climate);
+    if (c.style) storyParts.push(c.style);
+  } else {
+    if (c.style) storyParts.push(c.style);
+    if (c.origin) storyParts.push(c.origin);
+  }
 
-  // Related items
-  const relatedItems: { name: string; type: ExploreProfileType }[] = [];
-  if (c.related_grapes) {
-    for (const name of c.related_grapes) {
-      relatedItems.push({ name, type: "grape" });
-    }
+  // "You'd also love" items
+  const alsoLoveItems: { name: string; type: ExploreProfileType }[] = [];
+  for (const name of (c.related_grapes ?? []).slice(0, 2)) {
+    alsoLoveItems.push({ name, type: "grape" });
   }
-  if (c.related_regions) {
-    for (const name of c.related_regions) {
-      relatedItems.push({ name, type: "region" });
-    }
-  }
-  if (c.related_producers) {
-    for (const name of c.related_producers) {
-      relatedItems.push({ name, type: "producer" });
-    }
+  for (const name of (c.related_regions ?? []).slice(0, 1)) {
+    alsoLoveItems.push({ name, type: "region" });
   }
 
   // Sensory data
@@ -282,22 +280,28 @@ export default function ExploreProfileScreen() {
           </View>
         </View>
 
-        {/* ── At a Glance ────────────────────────────────── */}
-        {glanceCards.length > 0 ? (
-          <Section title="AT A GLANCE">
-            <View style={s.glanceRow}>
-              {glanceCards.map((card) => (
-                <InfoCard
-                  key={card.label}
-                  label={card.label}
-                  value={card.value}
-                />
-              ))}
-            </View>
+        {/* ── 2. The Story ────────────────────────────────── */}
+        {storyParts.length > 0 ? (
+          <Section title="THE STORY">
+            <AppText style={s.storyText}>{storyParts.join("\n\n")}</AppText>
+            {c.aging_potential && profileType === "grape" ? (
+              <AppText style={s.storyText}>
+                <AppText style={s.historyBold}>Aging potential: </AppText>
+                {c.aging_potential}
+              </AppText>
+            ) : null}
           </Section>
         ) : null}
 
-        {/* ── Your History ───────────────────────────────── */}
+        {/* ── 3. Fun Fact ────────────────────────────────── */}
+        {c.fun_fact ? (
+          <View style={[s.funFactCard, { marginHorizontal: 18 }]}>
+            <AppText style={s.funFactLabel}>DID YOU KNOW?</AppText>
+            <AppText style={s.funFactText}>{c.fun_fact}</AppText>
+          </View>
+        ) : null}
+
+        {/* ── 4. Your History (if logged) ────────────────── */}
         {personal_stats.entry_count > 0 ? (
           <View style={s.card}>
             <AppText style={s.cardLabel}>YOUR HISTORY</AppText>
@@ -314,58 +318,117 @@ export default function ExploreProfileScreen() {
           </View>
         ) : null}
 
-        {/* ── The Story ──────────────────────────────────── */}
-        {storyParts.length > 0 || c.fun_fact ? (
-          <Section title="THE STORY">
-            {storyParts.length > 0 ? (
-              <AppText style={s.storyText}>{storyParts.join("\n\n")}</AppText>
-            ) : null}
-            {c.fun_fact ? (
-              <View style={s.funFactCard}>
-                <AppText style={s.funFactLabel}>FUN FACT</AppText>
-                <AppText style={s.funFactText}>{c.fun_fact}</AppText>
-              </View>
-            ) : null}
-          </Section>
+        {/* ── 5. Preference Bridge (if no logs) ─────────── */}
+        {personal_stats.entry_count === 0 && sensoryEntries.length > 0 ? (
+          <View style={s.card}>
+            <AppText style={s.cardLabel}>BASED ON YOUR PALATE</AppText>
+            <AppText style={s.historyText}>
+              You might enjoy {profile.display_name} because{" "}
+              {profileType === "grape"
+                ? "this grape"
+                : profileType === "region"
+                  ? "wines from here"
+                  : "this producer"}{" "}
+              tends toward{" "}
+              <AppText style={s.historyBold}>
+                {sensoryEntries
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 3)
+                  .map(([key]) => key.charAt(0).toUpperCase() + key.slice(1))
+                  .join(", ")}
+              </AppText>
+              .
+            </AppText>
+          </View>
         ) : null}
 
-        {/* ── Sensory Profile ────────────────────────────── */}
-        {sensoryEntries.length > 0 ? (
-          <Section title="SENSORY PROFILE">
+        {/* ── 6. Sensory Profile ─────────────────────────── */}
+        {sensoryEntries.length > 0 && profileType !== "producer" ? (
+          <Section title="TYPICAL SENSORY SIGNATURE">
             <View style={s.card}>
               <View style={{ gap: 8 }}>
-                {sensoryEntries.map(([key, value]) => (
-                  <SensoryBar
-                    key={key}
-                    label={key.charAt(0).toUpperCase() + key.slice(1)}
-                    value={value}
-                  />
-                ))}
+                {sensoryEntries
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([key, value]) => (
+                    <SensoryBar
+                      key={key}
+                      label={key.charAt(0).toUpperCase() + key.slice(1)}
+                      value={value}
+                    />
+                  ))}
               </View>
             </View>
           </Section>
         ) : null}
 
-        {/* ── Food Pairings ──────────────────────────────── */}
-        {c.food_pairings && c.food_pairings.length > 0 ? (
-          <Section title="FOOD PAIRINGS">
-            <View style={s.chipRow}>
-              {c.food_pairings.map((item) => (
-                <Chip key={item} label={item} />
+        {/* ── 7. Notable Producers (region only) ─────────── */}
+        {profileType === "region" && c.notable_producers && c.notable_producers.length > 0 ? (
+          <Section title="NOTABLE PRODUCERS">
+            <View style={{ gap: 6 }}>
+              {c.notable_producers.map((producer) => (
+                <Pressable
+                  key={producer.name}
+                  style={s.relatedItem}
+                  onPress={() =>
+                    router.push(
+                      `/(app)/explore/producer/${toExploreSlug(producer.name)}`,
+                    )
+                  }
+                >
+                  <View style={s.relatedBadge}>
+                    <AppText style={s.relatedBadgeText}>P</AppText>
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <AppText style={s.relatedName}>{producer.name}</AppText>
+                    <AppText style={s.producerWhy}>{producer.why}</AppText>
+                  </View>
+                  <AppText style={s.relatedArrow}>{"\u2192"}</AppText>
+                </Pressable>
               ))}
             </View>
           </Section>
         ) : null}
 
-        {/* ── Aging Potential (grape) ────────────────────── */}
-        {c.aging_potential ? (
-          <Section title="AGING POTENTIAL">
-            <AppText style={s.storyText}>{c.aging_potential}</AppText>
+        {/* ── 8a. Key Grapes (region) ────────────────────── */}
+        {profileType === "region" && c.key_grapes && c.key_grapes.length > 0 ? (
+          <Section title="KEY GRAPES">
+            <View style={s.chipRow}>
+              {c.key_grapes.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  onPress={() =>
+                    router.push(
+                      `/(app)/explore/grape/${toExploreSlug(item)}`,
+                    )
+                  }
+                />
+              ))}
+            </View>
           </Section>
         ) : null}
 
-        {/* ── Key Wines (producer) ───────────────────────── */}
-        {c.key_wines && c.key_wines.length > 0 ? (
+        {/* ── 8b. Key Regions (grape) ────────────────────── */}
+        {profileType === "grape" && c.key_regions && c.key_regions.length > 0 ? (
+          <Section title="KEY REGIONS">
+            <View style={s.chipRow}>
+              {c.key_regions.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  onPress={() =>
+                    router.push(
+                      `/(app)/explore/region/${toExploreSlug(item)}`,
+                    )
+                  }
+                />
+              ))}
+            </View>
+          </Section>
+        ) : null}
+
+        {/* ── 8c. Key Wines (producer) ───────────────────── */}
+        {profileType === "producer" && c.key_wines && c.key_wines.length > 0 ? (
           <Section title="KEY WINES">
             <View style={s.chipRow}>
               {c.key_wines.map((item) => (
@@ -375,9 +438,28 @@ export default function ExploreProfileScreen() {
           </Section>
         ) : null}
 
-        {/* ── Appellations (region) ──────────────────────── */}
-        {c.appellations && c.appellations.length > 0 ? (
-          <Section title="APPELLATIONS">
+        {/* ── 8d. Grapes Used (producer) ─────────────────── */}
+        {profileType === "producer" && c.grapes && c.grapes.length > 0 ? (
+          <Section title="GRAPES USED">
+            <View style={s.chipRow}>
+              {c.grapes.map((item) => (
+                <Chip
+                  key={item}
+                  label={item}
+                  onPress={() =>
+                    router.push(
+                      `/(app)/explore/grape/${toExploreSlug(item)}`,
+                    )
+                  }
+                />
+              ))}
+            </View>
+          </Section>
+        ) : null}
+
+        {/* ── 9. Key Appellations (region) ────────────────── */}
+        {profileType === "region" && c.appellations && c.appellations.length > 0 ? (
+          <Section title="KEY APPELLATIONS">
             <View style={s.chipRow}>
               {c.appellations.map((item) => (
                 <Chip
@@ -394,11 +476,14 @@ export default function ExploreProfileScreen() {
           </Section>
         ) : null}
 
-        {/* ── Related ────────────────────────────────────── */}
-        {relatedItems.length > 0 ? (
-          <Section title="RELATED">
+        {/* ── 10. You'd Also Love ────────────────────────── */}
+        {alsoLoveItems.length > 0 ? (
+          <Section title="YOU'D ALSO LOVE">
+            <AppText style={[s.storyText, { marginBottom: 4 }]}>
+              Based on the flavour profile of {profile.display_name}
+            </AppText>
             <View style={{ gap: 6 }}>
-              {relatedItems.map((item) => (
+              {alsoLoveItems.map((item) => (
                 <Pressable
                   key={`${item.type}-${item.name}`}
                   style={s.relatedItem}
@@ -416,6 +501,32 @@ export default function ExploreProfileScreen() {
                   <AppText style={s.relatedName}>{item.name}</AppText>
                   <AppText style={s.relatedArrow}>{"\u2192"}</AppText>
                 </Pressable>
+              ))}
+            </View>
+          </Section>
+        ) : null}
+
+        {/* ── 11. Food Pairings ──────────────────────────── */}
+        {c.food_pairings && c.food_pairings.length > 0 ? (
+          <Section title="FOOD PAIRINGS">
+            <View style={s.chipRow}>
+              {c.food_pairings.map((item) => (
+                <Chip key={item} label={item} />
+              ))}
+            </View>
+          </Section>
+        ) : null}
+
+        {/* ── 12. At a Glance ────────────────────────────── */}
+        {glanceCards.length > 0 ? (
+          <Section title="AT A GLANCE">
+            <View style={s.glanceRow}>
+              {glanceCards.map((card) => (
+                <InfoCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                />
               ))}
             </View>
           </Section>
@@ -661,6 +772,11 @@ const s = StyleSheet.create({
   relatedArrow: {
     color: colors.textTertiary,
     fontSize: 14,
+  },
+  producerWhy: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    lineHeight: 15,
   },
 
   // Attribution
