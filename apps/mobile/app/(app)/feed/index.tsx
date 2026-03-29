@@ -210,15 +210,9 @@ function GroupedPostGallery({
     <View style={{ flex: 1 }}>
       {/* Header strip above photos — matching web */}
       <View style={groupedStyles.galleryHeader}>
-        <View style={{ flex: 1 }}>
-          {title ? (
-            <AppText style={groupedStyles.galleryHeaderTitle}>{title}</AppText>
-          ) : null}
-          <AppText style={groupedStyles.galleryHeaderWine} numberOfLines={1}>{slideTitle}</AppText>
-          {slideMeta ? (
-            <AppText style={groupedStyles.galleryHeaderMeta} numberOfLines={1}>{slideMeta}</AppText>
-          ) : null}
-        </View>
+        {title ? (
+          <AppText style={groupedStyles.galleryHeaderTitle}>{title}</AppText>
+        ) : null}
         {activeSlide?.consumed_at ? (
           <AppText style={groupedStyles.galleryHeaderDate}>
             Drank {formatConsumedDate(activeSlide.consumed_at)}
@@ -313,11 +307,6 @@ function GroupedPostGallery({
                 resizeMode="cover"
                 fadeDuration={0}
               />
-              <View style={groupedStyles.slideLabelPill}>
-                <AppText style={groupedStyles.slideLabelText}>
-                  {slide.label}
-                </AppText>
-              </View>
             </View>
           ))}
         </ScrollView>
@@ -330,14 +319,6 @@ function GroupedPostGallery({
               resizeMode="cover"
               fadeDuration={0}
             />
-            <View style={groupedStyles.overlayGradient} />
-            <View style={groupedStyles.overlayContent}>
-              <View style={groupedStyles.slideLabelPill}>
-                <AppText style={groupedStyles.slideLabelText}>
-                  {activeSlide.label}
-                </AppText>
-              </View>
-            </View>
           </View>
         </Pressable>
       )}
@@ -866,16 +847,30 @@ function FeedCard({
       )}
 
       <Pressable style={styles.feedTextStack} onPress={handleCardPress}>
-        {isGrouped && item.entry_group ? (
-          <View style={styles.feedGroupedLabelRow}>
-            <View style={styles.feedEventBadge}>
-              <AppText style={styles.feedEventBadgeText}>
-                {item.entry_group.mode === "event" ? "Event" : "Catch-up"}
-              </AppText>
-            </View>
-            <AppText style={styles.feedMetaText}>Grouped bulk post</AppText>
-          </View>
-        ) : (
+        {isGrouped ? (() => {
+          const activeSlide = groupSlides[galleryActiveIndex] ?? null;
+          const wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
+          const slideMeta = (() => {
+            if (!activeSlide) return "";
+            const parts = [
+              activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
+              activeSlide.vintage,
+              activeSlide.appellation || activeSlide.region,
+              activeSlide.country,
+            ].filter(Boolean);
+            return parts.slice(0, 3).join(" · ");
+          })();
+          return (
+            <>
+              {wineName ? (
+                <AppText style={styles.feedWineName}>{wineName}</AppText>
+              ) : null}
+              {slideMeta ? (
+                <AppText style={styles.feedMetaText}>{slideMeta}</AppText>
+              ) : null}
+            </>
+          );
+        })() : (
           <>
             {item.wine_name ? (
               <AppText style={styles.feedWineName}>{item.wine_name}</AppText>
@@ -2600,9 +2595,9 @@ const groupedStyles = StyleSheet.create({
   galleryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     gap: 8,
     backgroundColor: colors.surfaceMuted,
     borderBottomWidth: 1,

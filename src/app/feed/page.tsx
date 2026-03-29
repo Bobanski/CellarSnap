@@ -336,6 +336,7 @@ export default function FeedPage() {
   const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
   const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
+  const [groupedSlideIndexByEntryId, setGroupedSlideIndexByEntryId] = useState<Record<string, number>>({});
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
   >({});
@@ -1065,6 +1066,11 @@ export default function FeedPage() {
                         {Math.round(matchScores[entry.id].score)}%
                       </span>
                     ) : null}
+                    {entry.entry_group ? (
+                      <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
+                        {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -1157,20 +1163,35 @@ export default function FeedPage() {
                       title={entry.entry_group.title}
                       slides={entry.group_slides ?? []}
                       heightClassName=""
+                      onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}
                     />
                   ) : (
                     <EntryPhotoGallery entry={entry} />
                   )}
                 </div>
                 <div className="mt-4">
-                  {entry.entry_group ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                      <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-1 font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                        {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
-                      </span>
-                      <span>Grouped bulk post</span>
-                    </div>
-                  ) : (
+                  {entry.entry_group ? (() => {
+                    const activeSlide = (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0] ?? null;
+                    const wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
+                    const meta = activeSlide ? [
+                      activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
+                      activeSlide.vintage,
+                      activeSlide.appellation || activeSlide.region,
+                      activeSlide.country,
+                    ].filter(Boolean).slice(0, 3).join(" · ") : "";
+                    return (
+                      <div className="min-w-0">
+                        {wineName ? (
+                          <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
+                            {wineName}
+                          </h2>
+                        ) : null}
+                        {meta ? (
+                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
+                        ) : null}
+                      </div>
+                    );
+                  })() : (
                     <div className="min-w-0">
                       {entry.wine_name ? (
                         <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
@@ -1202,14 +1223,9 @@ export default function FeedPage() {
                     !Number.isNaN(entry.rating) ? (
                       <span
                         style={{
-                          background: "rgba(201, 168, 76, 0.1)",
-                          border: "0.5px solid rgba(201, 168, 76, 0.22)",
-                          color: "var(--color-accent-gold)",
-                          fontFamily: "var(--font-serif)",
-                          fontSize: 18,
-                          fontWeight: 700,
-                          padding: "4px 10px",
-                          borderRadius: 6,
+                          color: "#C4607A",
+                          fontSize: 14,
+                          fontWeight: 800,
                         }}
                         title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
                       >
