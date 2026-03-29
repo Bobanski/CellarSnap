@@ -208,6 +208,12 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             onClose={onClose}
           />
           <MenuLink
+            href="/explore"
+            label="Explore"
+            subtitle="Grapes, regions, and producers"
+            onClose={onClose}
+          />
+          <MenuLink
             href="/friends"
             label="Friends"
             subtitle="Requests, search, suggestions"
