@@ -134,30 +134,38 @@ function RegionPage({
 
         {hasLogs ? (
           <>
-            {personal_stats.avg_rating > 0 ? (
-              <View style={r.personalTopCard}>
-                <View style={{ flex: 1 }}>
-                  <AppText style={r.personalSmallLabel}>YOUR AVERAGE</AppText>
-                  <AppText style={r.personalWineName}>
-                    {personal_stats.entry_count}{" "}
-                    {personal_stats.entry_count === 1 ? "wine" : "wines"} logged
-                  </AppText>
-                </View>
-                <AppText style={r.personalRating}>
-                  {personal_stats.avg_rating.toFixed(1)}
+            {/* Top rated card */}
+            <View style={r.personalTopCard}>
+              <View style={{ flex: 1 }}>
+                <AppText style={r.personalSmallLabel}>TOP RATED</AppText>
+                <AppText style={r.personalWineName}>
+                  {personal_stats.entry_count}{" "}
+                  {personal_stats.entry_count === 1 ? "wine" : "wines"} logged
                 </AppText>
               </View>
-            ) : null}
+              {personal_stats.avg_rating > 0 ? (
+                <View style={{ alignItems: "flex-end" }}>
+                  <AppText style={r.personalRating}>
+                    {Math.round(personal_stats.avg_rating)}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Insight card */}
             <View style={r.insightCard}>
               <AppText style={r.insightText}>
-                You've explored {profile.display_name} across{" "}
-                {personal_stats.entry_count}{" "}
-                {personal_stats.entry_count === 1 ? "wine" : "wines"}.
-                {personal_stats.avg_rating > 0
-                  ? ` Your average rating: ${personal_stats.avg_rating.toFixed(1)}.`
-                  : ""}
+                {c.personal_insight ?? `You've logged ${personal_stats.entry_count} ${personal_stats.entry_count === 1 ? "wine" : "wines"} from ${profile.display_name}. Your average sits at ${personal_stats.avg_rating > 0 ? personal_stats.avg_rating.toFixed(1) : "—"}.`}
               </AppText>
             </View>
+
+            {/* + Log another */}
+            <Pressable
+              style={r.logAnotherBtn}
+              onPress={() => router.push("/(app)/entries/new")}
+            >
+              <AppText style={r.logAnotherText}>+ Log another</AppText>
+            </Pressable>
           </>
         ) : (
           <View style={r.insightCard}>
@@ -181,19 +189,19 @@ function RegionPage({
             />
           </View>
           <View style={r.legendRow}>
+            {hasLogs ? (
+              <View style={r.legendItem}>
+                <View style={[r.legendLine, { backgroundColor: ROSE }]} />
+                <AppText style={r.legendText}>Your {personal_stats.entry_count} {personal_stats.entry_count === 1 ? "log" : "logs"}</AppText>
+              </View>
+            ) : null}
             <View style={r.legendItem}>
               <View style={[r.legendLine, { backgroundColor: GRENACHE }]} />
               <AppText style={r.legendText}>Region avg</AppText>
             </View>
-            {hasLogs ? (
-              <View style={r.legendItem}>
-                <View style={[r.legendLine, { backgroundColor: ROSE }]} />
-                <AppText style={r.legendText}>Your palate</AppText>
-              </View>
-            ) : null}
           </View>
           <AppText style={r.radarInsight}>
-            Typical flavor signature of wines from {profile.display_name}.
+            {c.personal_insight ?? `Typical flavor signature of wines from ${profile.display_name}.`}
           </AppText>
         </View>
       ) : null}
@@ -276,32 +284,90 @@ function RegionPage({
       ) : null}
 
       {/* ── Layer 8: Key Appellations ─────────────────── */}
-      {appellationItems.length > 0 ? (
+      {(() => {
+        const zones = Array.isArray(c.zone_descriptions) && c.zone_descriptions.length > 0
+          ? c.zone_descriptions
+          : appellationItems.length > 0
+            ? appellationItems.map((a) => ({ name: a.name, note: a.character }))
+            : [];
+        if (zones.length === 0 && appellationItems.length === 0) return null;
+        return (
+          <View style={[r.section, { backgroundColor: nextBg() }]}>
+            <AppText style={r.sectionLabel}>KEY APPELLATIONS + ZONES</AppText>
+            {/* Appellation chips */}
+            {appellationItems.length > 0 ? (
+              <View style={r.grapeChipRow}>
+                {appellationItems.map((app) => (
+                  <Pressable
+                    key={app.name}
+                    onPress={() => router.push(`/(app)/explore/region/${toExploreSlug(app.name)}`)}
+                    style={r.grapeChipPrimary}
+                  >
+                    <AppText style={r.grapeChipTextPrimary}>{app.name}</AppText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {/* Zone descriptions */}
+            {zones.length > 0 ? (
+              <View style={{ marginTop: 10 }}>
+                {zones.map((zone) => (
+                  <View key={zone.name} style={r.zoneRow}>
+                    <AppText style={r.zoneName}>{zone.name}</AppText>
+                    {zone.note ? <AppText style={r.zoneNote}>{zone.note}</AppText> : null}
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        );
+      })()}
+
+      {/* ── Layer 9: Community Pulse ──────────────────── */}
+      {(c.most_loved_producer || c.best_qpr_producer) ? (
         <View style={[r.section, { backgroundColor: nextBg() }]}>
-          <AppText style={r.sectionLabel}>KEY APPELLATIONS + ZONES</AppText>
-          {appellationItems.map((app) => (
-            <Pressable
-              key={app.name}
-              style={r.zoneRow}
-              onPress={() =>
-                router.push(
-                  `/(app)/explore/region/${toExploreSlug(app.name)}`
-                )
-              }
-            >
-              <AppText style={r.zoneName}>{app.name}</AppText>
-              {app.character ? (
-                <AppText style={r.zoneNote}>{app.character}</AppText>
-              ) : null}
-            </Pressable>
-          ))}
+          <AppText style={r.sectionLabel}>COMMUNITY PULSE</AppText>
+          <View style={r.communityCardRow}>
+            {c.most_loved_producer ? (
+              <Pressable
+                style={r.communityCard}
+                onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.most_loved_producer!.name)}`)}
+              >
+                <AppText style={r.communityCardWine}>{c.most_loved_producer.name}</AppText>
+                <AppText style={r.communityCardSub}>Most loved · {c.most_loved_producer.avg_rating}</AppText>
+              </Pressable>
+            ) : null}
+            {c.best_qpr_producer ? (
+              <Pressable
+                style={r.communityCard}
+                onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.best_qpr_producer!.name)}`)}
+              >
+                <AppText style={r.communityCardWine}>{c.best_qpr_producer.name}</AppText>
+                <AppText style={r.communityCardSub}>Best QPR · {c.best_qpr_producer.avg_rating}</AppText>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       ) : null}
 
-      {/* ── Layer 9: Community Pulse (placeholder) ────── */}
-      {/* QPR distribution + most-loved wine will be implemented when aggregate data is available */}
-
-      {/* ── Layer 10: Recommendations (placeholder) ───── */}
+      {/* ── Layer 10: Based on your palate ────────────── */}
+      {c.recommendation_picks && c.recommendation_picks.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>BASED ON YOUR PALATE, YOU'D ALSO LOVE</AppText>
+          <View style={r.recCardRow}>
+            {c.recommendation_picks.map((rec) => (
+              <Pressable
+                key={rec.name}
+                style={r.recCard}
+                onPress={() => router.push(`/(app)/explore/${rec.type}/${toExploreSlug(rec.name)}`)}
+              >
+                <AppText style={r.recCardName}>{rec.name}</AppText>
+                <AppText style={r.recCardWhy}>{rec.why}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       {/* ── Layer 11: Food Pairings ───────────────────── */}
       {c.food_pairings && c.food_pairings.length > 0 ? (
@@ -597,6 +663,70 @@ const r = StyleSheet.create({
     fontSize: 9,
     color: "rgba(245,237,214,0.3)",
     marginTop: 8,
+  },
+
+  // Log another button
+  logAnotherBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(196,96,122,0.12)",
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  logAnotherText: {
+    fontSize: 9,
+    color: ROSE,
+    fontWeight: "500",
+  },
+
+  // Community pulse
+  communityCardRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  communityCard: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  communityCardWine: {
+    fontFamily: fonts.serif.light,
+    fontSize: 12,
+    color: CHAMPAGNE,
+    marginBottom: 2,
+  },
+  communityCardSub: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.4)",
+  },
+
+  // Recommendation cards
+  recCardRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  recCard: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 9,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  recCardName: {
+    fontFamily: fonts.serif.light,
+    fontSize: 13,
+    color: CHAMPAGNE,
+    marginBottom: 3,
+  },
+  recCardWhy: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.42)",
+    lineHeight: 13,
   },
 
   // Winemakers

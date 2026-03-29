@@ -65,11 +65,16 @@ Write a JSON object with these fields:
 - notable_winemakers: array of objects with { name: string, why: string } — 3-5 producers with "why they matter" in one sentence
 - appellations: array of objects with { name: string, character: string } — 3-5 sub-zones with a short sensory character note
 - food_pairings: array of 4-6 specific regional food pairings (not generic — tied to the place)
-- fun_facts: array of 2-3 surprising "did you know" strings that would make someone stop mid-sip
+- fun_facts: array of exactly 3 surprising "did you know" strings that would make someone stop mid-sip
 - related_regions: array of 3-4 similar region names (strings)
 - flavor_profile: object with { Tannin: number, Acidity: number, Body: number, Oak: number, Fruit: number } — each 0-100 scale representing the region's TYPICAL wine style
 - classification: classification system if applicable (string or null)
 - style: 2-3 sentences about typical wine styles from here
+- most_loved_producer: object with { name: string, avg_rating: number } — the most celebrated producer from this region
+- best_qpr_producer: object with { name: string, avg_rating: number } — the producer known for best quality-to-price ratio
+- recommendation_picks: array of exactly 3 objects with { name: string, type: "grape"|"region"|"producer", why: string } — personalized "based on your palate you'd also love" suggestions. These should be specifically relevant to this region (e.g. for Châteauneuf-du-Pape: Grenache because it's the main grape, Priorat because it shares Grenache/similar profile, Mourvèdre because it's in the blend). The "why" should be one evocative sentence.
+- zone_descriptions: array of 2-3 objects with { name: string, note: string } — key sub-zones/lieu-dits within this region with a sensory/terroir description of what makes each distinct
+- personal_insight: string — a short, punchy insight sentence about this region's wines that could feel personal (e.g. "You always rate the Grenache-heavy ones higher. That's the garrigue talking.")
 
 Return ONLY valid JSON. No markdown, no explanation.`;
 }

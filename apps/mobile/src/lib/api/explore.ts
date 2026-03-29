@@ -39,6 +39,11 @@ export type ProfileContent = {
   story?: string;
   notable_winemakers?: Array<{ name: string; why: string }>;
   flavor_profile?: { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number };
+  most_loved_producer?: { name: string; avg_rating: number };
+  best_qpr_producer?: { name: string; avg_rating: number };
+  recommendation_picks?: Array<{ name: string; type: string; why: string }>;
+  zone_descriptions?: Array<{ name: string; note: string }>;
+  personal_insight?: string;
 };
 
 export type ExploreProfile = {
