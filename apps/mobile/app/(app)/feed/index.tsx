@@ -38,6 +38,7 @@ import {
 import type { FeedComment } from "@/src/lib/feed/comments";
 import {
   fetchFeedPage,
+  type FeedGroupSlide,
   type FeedScope,
   type MobileFeedEntry,
   type QprLevel,
@@ -89,6 +90,291 @@ function buildAuthorWithCompanionsLabel(item: MobileFeedEntry) {
   return companionNames.length > 0
     ? `${item.author_name} + ${companionNames.join(", ")}`
     : item.author_name;
+}
+
+function GroupedPostGallery({
+  title,
+  slides,
+  photoFrameWidth,
+  onGallerySwipeStart,
+  onGallerySwipeEnd,
+  onCardPress,
+}: {
+  title: string;
+  slides: FeedGroupSlide[];
+  photoFrameWidth: number;
+  onGallerySwipeStart: () => void;
+  onGallerySwipeEnd: () => void;
+  onCardPress: () => void;
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const swipeActiveRef = useRef(false);
+  const pendingSwipeEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blockTapUntilRef = useRef(0);
+  const tapStartRef = useRef<{
+    x: number;
+    y: number;
+    timestamp: number;
+    moved: boolean;
+  } | null>(null);
+  const hasMultiple = slides.length > 1;
+  const clampedIndex = Math.max(0, Math.min(slides.length - 1, activeIndex));
+  const activeSlide = slides[clampedIndex] ?? null;
+
+  const beginSwipe = useCallback(() => {
+    if (swipeActiveRef.current) return;
+    swipeActiveRef.current = true;
+    blockTapUntilRef.current = Date.now() + 450;
+    onGallerySwipeStart();
+  }, [onGallerySwipeStart]);
+
+  const endSwipe = useCallback(() => {
+    if (!swipeActiveRef.current) return;
+    swipeActiveRef.current = false;
+    onGallerySwipeEnd();
+  }, [onGallerySwipeEnd]);
+
+  const clearPendingEnd = useCallback(() => {
+    if (!pendingSwipeEndTimerRef.current) return;
+    clearTimeout(pendingSwipeEndTimerRef.current);
+    pendingSwipeEndTimerRef.current = null;
+  }, []);
+
+  const scheduleSwipeEnd = useCallback(
+    (delayMs = 90) => {
+      clearPendingEnd();
+      pendingSwipeEndTimerRef.current = setTimeout(() => {
+        pendingSwipeEndTimerRef.current = null;
+        endSwipe();
+      }, delayMs);
+    },
+    [clearPendingEnd, endSwipe]
+  );
+
+  useEffect(
+    () => () => {
+      clearPendingEnd();
+      endSwipe();
+    },
+    [clearPendingEnd, endSwipe]
+  );
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    slides.forEach((slide) => {
+      void Image.prefetch(slide.url);
+    });
+  }, [slides]);
+
+  const scrollToIndex = useCallback(
+    (nextIndex: number, animated = true) => {
+      const maxIndex = Math.max(0, slides.length - 1);
+      const clamped = Math.max(0, Math.min(maxIndex, nextIndex));
+      setActiveIndex(clamped);
+      if (!scrollRef.current || photoFrameWidth <= 0) return;
+      scrollRef.current.scrollTo({ x: clamped * photoFrameWidth, animated });
+    },
+    [slides.length, photoFrameWidth]
+  );
+
+  const handleTap = useCallback(() => {
+    if (Date.now() < blockTapUntilRef.current) return;
+    blockTapUntilRef.current = Date.now() + 320;
+    onCardPress();
+  }, [onCardPress]);
+
+  if (!activeSlide || photoFrameWidth <= 0) {
+    return null;
+  }
+
+  return (
+    <View>
+      {hasMultiple ? (
+        <ScrollView
+          ref={(node) => {
+            scrollRef.current = node;
+          }}
+          horizontal
+          snapToInterval={photoFrameWidth}
+          snapToAlignment="start"
+          disableIntervalMomentum
+          bounces={false}
+          directionalLockEnabled
+          nestedScrollEnabled
+          overScrollMode="never"
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          scrollEventThrottle={16}
+          contentContainerStyle={groupedStyles.track}
+          onTouchStart={(event) => {
+            const touch = event.nativeEvent.touches[0];
+            if (!touch) {
+              tapStartRef.current = null;
+              return;
+            }
+            clearPendingEnd();
+            tapStartRef.current = {
+              x: touch.pageX,
+              y: touch.pageY,
+              timestamp: Date.now(),
+              moved: false,
+            };
+          }}
+          onTouchMove={(event) => {
+            const touch = event.nativeEvent.touches[0];
+            const start = tapStartRef.current;
+            if (!touch || !start) return;
+            const deltaX = Math.abs(touch.pageX - start.x);
+            const deltaY = Math.abs(touch.pageY - start.y);
+            if (deltaX > 10 && deltaX > deltaY + 2) beginSwipe();
+            if (deltaX > 8 || deltaY > 8) {
+              tapStartRef.current = { ...start, moved: true };
+            }
+          }}
+          onTouchEnd={() => {
+            const start = tapStartRef.current;
+            tapStartRef.current = null;
+            if (!start || start.moved || swipeActiveRef.current) {
+              if (swipeActiveRef.current) scheduleSwipeEnd(40);
+              return;
+            }
+            if (Date.now() - start.timestamp > 260) return;
+            handleTap();
+          }}
+          onTouchCancel={() => {
+            tapStartRef.current = null;
+            scheduleSwipeEnd(0);
+          }}
+          onScrollBeginDrag={() => {
+            tapStartRef.current = null;
+            beginSwipe();
+            clearPendingEnd();
+          }}
+          onScrollEndDrag={() => {
+            scheduleSwipeEnd();
+          }}
+          onMomentumScrollBegin={clearPendingEnd}
+          onMomentumScrollEnd={(event) => {
+            if (photoFrameWidth > 0) {
+              const offsetX = event.nativeEvent.contentOffset.x;
+              const rawIndex = Math.round(offsetX / photoFrameWidth);
+              const maxIndex = Math.max(0, slides.length - 1);
+              const clamped = Math.max(0, Math.min(maxIndex, rawIndex));
+              if (clamped !== clampedIndex) setActiveIndex(clamped);
+            }
+            blockTapUntilRef.current = Date.now() + 200;
+            endSwipe();
+          }}
+        >
+          {slides.map((slide, slideIndex) => (
+            <View
+              key={`${slide.id}-${slideIndex}`}
+              style={[groupedStyles.slideWrap, { width: photoFrameWidth }]}
+            >
+              <Image
+                source={{ uri: slide.url }}
+                style={groupedStyles.slideImage}
+                resizeMode="cover"
+                fadeDuration={0}
+              />
+              <View style={groupedStyles.overlayGradient} />
+              <View style={groupedStyles.overlayContent}>
+                <View style={groupedStyles.slideLabelPill}>
+                  <AppText style={groupedStyles.slideLabelText}>
+                    {slide.label}
+                  </AppText>
+                </View>
+                {slide.wine_name ? (
+                  <AppText style={groupedStyles.slideWineName} numberOfLines={2}>
+                    {slide.wine_name}
+                  </AppText>
+                ) : null}
+                {slide.producer || slide.vintage ? (
+                  <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
+                    {[slide.producer, slide.vintage].filter(Boolean).join(" · ")}
+                  </AppText>
+                ) : null}
+                {(slide.region || slide.appellation || slide.country) ? (
+                  <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
+                    {[slide.appellation || slide.region, slide.country]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </AppText>
+                ) : null}
+                {slide.consumed_at ? (
+                  <AppText style={groupedStyles.slideDate}>
+                    {formatConsumedDate(slide.consumed_at)}
+                  </AppText>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <Pressable onPress={handleTap}>
+          <View style={[groupedStyles.slideWrap, { width: photoFrameWidth }]}>
+            <Image
+              source={{ uri: activeSlide.url }}
+              style={groupedStyles.slideImage}
+              resizeMode="cover"
+              fadeDuration={0}
+            />
+            <View style={groupedStyles.overlayGradient} />
+            <View style={groupedStyles.overlayContent}>
+              <View style={groupedStyles.slideLabelPill}>
+                <AppText style={groupedStyles.slideLabelText}>
+                  {activeSlide.label}
+                </AppText>
+              </View>
+              {activeSlide.wine_name ? (
+                <AppText style={groupedStyles.slideWineName} numberOfLines={2}>
+                  {activeSlide.wine_name}
+                </AppText>
+              ) : null}
+              {activeSlide.producer || activeSlide.vintage ? (
+                <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
+                  {[activeSlide.producer, activeSlide.vintage]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </AppText>
+              ) : null}
+              {(activeSlide.region || activeSlide.appellation || activeSlide.country) ? (
+                <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
+                  {[activeSlide.appellation || activeSlide.region, activeSlide.country]
+                    .filter(Boolean)
+                    .join(", ")}
+                </AppText>
+              ) : null}
+              {activeSlide.consumed_at ? (
+                <AppText style={groupedStyles.slideDate}>
+                  {formatConsumedDate(activeSlide.consumed_at)}
+                </AppText>
+              ) : null}
+            </View>
+          </View>
+        </Pressable>
+      )}
+      {hasMultiple ? (
+        <View style={groupedStyles.dotRow}>
+          {slides.map((_, dotIndex) => (
+            <Pressable
+              key={`grouped-dot-${dotIndex}`}
+              onPress={(event) => {
+                event.stopPropagation();
+                scrollToIndex(dotIndex);
+              }}
+              hitSlop={6}
+              style={[
+                groupedStyles.dot,
+                dotIndex === clampedIndex ? groupedStyles.dotActive : null,
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 function FeedCard({
@@ -166,6 +452,10 @@ function FeedCard({
   const displayRating = getDisplayRating(item.rating);
   const galleryPhotos = useMemo(() => item.photo_gallery ?? [], [item.photo_gallery]);
   const notes = (item.notes ?? "").trim();
+  const isGrouped = Boolean(
+    item.entry_group && (item.group_slides?.length ?? 0) > 0
+  );
+  const groupSlides = useMemo(() => item.group_slides ?? [], [item.group_slides]);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
   const [isNotesTruncated, setIsNotesTruncated] = useState(false);
@@ -313,6 +603,13 @@ function FeedCard({
           <AppText style={styles.feedAuthorName} numberOfLines={2}>
             {authorWithCompanionsLabel}
           </AppText>
+          {isGrouped && item.entry_group ? (
+            <View style={groupedStyles.modeBadge}>
+              <AppText style={groupedStyles.modeBadgeText}>
+                {item.entry_group.mode === "event" ? "Event" : "Catch-up"}
+              </AppText>
+            </View>
+          ) : null}
         </Pressable>
         <View style={styles.feedAuthorRight}>
           <View style={styles.feedMetaRow}>
@@ -356,6 +653,26 @@ function FeedCard({
         </View>
       </View>
 
+      {isGrouped && groupSlides.length > 0 ? (
+        <View
+          style={styles.feedPhotoFrame}
+          onLayout={(event) => {
+            const nextWidth = PixelRatio.roundToNearestPixel(event.nativeEvent.layout.width);
+            if (nextWidth > 0 && Math.abs(nextWidth - photoFrameWidth) > 0.5) {
+              setPhotoFrameWidth(nextWidth);
+            }
+          }}
+        >
+          <GroupedPostGallery
+            title={item.entry_group?.title ?? ""}
+            slides={groupSlides}
+            photoFrameWidth={photoFrameWidth}
+            onGallerySwipeStart={beginGallerySwipe}
+            onGallerySwipeEnd={endGallerySwipe}
+            onCardPress={handleCardPress}
+          />
+        </View>
+      ) : (
       <View
         style={styles.feedPhotoFrame}
         onLayout={(event) => {
@@ -540,11 +857,21 @@ function FeedCard({
           </Pressable>
         )}
       </View>
+      )}
 
       <Pressable style={styles.feedTextStack} onPress={handleCardPress}>
-        {item.wine_name ? <AppText style={styles.feedWineName}>{item.wine_name}</AppText> : null}
-        {metaFields.length > 0 ? (
+        {isGrouped && item.entry_group ? (
+          <AppText style={styles.feedWineName}>{item.entry_group.title}</AppText>
+        ) : item.wine_name ? (
+          <AppText style={styles.feedWineName}>{item.wine_name}</AppText>
+        ) : null}
+        {!isGrouped && metaFields.length > 0 ? (
           <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
+        ) : null}
+        {isGrouped ? (
+          <AppText style={styles.feedMetaText}>
+            Grouped bulk post
+          </AppText>
         ) : null}
       </Pressable>
 
@@ -583,14 +910,16 @@ function FeedCard({
         </Pressable>
       ) : null}
 
-      <Pressable style={styles.feedValueRow} onPress={handleCardPress}>
-        {displayRating ? <AppText style={styles.feedRating}>{displayRating}</AppText> : null}
-        {item.qpr_level ? (
-          <AppText style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
-            {QPR_LEVEL_LABELS[item.qpr_level]}
-          </AppText>
-        ) : null}
-      </Pressable>
+      {!isGrouped ? (
+        <Pressable style={styles.feedValueRow} onPress={handleCardPress}>
+          {displayRating ? <AppText style={styles.feedRating}>{displayRating}</AppText> : null}
+          {item.qpr_level ? (
+            <AppText style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
+              {QPR_LEVEL_LABELS[item.qpr_level]}
+            </AppText>
+          ) : null}
+        </Pressable>
+      ) : null}
 
       <View style={styles.feedDivider} />
 
@@ -2188,5 +2517,120 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "700",
+  },
+});
+
+const groupedStyles = StyleSheet.create({
+  track: {
+    flexDirection: "row",
+    height: "100%",
+    backgroundColor: colors.surfaceRaised,
+  },
+  slideWrap: {
+    height: "100%",
+    position: "relative",
+    backgroundColor: colors.surfaceRaised,
+    flexShrink: 0,
+  },
+  slideImage: {
+    width: "100%",
+    height: "100%",
+  },
+  overlayGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "55%",
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  overlayContent: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 12,
+    gap: 2,
+  },
+  slideLabelPill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 4,
+  },
+  slideLabelText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  slideWineName: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  slideMeta: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  slideDate: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  dotRow: {
+    position: "absolute",
+    bottom: 8,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(161,161,170,0.85)",
+  },
+  dotActive: {
+    backgroundColor: colors.rose,
+  },
+  footerRow: {
+    paddingHorizontal: 14,
+    paddingTop: 6,
+  },
+  footerText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  modeBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfacePrimary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexShrink: 0,
+  },
+  modeBadgeText: {
+    color: colors.textSecondary,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
 });
