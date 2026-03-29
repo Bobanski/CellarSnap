@@ -393,7 +393,7 @@ function StepDetails() {
       </View>
 
       <AppText style={s.sectionLabel}>
-        Restaurant bottle budget
+        Typical restaurant bottle budget
       </AppText>
       <ChipSingleSelect
         options={BUDGET_RESTAURANT_OPTIONS}
@@ -402,7 +402,7 @@ function StepDetails() {
       />
 
       <AppText style={s.sectionLabel}>
-        Retail bottle budget
+        Typical retail bottle budget
       </AppText>
       <ChipSingleSelect
         options={BUDGET_RETAIL_OPTIONS}

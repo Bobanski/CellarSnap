@@ -426,14 +426,14 @@ function StepDetails({
         subtitle="This helps us fine-tune recommendations."
       />
 
-      <SectionLabel>Restaurant bottle budget</SectionLabel>
+      <SectionLabel>Typical restaurant bottle budget</SectionLabel>
       <ChipSingleSelect
         options={BUDGET_RESTAURANT_OPTIONS}
         selected={draft.budgetRestaurant}
         onSelect={(v) => update({ budgetRestaurant: v })}
       />
 
-      <SectionLabel>Retail bottle budget</SectionLabel>
+      <SectionLabel>Typical retail bottle budget</SectionLabel>
       <ChipSingleSelect
         options={BUDGET_RETAIL_OPTIONS}
         selected={draft.budgetRetail}
