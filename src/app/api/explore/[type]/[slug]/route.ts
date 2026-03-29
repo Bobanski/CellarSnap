@@ -52,21 +52,26 @@ Return ONLY valid JSON.`;
 }
 
 function buildRegionPrompt(displayName: string): string {
-  return `You are a wine expert writing educational content about the ${displayName} wine region.
+  return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} wine region.
+
+Your voice: sensory-first, personal, never textbook. You don't lecture — you make people feel what it's like to drink from this place.
 
 Write a JSON object with these fields:
-- tagline: one-sentence description (max 15 words)
-- country: country this region is in
-- climate: climate description (1-2 sentences)
-- key_grapes: array of 3-6 signature grapes
-- appellations: array of 3-5 notable sub-regions or appellations
-- style: typical wine style description (2-3 sentences)
-- classification: brief note on the classification system if applicable (1-2 sentences, or null)
-- food_pairings: array of 4-6 regional food pairings
-- fun_fact: one interesting fact
-- related_regions: array of 3-4 similar/related regions
+- tagline: one evocative sentence, max 15 words, taste-led (e.g. "Where Grenache burns slow and wild rosemary finds its way into every glass")
+- country: country name
+- climate: 1-2 sentences about climate, focused on how it shapes the wine in the glass
+- story: exactly 3 sentences. First: what makes this region's wines distinctive in the glass. Second: the land/terroir that creates it. Third: why it matters to someone building their palate. Sensory and personal, never encyclopedic.
+- key_grapes: array of objects with { name: string, context: string } — 4-6 grapes with a short phrase about what they do HERE specifically (not generic descriptions)
+- notable_winemakers: array of objects with { name: string, why: string } — 3-5 producers with "why they matter" in one sentence
+- appellations: array of objects with { name: string, character: string } — 3-5 sub-zones with a short sensory character note
+- food_pairings: array of 4-6 specific regional food pairings (not generic — tied to the place)
+- fun_facts: array of 2-3 surprising "did you know" strings that would make someone stop mid-sip
+- related_regions: array of 3-4 similar region names (strings)
+- flavor_profile: object with { Tannin: number, Acidity: number, Body: number, Oak: number, Fruit: number } — each 0-100 scale representing the region's TYPICAL wine style
+- classification: classification system if applicable (string or null)
+- style: 2-3 sentences about typical wine styles from here
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function buildProducerPrompt(displayName: string): string {

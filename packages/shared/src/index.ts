@@ -18,3 +18,4 @@ export * from "./wineText";
 export * from "./explore";
 export * from "./validation/phone";
 export * from "./validation/username";
+export * from "./educationPages";

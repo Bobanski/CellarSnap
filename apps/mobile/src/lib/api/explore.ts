@@ -2,7 +2,7 @@ import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
 // ─── Types ──────────────────────────────────────────────────
 
-export type ExploreProfileType = "grape" | "region" | "producer";
+export type ExploreProfileType = "grape" | "region" | "producer" | "concept";
 
 export type HeroImageAttribution = {
   photographer: string;
@@ -21,18 +21,24 @@ export type ProfileContent = {
   climate?: string;
   style?: string;
   classification?: string;
+  country?: string;
   key_regions?: string[];
-  key_grapes?: string[];
+  key_grapes?: Array<string | { name: string; context: string }>;
   key_wines?: string[];
-  appellations?: string[];
+  appellations?: Array<string | { name: string; character: string }>;
   food_pairings?: string[];
   fun_fact?: string;
+  fun_facts?: string[];
   related_grapes?: string[];
   related_regions?: string[];
   related_producers?: string[];
   founded?: string;
   grapes?: string[];
   aging_potential?: string;
+  // Region enriched fields
+  story?: string;
+  notable_winemakers?: Array<{ name: string; why: string }>;
+  flavor_profile?: { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number };
 };
 
 export type ExploreProfile = {
