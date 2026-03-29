@@ -1050,21 +1050,6 @@ export default function FeedPage() {
                         {entry.author_name}
                       </span>
                     </button>
-                    {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
-                      <span
-                        style={{
-                          background: "rgba(196, 96, 122, 0.1)",
-                          border: "0.5px solid rgba(196, 96, 122, 0.2)",
-                          color: "var(--color-accent-secondary)",
-                          fontSize: 11,
-                          padding: "2px 7px",
-                          borderRadius: 20,
-                        }}
-                        title={`${Math.round(matchScores[entry.id].score)}% match`}
-                      >
-                        {Math.round(matchScores[entry.id].score)}%
-                      </span>
-                    ) : null}
                     {entry.entry_group ? (
                       <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
                         {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
