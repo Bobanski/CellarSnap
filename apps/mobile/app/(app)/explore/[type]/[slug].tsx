@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { toExploreSlug, EDUCATION_PAGE_ACCENTS, EDUCATION_BG_PRIMARY, EDUCATION_BG_ALT } from "@cellarsnap/shared";
+import { toExploreSlug } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
@@ -19,108 +19,25 @@ import {
   type ExploreProfileType,
 } from "@/src/lib/api/explore";
 
-// ─── Chip / pill ────────────────────────────────────────────
+// ─── Constants matching brand guide ────────────────────────
 
-function Chip({
-  label,
-  accentColor,
-  onPress,
-}: {
-  label: string;
-  accentColor?: string;
-  onPress?: () => void;
-}) {
-  const inner = (
-    <View style={[s.chip, accentColor ? { borderColor: accentColor + "40" } : null]}>
-      <AppText style={[s.chipText, accentColor ? { color: accentColor } : null]}>{label}</AppText>
-    </View>
-  );
-  if (onPress) {
-    return <Pressable onPress={onPress}>{inner}</Pressable>;
-  }
-  return inner;
-}
+const CHAMPAGNE = "#F5EDD6";
+const FOG = "#8A8078";
+const ROSE = "#C4607A";
+const GRENACHE = "#7B1D3A";
+const NEBBIOLO = "#4A3060";
+const VERDOT = "#3D6B4F";
+const BG_ODD = "#140A0F";
+const BG_EVEN = "#0F0810";
+const DEVICE_BG = "#0E0608";
+const SECTION_BORDER = "rgba(255,255,255,0.06)";
 
-// ─── Section wrapper with alternating background ───────────
-
-function EducationSection({
-  title,
-  index,
-  children,
-  accentColor,
-}: {
-  title: string;
-  index: number;
-  children: React.ReactNode;
-  accentColor?: string;
-}) {
-  const bg = index % 2 === 0 ? EDUCATION_BG_PRIMARY : EDUCATION_BG_ALT;
-  return (
-    <View style={[s.eduSection, { backgroundColor: bg }]}>
-      <AppText style={[s.eduSectionTitle, accentColor ? { color: accentColor } : null]}>
-        {title}
-      </AppText>
-      {children}
-    </View>
-  );
-}
-
-// ─── Winemaker card ────────────────────────────────────────
-
-function WinemakerCard({
-  name,
-  why,
-  accentColor,
-  onPress,
-}: {
-  name: string;
-  why: string;
-  accentColor: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={s.winemakerCard}>
-      <AppText style={[s.winemakerName, { color: accentColor }]}>{name}</AppText>
-      <AppText style={s.winemakerWhy}>{why}</AppText>
-    </Pressable>
-  );
-}
-
-// ─── Appellation card ──────────────────────────────────────
-
-function AppellationCard({
-  name,
-  character,
-  onPress,
-}: {
-  name: string;
-  character: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={s.appellationCard}>
-      <AppText style={s.appellationName}>{name}</AppText>
-      <AppText style={s.appellationCharacter}>{character}</AppText>
-    </Pressable>
-  );
-}
-
-// ─── Type badge label ──────────────────────────────────────
-
-function typeBadgeLabel(type: ExploreProfileType): string {
-  switch (type) {
-    case "grape":
-      return "GRAPE VARIETY";
-    case "region":
-      return "WINE REGION";
-    case "producer":
-      return "PRODUCER";
-    case "concept":
-      return "CONCEPT";
-    default:
-      return (type as string).toUpperCase();
-  }
-}
+const ACCENTS: Record<string, string> = {
+  region: GRENACHE,
+  grape: NEBBIOLO,
+  producer: ROSE,
+  concept: VERDOT,
+};
 
 // ─── Region page (12-layer architecture) ───────────────────
 
@@ -136,36 +53,34 @@ function RegionPage({
   const router = useRouter();
   const { profile, personal_stats } = data;
   const c = profile.content;
-  const accent = EDUCATION_PAGE_ACCENTS.region;
   const hasHeroImage = !!profile.hero_image_url && !heroFailed;
   const hasLogs = personal_stats.entry_count > 0;
 
-  // Parse enriched fields (new GPT format returns objects, old returns strings)
-  const grapeItems: Array<{ name: string; context: string }> =
+  // Parse enriched fields (handles both old string[] and new object[] formats)
+  const grapeItems: Array<{ name: string; context: string; primary: boolean }> =
     Array.isArray(c.key_grapes)
-      ? c.key_grapes.map((g: string | { name: string; context: string }) =>
-          typeof g === "string" ? { name: g, context: "" } : g
+      ? c.key_grapes.map((g, i) =>
+          typeof g === "string"
+            ? { name: g, context: "", primary: i < 3 }
+            : { name: g.name, context: g.context, primary: i < 3 }
         )
       : [];
 
   const winemakerItems: Array<{ name: string; why: string }> =
-    Array.isArray(c.notable_winemakers)
-      ? c.notable_winemakers
-      : [];
+    Array.isArray(c.notable_winemakers) ? c.notable_winemakers : [];
 
   const appellationItems: Array<{ name: string; character: string }> =
     Array.isArray(c.appellations)
-      ? c.appellations.map((a: string | { name: string; character: string }) =>
+      ? c.appellations.map((a) =>
           typeof a === "string" ? { name: a, character: "" } : a
         )
       : [];
 
-  const funFacts: string[] =
-    Array.isArray(c.fun_facts)
-      ? c.fun_facts
-      : c.fun_fact
-        ? [c.fun_fact]
-        : [];
+  const funFacts: string[] = Array.isArray(c.fun_facts)
+    ? c.fun_facts
+    : c.fun_fact
+      ? [c.fun_fact]
+      : [];
 
   const flavorProfile = c.flavor_profile as
     | { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number }
@@ -173,190 +88,607 @@ function RegionPage({
 
   const storyText = typeof c.story === "string" ? c.story : "";
 
-  let sectionIndex = 0;
+  // Determine section index for alternating backgrounds
+  let bgIndex = 0;
+  const nextBg = () => (bgIndex++ % 2 === 0 ? BG_ODD : BG_EVEN);
 
   return (
-    <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: DEVICE_BG }}
+      contentContainerStyle={{ paddingBottom: 48 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* ── Layer 1: Hero ─────────────────────────────── */}
-      <View style={s.hero}>
+      <View style={r.hero}>
         {hasHeroImage ? (
           <Image
             source={{ uri: profile.hero_image_url }}
-            style={s.heroImage}
+            style={StyleSheet.absoluteFillObject}
             resizeMode="cover"
             onError={onHeroError}
           />
         ) : null}
-        <View style={[s.heroOverlay, { backgroundColor: accent + "CC" }, !hasHeroImage && { backgroundColor: accent }]} />
+        <View style={r.heroGradient} />
 
-        <Pressable onPress={() => router.back()} style={s.heroBackBtn}>
-          <AppText style={s.heroBackBtnText}>{"\u2190"}</AppText>
+        <Pressable onPress={() => router.back()} style={r.backBtn}>
+          <AppText style={r.backBtnArrow}>{"←"}</AppText>
+          <AppText style={r.backBtnLabel}>Explore</AppText>
         </Pressable>
 
-        <View style={s.heroContent}>
-          <View style={[s.typeBadge, { borderColor: accent }]}>
-            <AppText style={[s.typeBadgeText, { color: accent }]}>WINE REGION</AppText>
-          </View>
-          <AppText style={s.heroTitle}>{profile.display_name}</AppText>
+        <View style={r.heroBottom}>
+          <AppText style={r.heroBadge}>
+            WINE REGION · {(c.country ?? "").toUpperCase()}
+          </AppText>
+          <AppText style={r.heroTitle}>{profile.display_name}</AppText>
           {c.tagline ? (
-            <AppText style={s.heroTagline}>{c.tagline}</AppText>
-          ) : null}
-          {c.country ? (
-            <AppText style={s.heroCountry}>{c.country}</AppText>
+            <AppText style={r.heroTagline}>{c.tagline}</AppText>
           ) : null}
         </View>
       </View>
 
       {/* ── Layer 2/3: Personal Layer ─────────────────── */}
-      {hasLogs ? (
-        <View style={[s.personalCard, { borderColor: accent + "40" }]}>
-          <AppText style={[s.personalLabel, { color: accent }]}>YOUR HISTORY</AppText>
-          <AppText style={s.personalText}>
-            You've logged{" "}
-            <AppText style={s.personalBold}>
-              {personal_stats.entry_count} {personal_stats.entry_count === 1 ? "wine" : "wines"}
+      <View style={[r.section, { backgroundColor: nextBg() }]}>
+        <AppText style={r.sectionLabelAccent}>
+          {hasLogs ? "YOUR EXPERIENCE HERE" : "DISCOVER THIS REGION"}
+        </AppText>
+
+        {hasLogs ? (
+          <>
+            {personal_stats.avg_rating > 0 ? (
+              <View style={r.personalTopCard}>
+                <View style={{ flex: 1 }}>
+                  <AppText style={r.personalSmallLabel}>YOUR AVERAGE</AppText>
+                  <AppText style={r.personalWineName}>
+                    {personal_stats.entry_count}{" "}
+                    {personal_stats.entry_count === 1 ? "wine" : "wines"} logged
+                  </AppText>
+                </View>
+                <AppText style={r.personalRating}>
+                  {personal_stats.avg_rating.toFixed(1)}
+                </AppText>
+              </View>
+            ) : null}
+            <View style={r.insightCard}>
+              <AppText style={r.insightText}>
+                You've explored {profile.display_name} across{" "}
+                {personal_stats.entry_count}{" "}
+                {personal_stats.entry_count === 1 ? "wine" : "wines"}.
+                {personal_stats.avg_rating > 0
+                  ? ` Your average rating: ${personal_stats.avg_rating.toFixed(1)}.`
+                  : ""}
+              </AppText>
+            </View>
+          </>
+        ) : (
+          <View style={r.insightCard}>
+            <AppText style={r.insightText}>
+              You haven't explored {profile.display_name} yet. Log your first
+              wine from here to start tracking your taste across this region.
             </AppText>
-            {" "}from {profile.display_name}
-            {personal_stats.avg_rating > 0
-              ? ` with an average rating of ${personal_stats.avg_rating.toFixed(1)}`
-              : ""}
-            .
-          </AppText>
-        </View>
-      ) : (
-        <View style={[s.personalCard, { borderColor: accent + "40" }]}>
-          <AppText style={[s.personalLabel, { color: accent }]}>DISCOVER THIS REGION</AppText>
-          <AppText style={s.personalText}>
-            You haven't explored {profile.display_name} yet. Start logging wines from here to see how your palate connects with this region.
-          </AppText>
-        </View>
-      )}
+          </View>
+        )}
+      </View>
 
       {/* ── Layer 4: Flavor Profile ───────────────────── */}
       {flavorProfile ? (
-        <EducationSection title="Flavor Profile" index={sectionIndex++} accentColor={accent}>
-          <View style={s.radarWrap}>
-            <FlavorRadar data={flavorProfile} accentColor={accent} size={220} />
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>FLAVOR PROFILE</AppText>
+          <View style={r.radarWrap}>
+            <FlavorRadar
+              data={flavorProfile}
+              accentColor={GRENACHE}
+              size={200}
+            />
           </View>
-          <AppText style={s.radarHint}>
-            Typical flavor signature of wines from {profile.display_name}
+          <View style={r.legendRow}>
+            <View style={r.legendItem}>
+              <View style={[r.legendLine, { backgroundColor: GRENACHE }]} />
+              <AppText style={r.legendText}>Region avg</AppText>
+            </View>
+            {hasLogs ? (
+              <View style={r.legendItem}>
+                <View style={[r.legendLine, { backgroundColor: ROSE }]} />
+                <AppText style={r.legendText}>Your palate</AppText>
+              </View>
+            ) : null}
+          </View>
+          <AppText style={r.radarInsight}>
+            Typical flavor signature of wines from {profile.display_name}.
           </AppText>
-        </EducationSection>
+        </View>
       ) : null}
 
       {/* ── Layer 5: The Story ────────────────────────── */}
       {storyText ? (
-        <EducationSection title="The Story" index={sectionIndex++} accentColor={accent}>
-          <AppText style={s.storyText}>{storyText}</AppText>
-        </EducationSection>
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.storyTitle}>The Story</AppText>
+          <AppText style={r.storyBody}>{storyText}</AppText>
+          {funFacts.length > 0 ? (
+            <View style={r.didYouKnowBox}>
+              <AppText style={r.didYouKnowLabel}>DID YOU KNOW?</AppText>
+              <AppText style={r.didYouKnowText}>{funFacts[0]}</AppText>
+            </View>
+          ) : null}
+        </View>
       ) : null}
 
       {/* ── Layer 6: Grapes Grown Here ────────────────── */}
       {grapeItems.length > 0 ? (
-        <EducationSection title="Grapes Grown Here" index={sectionIndex++} accentColor={accent}>
-          <View style={s.grapeList}>
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>GRAPES GROWN HERE</AppText>
+          <View style={r.grapeChipRow}>
             {grapeItems.map((grape) => (
               <Pressable
                 key={grape.name}
-                style={s.grapeItem}
-                onPress={() => router.push(`/(app)/explore/grape/${toExploreSlug(grape.name)}`)}
+                onPress={() =>
+                  router.push(
+                    `/(app)/explore/grape/${toExploreSlug(grape.name)}`
+                  )
+                }
+                style={[
+                  r.grapeChip,
+                  grape.primary ? r.grapeChipPrimary : r.grapeChipSecondary,
+                ]}
               >
-                <AppText style={[s.grapeName, { color: EDUCATION_PAGE_ACCENTS.grape }]}>{grape.name}</AppText>
-                {grape.context ? (
-                  <AppText style={s.grapeContext}>{grape.context}</AppText>
-                ) : null}
+                <AppText
+                  style={[
+                    r.grapeChipText,
+                    grape.primary
+                      ? r.grapeChipTextPrimary
+                      : r.grapeChipTextSecondary,
+                  ]}
+                >
+                  {grape.name}
+                </AppText>
               </Pressable>
             ))}
           </View>
-        </EducationSection>
+          {grapeItems.some((g) => g.context) ? (
+            <AppText style={r.grapeHelper}>
+              Tap any grape to explore its full profile
+            </AppText>
+          ) : null}
+        </View>
       ) : null}
 
       {/* ── Layer 7: Notable Winemakers ───────────────── */}
       {winemakerItems.length > 0 ? (
-        <EducationSection title="Notable Winemakers" index={sectionIndex++} accentColor={accent}>
-          <View style={s.winemakerList}>
-            {winemakerItems.map((wm) => (
-              <WinemakerCard
-                key={wm.name}
-                name={wm.name}
-                why={wm.why}
-                accentColor={EDUCATION_PAGE_ACCENTS.producer}
-                onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(wm.name)}`)}
-              />
-            ))}
-          </View>
-        </EducationSection>
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>NOTABLE WINEMAKERS</AppText>
+          {winemakerItems.map((wm) => (
+            <Pressable
+              key={wm.name}
+              style={r.winemakerRow}
+              onPress={() =>
+                router.push(
+                  `/(app)/explore/producer/${toExploreSlug(wm.name)}`
+                )
+              }
+            >
+              <View style={r.winemakerAccent} />
+              <View style={{ flex: 1 }}>
+                <AppText style={r.winemakerName}>{wm.name}</AppText>
+                <AppText style={r.winemakerNote}>{wm.why}</AppText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
       ) : null}
 
-      {/* ── Layer 8: Appellations ─────────────────────── */}
+      {/* ── Layer 8: Key Appellations ─────────────────── */}
       {appellationItems.length > 0 ? (
-        <EducationSection title="Appellations & Sub-Zones" index={sectionIndex++} accentColor={accent}>
-          <View style={s.appellationList}>
-            {appellationItems.map((app) => (
-              <AppellationCard
-                key={app.name}
-                name={app.name}
-                character={app.character}
-                onPress={() => router.push(`/(app)/explore/region/${toExploreSlug(app.name)}`)}
-              />
-            ))}
-          </View>
-        </EducationSection>
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>KEY APPELLATIONS + ZONES</AppText>
+          {appellationItems.map((app) => (
+            <Pressable
+              key={app.name}
+              style={r.zoneRow}
+              onPress={() =>
+                router.push(
+                  `/(app)/explore/region/${toExploreSlug(app.name)}`
+                )
+              }
+            >
+              <AppText style={r.zoneName}>{app.name}</AppText>
+              {app.character ? (
+                <AppText style={r.zoneNote}>{app.character}</AppText>
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
       ) : null}
 
       {/* ── Layer 9: Community Pulse (placeholder) ────── */}
-      {/* Community pulse with QPR distribution will be built once we have aggregate data */}
+      {/* QPR distribution + most-loved wine will be implemented when aggregate data is available */}
 
       {/* ── Layer 10: Recommendations (placeholder) ───── */}
-      {/* Personalized recommendations will be powered by the palate matching algorithm */}
 
       {/* ── Layer 11: Food Pairings ───────────────────── */}
       {c.food_pairings && c.food_pairings.length > 0 ? (
-        <EducationSection title="Food Pairings" index={sectionIndex++} accentColor={accent}>
-          <View style={s.chipRow}>
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.storyTitle}>Food Pairings</AppText>
+          <View style={r.pairingRow}>
             {c.food_pairings.map((item: string) => (
-              <Chip key={item} label={item} accentColor={accent} />
+              <View key={item} style={r.pairingChip}>
+                <AppText style={r.pairingChipText}>{item}</AppText>
+              </View>
             ))}
           </View>
-        </EducationSection>
+        </View>
       ) : null}
 
-      {/* ── Layer 12: Fun Facts ────────────────────────── */}
-      {funFacts.length > 0 ? (
-        <EducationSection title="Did You Know?" index={sectionIndex++} accentColor={accent}>
-          {funFacts.map((fact, i) => (
-            <View key={i} style={[s.funFactCard, { borderColor: accent + "30" }]}>
-              <AppText style={s.funFactText}>{fact}</AppText>
+      {/* ── Layer 12: More to Know / Fun Facts ─────────── */}
+      {funFacts.length > 1 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>MORE TO KNOW</AppText>
+          {funFacts.slice(1).map((fact, i) => (
+            <View key={i} style={r.factRow}>
+              <AppText style={r.factBullet}>✦</AppText>
+              <AppText style={r.factText}>{fact}</AppText>
             </View>
           ))}
-        </EducationSection>
+        </View>
       ) : null}
 
       {/* ── Related Regions ───────────────────────────── */}
       {c.related_regions && c.related_regions.length > 0 ? (
-        <EducationSection title="Explore Similar Regions" index={sectionIndex++} accentColor={accent}>
-          <View style={s.chipRow}>
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>EXPLORE SIMILAR REGIONS</AppText>
+          <View style={r.grapeChipRow}>
             {c.related_regions.map((name: string) => (
-              <Chip
+              <Pressable
                 key={name}
-                label={name}
-                accentColor={accent}
-                onPress={() => router.push(`/(app)/explore/region/${toExploreSlug(name)}`)}
-              />
+                onPress={() =>
+                  router.push(
+                    `/(app)/explore/region/${toExploreSlug(name)}`
+                  )
+                }
+                style={r.grapeChipSecondary}
+              >
+                <AppText style={r.grapeChipTextSecondary}>{name}</AppText>
+              </Pressable>
             ))}
           </View>
-        </EducationSection>
+        </View>
       ) : null}
 
       {/* Attribution */}
       {profile.hero_image_attribution ? (
-        <AppText style={s.attribution}>
+        <AppText style={r.attribution}>
           Photo by {profile.hero_image_attribution.photographer}
         </AppText>
       ) : null}
     </ScrollView>
   );
 }
+
+// ─── Region styles (pixel-matched to brand guide) ──────────
+
+const r = StyleSheet.create({
+  // Hero
+  hero: {
+    height: 210,
+    position: "relative",
+    justifyContent: "flex-end",
+    overflow: "hidden",
+  },
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(14,6,8,0.55)",
+  },
+  backBtn: {
+    position: "absolute",
+    top: 12,
+    left: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    zIndex: 10,
+  },
+  backBtnArrow: {
+    color: "rgba(245,237,214,0.8)",
+    fontSize: 11,
+  },
+  backBtnLabel: {
+    color: "rgba(245,237,214,0.8)",
+    fontSize: 10,
+    fontWeight: "500",
+  },
+  heroBottom: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  heroBadge: {
+    fontSize: 9,
+    color: ROSE,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    marginBottom: 5,
+  },
+  heroTitle: {
+    fontFamily: fonts.serif.light,
+    fontSize: 26,
+    color: CHAMPAGNE,
+    fontWeight: "300",
+    lineHeight: 30,
+    marginBottom: 5,
+  },
+  heroTagline: {
+    fontSize: 11,
+    color: "rgba(245,237,214,0.65)",
+    lineHeight: 16,
+  },
+
+  // Section container
+  section: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: SECTION_BORDER,
+  },
+
+  // Section labels
+  sectionLabel: {
+    fontSize: 8,
+    color: FOG,
+    letterSpacing: 2.5,
+    textTransform: "uppercase",
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+  sectionLabelAccent: {
+    fontSize: 8,
+    color: ROSE,
+    letterSpacing: 2.5,
+    textTransform: "uppercase",
+    fontWeight: "700",
+    marginBottom: 10,
+  },
+
+  // Personal layer
+  personalTopCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  personalSmallLabel: {
+    fontSize: 8,
+    color: "rgba(245,237,214,0.4)",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 3,
+  },
+  personalWineName: {
+    fontFamily: fonts.serif.light,
+    fontSize: 14,
+    color: CHAMPAGNE,
+  },
+  personalRating: {
+    fontSize: 18,
+    color: ROSE,
+    fontWeight: "500",
+  },
+  insightCard: {
+    backgroundColor: "rgba(196,96,122,0.1)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderLeftWidth: 2,
+    borderLeftColor: "rgba(196,96,122,0.5)",
+    marginBottom: 8,
+  },
+  insightText: {
+    fontSize: 11,
+    color: "rgba(245,237,214,0.85)",
+    lineHeight: 17,
+  },
+
+  // Flavor radar
+  radarWrap: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  legendRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 16,
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendLine: {
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+  },
+  legendText: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.5)",
+  },
+  radarInsight: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.55)",
+    lineHeight: 16,
+    marginTop: 8,
+  },
+
+  // Story
+  storyTitle: {
+    fontFamily: fonts.serif.light,
+    fontSize: 16,
+    color: CHAMPAGNE,
+    marginBottom: 8,
+  },
+  storyBody: {
+    fontSize: 11,
+    color: "rgba(245,237,214,0.72)",
+    lineHeight: 19,
+    marginBottom: 10,
+  },
+  didYouKnowBox: {
+    backgroundColor: "rgba(196,96,122,0.07)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 0.5,
+    borderColor: "rgba(196,96,122,0.2)",
+  },
+  didYouKnowLabel: {
+    fontSize: 8,
+    color: ROSE,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  didYouKnowText: {
+    fontSize: 11,
+    color: "rgba(245,237,214,0.65)",
+    lineHeight: 18,
+  },
+
+  // Grapes
+  grapeChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+  },
+  grapeChip: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  grapeChipPrimary: {
+    backgroundColor: "rgba(123,29,58,0.35)",
+    borderWidth: 0.5,
+    borderColor: "rgba(196,96,122,0.3)",
+  },
+  grapeChipSecondary: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  grapeChipText: {
+    fontSize: 10,
+    fontWeight: "500",
+  },
+  grapeChipTextPrimary: {
+    color: CHAMPAGNE,
+  },
+  grapeChipTextSecondary: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.45)",
+  },
+  grapeHelper: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.3)",
+    marginTop: 8,
+  },
+
+  // Winemakers
+  winemakerRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  winemakerAccent: {
+    width: 3,
+    alignSelf: "stretch",
+    backgroundColor: ROSE,
+    borderRadius: 2,
+    opacity: 0.6,
+    flexShrink: 0,
+  },
+  winemakerName: {
+    fontFamily: fonts.serif.light,
+    fontSize: 13,
+    color: CHAMPAGNE,
+    marginBottom: 2,
+  },
+  winemakerNote: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.5)",
+    lineHeight: 14,
+  },
+
+  // Appellations
+  zoneRow: {
+    marginBottom: 7,
+  },
+  zoneName: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.7)",
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  zoneNote: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.4)",
+    lineHeight: 13,
+  },
+
+  // Food pairings
+  pairingRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  pairingChip: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  pairingChipText: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.6)",
+  },
+
+  // Fun facts
+  factRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  factBullet: {
+    color: ROSE,
+    fontSize: 9,
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  factText: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.55)",
+    lineHeight: 16,
+    flex: 1,
+  },
+
+  // Attribution
+  attribution: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.2)",
+    textAlign: "center",
+    paddingTop: 16,
+    paddingHorizontal: 18,
+  },
+});
 
 // ─── Fallback page for grape/producer (existing layout) ────
 
@@ -380,9 +712,9 @@ function FallbackProfilePage({
     if (c.body) glanceCards.push({ label: "Body", value: c.body });
     if (c.acidity) glanceCards.push({ label: "Acidity", value: c.acidity });
     if (c.tannin) glanceCards.push({ label: "Tannin", value: c.tannin });
-    if (c.key_regions?.length) glanceCards.push({ label: "Key Regions", value: c.key_regions });
+    if (c.key_regions?.length) glanceCards.push({ label: "Key Regions", value: c.key_regions as string[] });
   } else if (profileType === "producer") {
-    if (c.key_regions?.length) glanceCards.push({ label: "Region", value: c.key_regions });
+    if (c.key_regions?.length) glanceCards.push({ label: "Region", value: c.key_regions as string[] });
     if (c.founded) glanceCards.push({ label: "Founded", value: c.founded });
     if (c.classification) glanceCards.push({ label: "Classification", value: c.classification });
   }
@@ -402,74 +734,68 @@ function FallbackProfilePage({
     : [];
 
   return (
-    <ScrollView contentContainerStyle={fallback.scroll} showsVerticalScrollIndicator={false}>
-      {/* Hero */}
-      <View style={fallback.hero}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.screenBg }}
+      contentContainerStyle={{ paddingBottom: 48 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={fb.hero}>
         {hasHeroImage ? (
-          <Image
-            source={{ uri: profile.hero_image_url }}
-            style={fallback.heroImage}
-            resizeMode="cover"
-            onError={onHeroError}
-          />
+          <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" onError={onHeroError} />
         ) : null}
-        <View style={[fallback.heroOverlay, !hasHeroImage && fallback.heroOverlayNoImage]} />
-        <Pressable onPress={() => router.back()} style={s.heroBackBtn}>
-          <AppText style={s.heroBackBtnText}>{"\u2190"}</AppText>
+        <View style={[fb.heroOverlay, !hasHeroImage && fb.heroOverlayNoImage]} />
+        <Pressable onPress={() => router.back()} style={r.backBtn}>
+          <AppText style={r.backBtnArrow}>{"←"}</AppText>
+          <AppText style={r.backBtnLabel}>Back</AppText>
         </Pressable>
-        <View style={s.heroContent}>
-          <View style={s.typeBadge}>
-            <AppText style={s.typeBadgeText}>{typeBadgeLabel(profileType)}</AppText>
-          </View>
-          <AppText style={s.heroTitle}>{profile.display_name}</AppText>
-          {c.tagline ? <AppText style={s.heroTagline}>{c.tagline}</AppText> : null}
+        <View style={fb.heroContent}>
+          <AppText style={fb.typeBadge}>{profileType === "grape" ? "GRAPE VARIETY" : "PRODUCER"}</AppText>
+          <AppText style={fb.heroTitle}>{profile.display_name}</AppText>
+          {c.tagline ? <AppText style={fb.heroTagline}>{c.tagline}</AppText> : null}
         </View>
       </View>
 
-      {/* At a Glance */}
       {glanceCards.length > 0 ? (
-        <View style={fallback.section}>
-          <AppText style={fallback.sectionTitle}>AT A GLANCE</AppText>
+        <View style={fb.section}>
+          <AppText style={fb.sectionTitle}>AT A GLANCE</AppText>
           {glanceCards.map((card) => (
-            <View key={card.label} style={fallback.infoCard}>
-              <AppText style={fallback.infoLabel}>{card.label}</AppText>
-              <AppText style={fallback.infoValue}>
-                {Array.isArray(card.value) ? card.value.join(", ") : card.value}
-              </AppText>
+            <View key={card.label} style={fb.infoCard}>
+              <AppText style={fb.infoLabel}>{card.label}</AppText>
+              <AppText style={fb.infoValue}>{Array.isArray(card.value) ? card.value.join(", ") : card.value}</AppText>
             </View>
           ))}
         </View>
       ) : null}
 
-      {/* Your History */}
       {personal_stats.entry_count > 0 ? (
-        <View style={fallback.card}>
-          <AppText style={fallback.cardLabel}>YOUR HISTORY</AppText>
-          <AppText style={fallback.cardText}>
+        <View style={fb.card}>
+          <AppText style={fb.cardLabel}>YOUR HISTORY</AppText>
+          <AppText style={fb.cardText}>
             You've logged {personal_stats.entry_count} {personal_stats.entry_count === 1 ? "wine" : "wines"}
             {personal_stats.avg_rating > 0 ? ` with an average rating of ${personal_stats.avg_rating.toFixed(1)}` : ""}
           </AppText>
         </View>
       ) : null}
 
-      {/* Story */}
       {storyParts.length > 0 ? (
-        <View style={fallback.section}>
-          <AppText style={fallback.sectionTitle}>THE STORY</AppText>
-          <AppText style={s.storyText}>{storyParts.join("\n\n")}</AppText>
+        <View style={fb.section}>
+          <AppText style={fb.sectionTitle}>THE STORY</AppText>
+          <AppText style={fb.storyText}>{storyParts.join("\n\n")}</AppText>
         </View>
       ) : null}
 
-      {/* Sensory */}
       {sensoryEntries.length > 0 ? (
-        <View style={fallback.section}>
-          <AppText style={fallback.sectionTitle}>SENSORY PROFILE</AppText>
-          <View style={fallback.card}>
+        <View style={fb.section}>
+          <AppText style={fb.sectionTitle}>SENSORY PROFILE</AppText>
+          <View style={fb.card}>
             {sensoryEntries.map(([key, value]) => (
-              <View key={key} style={fallback.sensoryRow}>
-                <AppText style={fallback.sensoryLabel}>{key.charAt(0).toUpperCase() + key.slice(1)}</AppText>
-                <View style={fallback.sensoryTrack}>
-                  <View style={[fallback.sensoryFill, { width: `${Math.max(0, Math.min(100, (value / 5) * 100))}%` }]} />
+              <View key={key} style={fb.sensoryRow}>
+                <View style={fb.sensoryLabelRow}>
+                  <AppText style={fb.sensoryLabel}>{key.charAt(0).toUpperCase() + key.slice(1)}</AppText>
+                  <AppText style={fb.sensoryValue}>{value.toFixed(1)}</AppText>
+                </View>
+                <View style={fb.sensoryTrack}>
+                  <View style={[fb.sensoryFill, { width: `${Math.max(0, Math.min(100, (value / 5) * 100))}%` }]} />
                 </View>
               </View>
             ))}
@@ -477,33 +803,37 @@ function FallbackProfilePage({
         </View>
       ) : null}
 
-      {/* Food Pairings */}
       {c.food_pairings && c.food_pairings.length > 0 ? (
-        <View style={fallback.section}>
-          <AppText style={fallback.sectionTitle}>FOOD PAIRINGS</AppText>
-          <View style={s.chipRow}>{c.food_pairings.map((item: string) => <Chip key={item} label={item} />)}</View>
+        <View style={fb.section}>
+          <AppText style={fb.sectionTitle}>FOOD PAIRINGS</AppText>
+          <View style={r.pairingRow}>
+            {c.food_pairings.map((item: string) => (
+              <View key={item} style={r.pairingChip}>
+                <AppText style={r.pairingChipText}>{item}</AppText>
+              </View>
+            ))}
+          </View>
         </View>
       ) : null}
 
-      {/* Related */}
       {relatedItems.length > 0 ? (
-        <View style={fallback.section}>
-          <AppText style={fallback.sectionTitle}>RELATED</AppText>
+        <View style={fb.section}>
+          <AppText style={fb.sectionTitle}>RELATED</AppText>
           {relatedItems.map((item) => (
             <Pressable
               key={`${item.type}-${item.name}`}
-              style={fallback.relatedItem}
+              style={fb.relatedItem}
               onPress={() => router.push(`/(app)/explore/${item.type}/${toExploreSlug(item.name)}`)}
             >
-              <AppText style={fallback.relatedName}>{item.name}</AppText>
-              <AppText style={fallback.relatedArrow}>{"\u2192"}</AppText>
+              <AppText style={fb.relatedName}>{item.name}</AppText>
+              <AppText style={fb.relatedArrow}>{"→"}</AppText>
             </Pressable>
           ))}
         </View>
       ) : null}
 
       {profile.hero_image_attribution ? (
-        <AppText style={s.attribution}>Photo by {profile.hero_image_attribution.photographer}</AppText>
+        <AppText style={r.attribution}>Photo by {profile.hero_image_attribution.photographer}</AppText>
       ) : null}
     </ScrollView>
   );
@@ -538,19 +868,19 @@ export default function ExploreProfileScreen() {
 
   if (loading) {
     return (
-      <View style={[s.screen, s.center]}>
-        <ActivityIndicator color={colors.accentSecondary} size="large" />
+      <View style={{ flex: 1, backgroundColor: DEVICE_BG, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={ROSE} size="large" />
       </View>
     );
   }
 
   if (error || !data) {
     return (
-      <View style={[s.screen, s.center, { paddingHorizontal: 24, gap: 12 }]}>
-        <AppText style={s.errorTitle}>Unable to load profile</AppText>
-        <AppText style={s.errorSubtitle}>{error ?? "Something went wrong."}</AppText>
-        <Pressable style={s.backBtn} onPress={() => router.back()}>
-          <AppText style={s.backBtnText}>Go back</AppText>
+      <View style={{ flex: 1, backgroundColor: DEVICE_BG, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, gap: 12 }}>
+        <AppText style={{ fontFamily: fonts.serif.light, fontSize: 20, color: CHAMPAGNE, textAlign: "center" }}>Unable to load profile</AppText>
+        <AppText style={{ fontSize: 13, color: "rgba(245,237,214,0.6)", textAlign: "center", lineHeight: 18 }}>{error ?? "Something went wrong."}</AppText>
+        <Pressable style={{ paddingVertical: 8 }} onPress={() => router.back()}>
+          <AppText style={{ fontSize: 13, color: "rgba(245,237,214,0.5)", fontWeight: "600" }}>Go back</AppText>
         </Pressable>
       </View>
     );
@@ -558,390 +888,39 @@ export default function ExploreProfileScreen() {
 
   const profileType = data.profile.type as ExploreProfileType;
 
-  return (
-    <View style={s.screen}>
-      {profileType === "region" ? (
-        <RegionPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />
-      ) : (
-        <FallbackProfilePage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />
-      )}
-    </View>
+  return profileType === "region" ? (
+    <RegionPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />
+  ) : (
+    <FallbackProfilePage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />
   );
 }
 
-// ─── Shared styles ──────────────────────────────────────────
+// ─── Fallback styles ────────────────────────────────────────
 
-const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: EDUCATION_BG_PRIMARY },
-  center: { alignItems: "center", justifyContent: "center" },
-  scroll: { paddingBottom: 48 },
-
-  // Hero
-  hero: {
-    height: 280,
-    position: "relative",
-    justifyContent: "flex-end",
-    overflow: "hidden",
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroBackBtn: {
-    position: "absolute",
-    top: 54,
-    left: 16,
-    width: 34,
-    height: 34,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(240,236,228,0.3)",
-    backgroundColor: "rgba(12,8,16,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  heroBackBtnText: {
-    color: "#F5EDD6",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  heroContent: {
-    paddingHorizontal: 18,
-    paddingBottom: 20,
-    gap: 4,
-  },
-  typeBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.accentRose,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 4,
-  },
-  typeBadgeText: {
-    color: colors.accentSecondary,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-  heroTitle: {
-    color: "#F5EDD6",
-    fontFamily: fonts.serif.light,
-    fontSize: 30,
-    lineHeight: 36,
-  },
-  heroTagline: {
-    color: "rgba(245,237,214,0.75)",
-    fontSize: 13,
-    lineHeight: 19,
-    fontStyle: "italic",
-  },
-  heroCountry: {
-    color: "rgba(245,237,214,0.5)",
-    fontSize: 11,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    fontWeight: "600",
-    marginTop: 2,
-  },
-
-  // Personal layer
-  personalCard: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    backgroundColor: EDUCATION_BG_ALT,
-    padding: 16,
-    gap: 6,
-  },
-  personalLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  personalText: {
-    color: "rgba(245,237,214,0.7)",
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  personalBold: {
-    color: "#F5EDD6",
-    fontWeight: "700",
-  },
-
-  // Education section
-  eduSection: {
-    paddingHorizontal: 18,
-    paddingVertical: 20,
-    gap: 12,
-  },
-  eduSectionTitle: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2.2,
-    textTransform: "uppercase",
-    color: "rgba(245,237,214,0.5)",
-  },
-
-  // Radar
-  radarWrap: {
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  radarHint: {
-    color: "rgba(245,237,214,0.4)",
-    fontSize: 11,
-    textAlign: "center",
-  },
-
-  // Story
-  storyText: {
-    color: "rgba(245,237,214,0.75)",
-    fontSize: 14,
-    lineHeight: 22,
-    fontFamily: fonts.serif.light,
-  },
-
-  // Grape list
-  grapeList: {
-    gap: 8,
-  },
-  grapeItem: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(74,48,96,0.3)",
-    backgroundColor: "rgba(74,48,96,0.08)",
-    padding: 14,
-    gap: 3,
-  },
-  grapeName: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  grapeContext: {
-    color: "rgba(245,237,214,0.6)",
-    fontSize: 12,
-    lineHeight: 17,
-  },
-
-  // Winemaker
-  winemakerList: {
-    gap: 8,
-  },
-  winemakerCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(196,96,122,0.2)",
-    backgroundColor: "rgba(196,96,122,0.06)",
-    padding: 14,
-    gap: 4,
-  },
-  winemakerName: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  winemakerWhy: {
-    color: "rgba(245,237,214,0.6)",
-    fontSize: 12,
-    lineHeight: 17,
-  },
-
-  // Appellation
-  appellationList: {
-    gap: 8,
-  },
-  appellationCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(123,29,58,0.25)",
-    backgroundColor: "rgba(123,29,58,0.08)",
-    padding: 14,
-    gap: 3,
-  },
-  appellationName: {
-    color: "#F5EDD6",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  appellationCharacter: {
-    color: "rgba(245,237,214,0.6)",
-    fontSize: 12,
-    lineHeight: 17,
-    fontStyle: "italic",
-  },
-
-  // Chips
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(245,237,214,0.15)",
-    backgroundColor: "rgba(245,237,214,0.05)",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  chipText: {
-    color: "rgba(245,237,214,0.7)",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-
-  // Fun facts
-  funFactCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(245,237,214,0.1)",
-    backgroundColor: "rgba(245,237,214,0.03)",
-    padding: 14,
-  },
-  funFactText: {
-    color: "rgba(245,237,214,0.75)",
-    fontSize: 13,
-    lineHeight: 19,
-  },
-
-  // Attribution
-  attribution: {
-    color: "rgba(245,237,214,0.3)",
-    fontSize: 10,
-    textAlign: "center",
-    paddingTop: 16,
-    paddingHorizontal: 18,
-  },
-
-  // Error state
-  errorTitle: {
-    color: "#F5EDD6",
-    fontFamily: fonts.serif.light,
-    fontSize: 20,
-    textAlign: "center",
-  },
-  errorSubtitle: {
-    color: "rgba(245,237,214,0.6)",
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  backBtn: { paddingVertical: 8 },
-  backBtnText: {
-    color: "rgba(245,237,214,0.5)",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-});
-
-// ─── Fallback styles (for grape/producer — keeping current layout) ──
-
-const fallback = StyleSheet.create({
-  scroll: { paddingBottom: 48 },
-  hero: {
-    height: 250,
-    position: "relative",
-    justifyContent: "flex-end",
-    overflow: "hidden",
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(12,8,16,0.55)",
-  },
-  heroOverlayNoImage: {
-    backgroundColor: colors.surfacePrimary,
-  },
-  section: {
-    paddingHorizontal: 18,
-    gap: 10,
-    marginTop: 18,
-  },
-  sectionTitle: {
-    color: colors.textTertiary,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    padding: 14,
-    gap: 8,
-    marginHorizontal: 18,
-    marginTop: 14,
-  },
-  cardLabel: {
-    color: colors.textTertiary,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  cardText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  infoCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    padding: 14,
-    gap: 4,
-  },
-  infoLabel: {
-    color: colors.textTertiary,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  infoValue: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 18,
-  },
+const fb = StyleSheet.create({
+  hero: { height: 250, position: "relative", justifyContent: "flex-end", overflow: "hidden" },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(12,8,16,0.55)" },
+  heroOverlayNoImage: { backgroundColor: colors.surfacePrimary },
+  heroContent: { paddingHorizontal: 18, paddingBottom: 18, gap: 4 },
+  typeBadge: { fontSize: 9, color: colors.accentSecondary, letterSpacing: 2, fontWeight: "700", marginBottom: 4 },
+  heroTitle: { fontFamily: fonts.serif.light, fontSize: 28, color: colors.textPrimary, lineHeight: 34 },
+  heroTagline: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+  section: { paddingHorizontal: 18, gap: 10, marginTop: 18 },
+  sectionTitle: { color: colors.textTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
+  card: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 14, gap: 8, marginHorizontal: 18, marginTop: 14 },
+  cardLabel: { color: colors.textTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
+  cardText: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  infoCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 14, gap: 4 },
+  infoLabel: { color: colors.textTertiary, fontSize: 9, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
+  infoValue: { color: colors.textPrimary, fontSize: 13, lineHeight: 18 },
+  storyText: { color: colors.textSecondary, fontSize: 13, lineHeight: 20 },
   sensoryRow: { gap: 3 },
+  sensoryLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   sensoryLabel: { color: colors.textSecondary, fontSize: 12 },
+  sensoryValue: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
   sensoryTrack: { height: 5, borderRadius: 3, backgroundColor: colors.surfaceHover },
   sensoryFill: { height: "100%", borderRadius: 3, backgroundColor: colors.accentPrimary },
-  relatedItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: 6,
-  },
-  relatedName: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  relatedArrow: {
-    color: colors.textTertiary,
-    fontSize: 14,
-  },
+  relatedItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, paddingHorizontal: 14, paddingVertical: 10, marginTop: 6 },
+  relatedName: { color: colors.textPrimary, fontSize: 13, fontWeight: "600" },
+  relatedArrow: { color: colors.textTertiary, fontSize: 14 },
 });
