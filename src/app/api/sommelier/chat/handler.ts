@@ -11,6 +11,7 @@ import {
 } from "@/server/sommelier/conversations";
 import { toSommelierSchemaErrorMessage } from "@/server/sommelier/schema";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
+import { AUDIENCE_MODES, type AudienceMode } from "@shared";
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
@@ -112,6 +113,24 @@ export function createSommelierChatHandler(
 
     const headers = rateLimitHeaders(rateLimit);
 
+    let audienceMode: AudienceMode = "explorer";
+    try {
+      const { data: modeRow } = await auth.supabase
+        .from("profiles")
+        .select("audience_mode")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+
+      if (
+        typeof modeRow?.audience_mode === "string" &&
+        (AUDIENCE_MODES as readonly string[]).includes(modeRow.audience_mode)
+      ) {
+        audienceMode = modeRow.audience_mode as AudienceMode;
+      }
+    } catch {
+      // Fall back to explorer if the column doesn't exist yet.
+    }
+
     try {
       const adminSupabase = resolvedDependencies.createAdminClient();
       const latestUserMessage =
@@ -139,6 +158,7 @@ export function createSommelierChatHandler(
           messages: parsed.data.messages,
           requestSupabase: auth.supabase,
           adminSupabase,
+          audienceMode,
           onComplete: async ({ answer }) => {
             await resolvedDependencies.appendSommelierMessages({
               supabase: adminSupabase,
@@ -170,6 +190,7 @@ export function createSommelierChatHandler(
         messages: parsed.data.messages,
         requestSupabase: auth.supabase,
         adminSupabase,
+        audienceMode,
       });
 
       return NextResponse.json(

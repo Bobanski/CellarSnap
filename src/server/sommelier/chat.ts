@@ -6,13 +6,14 @@ import type {
   SommelierMessage,
   SommelierSource,
 } from "@/server/sommelier/types";
+import type { AudienceMode } from "@shared";
 
 type ResponsesClient = OpenAI;
 
 export const SOMMELIER_MODEL = "gpt-5-mini";
 export const SOMMELIER_MAX_OUTPUT_TOKENS = 1000;
 
-export const SOMMELIER_SYSTEM_PROMPT = [
+const SOMMELIER_BASE_INSTRUCTIONS = [
   "You are Cluster's pocket sommelier: a knowledgeable, approachable wine expert.",
   "You have persistent access to the user's full tasting history and cellar - it is retrieved automatically and included in your context when relevant. You are not limited to this session's messages. Never say you only know wines shared in this session or that you lack access to the user's history.",
   "Use the user's tasting history and the supplied wine knowledge context when it is relevant.",
@@ -25,7 +26,35 @@ export const SOMMELIER_SYSTEM_PROMPT = [
   "Do not explain the retrieval process, source documents, or backend context unless the user explicitly asks.",
   "If the retrieved context does not contain enough information to answer confidently, say something like 'Based on what I can see in your cellar...' or 'I don't see enough entries matching that to give a confident answer' rather than claiming you have no access to history.",
   "Prefer practical guidance over generic textbook exposition.",
-].join(" ");
+];
+
+const SOMMELIER_MODE_INSTRUCTIONS: Record<AudienceMode, string[]> = {
+  explorer: [
+    "Speak in warm, simple language. No wine jargon unless the user introduces it first.",
+    "Keep answers short and encouraging. Use emoji sparingly if it fits.",
+    "Frame everything around what they'll enjoy, not what they should know.",
+  ],
+  enthusiast: [
+    "Be curious and conversational. Introduce regional context and producer nuance naturally.",
+    "Build vocabulary gradually — use a term, then briefly explain it.",
+    "QPR framing feels natural here. Reference value when relevant.",
+  ],
+  connoisseur: [
+    "Be precise and technical when warranted. Terroir, phenolic, extraction — use correctly.",
+    "Keep responses concise and data-forward. No hand-holding.",
+    "Treat them as a peer. Wry humor works. Minimal padding.",
+  ],
+};
+
+export function buildSommelierSystemPrompt(
+  mode: AudienceMode = "explorer"
+): string {
+  const modeInstructions = SOMMELIER_MODE_INSTRUCTIONS[mode] ?? SOMMELIER_MODE_INSTRUCTIONS.explorer;
+  return [...SOMMELIER_BASE_INSTRUCTIONS, ...modeInstructions].join(" ");
+}
+
+/** @deprecated Use buildSommelierSystemPrompt(mode) instead. Kept for backward compat in tests. */
+export const SOMMELIER_SYSTEM_PROMPT = buildSommelierSystemPrompt("explorer");
 
 const APPROX_WORDS_PER_TOKEN = 0.75;
 const MAX_CONTEXT_TOKENS = 5000;
@@ -96,7 +125,11 @@ function normalizeMessages(messages: SommelierMessage[]) {
   return kept;
 }
 
-function buildResponseInput(messages: SommelierMessage[], context: AssembledSommelierContext) {
+function buildResponseInput(
+  messages: SommelierMessage[],
+  context: AssembledSommelierContext,
+  audienceMode: AudienceMode = "explorer"
+) {
   const contextPrefix = "Context for this reply:\n";
   const contextSuffix =
     "\n\nWhen the user asks for a recommendation, prefer answers that fit their logged preferences and favorites.";
@@ -109,7 +142,7 @@ function buildResponseInput(messages: SommelierMessage[], context: AssembledSomm
   return [
     {
       role: "system" as const,
-      content: [{ type: "input_text" as const, text: SOMMELIER_SYSTEM_PROMPT }],
+      content: [{ type: "input_text" as const, text: buildSommelierSystemPrompt(audienceMode) }],
     },
     {
       role: "system" as const,
@@ -139,6 +172,7 @@ export async function chatWithSommelier(
     requestSupabase: Parameters<typeof assembleContext>[2]["requestSupabase"];
     adminSupabase?: Parameters<typeof assembleContext>[2]["adminSupabase"];
     createClient?: () => ResponsesClient;
+    audienceMode?: AudienceMode;
   }
 ): Promise<{
   answer: string;
@@ -157,7 +191,7 @@ export async function chatWithSommelier(
     model: SOMMELIER_MODEL,
     reasoning: { effort: "minimal" },
     max_output_tokens: SOMMELIER_MAX_OUTPUT_TOKENS,
-    input: buildResponseInput(params.messages, context) as ResponseInput,
+    input: buildResponseInput(params.messages, context, params.audienceMode) as ResponseInput,
   });
 
   // Explicit validation: ensure output_text field exists and is a string
@@ -193,6 +227,7 @@ export async function streamSommelierChat(
     requestSupabase: Parameters<typeof assembleContext>[2]["requestSupabase"];
     adminSupabase?: Parameters<typeof assembleContext>[2]["adminSupabase"];
     createClient?: () => ResponsesClient;
+    audienceMode?: AudienceMode;
     onComplete?: (payload: {
       answer: string;
       sources: SommelierSource[];
@@ -213,7 +248,7 @@ export async function streamSommelierChat(
     model: SOMMELIER_MODEL,
     reasoning: { effort: "minimal" },
     max_output_tokens: SOMMELIER_MAX_OUTPUT_TOKENS,
-    input: buildResponseInput(params.messages, context) as ResponseInput,
+    input: buildResponseInput(params.messages, context, params.audienceMode) as ResponseInput,
   });
   const encoder = new TextEncoder();
 

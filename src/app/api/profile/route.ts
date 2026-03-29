@@ -28,6 +28,7 @@ const privacyLevelSchema = z.enum([
   "private",
 ]);
 const nameDisplayPreferenceSchema = z.enum(["real_name", "username"]);
+const audienceModeSchema = z.enum(["explorer", "enthusiast", "connoisseur"]);
 const NAME_MAX_LENGTH = 80;
 const BIO_MAX_LENGTH = 100;
 
@@ -110,6 +111,7 @@ const updateProfileSchema = z
     default_reaction_privacy: privacyLevelSchema.optional(),
     default_comments_privacy: privacyLevelSchema.optional(),
     confirm_privacy_onboarding: z.literal(true).optional(),
+    audience_mode: audienceModeSchema.optional(),
   })
   .refine(
     (value) =>
@@ -123,7 +125,8 @@ const updateProfileSchema = z
       value.default_entry_privacy !== undefined ||
       value.default_reaction_privacy !== undefined ||
       value.default_comments_privacy !== undefined ||
-      value.confirm_privacy_onboarding !== undefined,
+      value.confirm_privacy_onboarding !== undefined ||
+      value.audience_mode !== undefined,
     { message: "No profile updates provided." }
   );
 
@@ -253,6 +256,7 @@ const PROFILE_OPTIONAL_UPDATE_COLUMNS = [
   "last_name",
   "phone",
   "bio",
+  "audience_mode",
 ] as const;
 
 async function ensureProfileRowExists(
@@ -481,12 +485,24 @@ export async function GET() {
 
   const bio = typeof bioRow?.bio === "string" ? bioRow.bio : null;
 
+  const { data: audienceModeRow } = await supabase
+    .from("profiles")
+    .select("audience_mode")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const audience_mode =
+    typeof audienceModeRow?.audience_mode === "string"
+      ? audienceModeRow.audience_mode
+      : "explorer";
+
   return NextResponse.json(
     {
       profile: {
         ...profile,
         phone,
         bio,
+        audience_mode,
         avatar_path: avatarPath,
         avatar_url,
       },
@@ -538,6 +554,7 @@ export async function PATCH(request: Request) {
       flattened.fieldErrors.default_reaction_privacy?.[0] ??
       flattened.fieldErrors.default_comments_privacy?.[0] ??
       flattened.fieldErrors.confirm_privacy_onboarding?.[0] ??
+      flattened.fieldErrors.audience_mode?.[0] ??
       "Invalid profile update.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
@@ -580,6 +597,10 @@ export async function PATCH(request: Request) {
 
   if (parsed.data.bio !== undefined) {
     updates.bio = parsed.data.bio?.trim() || null;
+  }
+
+  if (parsed.data.audience_mode !== undefined) {
+    updates.audience_mode = parsed.data.audience_mode;
   }
 
   if (parsed.data.name_display_preference !== undefined) {
@@ -631,6 +652,10 @@ export async function PATCH(request: Request) {
   }
   if (parsed.data.default_comments_privacy !== undefined) {
     updates.default_comments_privacy = parsed.data.default_comments_privacy;
+  }
+
+  if (parsed.data.audience_mode !== undefined) {
+    updates.audience_mode = parsed.data.audience_mode;
   }
 
   if (confirmedPrivacyAt) {
