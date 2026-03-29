@@ -74,7 +74,7 @@ Write a JSON object with these fields:
 - style: 2-3 sentences about typical wine styles from here
 - most_loved_producer: object with { name: string, avg_rating: number } — the most celebrated producer from this region
 - best_qpr_producer: object with { name: string, avg_rating: number } — the producer known for best quality-to-price ratio
-- recommendation_picks: array of exactly 3 objects with { name: string, type: "grape"|"region"|"producer", why: string } — personalized "based on your palate you'd also love" suggestions. These should be specifically relevant to this region (e.g. for Châteauneuf-du-Pape: Grenache because it's the main grape, Priorat because it shares Grenache/similar profile, Mourvèdre because it's in the blend). The "why" should be one evocative sentence.
+- recommendation_picks: array of exactly 3 objects with { name: string, type: "grape"|"region"|"producer", why: string } — "if you like this, you may also enjoy" suggestions. IMPORTANT: Mix obvious and non-obvious picks. One can be directly related (e.g. the region's main grape). One should be a step removed — a region that profiles similarly but uses DIFFERENT grapes, or shares sensory components from a different part of the world (e.g. for CDP: Priorat because Grenache travels there but slate changes everything). The third should be a genuine surprise — something that shares a sensory thread but wouldn't be the first association (e.g. for CDP: a Barossa Grenache or a Bandol Mourvèdre). Avoid all three being from the same country or grape. The "why" should be one evocative sentence.
 - zone_descriptions: array of 2-3 objects with { name: string, note: string } — key sub-zones/lieu-dits within this region with a sensory/terroir description of what makes each distinct
 - personal_insight: string — a short, punchy insight sentence about this region's wines that could feel personal (e.g. "You always rate the Grenache-heavy ones higher. That's the garrigue talking.")
 
@@ -698,8 +698,33 @@ export async function GET(
   // 6. Personal stats (always fresh, user-specific)
   const personalStats = await fetchPersonalStats(type, displayName, user.id, supabase);
 
+  // 7. Community QPR data (for regions)
+  let community_qpr: { extortion: number; pricey: number; spot_on: number; good_value: number; absolute_steal: number; total: number } | null = null;
+  if (type === "region") {
+    const adminClient = createSupabaseAdminClient();
+    const { data: qprRows } = await adminClient
+      .from("wine_entries")
+      .select("qpr_level")
+      .or(`canonical_region.ilike.%${displayName}%,region.ilike.%${displayName}%`)
+      .not("qpr_level", "is", null);
+
+    if (qprRows && qprRows.length >= 3) {
+      const counts = { extortion: 0, pricey: 0, spot_on: 0, good_value: 0, absolute_steal: 0 };
+      for (const row of qprRows as Array<{ qpr_level: string }>) {
+        const level = row.qpr_level;
+        if (level === "extortion") counts.extortion++;
+        else if (level === "pricey") counts.pricey++;
+        else if (level === "mid") counts.spot_on++;
+        else if (level === "good_value") counts.good_value++;
+        else if (level === "absolute_steal") counts.absolute_steal++;
+      }
+      community_qpr = { ...counts, total: qprRows.length };
+    }
+  }
+
   return NextResponse.json({
     profile,
     personal_stats: personalStats,
+    community_qpr,
   });
 }

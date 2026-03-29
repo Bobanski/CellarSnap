@@ -324,47 +324,72 @@ function RegionPage({
       })()}
 
       {/* ── Layer 9: Community Pulse ──────────────────── */}
-      {(c.most_loved_producer || c.best_qpr_producer) ? (
-        <View style={[r.section, { backgroundColor: nextBg() }]}>
-          <AppText style={r.sectionLabel}>COMMUNITY PULSE</AppText>
+      {(() => {
+        const qpr = data.community_qpr;
+        const hasQpr = qpr && qpr.total > 0;
+        const hasProducers = c.most_loved_producer || c.best_qpr_producer;
+        if (!hasQpr && !hasProducers) return null;
 
-          {/* QPR distribution bar */}
-          <AppText style={r.qprBarLabel}>QPR across community logs</AppText>
-          <View style={r.qprBar}>
-            <View style={[r.qprSegment, { flex: 4, backgroundColor: "rgba(184,48,96,0.75)" }]} />
-            <View style={[r.qprSegment, { flex: 18, backgroundColor: "rgba(92,85,80,0.75)" }]} />
-            <View style={[r.qprSegment, { flex: 52, backgroundColor: "rgba(61,107,79,0.75)" }]} />
-            <View style={[r.qprSegment, { flex: 26, backgroundColor: "rgba(123,29,58,0.75)" }]} />
-          </View>
-          <View style={r.qprLegendRow}>
-            <AppText style={[r.qprLegendText, { color: VERDOT }]}>Spot On</AppText>
-            <AppText style={[r.qprLegendText, { color: GRENACHE }]}>Good Value</AppText>
-            <AppText style={[r.qprLegendText, { color: FOG }]}>Pricey</AppText>
-          </View>
+        // Compute percentages
+        const pctSpotOn = hasQpr ? Math.round((qpr.spot_on / qpr.total) * 100) : 0;
+        const pctGoodValue = hasQpr ? Math.round((qpr.good_value / qpr.total) * 100) : 0;
+        const pctSteal = hasQpr ? Math.round((qpr.absolute_steal / qpr.total) * 100) : 0;
+        const pctPricey = hasQpr ? Math.round((qpr.pricey / qpr.total) * 100) : 0;
+        const pctExtortion = hasQpr ? Math.round((qpr.extortion / qpr.total) * 100) : 0;
 
-          {/* Producer cards */}
-          <View style={[r.communityCardRow, { marginTop: 10 }]}>
-            {c.most_loved_producer ? (
-              <Pressable
-                style={r.communityCard}
-                onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.most_loved_producer!.name)}`)}
-              >
-                <AppText style={r.communityCardWine}>{c.most_loved_producer.name}</AppText>
-                <AppText style={r.communityCardSub}>Most loved · {c.most_loved_producer.avg_rating} avg</AppText>
-              </Pressable>
+        // Best QPR subtitle
+        const bestQprSub = hasQpr && (pctSteal + pctGoodValue) > 0
+          ? `Best QPR · ${pctSteal + pctGoodValue}% said Good Value or better`
+          : "Best QPR";
+
+        return (
+          <View style={[r.section, { backgroundColor: nextBg() }]}>
+            <AppText style={r.sectionLabel}>COMMUNITY PULSE</AppText>
+
+            {/* QPR bar — only if real data */}
+            {hasQpr ? (
+              <>
+                <AppText style={r.qprBarLabel}>QPR across {qpr.total} community logs</AppText>
+                <View style={r.qprBar}>
+                  {pctExtortion > 0 ? <View style={[r.qprSegment, { flex: pctExtortion, backgroundColor: "rgba(184,48,96,0.75)" }]} /> : null}
+                  {pctPricey > 0 ? <View style={[r.qprSegment, { flex: pctPricey, backgroundColor: "rgba(92,85,80,0.75)" }]} /> : null}
+                  {pctSpotOn > 0 ? <View style={[r.qprSegment, { flex: pctSpotOn, backgroundColor: "rgba(61,107,79,0.75)" }]} /> : null}
+                  {(pctGoodValue + pctSteal) > 0 ? <View style={[r.qprSegment, { flex: pctGoodValue + pctSteal, backgroundColor: "rgba(123,29,58,0.75)" }]} /> : null}
+                </View>
+                <View style={r.qprLegendRow}>
+                  {pctSpotOn > 0 ? <AppText style={[r.qprLegendText, { color: VERDOT }]}>{pctSpotOn}% Spot On</AppText> : null}
+                  {(pctGoodValue + pctSteal) > 0 ? <AppText style={[r.qprLegendText, { color: GRENACHE }]}>{pctGoodValue + pctSteal}% Good Value</AppText> : null}
+                  {pctPricey > 0 ? <AppText style={[r.qprLegendText, { color: FOG }]}>{pctPricey}% Pricey</AppText> : null}
+                </View>
+              </>
             ) : null}
-            {c.best_qpr_producer ? (
-              <Pressable
-                style={r.communityCard}
-                onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.best_qpr_producer!.name)}`)}
-              >
-                <AppText style={r.communityCardWine}>{c.best_qpr_producer.name}</AppText>
-                <AppText style={r.communityCardSub}>Best QPR</AppText>
-              </Pressable>
+
+            {/* Producer cards */}
+            {hasProducers ? (
+              <View style={[r.communityCardRow, hasQpr ? { marginTop: 10 } : null]}>
+                {c.most_loved_producer ? (
+                  <Pressable
+                    style={r.communityCard}
+                    onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.most_loved_producer!.name)}`)}
+                  >
+                    <AppText style={r.communityCardWine}>{c.most_loved_producer.name}</AppText>
+                    <AppText style={r.communityCardSub}>Most loved · {c.most_loved_producer.avg_rating} avg</AppText>
+                  </Pressable>
+                ) : null}
+                {c.best_qpr_producer ? (
+                  <Pressable
+                    style={r.communityCard}
+                    onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.best_qpr_producer!.name)}`)}
+                  >
+                    <AppText style={r.communityCardWine}>{c.best_qpr_producer.name}</AppText>
+                    <AppText style={r.communityCardSub}>{bestQprSub}</AppText>
+                  </Pressable>
+                ) : null}
+              </View>
             ) : null}
           </View>
-        </View>
-      ) : null}
+        );
+      })()}
 
       {/* ── Layer 10: Based on your palate ────────────── */}
       {c.recommendation_picks && c.recommendation_picks.length > 0 ? (

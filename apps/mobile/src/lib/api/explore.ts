@@ -62,9 +62,19 @@ export type PersonalStats = {
   label_photos: string[];
 };
 
+export type CommunityQpr = {
+  extortion: number;
+  pricey: number;
+  spot_on: number;
+  good_value: number;
+  absolute_steal: number;
+  total: number;
+};
+
 export type ExploreProfileResponse = {
   profile: ExploreProfile;
   personal_stats: PersonalStats;
+  community_qpr?: CommunityQpr | null;
 };
 
 // ─── API ────────────────────────────────────────────────────
