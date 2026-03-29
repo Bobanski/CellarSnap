@@ -1068,7 +1068,7 @@ export default function FeedPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span>{formatConsumedDate(entry.consumed_at)}</span>
+                      <span>{formatConsumedDate(entry.created_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
                           <button

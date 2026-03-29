@@ -70,11 +70,7 @@ export default function GroupedPostGallery({
                   : `${slide?.label ?? "Photo"} slide`}
               </p>
             </div>
-            {slide?.created_at ? (
-              <span className="shrink-0 text-[11px] text-[var(--color-text-tertiary)]">
-                {formatConsumedDate(slide.created_at)}
-              </span>
-            ) : slide?.consumed_at ? (
+            {slide?.consumed_at ? (
               <span className="shrink-0 text-[11px] text-[var(--color-text-tertiary)]">
                 {formatConsumedDate(slide.consumed_at)}
               </span>

@@ -316,7 +316,7 @@ function FeedCard({
         </Pressable>
         <View style={styles.feedAuthorRight}>
           <View style={styles.feedMetaRow}>
-            <AppText style={styles.feedDate}>{formatConsumedDate(item.consumed_at)}</AppText>
+            <AppText style={styles.feedDate}>{formatConsumedDate(item.created_at)}</AppText>
             {viewerUserId && viewerUserId !== item.user_id ? (
               <View style={styles.feedMenuWrap}>
                 <Pressable
