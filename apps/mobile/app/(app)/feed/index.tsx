@@ -63,7 +63,7 @@ const QPR_LEVEL_LABELS: Record<QprLevel, string> = {
 };
 
 function formatConsumedDate(raw: string) {
-  const date = new Date(`${raw}T00:00:00`);
+  const date = raw.includes("T") ? new Date(raw) : new Date(`${raw}T00:00:00`);
   if (Number.isNaN(date.getTime())) return raw;
   return date.toLocaleDateString(undefined, {
     month: "short",
@@ -99,6 +99,7 @@ function GroupedPostGallery({
   onGallerySwipeStart,
   onGallerySwipeEnd,
   onCardPress,
+  onIndexChange,
 }: {
   title: string;
   slides: FeedGroupSlide[];
@@ -106,6 +107,7 @@ function GroupedPostGallery({
   onGallerySwipeStart: () => void;
   onGallerySwipeEnd: () => void;
   onCardPress: () => void;
+  onIndexChange?: (index: number) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
@@ -172,6 +174,7 @@ function GroupedPostGallery({
       const maxIndex = Math.max(0, slides.length - 1);
       const clamped = Math.max(0, Math.min(maxIndex, nextIndex));
       setActiveIndex(clamped);
+      onIndexChange?.(clamped);
       if (!scrollRef.current || photoFrameWidth <= 0) return;
       scrollRef.current.scrollTo({ x: clamped * photoFrameWidth, animated });
     },
@@ -188,8 +191,40 @@ function GroupedPostGallery({
     return null;
   }
 
+  const isWineSlide = Boolean(activeSlide?.entry_id);
+  const slideTitle = isWineSlide
+    ? activeSlide?.wine_name ?? activeSlide?.producer ?? activeSlide?.label ?? "Wine"
+    : activeSlide?.label ?? "Photo";
+  const slideMeta = (() => {
+    if (!activeSlide) return "";
+    const parts = [
+      activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
+      activeSlide.vintage,
+      activeSlide.appellation || activeSlide.region,
+      activeSlide.country,
+    ].filter(Boolean);
+    return parts.slice(0, 3).join(" · ");
+  })();
+
   return (
-    <View>
+    <View style={{ flex: 1 }}>
+      {/* Header strip above photos — matching web */}
+      <View style={groupedStyles.galleryHeader}>
+        <View style={{ flex: 1 }}>
+          {title ? (
+            <AppText style={groupedStyles.galleryHeaderTitle}>{title}</AppText>
+          ) : null}
+          <AppText style={groupedStyles.galleryHeaderWine} numberOfLines={1}>{slideTitle}</AppText>
+          {slideMeta ? (
+            <AppText style={groupedStyles.galleryHeaderMeta} numberOfLines={1}>{slideMeta}</AppText>
+          ) : null}
+        </View>
+        {activeSlide?.consumed_at ? (
+          <AppText style={groupedStyles.galleryHeaderDate}>
+            Drank {formatConsumedDate(activeSlide.consumed_at)}
+          </AppText>
+        ) : null}
+      </View>
       {hasMultiple ? (
         <ScrollView
           ref={(node) => {
@@ -261,7 +296,7 @@ function GroupedPostGallery({
               const rawIndex = Math.round(offsetX / photoFrameWidth);
               const maxIndex = Math.max(0, slides.length - 1);
               const clamped = Math.max(0, Math.min(maxIndex, rawIndex));
-              if (clamped !== clampedIndex) setActiveIndex(clamped);
+              if (clamped !== clampedIndex) { setActiveIndex(clamped); onIndexChange?.(clamped); }
             }
             blockTapUntilRef.current = Date.now() + 200;
             endSwipe();
@@ -278,35 +313,10 @@ function GroupedPostGallery({
                 resizeMode="cover"
                 fadeDuration={0}
               />
-              <View style={groupedStyles.overlayGradient} />
-              <View style={groupedStyles.overlayContent}>
-                <View style={groupedStyles.slideLabelPill}>
-                  <AppText style={groupedStyles.slideLabelText}>
-                    {slide.label}
-                  </AppText>
-                </View>
-                {slide.wine_name ? (
-                  <AppText style={groupedStyles.slideWineName} numberOfLines={2}>
-                    {slide.wine_name}
-                  </AppText>
-                ) : null}
-                {slide.producer || slide.vintage ? (
-                  <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
-                    {[slide.producer, slide.vintage].filter(Boolean).join(" · ")}
-                  </AppText>
-                ) : null}
-                {(slide.region || slide.appellation || slide.country) ? (
-                  <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
-                    {[slide.appellation || slide.region, slide.country]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </AppText>
-                ) : null}
-                {slide.consumed_at ? (
-                  <AppText style={groupedStyles.slideDate}>
-                    {formatConsumedDate(slide.consumed_at)}
-                  </AppText>
-                ) : null}
+              <View style={groupedStyles.slideLabelPill}>
+                <AppText style={groupedStyles.slideLabelText}>
+                  {slide.label}
+                </AppText>
               </View>
             </View>
           ))}
@@ -327,30 +337,6 @@ function GroupedPostGallery({
                   {activeSlide.label}
                 </AppText>
               </View>
-              {activeSlide.wine_name ? (
-                <AppText style={groupedStyles.slideWineName} numberOfLines={2}>
-                  {activeSlide.wine_name}
-                </AppText>
-              ) : null}
-              {activeSlide.producer || activeSlide.vintage ? (
-                <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
-                  {[activeSlide.producer, activeSlide.vintage]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </AppText>
-              ) : null}
-              {(activeSlide.region || activeSlide.appellation || activeSlide.country) ? (
-                <AppText style={groupedStyles.slideMeta} numberOfLines={1}>
-                  {[activeSlide.appellation || activeSlide.region, activeSlide.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </AppText>
-              ) : null}
-              {activeSlide.consumed_at ? (
-                <AppText style={groupedStyles.slideDate}>
-                  {formatConsumedDate(activeSlide.consumed_at)}
-                </AppText>
-              ) : null}
             </View>
           </View>
         </Pressable>
@@ -458,6 +444,7 @@ function FeedCard({
   const groupSlides = useMemo(() => item.group_slides ?? [], [item.group_slides]);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
+  const [galleryActiveIndex, setGalleryActiveIndex] = useState(0);
   const [isNotesTruncated, setIsNotesTruncated] = useState(false);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const swipeActiveRef = useRef(false);
@@ -655,7 +642,7 @@ function FeedCard({
 
       {isGrouped && groupSlides.length > 0 ? (
         <View
-          style={styles.feedPhotoFrame}
+          style={styles.feedPhotoFrameGrouped}
           onLayout={(event) => {
             const nextWidth = PixelRatio.roundToNearestPixel(event.nativeEvent.layout.width);
             if (nextWidth > 0 && Math.abs(nextWidth - photoFrameWidth) > 0.5) {
@@ -670,7 +657,21 @@ function FeedCard({
             onGallerySwipeStart={beginGallerySwipe}
             onGallerySwipeEnd={endGallerySwipe}
             onCardPress={handleCardPress}
+            onIndexChange={setGalleryActiveIndex}
           />
+          {groupSlides.length > 1 ? (
+            <View style={styles.groupedDotRow}>
+              {groupSlides.map((_, i) => (
+                <View
+                  key={`gd-${i}`}
+                  style={[
+                    styles.groupedDot,
+                    i === (galleryActiveIndex ?? 0) ? styles.groupedDotActive : null,
+                  ]}
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : (
       <View
@@ -2025,6 +2026,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
+  groupedDotRow: {
+    position: "absolute",
+    bottom: 10,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  groupedDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.45)",
+  },
+  groupedDotActive: {
+    width: 8,
+    height: 8,
+    backgroundColor: colors.rose,
+  },
+  feedPhotoFrameGrouped: {
+    aspectRatio: 3 / 4,
+    borderRadius: 0,
+    overflow: "hidden",
+    backgroundColor: colors.surfacePrimary,
+    position: "relative",
+    marginHorizontal: -12,
+    width: "auto",
+  },
   feedPhotoFrame: {
     aspectRatio: 4 / 3,
     borderRadius: 0,
@@ -2536,6 +2568,38 @@ const groupedStyles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  galleryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  galleryHeaderTitle: {
+    color: colors.accentSecondary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    opacity: 0.8,
+  },
+  galleryHeaderWine: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  galleryHeaderMeta: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  galleryHeaderDate: {
+    color: colors.textTertiary,
+    fontSize: 11,
+    flexShrink: 0,
+  },
   overlayGradient: {
     position: "absolute",
     left: 0,
@@ -2553,14 +2617,16 @@ const groupedStyles = StyleSheet.create({
     gap: 2,
   },
   slideLabelPill: {
-    alignSelf: "flex-start",
+    position: "absolute",
+    left: 8,
+    top: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.55)",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    marginBottom: 4,
+    zIndex: 2,
   },
   slideLabelText: {
     color: "rgba(255,255,255,0.9)",
@@ -2569,42 +2635,22 @@ const groupedStyles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
-  slideWineName: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
-    lineHeight: 20,
-  },
-  slideMeta: {
-    color: "rgba(255,255,255,0.72)",
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  slideDate: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 10,
-    lineHeight: 14,
-    marginTop: 2,
-  },
   dotRow: {
     position: "absolute",
-    bottom: 8,
-    alignSelf: "center",
+    bottom: 10,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfacePrimary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 6,
   },
   dot: {
-    width: 5,
-    height: 5,
+    width: 7,
+    height: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(161,161,170,0.85)",
+    backgroundColor: "rgba(255,255,255,0.45)",
   },
   dotActive: {
     backgroundColor: colors.rose,
