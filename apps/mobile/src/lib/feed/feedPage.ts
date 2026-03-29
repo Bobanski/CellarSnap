@@ -21,6 +21,7 @@ export type FeedEntryRow = {
   root_entry_id?: string | null;
   is_feed_visible?: boolean | null;
   drinking_now?: boolean | null;
+  entry_group_id?: string | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
@@ -37,6 +38,29 @@ export type FeedEntryRow = {
   pairing_image_path: string | null;
   entry_privacy: EntryPrivacy;
   created_at: string;
+};
+
+export type EntryGroupMode = "event" | "catch_up";
+
+export type FeedEntryGroup = {
+  id: string;
+  mode: EntryGroupMode;
+  title: string;
+};
+
+export type FeedGroupSlide = {
+  id: string;
+  type: string;
+  url: string;
+  entry_id: string | null;
+  label: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  consumed_at: string | null;
 };
 
 export type PrimaryGrape = {
@@ -98,6 +122,8 @@ export type MobileFeedEntry = FeedEntryRow & {
   reaction_counts: Record<string, number>;
   reaction_users: Record<string, string[]>;
   comment_count: number;
+  entry_group?: FeedEntryGroup | null;
+  group_slides?: FeedGroupSlide[] | null;
 };
 
 type InteractionSettingsRow = {
@@ -125,6 +151,15 @@ const TYPE_ORDER: Record<FeedPhotoType, number> = {
   lineup: 3,
   other_bottles: 4,
   pairing: 5,
+};
+
+const GROUP_SLIDE_LABELS: Record<string, string> = {
+  label: "Wine",
+  pairing: "Pairing",
+  people: "People",
+  place: "Place",
+  lineup: "Lineup",
+  other_bottles: "Other bottles",
 };
 
 function isMissingSharedTastingColumns(message: string) {
@@ -345,6 +380,7 @@ export async function fetchFeedPage({
 
   const baseSelectFields =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+  const baseSelectFieldsWithGroupId = `${baseSelectFields}, entry_group_id`;
   const fetchLimit = Math.min(160, limit * 5 + 1);
 
   const buildQuery = ({
@@ -378,31 +414,43 @@ export async function fetchFeedPage({
 
   let feedRows: FeedEntryRow[] = [];
   let hasSharedTastingColumns = false;
+  let hasGroupIdColumn = false;
 
   const feedSelectAttempts = [
+    {
+      fields: `${baseSelectFieldsWithGroupId}, drinking_now, root_entry_id, is_feed_visible`,
+      withTastingSupport: true,
+      hasSharedTastingColumns: true,
+      hasDrinkingNowColumn: true,
+      hasGroupIdColumn: true,
+    },
     {
       fields: `${baseSelectFields}, drinking_now, root_entry_id, is_feed_visible`,
       withTastingSupport: true,
       hasSharedTastingColumns: true,
       hasDrinkingNowColumn: true,
+      hasGroupIdColumn: false,
     },
     {
       fields: `${baseSelectFields}, root_entry_id, is_feed_visible`,
       withTastingSupport: true,
       hasSharedTastingColumns: true,
       hasDrinkingNowColumn: false,
+      hasGroupIdColumn: false,
     },
     {
       fields: `${baseSelectFields}, drinking_now`,
       withTastingSupport: false,
       hasSharedTastingColumns: false,
       hasDrinkingNowColumn: true,
+      hasGroupIdColumn: false,
     },
     {
       fields: baseSelectFields,
       withTastingSupport: false,
       hasSharedTastingColumns: false,
       hasDrinkingNowColumn: false,
+      hasGroupIdColumn: false,
     },
   ] as const;
 
@@ -415,8 +463,12 @@ export async function fetchFeedPage({
         drinking_now: attempt.hasDrinkingNowColumn
           ? (row as unknown as FeedEntryRow).drinking_now ?? false
           : false,
+        entry_group_id: attempt.hasGroupIdColumn
+          ? (row as unknown as FeedEntryRow).entry_group_id ?? null
+          : null,
       }));
       hasSharedTastingColumns = attempt.hasSharedTastingColumns;
+      hasGroupIdColumn = attempt.hasGroupIdColumn;
       lastAttemptError = null;
       break;
     }
@@ -728,6 +780,181 @@ export async function fetchFeedPage({
     supabaseClient,
   });
 
+  // --- Resolve grouped post data ---
+  const groupDataByEntryId = new Map<
+    string,
+    { entry_group: FeedEntryGroup; group_slides: FeedGroupSlide[] }
+  >();
+
+  if (hasGroupIdColumn) {
+    const entryGroupIdByEntryId = new Map<string, string>();
+    pageRows.forEach((entry) => {
+      if (
+        typeof entry.entry_group_id === "string" &&
+        entry.entry_group_id.length > 0
+      ) {
+        entryGroupIdByEntryId.set(entry.id, entry.entry_group_id);
+      }
+    });
+
+    const groupIds = Array.from(new Set(entryGroupIdByEntryId.values()));
+
+    if (groupIds.length > 0) {
+      const [groupsResponse, slidesResponse] = await Promise.all([
+        supabaseClient
+          .from("entry_groups")
+          .select("id, mode, title")
+          .in("id", groupIds),
+        supabaseClient
+          .from("entry_group_slides")
+          .select(
+            "id, group_id, entry_id, photo_type, path, position, created_at"
+          )
+          .in("group_id", groupIds)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true }),
+      ]);
+
+      if (groupsResponse.error || slidesResponse.error) {
+        // Tables may not exist yet — silently skip group resolution
+      } else {
+
+      const groupRows = (groupsResponse.data ?? []) as Array<{
+        id: string;
+        mode: string;
+        title: string;
+      }>;
+      const slideRows = (slidesResponse.data ?? []) as Array<{
+        id: string;
+        group_id: string;
+        entry_id: string | null;
+        photo_type: string;
+        path: string;
+        position: number;
+        created_at: string;
+      }>;
+
+      // Fetch wine entry metadata for slide entries
+      const slideEntryIds = Array.from(
+        new Set(
+          slideRows
+            .map((row) => row.entry_id)
+            .filter(
+              (value): value is string =>
+                typeof value === "string" && value.length > 0
+            )
+        )
+      );
+
+      const slideEntryMap = new Map<
+        string,
+        {
+          id: string;
+          wine_name: string | null;
+          producer: string | null;
+          vintage: string | null;
+          country: string | null;
+          region: string | null;
+          appellation: string | null;
+          consumed_at: string;
+        }
+      >();
+
+      if (slideEntryIds.length > 0) {
+        const { data: slideEntryRows } = await supabaseClient
+          .from("wine_entries")
+          .select(
+            "id, wine_name, producer, vintage, country, region, appellation, consumed_at"
+          )
+          .in("id", slideEntryIds);
+
+        ((slideEntryRows ?? []) as Array<{
+          id: string;
+          wine_name: string | null;
+          producer: string | null;
+          vintage: string | null;
+          country: string | null;
+          region: string | null;
+          appellation: string | null;
+          consumed_at: string;
+        }>).forEach((row) => {
+          slideEntryMap.set(row.id, row);
+        });
+      }
+
+      // Sign slide photo URLs
+      const slidePaths = slideRows.map((row) => row.path);
+      const slideSignedUrls = await signPhotoUrls(slidePaths, {
+        supabaseClient,
+      });
+
+      const groupById = new Map(groupRows.map((row) => [row.id, row]));
+      const slidesByGroupId = new Map<string, typeof slideRows>();
+      slideRows.forEach((row) => {
+        const current = slidesByGroupId.get(row.group_id) ?? [];
+        current.push(row);
+        slidesByGroupId.set(row.group_id, current);
+      });
+
+      entryGroupIdByEntryId.forEach((groupId, entryId) => {
+        const group = groupById.get(groupId);
+        if (!group) {
+          return;
+        }
+        if (group.mode !== "event" && group.mode !== "catch_up") {
+          return;
+        }
+
+        const slides = (slidesByGroupId.get(groupId) ?? [])
+          .map((slide) => {
+            const signedUrl = slideSignedUrls.get(slide.path) ?? null;
+            if (!signedUrl) {
+              return null;
+            }
+            const slideEntry =
+              slide.entry_id && slideEntryMap.has(slide.entry_id)
+                ? slideEntryMap.get(slide.entry_id) ?? null
+                : null;
+
+            const label =
+              slide.photo_type === "label"
+                ? slideEntry?.wine_name ??
+                  slideEntry?.producer ??
+                  slideEntry?.appellation ??
+                  slideEntry?.region ??
+                  "Wine"
+                : GROUP_SLIDE_LABELS[slide.photo_type] ?? slide.photo_type;
+
+            return {
+              id: slide.id,
+              type: slide.photo_type,
+              url: signedUrl,
+              entry_id: slide.entry_id,
+              label,
+              wine_name: slideEntry?.wine_name ?? null,
+              producer: slideEntry?.producer ?? null,
+              vintage: slideEntry?.vintage ?? null,
+              country: slideEntry?.country ?? null,
+              region: slideEntry?.region ?? null,
+              appellation: slideEntry?.appellation ?? null,
+              consumed_at: slideEntry?.consumed_at ?? null,
+            } satisfies FeedGroupSlide;
+          })
+          .filter((slide): slide is FeedGroupSlide => slide !== null);
+
+        groupDataByEntryId.set(entryId, {
+          entry_group: {
+            id: group.id,
+            mode: group.mode as EntryGroupMode,
+            title: typeof group.title === "string" ? group.title : "",
+          },
+          group_slides: slides,
+        });
+      });
+      } // end else (no group query errors)
+    }
+  }
+
   const entries: MobileFeedEntry[] = pageRows.map((entry) => {
     const authorProfile = profileMap.get(entry.user_id);
     const avatarPath = authorProfile?.avatar_path ?? null;
@@ -783,6 +1010,8 @@ export async function fetchFeedPage({
       email: null,
     }));
 
+    const groupData = groupDataByEntryId.get(entry.id);
+
     return {
       ...entry,
       drinking_now: entry.drinking_now === true,
@@ -790,7 +1019,7 @@ export async function fetchFeedPage({
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,
       viewer_is_direct_friend: socialAudience.acceptedFriendIds.has(entry.user_id),
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
-      photo_gallery: photoGallery,
+      photo_gallery: groupData ? groupData.group_slides.map((s) => ({ type: s.type as FeedPhotoType, url: s.url })) : photoGallery,
       tasted_with_users: tastedWithUsers,
       can_react: canSeeReactions,
       can_comment: canSeeComments,
@@ -799,11 +1028,15 @@ export async function fetchFeedPage({
       reaction_counts: canSeeReactions ? reactionCountsMap.get(entry.id) ?? {} : {},
       reaction_users: reactionUsers,
       comment_count: canSeeComments ? commentCountsMap.get(entry.id) ?? 0 : 0,
+      entry_group: groupData?.entry_group ?? null,
+      group_slides: groupData?.group_slides ?? null,
     };
   });
 
   const entriesWithPhotos = entries.filter(
-    (entry) => (entry.photo_gallery?.length ?? 0) > 0
+    (entry) =>
+      (entry.photo_gallery?.length ?? 0) > 0 ||
+      (entry.group_slides?.length ?? 0) > 0
   );
 
   return {
