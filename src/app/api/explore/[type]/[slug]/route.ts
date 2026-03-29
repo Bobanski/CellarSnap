@@ -4,6 +4,8 @@ import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 
+export const maxDuration = 60;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -563,7 +565,7 @@ async function generateContent(
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
-    max_tokens: 800,
+    max_tokens: 2000,
     temperature: 0.3,
     messages: [{ role: "user", content: prompt }],
   });
