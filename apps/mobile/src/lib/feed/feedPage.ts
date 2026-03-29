@@ -46,6 +46,7 @@ export type FeedEntryGroup = {
   id: string;
   mode: EntryGroupMode;
   title: string;
+  event_type: string | null;
 };
 
 export type FeedGroupSlide = {
@@ -806,7 +807,7 @@ export async function fetchFeedPage({
       const [groupsResponse, slidesResponse] = await Promise.all([
         supabaseClient
           .from("entry_groups")
-          .select("id, mode, title")
+          .select("id, mode, title, event_type")
           .in("id", groupIds),
         supabaseClient
           .from("entry_group_slides")
@@ -826,6 +827,7 @@ export async function fetchFeedPage({
         id: string;
         mode: string;
         title: string;
+        event_type: string | null;
       }>;
       const slideRows = (slidesResponse.data ?? []) as Array<{
         id: string;
@@ -959,6 +961,7 @@ export async function fetchFeedPage({
             id: group.id,
             mode: group.mode as EntryGroupMode,
             title: typeof group.title === "string" ? group.title : "",
+            event_type: typeof group.event_type === "string" ? group.event_type : null,
           },
           group_slides: slides,
         });

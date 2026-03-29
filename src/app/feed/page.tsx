@@ -20,6 +20,8 @@ import {
   FEED_TITLE_ALL,
   FEED_TITLE_CIRCLE,
   type FeedReportReason as ReportReason,
+  EVENT_TYPE_LABELS,
+  type EventTypeValue,
 } from "@shared";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -1052,7 +1054,7 @@ export default function FeedPage() {
                     </button>
                     {entry.entry_group ? (
                       <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
-                        {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
+                        {entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event") : (entry.entry_group.mode === "event" ? "Event" : "Catch-up")}
                       </span>
                     ) : null}
                   </div>
@@ -1144,7 +1146,7 @@ export default function FeedPage() {
                 <div className="mt-4 -mx-5">
                   {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
                     <GroupedPostGallery
-                      title={entry.entry_group.title}
+                      title={entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? entry.entry_group.title) : entry.entry_group.title}
                       slides={entry.group_slides ?? []}
                       heightClassName=""
                       onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}

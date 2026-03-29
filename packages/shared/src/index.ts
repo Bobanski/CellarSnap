@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./cellar";
 export * from "./date";
 export * from "./entries";
+export * from "./eventTypes";
 export * from "./entriesLibrary";
 export * from "./entryDetail";
 export * from "./entry-flow";

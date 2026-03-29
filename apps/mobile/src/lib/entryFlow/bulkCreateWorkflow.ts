@@ -113,6 +113,7 @@ export async function runBulkCreateWorkflow({
     | {
         mode: EntryGroupMode;
         title: string;
+        event_type?: string | null;
       }
     | undefined;
   resolveSuggestedGrapes: (suggestions: string[]) => Promise<PrimaryGrapeSelection[]>;
@@ -515,6 +516,7 @@ export async function runBulkCreateWorkflow({
               entry_ids: createdEntryIds,
               mode: groupConfig.mode,
               title: groupConfig.title,
+              event_type: groupConfig.event_type ?? null,
               slides: groupedSlides,
             }),
           });

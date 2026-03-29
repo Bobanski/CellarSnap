@@ -384,6 +384,38 @@ export const styles = StyleSheet.create({
   bulkGroupInputError: {
     borderColor: colors.error,
   },
+  bulkGroupHintText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  eventTypeGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 8,
+    marginTop: 6,
+  },
+  eventTypePill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceHover,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  eventTypePillActive: {
+    borderColor: colors.accentHover,
+    backgroundColor: colors.accentPrimary,
+  },
+  eventTypePillText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "600" as const,
+  },
+  eventTypePillTextActive: {
+    color: colors.screenBg,
+  },
   bulkGroupErrorText: {
     color: colors.accentSecondary,
     fontSize: 11,

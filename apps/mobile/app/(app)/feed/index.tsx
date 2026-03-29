@@ -9,6 +9,8 @@ import {
   FEED_TITLE_CIRCLE,
   getFeedDisplayRatingLabel as getDisplayRating,
   getFeedEmptyStateMessage,
+  EVENT_TYPE_LABELS,
+  type EventTypeValue,
 } from "@cellarsnap/shared";
 import {
   useCallback,
@@ -579,7 +581,7 @@ function FeedCard({
           {isGrouped && item.entry_group ? (
             <View style={groupedStyles.modeBadge}>
               <AppText style={groupedStyles.modeBadgeText}>
-                {item.entry_group.mode === "event" ? "Event" : "Catch-up"}
+                {item.entry_group.event_type ? (EVENT_TYPE_LABELS[item.entry_group.event_type as EventTypeValue] ?? "Event") : (item.entry_group.mode === "event" ? "Event" : "Catch-up")}
               </AppText>
             </View>
           ) : null}
@@ -637,7 +639,7 @@ function FeedCard({
           }}
         >
           <GroupedPostGallery
-            title={item.entry_group?.title ?? ""}
+            title={item.entry_group?.event_type ? (EVENT_TYPE_LABELS[item.entry_group.event_type as EventTypeValue] ?? item.entry_group.title) : item.entry_group?.title ?? ""}
             slides={groupSlides}
             photoFrameWidth={photoFrameWidth}
             onGallerySwipeStart={beginGallerySwipe}

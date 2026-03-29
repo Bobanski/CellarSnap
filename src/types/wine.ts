@@ -54,6 +54,7 @@ export type EntryGroup = {
   id: string;
   mode: EntryGroupMode;
   title: string;
+  event_type: string | null;
   anchor_entry_id: string | null;
 };
 
