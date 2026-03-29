@@ -5,8 +5,8 @@ import {
   FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
   FEED_REACTION_EMOJIS as REACTION_EMOJIS,
   FEED_SCOPE_LABELS,
-  FEED_SUBTITLE,
-  FEED_TITLE,
+  FEED_TITLE_ALL,
+  FEED_TITLE_CIRCLE,
   getFeedDisplayRatingLabel as getDisplayRating,
   getFeedEmptyStateMessage,
 } from "@cellarsnap/shared";
@@ -1433,8 +1433,7 @@ export default function FeedScreen() {
 
         <View style={styles.header}>
           <AppText style={styles.eyebrow}>{FEED_EYEBROW}</AppText>
-          <AppText style={[styles.title, { fontSize: 18 }]}>{FEED_TITLE}</AppText>
-          <AppText style={styles.subtitle}>{FEED_SUBTITLE}</AppText>
+          <AppText style={[styles.title, { fontSize: 18 }]}>{feedScope === "friends" ? FEED_TITLE_CIRCLE : FEED_TITLE_ALL}</AppText>
         </View>
 
         <View style={styles.scopeRow}>

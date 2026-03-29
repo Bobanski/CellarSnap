@@ -17,8 +17,8 @@ import {
   FEED_REACTION_EMOJIS as REACTION_EMOJIS,
   FEED_REPORT_REASON_OPTIONS as REPORT_REASON_OPTIONS,
   FEED_SCOPE_LABELS,
-  FEED_SUBTITLE,
-  FEED_TITLE,
+  FEED_TITLE_ALL,
+  FEED_TITLE_CIRCLE,
   type FeedReportReason as ReportReason,
 } from "@shared";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
@@ -913,9 +913,8 @@ export default function FeedPage() {
             {FEED_EYEBROW}
           </span>
           <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
-            {FEED_TITLE}
+            {feedScope === "friends" ? FEED_TITLE_CIRCLE : FEED_TITLE_ALL}
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">{FEED_SUBTITLE}</p>
         </header>
 
         <div className="flex flex-wrap items-center gap-2 px-6">
