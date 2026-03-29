@@ -162,8 +162,8 @@ function parseCsv(
   });
 
   const parseErrors = result.errors
-    .filter((e) => e.type !== "FieldMismatch")
-    .map((e) => `CSV parse error row ${e.row}: ${e.message}`);
+    .filter((e: { type: string }) => e.type !== "FieldMismatch")
+    .map((e: { row?: number; message?: string }) => `CSV parse error row ${e.row}: ${e.message}`);
 
   return { data: result.data, errors: parseErrors };
 }

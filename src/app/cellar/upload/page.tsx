@@ -51,7 +51,7 @@ async function getSession() {
 function parseCSV(file: File): Promise<{ headers: string[]; rows: string[][] }> {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
-      complete: (result) => {
+      complete: (result: { data: unknown[][] }) => {
         const data = result.data as string[][];
         if (data.length < 2) {
           reject(new Error("File must have a header row and at least one data row."));
@@ -61,7 +61,7 @@ function parseCSV(file: File): Promise<{ headers: string[]; rows: string[][] }> 
         const rows = data.slice(1).filter((row) => row.some((cell) => cell?.trim()));
         resolve({ headers, rows });
       },
-      error: (err) => reject(new Error(err.message)),
+      error: (err: { message: string }) => reject(new Error(err.message)),
     });
   });
 }
