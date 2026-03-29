@@ -79,14 +79,9 @@ export default function GroupedPostGallery({
         );
       }}
       footer={(_active, activeIndex) => (
-        <>
-          <span>
-            {activeIndex + 1} of {slides.length}
-          </span>
-          <span className="text-[var(--color-text-tertiary)]">
-            Swipe to move between wines and event photos
-          </span>
-        </>
+        <span>
+          {activeIndex + 1} of {slides.length}
+        </span>
       )}
     />
   );

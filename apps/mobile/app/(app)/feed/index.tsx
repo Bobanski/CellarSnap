@@ -359,6 +359,13 @@ function GroupedPostGallery({
           ))}
         </View>
       ) : null}
+      {hasMultiple ? (
+        <View style={groupedStyles.galleryFooter}>
+          <AppText style={groupedStyles.galleryFooterCount}>
+            {clampedIndex + 1} of {slides.length}
+          </AppText>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -445,7 +452,6 @@ function FeedCard({
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoFrameWidth, setPhotoFrameWidth] = useState(0);
   const [galleryActiveIndex, setGalleryActiveIndex] = useState(0);
-  const [isNotesTruncated, setIsNotesTruncated] = useState(false);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const swipeActiveRef = useRef(false);
   const pendingSwipeEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -464,7 +470,6 @@ function FeedCard({
   );
   const activePhoto =
     galleryPhotos[clampedActivePhotoIndex] ?? null;
-  const canToggleNotes = notesExpanded || isNotesTruncated;
   const authorWithCompanionsLabel = useMemo(() => buildAuthorWithCompanionsLabel(item), [item]);
 
   const beginGallerySwipe = useCallback(() => {
@@ -862,65 +867,68 @@ function FeedCard({
 
       <Pressable style={styles.feedTextStack} onPress={handleCardPress}>
         {isGrouped && item.entry_group ? (
-          <AppText style={styles.feedWineName}>{item.entry_group.title}</AppText>
-        ) : item.wine_name ? (
-          <AppText style={styles.feedWineName}>{item.wine_name}</AppText>
-        ) : null}
-        {!isGrouped && metaFields.length > 0 ? (
-          <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
-        ) : null}
-        {isGrouped ? (
-          <AppText style={styles.feedMetaText}>
-            Grouped bulk post
-          </AppText>
-        ) : null}
+          <View style={styles.feedGroupedLabelRow}>
+            <View style={styles.feedEventBadge}>
+              <AppText style={styles.feedEventBadgeText}>
+                {item.entry_group.mode === "event" ? "Event" : "Catch-up"}
+              </AppText>
+            </View>
+            <AppText style={styles.feedMetaText}>Grouped bulk post</AppText>
+          </View>
+        ) : (
+          <>
+            {item.wine_name ? (
+              <AppText style={styles.feedWineName}>{item.wine_name}</AppText>
+            ) : null}
+            {metaFields.length > 0 ? (
+              <AppText style={styles.feedMetaText}>{metaFields.join(" · ")}</AppText>
+            ) : null}
+          </>
+        )}
       </Pressable>
 
-      {notes ? (
-        <Pressable
-          style={styles.notesWrap}
-          onPress={(event) => {
-            event.stopPropagation();
-            if (canToggleNotes) {
+      {(() => {
+        const activeSlideNotes = isGrouped
+          ? (groupSlides[galleryActiveIndex]?.notes ?? "").trim()
+          : notes;
+        if (!activeSlideNotes) return null;
+        return (
+          <Pressable
+            style={styles.notesWrap}
+            onPress={(event) => {
+              event.stopPropagation();
               onToggleNotes();
-              return;
-            }
-            handleCardPress();
-          }}
-        >
-          <AppText
-            style={styles.notesText}
-            numberOfLines={notesExpanded ? undefined : 2}
-            onTextLayout={(event) => {
-              if (notesExpanded) {
-                return;
-              }
-              const nextTruncated = event.nativeEvent.lines.length > 2;
-              if (nextTruncated !== isNotesTruncated) {
-                setIsNotesTruncated(nextTruncated);
-              }
             }}
           >
-            {notes}
-          </AppText>
-          {canToggleNotes ? (
-            <AppText style={styles.notesToggleText}>
-              {notesExpanded ? "Show less" : "Read more"}
+            <AppText
+              style={styles.notesText}
+              numberOfLines={notesExpanded ? undefined : 2}
+            >
+              {activeSlideNotes}
             </AppText>
-          ) : null}
-        </Pressable>
-      ) : null}
+          </Pressable>
+        );
+      })()}
 
-      {!isGrouped ? (
-        <Pressable style={styles.feedValueRow} onPress={handleCardPress}>
-          {displayRating ? <AppText style={styles.feedRating}>{displayRating}</AppText> : null}
-          {item.qpr_level ? (
-            <AppText style={[styles.feedQprTag, styles[`qpr_${item.qpr_level}` as keyof typeof styles]]}>
-              {QPR_LEVEL_LABELS[item.qpr_level]}
-            </AppText>
-          ) : null}
-        </Pressable>
-      ) : null}
+      {(() => {
+        const activeRating = isGrouped
+          ? getDisplayRating(groupSlides[galleryActiveIndex]?.rating ?? null)
+          : displayRating;
+        const activeQpr = isGrouped
+          ? (groupSlides[galleryActiveIndex]?.qpr_level as QprLevel | null) ?? null
+          : item.qpr_level;
+        if (!activeRating && !activeQpr) return null;
+        return (
+          <Pressable style={styles.feedValueRow} onPress={handleCardPress}>
+            {activeRating ? <AppText style={styles.feedRating}>{activeRating}</AppText> : null}
+            {activeQpr ? (
+              <AppText style={[styles.feedQprTag, styles[`qpr_${activeQpr}` as keyof typeof styles]]}>
+                {QPR_LEVEL_LABELS[activeQpr]}
+              </AppText>
+            ) : null}
+          </Pressable>
+        );
+      })()}
 
       <View style={styles.feedDivider} />
 
@@ -2169,6 +2177,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  feedGroupedLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  feedEventBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  feedEventBadgeText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
   feedTastedWithText: {
     color: colors.textSecondary,
     fontSize: 11,
@@ -2575,6 +2604,9 @@ const groupedStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
+    backgroundColor: colors.surfaceMuted,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   galleryHeaderTitle: {
     color: colors.accentSecondary,
@@ -2660,6 +2692,20 @@ const groupedStyles = StyleSheet.create({
     paddingTop: 6,
   },
   footerText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  galleryFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  galleryFooterCount: {
     color: colors.textSecondary,
     fontSize: 11,
   },
