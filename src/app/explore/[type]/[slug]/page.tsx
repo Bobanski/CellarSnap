@@ -1,18 +1,36 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import AppImage from "@/components/AppImage";
 
-// ─── Types ──────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────
 
-type ProfileType = "grape" | "region" | "producer";
+const CHAMPAGNE = "#F5EDD6";
+const FOG = "#8A8078";
+const ROSE = "#C4607A";
+const GRENACHE = "#7B1D3A";
+const NEBBIOLO = "#4A3060";
+const VERDOT = "#3D6B4F";
+const VIOGNIER = "#C9A84C";
+const BG_ODD = "#140A0F";
+const BG_EVEN = "#0F0810";
+const DEVICE_BG = "#0E0608";
+const SECTION_BORDER = "rgba(255,255,255,0.06)";
+const SERIF = "var(--font-serif)";
+const SANS = "var(--font-sans)";
 
-type HeroImageAttribution = {
-  photographer: string;
-  url: string;
+const ACCENTS: Record<string, string> = {
+  region: GRENACHE,
+  grape: NEBBIOLO,
+  producer: ROSE,
+  concept: VERDOT,
 };
+
+// ─── Types ─────────────────────────────────────────────────
+
+type ProfileType = "grape" | "region" | "producer" | "concept";
 
 type ProfileContent = {
   tagline?: string;
@@ -21,531 +39,760 @@ type ProfileContent = {
   body?: string;
   acidity?: string;
   tannin?: string;
-  key_regions?: string[];
-  key_grapes?: string[];
-  appellations?: string[];
   climate?: string;
-  key_wines?: string[];
-  founded?: string;
-  grapes?: string[];
+  style?: string;
+  classification?: string;
+  country?: string;
+  key_regions?: Array<string | { name: string; context: string }>;
+  key_grapes?: Array<string | { name: string; context: string }>;
+  key_wines?: Array<string | { name: string; desc: string; rating: string }>;
+  appellations?: Array<string | { name: string; character: string }>;
   food_pairings?: string[];
   fun_fact?: string;
-  aging_potential?: string;
+  fun_facts?: string[];
   related_grapes?: string[];
   related_regions?: string[];
   related_producers?: string[];
-  classification?: string;
-  region?: string;
-  style?: string;
+  founded?: string;
+  grapes?: string[];
+  aging_potential?: string;
+  story?: string;
+  notable_winemakers?: Array<{ name: string; why: string }>;
+  flavor_profile?: { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number };
+  most_loved_producer?: { name: string; avg_rating: number };
+  best_qpr_producer?: { name: string; avg_rating: number };
+  recommendation_picks?: Array<{ name: string; type: string; why: string }>;
+  zone_descriptions?: Array<{ name: string; note: string }>;
+  personal_insight?: string;
+  where_it_grows?: Array<{ name: string; size: string }>;
+  styles_expressions?: Array<{ style: string; desc: string; example: string }>;
+  notable_producers?: Array<{ name: string; note: string }>;
+  philosophy_tags?: Array<{ tag: string; note: string }>;
+  region_grapes?: string[];
+  similar_producers?: Array<{ name: string; why: string }>;
 };
 
-type SensoryData = Record<string, number>;
-
-type Profile = {
-  type: ProfileType;
-  slug: string;
-  display_name: string;
-  content: ProfileContent;
-  hero_image_url?: string | null;
-  hero_image_attribution?: HeroImageAttribution | null;
-  sensory_data?: SensoryData | null;
-};
-
-type PersonalStats = {
-  entry_count: number;
-  avg_rating?: number | null;
-  label_photos?: string[];
+type CommunityQpr = {
+  extortion: number;
+  pricey: number;
+  spot_on: number;
+  good_value: number;
+  absolute_steal: number;
+  total: number;
 };
 
 type ProfileResponse = {
-  profile: Profile;
-  personal_stats?: PersonalStats | null;
+  profile: {
+    type: string;
+    slug: string;
+    display_name: string;
+    content: ProfileContent;
+    hero_image_url?: string | null;
+    hero_image_attribution?: { photographer: string; url: string } | null;
+    sensory_data?: Record<string, number> | null;
+  };
+  personal_stats: { entry_count: number; avg_rating: number; label_photos: string[] };
+  community_qpr?: CommunityQpr | null;
 };
 
-// ─── Helpers ────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────
 
-const TYPE_LABELS: Record<ProfileType, string> = {
-  grape: "GRAPE VARIETY",
-  region: "WINE REGION",
-  producer: "PRODUCER",
-};
-
-const TYPE_PLURAL: Record<ProfileType, string> = {
-  grape: "grapes",
-  region: "regions",
-  producer: "producers",
-};
-
-const SENSORY_AXIS_LABELS: Record<string, string> = {
-  body: "Body",
-  acidity: "Acidity",
-  tannin: "Tannin",
-  alcohol_perception: "Alcohol",
-  fruit_ripeness: "Fruit Ripeness",
-  oak_presence: "Oak",
-  sweetness_perception: "Sweetness",
-  aromatic_intensity: "Aromatics",
-  earthy: "Earthiness",
-  mineral: "Minerality",
-  savory: "Savory",
-  finish_length: "Finish",
-  concentration: "Concentration",
-  complexity: "Complexity",
-  freshness: "Freshness",
-  bitterness_phenolic_grip: "Bitterness",
-};
-
-function isValidProfileType(value: string): value is ProfileType {
-  return value === "grape" || value === "region" || value === "producer";
+function toSlug(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, "-");
 }
 
-// ─── Components ─────────────────────────────────────────────
+function exploreHref(type: string, name: string): string {
+  return `/explore/${type}/${toSlug(name)}`;
+}
 
-function SensoryBar({ label, value, max = 5 }: { label: string; value: number; max?: number }) {
-  const pct = Math.max(0, Math.min(100, (value / max) * 100));
-  const isHigh = value >= 3.8;
-  const isLow = value <= 2.2;
+// ─── FlavorRadar (SVG pentagon for web) ────────────────────
+
+const AXES: Array<"Tannin" | "Acidity" | "Body" | "Oak" | "Fruit"> = ["Tannin", "Acidity", "Body", "Oak", "Fruit"];
+
+function radarPoint(cx: number, cy: number, r: number, i: number): [number, number] {
+  const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+  return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+}
+
+function radarPolygon(cx: number, cy: number, radius: number, values?: Record<string, number>): string {
+  return AXES.map((axis, i) => {
+    const scale = values ? (values[axis] ?? 0) / 100 : 1;
+    const [x, y] = radarPoint(cx, cy, radius * scale, i);
+    return `${x},${y}`;
+  }).join(" ");
+}
+
+function FlavorRadar({ data, accentColor, size = 200 }: { data: Record<string, number>; accentColor: string; size?: number }) {
+  const pad = 28;
+  const vb = size + pad * 2;
+  const cx = vb / 2;
+  const cy = vb / 2;
+  const maxR = size / 2 - 10;
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-[var(--color-text-secondary)]">{label}</span>
-        <span
-          className={`font-semibold ${
-            isHigh
-              ? "text-[var(--color-accent-secondary)]"
-              : isLow
-                ? "text-[var(--color-text-tertiary)]"
-                : "text-[var(--color-text-primary)]"
-          }`}
-        >
-          {value.toFixed(1)}
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full bg-[var(--color-surface-hover)]">
-        <div
-          className={`h-full rounded-full transition-all ${
-            isHigh ? "bg-[var(--color-accent-secondary)]" : "bg-[var(--color-accent-primary)]"
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
+    <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`} className="mx-auto">
+      {[0.33, 0.66, 1.0].map((level) => (
+        <polygon key={level} points={radarPolygon(cx, cy, maxR * level)} fill="none" stroke="rgba(245,237,214,0.08)" strokeWidth="0.5" />
+      ))}
+      {AXES.map((_, i) => {
+        const [x, y] = radarPoint(cx, cy, maxR, i);
+        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="rgba(245,237,214,0.08)" strokeWidth="0.5" />;
+      })}
+      <polygon points={radarPolygon(cx, cy, maxR, data)} fill={accentColor} fillOpacity={0.25} stroke={accentColor} strokeWidth={1} />
+      {AXES.map((label, i) => {
+        const [x, y] = radarPoint(cx, cy, maxR + 14, i);
+        const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+        const anchor = Math.cos(angle) > 0.1 ? "start" : Math.cos(angle) < -0.1 ? "end" : "middle";
+        return <text key={label} x={x} y={y} fill="rgba(245,237,214,0.35)" fontSize="10" textAnchor={anchor} dominantBaseline="central">{label}</text>;
+      })}
+    </svg>
   );
 }
 
-function Spinner() {
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border-strong)] border-t-[var(--color-accent-secondary)]" />
-    </div>
-  );
-}
+// ─── Section wrapper ───────────────────────────────────────
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+function Section({ bg, children }: { bg: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-sm text-[var(--color-text-secondary)]">{message}</p>
-      <button
-        onClick={onRetry}
-        className="rounded-xl bg-[var(--color-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
-      >
-        Try again
-      </button>
-    </div>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+    <div style={{ background: bg, borderBottom: `0.5px solid ${SECTION_BORDER}`, padding: "14px 16px" }}>
       {children}
-    </span>
+    </div>
   );
 }
 
-// ─── At-a-Glance card builders ──────────────────────────────
-
-type GlanceItem = { label: string; value: string };
-
-function getGlanceItems(profile: Profile): GlanceItem[] {
-  const { content, type } = profile;
-  const items: GlanceItem[] = [];
-
-  if (type === "grape") {
-    if (content.body) items.push({ label: "Body", value: content.body });
-    if (content.acidity) items.push({ label: "Acidity", value: content.acidity });
-    if (content.tannin) items.push({ label: "Tannin", value: content.tannin });
-    if (content.key_regions && content.key_regions.length > 0) {
-      items.push({ label: "Key Regions", value: content.key_regions.slice(0, 3).join(", ") });
-    }
-  } else if (type === "region") {
-    if (content.climate) items.push({ label: "Climate", value: content.climate });
-    if (content.key_grapes && content.key_grapes.length > 0) {
-      items.push({ label: "Key Grapes", value: content.key_grapes.slice(0, 3).join(", ") });
-    }
-    if (content.classification) items.push({ label: "Classification", value: content.classification });
-  } else if (type === "producer") {
-    if (content.region) items.push({ label: "Region", value: content.region });
-    if (content.founded) items.push({ label: "Founded", value: content.founded });
-    if (content.classification) items.push({ label: "Classification", value: content.classification });
-  }
-
-  return items;
+function SectionLabel({ color, children }: { color?: string; children: React.ReactNode }) {
+  return (
+    <p style={{ fontFamily: SANS, fontSize: 8, color: color ?? FOG, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 10 }}>
+      {children}
+    </p>
+  );
 }
 
-function getRelatedItems(profile: Profile): { name: string; slug: string; type: ProfileType }[] {
-  const { content, type } = profile;
-  const items: { name: string; slug: string; type: ProfileType }[] = [];
-
-  const relatedGrapes = content.related_grapes ?? [];
-  const relatedRegions = content.related_regions ?? [];
-  const relatedProducers = content.related_producers ?? [];
-
-  for (const name of relatedGrapes) {
-    items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
-  }
-  for (const name of relatedRegions) {
-    items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "region" });
-  }
-  for (const name of relatedProducers) {
-    items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "producer" });
-  }
-
-  // If no explicit related items, fall back to key_grapes / key_wines as cross-links
-  if (items.length === 0) {
-    if (type === "region" && content.key_grapes) {
-      for (const name of content.key_grapes.slice(0, 4)) {
-        items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
-      }
-    }
-    if (type === "producer" && content.grapes) {
-      for (const name of content.grapes.slice(0, 4)) {
-        items.push({ name, slug: name.toLowerCase().replace(/\s+/g, "-"), type: "grape" });
-      }
-    }
-  }
-
-  return items;
+function StoryTitle({ children }: { children: React.ReactNode }) {
+  return <p style={{ fontFamily: SERIF, fontSize: 16, color: CHAMPAGNE, marginBottom: 8 }}>{children}</p>;
 }
 
-// ─── Main page ──────────────────────────────────────────────
+// ─── QPR Bar ───────────────────────────────────────────────
+
+function QprBar({ qpr, label }: { qpr: CommunityQpr; label: string }) {
+  const pctSpotOn = Math.round((qpr.spot_on / qpr.total) * 100);
+  const pctGoodValue = Math.round(((qpr.good_value + qpr.absolute_steal) / qpr.total) * 100);
+  const pctPricey = Math.round((qpr.pricey / qpr.total) * 100);
+  const pctExtortion = Math.round((qpr.extortion / qpr.total) * 100);
+
+  return (
+    <>
+      <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", marginBottom: 5 }}>{label}</p>
+      <div style={{ display: "flex", height: 5, borderRadius: 3, overflow: "hidden", gap: 1 }}>
+        {pctExtortion > 0 ? <div style={{ flex: pctExtortion, background: "rgba(184,48,96,0.75)" }} /> : null}
+        {pctPricey > 0 ? <div style={{ flex: pctPricey, background: "rgba(92,85,80,0.75)" }} /> : null}
+        {pctSpotOn > 0 ? <div style={{ flex: pctSpotOn, background: "rgba(61,107,79,0.75)" }} /> : null}
+        {pctGoodValue > 0 ? <div style={{ flex: pctGoodValue, background: "rgba(123,29,58,0.75)" }} /> : null}
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 5 }}>
+        {pctSpotOn > 0 ? <span style={{ fontFamily: SANS, fontSize: 8, color: VERDOT }}>{pctSpotOn}% Spot On</span> : null}
+        {pctGoodValue > 0 ? <span style={{ fontFamily: SANS, fontSize: 8, color: GRENACHE }}>{pctGoodValue}% Good Value</span> : null}
+        {pctPricey > 0 ? <span style={{ fontFamily: SANS, fontSize: 8, color: FOG }}>{pctPricey}% Pricey</span> : null}
+      </div>
+    </>
+  );
+}
+
+// ─── Community Pulse section ───────────────────────────────
+
+function CommunityPulse({ c, qpr, bg, displayName }: { c: ProfileContent; qpr?: CommunityQpr | null; bg: string; displayName: string }) {
+  const hasQpr = qpr && qpr.total > 0;
+  const hasProducers = c.most_loved_producer || c.best_qpr_producer;
+  if (!hasQpr && !hasProducers) return null;
+
+  const bestQprSub = hasQpr && ((qpr.good_value + qpr.absolute_steal) > 0)
+    ? `Best QPR · ${Math.round(((qpr.good_value + qpr.absolute_steal) / qpr.total) * 100)}% said Good Value or better`
+    : "Best QPR";
+
+  return (
+    <Section bg={bg}>
+      <SectionLabel>COMMUNITY PULSE</SectionLabel>
+      {hasQpr ? <QprBar qpr={qpr} label={`QPR across ${qpr.total} ${displayName} logs`} /> : null}
+      {hasProducers ? (
+        <div style={{ display: "flex", gap: 6, marginTop: hasQpr ? 10 : 0 }}>
+          {c.most_loved_producer ? (
+            <Link href={exploreHref("producer", c.most_loved_producer.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", textDecoration: "none" }}>
+              <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 2 }}>{c.most_loved_producer.name}</p>
+              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)" }}>Most loved · {c.most_loved_producer.avg_rating} avg</p>
+            </Link>
+          ) : null}
+          {c.best_qpr_producer ? (
+            <Link href={exploreHref("producer", c.best_qpr_producer.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", textDecoration: "none" }}>
+              <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 2 }}>{c.best_qpr_producer.name}</p>
+              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)" }}>{bestQprSub}</p>
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+    </Section>
+  );
+}
+
+// ─── Recommendations section ───────────────────────────────
+
+function Recommendations({ picks, bg }: { picks: Array<{ name: string; type: string; why: string }>; bg: string }) {
+  if (picks.length === 0) return null;
+  return (
+    <Section bg={bg}>
+      <SectionLabel>IF YOU LIKE THIS, YOU MAY ALSO ENJOY...</SectionLabel>
+      <div style={{ display: "flex", gap: 6 }}>
+        {picks.map((rec) => (
+          <Link key={rec.name} href={exploreHref(rec.type, rec.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 8px", border: "0.5px solid rgba(255,255,255,0.06)", textDecoration: "none" }}>
+            <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 3 }}>{rec.name}</p>
+            <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.42)", lineHeight: 1.4 }}>{rec.why}</p>
+          </Link>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+// ─── Food Pairings section ─────────────────────────────────
+
+function FoodPairings({ items, bg }: { items: string[]; bg: string }) {
+  if (items.length === 0) return null;
+  return (
+    <Section bg={bg}>
+      <StoryTitle>Food Pairings</StoryTitle>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {items.map((item) => (
+          <span key={item} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 20, padding: "5px 11px", fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.6)", border: "0.5px solid rgba(255,255,255,0.08)" }}>
+            {item}
+          </span>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+// ─── Fun Facts section ─────────────────────────────────────
+
+function MoreToKnow({ facts, accentColor, bg, noBorder }: { facts: string[]; accentColor: string; bg: string; noBorder?: boolean }) {
+  if (facts.length === 0) return null;
+  return (
+    <div style={{ background: bg, borderBottom: noBorder ? "none" : `0.5px solid ${SECTION_BORDER}`, padding: "14px 16px" }}>
+      <SectionLabel>MORE TO KNOW</SectionLabel>
+      {facts.map((fact, i) => (
+        <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <span style={{ color: accentColor, fontFamily: SANS, fontSize: 9, flexShrink: 0, marginTop: 1 }}>✦</span>
+          <span style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.55)", lineHeight: 1.55 }}>{fact}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Hero ──────────────────────────────────────────────────
+
+function Hero({ profile, accentColor, badge, heroFailed, onHeroFail }: {
+  profile: ProfileResponse["profile"];
+  accentColor: string;
+  badge: string;
+  heroFailed: boolean;
+  onHeroFail: () => void;
+}) {
+  const c = profile.content;
+  const hasImage = !!profile.hero_image_url && !heroFailed;
+  return (
+    <div style={{ position: "relative", height: 210, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      {hasImage ? (
+        <AppImage src={profile.hero_image_url!} alt="" className="absolute inset-0 h-full w-full object-cover" onError={onHeroFail} />
+      ) : null}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(14,6,8,0.55)" }} />
+      <Link href="/explore" style={{ position: "absolute", top: 12, left: 14, display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.35)", borderRadius: 20, padding: "5px 12px", textDecoration: "none", zIndex: 10 }}>
+        <span style={{ color: "rgba(245,237,214,0.8)", fontSize: 11 }}>←</span>
+        <span style={{ fontFamily: SANS, color: "rgba(245,237,214,0.8)", fontSize: 10, fontWeight: 500 }}>Explore</span>
+      </Link>
+      <div style={{ position: "relative", padding: "0 16px 16px" }}>
+        <p style={{ fontFamily: SANS, fontSize: 9, color: accentColor, letterSpacing: 3, textTransform: "uppercase", marginBottom: 5 }}>{badge}</p>
+        <h1 style={{ fontFamily: SERIF, fontSize: 26, color: CHAMPAGNE, fontWeight: 300, lineHeight: 1.15, marginBottom: 5 }}>{profile.display_name}</h1>
+        {c.tagline ? <p style={{ fontFamily: SERIF, fontSize: 12, color: "rgba(245,237,214,0.55)", fontStyle: "italic" }}>{c.tagline}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+// ─── Region Page ───────────────────────────────────────────
+
+function RegionPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse; heroFailed: boolean; onHeroFail: () => void }) {
+  const { profile, personal_stats, community_qpr } = data;
+  const c = profile.content;
+  const accent = GRENACHE;
+  const hasLogs = personal_stats.entry_count > 0;
+
+  const grapeItems = Array.isArray(c.key_grapes) ? c.key_grapes.map((g, i) => typeof g === "string" ? { name: g, context: "", primary: i < 3 } : { name: g.name, context: g.context, primary: i < 3 }) : [];
+  const winemakerItems = Array.isArray(c.notable_winemakers) ? c.notable_winemakers : [];
+  const appellationItems = Array.isArray(c.appellations) ? c.appellations.map((a) => typeof a === "string" ? { name: a, character: "" } : a) : [];
+  const funFacts: string[] = Array.isArray(c.fun_facts) ? c.fun_facts : c.fun_fact ? [c.fun_fact] : [];
+  const flavorProfile = c.flavor_profile;
+  const storyText = typeof c.story === "string" ? c.story : "";
+  const zones = Array.isArray(c.zone_descriptions) ? c.zone_descriptions : [];
+
+  let bgIdx = 0;
+  const nextBg = () => (bgIdx++ % 2 === 0 ? BG_ODD : BG_EVEN);
+
+  return (
+    <>
+      <Hero profile={profile} accentColor={accent} badge={`WINE REGION · ${(c.country ?? "").toUpperCase()}`} heroFailed={heroFailed} onHeroFail={onHeroFail} />
+
+      {/* Personal Layer */}
+      <Section bg={nextBg()}>
+        <SectionLabel color={ROSE}>{hasLogs ? "YOUR EXPERIENCE HERE" : "DISCOVER THIS REGION"}</SectionLabel>
+        {hasLogs ? (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+              <div>
+                <p style={{ fontFamily: SANS, fontSize: 8, color: "rgba(245,237,214,0.4)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 3 }}>TOP RATED</p>
+                <p style={{ fontFamily: SERIF, fontSize: 14, color: CHAMPAGNE }}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "wine" : "wines"} logged</p>
+              </div>
+              {personal_stats.avg_rating > 0 ? <span style={{ fontFamily: SANS, fontSize: 18, color: ROSE, fontWeight: 500 }}>{Math.round(personal_stats.avg_rating)}</span> : null}
+            </div>
+            <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)", marginBottom: 8 }}>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>
+                {c.personal_insight ?? `You've logged ${personal_stats.entry_count} wines from ${profile.display_name}. Your average sits at ${personal_stats.avg_rating > 0 ? personal_stats.avg_rating.toFixed(1) : "—"}.`}
+              </p>
+            </div>
+            <Link href="/entries/new" style={{ display: "inline-block", background: "rgba(196,96,122,0.12)", borderRadius: 20, padding: "3px 9px", fontFamily: SANS, fontSize: 9, color: ROSE, textDecoration: "none" }}>+ Log another</Link>
+          </>
+        ) : (
+          <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)" }}>
+            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>
+              You haven't explored {profile.display_name} yet. Log your first wine from here to start tracking your taste across this region.
+            </p>
+          </div>
+        )}
+      </Section>
+
+      {/* Flavor Profile */}
+      {flavorProfile ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>FLAVOR PROFILE</SectionLabel>
+          <FlavorRadar data={flavorProfile} accentColor={accent} size={200} />
+          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 8 }}>
+            {hasLogs ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 14, height: 2, borderRadius: 1, background: ROSE }} /><span style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.5)" }}>Your {personal_stats.entry_count} {personal_stats.entry_count === 1 ? "log" : "logs"}</span></div> : null}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 14, height: 2, borderRadius: 1, background: accent }} /><span style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.5)" }}>Region avg</span></div>
+          </div>
+          <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.55)", lineHeight: 1.55, marginTop: 8, textAlign: "center" }}>
+            {c.personal_insight ?? `Typical flavor signature of wines from ${profile.display_name}.`}
+          </p>
+        </Section>
+      ) : null}
+
+      {/* The Story */}
+      {storyText ? (
+        <Section bg={nextBg()}>
+          <StoryTitle>The Story</StoryTitle>
+          <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.72)", lineHeight: 1.75, marginBottom: 10 }}>{storyText}</p>
+          {funFacts.length > 0 ? (
+            <div style={{ background: "rgba(196,96,122,0.07)", borderRadius: 8, padding: "10px 12px", border: "0.5px solid rgba(196,96,122,0.2)" }}>
+              <p style={{ fontFamily: SANS, fontSize: 8, color: ROSE, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>DID YOU KNOW?</p>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.65)", lineHeight: 1.6 }}>{funFacts[0]}</p>
+            </div>
+          ) : null}
+        </Section>
+      ) : null}
+
+      {/* Grapes Grown Here */}
+      {grapeItems.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>GRAPES GROWN HERE</SectionLabel>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {grapeItems.map((grape) => (
+              <Link key={grape.name} href={exploreHref("grape", grape.name)} style={{
+                borderRadius: 20, padding: grape.primary ? "4px 10px" : "4px 10px", textDecoration: "none",
+                background: grape.primary ? "rgba(123,29,58,0.35)" : "rgba(255,255,255,0.05)",
+                border: grape.primary ? "0.5px solid rgba(196,96,122,0.3)" : "0.5px solid rgba(255,255,255,0.08)",
+              }}>
+                <span style={{ fontFamily: SANS, fontSize: grape.primary ? 10 : 9, color: grape.primary ? CHAMPAGNE : "rgba(245,237,214,0.45)", fontWeight: grape.primary ? 500 : 400 }}>{grape.name}</span>
+              </Link>
+            ))}
+          </div>
+          <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.3)", marginTop: 8 }}>Primary grapes highlighted · tap any to explore</p>
+        </Section>
+      ) : null}
+
+      {/* Notable Winemakers */}
+      {winemakerItems.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>NOTABLE WINEMAKERS</SectionLabel>
+          {winemakerItems.map((wm) => (
+            <Link key={wm.name} href={exploreHref("producer", wm.name)} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start", textDecoration: "none" }}>
+              <div style={{ width: 3, alignSelf: "stretch", background: ROSE, borderRadius: 2, opacity: 0.6, flexShrink: 0 }} />
+              <div>
+                <p style={{ fontFamily: SERIF, fontSize: 13, color: CHAMPAGNE, marginBottom: 2 }}>{wm.name}</p>
+                <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 1.4 }}>{wm.why}</p>
+              </div>
+            </Link>
+          ))}
+        </Section>
+      ) : null}
+
+      {/* Key Appellations + Zones */}
+      {(appellationItems.length > 0 || zones.length > 0) ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>KEY APPELLATIONS + ZONES</SectionLabel>
+          {appellationItems.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: zones.length > 0 ? 10 : 0 }}>
+              {appellationItems.map((app) => (
+                <Link key={app.name} href={exploreHref("region", app.name)} style={{ borderRadius: 20, padding: "4px 10px", background: "rgba(123,29,58,0.35)", border: "0.5px solid rgba(196,96,122,0.3)", textDecoration: "none" }}>
+                  <span style={{ fontFamily: SANS, fontSize: 10, color: CHAMPAGNE, fontWeight: 500 }}>{app.name}</span>
+                </Link>
+              ))}
+            </div>
+          ) : null}
+          {zones.map((zone) => (
+            <div key={zone.name} style={{ marginBottom: 7 }}>
+              <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.7)", fontWeight: 500, marginBottom: 2 }}>{zone.name}</p>
+              {zone.note ? <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.45 }}>{zone.note}</p> : null}
+            </div>
+          ))}
+        </Section>
+      ) : null}
+
+      <CommunityPulse c={c} qpr={community_qpr} bg={nextBg()} displayName={profile.display_name} />
+      {c.recommendation_picks ? <Recommendations picks={c.recommendation_picks} bg={nextBg()} /> : null}
+      {c.food_pairings ? <FoodPairings items={c.food_pairings} bg={nextBg()} /> : null}
+      {funFacts.length > 1 ? <MoreToKnow facts={funFacts.slice(1)} accentColor={ROSE} bg={nextBg()} /> : null}
+
+      {/* Related Regions */}
+      {c.related_regions && c.related_regions.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>EXPLORE SIMILAR REGIONS</SectionLabel>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {c.related_regions.map((name) => (
+              <Link key={name} href={exploreHref("region", name)} style={{ borderRadius: 20, padding: "4px 10px", background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
+                <span style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.45)" }}>{name}</span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+    </>
+  );
+}
+
+// ─── Varietal Page ─────────────────────────────────────────
+
+function VarietalPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse; heroFailed: boolean; onHeroFail: () => void }) {
+  const { profile, personal_stats, community_qpr } = data;
+  const c = profile.content;
+  const accent = NEBBIOLO;
+  const hasLogs = personal_stats.entry_count > 0;
+
+  const storyText = typeof c.story === "string" ? c.story : "";
+  const funFacts: string[] = Array.isArray(c.fun_facts) ? c.fun_facts : c.fun_fact ? [c.fun_fact] : [];
+  const flavorProfile = c.flavor_profile;
+  const whereItGrows = Array.isArray(c.where_it_grows) ? c.where_it_grows : (Array.isArray(c.key_regions) ? (c.key_regions as string[]).map((n, i) => ({ name: n, size: i < 2 ? "large" : i < 4 ? "medium" : "small" })) : []);
+  const stylesExpressions = Array.isArray(c.styles_expressions) ? c.styles_expressions : [];
+  const notableProducers = Array.isArray(c.notable_producers) ? c.notable_producers : [];
+
+  let bgIdx = 0;
+  const nextBg = () => (bgIdx++ % 2 === 0 ? BG_ODD : BG_EVEN);
+
+  return (
+    <>
+      <Hero profile={profile} accentColor={accent} badge="VARIETAL" heroFailed={heroFailed} onHeroFail={onHeroFail} />
+
+      {/* Personal Layer */}
+      <Section bg={nextBg()}>
+        <SectionLabel color={ROSE}>YOUR {profile.display_name.toUpperCase()}</SectionLabel>
+        {hasLogs ? (
+          <>
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                <p style={{ fontFamily: SERIF, fontSize: 20, color: VIOGNIER }}>{personal_stats.entry_count}</p>
+                <p style={{ fontFamily: SANS, fontSize: 8, color: "rgba(245,237,214,0.4)" }}>wines logged</p>
+              </div>
+              {personal_stats.avg_rating > 0 ? (
+                <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                  <p style={{ fontFamily: SERIF, fontSize: 20, color: VIOGNIER }}>{personal_stats.avg_rating.toFixed(1)}</p>
+                  <p style={{ fontFamily: SANS, fontSize: 8, color: "rgba(245,237,214,0.4)" }}>your avg rating</p>
+                </div>
+              ) : null}
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
+                <p style={{ fontFamily: SERIF, fontSize: 20, color: CHAMPAGNE }}>—</p>
+                <p style={{ fontFamily: SANS, fontSize: 8, color: "rgba(245,237,214,0.4)" }}>community avg</p>
+              </div>
+            </div>
+            <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 1.5, marginTop: 6 }}>
+              {c.personal_insight ?? `You've logged ${personal_stats.entry_count} ${profile.display_name} wines. Keep exploring to see your taste pattern emerge.`}
+            </p>
+          </>
+        ) : (
+          <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)" }}>
+            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>You haven't logged any {profile.display_name} wines yet. Start exploring this grape to discover your personal preferences.</p>
+          </div>
+        )}
+      </Section>
+
+      {/* Flavor Profile */}
+      {flavorProfile ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>FLAVOUR PROFILE</SectionLabel>
+          <FlavorRadar data={flavorProfile} accentColor={accent} size={200} />
+          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 8 }}>
+            {hasLogs ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 14, height: 2, borderRadius: 1, background: ROSE }} /><span style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.5)" }}>Your {personal_stats.entry_count} logs</span></div> : null}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 14, height: 2, borderRadius: 1, background: accent }} /><span style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.5)" }}>{profile.display_name} avg</span></div>
+          </div>
+          {c.personal_insight ? <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.45)", textAlign: "center", marginTop: 4 }}>{c.personal_insight}</p> : null}
+        </Section>
+      ) : null}
+
+      {/* The Story */}
+      {storyText ? (
+        <Section bg={nextBg()}>
+          <p style={{ fontFamily: SERIF, fontSize: 16, color: CHAMPAGNE, lineHeight: 1.5, marginBottom: 8 }}>{storyText}</p>
+          {funFacts.length > 0 ? (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <span style={{ color: accent, fontFamily: SANS, fontSize: 9, flexShrink: 0, marginTop: 1 }}>✦</span>
+              <span style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 1.5 }}>{funFacts[0]}</span>
+            </div>
+          ) : null}
+        </Section>
+      ) : null}
+
+      {/* Where It Grows */}
+      {whereItGrows.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>WHERE IT GROWS BEST</SectionLabel>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {whereItGrows.map((region) => (
+              <Link key={region.name} href={exploreHref("region", region.name)} style={{
+                borderRadius: 20, background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.08)", textDecoration: "none",
+                padding: region.size === "large" ? "6px 14px" : region.size === "medium" ? "5px 11px" : "4px 9px",
+              }}>
+                <span style={{ fontFamily: SANS, fontSize: region.size === "large" ? 11 : region.size === "medium" ? 10 : 9, color: region.size === "large" ? "rgba(245,237,214,0.8)" : "rgba(245,237,214,0.5)", fontWeight: region.size === "large" ? 500 : 400 }}>{region.name}</span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {/* Styles & Expressions */}
+      {stylesExpressions.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>STYLES + EXPRESSIONS</SectionLabel>
+          {stylesExpressions.map((expr) => (
+            <div key={expr.style} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "10px 12px", marginBottom: 6 }}>
+              <p style={{ fontFamily: SERIF, fontSize: 13, color: CHAMPAGNE, marginBottom: 3 }}>{expr.style}</p>
+              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.45)", lineHeight: 1.45, marginBottom: 3 }}>{expr.desc}</p>
+              <p style={{ fontFamily: SANS, fontSize: 8, color: VIOGNIER }}>{expr.example}</p>
+            </div>
+          ))}
+        </Section>
+      ) : null}
+
+      {/* Notable Producers */}
+      {notableProducers.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>NOTABLE PRODUCERS</SectionLabel>
+          {notableProducers.map((prod) => (
+            <Link key={prod.name} href={exploreHref("producer", prod.name)} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start", textDecoration: "none" }}>
+              <div style={{ width: 6, height: 6, borderRadius: 3, background: accent, marginTop: 5, flexShrink: 0 }} />
+              <div>
+                <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE }}>{prod.name}</p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.4 }}>{prod.note}</p>
+              </div>
+            </Link>
+          ))}
+        </Section>
+      ) : null}
+
+      <CommunityPulse c={c} qpr={community_qpr} bg={nextBg()} displayName={profile.display_name} />
+      {c.recommendation_picks ? <Recommendations picks={c.recommendation_picks} bg={nextBg()} /> : null}
+      {c.food_pairings ? <FoodPairings items={c.food_pairings} bg={nextBg()} /> : null}
+      {funFacts.length > 1 ? <MoreToKnow facts={funFacts.slice(1)} accentColor={accent} bg={nextBg()} noBorder /> : null}
+    </>
+  );
+}
+
+// ─── Producer Page ─────────────────────────────────────────
+
+function ProducerPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse; heroFailed: boolean; onHeroFail: () => void }) {
+  const { profile, personal_stats } = data;
+  const c = profile.content;
+  const accent = ROSE;
+  const hasLogs = personal_stats.entry_count > 0;
+
+  const storyText = typeof c.story === "string" ? c.story : [c.origin, c.characteristics, c.style].filter(Boolean).join(" ");
+  const funFacts: string[] = Array.isArray(c.fun_facts) ? c.fun_facts : c.fun_fact ? [c.fun_fact] : [];
+  const philosophyTags = Array.isArray(c.philosophy_tags) ? c.philosophy_tags : [];
+  const keyWines = Array.isArray(c.key_wines) ? c.key_wines.map((w) => typeof w === "string" ? { name: w, desc: "", rating: "" } : w) : [];
+  const regionGrapes: string[] = Array.isArray(c.region_grapes) ? c.region_grapes : [...(c.grapes ?? []), ...((c.key_regions ?? []) as string[])];
+  const similarProducers = Array.isArray(c.similar_producers) ? c.similar_producers : [];
+
+  let bgIdx = 0;
+  const nextBg = () => (bgIdx++ % 2 === 0 ? BG_ODD : BG_EVEN);
+
+  return (
+    <>
+      <Hero profile={profile} accentColor={accent} badge="PRODUCER" heroFailed={heroFailed} onHeroFail={onHeroFail} />
+
+      {/* Personal Layer */}
+      <Section bg={nextBg()}>
+        <SectionLabel color={ROSE}>YOUR {profile.display_name.toUpperCase()}</SectionLabel>
+        {hasLogs ? (
+          <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.55)", lineHeight: 1.6 }}>
+            You've opened <span style={{ color: VIOGNIER, fontWeight: 600 }}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "bottle" : "bottles"}</span>
+            {personal_stats.avg_rating > 0 ? <>. Your average rating: <span style={{ color: VIOGNIER, fontWeight: 600 }}>{personal_stats.avg_rating.toFixed(1)}</span></> : null}.
+          </p>
+        ) : (
+          <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)" }}>
+            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>You haven't logged any {profile.display_name} wines yet. Open your first bottle to start tracking.</p>
+          </div>
+        )}
+      </Section>
+
+      {/* The Story */}
+      {storyText ? (
+        <Section bg={nextBg()}>
+          <p style={{ fontFamily: SERIF, fontSize: 16, color: CHAMPAGNE, lineHeight: 1.5, marginBottom: 8 }}>{storyText}</p>
+          {funFacts.length > 0 ? (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 8 }}>
+              <span style={{ color: accent, fontFamily: SANS, fontSize: 9, flexShrink: 0, marginTop: 1 }}>✦</span>
+              <span style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 1.5 }}>{funFacts[0]}</span>
+            </div>
+          ) : null}
+        </Section>
+      ) : null}
+
+      {/* Philosophy & Approach */}
+      {philosophyTags.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>PHILOSOPHY + APPROACH</SectionLabel>
+          {philosophyTags.map((item) => (
+            <div key={item.tag} style={{ marginBottom: 8 }}>
+              <p style={{ fontFamily: SANS, fontSize: 10, color: VIOGNIER, fontWeight: 500, marginBottom: 2 }}>{item.tag}</p>
+              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.45 }}>{item.note}</p>
+            </div>
+          ))}
+        </Section>
+      ) : null}
+
+      {/* Key Wines */}
+      {keyWines.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>KEY WINES</SectionLabel>
+          {keyWines.map((wine) => (
+            <div key={wine.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "10px 12px", marginBottom: 6 }}>
+              <div>
+                <p style={{ fontFamily: SERIF, fontSize: 13, color: CHAMPAGNE, marginBottom: 3 }}>{wine.name}</p>
+                {wine.desc ? <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.4 }}>{wine.desc}</p> : null}
+              </div>
+              {wine.rating ? <span style={{ fontFamily: SANS, fontSize: 10, color: VIOGNIER, flexShrink: 0, marginLeft: 8 }}>{wine.rating}</span> : null}
+            </div>
+          ))}
+        </Section>
+      ) : null}
+
+      {/* Region + Grapes */}
+      {regionGrapes.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>REGION + GRAPES</SectionLabel>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {regionGrapes.map((name) => (
+              <Link key={name} href={exploreHref(name.includes("-") || (name.includes(" ") && name.length > 12) ? "region" : "grape", name)} style={{ borderRadius: 20, padding: "5px 11px", background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.08)", textDecoration: "none" }}>
+                <span style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.6)" }}>{name}</span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {/* Similar Producers */}
+      {similarProducers.length > 0 ? (
+        <Section bg={nextBg()}>
+          <SectionLabel>SIMILAR PRODUCERS</SectionLabel>
+          <div style={{ display: "flex", gap: 6 }}>
+            {similarProducers.map((prod) => (
+              <Link key={prod.name} href={exploreHref("producer", prod.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 8px", border: "0.5px solid rgba(255,255,255,0.06)", textDecoration: "none" }}>
+                <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 3 }}>{prod.name}</p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.42)", lineHeight: 1.4 }}>{prod.why}</p>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {c.food_pairings ? <FoodPairings items={c.food_pairings} bg={nextBg()} /> : null}
+      {funFacts.length > 1 ? <MoreToKnow facts={funFacts.slice(1)} accentColor={accent} bg={nextBg()} noBorder /> : null}
+    </>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────
 
 export default function ExploreProfilePage() {
-  const params = useParams<{ type: string; slug: string }>();
+  const params = useParams();
   const router = useRouter();
+  const rawType = typeof params.type === "string" ? params.type : "";
+  const rawSlug = typeof params.slug === "string" ? params.slug : "";
+
   const [data, setData] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchProfile = useCallback(async () => {
-    const type = params?.type;
-    const slug = params?.slug;
-
-    if (!type || !slug || !isValidProfileType(type)) {
-      setError("Invalid profile type.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers.Authorization = `Bearer ${accessToken}`;
-      }
-
-      const response = await fetch(`/api/explore/${type}/${slug}`, { headers });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError("Profile not found.");
-        } else {
-          setError("Unable to load profile.");
-        }
-        setLoading(false);
-        return;
-      }
-
-      const json = await response.json();
-      setData(json);
-    } catch {
-      setError("Unable to load profile.");
-    } finally {
-      setLoading(false);
-    }
-  }, [params?.type, params?.slug]);
+  const [heroFailed, setHeroFailed] = useState(false);
 
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (!rawType || !rawSlug) return;
+    setLoading(true);
+    setError(null);
+    setData(null);
+    setHeroFailed(false);
 
-  if (loading) return <Spinner />;
-  if (error || !data) return <ErrorState message={error ?? "Unable to load profile."} onRetry={fetchProfile} />;
+    fetch(`/api/explore/${encodeURIComponent(rawType)}/${encodeURIComponent(rawSlug)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload.error ?? "Failed to load profile");
+        }
+        return res.json();
+      })
+      .then((json) => setData(json as ProfileResponse))
+      .catch((err) => setError(err instanceof Error ? err.message : "Something went wrong"))
+      .finally(() => setLoading(false));
+  }, [rawType, rawSlug]);
 
-  const { profile, personal_stats } = data;
-  const glanceItems = getGlanceItems(profile);
-  const relatedItems = getRelatedItems(profile);
-  const hasSensory = profile.sensory_data && Object.keys(profile.sensory_data).length > 0;
-  const hasPersonalStats = personal_stats && personal_stats.entry_count > 0;
-  const foodPairings = profile.content.food_pairings ?? [];
+  if (loading) {
+    return (
+      <div style={{ background: DEVICE_BG, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[rgba(245,237,214,0.2)] border-t-[#C4607A]" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ background: DEVICE_BG, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
+        <p style={{ fontFamily: SERIF, fontSize: 20, color: CHAMPAGNE, textAlign: "center" }}>Unable to load profile</p>
+        <p style={{ fontSize: 13, color: "rgba(245,237,214,0.6)", textAlign: "center" }}>{error ?? "Something went wrong."}</p>
+        <button onClick={() => router.back()} style={{ fontFamily: SANS, fontSize: 13, color: "rgba(245,237,214,0.5)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 8 }}>Go back</button>
+      </div>
+    );
+  }
+
+  const profileType = data.profile.type as ProfileType;
 
   return (
-    <div className="min-h-screen bg-[var(--color-surface-primary)] text-[var(--color-text-primary)]">
-      {/* ── Hero Section ── */}
-      <section className="relative w-full" style={{ aspectRatio: "16 / 9", maxHeight: 420 }}>
-        {profile.hero_image_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={profile.hero_image_url}
-              alt={profile.display_name}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface-primary)] via-[var(--color-surface-primary)]/60 to-transparent" />
-          </>
-        ) : (
-          <div className="absolute inset-0 bg-[var(--color-surface-raised)]" />
-        )}
+    <div style={{ background: DEVICE_BG, minHeight: "100vh", maxWidth: 600, margin: "0 auto" }}>
+      {profileType === "region" ? (
+        <RegionPage data={data} heroFailed={heroFailed} onHeroFail={() => setHeroFailed(true)} />
+      ) : profileType === "grape" ? (
+        <VarietalPage data={data} heroFailed={heroFailed} onHeroFail={() => setHeroFailed(true)} />
+      ) : profileType === "producer" ? (
+        <ProducerPage data={data} heroFailed={heroFailed} onHeroFail={() => setHeroFailed(true)} />
+      ) : null}
 
-        {/* Back link */}
-        <div className="absolute left-4 top-4 z-10">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1 rounded-full bg-black/30 px-3 py-1.5 text-xs font-medium text-[var(--color-text-primary)] backdrop-blur-sm transition hover:bg-black/50"
-          >
-            <span aria-hidden="true">&larr;</span> Back
-          </button>
-        </div>
-
-        {/* Hero text */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-6">
-          <div className="mx-auto w-full max-w-[800px]">
-            <span className="mb-2 block text-[9px] font-bold uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
-              {TYPE_LABELS[profile.type]}
-            </span>
-            <h1
-              className="text-[40px] leading-[46px] font-light text-[var(--color-text-primary)]"
-              style={{ fontFamily: "var(--font-serif)" }}
-            >
-              {profile.display_name}
-            </h1>
-            {profile.content.tagline && (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                {profile.content.tagline}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Photo attribution */}
-        {profile.hero_image_attribution && (
-          <div className="absolute bottom-2 right-4 z-10">
-            <a
-              href={profile.hero_image_attribution.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] transition"
-            >
-              Photo by {profile.hero_image_attribution.photographer}
-            </a>
-          </div>
-        )}
-      </section>
-
-      {/* ── Content ── */}
-      <div className="px-5 py-6">
-        <div className="mx-auto w-full max-w-[800px] space-y-6">
-
-          {/* ── At a Glance ── */}
-          {glanceItems.length > 0 && (
-            <section className="flex flex-col gap-3">
-              {glanceItems.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 space-y-1"
-                >
-                  <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
-                    {item.label}
-                  </p>
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{item.value}</p>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {/* ── Your History ── */}
-          {hasPersonalStats && (
-            <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
-              <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
-                Your history
-              </p>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                You&apos;ve logged{" "}
-                <span className="font-semibold text-[var(--color-text-primary)]">
-                  {personal_stats.entry_count}
-                </span>{" "}
-                {profile.type === "grape"
-                  ? `${profile.display_name} wine${personal_stats.entry_count !== 1 ? "s" : ""}`
-                  : profile.type === "region"
-                    ? `wine${personal_stats.entry_count !== 1 ? "s" : ""} from ${profile.display_name}`
-                    : `wine${personal_stats.entry_count !== 1 ? "s" : ""} by ${profile.display_name}`}
-              </p>
-              {personal_stats.avg_rating != null && (
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  Average rating:{" "}
-                  <span className="font-semibold text-[var(--color-accent-secondary)]">
-                    {personal_stats.avg_rating.toFixed(1)}
-                  </span>
-                </p>
-              )}
-              {personal_stats.label_photos && personal_stats.label_photos.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pt-1">
-                  {personal_stats.label_photos.slice(0, 6).map((url, i) => (
-                    <div
-                      key={i}
-                      className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-[var(--color-border)]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt={`Label photo ${i + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* ── The Story ── */}
-          {(profile.content.origin || profile.content.characteristics || profile.content.style) && (
-            <section className="space-y-4">
-              <h2
-                className="text-[24px] font-light text-[var(--color-text-primary)]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                The Story
-              </h2>
-              {profile.content.origin && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {profile.content.origin}
-                </p>
-              )}
-              {profile.content.characteristics && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {profile.content.characteristics}
-                </p>
-              )}
-              {profile.content.style && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  {profile.content.style}
-                </p>
-              )}
-              {profile.content.aging_potential && (
-                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                  <span className="font-semibold text-[var(--color-text-primary)]">Aging potential:</span>{" "}
-                  {profile.content.aging_potential}
-                </p>
-              )}
-              {profile.content.fun_fact && (
-                <div className="rounded-2xl border border-[var(--color-accent-rose)] bg-[var(--color-accent-soft)] p-5">
-                  <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-accent-secondary)] mb-2">
-                    Did you know?
-                  </p>
-                  <p className="text-sm leading-relaxed text-[var(--color-text-primary)]">
-                    {profile.content.fun_fact}
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* ── Sensory Profile ── */}
-          {hasSensory && profile.sensory_data && (
-            <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-4">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
-                  Sensory profile
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                  Typical sensory profile for {profile.display_name}
-                </p>
-              </div>
-              <div className="space-y-3">
-                {Object.entries(profile.sensory_data)
-                  .filter(([, val]) => typeof val === "number")
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([axis, value]) => (
-                    <SensoryBar
-                      key={axis}
-                      label={SENSORY_AXIS_LABELS[axis] ?? axis}
-                      value={value}
-                    />
-                  ))}
-              </div>
-            </section>
-          )}
-
-          {/* ── Food Pairings ── */}
-          {foodPairings.length > 0 && (
-            <section className="space-y-3">
-              <h2
-                className="text-[24px] font-light text-[var(--color-text-primary)]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                Food Pairings
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {foodPairings.map((pairing) => (
-                  <Chip key={pairing}>{pairing}</Chip>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* ── Related ── */}
-          {relatedItems.length > 0 && (
-            <section className="space-y-3">
-              <h2
-                className="text-[24px] font-light text-[var(--color-text-primary)]"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                Related
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {relatedItems.map((item) => (
-                  <Link
-                    key={`${item.type}-${item.slug}`}
-                    href={`/explore/${item.type}/${item.slug}`}
-                    className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* ── Explore More ── */}
-          <section className="pt-2 pb-8">
-            <Link
-              href={`/explore`}
-              className="text-sm font-semibold text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-secondary)] transition"
-            >
-              Explore other {TYPE_PLURAL[profile.type]} &rarr;
-            </Link>
-          </section>
-        </div>
-      </div>
+      {/* Attribution */}
+      {data.profile.hero_image_attribution ? (
+        <p style={{ fontSize: 10, color: "rgba(245,237,214,0.2)", textAlign: "center", padding: "16px 18px 32px" }}>
+          Photo by {data.profile.hero_image_attribution.photographer}
+        </p>
+      ) : null}
     </div>
   );
 }
