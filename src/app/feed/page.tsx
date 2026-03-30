@@ -17,9 +17,11 @@ import {
   FEED_REACTION_EMOJIS as REACTION_EMOJIS,
   FEED_REPORT_REASON_OPTIONS as REPORT_REASON_OPTIONS,
   FEED_SCOPE_LABELS,
-  FEED_SUBTITLE,
-  FEED_TITLE,
+  FEED_TITLE_ALL,
+  FEED_TITLE_CIRCLE,
   type FeedReportReason as ReportReason,
+  EVENT_TYPE_LABELS,
+  type EventTypeValue,
 } from "@shared";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -336,6 +338,7 @@ export default function FeedPage() {
   const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
   const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
+  const [groupedSlideIndexByEntryId, setGroupedSlideIndexByEntryId] = useState<Record<string, number>>({});
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
   >({});
@@ -912,9 +915,8 @@ export default function FeedPage() {
             {FEED_EYEBROW}
           </span>
           <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 300 }} className="text-[var(--color-text-primary)]">
-            {FEED_TITLE}
+            {feedScope === "friends" ? FEED_TITLE_CIRCLE : FEED_TITLE_ALL}
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">{FEED_SUBTITLE}</p>
         </header>
 
         <div className="flex flex-wrap items-center gap-2 px-6">
@@ -1050,19 +1052,9 @@ export default function FeedPage() {
                         {entry.author_name}
                       </span>
                     </button>
-                    {canDisplayAlgorithmMatch(matchScores[entry.id]) ? (
-                      <span
-                        style={{
-                          background: "rgba(196, 96, 122, 0.1)",
-                          border: "0.5px solid rgba(196, 96, 122, 0.2)",
-                          color: "var(--color-accent-secondary)",
-                          fontSize: 11,
-                          padding: "2px 7px",
-                          borderRadius: 20,
-                        }}
-                        title={`${Math.round(matchScores[entry.id].score)}% match`}
-                      >
-                        {Math.round(matchScores[entry.id].score)}%
+                    {entry.entry_group ? (
+                      <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
+                        {entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event") : (entry.entry_group.mode === "event" ? "Event" : "Catch-up")}
                       </span>
                     ) : null}
                   </div>
@@ -1154,23 +1146,38 @@ export default function FeedPage() {
                 <div className="mt-4 -mx-5">
                   {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
                     <GroupedPostGallery
-                      title={entry.entry_group.title}
+                      title={entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? entry.entry_group.title) : entry.entry_group.title}
                       slides={entry.group_slides ?? []}
                       heightClassName=""
+                      onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}
                     />
                   ) : (
                     <EntryPhotoGallery entry={entry} />
                   )}
                 </div>
                 <div className="mt-4">
-                  {entry.entry_group ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-                      <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2 py-1 font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                        {entry.entry_group.mode === "event" ? "Event" : "Catch-up"}
-                      </span>
-                      <span>Grouped bulk post</span>
-                    </div>
-                  ) : (
+                  {entry.entry_group ? (() => {
+                    const activeSlide = (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0] ?? null;
+                    const wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
+                    const meta = activeSlide ? [
+                      activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
+                      activeSlide.vintage,
+                      activeSlide.appellation || activeSlide.region,
+                      activeSlide.country,
+                    ].filter(Boolean).slice(0, 3).join(" · ") : "";
+                    return (
+                      <div className="min-w-0">
+                        {wineName ? (
+                          <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
+                            {wineName}
+                          </h2>
+                        ) : null}
+                        {meta ? (
+                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
+                        ) : null}
+                      </div>
+                    );
+                  })() : (
                     <div className="min-w-0">
                       {entry.wine_name ? (
                         <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
@@ -1202,14 +1209,9 @@ export default function FeedPage() {
                     !Number.isNaN(entry.rating) ? (
                       <span
                         style={{
-                          background: "rgba(201, 168, 76, 0.1)",
-                          border: "0.5px solid rgba(201, 168, 76, 0.22)",
-                          color: "var(--color-accent-gold)",
-                          fontFamily: "var(--font-serif)",
-                          fontSize: 18,
-                          fontWeight: 700,
-                          padding: "4px 10px",
-                          borderRadius: 6,
+                          color: "#C4607A",
+                          fontSize: 14,
+                          fontWeight: 800,
                         }}
                         title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
                       >

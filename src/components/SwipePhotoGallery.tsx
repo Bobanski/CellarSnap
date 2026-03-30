@@ -37,6 +37,7 @@ export default function SwipePhotoGallery({
   empty,
   showOrderBadge = false,
   orderBadgeFormatter,
+  onIndexChange,
 }: {
   items: SwipePhotoGalleryItem[];
   heightClassName?: string;
@@ -46,6 +47,7 @@ export default function SwipePhotoGallery({
   empty?: ReactNode;
   showOrderBadge?: boolean;
   orderBadgeFormatter?: (order: number, total: number) => ReactNode;
+  onIndexChange?: (index: number) => void;
 }) {
   const [activeItemState, setActiveItemState] = useState<{
     index: number;
@@ -87,6 +89,7 @@ export default function SwipePhotoGallery({
       index: nextIndex,
       key: resolveItemKey(nextItem, nextIndex),
     });
+    onIndexChange?.(nextIndex);
   };
   const goPrev = () => setActiveByIndex((activeIndex - 1 + total) % total);
   const goNext = () => setActiveByIndex((activeIndex + 1) % total);
@@ -102,7 +105,7 @@ export default function SwipePhotoGallery({
       }}
     >
       {header ? (
-        <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-xs text-[var(--color-text-secondary)]">
+        <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 text-xs text-[var(--color-text-secondary)]" style={{ paddingTop: 15, paddingBottom: 15 }}>
           {header(active, activeIndex)}
         </div>
       ) : null}
@@ -208,7 +211,7 @@ export default function SwipePhotoGallery({
               type="button"
               className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
               aria-label="Previous photo"
-              onClick={goPrev}
+              onClick={(e) => { e.stopPropagation(); goPrev(); }}
             >
               {"<"}
             </button>
@@ -216,7 +219,7 @@ export default function SwipePhotoGallery({
               type="button"
               className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
               aria-label="Next photo"
-              onClick={goNext}
+              onClick={(e) => { e.stopPropagation(); goNext(); }}
             >
               {">"}
             </button>
@@ -229,7 +232,7 @@ export default function SwipePhotoGallery({
                   className={`h-1.5 w-1.5 rounded-full transition ${
                     dotIndex === activeIndex ? "bg-[var(--color-accent-primary)]" : "bg-zinc-400/70"
                   }`}
-                  onClick={() => setActiveByIndex(dotIndex)}
+                  onClick={(e) => { e.stopPropagation(); setActiveByIndex(dotIndex); }}
                 />
               ))}
             </div>

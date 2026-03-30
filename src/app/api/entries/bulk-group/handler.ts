@@ -22,6 +22,7 @@ const payloadSchema = z.object({
   entry_ids: z.array(z.string().uuid()).min(1).max(250),
   mode: entryGroupModeSchema,
   title: z.string().trim().min(1).max(120),
+  event_type: z.string().trim().min(1).max(60).nullable().optional(),
   slides: z.array(entryGroupSlideSchema).min(1).max(250),
 });
 
@@ -116,9 +117,10 @@ export function createBulkGroupHandler(
         user_id: user.id,
         mode: parsed.data.mode,
         title: parsed.data.title,
+        event_type: parsed.data.event_type ?? null,
         anchor_entry_id: parsed.data.anchor_entry_id,
       })
-      .select("id, mode, title, anchor_entry_id")
+      .select("id, mode, title, event_type, anchor_entry_id")
       .single();
 
     if (groupCreateError || !createdGroup) {

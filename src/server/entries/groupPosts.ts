@@ -18,6 +18,7 @@ type EntryGroupRow = {
   id: string;
   mode: EntryGroupMode;
   title: string;
+  event_type: string | null;
   anchor_entry_id: string | null;
 };
 
@@ -86,7 +87,7 @@ export async function resolveGroupedPostData(
 
   const { data: groupRows, error: groupsError } = await supabase
     .from("entry_groups")
-    .select("id, mode, title, anchor_entry_id")
+    .select("id, mode, title, event_type, anchor_entry_id")
     .in("id", groupIds);
 
   if (groupsError) {
@@ -204,6 +205,7 @@ export async function resolveGroupedPostData(
         id: group.id,
         mode: group.mode,
         title: group.title,
+        event_type: group.event_type ?? null,
         anchor_entry_id: group.anchor_entry_id,
       },
       group_slides: groupSlides,

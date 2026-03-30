@@ -46,6 +46,7 @@ import {
   type NormalizedLineupBbox,
   type PrivacyLevel,
   type QprLevel,
+  EVENT_TYPE_OPTIONS,
 } from "@cellarsnap/shared";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import {
@@ -405,6 +406,7 @@ export default function NewEntryScreen() {
   >("group");
   const [bulkGroupInfoOpen, setBulkGroupInfoOpen] = useState(false);
   const [bulkEntryTitle, setBulkEntryTitle] = useState("");
+  const [bulkEventType, setBulkEventType] = useState<string>("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
@@ -1541,6 +1543,7 @@ export default function NewEntryScreen() {
     setBulkEntryMode("event");
     setBulkEntrySetupStep("group");
     setBulkEntryTitle("");
+    setBulkEventType("");
     setBulkEntryConfigError(null);
   };
 
@@ -1747,10 +1750,12 @@ export default function NewEntryScreen() {
       return;
     }
     const normalizedBulkTitle = bulkEntryTitle.trim();
-    if (!normalizedBulkTitle) {
-      setBulkEntryConfigError(
-        "Add an event or catch-up title before creating the grouped post."
-      );
+    if (bulkEntryMode === "event" && !bulkEventType) {
+      setBulkEntryConfigError("Select an event type before creating the grouped post.");
+      return;
+    }
+    if (bulkEntryMode === "catch_up" && !normalizedBulkTitle) {
+      setBulkEntryConfigError("Add a title before creating the grouped post.");
       return;
     }
     if (uploadPhotos.length === 0) {
@@ -1787,7 +1792,8 @@ export default function NewEntryScreen() {
         setBulkCreateMessage,
         groupConfig: {
           mode: bulkEntryMode,
-          title: normalizedBulkTitle,
+          title: normalizedBulkTitle || bulkEventType || "Event",
+          event_type: bulkEntryMode === "event" ? bulkEventType || null : null,
         },
         resolveSuggestedGrapes,
         insertEntryWithFallback,
@@ -2214,29 +2220,55 @@ export default function NewEntryScreen() {
                     <View style={styles.block}>
                       <View style={styles.block}>
                         <AppText style={styles.bulkGroupFieldLabel}>
-                          {NEW_ENTRY_BULK_COPY.eventNameLabel}
+                          Event Type
                         </AppText>
-                        <DoneTextInput
-                          value={bulkEntryTitle}
-                          onChangeText={(value) => {
-                            setBulkEntryTitle(value);
-                            if (bulkEntryConfigError) {
-                              setBulkEntryConfigError(null);
-                            }
-                          }}
-                          placeholder="Stuytown tasting"
-                          placeholderTextColor={colors.textSecondary}
-                          autoCorrect={false}
-                          style={[
-                            styles.input,
-                            bulkEntryConfigError ? styles.bulkGroupInputError : null,
-                          ]}
-                        />
+                        <View style={styles.eventTypeGrid}>
+                          {EVENT_TYPE_OPTIONS.map((opt) => (
+                            <Pressable
+                              key={opt.value}
+                              onPress={() => {
+                                setBulkEventType(opt.value);
+                                if (bulkEntryConfigError) setBulkEntryConfigError(null);
+                              }}
+                              style={[
+                                styles.eventTypePill,
+                                bulkEventType === opt.value ? styles.eventTypePillActive : null,
+                              ]}
+                            >
+                              <AppText
+                                style={[
+                                  styles.eventTypePillText,
+                                  bulkEventType === opt.value ? styles.eventTypePillTextActive : null,
+                                ]}
+                              >
+                                {opt.label}
+                              </AppText>
+                            </Pressable>
+                          ))}
+                        </View>
                         {bulkEntryConfigError ? (
                           <AppText style={styles.bulkGroupErrorText}>
                             {bulkEntryConfigError}
                           </AppText>
                         ) : null}
+                      </View>
+                      <View style={styles.block}>
+                        <AppText style={styles.bulkGroupFieldLabel}>
+                          Custom Name (optional, private)
+                        </AppText>
+                        <DoneTextInput
+                          value={bulkEntryTitle}
+                          onChangeText={(value) => {
+                            setBulkEntryTitle(value);
+                          }}
+                          placeholder="e.g. Stuytown tasting (only you see this)"
+                          placeholderTextColor={colors.textSecondary}
+                          autoCorrect={false}
+                          style={styles.input}
+                        />
+                        <AppText style={styles.bulkGroupHintText}>
+                          Only visible in your cellar.
+                        </AppText>
                       </View>
 
                       <View style={styles.block}>

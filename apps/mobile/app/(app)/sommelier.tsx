@@ -17,7 +17,11 @@ import {
   SOMMELIER_INPUT_PLACEHOLDER,
   SOMMELIER_INTRO_MESSAGE,
   SOMMELIER_SUBTITLE,
+  SOMMELIER_SUGGESTIONS_BY_MODE,
   SOMMELIER_TITLE,
+  SOMMELIER_COLD_GREETINGS,
+  SOMMELIER_WARM_GREETINGS,
+  type AudienceMode,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
@@ -31,8 +35,23 @@ import {
   type MobileSommelierMessage,
 } from "@/src/lib/api/sommelier";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { supabase } from "@/src/lib/supabase";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
+
+function pickMobileGreeting(
+  mode: AudienceMode,
+  entryCount: number,
+  topPattern: string | null
+): string {
+  if (entryCount < 3 || !topPattern) {
+    return SOMMELIER_COLD_GREETINGS[mode];
+  }
+
+  const templates = SOMMELIER_WARM_GREETINGS[mode];
+  const picked = templates[Math.floor(Math.random() * templates.length)];
+  return picked.replace("{pattern}", topPattern);
+}
 
 type ChatMessage = {
   id: string;
@@ -127,6 +146,8 @@ function TypingIndicator() {
 
 export default function SommelierScreen() {
   const { hasPrivateBetaFeatureAccess } = useAuth();
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("explorer");
+  const [greeting, setGreeting] = useState(SOMMELIER_INTRO_MESSAGE);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "intro",
@@ -140,6 +161,52 @@ export default function SommelierScreen() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView | null>(null);
+
+  // Load user audience_mode from profile
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMode() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("audience_mode")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        const mode =
+          typeof profileRow?.audience_mode === "string" &&
+          ["explorer", "enthusiast", "connoisseur"].includes(profileRow.audience_mode)
+            ? (profileRow.audience_mode as AudienceMode)
+            : "explorer";
+
+        setAudienceMode(mode);
+
+        // Build a greeting based on mode and entry count
+        const { count } = await supabase
+          .from("entries")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        if (cancelled) return;
+
+        const entryCount = count ?? 0;
+        const newGreeting = pickMobileGreeting(mode, entryCount, null);
+        setGreeting(newGreeting);
+        setMessages([{ id: "intro", role: "assistant", content: newGreeting }]);
+      } catch {
+        // Fall back to defaults silently
+      }
+    }
+
+    void loadMode();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -169,7 +236,7 @@ export default function SommelierScreen() {
       {
         id: "intro",
         role: "assistant",
-        content: SOMMELIER_INTRO_MESSAGE,
+        content: greeting,
       },
     ]);
     setValue("");
@@ -342,7 +409,7 @@ export default function SommelierScreen() {
                 <View style={styles.suggestionSection}>
                   <AppText style={styles.suggestionEyebrow}>Try asking</AppText>
                   <View style={styles.suggestionWrap}>
-                    {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
+                    {(SOMMELIER_SUGGESTIONS_BY_MODE[audienceMode] ?? SOMMELIER_DEFAULT_SUGGESTIONS).map((suggestion) => (
                       <Pressable
                         key={suggestion}
                         style={styles.suggestionChip}

@@ -2,7 +2,7 @@ import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
 // ─── Types ──────────────────────────────────────────────────
 
-export type ExploreProfileType = "grape" | "region" | "producer";
+export type ExploreProfileType = "grape" | "region" | "producer" | "concept";
 
 export type HeroImageAttribution = {
   photographer: string;
@@ -21,18 +21,37 @@ export type ProfileContent = {
   climate?: string;
   style?: string;
   classification?: string;
+  country?: string;
   key_regions?: string[];
-  key_grapes?: string[];
+  key_grapes?: Array<string | { name: string; context: string }>;
   key_wines?: string[];
-  appellations?: string[];
+  appellations?: Array<string | { name: string; character: string }>;
   food_pairings?: string[];
   fun_fact?: string;
+  fun_facts?: string[];
   related_grapes?: string[];
   related_regions?: string[];
   related_producers?: string[];
   founded?: string;
   grapes?: string[];
   aging_potential?: string;
+  // Enriched fields (region + grape)
+  story?: string;
+  notable_winemakers?: Array<{ name: string; why: string }>;
+  flavor_profile?: { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number };
+  most_loved_producer?: { name: string; avg_rating: number };
+  best_qpr_producer?: { name: string; avg_rating: number };
+  recommendation_picks?: Array<{ name: string; type: string; why: string }>;
+  zone_descriptions?: Array<{ name: string; note: string }>;
+  personal_insight?: string;
+  // Grape-specific enriched fields
+  where_it_grows?: Array<{ name: string; size: string }>;
+  styles_expressions?: Array<{ style: string; desc: string; example: string }>;
+  notable_producers?: Array<{ name: string; note: string }>;
+  // Producer-specific enriched fields
+  philosophy_tags?: Array<{ tag: string; note: string }>;
+  region_grapes?: string[];
+  similar_producers?: Array<{ name: string; why: string }>;
 };
 
 export type ExploreProfile = {
@@ -51,9 +70,19 @@ export type PersonalStats = {
   label_photos: string[];
 };
 
+export type CommunityQpr = {
+  extortion: number;
+  pricey: number;
+  spot_on: number;
+  good_value: number;
+  absolute_steal: number;
+  total: number;
+};
+
 export type ExploreProfileResponse = {
   profile: ExploreProfile;
   personal_stats: PersonalStats;
+  community_qpr?: CommunityQpr | null;
 };
 
 // ─── API ────────────────────────────────────────────────────

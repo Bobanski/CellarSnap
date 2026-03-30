@@ -1,15 +1,25 @@
 "use client";
 
-import { SOMMELIER_DEFAULT_SUGGESTIONS } from "@shared";
+import {
+  SOMMELIER_DEFAULT_SUGGESTIONS,
+  SOMMELIER_SUGGESTIONS_BY_MODE,
+  type AudienceMode,
+} from "@shared";
 
 export default function SommelierSuggestions({
   onSelect,
+  audienceMode,
 }: {
   onSelect: (prompt: string) => void;
+  audienceMode?: AudienceMode;
 }) {
+  const suggestions = audienceMode
+    ? SOMMELIER_SUGGESTIONS_BY_MODE[audienceMode]
+    : SOMMELIER_DEFAULT_SUGGESTIONS;
+
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Suggested prompts">
-      {SOMMELIER_DEFAULT_SUGGESTIONS.map((suggestion) => (
+      {suggestions.map((suggestion) => (
         <button
           key={suggestion}
           type="button"

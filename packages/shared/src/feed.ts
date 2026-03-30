@@ -1,9 +1,11 @@
 export const FEED_EYEBROW = "Feed";
 export const FEED_TITLE = "What your people are drinking.";
-export const FEED_SUBTITLE = "Discover what the community is enjoying.";
+export const FEED_TITLE_ALL = "What the cluster is drinking.";
+export const FEED_TITLE_CIRCLE = "What your people are drinking.";
+export const FEED_SUBTITLE = "";
 export const FEED_SCOPE_LABELS = {
-  public: "Public feed",
-  friends: "Friends only",
+  public: "All",
+  friends: "My Circle",
 } as const;
 export const FEED_EMPTY_STATE_MESSAGE = "No entries yet.";
 export const FEED_LOAD_MORE_LABEL = "Load more";

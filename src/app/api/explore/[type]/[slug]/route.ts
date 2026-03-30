@@ -4,6 +4,8 @@ import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 
+export const maxDuration = 60;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -33,58 +35,81 @@ function slugToDisplayName(slug: string): string {
 // ---------------------------------------------------------------------------
 
 function buildGrapePrompt(displayName: string): string {
-  return `You are a wine expert writing educational content about the ${displayName} grape variety.
+  return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} grape variety.
+
+Your voice: sensory-first, personal, never textbook. You don't lecture — you make people feel what this grape does in the glass.
 
 Write a JSON object with these fields:
-- tagline: one-sentence description (max 15 words)
-- origin: where this grape originated (1-2 sentences)
-- characteristics: flavor/aroma profile (2-3 sentences)
+- tagline: one evocative sentence, max 15 words, taste-led (e.g. "The grape that tastes like warm earth and ripe fruit — then surprises you with how long it lingers.")
+- story: exactly 3 sentences in one paragraph. What this grape does to a glass, where it thrives, why someone building their palate should care. Sensory and personal, never encyclopedic.
+- where_it_grows: array of objects with { name: string, size: "large"|"medium"|"small" } — 6-8 regions where this grape is most important. Top 2 should be "large", next 2 "medium", rest "small". These should be tappable wine regions.
+- styles_expressions: array of exactly 3 objects with { style: string, desc: string, example: string } — different faces this grape can wear. Each style has a name, a 1-2 sentence sensory description, and an example producer/wine.
+- notable_producers: array of 3-5 objects with { name: string, note: string } — producers known for exceptional work with this grape. The note should be one punchy sentence about what makes them special WITH this grape specifically.
+- flavor_profile: object with { Tannin: number, Acidity: number, Body: number, Oak: number, Fruit: number } — each 0-100 scale representing this grape's TYPICAL profile
+- food_pairings: array of 4-6 specific food pairings (grape-specific, not generic)
+- fun_facts: array of exactly 3 surprising "did you know" strings. The first one should work as a standalone factoid beneath the story.
+- related_grapes: array of 3-4 similar/related grape names (strings)
+- most_loved_producer: object with { name: string, avg_rating: number } — most celebrated producer for this grape
+- best_qpr_producer: object with { name: string, avg_rating: number } — best QPR producer for this grape
+- recommendation_picks: array of exactly 3 objects with { name: string, type: "grape"|"region"|"producer", why: string } — "if you like this grape, you may also enjoy" suggestions. One obvious, one step-removed (different grape with similar sensory profile), one genuine surprise. Avoid all three being the same type. The "why" should be one evocative sentence.
+- personal_insight: string — a punchy insight about this grape's character that could feel personal (e.g. "You rate fuller, more tannic Grenache higher than average. Old-vine territory.")
 - body: typical body level ("Light", "Medium", "Full")
 - acidity: typical acidity ("Low", "Medium", "High")
 - tannin: typical tannin ("Low", "Medium", "High") — null for whites
-- key_regions: array of 3-5 regions known for this grape
-- food_pairings: array of 4-6 food pairings
-- fun_fact: one interesting fact most people don't know
-- aging_potential: brief note on aging (1 sentence)
-- related_grapes: array of 3-4 similar/related grapes
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function buildRegionPrompt(displayName: string): string {
-  return `You are a wine expert writing educational content about the ${displayName} wine region.
+  return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} wine region.
+
+Your voice: sensory-first, personal, never textbook. You don't lecture — you make people feel what it's like to drink from this place.
 
 Write a JSON object with these fields:
-- tagline: one-sentence description (max 15 words)
-- country: country this region is in
-- climate: climate description (1-2 sentences)
-- key_grapes: array of 3-6 signature grapes
-- appellations: array of 3-5 notable sub-regions or appellations
-- style: typical wine style description (2-3 sentences)
-- classification: brief note on the classification system if applicable (1-2 sentences, or null)
-- food_pairings: array of 4-6 regional food pairings
-- fun_fact: one interesting fact
-- related_regions: array of 3-4 similar/related regions
+- tagline: one evocative sentence, max 15 words, taste-led (e.g. "Where Grenache burns slow and wild rosemary finds its way into every glass")
+- country: country name
+- climate: 1-2 sentences about climate, focused on how it shapes the wine in the glass
+- story: exactly 3 sentences. First: what makes this region's wines distinctive in the glass. Second: the land/terroir that creates it. Third: why it matters to someone building their palate. Sensory and personal, never encyclopedic.
+- key_grapes: array of objects with { name: string, context: string } — 4-6 grapes with a short phrase about what they do HERE specifically (not generic descriptions)
+- notable_winemakers: array of objects with { name: string, why: string } — 3-5 producers with "why they matter" in one sentence
+- appellations: array of objects with { name: string, character: string } — 3-5 sub-zones with a short sensory character note
+- food_pairings: array of 4-6 specific regional food pairings (not generic — tied to the place)
+- fun_facts: array of exactly 3 surprising "did you know" strings that would make someone stop mid-sip
+- related_regions: array of 3-4 similar region names (strings)
+- flavor_profile: object with { Tannin: number, Acidity: number, Body: number, Oak: number, Fruit: number } — each 0-100 scale representing the region's TYPICAL wine style
+- classification: classification system if applicable (string or null)
+- style: 2-3 sentences about typical wine styles from here
+- most_loved_producer: object with { name: string, avg_rating: number } — the most celebrated producer from this region
+- best_qpr_producer: object with { name: string, avg_rating: number } — the producer known for best quality-to-price ratio
+- recommendation_picks: array of exactly 3 objects with { name: string, type: "grape"|"region"|"producer", why: string } — "if you like this, you may also enjoy" suggestions. IMPORTANT: Mix obvious and non-obvious picks. One can be directly related (e.g. the region's main grape). One should be a step removed — a region that profiles similarly but uses DIFFERENT grapes, or shares sensory components from a different part of the world (e.g. for CDP: Priorat because Grenache travels there but slate changes everything). The third should be a genuine surprise — something that shares a sensory thread but wouldn't be the first association (e.g. for CDP: a Barossa Grenache or a Bandol Mourvèdre). Avoid all three being from the same country or grape. The "why" should be one evocative sentence.
+- zone_descriptions: array of 2-3 objects with { name: string, note: string } — key sub-zones/lieu-dits within this region with a sensory/terroir description of what makes each distinct
+- personal_insight: string — a short, punchy insight sentence about this region's wines that could feel personal (e.g. "You always rate the Grenache-heavy ones higher. That's the garrigue talking.")
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function buildProducerPrompt(displayName: string): string {
-  return `You are a wine expert writing educational content about ${displayName} (wine producer).
+  return `You are a wine storyteller writing for the Cluster wine app. Write about ${displayName} (wine producer).
+
+Your voice: sensory-first, personal, never textbook. You're writing a character sketch, not a biography.
 
 Write a JSON object with these fields:
-- tagline: one-sentence description (max 15 words)
-- region: primary region
-- country: country
-- founded: year founded or "Unknown"
-- style: winemaking style description (2-3 sentences)
-- key_wines: array of 3-5 notable wines/labels
-- grapes: array of primary grapes used
-- classification: quality tier if applicable (e.g., "Grand Cru Classé") or null
-- fun_fact: one interesting fact
-- related_producers: array of 3-4 similar producers
+- tagline: one evocative ethos sentence, max 15 words — what makes them worth knowing, not when they were founded (e.g. "The man who proved Grenache doesn't need Syrah.")
+- region: primary region name
+- country: country name
+- story: exactly 3-4 sentences. Who they are, what they believe, why they matter to wine. Character sketch, not biography. Cluster Enthusiast voice.
+- philosophy_tags: array of 2-4 objects with { tag: string, note: string } — winemaking philosophy/approach tags. Each tag is a short label (e.g. "100% Grenache", "Sand soils", "No technology") and note is one sentence explaining what it means for the wine.
+- key_wines: array of 2-4 objects with { name: string, desc: string, rating: string } — flagship and notable wines. Name is the wine, desc is one evocative sentence, rating is like "96 avg" or "94 avg".
+- region_grapes: array of strings — region(s) and grape(s) as chip labels for cross-linking (e.g. ["Châteauneuf-du-Pape", "Grenache", "Grenache Blanc", "Clairette"])
+- similar_producers: array of exactly 3 objects with { name: string, why: string } — similar producers. One from the same region, one from a different region with similar philosophy, one genuine surprise. The "why" should be one punchy sentence.
+- fun_facts: array of exactly 3 surprising facts about this producer that would make someone stop mid-sip.
+- food_pairings: array of 4-6 food pairings that specifically match this producer's style
+- founded: year founded as string, or "Unknown"
+- classification: quality tier if applicable (string or null)
+- related_producers: array of 3-4 similar producer names (strings, for slug generation)
+- grapes: array of primary grape names used
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function getPromptForType(type: ProfileType, displayName: string): string {
@@ -553,7 +578,7 @@ async function generateContent(
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
-    max_tokens: 800,
+    max_tokens: 2000,
     temperature: 0.3,
     messages: [{ role: "user", content: prompt }],
   });
@@ -686,8 +711,53 @@ export async function GET(
   // 6. Personal stats (always fresh, user-specific)
   const personalStats = await fetchPersonalStats(type, displayName, user.id, supabase);
 
+  // 7. Community QPR data (for regions and grapes)
+  let community_qpr: { extortion: number; pricey: number; spot_on: number; good_value: number; absolute_steal: number; total: number } | null = null;
+  if (type === "region" || type === "grape") {
+    const adminClient = createSupabaseAdminClient();
+    let qprRows: Array<{ qpr_level: string }> | null = null;
+
+    if (type === "region") {
+      const { data } = await adminClient
+        .from("wine_entries")
+        .select("qpr_level")
+        .or(`canonical_region.ilike.%${displayName}%,region.ilike.%${displayName}%`)
+        .not("qpr_level", "is", null);
+      qprRows = data as Array<{ qpr_level: string }> | null;
+    } else {
+      // For grapes, join through entry_primary_grapes
+      const { data: grapeEntries } = await adminClient
+        .from("entry_primary_grapes")
+        .select("entry_id")
+        .ilike("grape", `%${displayName}%`);
+      const entryIds = (grapeEntries ?? []).map((r: { entry_id: string }) => r.entry_id);
+      if (entryIds.length > 0) {
+        const { data } = await adminClient
+          .from("wine_entries")
+          .select("qpr_level")
+          .in("id", entryIds)
+          .not("qpr_level", "is", null);
+        qprRows = data as Array<{ qpr_level: string }> | null;
+      }
+    }
+
+    if (qprRows && qprRows.length >= 3) {
+      const counts = { extortion: 0, pricey: 0, spot_on: 0, good_value: 0, absolute_steal: 0 };
+      for (const row of qprRows) {
+        const level = row.qpr_level;
+        if (level === "extortion") counts.extortion++;
+        else if (level === "pricey") counts.pricey++;
+        else if (level === "mid") counts.spot_on++;
+        else if (level === "good_value") counts.good_value++;
+        else if (level === "absolute_steal") counts.absolute_steal++;
+      }
+      community_qpr = { ...counts, total: qprRows.length };
+    }
+  }
+
   return NextResponse.json({
     profile,
     personal_stats: personalStats,
+    community_qpr,
   });
 }

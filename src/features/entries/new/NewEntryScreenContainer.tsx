@@ -49,6 +49,7 @@ import {
   NEW_ENTRY_PRIVACY_OPTIONS,
   NEW_ENTRY_SINGLE_BOTTLE_COPY,
   NEW_ENTRY_UPLOAD_COPY,
+  EVENT_TYPE_OPTIONS,
 } from "@shared";
 import {
   buildResolvedPhotoTypeMap,
@@ -417,6 +418,7 @@ export default function NewEntryPage() {
     "group" | "event_details"
   >("group");
   const [bulkEntryTitle, setBulkEntryTitle] = useState("");
+  const [bulkEventType, setBulkEventType] = useState<string>("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [showManualFields, setShowManualFields] = useState(false);
 
@@ -1411,6 +1413,7 @@ export default function NewEntryPage() {
     setBulkEntryMode("event");
     setBulkEntryConfigStep("group");
     setBulkEntryTitle("");
+    setBulkEventType("");
     setBulkEntryConfigError(null);
   };
 
@@ -2046,10 +2049,12 @@ export default function NewEntryPage() {
     const selected = lineupWines.filter((w) => w.included);
     if (selected.length === 0) return;
     const normalizedBulkTitle = bulkEntryTitle.trim();
-    if (!normalizedBulkTitle) {
-      setBulkEntryConfigError(
-        "Add an event or catch-up title before creating the grouped post."
-      );
+    if (bulkEntryMode === "event" && !bulkEventType) {
+      setBulkEntryConfigError("Select an event type before creating the grouped post.");
+      return;
+    }
+    if (bulkEntryMode === "catch_up" && !normalizedBulkTitle) {
+      setBulkEntryConfigError("Add a title before creating the grouped post.");
       return;
     }
     setBulkEntryConfigError(null);
@@ -2491,7 +2496,8 @@ export default function NewEntryPage() {
               anchor_entry_id: anchorResult.entryId,
               entry_ids: createdEntryIds,
               mode: bulkEntryMode,
-              title: normalizedBulkTitle,
+              title: normalizedBulkTitle || bulkEventType || "Event",
+              event_type: bulkEntryMode === "event" ? bulkEventType || null : null,
               slides: groupedSlides,
             }),
           });
@@ -3582,34 +3588,50 @@ export default function NewEntryPage() {
 
                       {showBulkEventDetailsStep ? (
                         <div className="md:col-span-2 space-y-4">
+                          {bulkEntryMode === "event" ? (
+                            <div>
+                              <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
+                                Event Type
+                              </label>
+                              <select
+                                value={bulkEventType}
+                                onChange={(event) => {
+                                  setBulkEventType(event.target.value);
+                                  if (bulkEntryConfigError) setBulkEntryConfigError(null);
+                                }}
+                                className={`mt-2 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 ${
+                                  bulkEntryConfigError
+                                    ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
+                                    : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
+                                }`}
+                              >
+                                <option value="">Select event type…</option>
+                                {EVENT_TYPE_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                              {bulkEntryConfigError ? (
+                                <p className="mt-2 text-xs text-[var(--color-error)]">{bulkEntryConfigError}</p>
+                              ) : null}
+                            </div>
+                          ) : null}
                           <div>
                             <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
-                              {NEW_ENTRY_BULK_COPY.eventNameLabel}
+                              {bulkEntryMode === "event" ? "Custom Name (private)" : NEW_ENTRY_BULK_COPY.eventNameLabel}
                             </label>
                             <input
                               type="text"
                               value={bulkEntryTitle}
                               onChange={(event) => {
                                 setBulkEntryTitle(event.target.value);
-                                if (bulkEntryConfigError) {
-                                  setBulkEntryConfigError(null);
-                                }
+                                if (bulkEntryConfigError) setBulkEntryConfigError(null);
                               }}
-                              placeholder="Stuytown tasting"
-                              className={`mt-2 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
-                                bulkEntryConfigError
-                                  ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
-                                  : "border-[var(--color-border)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
-                              }`}
+                              placeholder="e.g. Stuytown tasting (only you see this)"
+                              className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
                             />
                             <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                              This name becomes the grouped event title in Home and Feed.
+                              Optional — only visible in your cellar.
                             </p>
-                            {bulkEntryConfigError ? (
-                              <p className="mt-2 text-xs text-[var(--color-error)]">
-                                {bulkEntryConfigError}
-                              </p>
-                            ) : null}
                           </div>
 
                           <div className="grid gap-4 md:grid-cols-2">

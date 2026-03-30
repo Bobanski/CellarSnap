@@ -46,6 +46,7 @@ export type FeedEntryGroup = {
   id: string;
   mode: EntryGroupMode;
   title: string;
+  event_type: string | null;
 };
 
 export type FeedGroupSlide = {
@@ -61,6 +62,9 @@ export type FeedGroupSlide = {
   region: string | null;
   appellation: string | null;
   consumed_at: string | null;
+  notes: string | null;
+  rating: number | null;
+  qpr_level: string | null;
 };
 
 export type PrimaryGrape = {
@@ -803,7 +807,7 @@ export async function fetchFeedPage({
       const [groupsResponse, slidesResponse] = await Promise.all([
         supabaseClient
           .from("entry_groups")
-          .select("id, mode, title")
+          .select("id, mode, title, event_type")
           .in("id", groupIds),
         supabaseClient
           .from("entry_group_slides")
@@ -823,6 +827,7 @@ export async function fetchFeedPage({
         id: string;
         mode: string;
         title: string;
+        event_type: string | null;
       }>;
       const slideRows = (slidesResponse.data ?? []) as Array<{
         id: string;
@@ -857,6 +862,9 @@ export async function fetchFeedPage({
           region: string | null;
           appellation: string | null;
           consumed_at: string;
+          notes: string | null;
+          rating: number | null;
+          qpr_level: string | null;
         }
       >();
 
@@ -864,7 +872,7 @@ export async function fetchFeedPage({
         const { data: slideEntryRows } = await supabaseClient
           .from("wine_entries")
           .select(
-            "id, wine_name, producer, vintage, country, region, appellation, consumed_at"
+            "id, wine_name, producer, vintage, country, region, appellation, consumed_at, notes, rating, qpr_level"
           )
           .in("id", slideEntryIds);
 
@@ -877,6 +885,9 @@ export async function fetchFeedPage({
           region: string | null;
           appellation: string | null;
           consumed_at: string;
+          notes: string | null;
+          rating: number | null;
+          qpr_level: string | null;
         }>).forEach((row) => {
           slideEntryMap.set(row.id, row);
         });
@@ -938,6 +949,9 @@ export async function fetchFeedPage({
               region: slideEntry?.region ?? null,
               appellation: slideEntry?.appellation ?? null,
               consumed_at: slideEntry?.consumed_at ?? null,
+              notes: slideEntry?.notes ?? null,
+              rating: slideEntry?.rating ?? null,
+              qpr_level: slideEntry?.qpr_level ?? null,
             } satisfies FeedGroupSlide;
           })
           .filter((slide): slide is FeedGroupSlide => slide !== null);
@@ -947,6 +961,7 @@ export async function fetchFeedPage({
             id: group.id,
             mode: group.mode as EntryGroupMode,
             title: typeof group.title === "string" ? group.title : "",
+            event_type: typeof group.event_type === "string" ? group.event_type : null,
           },
           group_slides: slides,
         });

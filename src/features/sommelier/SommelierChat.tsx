@@ -1,7 +1,12 @@
 "use client";
 
-import { startTransition, useEffect, useRef, useState } from "react";
-import { SOMMELIER_INTRO_MESSAGE } from "@shared";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import {
+  SOMMELIER_INTRO_MESSAGE,
+  SOMMELIER_COLD_GREETINGS,
+  SOMMELIER_WARM_GREETINGS,
+  type AudienceMode,
+} from "@shared";
 import SommelierInput from "@/features/sommelier/SommelierInput";
 import SommelierMessage from "@/features/sommelier/SommelierMessage";
 import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
@@ -61,7 +66,23 @@ function parseSseBuffer(
   return remainder;
 }
 
+function pickGreeting(
+  mode: AudienceMode,
+  entryCount: number,
+  topPattern: string | null
+): string {
+  if (entryCount < 3 || !topPattern) {
+    return SOMMELIER_COLD_GREETINGS[mode];
+  }
+
+  const templates = SOMMELIER_WARM_GREETINGS[mode];
+  const picked = templates[Math.floor(Math.random() * templates.length)];
+  return picked.replace("{pattern}", topPattern);
+}
+
 export default function SommelierChat() {
+  const [audienceMode, setAudienceMode] = useState<AudienceMode | null>(null);
+  const [greeting, setGreeting] = useState(SOMMELIER_INTRO_MESSAGE);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "intro",
@@ -75,12 +96,58 @@ export default function SommelierChat() {
   const [lastSubmittedPrompt, setLastSubmittedPrompt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const resetChat = () => {
+  // Load user profile (audience_mode) and entry count for greeting
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const [profileRes, entriesRes] = await Promise.all([
+          fetch("/api/profile"),
+          fetch("/api/entries?limit=1&count_only=true").catch(() => null),
+        ]);
+
+        if (cancelled) return;
+
+        const profileData = profileRes.ok
+          ? ((await profileRes.json()) as { profile?: { audience_mode?: string } })
+          : null;
+        const mode =
+          (profileData?.profile?.audience_mode as AudienceMode) ?? "explorer";
+        setAudienceMode(mode);
+
+        let entryCount = 0;
+        let topPattern: string | null = null;
+
+        if (entriesRes?.ok) {
+          const entriesData = (await entriesRes.json()) as {
+            count?: number;
+            topPattern?: string;
+          };
+          entryCount = entriesData.count ?? 0;
+          topPattern = entriesData.topPattern ?? null;
+        }
+
+        const newGreeting = pickGreeting(mode, entryCount, topPattern);
+        setGreeting(newGreeting);
+        setMessages([{ id: "intro", role: "assistant", content: newGreeting }]);
+      } catch {
+        // Silently fall back to the default greeting
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resetChat = useCallback(() => {
     setMessages([
       {
         id: "intro",
         role: "assistant",
-        content: SOMMELIER_INTRO_MESSAGE,
+        content: greeting,
       },
     ]);
     setPending(false);
@@ -91,7 +158,7 @@ export default function SommelierChat() {
       behavior: "auto",
       block: "end",
     });
-  };
+  }, [greeting]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -321,7 +388,10 @@ export default function SommelierChat() {
 
       <div className="shrink-0 space-y-3">
         {showSuggestions ? (
-          <SommelierSuggestions onSelect={(suggestion) => void sendMessage(suggestion)} />
+          <SommelierSuggestions
+            onSelect={(suggestion) => void sendMessage(suggestion)}
+            audienceMode={audienceMode ?? undefined}
+          />
         ) : null}
 
         <SommelierInput disabled={pending} onSend={sendMessage} />

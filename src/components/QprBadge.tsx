@@ -9,11 +9,11 @@ type QprBadgeProps = {
 };
 
 const QPR_STYLES: Record<QprLevel, string> = {
-  extortion: "border-rose-400/40 bg-rose-400/10 text-rose-200",
-  pricey: "border-red-400/40 bg-red-400/10 text-red-200",
-  mid: "border-[var(--color-accent-primary)]/40 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]",
-  good_value: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-  absolute_steal: "border-green-400/40 bg-green-400/10 text-green-200",
+  extortion: "border-[rgba(196,96,122,0.4)] bg-[rgba(196,96,122,0.1)] text-[#C4607A]",
+  pricey: "border-[rgba(138,128,120,0.4)] bg-[rgba(138,128,120,0.1)] text-[#8A8078]",
+  mid: "border-[rgba(201,168,76,0.4)] bg-[rgba(201,168,76,0.1)] text-[#C9A84C]",
+  good_value: "border-[rgba(61,107,79,0.4)] bg-[rgba(61,107,79,0.1)] text-[#3D6B4F]",
+  absolute_steal: "border-[rgba(61,107,79,0.4)] bg-[rgba(61,107,79,0.1)] text-[#3D6B4F]",
 };
 
 export default function QprBadge({ level, className = "" }: QprBadgeProps) {

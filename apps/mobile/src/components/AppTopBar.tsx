@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { router, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { AlertsIcon } from "@/src/components/BrandIcons";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import {
   getPublicProfileInitial,
@@ -533,7 +534,7 @@ export function AppTopBar() {
             accessibilityRole="button"
             accessibilityLabel={alertsOpen ? "Close alerts" : "Open alerts"}
           >
-            <Feather name="bell" size={16} color={colors.textPrimary} />
+            <AlertsIcon size={18} color={colors.textPrimary} />
             {alertCount > 0 ? (
               <View style={styles.alertBadge}>
                 <AppText style={styles.alertBadgeText}>
@@ -790,6 +791,20 @@ export function AppTopBar() {
                   style={menuStyles.menuItem}
                   onPress={() => {
                     setMenuOpen(false);
+                    router.push("/(app)/explore-browse" as Parameters<typeof router.push>[0]);
+                  }}
+                >
+                  <Feather
+                    name="compass"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>Explore</AppText>
+                </Pressable>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
                     router.push("/(app)/friends");
                   }}
                 >
@@ -812,11 +827,7 @@ export function AppTopBar() {
                     toggleAlerts();
                   }}
                 >
-                  <Feather
-                    name="bell"
-                    size={16}
-                    color={colors.textSecondary}
-                  />
+                  <AlertsIcon size={18} color={colors.textSecondary} />
                   <AppText style={menuStyles.menuItemText}>
                     Notifications
                   </AppText>
