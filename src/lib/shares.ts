@@ -3,8 +3,9 @@ import { unstable_cache } from "next/cache";
 import {
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
+  normalizePrivacyLevel,
   type QprLevel,
-} from "@/lib/entryMeta";
+} from "@shared";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -264,7 +265,7 @@ async function resolvePublicPostShareUncached(
   }
 
   const entry = rawEntry as EntryRow;
-  if (entry.entry_privacy !== "public") {
+  if (normalizePrivacyLevel(entry.entry_privacy, "public") !== "public") {
     return null;
   }
 

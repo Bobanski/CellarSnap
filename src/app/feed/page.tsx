@@ -8,6 +8,7 @@ import {
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
 import {
+  buildEntryShareText,
   buildFeedEntryMetaFields as buildEntryMetaFields,
   DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
   FEED_EYEBROW,
@@ -19,6 +20,7 @@ import {
   FEED_SCOPE_LABELS,
   FEED_TITLE_ALL,
   FEED_TITLE_CIRCLE,
+  normalizePrivacyLevel,
   type FeedReportReason as ReportReason,
   EVENT_TYPE_LABELS,
   type EventTypeValue,
@@ -100,6 +102,31 @@ type FeedComment = {
   is_deleted?: boolean;
   replies: FeedReply[];
 };
+
+async function copyTextToClipboard(value: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "absolute";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textArea);
+  }
+}
 
 function buildFeedScoreBatchItems(entries: FeedEntry[]) {
   return entries
@@ -367,6 +394,7 @@ export default function FeedPage() {
     {}
   );
   const [postMenuEntryId, setPostMenuEntryId] = useState<string | null>(null);
+  const [sharingEntryId, setSharingEntryId] = useState<string | null>(null);
   const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
   const [postReportReasonByEntryId, setPostReportReasonByEntryId] = useState<
     Record<string, ReportReason>
@@ -801,6 +829,98 @@ export default function FeedPage() {
     }
   };
 
+  const shareEntry = async (entry: FeedEntry) => {
+    if (!viewerUserId) {
+      setModerationNotice({
+        kind: "error",
+        message: "Sign in to share posts.",
+      });
+      return;
+    }
+
+    if (normalizePrivacyLevel(entry.entry_privacy, "public") !== "public") {
+      setModerationNotice({
+        kind: "error",
+        message: "Only public posts can be shared.",
+      });
+      return;
+    }
+
+    setSharingEntryId(entry.id);
+    setPostMenuEntryId(null);
+    setModerationNotice(null);
+
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId: entry.id }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+
+      if (!response.ok || typeof payload.url !== "string") {
+        setModerationNotice({
+          kind: "error",
+          message: payload.error ?? "Unable to create share link.",
+        });
+        return;
+      }
+
+      const shareUrl = payload.url;
+      const shareText = buildEntryShareText();
+
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            text: shareText,
+            url: shareUrl,
+          });
+          setModerationNotice({
+            kind: "success",
+            message: "Share link ready.",
+          });
+          return;
+        } catch (shareError) {
+          if (shareError instanceof Error && shareError.name === "AbortError") {
+            return;
+          }
+        }
+      }
+
+      const copied = await copyTextToClipboard(shareUrl);
+      if (copied) {
+        setModerationNotice({
+          kind: "success",
+          message: "Share link copied to clipboard.",
+        });
+      } else if (typeof window !== "undefined" && typeof window.prompt === "function") {
+        window.prompt("Copy share link", shareUrl);
+        setModerationNotice({
+          kind: "success",
+          message: "Share link ready. Copy it from the prompt.",
+        });
+      } else {
+        setModerationNotice({
+          kind: "error",
+          message: "Unable to copy link automatically.",
+        });
+      }
+    } catch {
+      setModerationNotice({
+        kind: "error",
+        message: "Unable to create share link.",
+      });
+    } finally {
+      setSharingEntryId(null);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -852,6 +972,7 @@ export default function FeedPage() {
           setCommentErrorByEntryId({});
           setReactionPopupEntryId(null);
           setPostMenuEntryId(null);
+          setSharingEntryId(null);
           setReportingEntryId(null);
           setPostReportReasonByEntryId({});
           setCommentMenuKey(null);
@@ -1091,6 +1212,19 @@ export default function FeedPage() {
                                 className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
                                 onClick={(event) => event.stopPropagation()}
                               >
+                              {normalizePrivacyLevel(entry.entry_privacy, "public") === "public" ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={sharingEntryId === entry.id || reportingEntryId === entry.id}
+                                    onClick={() => void shareEntry(entry)}
+                                    className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                  >
+                                    {sharingEntryId === entry.id ? "Sharing..." : "Share"}
+                                  </button>
+                                  <div className="my-1 border-t border-[var(--color-border)]" />
+                                </>
+                              ) : null}
                               <div className="px-3 pb-1">
                                 <label
                                   htmlFor={`post-report-reason-${entry.id}`}

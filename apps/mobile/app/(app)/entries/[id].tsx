@@ -29,6 +29,7 @@ import {
   buildEntryLocationDisplayLabel,
   buildEntryShareText,
   mapContextTagToPhotoType,
+  normalizePrivacyLevel,
   normalizeProducerText,
   normalizeWineNameText,
   type EntryMatchBand,
@@ -921,7 +922,8 @@ export default function EntryDetailScreen() {
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
   const isOwner = Boolean(user?.id && entry?.user_id === user.id);
-  const canShareEntry = entry?.entry_privacy === "public";
+  const canShareEntry =
+    entry ? normalizePrivacyLevel(entry.entry_privacy, "public") === "public" : false;
 
   useEffect(() => {
     setShowBulkMoreDetails(false);
