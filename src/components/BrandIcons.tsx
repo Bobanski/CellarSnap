@@ -1,3 +1,5 @@
+import React from "react";
+
 type BrandIconProps = { size?: number; color?: string; className?: string };
 
 export function AlertsIcon({ size: s = 20, color: c = "#F0ECE4", className }: BrandIconProps) {
@@ -16,7 +18,7 @@ export function AlertsIcon({ size: s = 20, color: c = "#F0ECE4", className }: Br
 }
 
 export function SettingsIcon({ size: s = 20, color: c = "#F0ECE4", className }: BrandIconProps) {
-  const nodes: JSX.Element[] = [];
+  const nodes: React.ReactElement[] = [];
   for (let i = 0; i < 6; i++) {
     const a = i * 60 * Math.PI / 180;
     nodes.push(<circle key={i} cx={s/2 + s*0.3*Math.cos(a)} cy={s/2 + s*0.3*Math.sin(a)} r={s*0.1} fill={c} />);
