@@ -1,3 +1,5 @@
-export function canManageEntryShare(viewerUserId: string, ownerUserId: string) {
-  return viewerUserId === ownerUserId;
+type ShareableEntryPrivacy = string | null | undefined;
+
+export function canManageEntryShare(entryPrivacy: ShareableEntryPrivacy) {
+  return entryPrivacy === "public";
 }

@@ -50,6 +50,11 @@ import {
   getPublicProfileInitial,
   getPublicProfileName,
 } from "@/src/lib/publicProfiles";
+import {
+  resolveMobileGroupedPostData,
+  type MobileEntryGroup,
+  type MobileGroupedEntrySlide,
+} from "@/src/lib/entries/groupedPosts";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { signPhotoUrl, signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
@@ -61,6 +66,9 @@ type EntryTile = {
   id: string;
   wine_name: string | null;
   label_image_url: string | null;
+  entry_group_id?: string | null;
+  entry_group?: MobileEntryGroup | null;
+  group_slides?: MobileGroupedEntrySlide[] | null;
 };
 
 type Badge = {
@@ -264,6 +272,26 @@ export default function ProfileScreen() {
       .filter((value): value is string => Boolean(value))
       .join(" ");
   }, [profile]);
+
+  const galleryEntries = useMemo(() => {
+    const seenGroupIds = new Set<string>();
+
+    return entries.filter((entry) => {
+      if (
+        typeof entry.entry_group_id !== "string" ||
+        entry.entry_group_id.length === 0
+      ) {
+        return true;
+      }
+
+      if (seenGroupIds.has(entry.entry_group_id)) {
+        return false;
+      }
+
+      seenGroupIds.add(entry.entry_group_id);
+      return true;
+    });
+  }, [entries]);
 
   const friendIdSet = useMemo(() => new Set(friends.map((friend) => friend.id)), [friends]);
   const outgoingIdSet = useMemo(
@@ -514,7 +542,7 @@ export default function ProfileScreen() {
         const { data, error, count } = await supabase
           .from("wine_entries")
           .select(
-            "id, wine_name, label_image_path, consumed_at, created_at",
+            "id, wine_name, label_image_path, consumed_at, created_at, entry_group_id",
             { count: "exact" }
           )
           .eq("user_id", user.id)
@@ -530,16 +558,26 @@ export default function ProfileScreen() {
           id: string;
           wine_name: string | null;
           label_image_path: string | null;
+          entry_group_id?: string | null;
         }[];
-        const labelByEntryId = await resolveEntryLabelPhotos(rows, {
-          supabaseClient: supabase,
-        });
+        const [labelByEntryId, groupedPostByEntryId] = await Promise.all([
+          resolveEntryLabelPhotos(rows, {
+            supabaseClient: supabase,
+          }),
+          resolveMobileGroupedPostData(rows, {
+            supabaseClient: supabase,
+          }),
+        ]);
 
         const nextEntries: EntryTile[] = rows.map((row) => {
+          const groupedPost = groupedPostByEntryId.get(row.id);
           return {
             id: row.id,
             wine_name: row.wine_name ?? null,
             label_image_url: labelByEntryId.get(row.id)?.signedUrl ?? null,
+            entry_group_id: row.entry_group_id ?? null,
+            entry_group: groupedPost?.entry_group ?? null,
+            group_slides: groupedPost?.group_slides ?? null,
           };
         });
 
@@ -1978,17 +2016,19 @@ export default function ProfileScreen() {
 
         {galleryTab === "mine" ? (
           <>
-            {entries.length > 0 ? (
+            {galleryEntries.length > 0 ? (
               <View style={styles.galleryGrid}>
-                {entries.map((entry) => (
+                {galleryEntries.map((entry) => (
                   <Pressable
                     key={entry.id}
                     style={styles.galleryTile}
                     onPress={() => router.push(`/(app)/entries/${entry.id}`)}
                   >
-                    {entry.label_image_url ? (
+                    {entry.group_slides?.[0]?.url || entry.label_image_url ? (
                       <Image
-                        source={{ uri: entry.label_image_url }}
+                        source={{
+                          uri: entry.group_slides?.[0]?.url ?? entry.label_image_url ?? undefined,
+                        }}
                         style={styles.galleryImage}
                         resizeMode="cover"
                       />

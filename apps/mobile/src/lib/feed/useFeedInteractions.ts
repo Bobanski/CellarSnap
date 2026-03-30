@@ -394,6 +394,10 @@ export function useFeedInteractions({
     setReportMenuEntryId((current) => (current === entryId ? null : entryId));
   }, []);
 
+  const closeReportMenu = useCallback(() => {
+    setReportMenuEntryId(null);
+  }, []);
+
   const toggleCommentMenu = useCallback((entryId: string, commentId: string) => {
     setCommentMenuKey((current) =>
       current === `${entryId}:${commentId}` ? null : `${entryId}:${commentId}`
@@ -569,6 +573,7 @@ export function useFeedInteractions({
     toggleReactionPicker,
     toggleReaction,
     toggleReportMenu,
+    closeReportMenu,
     toggleCommentMenu,
     openReportReasonSheet,
     closePendingReport,

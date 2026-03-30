@@ -5,6 +5,7 @@ import {
   QPR_LEVEL_VALUES,
   type QprLevel,
 } from "@/lib/entryMeta";
+import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type ShareRow = {
@@ -16,6 +17,8 @@ type ShareRow = {
 
 type EntryRow = {
   id: string;
+  user_id: string;
+  entry_privacy: string | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
@@ -27,10 +30,20 @@ type EntryRow = {
   appellation: string | null;
   qpr_level: string | null;
   label_image_path: string | null;
+  entry_group_id: string | null;
 };
 
-type LabelPhotoRow = {
+type PhotoPathRow = {
   path: string;
+};
+
+type PublicProfileRow = {
+  display_name: string | null;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  name_display_preference?: "real_name" | "username" | null;
 };
 
 type PrimaryGrapeRow = {
@@ -50,6 +63,7 @@ export type PublicSharedPost = {
   postId: string;
   mode: string;
   expiresAt: string | null;
+  authorName: string;
   wineName: string | null;
   producer: string | null;
   vintage: string | null;
@@ -64,6 +78,8 @@ export type PublicSharedPost = {
   qprLabel: string | null;
   labelImageUrl: string | null;
   labelImageOgUrl: string | null;
+  previewImageUrl: string | null;
+  previewImageOgUrl: string | null;
   metadataTitle: string;
   metadataDescription: string;
 };
@@ -165,6 +181,48 @@ function buildMetadataDescription(entry: EntryRow) {
   return truncateClean(fragments.join(" • "), 180);
 }
 
+async function createSignedImagePair(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  path: string | null,
+  {
+    resize,
+  }: {
+    resize: "contain" | "cover";
+  }
+) {
+  if (!path) {
+    return {
+      defaultUrl: null,
+      ogUrl: null,
+    };
+  }
+
+  const [defaultSigned, ogSigned] = await Promise.all([
+    supabase.storage
+      .from("wine-photos")
+      .createSignedUrl(path, 60 * 60 * 24 * 7),
+    supabase.storage
+      .from("wine-photos")
+      .createSignedUrl(path, 60 * 60 * 24 * 7, {
+        transform: {
+          width: 640,
+          height: 640,
+          resize,
+          format: "origin",
+          quality: 90,
+        },
+      }),
+  ]);
+
+  const defaultUrl = defaultSigned.data?.signedUrl ?? null;
+  const ogUrl = ogSigned.data?.signedUrl ?? defaultUrl;
+
+  return {
+    defaultUrl,
+    ogUrl,
+  };
+}
+
 async function resolvePublicPostShareUncached(
   shareId: string
 ): Promise<PublicSharedPost | null> {
@@ -196,7 +254,7 @@ async function resolvePublicPostShareUncached(
   const { data: rawEntry, error: entryError } = await supabase
     .from("wine_entries")
     .select(
-      "id, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, qpr_level, label_image_path"
+      "id, user_id, entry_privacy, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, qpr_level, label_image_path, entry_group_id"
     )
     .eq("id", share.post_id)
     .maybeSingle();
@@ -206,23 +264,70 @@ async function resolvePublicPostShareUncached(
   }
 
   const entry = rawEntry as EntryRow;
+  if (entry.entry_privacy !== "public") {
+    return null;
+  }
 
   let labelPath = normalizeStoragePath(entry.label_image_path);
 
-  const { data: rawLabelPhoto } = await supabase
-    .from("entry_photos")
-    .select("path")
-    .eq("entry_id", entry.id)
-    .eq("type", "label")
-    .order("position", { ascending: true })
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const [
+    { data: rawLabelPhoto },
+    { data: rawFirstPhoto },
+    { data: rawProfile },
+    { data: rawGroupedPreviewPhoto },
+  ] = await Promise.all([
+    supabase
+      .from("entry_photos")
+      .select("path")
+      .eq("entry_id", entry.id)
+      .eq("type", "label")
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("entry_photos")
+      .select("path")
+      .eq("entry_id", entry.id)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("public_profiles")
+      .select(
+        "display_name, username, first_name, last_name, email, name_display_preference"
+      )
+      .eq("id", entry.user_id)
+      .maybeSingle(),
+    entry.entry_group_id
+      ? supabase
+          .from("entry_group_slides")
+          .select("path")
+          .eq("group_id", entry.entry_group_id)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   if (rawLabelPhoto) {
-    const labelPhoto = rawLabelPhoto as LabelPhotoRow;
+    const labelPhoto = rawLabelPhoto as PhotoPathRow;
     labelPath = normalizeStoragePath(labelPhoto.path) ?? labelPath;
   }
+
+  const groupedPreviewPath = rawGroupedPreviewPhoto
+    ? normalizeStoragePath((rawGroupedPreviewPhoto as PhotoPathRow).path)
+    : null;
+  const firstPhotoPath = rawFirstPhoto
+    ? normalizeStoragePath((rawFirstPhoto as PhotoPathRow).path)
+    : null;
+  const previewPath = groupedPreviewPath ?? firstPhotoPath ?? labelPath;
+  const authorName = getPublicProfileName(
+    (rawProfile ?? null) as PublicProfileRow | null,
+    "Someone from Cluster"
+  );
 
   let primaryGrapes: string[] = [];
   const { data: rawPrimaryGrapes, error: primaryGrapesError } = await supabase
@@ -242,29 +347,13 @@ async function resolvePublicPostShareUncached(
     primaryGrapes = Array.from(deduped);
   }
 
-  let labelImageUrl: string | null = null;
-  let labelImageOgUrl: string | null = null;
-  if (labelPath) {
-    const [defaultSigned, ogSigned] = await Promise.all([
-      supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(labelPath, 60 * 60 * 24 * 7),
-      supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(labelPath, 60 * 60 * 24 * 7, {
-          transform: {
-            width: 640,
-            height: 640,
-            resize: "contain",
-            format: "origin",
-            quality: 90,
-          },
-        }),
-    ]);
-
-    labelImageUrl = defaultSigned.data?.signedUrl ?? null;
-    labelImageOgUrl = ogSigned.data?.signedUrl ?? labelImageUrl;
-  }
+  const [
+    { defaultUrl: labelImageUrl, ogUrl: labelImageOgUrl },
+    { defaultUrl: previewImageUrl, ogUrl: previewImageOgUrl },
+  ] = await Promise.all([
+    createSignedImagePair(supabase, labelPath, { resize: "contain" }),
+    createSignedImagePair(supabase, previewPath, { resize: "cover" }),
+  ]);
 
   const normalizedNotes = normalizeText(entry.notes);
 
@@ -273,6 +362,7 @@ async function resolvePublicPostShareUncached(
     postId: share.post_id,
     mode: share.mode ?? "unlisted",
     expiresAt: share.expires_at,
+    authorName,
     wineName: entry.wine_name,
     producer: entry.producer,
     vintage: entry.vintage,
@@ -287,6 +377,8 @@ async function resolvePublicPostShareUncached(
     qprLabel: normalizeQprLabel(entry.qpr_level),
     labelImageUrl,
     labelImageOgUrl,
+    previewImageUrl,
+    previewImageOgUrl,
     metadataTitle: buildMetadataTitle(entry),
     metadataDescription: buildMetadataDescription(entry),
   };

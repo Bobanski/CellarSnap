@@ -30,6 +30,7 @@ import {
   ENTRIES_LIBRARY_SORT_OPTIONS,
   ENTRIES_LIBRARY_STATS_LABELS,
   ENTRIES_LIBRARY_VIEW_OPTIONS,
+  EVENT_TYPE_LABELS,
   getEntriesCollectionStats,
   getEntriesCountLabel,
   getEntriesEmptyStateMessage,
@@ -50,12 +51,18 @@ import {
   type EntryLibrarySortBy as SortBy,
   type EntryLibrarySortOrder as SortOrder,
   type EntryLibraryViewMode as LibraryViewMode,
+  type EventTypeValue,
   type QprLevel,
   type WineEntrySummary,
 } from "@cellarsnap/shared";
 import { fetchCellarEntries, drinkFromCellar } from "@/src/lib/api/cellar";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
+import {
+  resolveMobileGroupedPostData,
+  type MobileEntryGroup,
+  type MobileGroupedEntrySlide,
+} from "@/src/lib/entries/groupedPosts";
 import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -82,6 +89,15 @@ type EntryPrimaryGrapeRow = {
       }[]
     | null;
 };
+type MobileEntryRow = WineEntrySummary & {
+  label_image_path: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  classification: string | null;
+  qpr_level: QprLevel | null;
+  entry_group_id?: string | null;
+};
 type MobileEntry = WineEntrySummary & {
   label_image_path: string | null;
   label_image_url?: string | null;
@@ -91,12 +107,31 @@ type MobileEntry = WineEntrySummary & {
   classification: string | null;
   primary_grapes?: PrimaryGrape[];
   qpr_level: QprLevel | null;
+  entry_group_id?: string | null;
+  entry_group?: MobileEntryGroup | null;
+  group_slides?: MobileGroupedEntrySlide[] | null;
 };
 
 type EntryGroup = {
   id: string;
   label: string;
   entries: MobileEntry[];
+};
+
+type EventHistoryEntry = {
+  id: string;
+  wine_name: string | null;
+  producer: string | null;
+  vintage: string | null;
+  country: string | null;
+  region: string | null;
+  appellation: string | null;
+  label_image_url: string | null;
+  consumed_at: string;
+  created_at: string;
+  entry_group_id: string;
+  entry_group: MobileEntryGroup | null;
+  group_slides: MobileGroupedEntrySlide[];
 };
 
 function formatConsumedDate(raw: string) {
@@ -243,6 +278,165 @@ function CellarEntryCard({
   );
 }
 
+function getGroupedModeLabel(group: MobileEntryGroup | null) {
+  if (group?.event_type) {
+    return EVENT_TYPE_LABELS[group.event_type as EventTypeValue] ?? "Event";
+  }
+  return group?.mode === "catch_up" ? "Catch-up" : "Event";
+}
+
+function getGroupedTitle(item: EventHistoryEntry) {
+  const title = item.entry_group?.title?.trim() ?? "";
+  if (title) {
+    return title;
+  }
+  return getGroupedModeLabel(item.entry_group);
+}
+
+function buildGroupedSlideMeta(slide: MobileGroupedEntrySlide | null) {
+  if (!slide) {
+    return "";
+  }
+
+  return [
+    slide.producer && slide.producer !== slide.wine_name ? slide.producer : null,
+    slide.vintage,
+    slide.appellation || slide.region,
+    slide.country,
+  ]
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" · ");
+}
+
+function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [frameWidth, setFrameWidth] = useState(0);
+  const slides = item.group_slides;
+  const hasSlides = slides.length > 0;
+  const hasMultipleSlides = slides.length > 1;
+  const clampedIndex = hasSlides
+    ? Math.max(0, Math.min(slides.length - 1, activeIndex))
+    : 0;
+  const activeSlide = hasSlides ? slides[clampedIndex] ?? slides[0] ?? null : null;
+  const previewImageUrl = activeSlide?.url ?? item.label_image_url ?? null;
+  const headline = activeSlide?.wine_name ?? activeSlide?.producer ?? item.wine_name ?? null;
+  const headlineMeta = buildGroupedSlideMeta(activeSlide);
+  const modeLabel = getGroupedModeLabel(item.entry_group);
+  const title = getGroupedTitle(item);
+
+  return (
+    <View style={styles.eventCard}>
+      <View style={styles.eventCardHeader}>
+        <View style={styles.eventHeaderCopy}>
+          <View style={styles.eventModeBadge}>
+            <AppText style={styles.eventModeBadgeText}>{modeLabel}</AppText>
+          </View>
+          <AppText style={styles.eventCardTitle}>{title}</AppText>
+          {item.entry_group?.event_type && item.entry_group.title?.trim() ? (
+            <AppText style={styles.eventCardSubtitle}>
+              {EVENT_TYPE_LABELS[item.entry_group.event_type as EventTypeValue] ?? "Event"}
+            </AppText>
+          ) : null}
+        </View>
+        <AppText style={styles.eventCardDate}>
+          {formatConsumedDate(item.consumed_at)}
+        </AppText>
+      </View>
+
+      <View
+        style={styles.eventGalleryFrame}
+        onLayout={(event) => {
+          const nextWidth = event.nativeEvent.layout.width;
+          if (nextWidth > 0 && Math.abs(nextWidth - frameWidth) > 0.5) {
+            setFrameWidth(nextWidth);
+          }
+        }}
+      >
+        {previewImageUrl ? (
+          hasMultipleSlides && frameWidth > 0 ? (
+            <ScrollView
+              horizontal
+              snapToInterval={frameWidth}
+              snapToAlignment="start"
+              disableIntervalMomentum
+              bounces={false}
+              directionalLockEnabled
+              nestedScrollEnabled
+              overScrollMode="never"
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.eventGalleryTrack}
+              onMomentumScrollEnd={(event) => {
+                if (frameWidth <= 0) {
+                  return;
+                }
+                const rawIndex = Math.round(event.nativeEvent.contentOffset.x / frameWidth);
+                const nextIndex = Math.max(0, Math.min(slides.length - 1, rawIndex));
+                setActiveIndex(nextIndex);
+              }}
+            >
+              {slides.map((slide, slideIndex) => (
+                <View
+                  key={`${slide.id}-${slideIndex}`}
+                  style={[styles.eventGallerySlide, { width: frameWidth }]}
+                >
+                  <Image
+                    source={{ uri: slide.url }}
+                    style={styles.eventGalleryImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.eventGalleryImage}
+              resizeMode="cover"
+            />
+          )
+        ) : (
+          <View style={styles.eventGalleryFallback}>
+            <AppText style={styles.eventGalleryFallbackText}>No photos yet</AppText>
+          </View>
+        )}
+      </View>
+
+      {hasMultipleSlides ? (
+        <View style={styles.eventDotRow}>
+          {slides.map((_, dotIndex) => (
+            <View
+              key={`event-dot-${item.id}-${dotIndex}`}
+              style={[
+                styles.eventDot,
+                dotIndex === clampedIndex ? styles.eventDotActive : null,
+              ]}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      {headline ? (
+        <View style={styles.eventPreviewCopy}>
+          <AppText style={styles.eventPreviewTitle}>{headline}</AppText>
+          {headlineMeta ? (
+            <AppText style={styles.eventPreviewMeta}>{headlineMeta}</AppText>
+          ) : null}
+        </View>
+      ) : null}
+
+      <Pressable
+        style={styles.eventOpenButton}
+        onPress={() => router.push(`/(app)/entries/${item.id}`)}
+      >
+        <AppText style={styles.eventOpenButtonText}>Open details</AppText>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function EntriesScreen() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<EntryStatus>("consumed");
@@ -362,6 +556,37 @@ export default function EntriesScreen() {
     return sortedGroups;
   }, [groupScheme, libraryViewMode, sortedEntries]);
 
+  const eventEntries = useMemo<EventHistoryEntry[]>(() => {
+    const seenGroupIds = new Set<string>();
+
+    return entries
+      .filter((entry): entry is MobileEntry & { entry_group_id: string } => (
+        typeof entry.entry_group_id === "string" && entry.entry_group_id.length > 0
+      ))
+      .filter((entry) => {
+        if (seenGroupIds.has(entry.entry_group_id)) {
+          return false;
+        }
+        seenGroupIds.add(entry.entry_group_id);
+        return true;
+      })
+      .map((entry) => ({
+        id: entry.id,
+        wine_name: entry.wine_name,
+        producer: entry.producer,
+        vintage: entry.vintage,
+        country: entry.country,
+        region: entry.region,
+        appellation: entry.appellation,
+        label_image_url: entry.label_image_url ?? null,
+        consumed_at: entry.consumed_at,
+        created_at: entry.created_at,
+        entry_group_id: entry.entry_group_id,
+        entry_group: entry.entry_group ?? null,
+        group_slides: entry.group_slides ?? [],
+      }));
+  }, [entries]);
+
   const loadEntries = useCallback(
     async (refresh = false) => {
       if (!user) return;
@@ -372,62 +597,92 @@ export default function EntriesScreen() {
       }
       setErrorMessage(null);
 
-      const { data, error } = await supabase
-        .from("wine_entries")
-        .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level")
-        .eq("user_id", user.id)
-        .order("consumed_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(100);
+      try {
+        const rows: MobileEntryRow[] = [];
+        const pageSize = 100;
+        let start = 0;
 
-      if (error) {
-        setErrorMessage(error.message);
-      } else {
-        const rows = (data ?? []) as MobileEntry[];
-        const entryIds = rows.map((entry) => entry.id);
-        const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
+        while (true) {
+          const { data, error } = await supabase
+            .from("wine_entries")
+            .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level, entry_group_id")
+            .eq("user_id", user.id)
+            .order("consumed_at", { ascending: false })
+            .order("created_at", { ascending: false })
+            .range(start, start + pageSize - 1);
 
-        if (entryIds.length > 0) {
-          const { data: primaryGrapeRows, error: primaryGrapeError } = await supabase
-            .from("entry_primary_grapes")
-            .select("entry_id, position, grape_varieties(id, name)")
-            .in("entry_id", entryIds)
-            .order("position", { ascending: true });
-
-          if (!primaryGrapeError && primaryGrapeRows) {
-            (primaryGrapeRows as EntryPrimaryGrapeRow[]).forEach((row) => {
-              const variety = normalizeVariety(row.grape_varieties);
-              if (!variety) {
-                return;
-              }
-              const current = primaryGrapeMap.get(row.entry_id) ?? [];
-              current.push({
-                id: variety.id,
-                name: variety.name,
-                position: row.position,
-              });
-              primaryGrapeMap.set(row.entry_id, current);
-            });
+          if (error) {
+            setErrorMessage(error.message);
+            break;
           }
+
+          const pageRows = (data ?? []) as MobileEntryRow[];
+          rows.push(...pageRows);
+
+          if (pageRows.length < pageSize) {
+            break;
+          }
+
+          start += pageSize;
         }
 
-        const labelByEntryId = await resolveEntryLabelPhotos(rows, {
-          supabaseClient: supabase,
-        });
+        if (rows.length > 0) {
+          const entryIds = rows.map((entry) => entry.id);
+          const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
 
-        setEntries(
-          rows.map((entry) => {
-            return {
-              ...entry,
-              label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
-              primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
-            };
-          })
-        );
+          if (entryIds.length > 0) {
+            const { data: primaryGrapeRows, error: primaryGrapeError } = await supabase
+              .from("entry_primary_grapes")
+              .select("entry_id, position, grape_varieties(id, name)")
+              .in("entry_id", entryIds)
+              .order("position", { ascending: true });
+
+            if (!primaryGrapeError && primaryGrapeRows) {
+              (primaryGrapeRows as EntryPrimaryGrapeRow[]).forEach((row) => {
+                const variety = normalizeVariety(row.grape_varieties);
+                if (!variety) {
+                  return;
+                }
+                const current = primaryGrapeMap.get(row.entry_id) ?? [];
+                current.push({
+                  id: variety.id,
+                  name: variety.name,
+                  position: row.position,
+                });
+                primaryGrapeMap.set(row.entry_id, current);
+              });
+            }
+          }
+
+          const [labelByEntryId, groupedPostByEntryId] = await Promise.all([
+            resolveEntryLabelPhotos(rows, {
+              supabaseClient: supabase,
+            }),
+            resolveMobileGroupedPostData(rows, {
+              supabaseClient: supabase,
+            }),
+          ]);
+
+          setEntries(
+            rows.map((entry) => {
+              const groupedPost = groupedPostByEntryId.get(entry.id);
+              return {
+                ...entry,
+                label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
+                primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
+                entry_group_id: entry.entry_group_id ?? null,
+                entry_group: groupedPost?.entry_group ?? null,
+                group_slides: groupedPost?.group_slides ?? null,
+              };
+            })
+          );
+        } else {
+          setEntries([]);
+        }
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-
-      setIsLoading(false);
-      setIsRefreshing(false);
     },
     [user]
   );
@@ -551,6 +806,14 @@ export default function EntriesScreen() {
               {CELLAR_TAB_LABELS.cellaring}
             </AppText>
           </Pressable>
+          <Pressable
+            style={[styles.tabToggleBtn, activeTab === "events" ? styles.tabToggleBtnActive : null]}
+            onPress={() => setActiveTab("events")}
+          >
+            <AppText style={[styles.tabToggleText, activeTab === "events" ? styles.tabToggleTextActive : null]}>
+              {CELLAR_TAB_LABELS.events}
+            </AppText>
+          </Pressable>
         </View>
 
         {activeTab === "cellaring" ? (
@@ -642,7 +905,22 @@ export default function EntriesScreen() {
           )
         ) : null}
 
-        {activeTab === "consumed" ? (
+        {activeTab === "events" ? (
+          <>
+            {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+
+            {eventEntries.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.eventsEmptyTitle}</AppText>
+                <AppText style={styles.emptyText}>{CELLAR_COPY.eventsEmptySubtitle}</AppText>
+              </View>
+            ) : (
+              <View style={styles.stack}>
+                {eventEntries.map((item) => <EventHistoryCard key={item.entry_group_id} item={item} />)}
+              </View>
+            )}
+          </>
+        ) : activeTab === "consumed" ? (
           <>
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
@@ -818,6 +1096,125 @@ const styles = StyleSheet.create({
   emptyCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, paddingHorizontal: 16, paddingVertical: 14 },
   emptyText: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   stack: { gap: 10 },
+  eventCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    padding: 14,
+    gap: 12,
+  },
+  eventCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  eventHeaderCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  eventModeBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  eventModeBadgeText: {
+    color: colors.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  eventCardTitle: {
+    color: colors.textPrimary,
+    fontFamily: fonts.serif.light,
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  eventCardSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  eventCardDate: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontFamily: fonts.serif.italic,
+    textAlign: "right",
+  },
+  eventGalleryFrame: {
+    minHeight: 240,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: colors.surfaceTinted,
+  },
+  eventGalleryTrack: {
+    flexDirection: "row",
+  },
+  eventGallerySlide: {
+    minHeight: 240,
+  },
+  eventGalleryImage: {
+    width: "100%",
+    height: 240,
+  },
+  eventGalleryFallback: {
+    minHeight: 240,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  eventGalleryFallbackText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  eventDotRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: -2,
+  },
+  eventDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: colors.borderStrong,
+  },
+  eventDotActive: {
+    backgroundColor: colors.accentSecondary,
+  },
+  eventPreviewCopy: {
+    gap: 4,
+  },
+  eventPreviewTitle: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+  eventPreviewMeta: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  eventOpenButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    backgroundColor: colors.accentPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  eventOpenButtonText: {
+    color: colors.textOnAccent,
+    fontSize: 12,
+    fontWeight: "700",
+  },
   groupCard: { borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfacePrimary, padding: 10, gap: 8 },
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   groupTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: "700" },

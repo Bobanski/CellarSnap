@@ -1,4 +1,5 @@
 import {
+  buildEntryShareText,
   buildFeedEntryMetaFields as buildEntryMetaFields,
   FEED_EYEBROW,
   FEED_LOAD_MORE_LABEL,
@@ -26,9 +27,11 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   View
 } from "react-native";
+import * as SMS from "expo-sms";
 import { router } from "expo-router";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -49,6 +52,7 @@ import {
   REPORT_REASON_OPTIONS,
   useFeedInteractions,
 } from "@/src/lib/feed/useFeedInteractions";
+import { createPostShareLink } from "@/src/lib/api/share";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
@@ -92,6 +96,20 @@ function buildAuthorWithCompanionsLabel(item: MobileFeedEntry) {
   return companionNames.length > 0
     ? `${item.author_name} + ${companionNames.join(", ")}`
     : item.author_name;
+}
+
+async function openFeedSmsShare(url: string) {
+  const message = `${buildEntryShareText()} ${url}`;
+
+  if (await SMS.isAvailableAsync()) {
+    await SMS.sendSMSAsync([], message);
+    return;
+  }
+
+  await Share.share({
+    message,
+    url,
+  });
 }
 
 function GroupedPostGallery({
@@ -358,6 +376,7 @@ function FeedCard({
   viewerUserId,
   reportMenuOpen,
   reportBusy,
+  shareBusy,
   notesExpanded,
   onToggleNotes,
   commentsExpanded,
@@ -381,6 +400,7 @@ function FeedCard({
   onToggleReactionPicker,
   onToggleReaction,
   onToggleReportMenu,
+  onSharePost,
   onReportPost,
   onToggleCommentMenu,
   onReportComment,
@@ -393,6 +413,7 @@ function FeedCard({
   viewerUserId: string | null;
   reportMenuOpen: boolean;
   reportBusy: boolean;
+  shareBusy: boolean;
   notesExpanded: boolean;
   onToggleNotes: () => void;
   commentsExpanded: boolean;
@@ -416,6 +437,7 @@ function FeedCard({
   onToggleReactionPicker: () => void;
   onToggleReaction: (emoji: string) => void;
   onToggleReportMenu: () => void;
+  onSharePost: () => void;
   onReportPost: () => void;
   onToggleCommentMenu: (commentId: string) => void;
   onReportComment: (commentId: string, targetUserId: string) => void;
@@ -447,6 +469,9 @@ function FeedCard({
   } | null>(null);
   const hasMultiplePhotos = galleryPhotos.length > 1;
   const showCommentsControl = item.can_comment;
+  const canShare = item.entry_privacy === "public";
+  const canReport = Boolean(viewerUserId && viewerUserId !== item.user_id);
+  const showEntryMenu = canShare || canReport;
   const clampedActivePhotoIndex = Math.max(
     0,
     Math.min(galleryPhotos.length - 1, activePhotoIndex)
@@ -589,10 +614,14 @@ function FeedCard({
         <View style={styles.feedAuthorRight}>
           <View style={styles.feedMetaRow}>
             <AppText style={styles.feedDate}>{formatConsumedDate(item.created_at)}</AppText>
-            {viewerUserId && viewerUserId !== item.user_id ? (
+            {showEntryMenu ? (
               <View style={styles.feedMenuWrap}>
                 <Pressable
-                  style={styles.feedMenuButton}
+                  style={[
+                    styles.feedMenuButton,
+                    shareBusy ? styles.feedMenuButtonDisabled : null,
+                  ]}
+                  disabled={shareBusy}
                   onPress={(event) => {
                     event.stopPropagation();
                     onToggleReportMenu();
@@ -609,17 +638,35 @@ function FeedCard({
                     style={styles.feedMenuPanel}
                     onStartShouldSetResponder={() => true}
                   >
-                    <Pressable
-                      disabled={reportBusy}
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        onReportPost();
-                      }}
-                    >
-                      <AppText style={styles.feedMenuItemText}>
-                        {reportBusy ? "Reporting..." : "Report post"}
-                      </AppText>
-                    </Pressable>
+                    {canShare ? (
+                      <Pressable
+                        style={styles.feedMenuItemButton}
+                        disabled={shareBusy || reportBusy}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          onSharePost();
+                        }}
+                      >
+                        <AppText style={styles.feedMenuItemText}>
+                          {shareBusy ? "Sharing..." : "Share via text"}
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                    {canShare && canReport ? <View style={styles.feedMenuDivider} /> : null}
+                    {canReport ? (
+                      <Pressable
+                        style={styles.feedMenuItemButton}
+                        disabled={reportBusy || shareBusy}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          onReportPost();
+                        }}
+                      >
+                        <AppText style={styles.feedMenuItemText}>
+                          {reportBusy ? "Reporting..." : "Report post"}
+                        </AppText>
+                      </Pressable>
+                    ) : null}
                   </View>
                 ) : null}
               </View>
@@ -1239,7 +1286,9 @@ export default function FeedScreen() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isGallerySwipeActive, setIsGallerySwipeActive] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
+  const [sharingEntryId, setSharingEntryId] = useState<string | null>(null);
   const {
+    closeReportMenu,
     closePendingReport,
     getEntryInteractionState,
     moderationNotice,
@@ -1362,6 +1411,33 @@ export default function FeedScreen() {
 
     return () => clearTimeout(timeoutId);
   }, [loadFeed]);
+
+  const shareEntryByText = useCallback(
+    async (entryId: string) => {
+      if (sharingEntryId === entryId) {
+        return;
+      }
+
+      setErrorMessage(null);
+      setSharingEntryId(entryId);
+
+      try {
+        const result = await createPostShareLink(entryId);
+        if (!result.ok) {
+          setErrorMessage(result.errorMessage);
+          return;
+        }
+
+        closeReportMenu();
+        await openFeedSmsShare(result.url);
+      } catch {
+        setErrorMessage("Unable to open text sharing right now.");
+      } finally {
+        setSharingEntryId((current) => (current === entryId ? null : current));
+      }
+    },
+    [closeReportMenu, sharingEntryId]
+  );
 
   const loadMore = async () => {
     if (!viewerUserId || isLoadingMore || !hasMore || !nextCursor) {
@@ -1505,6 +1581,7 @@ export default function FeedScreen() {
                   viewerUserId={viewerUserId}
                   reportMenuOpen={interaction.reportMenuOpen}
                   reportBusy={interaction.reportBusy}
+                  shareBusy={sharingEntryId === entry.id}
                   notesExpanded={interaction.notesExpanded}
                   onToggleNotes={() => toggleNotes(entry.id)}
                   commentsExpanded={interaction.commentsExpanded}
@@ -1532,6 +1609,7 @@ export default function FeedScreen() {
                   onToggleReactionPicker={() => toggleReactionPicker(entry.id)}
                   onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
                   onToggleReportMenu={() => toggleReportMenu(entry.id)}
+                  onSharePost={() => void shareEntryByText(entry.id)}
                   onReportPost={() =>
                     openReportReasonSheet({
                       targetType: "entry",
@@ -1999,6 +2077,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  feedMenuButtonDisabled: {
+    opacity: 0.7,
+  },
   feedMenuDotsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2023,12 +2104,20 @@ const styles = StyleSheet.create({
     minWidth: 116,
     paddingVertical: 4,
   },
+  feedMenuItemButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  feedMenuDivider: {
+    height: 1,
+    marginHorizontal: 8,
+    marginVertical: 2,
+    backgroundColor: colors.borderStrong,
+  },
   feedMenuItemText: {
     color: colors.textPrimary,
     fontSize: 11,
     fontWeight: "600",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
   },
   groupedDotRow: {
     position: "absolute",

@@ -67,6 +67,12 @@ type FeedCursorPosition = {
 
 const MAX_FEED_ITERATIONS = 20;
 
+function formatPostgrestInList(values: string[]) {
+  return values
+    .map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
+    .join(",");
+}
+
 function isValidIsoTimestamp(value: string) {
   return !Number.isNaN(Date.parse(value));
 }
@@ -145,7 +151,9 @@ export async function GET(request: Request) {
 
   const blockedUserIdsSet = await getBlockedEitherWayUserIds(supabase, user.id);
   const acceptedFriendIdsSet = await getAcceptedFriendIds(supabase, user.id);
-  const friendIds = Array.from(acceptedFriendIdsSet);
+  const friendIds = Array.from(acceptedFriendIdsSet).filter(
+    (id) => !blockedUserIdsSet.has(id)
+  );
   const friendsOfFriendsIdsSet = await getFriendsOfFriendsIds(
     supabase,
     user.id,
@@ -199,7 +207,27 @@ export async function GET(request: Request) {
         .in("entry_privacy", ["public", "friends_of_friends", "friends"])
         .neq("user_id", user.id);
     } else {
-      query = query.eq("entry_privacy", "public").neq("user_id", user.id);
+      query = query.neq("user_id", user.id);
+
+      const publicVisibilityClauses = ["entry_privacy.eq.public"];
+
+      if (socialAuthorIds.length > 0) {
+        publicVisibilityClauses.push(
+          `and(entry_privacy.eq.friends_of_friends,user_id.in.(${formatPostgrestInList(
+            socialAuthorIds
+          )}))`
+        );
+      }
+
+      if (friendIds.length > 0) {
+        publicVisibilityClauses.push(
+          `and(entry_privacy.eq.friends,user_id.in.(${formatPostgrestInList(
+            friendIds
+          )}))`
+        );
+      }
+
+      query = query.or(publicVisibilityClauses.join(","));
     }
 
     if (withTastingSupport) {

@@ -123,6 +123,7 @@ export default function EntryDetailPage() {
   const [fromCellarBanner, setFromCellarBanner] = useState(
     searchParams.get("from_cellar") === "1"
   );
+  const canShareEntry = entry?.entry_privacy === "public";
 
   // Reactions & comments state
   const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
@@ -409,6 +410,13 @@ export default function EntryDetailPage() {
       setShareToast({
         kind: "error",
         message: "Entry unavailable.",
+      });
+      return;
+    }
+    if (!canShareEntry) {
+      setShareToast({
+        kind: "error",
+        message: "Only public posts can be shared.",
       });
       return;
     }
@@ -769,7 +777,7 @@ export default function EntryDetailPage() {
             <button
               type="button"
               className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={sharing}
+              disabled={sharing || !canShareEntry}
               onClick={onShare}
             >
               {sharing ? "Sharing..." : "Share"}

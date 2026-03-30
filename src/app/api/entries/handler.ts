@@ -12,6 +12,7 @@ import {
   executeSelectWithFallback,
   executeWithColumnFallback,
 } from "@/server/db/compat";
+import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
 import { persistEntryResolution } from "@/server/algorithm/persistEntryResolution";
 import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
@@ -47,6 +48,7 @@ type EntryListRow = {
   consumed_at: string;
   tasted_with_user_ids: string[] | null;
   label_image_path: string | null;
+  entry_group_id: string | null;
   created_at: string;
 };
 
@@ -165,25 +167,44 @@ export async function GET(request: Request) {
   const sortBy = url.searchParams.get("sort") === "consumed_at" ? "consumed_at" : "created_at";
 
   const selectFields =
-    "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, entry_group_id, created_at";
   const fallbackSelectFields =
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, entry_group_id, created_at";
+  const selectFieldsWithoutGroupId =
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
+  const fallbackSelectFieldsWithoutGroupId =
     "id, user_id, wine_name, producer, vintage, country, region, appellation, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, consumed_at, tasted_with_user_ids, label_image_path, created_at";
 
   type EntryListSelectAttempt = {
     fields: string;
     missingColumns: readonly string[];
     includesClassification: boolean;
+    includesGroupId: boolean;
   };
   const listSelectAttempts: EntryListSelectAttempt[] = [
     {
       fields: selectFields,
-      missingColumns: ["classification"],
+      missingColumns: ["classification", "entry_group_id"],
       includesClassification: true,
+      includesGroupId: true,
     },
     {
       fields: fallbackSelectFields,
+      missingColumns: ["entry_group_id"],
+      includesClassification: false,
+      includesGroupId: true,
+    },
+    {
+      fields: selectFieldsWithoutGroupId,
+      missingColumns: ["classification"],
+      includesClassification: true,
+      includesGroupId: false,
+    },
+    {
+      fields: fallbackSelectFieldsWithoutGroupId,
       missingColumns: [],
       includesClassification: false,
+      includesGroupId: false,
     },
   ];
 
@@ -214,25 +235,24 @@ export async function GET(request: Request) {
     },
   });
 
-  const rows = listSelectResult.usedAttempt?.includesClassification
-    ? (((listSelectResult.data ?? []) as unknown as EntryListRow[]).map((entry) => ({
-        ...entry,
-        classification: entry.classification ?? null,
-      })) as EntryListRow[])
-    : (((listSelectResult.data ?? []) as unknown as Omit<
-        EntryListRow,
-        "classification"
-      >[]).map((entry) => ({
-        ...entry,
-        classification: null,
-      })) as EntryListRow[]);
-
   if (listSelectResult.error) {
     return NextResponse.json(
       { error: listSelectResult.error.message },
       { status: 500 }
     );
   }
+
+  const rows = (((listSelectResult.data ?? []) as unknown) as Array<
+    Partial<EntryListRow> & Omit<EntryListRow, "classification" | "entry_group_id">
+  >).map((entry) => ({
+    ...entry,
+    classification: listSelectResult.usedAttempt?.includesClassification
+      ? entry.classification ?? null
+      : null,
+    entry_group_id: listSelectResult.usedAttempt?.includesGroupId
+      ? entry.entry_group_id ?? null
+      : null,
+  })) as EntryListRow[];
 
   const pageRows = rows.length > limit ? rows.slice(0, limit) : rows;
   const has_more = rows.length > limit;
@@ -272,6 +292,15 @@ export async function GET(request: Request) {
   });
 
   const signedUrlByPath = await signPhotoUrls(labelPathsToSign, supabase);
+  const groupedPostByEntryId = listSelectResult.usedAttempt?.includesGroupId
+    ? await resolveGroupedPostData(
+        supabase,
+        pageRows.map((entry) => ({
+          id: entry.id,
+          entry_group_id: entry.entry_group_id ?? null,
+        }))
+      )
+    : new Map();
 
   const commentCountMap = new Map<string, number>();
   if (entryIds.length > 0) {
@@ -286,6 +315,7 @@ export async function GET(request: Request) {
 
   const entries = pageRows.map((entry) => {
     const labelPath = labelPathByEntryId.get(entry.id) ?? null;
+    const groupedPost = groupedPostByEntryId.get(entry.id);
     return {
       ...entry,
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
@@ -293,6 +323,8 @@ export async function GET(request: Request) {
       place_image_url: null,
       pairing_image_url: null,
       comment_count: commentCountMap.get(entry.id) ?? 0,
+      entry_group: groupedPost?.entry_group ?? null,
+      group_slides: groupedPost?.group_slides ?? [],
     };
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,7 +17,11 @@ import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
-import type { PrivacyLevel } from "@/types/wine";
+import type {
+  EntryGroup,
+  GroupedEntrySlide,
+  PrivacyLevel,
+} from "@/types/wine";
 import {
   USERNAME_FORMAT_MESSAGE,
   USERNAME_MIN_LENGTH,
@@ -52,6 +56,9 @@ type Entry = {
   id: string;
   wine_name: string | null;
   label_image_url: string | null;
+  entry_group_id?: string | null;
+  entry_group?: EntryGroup | null;
+  group_slides?: GroupedEntrySlide[] | null;
 };
 
 type FriendProfile = {
@@ -163,6 +170,26 @@ export default function ProfilePage() {
   const [taggedEntries, setTaggedEntries] = useState<Entry[]>([]);
   const [taggedLoading, setTaggedLoading] = useState(false);
   const [taggedLoaded, setTaggedLoaded] = useState(false);
+
+  const galleryEntries = useMemo(() => {
+    const seenGroupIds = new Set<string>();
+
+    return entries.filter((entry) => {
+      if (
+        typeof entry.entry_group_id !== "string" ||
+        entry.entry_group_id.length === 0
+      ) {
+        return true;
+      }
+
+      if (seenGroupIds.has(entry.entry_group_id)) {
+        return false;
+      }
+
+      seenGroupIds.add(entry.entry_group_id);
+      return true;
+    });
+  }, [entries]);
 
   // Friends tab state
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -1029,18 +1056,18 @@ export default function ProfilePage() {
           <div>
             {galleryTab === "mine" ? (
               <>
-                {entries.length > 0 ? (
+                {galleryEntries.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
-                    {entries.map((entry) => (
+                    {galleryEntries.map((entry) => (
                       <Link
                         key={entry.id}
                         href={`/entries/${entry.id}`}
                         className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]/10"
                       >
-                        {entry.label_image_url ? (
+                        {entry.group_slides?.[0]?.url || entry.label_image_url ? (
                           <AppImage
-                            src={entry.label_image_url}
-                            alt={entry.wine_name || "Wine entry"}
+                            src={entry.group_slides?.[0]?.url ?? entry.label_image_url ?? ""}
+                            alt={entry.entry_group?.title || entry.wine_name || "Wine entry"}
                             className="h-full w-full object-cover transition hover:scale-105"
                           />
                         ) : (

@@ -1,6 +1,6 @@
 /* ─── Cellar — shared types & constants ─── */
 
-export type EntryStatus = "consumed" | "cellaring";
+export type EntryStatus = "consumed" | "cellaring" | "events";
 
 export type BottleFormat = "375ml" | "750ml" | "1.5L" | "3L" | "5L" | "6L" | "other";
 
@@ -17,6 +17,7 @@ export const BOTTLE_FORMAT_OPTIONS: { value: BottleFormat; label: string }[] = [
 export const CELLAR_TAB_LABELS = {
   consumed: "Consumed",
   cellaring: "In My Cellar",
+  events: "My Events",
 } as const;
 
 export const CELLAR_COPY = {
@@ -25,6 +26,8 @@ export const CELLAR_COPY = {
   addButton: "Add to cellar",
   drinkButton: "Drink this",
   allConsumed: "All consumed",
+  eventsEmptyTitle: "No grouped events yet",
+  eventsEmptySubtitle: "Create a grouped event post and it will show up here.",
   bottlesRemaining: (n: number) => `${n} bottle${n === 1 ? "" : "s"}`,
   addPhotosPrompt: "Add photos from the night to capture the moment",
 } as const;

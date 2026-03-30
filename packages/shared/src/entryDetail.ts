@@ -1,4 +1,4 @@
-export const ENTRY_SHARE_TEXT = "Check out this wine post from my CellarSnap.";
+export const ENTRY_SHARE_TEXT = "Check out this wine from my Cluster.";
 
 export const ENTRY_MATCH_BAND_LABELS = {
   excellent: "Perfect match",

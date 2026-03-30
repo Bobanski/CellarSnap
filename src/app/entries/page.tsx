@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
+import GroupedPostGallery from "@/components/GroupedPostGallery";
 import CellarTable from "@/features/entries/CellarTable";
 import type { WineEntryWithUrls } from "@/types/wine";
 import {
@@ -26,6 +27,7 @@ import {
   ENTRIES_LIBRARY_SORT_OPTIONS,
   ENTRIES_LIBRARY_STATS_LABELS,
   ENTRIES_LIBRARY_VIEW_OPTIONS,
+  EVENT_TYPE_LABELS,
   getEntriesCollectionStats,
   getEntriesCountLabel,
   getEntriesEmptyStateMessage,
@@ -40,12 +42,17 @@ import {
   type EntryLibrarySortBy as SortBy,
   type EntryLibrarySortOrder as SortOrder,
   type EntryLibraryViewMode as LibraryViewMode,
+  type EventTypeValue,
 } from "@shared";
 
 type EntryGroup = {
   id: string;
   label: string;
   entries: WineEntryWithUrls[];
+};
+
+type EventHistoryEntry = WineEntryWithUrls & {
+  entry_group_id: string;
 };
 
 function entryMatchesSearch(entry: WineEntryWithUrls, query: string): boolean {
@@ -135,7 +142,145 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
   );
 }
 
-type CellarTab = "consumed" | "cellaring";
+function getGroupedModeLabel(entry: EventHistoryEntry) {
+  if (entry.entry_group?.event_type) {
+    return EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event";
+  }
+  return entry.entry_group?.mode === "catch_up" ? "Catch-up" : "Event";
+}
+
+function getGroupedTitle(entry: EventHistoryEntry) {
+  const title = entry.entry_group?.title?.trim() ?? "";
+  if (title) {
+    return title;
+  }
+  return getGroupedModeLabel(entry);
+}
+
+function buildGroupedSlideMeta(
+  slide: NonNullable<EventHistoryEntry["group_slides"]>[number] | null
+) {
+  if (!slide) {
+    return "";
+  }
+
+  return [
+    slide.producer && slide.producer !== slide.wine_name ? slide.producer : null,
+    slide.vintage,
+    slide.appellation || slide.region,
+    slide.country,
+  ]
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" · ");
+}
+
+function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const slides = entry.group_slides ?? [];
+  const activeSlide = slides[activeIndex] ?? slides[0] ?? null;
+  const title = getGroupedTitle(entry);
+  const modeLabel = getGroupedModeLabel(entry);
+  const previewTitle =
+    activeSlide?.wine_name ?? activeSlide?.producer ?? entry.wine_name ?? null;
+  const previewMeta = buildGroupedSlideMeta(activeSlide);
+
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        border: "0.5px solid var(--color-border)",
+        background: "var(--color-surface-primary)",
+        padding: 16,
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <span
+            className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+            style={{
+              border: "0.5px solid var(--color-border-strong)",
+              background: "var(--color-surface-tinted)",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {modeLabel}
+          </span>
+          <h2
+            className="mt-3 break-words"
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: 26,
+              fontWeight: 300,
+              color: "var(--color-text-primary)",
+              lineHeight: 1.2,
+            }}
+          >
+            {title}
+          </h2>
+          {entry.entry_group?.event_type && entry.entry_group.title?.trim() ? (
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              {EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event"}
+            </p>
+          ) : null}
+        </div>
+        <p className="shrink-0 text-sm text-[var(--color-text-tertiary)]">
+          {formatConsumedDate(entry.consumed_at)}
+        </p>
+      </div>
+
+      <div className="mt-4 -mx-4">
+        {slides.length > 0 ? (
+          <GroupedPostGallery
+            title={entry.entry_group?.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? title) : title}
+            slides={slides}
+            heightClassName=""
+            onIndexChange={setActiveIndex}
+          />
+        ) : (
+          <div
+            className="mx-4 flex aspect-[4/3] items-center justify-center rounded-2xl"
+            style={{
+              background: "rgba(245, 237, 214, 0.06)",
+              border: "0.5px solid var(--color-border)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            No photos yet
+          </div>
+        )}
+      </div>
+
+      {previewTitle ? (
+        <div className="mt-4 min-w-0">
+          <h3 className="break-words text-base font-semibold text-[var(--color-text-primary)]">
+            {previewTitle}
+          </h3>
+          {previewMeta ? (
+            <p className="mt-1 break-words text-sm text-[var(--color-text-tertiary)]">
+              {previewMeta}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-4">
+        <Link
+          href={`/entries/${entry.id}`}
+          className="inline-flex rounded-full px-4 py-2 text-sm font-semibold transition"
+          style={{
+            background: "var(--color-accent-primary)",
+            color: "var(--color-text-on-accent)",
+          }}
+        >
+          Open details
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+type CellarTab = "consumed" | "cellaring" | "events";
 
 /* ─── Cellar entry card for the grid ─── */
 function CellarEntryCard({
@@ -860,6 +1005,23 @@ export default function EntriesPage() {
     return sorted;
   }, [groupScheme, libraryViewMode, sortedEntries]);
 
+  const eventEntries = useMemo<EventHistoryEntry[]>(() => {
+    const seenGroupIds = new Set<string>();
+
+    return entries
+      .filter((entry): entry is EventHistoryEntry => (
+        typeof entry.entry_group_id === "string" && entry.entry_group_id.length > 0
+      ))
+      .filter((entry) => {
+        if (seenGroupIds.has(entry.entry_group_id)) {
+          return false;
+        }
+
+        seenGroupIds.add(entry.entry_group_id);
+        return true;
+      });
+  }, [entries]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -1016,7 +1178,7 @@ export default function EntriesPage() {
 
           {/* ─── Consumed / Cellar tab toggle ─── */}
           <div className="flex items-center justify-center gap-2">
-            {(["consumed", "cellaring"] as const).map((tab) => (
+            {(["consumed", "cellaring", "events"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -1034,6 +1196,68 @@ export default function EntriesPage() {
 
           {activeTab === "cellaring" ? (
             <CellarView />
+          ) : activeTab === "events" ? (
+            <>
+              {errorMessage ? (
+                <div
+                  style={{
+                    borderRadius: 14,
+                    border: "0.5px solid rgba(192, 57, 43, 0.3)",
+                    background: "rgba(192, 57, 43, 0.08)",
+                    padding: "24px 16px",
+                    fontSize: 12,
+                    color: "#e6a0a0",
+                  }}
+                >
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              {eventEntries.length === 0 ? (
+                <div
+                  style={{
+                    background: "var(--color-surface-primary)",
+                    border: "0.5px solid var(--color-border)",
+                    borderRadius: 14,
+                    padding: "32px 18px",
+                    textAlign: "center",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: "var(--font-serif)",
+                      fontSize: 24,
+                      fontWeight: 300,
+                      color: "var(--color-text-primary)",
+                    }}
+                  >
+                    {CELLAR_COPY.eventsEmptyTitle}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                    {CELLAR_COPY.eventsEmptySubtitle}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {eventEntries.map((entry) => (
+                    <EventHistoryCard key={entry.entry_group_id} entry={entry} />
+                  ))}
+                </div>
+              )}
+
+              {hasMore ? (
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={() => void loadMore()}
+                    disabled={loadingMore}
+                    className="rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
+                  >
+                    {loadingMore ? "Loading..." : "Load more"}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
           <>
 

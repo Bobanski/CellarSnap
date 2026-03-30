@@ -44,6 +44,7 @@ import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+import { createPostShareLink } from "@/src/lib/api/share";
 import {
   canViewerAccessByPrivacy,
   loadSocialAudience,
@@ -920,6 +921,7 @@ export default function EntryDetailScreen() {
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
   const isOwner = Boolean(user?.id && entry?.user_id === user.id);
+  const canShareEntry = entry?.entry_privacy === "public";
 
   useEffect(() => {
     setShowBulkMoreDetails(false);
@@ -1383,29 +1385,31 @@ export default function EntryDetailScreen() {
       });
       return;
     }
+    if (!canShareEntry) {
+      setShareToast({
+        kind: "error",
+        message: "Only public posts can be shared.",
+      });
+      return;
+    }
 
     setSharing(true);
     setShareToast(null);
 
     try {
-      const response = await fetchWebApiJson<{ url?: string }>("/api/share", {
-        method: "POST",
-        body: JSON.stringify({ postId: entryId }),
-      });
+      const response = await createPostShareLink(entryId);
 
-      if (!response.ok || typeof response.payload.url !== "string") {
+      if (!response.ok) {
         setShareToast({
           kind: "error",
-          message: response.ok
-            ? "Unable to create share link."
-            : response.errorMessage,
+          message: response.errorMessage,
         });
         return;
       }
 
       const result = await Share.share({
-        message: `${buildEntryShareText()} ${response.payload.url}`,
-        url: response.payload.url,
+        message: `${buildEntryShareText()} ${response.url}`,
+        url: response.url,
       });
 
       if (result.action === Share.dismissedAction) {
@@ -1424,7 +1428,7 @@ export default function EntryDetailScreen() {
     } finally {
       setSharing(false);
     }
-  }, [entryId]);
+  }, [canShareEntry, entryId]);
 
   const addToMyCellar = useCallback(async () => {
     if (!entryId || addingToLog) {
@@ -4328,10 +4332,12 @@ export default function EntryDetailScreen() {
                   style={[
                     styles.actionButton,
                     styles.shareButton,
-                    (sharing || !WEB_API_BASE_URL) ? styles.actionButtonDisabled : null,
+                    (sharing || !WEB_API_BASE_URL || !canShareEntry)
+                      ? styles.actionButtonDisabled
+                      : null,
                   ]}
                   onPress={() => void onShare()}
-                  disabled={sharing || !WEB_API_BASE_URL}
+                  disabled={sharing || !WEB_API_BASE_URL || !canShareEntry}
                 >
                   <AppText style={styles.shareButtonText}>
                     {sharing ? "Sharing..." : "Share"}

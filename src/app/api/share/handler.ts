@@ -10,6 +10,12 @@ type ShareRow = {
   expires_at: string | null;
 };
 
+type ShareTargetPostRow = {
+  id: string;
+  user_id: string;
+  entry_privacy: string | null;
+};
+
 const createShareSchema = z.object({
   postId: z.string().uuid(),
   expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
@@ -100,7 +106,7 @@ export function createSharePostHandler(
 
     const { data: targetPost, error: postError } = await supabase
       .from("wine_entries")
-      .select("id, user_id")
+      .select("id, user_id, entry_privacy")
       .eq("id", payload.data.postId)
       .maybeSingle();
 
@@ -115,15 +121,17 @@ export function createSharePostHandler(
       );
     }
 
-    if (!canManageEntryShare(user.id, targetPost.user_id)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!canManageEntryShare((targetPost as ShareTargetPostRow).entry_privacy)) {
+      return NextResponse.json(
+        { error: "Only public posts can be shared." },
+        { status: 403 }
+      );
     }
 
     const { data: existingRows, error: existingError } = await supabase
       .from("post_shares")
       .select("id, expires_at")
       .eq("post_id", payload.data.postId)
-      .eq("created_by", user.id)
       .is("revoked_at", null)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -194,7 +202,7 @@ export function createSharePostHandler(
     }
 
     const siteUrl = resolvedDependencies.getPublicSiteUrlFromRequest(request);
-    const url = `${siteUrl}/s/${shareId}`;
+    const url = `${siteUrl}/s/${shareId}?v=${resolvedDependencies.getCurrentTimeMs()}`;
 
     return NextResponse.json({ url });
   };

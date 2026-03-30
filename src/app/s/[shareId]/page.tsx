@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AppImage from "@/components/AppImage";
@@ -20,10 +21,46 @@ function normalizeFieldValue(value: string | null | undefined) {
   return normalized.length > 0 ? normalized : null;
 }
 
+function shouldUseHttpForHost(host: string) {
+  return (
+    host.includes("localhost") ||
+    host.includes("127.0.0.1") ||
+    host.includes("192.168.") ||
+    host.includes("10.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+  );
+}
+
+async function getShareSiteUrl() {
+  const configured =
+    process.env.PUBLIC_SITE_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+
+  if (configured) {
+    return getConfiguredPublicSiteUrl();
+  }
+
+  const requestHeaders = await headers();
+  const host =
+    requestHeaders.get("x-forwarded-host") ??
+    requestHeaders.get("host");
+
+  if (host) {
+    const forwardedProto = requestHeaders.get("x-forwarded-proto");
+    const protocol =
+      forwardedProto ??
+      (shouldUseHttpForHost(host) ? "http" : "https");
+    return `${protocol}://${host}`;
+  }
+
+  return getConfiguredPublicSiteUrl();
+}
+
 export async function generateMetadata({ params }: SharePageProps): Promise<Metadata> {
   const { shareId } = await params;
   const share = await resolvePublicPostShare(shareId);
-  const siteUrl = getConfiguredPublicSiteUrl();
+  const siteUrl = await getShareSiteUrl();
   const pageUrl = `${siteUrl}/s/${shareId}`;
   const imageUrl = `${siteUrl}/s/${shareId}/opengraph-image`;
 

@@ -148,6 +148,12 @@ export type SocialAudience = {
   friendsOfFriendsIds: Set<string>;
 };
 
+function formatPostgrestInList(values: string[]) {
+  return values
+    .map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
+    .join(",");
+}
+
 const TYPE_ORDER: Record<FeedPhotoType, number> = {
   place: 0,
   people: 1,
@@ -372,6 +378,7 @@ export async function fetchFeedPage({
 }) {
   const socialAudience = await loadSocialAudience(viewerUserId, supabaseClient);
   const socialAuthorIds = socialAudience.socialAuthorIds;
+  const directFriendIds = Array.from(socialAudience.acceptedFriendIds);
 
   if (scope === "friends" && socialAuthorIds.length === 0) {
     return {
@@ -394,15 +401,35 @@ export async function fetchFeedPage({
     fields: string;
     withTastingSupport: boolean;
   }) => {
-    let query = supabaseClient.from("wine_entries").select(fields);
+    let query = supabaseClient
+      .from("wine_entries")
+      .select(fields)
+      .neq("user_id", viewerUserId);
 
     if (scope === "friends") {
       query = query
         .in("user_id", socialAuthorIds)
-        .in("entry_privacy", ["public", "friends_of_friends", "friends"])
-        .neq("user_id", viewerUserId);
+        .in("entry_privacy", ["public", "friends_of_friends", "friends"]);
     } else {
-      query = query.eq("entry_privacy", "public").neq("user_id", viewerUserId);
+      const publicVisibilityClauses = ["entry_privacy.eq.public"];
+
+      if (socialAuthorIds.length > 0) {
+        publicVisibilityClauses.push(
+          `and(entry_privacy.eq.friends_of_friends,user_id.in.(${formatPostgrestInList(
+            socialAuthorIds
+          )}))`
+        );
+      }
+
+      if (directFriendIds.length > 0) {
+        publicVisibilityClauses.push(
+          `and(entry_privacy.eq.friends,user_id.in.(${formatPostgrestInList(
+            directFriendIds
+          )}))`
+        );
+      }
+
+      query = query.or(publicVisibilityClauses.join(","));
     }
 
     if (withTastingSupport) {
@@ -498,9 +525,18 @@ export async function fetchFeedPage({
   }
 
   const dedupedRows = hasSharedTastingColumns ? dedupeEntries(feedRows) : feedRows;
+  const visibleRows = dedupedRows.filter((entry) =>
+    canViewerAccessByPrivacy({
+      viewerUserId,
+      ownerUserId: entry.user_id,
+      privacy: normalizePrivacyValue(entry.entry_privacy, "public"),
+      acceptedFriendIds: socialAudience.acceptedFriendIds,
+      friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
+    })
+  );
   const pageRows =
-    dedupedRows.length > limit ? dedupedRows.slice(0, limit) : dedupedRows;
-  const hasMore = dedupedRows.length > limit;
+    visibleRows.length > limit ? visibleRows.slice(0, limit) : visibleRows;
+  const hasMore = visibleRows.length > limit;
   const nextCursor = hasMore
     ? pageRows[pageRows.length - 1]?.created_at ?? null
     : null;
