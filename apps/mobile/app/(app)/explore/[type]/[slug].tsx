@@ -846,6 +846,239 @@ const v = StyleSheet.create({
   },
 });
 
+// ─── Producer page (11-layer architecture) ─────────────────
+
+function ProducerPage({
+  data,
+  heroFailed,
+  onHeroError,
+}: {
+  data: ExploreProfileResponse;
+  heroFailed: boolean;
+  onHeroError: () => void;
+}) {
+  const router = useRouter();
+  const { profile, personal_stats } = data;
+  const c = profile.content;
+  const accent = ROSE;
+  const hasHeroImage = !!profile.hero_image_url && !heroFailed;
+  const hasLogs = personal_stats.entry_count > 0;
+
+  const storyText = typeof c.story === "string" ? c.story : [c.origin, c.characteristics, c.style].filter(Boolean).join(" ");
+  const funFacts: string[] = Array.isArray(c.fun_facts) ? c.fun_facts : c.fun_fact ? [c.fun_fact] : [];
+  const philosophyTags: Array<{ tag: string; note: string }> = Array.isArray(c.philosophy_tags) ? c.philosophy_tags : [];
+  const keyWines: Array<{ name: string; desc: string; rating: string }> = Array.isArray(c.key_wines)
+    ? c.key_wines.map((w: string | { name: string; desc: string; rating: string }) => typeof w === "string" ? { name: w, desc: "", rating: "" } : w)
+    : [];
+  const regionGrapes: string[] = Array.isArray(c.region_grapes) ? c.region_grapes : [...(c.grapes ?? []), ...(c.key_regions ?? []) as string[]];
+  const similarProducers: Array<{ name: string; why: string }> = Array.isArray(c.similar_producers) ? c.similar_producers : [];
+
+  let bgIndex = 0;
+  const nextBg = () => (bgIndex++ % 2 === 0 ? BG_ODD : BG_EVEN);
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: DEVICE_BG }} contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+      {/* ── Hero ──────────────────────────────────────── */}
+      <View style={[r.hero, { height: 180 }]}>
+        {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" onError={onHeroError} /> : null}
+        <View style={r.heroGradient} />
+        <Pressable onPress={() => router.back()} style={r.backBtn}>
+          <AppText style={r.backBtnArrow}>{"←"}</AppText>
+          <AppText style={r.backBtnLabel}>Explore</AppText>
+        </Pressable>
+        <View style={r.heroBottom}>
+          <AppText style={[r.heroBadge, { color: accent }]}>PRODUCER</AppText>
+          <AppText style={[r.heroTitle, { fontSize: 24 }]}>{profile.display_name}</AppText>
+          {c.tagline ? <AppText style={[r.heroTagline, { fontFamily: fonts.serif.light }]}>{c.tagline}</AppText> : null}
+        </View>
+      </View>
+
+      {/* ── Personal Layer ────────────────────────────── */}
+      <View style={[r.section, { backgroundColor: nextBg() }]}>
+        <AppText style={r.sectionLabelAccent}>YOUR {profile.display_name.toUpperCase()}</AppText>
+        {hasLogs ? (
+          <AppText style={p.personalNarrative}>
+            You've opened <AppText style={p.personalHighlight}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "bottle" : "bottles"}</AppText>
+            {personal_stats.avg_rating > 0 ? (
+              <>. Your average rating: <AppText style={p.personalHighlight}>{personal_stats.avg_rating.toFixed(1)}</AppText></>
+            ) : null}.
+          </AppText>
+        ) : (
+          <View style={r.insightCard}>
+            <AppText style={r.insightText}>
+              You haven't logged any {profile.display_name} wines yet. Open your first bottle to start tracking.
+            </AppText>
+          </View>
+        )}
+      </View>
+
+      {/* ── The Story ─────────────────────────────────── */}
+      {storyText ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={[r.storyBody, { fontFamily: fonts.serif.light, fontSize: 16, lineHeight: 24, color: CHAMPAGNE }]}>{storyText}</AppText>
+          {funFacts.length > 0 ? (
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 8 }}>
+              <AppText style={{ color: accent, fontSize: 9, flexShrink: 0, marginTop: 1 }}>✦</AppText>
+              <AppText style={{ fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 15 }}>{funFacts[0]}</AppText>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* ── Philosophy & Approach ─────────────────────── */}
+      {philosophyTags.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>PHILOSOPHY + APPROACH</AppText>
+          {philosophyTags.map((item) => (
+            <View key={item.tag} style={{ marginBottom: 8 }}>
+              <AppText style={p.philoTag}>{item.tag}</AppText>
+              <AppText style={p.philoNote}>{item.note}</AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* ── Key Wines ─────────────────────────────────── */}
+      {keyWines.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>KEY WINES</AppText>
+          {keyWines.map((wine) => (
+            <View key={wine.name} style={p.wineCard}>
+              <View style={{ flex: 1 }}>
+                <AppText style={p.wineName}>{wine.name}</AppText>
+                {wine.desc ? <AppText style={p.wineDesc}>{wine.desc}</AppText> : null}
+              </View>
+              {wine.rating ? <AppText style={p.wineRating}>{wine.rating}</AppText> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* ── Region + Grapes ───────────────────────────── */}
+      {regionGrapes.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>REGION + GRAPES</AppText>
+          <View style={r.grapeChipRow}>
+            {regionGrapes.map((name) => (
+              <Pressable
+                key={name}
+                onPress={() => {
+                  // Attempt to determine if it's a region or grape — grapes are typically single words
+                  const isRegion = name.includes("-") || name.includes(" ") && name.length > 12;
+                  router.push(`/(app)/explore/${isRegion ? "region" : "grape"}/${toExploreSlug(name)}`);
+                }}
+                style={r.grapeChipSecondary}
+              >
+                <AppText style={[r.grapeChipTextSecondary, { fontSize: 10, color: "rgba(245,237,214,0.6)" }]}>{name}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── Similar Producers ─────────────────────────── */}
+      {similarProducers.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>SIMILAR PRODUCERS</AppText>
+          <View style={r.recCardRow}>
+            {similarProducers.map((prod) => (
+              <Pressable key={prod.name} style={r.recCard} onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(prod.name)}`)}>
+                <AppText style={r.recCardName}>{prod.name}</AppText>
+                <AppText style={r.recCardWhy}>{prod.why}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── Food Pairings ─────────────────────────────── */}
+      {c.food_pairings && c.food_pairings.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.storyTitle}>Food Pairings</AppText>
+          <View style={r.pairingRow}>
+            {c.food_pairings.map((item: string) => (
+              <View key={item} style={r.pairingChip}><AppText style={r.pairingChipText}>{item}</AppText></View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── More to Know ──────────────────────────────── */}
+      {funFacts.length > 1 ? (
+        <View style={[r.section, { backgroundColor: nextBg(), borderBottomWidth: 0 }]}>
+          <AppText style={r.sectionLabel}>MORE TO KNOW</AppText>
+          {funFacts.slice(1).map((fact, i) => (
+            <View key={i} style={r.factRow}>
+              <AppText style={[r.factBullet, { color: accent }]}>✦</AppText>
+              <AppText style={r.factText}>{fact}</AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Attribution */}
+      {profile.hero_image_attribution ? <AppText style={r.attribution}>Photo by {profile.hero_image_attribution.photographer}</AppText> : null}
+    </ScrollView>
+  );
+}
+
+// ─── Producer-specific styles ───────────────────────────────
+
+const p = StyleSheet.create({
+  // Personal narrative
+  personalNarrative: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.55)",
+    lineHeight: 16,
+  },
+  personalHighlight: {
+    color: "#C9A84C", // Viognier
+    fontWeight: "600",
+  },
+
+  // Philosophy tags
+  philoTag: {
+    fontSize: 10,
+    color: "#C9A84C", // Viognier
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  philoNote: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.4)",
+    lineHeight: 13,
+  },
+
+  // Key wines
+  wineCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  wineName: {
+    fontFamily: fonts.serif.light,
+    fontSize: 13,
+    color: CHAMPAGNE,
+    marginBottom: 3,
+  },
+  wineDesc: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.4)",
+    lineHeight: 13,
+  },
+  wineRating: {
+    fontSize: 10,
+    color: "#C9A84C", // Viognier
+    flexShrink: 0,
+    marginLeft: 8,
+  },
+});
+
 // ─── Region styles (pixel-matched to brand guide) ──────────
 
 const r = StyleSheet.create({
@@ -1467,6 +1700,9 @@ export default function ExploreProfileScreen() {
   }
   if (profileType === "grape") {
     return <VarietalPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />;
+  }
+  if (profileType === "producer") {
+    return <ProducerPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />;
   }
   return <FallbackProfilePage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />;
 }

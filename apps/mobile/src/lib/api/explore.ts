@@ -48,6 +48,10 @@ export type ProfileContent = {
   where_it_grows?: Array<{ name: string; size: string }>;
   styles_expressions?: Array<{ style: string; desc: string; example: string }>;
   notable_producers?: Array<{ name: string; note: string }>;
+  // Producer-specific enriched fields
+  philosophy_tags?: Array<{ tag: string; note: string }>;
+  region_grapes?: string[];
+  similar_producers?: Array<{ name: string; why: string }>;
 };
 
 export type ExploreProfile = {

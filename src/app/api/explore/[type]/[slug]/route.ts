@@ -89,21 +89,27 @@ Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function buildProducerPrompt(displayName: string): string {
-  return `You are a wine expert writing educational content about ${displayName} (wine producer).
+  return `You are a wine storyteller writing for the Cluster wine app. Write about ${displayName} (wine producer).
+
+Your voice: sensory-first, personal, never textbook. You're writing a character sketch, not a biography.
 
 Write a JSON object with these fields:
-- tagline: one-sentence description (max 15 words)
-- region: primary region
-- country: country
-- founded: year founded or "Unknown"
-- style: winemaking style description (2-3 sentences)
-- key_wines: array of 3-5 notable wines/labels
-- grapes: array of primary grapes used
-- classification: quality tier if applicable (e.g., "Grand Cru Classé") or null
-- fun_fact: one interesting fact
-- related_producers: array of 3-4 similar producers
+- tagline: one evocative ethos sentence, max 15 words — what makes them worth knowing, not when they were founded (e.g. "The man who proved Grenache doesn't need Syrah.")
+- region: primary region name
+- country: country name
+- story: exactly 3-4 sentences. Who they are, what they believe, why they matter to wine. Character sketch, not biography. Cluster Enthusiast voice.
+- philosophy_tags: array of 2-4 objects with { tag: string, note: string } — winemaking philosophy/approach tags. Each tag is a short label (e.g. "100% Grenache", "Sand soils", "No technology") and note is one sentence explaining what it means for the wine.
+- key_wines: array of 2-4 objects with { name: string, desc: string, rating: string } — flagship and notable wines. Name is the wine, desc is one evocative sentence, rating is like "96 avg" or "94 avg".
+- region_grapes: array of strings — region(s) and grape(s) as chip labels for cross-linking (e.g. ["Châteauneuf-du-Pape", "Grenache", "Grenache Blanc", "Clairette"])
+- similar_producers: array of exactly 3 objects with { name: string, why: string } — similar producers. One from the same region, one from a different region with similar philosophy, one genuine surprise. The "why" should be one punchy sentence.
+- fun_facts: array of exactly 3 surprising facts about this producer that would make someone stop mid-sip.
+- food_pairings: array of 4-6 food pairings that specifically match this producer's style
+- founded: year founded as string, or "Unknown"
+- classification: quality tier if applicable (string or null)
+- related_producers: array of 3-4 similar producer names (strings, for slug generation)
+- grapes: array of primary grape names used
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function getPromptForType(type: ProfileType, displayName: string): string {
