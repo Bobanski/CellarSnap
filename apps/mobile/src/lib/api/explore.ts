@@ -35,7 +35,7 @@ export type ProfileContent = {
   founded?: string;
   grapes?: string[];
   aging_potential?: string;
-  // Region enriched fields
+  // Enriched fields (region + grape)
   story?: string;
   notable_winemakers?: Array<{ name: string; why: string }>;
   flavor_profile?: { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number };
@@ -44,6 +44,10 @@ export type ProfileContent = {
   recommendation_picks?: Array<{ name: string; type: string; why: string }>;
   zone_descriptions?: Array<{ name: string; note: string }>;
   personal_insight?: string;
+  // Grape-specific enriched fields
+  where_it_grows?: Array<{ name: string; size: string }>;
+  styles_expressions?: Array<{ style: string; desc: string; example: string }>;
+  notable_producers?: Array<{ name: string; note: string }>;
 };
 
 export type ExploreProfile = {

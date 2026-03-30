@@ -35,22 +35,29 @@ function slugToDisplayName(slug: string): string {
 // ---------------------------------------------------------------------------
 
 function buildGrapePrompt(displayName: string): string {
-  return `You are a wine expert writing educational content about the ${displayName} grape variety.
+  return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} grape variety.
+
+Your voice: sensory-first, personal, never textbook. You don't lecture — you make people feel what this grape does in the glass.
 
 Write a JSON object with these fields:
-- tagline: one-sentence description (max 15 words)
-- origin: where this grape originated (1-2 sentences)
-- characteristics: flavor/aroma profile (2-3 sentences)
+- tagline: one evocative sentence, max 15 words, taste-led (e.g. "The grape that tastes like warm earth and ripe fruit — then surprises you with how long it lingers.")
+- story: exactly 3 sentences in one paragraph. What this grape does to a glass, where it thrives, why someone building their palate should care. Sensory and personal, never encyclopedic.
+- where_it_grows: array of objects with { name: string, size: "large"|"medium"|"small" } — 6-8 regions where this grape is most important. Top 2 should be "large", next 2 "medium", rest "small". These should be tappable wine regions.
+- styles_expressions: array of exactly 3 objects with { style: string, desc: string, example: string } — different faces this grape can wear. Each style has a name, a 1-2 sentence sensory description, and an example producer/wine.
+- notable_producers: array of 3-5 objects with { name: string, note: string } — producers known for exceptional work with this grape. The note should be one punchy sentence about what makes them special WITH this grape specifically.
+- flavor_profile: object with { Tannin: number, Acidity: number, Body: number, Oak: number, Fruit: number } — each 0-100 scale representing this grape's TYPICAL profile
+- food_pairings: array of 4-6 specific food pairings (grape-specific, not generic)
+- fun_facts: array of exactly 3 surprising "did you know" strings. The first one should work as a standalone factoid beneath the story.
+- related_grapes: array of 3-4 similar/related grape names (strings)
+- most_loved_producer: object with { name: string, avg_rating: number } — most celebrated producer for this grape
+- best_qpr_producer: object with { name: string, avg_rating: number } — best QPR producer for this grape
+- recommendation_picks: array of exactly 3 objects with { name: string, type: "grape"|"region"|"producer", why: string } — "if you like this grape, you may also enjoy" suggestions. One obvious, one step-removed (different grape with similar sensory profile), one genuine surprise. Avoid all three being the same type. The "why" should be one evocative sentence.
+- personal_insight: string — a punchy insight about this grape's character that could feel personal (e.g. "You rate fuller, more tannic Grenache higher than average. Old-vine territory.")
 - body: typical body level ("Light", "Medium", "Full")
 - acidity: typical acidity ("Low", "Medium", "High")
 - tannin: typical tannin ("Low", "Medium", "High") — null for whites
-- key_regions: array of 3-5 regions known for this grape
-- food_pairings: array of 4-6 food pairings
-- fun_fact: one interesting fact most people don't know
-- aging_potential: brief note on aging (1 sentence)
-- related_grapes: array of 3-4 similar/related grapes
 
-Return ONLY valid JSON.`;
+Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
 function buildRegionPrompt(displayName: string): string {
@@ -698,19 +705,39 @@ export async function GET(
   // 6. Personal stats (always fresh, user-specific)
   const personalStats = await fetchPersonalStats(type, displayName, user.id, supabase);
 
-  // 7. Community QPR data (for regions)
+  // 7. Community QPR data (for regions and grapes)
   let community_qpr: { extortion: number; pricey: number; spot_on: number; good_value: number; absolute_steal: number; total: number } | null = null;
-  if (type === "region") {
+  if (type === "region" || type === "grape") {
     const adminClient = createSupabaseAdminClient();
-    const { data: qprRows } = await adminClient
-      .from("wine_entries")
-      .select("qpr_level")
-      .or(`canonical_region.ilike.%${displayName}%,region.ilike.%${displayName}%`)
-      .not("qpr_level", "is", null);
+    let qprRows: Array<{ qpr_level: string }> | null = null;
+
+    if (type === "region") {
+      const { data } = await adminClient
+        .from("wine_entries")
+        .select("qpr_level")
+        .or(`canonical_region.ilike.%${displayName}%,region.ilike.%${displayName}%`)
+        .not("qpr_level", "is", null);
+      qprRows = data as Array<{ qpr_level: string }> | null;
+    } else {
+      // For grapes, join through entry_primary_grapes
+      const { data: grapeEntries } = await adminClient
+        .from("entry_primary_grapes")
+        .select("entry_id")
+        .ilike("grape", `%${displayName}%`);
+      const entryIds = (grapeEntries ?? []).map((r: { entry_id: string }) => r.entry_id);
+      if (entryIds.length > 0) {
+        const { data } = await adminClient
+          .from("wine_entries")
+          .select("qpr_level")
+          .in("id", entryIds)
+          .not("qpr_level", "is", null);
+        qprRows = data as Array<{ qpr_level: string }> | null;
+      }
+    }
 
     if (qprRows && qprRows.length >= 3) {
       const counts = { extortion: 0, pricey: 0, spot_on: 0, good_value: 0, absolute_steal: 0 };
-      for (const row of qprRows as Array<{ qpr_level: string }>) {
+      for (const row of qprRows) {
         const level = row.qpr_level;
         if (level === "extortion") counts.extortion++;
         else if (level === "pricey") counts.pricey++;

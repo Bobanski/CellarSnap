@@ -469,6 +469,383 @@ function RegionPage({
   );
 }
 
+// ─── Varietal page (12-layer architecture) ─────────────────
+
+function VarietalPage({
+  data,
+  heroFailed,
+  onHeroError,
+}: {
+  data: ExploreProfileResponse;
+  heroFailed: boolean;
+  onHeroError: () => void;
+}) {
+  const router = useRouter();
+  const { profile, personal_stats } = data;
+  const c = profile.content;
+  const accent = NEBBIOLO;
+  const hasHeroImage = !!profile.hero_image_url && !heroFailed;
+  const hasLogs = personal_stats.entry_count > 0;
+
+  const storyText = typeof c.story === "string" ? c.story : "";
+  const funFacts: string[] = Array.isArray(c.fun_facts) ? c.fun_facts : c.fun_fact ? [c.fun_fact] : [];
+  const flavorProfile = c.flavor_profile as { Tannin: number; Acidity: number; Body: number; Oak: number; Fruit: number } | undefined;
+  const whereItGrows: Array<{ name: string; size: string }> = Array.isArray(c.where_it_grows) ? c.where_it_grows : (Array.isArray(c.key_regions) ? (c.key_regions as string[]).map((n, i) => ({ name: n, size: i < 2 ? "large" : i < 4 ? "medium" : "small" })) : []);
+  const stylesExpressions: Array<{ style: string; desc: string; example: string }> = Array.isArray(c.styles_expressions) ? c.styles_expressions : [];
+  const notableProducers: Array<{ name: string; note: string }> = Array.isArray(c.notable_producers) ? c.notable_producers : [];
+
+  let bgIndex = 0;
+  const nextBg = () => (bgIndex++ % 2 === 0 ? BG_ODD : BG_EVEN);
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: DEVICE_BG }} contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+      {/* ── Hero ──────────────────────────────────────── */}
+      <View style={[r.hero, { height: 180 }]}>
+        {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" onError={onHeroError} /> : null}
+        <View style={r.heroGradient} />
+        <Pressable onPress={() => router.back()} style={r.backBtn}>
+          <AppText style={r.backBtnArrow}>{"←"}</AppText>
+          <AppText style={r.backBtnLabel}>Explore</AppText>
+        </Pressable>
+        <View style={r.heroBottom}>
+          <AppText style={[r.heroBadge, { color: accent }]}>VARIETAL</AppText>
+          <AppText style={r.heroTitle}>{profile.display_name}</AppText>
+          {c.tagline ? <AppText style={[r.heroTagline, { fontFamily: fonts.serif.light }]}>{c.tagline}</AppText> : null}
+        </View>
+      </View>
+
+      {/* ── Personal Layer ────────────────────────────── */}
+      <View style={[r.section, { backgroundColor: nextBg() }]}>
+        <AppText style={r.sectionLabelAccent}>YOUR {profile.display_name.toUpperCase()}</AppText>
+        {hasLogs ? (
+          <>
+            <View style={v.statsRow}>
+              <View style={v.statCard}>
+                <AppText style={v.statNumber}>{personal_stats.entry_count}</AppText>
+                <AppText style={v.statLabel}>wines logged</AppText>
+              </View>
+              {personal_stats.avg_rating > 0 ? (
+                <View style={v.statCard}>
+                  <AppText style={v.statNumber}>{personal_stats.avg_rating.toFixed(1)}</AppText>
+                  <AppText style={v.statLabel}>your avg rating</AppText>
+                </View>
+              ) : null}
+              <View style={v.statCard}>
+                <AppText style={[v.statNumber, { color: CHAMPAGNE }]}>—</AppText>
+                <AppText style={v.statLabel}>community avg</AppText>
+              </View>
+            </View>
+            <AppText style={v.insightText}>
+              {c.personal_insight ?? `You've logged ${personal_stats.entry_count} ${profile.display_name} wines. Keep exploring to see your taste pattern emerge.`}
+            </AppText>
+          </>
+        ) : (
+          <View style={r.insightCard}>
+            <AppText style={r.insightText}>
+              You haven't logged any {profile.display_name} wines yet. Start exploring this grape to discover your personal preferences.
+            </AppText>
+          </View>
+        )}
+      </View>
+
+      {/* ── Flavor Profile ────────────────────────────── */}
+      {flavorProfile ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>FLAVOUR PROFILE</AppText>
+          <View style={r.radarWrap}>
+            <FlavorRadar data={flavorProfile} accentColor={accent} size={200} />
+          </View>
+          <View style={r.legendRow}>
+            {hasLogs ? (
+              <View style={r.legendItem}>
+                <View style={[r.legendLine, { backgroundColor: ROSE }]} />
+                <AppText style={r.legendText}>Your {personal_stats.entry_count} {personal_stats.entry_count === 1 ? "log" : "logs"}</AppText>
+              </View>
+            ) : null}
+            <View style={r.legendItem}>
+              <View style={[r.legendLine, { backgroundColor: accent }]} />
+              <AppText style={r.legendText}>{profile.display_name} avg</AppText>
+            </View>
+          </View>
+          {c.personal_insight ? <AppText style={r.radarInsight}>{c.personal_insight}</AppText> : null}
+        </View>
+      ) : null}
+
+      {/* ── The Story ─────────────────────────────────── */}
+      {storyText ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.storyTitle}>{profile.display_name}</AppText>
+          <AppText style={[r.storyBody, { fontFamily: fonts.serif.light, fontSize: 16, lineHeight: 24, color: CHAMPAGNE }]}>{storyText}</AppText>
+          {funFacts.length > 0 ? (
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start", marginTop: 8 }}>
+              <AppText style={{ color: accent, fontSize: 9, flexShrink: 0, marginTop: 1 }}>✦</AppText>
+              <AppText style={{ fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 15 }}>{funFacts[0]}</AppText>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* ── Where It Grows ────────────────────────────── */}
+      {whereItGrows.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>WHERE IT GROWS BEST</AppText>
+          <View style={r.grapeChipRow}>
+            {whereItGrows.map((region) => (
+              <Pressable
+                key={region.name}
+                onPress={() => router.push(`/(app)/explore/region/${toExploreSlug(region.name)}`)}
+                style={[v.regionChip, region.size === "large" ? v.regionChipLarge : region.size === "medium" ? v.regionChipMedium : v.regionChipSmall]}
+              >
+                <AppText style={[v.regionChipText, region.size === "large" ? v.regionChipTextLarge : region.size === "medium" ? v.regionChipTextMedium : v.regionChipTextSmall]}>
+                  {region.name}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── Styles & Expressions ──────────────────────── */}
+      {stylesExpressions.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>STYLES + EXPRESSIONS</AppText>
+          {stylesExpressions.map((expr) => (
+            <View key={expr.style} style={v.exprCard}>
+              <AppText style={v.exprTitle}>{expr.style}</AppText>
+              <AppText style={v.exprDesc}>{expr.desc}</AppText>
+              <AppText style={v.exprExample}>{expr.example}</AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* ── Notable Producers ─────────────────────────── */}
+      {notableProducers.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>NOTABLE PRODUCERS</AppText>
+          {notableProducers.map((prod) => (
+            <Pressable key={prod.name} style={v.producerRow} onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(prod.name)}`)}>
+              <View style={[v.producerDot, { backgroundColor: accent }]} />
+              <View style={{ flex: 1 }}>
+                <AppText style={v.producerName}>{prod.name}</AppText>
+                <AppText style={v.producerNote}>{prod.note}</AppText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {/* ── Community Pulse ───────────────────────────── */}
+      {(() => {
+        const qpr = data.community_qpr;
+        const hasQpr = qpr && qpr.total > 0;
+        const hasProducers = c.most_loved_producer || c.best_qpr_producer;
+        if (!hasQpr && !hasProducers) return null;
+        const pctSpotOn = hasQpr ? Math.round((qpr.spot_on / qpr.total) * 100) : 0;
+        const pctGoodValue = hasQpr ? Math.round(((qpr.good_value + qpr.absolute_steal) / qpr.total) * 100) : 0;
+        const pctPricey = hasQpr ? Math.round((qpr.pricey / qpr.total) * 100) : 0;
+        const pctExtortion = hasQpr ? Math.round((qpr.extortion / qpr.total) * 100) : 0;
+        return (
+          <View style={[r.section, { backgroundColor: nextBg() }]}>
+            <AppText style={r.sectionLabel}>COMMUNITY PULSE</AppText>
+            {hasQpr ? (
+              <>
+                <AppText style={r.qprBarLabel}>QPR across {qpr.total} {profile.display_name} logs</AppText>
+                <View style={r.qprBar}>
+                  {pctExtortion > 0 ? <View style={[r.qprSegment, { flex: pctExtortion, backgroundColor: "rgba(184,48,96,0.75)" }]} /> : null}
+                  {pctPricey > 0 ? <View style={[r.qprSegment, { flex: pctPricey, backgroundColor: "rgba(92,85,80,0.75)" }]} /> : null}
+                  {pctSpotOn > 0 ? <View style={[r.qprSegment, { flex: pctSpotOn, backgroundColor: "rgba(61,107,79,0.75)" }]} /> : null}
+                  {pctGoodValue > 0 ? <View style={[r.qprSegment, { flex: pctGoodValue, backgroundColor: "rgba(123,29,58,0.75)" }]} /> : null}
+                </View>
+                <View style={r.qprLegendRow}>
+                  {pctSpotOn > 0 ? <AppText style={[r.qprLegendText, { color: VERDOT }]}>{pctSpotOn}% Spot On</AppText> : null}
+                  {pctGoodValue > 0 ? <AppText style={[r.qprLegendText, { color: GRENACHE }]}>{pctGoodValue}% Good Value</AppText> : null}
+                  {pctPricey > 0 ? <AppText style={[r.qprLegendText, { color: FOG }]}>{pctPricey}% Pricey</AppText> : null}
+                </View>
+              </>
+            ) : null}
+            {hasProducers ? (
+              <View style={[r.communityCardRow, hasQpr ? { marginTop: 10 } : null]}>
+                {c.most_loved_producer ? (
+                  <Pressable style={r.communityCard} onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.most_loved_producer!.name)}`)}>
+                    <AppText style={r.communityCardWine}>{c.most_loved_producer.name}</AppText>
+                    <AppText style={r.communityCardSub}>Most loved · {c.most_loved_producer.avg_rating} avg</AppText>
+                  </Pressable>
+                ) : null}
+                {c.best_qpr_producer ? (
+                  <Pressable style={r.communityCard} onPress={() => router.push(`/(app)/explore/producer/${toExploreSlug(c.best_qpr_producer!.name)}`)}>
+                    <AppText style={r.communityCardWine}>{c.best_qpr_producer.name}</AppText>
+                    <AppText style={r.communityCardSub}>Best QPR</AppText>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        );
+      })()}
+
+      {/* ── Recommendations ───────────────────────────── */}
+      {c.recommendation_picks && c.recommendation_picks.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.sectionLabel}>IF YOU LIKE THIS, YOU MAY ALSO ENJOY...</AppText>
+          <View style={r.recCardRow}>
+            {c.recommendation_picks.map((rec) => (
+              <Pressable key={rec.name} style={r.recCard} onPress={() => router.push(`/(app)/explore/${rec.type}/${toExploreSlug(rec.name)}`)}>
+                <AppText style={r.recCardName}>{rec.name}</AppText>
+                <AppText style={r.recCardWhy}>{rec.why}</AppText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── Food Pairings ─────────────────────────────── */}
+      {c.food_pairings && c.food_pairings.length > 0 ? (
+        <View style={[r.section, { backgroundColor: nextBg() }]}>
+          <AppText style={r.storyTitle}>Food Pairings</AppText>
+          <View style={r.pairingRow}>
+            {c.food_pairings.map((item: string) => (
+              <View key={item} style={r.pairingChip}><AppText style={r.pairingChipText}>{item}</AppText></View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── More to Know ──────────────────────────────── */}
+      {funFacts.length > 1 ? (
+        <View style={[r.section, { backgroundColor: nextBg(), borderBottomWidth: 0 }]}>
+          <AppText style={r.sectionLabel}>MORE TO KNOW</AppText>
+          {funFacts.slice(1).map((fact, i) => (
+            <View key={i} style={r.factRow}>
+              <AppText style={[r.factBullet, { color: accent }]}>✦</AppText>
+              <AppText style={r.factText}>{fact}</AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Attribution */}
+      {profile.hero_image_attribution ? <AppText style={r.attribution}>Photo by {profile.hero_image_attribution.photographer}</AppText> : null}
+    </ScrollView>
+  );
+}
+
+// ─── Varietal-specific styles ───────────────────────────────
+
+const v = StyleSheet.create({
+  // Personal layer stat cards
+  statsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  statNumber: {
+    fontFamily: fonts.serif.light,
+    fontSize: 20,
+    color: "#C9A84C", // Viognier
+  },
+  statLabel: {
+    fontSize: 8,
+    color: "rgba(245,237,214,0.4)",
+  },
+  insightText: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.5)",
+    lineHeight: 15,
+    marginTop: 6,
+  },
+
+  // Where it grows — sized chips
+  regionChip: {
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  regionChipLarge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  regionChipMedium: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  regionChipSmall: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  regionChipText: {},
+  regionChipTextLarge: {
+    fontSize: 11,
+    color: "rgba(245,237,214,0.8)",
+    fontWeight: "500",
+  },
+  regionChipTextMedium: {
+    fontSize: 10,
+    color: "rgba(245,237,214,0.5)",
+  },
+  regionChipTextSmall: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.5)",
+  },
+
+  // Styles & Expressions cards
+  exprCard: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  exprTitle: {
+    fontFamily: fonts.serif.light,
+    fontSize: 13,
+    color: CHAMPAGNE,
+    marginBottom: 3,
+  },
+  exprDesc: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.45)",
+    lineHeight: 13,
+    marginBottom: 3,
+  },
+  exprExample: {
+    fontSize: 8,
+    color: "#C9A84C", // Viognier
+  },
+
+  // Notable producers with dot
+  producerRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+    alignItems: "flex-start",
+  },
+  producerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  producerName: {
+    fontFamily: fonts.serif.light,
+    fontSize: 12,
+    color: CHAMPAGNE,
+  },
+  producerNote: {
+    fontSize: 9,
+    color: "rgba(245,237,214,0.4)",
+    lineHeight: 13,
+  },
+});
+
 // ─── Region styles (pixel-matched to brand guide) ──────────
 
 const r = StyleSheet.create({
@@ -1085,11 +1462,13 @@ export default function ExploreProfileScreen() {
 
   const profileType = data.profile.type as ExploreProfileType;
 
-  return profileType === "region" ? (
-    <RegionPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />
-  ) : (
-    <FallbackProfilePage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />
-  );
+  if (profileType === "region") {
+    return <RegionPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />;
+  }
+  if (profileType === "grape") {
+    return <VarietalPage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />;
+  }
+  return <FallbackProfilePage data={data} heroFailed={heroFailed} onHeroError={() => setHeroFailed(true)} />;
 }
 
 // ─── Fallback styles ────────────────────────────────────────
