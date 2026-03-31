@@ -1,6 +1,6 @@
 /* ─── Cellar — shared types & constants ─── */
 
-export type EntryStatus = "consumed" | "cellaring" | "events";
+export type EntryStatus = "consumed" | "cellaring" | "events" | "collections";
 
 export type BottleFormat = "375ml" | "750ml" | "1.5L" | "3L" | "5L" | "6L" | "other";
 
@@ -18,6 +18,7 @@ export const CELLAR_TAB_LABELS = {
   consumed: "Consumed",
   cellaring: "In My Cellar",
   events: "My Events",
+  collections: "My Collections",
 } as const;
 
 export const CELLAR_COPY = {
@@ -28,6 +29,9 @@ export const CELLAR_COPY = {
   allConsumed: "All consumed",
   eventsEmptyTitle: "No grouped events yet",
   eventsEmptySubtitle: "Create a grouped event post and it will show up here.",
+  collectionsEmptyTitle: "No collections yet",
+  collectionsEmptySubtitle:
+    "Save wines from Feed or while logging a pour and they will show up here.",
   bottlesRemaining: (n: number) => `${n} bottle${n === 1 ? "" : "s"}`,
   addPhotosPrompt: "Add photos from the night to capture the moment",
 } as const;
@@ -45,4 +49,5 @@ export type CellarEntry = {
   bottle_format: BottleFormat | null;
   label_image_url: string | null;
   created_at: string;
+  collections?: import("./collections").EntryCollectionSummary[];
 };

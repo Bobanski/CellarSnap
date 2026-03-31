@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import CellarTable from "@/features/entries/CellarTable";
+import {
+  fetchEntryCollectionsClient,
+  fetchUserCollectionsClient,
+} from "@/lib/collections/client";
 import type { WineEntryWithUrls } from "@/types/wine";
 import {
   CELLAR_TAB_LABELS,
@@ -42,25 +46,149 @@ import {
   type EntryLibrarySortBy as SortBy,
   type EntryLibrarySortOrder as SortOrder,
   type EntryLibraryViewMode as LibraryViewMode,
+  type EntryCollectionSummary,
   type EventTypeValue,
+  type UserCollectionSummary,
 } from "@shared";
 
 type EntryGroup = {
   id: string;
   label: string;
-  entries: WineEntryWithUrls[];
+  entries: EntryListItem[];
 };
 
-type EventHistoryEntry = WineEntryWithUrls & {
+type EntryListItem = WineEntryWithUrls & {
+  comment_count?: number;
+  collections?: EntryCollectionSummary[];
+};
+
+type EventHistoryEntry = EntryListItem & {
   entry_group_id: string;
 };
 
-function entryMatchesSearch(entry: WineEntryWithUrls, query: string): boolean {
+const VISIBLE_CELLAR_TABS: CellarTab[] = ["consumed", "cellaring", "events"];
+const COLLECTIONS_HEADER = {
+  eyebrow: "Collections",
+  title: "Your collections.",
+} as const;
+
+function normalizeRequestedCellarTab(value: string | null): CellarTab {
+  return value === "cellaring" || value === "events" || value === "collections"
+    ? value
+    : "consumed";
+}
+
+async function attachEntryCollections<T extends { id: string }>(
+  items: T[]
+): Promise<Array<T & { collections?: EntryCollectionSummary[] }>> {
+  if (items.length === 0) {
+    return items;
+  }
+
+  const result = await fetchEntryCollectionsClient(items.map((item) => item.id));
+  if (!result.ok) {
+    return items;
+  }
+
+  return items.map((item) => ({
+    ...item,
+    collections: result.memberships[item.id] ?? [],
+  }));
+}
+
+function getPrimaryCollectionLabel(collections?: EntryCollectionSummary[]) {
+  if (!collections || collections.length === 0) {
+    return null;
+  }
+
+  const [first] = collections;
+  if (!first?.name) {
+    return null;
+  }
+
+  return collections.length > 1 ? `${first.name}...` : first.name;
+}
+
+function CollectionTag({ collections }: { collections?: EntryCollectionSummary[] }) {
+  const label = getPrimaryCollectionLabel(collections);
+  if (!label) {
+    return null;
+  }
+
+  return (
+    <span
+      className="mt-1 inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+      style={{
+        borderColor: "var(--color-border-strong)",
+        background: "var(--color-surface-tinted)",
+        color: "var(--color-accent-secondary)",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function CollectionListCard({ collection }: { collection: UserCollectionSummary }) {
+  return (
+    <Link
+      href={`/entries/collections/${collection.id}`}
+      className="group flex items-center gap-4 rounded-2xl border p-4 transition hover:border-[var(--color-border-strong)]"
+      style={{
+        borderColor: "var(--color-border)",
+        background: "var(--color-surface-primary)",
+      }}
+    >
+      <div
+        className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+        style={{ background: "var(--color-surface-tinted)" }}
+      >
+        {collection.cover_image_url ? (
+          <Photo
+            src={collection.cover_image_url}
+            alt={collection.name}
+            containerClassName="h-full w-full"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <span className="px-4 text-center text-xs text-[var(--color-text-secondary)]">
+            No cover
+          </span>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <h2
+          className="truncate"
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 28,
+            fontWeight: 300,
+            color: "var(--color-text-primary)",
+            lineHeight: 1.15,
+          }}
+        >
+          {collection.name}
+        </h2>
+        <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          {collection.item_count} wine{collection.item_count === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      <span className="text-lg text-[var(--color-text-tertiary)]" aria-hidden="true">
+        {">"}
+      </span>
+    </Link>
+  );
+}
+
+function entryMatchesSearch(entry: EntryListItem, query: string): boolean {
   return entryMatchesLibrarySearch(entry, query);
 }
 
 /* ─── Compact entry row for the new cellar design ─── */
-function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: number } }) {
+function EntryRow({ entry }: { entry: EntryListItem }) {
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
   const producer = hideProducer ? null : entry.producer;
   const metaParts = [producer, entry.region || entry.country].filter(Boolean);
@@ -114,6 +242,7 @@ function EntryRow({ entry }: { entry: WineEntryWithUrls & { comment_count?: numb
             {metaParts.join(" \u00B7 ")}
           </span>
         ) : null}
+        <CollectionTag collections={entry.collections} />
       </div>
 
       {/* Right: rating + date */}
@@ -280,7 +409,7 @@ function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
   );
 }
 
-type CellarTab = "consumed" | "cellaring" | "events";
+type CellarTab = "consumed" | "cellaring" | "events" | "collections";
 
 /* ─── Cellar entry card for the grid ─── */
 function CellarEntryCard({
@@ -344,6 +473,7 @@ function CellarEntryCard({
             {[entry.producer, entry.region || entry.country].filter(Boolean).join(" \u00B7 ")}
           </span>
         ) : null}
+        <CollectionTag collections={entry.collections} />
       </div>
 
       {/* Right: quantity + format */}
@@ -555,7 +685,8 @@ function CellarView() {
 
         const data = await response.json();
         if (isMounted) {
-          setCellarEntries(data.entries ?? []);
+          const nextEntries = await attachEntryCollections((data.entries ?? []) as CellarEntry[]);
+          setCellarEntries(nextEntries);
           setLoading(false);
         }
       } catch {
@@ -836,8 +967,14 @@ function CellarView() {
 }
 
 export default function EntriesPage() {
-  const [activeTab, setActiveTab] = useState<CellarTab>("consumed");
-  const [entries, setEntries] = useState<WineEntryWithUrls[]>([]);
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<CellarTab>(() =>
+    normalizeRequestedCellarTab(requestedTab)
+  );
+  const [entries, setEntries] = useState<EntryListItem[]>([]);
+  const [collections, setCollections] = useState<UserCollectionSummary[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -866,6 +1003,7 @@ export default function EntriesPage() {
   const isRangeFilterActive =
     (filterType === "rating" || filterType === "vintage") &&
     (filterMin !== "" || filterMax !== "");
+  const isCollectionsView = activeTab === "collections";
   const isFilterActive =
     filterType === "country" ? filterValue !== "" : isRangeFilterActive;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -1045,7 +1183,8 @@ export default function EntriesPage() {
 
         const data = await response.json();
         if (isMounted) {
-          setEntries(data.entries ?? []);
+          const nextEntries = await attachEntryCollections((data.entries ?? []) as EntryListItem[]);
+          setEntries(nextEntries);
           setNextCursor(data.next_cursor ?? null);
           setHasMore(Boolean(data.has_more));
           setLoading(false);
@@ -1065,6 +1204,41 @@ export default function EntriesPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setActiveTab(normalizeRequestedCellarTab(requestedTab));
+  }, [requestedTab]);
+
+  useEffect(() => {
+    if (activeTab !== "collections" || collections.length > 0) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadCollections = async () => {
+      setCollectionsLoading(true);
+      const result = await fetchUserCollectionsClient();
+      if (!isMounted) {
+        return;
+      }
+
+      if (!result.ok) {
+        setErrorMessage(result.errorMessage);
+        setCollectionsLoading(false);
+        return;
+      }
+
+      setCollections(result.collections);
+      setCollectionsLoading(false);
+    };
+
+    void loadCollections();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, collections.length]);
+
   const loadMore = async () => {
     if (!hasMore || loadingMore || !nextCursor) {
       return;
@@ -1082,7 +1256,8 @@ export default function EntriesPage() {
         return;
       }
       const data = await response.json();
-      setEntries((prev) => [...prev, ...(data.entries ?? [])]);
+      const nextEntries = await attachEntryCollections((data.entries ?? []) as EntryListItem[]);
+      setEntries((prev) => [...prev, ...nextEntries]);
       setNextCursor(data.next_cursor ?? null);
       setHasMore(Boolean(data.has_more));
     } finally {
@@ -1160,7 +1335,9 @@ export default function EntriesPage() {
                 color: "var(--color-accent-secondary)",
               }}
             >
-              {ENTRIES_LIBRARY_HEADER.eyebrow}
+              {isCollectionsView
+                ? COLLECTIONS_HEADER.eyebrow
+                : ENTRIES_LIBRARY_HEADER.eyebrow}
             </span>
             <h1
               className="mt-1"
@@ -1172,30 +1349,97 @@ export default function EntriesPage() {
                 lineHeight: 1.2,
               }}
             >
-              {ENTRIES_LIBRARY_HEADER.title}
+              {isCollectionsView
+                ? COLLECTIONS_HEADER.title
+                : ENTRIES_LIBRARY_HEADER.title}
             </h1>
           </header>
 
           {/* ─── Consumed / Cellar tab toggle ─── */}
-          <div className="flex items-center justify-center gap-2">
-            {(["consumed", "cellaring", "events"] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  activeTab === tab
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                {CELLAR_TAB_LABELS[tab]}
-              </button>
-            ))}
-          </div>
+          {isCollectionsView ? null : (
+            <div className="flex items-center justify-center gap-2">
+              {VISIBLE_CELLAR_TABS.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    activeTab === tab
+                      ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                      : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  {CELLAR_TAB_LABELS[tab]}
+                </button>
+              ))}
+            </div>
+          )}
 
           {activeTab === "cellaring" ? (
             <CellarView />
+          ) : activeTab === "collections" ? (
+            <>
+              {errorMessage ? (
+                <div
+                  style={{
+                    borderRadius: 14,
+                    border: "0.5px solid rgba(192, 57, 43, 0.3)",
+                    background: "rgba(192, 57, 43, 0.08)",
+                    padding: "24px 16px",
+                    fontSize: 12,
+                    color: "#e6a0a0",
+                  }}
+                >
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              {collectionsLoading ? (
+                <div
+                  className="text-center"
+                  style={{
+                    background: "var(--color-surface-primary)",
+                    border: "0.5px solid var(--color-border)",
+                    borderRadius: 14,
+                    padding: "24px 16px",
+                    fontSize: 12,
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  Loading collections...
+                </div>
+              ) : collections.length === 0 ? (
+                <div
+                  style={{
+                    background: "var(--color-surface-primary)",
+                    border: "0.5px solid var(--color-border)",
+                    borderRadius: 14,
+                    padding: "32px 18px",
+                    textAlign: "center",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: "var(--font-serif)",
+                      fontSize: 24,
+                      fontWeight: 300,
+                      color: "var(--color-text-primary)",
+                    }}
+                  >
+                    {CELLAR_COPY.collectionsEmptyTitle}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                    {CELLAR_COPY.collectionsEmptySubtitle}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {collections.map((collection) => (
+                    <CollectionListCard key={collection.id} collection={collection} />
+                  ))}
+                </div>
+              )}
+            </>
           ) : activeTab === "events" ? (
             <>
               {errorMessage ? (

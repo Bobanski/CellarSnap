@@ -23,6 +23,7 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
+  COLLECTIONS_COPY,
   createEntryInputSchema,
   getTodayLocalYmd,
   isUnknownWineName,
@@ -40,6 +41,7 @@ import {
   QPR_LEVEL_VALUES,
   resolveLineupWineDisplayName,
   toWineEntryInsertPayload,
+  type CollectionOption,
   type PricePaidCurrency,
   type PricePaidSource,
   type NormalizedLabelAnchor,
@@ -48,6 +50,10 @@ import {
   type QprLevel,
   EVENT_TYPE_OPTIONS,
 } from "@cellarsnap/shared";
+import {
+  CollectionField,
+  CollectionPickerModal,
+} from "@/src/components/collections/CollectionPickerModal";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import {
   Accordion,
@@ -79,6 +85,11 @@ import {
 } from "@/src/lib/entryFlow/bulkCreateWorkflow";
 import { styles } from "@/src/components/entries/newEntryStyles";
 import { PostSaveSurveyModal } from "@/src/components/entries/PostSaveSurveyModal";
+import {
+  addEntryToUserCollections,
+  createUserCollection,
+  fetchUserCollections,
+} from "@/src/lib/api/collections";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import {
   fetchComparisonCandidateForEntry as fetchComparisonCandidateForEntryService,
@@ -152,6 +163,7 @@ type AccordionKey =
   | "wine_details"
   | "location_date"
   | "tasted_with"
+  | "collections"
   | "advanced_notes"
   | "visibility";
 
@@ -370,11 +382,17 @@ export default function NewEntryScreen() {
     wine_details: false,
     location_date: false,
     tasted_with: false,
+    collections: false,
     advanced_notes: false,
     visibility: false,
   });
   const [users, setUsers] = useState<FriendUser[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [collectionsPickerOpen, setCollectionsPickerOpen] = useState(false);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
   const [isLoadingFriends, setIsLoadingFriends] = useState(false);
@@ -597,6 +615,37 @@ export default function NewEntryScreen() {
     setExpanded((current) => ({ ...current, [section]: !current[section] }));
   };
 
+  const toggleCollectionSelection = useCallback((collectionId: string) => {
+    setSelectedCollectionIds((current) =>
+      current.includes(collectionId)
+        ? current.filter((id) => id !== collectionId)
+        : [...current, collectionId]
+    );
+  }, []);
+
+  const handleCreateCollection = useCallback(async (name: string) => {
+    setIsCreatingCollection(true);
+    const result = await createUserCollection(name);
+    setIsCreatingCollection(false);
+
+    if (!result.ok) {
+      Alert.alert("Unable to create collection", result.errorMessage);
+      return;
+    }
+
+    setCollections((current) => {
+      if (current.some((collection) => collection.id === result.collection.id)) {
+        return current;
+      }
+      return [...current, result.collection];
+    });
+    setSelectedCollectionIds((current) =>
+      current.includes(result.collection.id)
+        ? current
+        : [...current, result.collection.id]
+    );
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -657,6 +706,40 @@ export default function NewEntryScreen() {
     };
 
     void loadDefaults();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setCollections([]);
+      setSelectedCollectionIds([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCollections = async () => {
+      setIsLoadingCollections(true);
+      const result = await fetchUserCollections();
+      if (cancelled) {
+        return;
+      }
+      setIsLoadingCollections(false);
+      if (!result.ok) {
+        return;
+      }
+      setCollections(
+        result.collections.map((collection) => ({
+          id: collection.id,
+          name: collection.name,
+        }))
+      );
+    };
+
+    void loadCollections();
+
     return () => {
       cancelled = true;
     };
@@ -1037,6 +1120,8 @@ export default function NewEntryScreen() {
   };
 
   const applyLabelAutofill = async (payload: LabelAutofillResponse) => {
+    setShowManualFields(true);
+
     const normalizeText = (value?: string | null) => {
       if (typeof value !== "string") {
         return "";
@@ -1118,6 +1203,8 @@ export default function NewEntryScreen() {
   };
 
   const applyLineupAutofill = async (wine: LineupWine) => {
+    setShowManualFields(true);
+
     const normalizeText = (value?: string | null) => {
       if (typeof value !== "string") {
         return "";
@@ -1935,6 +2022,20 @@ export default function NewEntryScreen() {
         new_wine_image_url: labelPhotoUri,
         candidate: result.comparisonCandidate,
       });
+
+      if (selectedCollectionIds.length > 0) {
+        void addEntryToUserCollections({
+          entryId: result.entryId,
+          collectionIds: selectedCollectionIds,
+        }).then((collectionResult) => {
+          if (!collectionResult.ok) {
+            Alert.alert(
+              "Collection issue",
+              `The entry was saved, but we couldn't add it to your collections. ${collectionResult.errorMessage}`
+            );
+          }
+        });
+      }
     } catch {
       setIsSubmitting(false);
       setErrorMessage("Unable to create entry. Check your connection.");
@@ -2940,6 +3041,23 @@ export default function NewEntryScreen() {
               </Accordion>
 
               <Accordion
+                title={NEW_ENTRY_SINGLE_BOTTLE_COPY.collectionsTitle}
+                description={NEW_ENTRY_SINGLE_BOTTLE_COPY.collectionsDescription}
+                expanded={expanded.collections}
+                onToggle={() => toggleSection("collections")}
+              >
+                {isLoadingCollections ? (
+                  <AppText style={styles.hint}>Loading collections...</AppText>
+                ) : null}
+                <CollectionField
+                  label={COLLECTIONS_COPY.sectionTitle}
+                  collections={collections}
+                  selectedIds={selectedCollectionIds}
+                  onPress={() => setCollectionsPickerOpen(true)}
+                />
+              </Accordion>
+
+              <Accordion
                 title={NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesTitle}
                 description={NEW_ENTRY_SINGLE_BOTTLE_COPY.advancedNotesDescription}
                 expanded={expanded.advanced_notes}
@@ -3157,6 +3275,15 @@ export default function NewEntryScreen() {
           </View>
         </View>
       </Modal>
+      <CollectionPickerModal
+        visible={collectionsPickerOpen}
+        collections={collections}
+        selectedIds={selectedCollectionIds}
+        onToggleCollection={toggleCollectionSelection}
+        onClose={() => setCollectionsPickerOpen(false)}
+        onCreateCollection={handleCreateCollection}
+        creating={isCreatingCollection}
+      />
       <PostSaveSurveyModal
         pendingPostSaveSurvey={pendingPostSaveSurvey}
         postSaveSurveyStep={postSaveSurveyStep}

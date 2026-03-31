@@ -1,5 +1,6 @@
 export * from "./auth";
 export * from "./cellar";
+export * from "./collections";
 export * from "./date";
 export * from "./entries";
 export * from "./eventTypes";

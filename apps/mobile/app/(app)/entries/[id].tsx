@@ -18,6 +18,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import {
+  COLLECTIONS_COPY,
   ENTRY_MATCH_BAND_LABELS,
   PRICE_PAID_CURRENCY_LABELS,
   PRICE_PAID_CURRENCY_VALUES,
@@ -33,6 +34,7 @@ import {
   normalizeProducerText,
   normalizeWineNameText,
   type EntryMatchBand,
+  type EntryCollectionSummary,
   type PricePaidCurrency,
   type PricePaidSource,
   type PrivacyLevel,
@@ -44,6 +46,7 @@ import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
+import { fetchEntryCollections } from "@/src/lib/api/collections";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import { createPostShareLink } from "@/src/lib/api/share";
 import {
@@ -919,6 +922,7 @@ export default function EntryDetailScreen() {
   const [scoreError, setScoreError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareToast, setShareToast] = useState<ShareToast | null>(null);
+  const [entryCollections, setEntryCollections] = useState<EntryCollectionSummary[]>([]);
   const galleryScrollRef = useRef<ScrollView | null>(null);
   const cropDragRef = useRef<CropGestureState | null>(null);
   const isOwner = Boolean(user?.id && entry?.user_id === user.id);
@@ -944,6 +948,31 @@ export default function EntryDetailScreen() {
     setScoreResult(null);
     setScoreError(null);
     setShareToast(null);
+    setEntryCollections([]);
+  }, [entryId]);
+
+  useEffect(() => {
+    if (!entryId) {
+      setEntryCollections([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadCollections = async () => {
+      const result = await fetchEntryCollections([entryId]);
+      if (cancelled || !result.ok) {
+        return;
+      }
+
+      setEntryCollections(result.memberships[entryId] ?? []);
+    };
+
+    void loadCollections();
+
+    return () => {
+      cancelled = true;
+    };
   }, [entryId]);
 
   useEffect(() => {
@@ -4589,6 +4618,29 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
+                {entryCollections.length > 0 ? (
+                  <View style={styles.metaItem}>
+                    <AppText style={styles.metaLabel}>{COLLECTIONS_COPY.sectionTitle}</AppText>
+                    <View style={styles.collectionLinksWrap}>
+                      {entryCollections.map((collection) => (
+                        <Pressable
+                          key={collection.id}
+                          style={styles.collectionLinkChip}
+                          onPress={() =>
+                            router.push(
+                              `/(app)/entries/collections/${collection.id}` as never
+                            )
+                          }
+                        >
+                          <AppText style={styles.collectionLinkText}>
+                            {collection.name}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
                 {isOwner || tastedWithNames.length > 0 ? (
                   <View style={styles.metaItem}>
                     <AppText style={styles.metaLabel}>Tasted with</AppText>
@@ -6328,6 +6380,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.8,
+  },
+  collectionLinksWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+  },
+  collectionLinkChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(123,29,58,0.45)",
+    backgroundColor: "rgba(123,29,58,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  collectionLinkText: {
+    color: colors.accentSecondary,
+    fontSize: 12,
+    fontWeight: "700",
   },
   taggedCard: {
     borderRadius: 14,

@@ -214,6 +214,12 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             onClose={onClose}
           />
           <MenuLink
+            href="/entries?tab=collections"
+            label="My Collections"
+            subtitle="Saved wines from feed and your own pours"
+            onClose={onClose}
+          />
+          <MenuLink
             href="/friends"
             label="Friends"
             subtitle="Requests, search, suggestions"

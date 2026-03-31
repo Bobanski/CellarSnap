@@ -10,6 +10,7 @@ import {
 import {
   buildEntryShareText,
   buildFeedEntryMetaFields as buildEntryMetaFields,
+  COLLECTIONS_COPY,
   DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
   FEED_EYEBROW,
   FEED_EMPTY_STATE_MESSAGE,
@@ -20,13 +21,22 @@ import {
   FEED_SCOPE_LABELS,
   FEED_TITLE_ALL,
   FEED_TITLE_CIRCLE,
+  type CollectionOption,
+  type EntryCollectionSummary,
   normalizePrivacyLevel,
   type FeedReportReason as ReportReason,
   EVENT_TYPE_LABELS,
   type EventTypeValue,
 } from "@shared";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
+import CollectionPickerPopover from "@/components/collections/CollectionPickerPopover";
 import { formatConsumedDate } from "@/lib/formatDate";
+import {
+  addEntryToCollectionsClient,
+  createUserCollectionClient,
+  fetchEntryCollectionsClient,
+  fetchUserCollectionsClient,
+} from "@/lib/collections/client";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
   isDrinkingNowActive,
@@ -366,6 +376,14 @@ export default function FeedPage() {
   const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [groupedSlideIndexByEntryId, setGroupedSlideIndexByEntryId] = useState<Record<string, number>>({});
+  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [collectionMembershipsByEntryId, setCollectionMembershipsByEntryId] = useState<
+    Record<string, EntryCollectionSummary[]>
+  >({});
+  const [collectionPickerEntryId, setCollectionPickerEntryId] = useState<string | null>(null);
+  const [savingCollectionEntryId, setSavingCollectionEntryId] = useState<string | null>(null);
+  const [creatingCollection, setCreatingCollection] = useState(false);
   const [expandedNotesByEntryId, setExpandedNotesByEntryId] = useState<
     Record<string, boolean>
   >({});
@@ -834,6 +852,126 @@ export default function FeedPage() {
     } else if (commentId) {
       setReportingCommentId(null);
     }
+  };
+
+  const ensureCollectionsLoaded = async () => {
+    const result = await fetchUserCollectionsClient();
+    if (!result.ok) {
+      throw new Error(result.errorMessage);
+    }
+    setCollections(
+      result.collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+      }))
+    );
+    return result.collections;
+  };
+
+  const openCollectionPicker = async (entryId: string) => {
+    setModerationNotice(null);
+    setCollectionPickerEntryId(entryId);
+    try {
+      const [collectionResult, membershipResult] = await Promise.all([
+        ensureCollectionsLoaded(),
+        fetchEntryCollectionsClient([entryId]),
+      ]);
+
+      const memberships = membershipResult.ok
+        ? membershipResult.memberships[entryId] ?? []
+        : collectionMembershipsByEntryId[entryId] ?? [];
+
+      if (!membershipResult.ok) {
+        setModerationNotice({
+          kind: "error",
+          message: membershipResult.errorMessage,
+        });
+      }
+
+      setCollections(
+        collectionResult.map((collection) => ({
+          id: collection.id,
+          name: collection.name,
+        }))
+      );
+      setCollectionMembershipsByEntryId((current) => ({
+        ...current,
+        [entryId]: memberships,
+      }));
+      setSelectedCollectionIds(memberships.map((membership) => membership.id));
+    } catch (error) {
+      setCollectionPickerEntryId(null);
+      setModerationNotice({
+        kind: "error",
+        message:
+          error instanceof Error ? error.message : "Unable to load collections.",
+      });
+    }
+  };
+
+  const handleCreateCollection = async (name: string) => {
+    setCreatingCollection(true);
+    const result = await createUserCollectionClient(name);
+    setCreatingCollection(false);
+
+    if (!result.ok) {
+      setModerationNotice({
+        kind: "error",
+        message: result.errorMessage,
+      });
+      return;
+    }
+
+    setCollections((current) => {
+      if (current.some((collection) => collection.id === result.collection.id)) {
+        return current;
+      }
+      return [...current, result.collection];
+    });
+    setSelectedCollectionIds((current) =>
+      current.includes(result.collection.id)
+        ? current
+        : [...current, result.collection.id]
+    );
+  };
+
+  const saveCollectionSelection = async () => {
+    if (!collectionPickerEntryId || savingCollectionEntryId === collectionPickerEntryId) {
+      return;
+    }
+
+    const lockedCollectionIds =
+      collectionMembershipsByEntryId[collectionPickerEntryId]?.map((membership) => membership.id) ?? [];
+
+    setSavingCollectionEntryId(collectionPickerEntryId);
+    const result = await addEntryToCollectionsClient({
+      entryId: collectionPickerEntryId,
+      collectionIds: Array.from(new Set([...lockedCollectionIds, ...selectedCollectionIds])),
+    });
+    setSavingCollectionEntryId(null);
+
+    if (!result.ok) {
+      setModerationNotice({
+        kind: "error",
+        message: result.errorMessage,
+      });
+      return;
+    }
+
+    setCollectionMembershipsByEntryId((current) => ({
+      ...current,
+      [collectionPickerEntryId]: result.memberships,
+    }));
+    setCollectionPickerEntryId(null);
+    setModerationNotice({
+      kind: "success",
+      message:
+        result.addedCollectionIds.length > 0
+          ? `Saved to ${result.addedCollectionIds.length} collection${
+              result.addedCollectionIds.length === 1 ? "" : "s"
+            }.`
+          : "Already saved to the selected collection(s).",
+    });
   };
 
   const shareEntry = async (entry: FeedEntry) => {
@@ -1422,6 +1560,11 @@ export default function FeedPage() {
                   const commentsExpanded = Boolean(expandedCommentsByEntryId[entry.id]);
                   const canReact = Boolean(entry.can_react);
                   const canComment = entry.can_comment ?? true;
+                  const activeCollectionEntryId =
+                    entry.entry_group && (entry.group_slides?.length ?? 0) > 0
+                      ? (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0]
+                          ?.entry_id ?? entry.id
+                      : entry.id;
                   const reactionSummary = REACTION_EMOJIS
                     .map((emoji) => ({
                       emoji,
@@ -1515,6 +1658,65 @@ export default function FeedPage() {
                               >
                                 +
                               </button>
+                              <CollectionPickerPopover
+                                open={collectionPickerEntryId === activeCollectionEntryId}
+                                onOpenChange={(open) => {
+                                  if (open) {
+                                    void openCollectionPicker(activeCollectionEntryId);
+                                  } else if (
+                                    collectionPickerEntryId === activeCollectionEntryId
+                                  ) {
+                                    setCollectionPickerEntryId(null);
+                                  }
+                                }}
+                                collections={collections}
+                                selectedIds={selectedCollectionIds}
+                                lockedIds={
+                                  collectionPickerEntryId === activeCollectionEntryId
+                                    ? collectionMembershipsByEntryId[activeCollectionEntryId]?.map((membership) => membership.id) ?? []
+                                    : []
+                                }
+                                onToggleCollection={(collectionId) =>
+                                  setSelectedCollectionIds((current) =>
+                                    current.includes(collectionId)
+                                      ? current.filter((id) => id !== collectionId)
+                                      : [...current, collectionId]
+                                  )
+                                }
+                                onCreateCollection={handleCreateCollection}
+                                creating={creatingCollection}
+                                primaryActionLabel={COLLECTIONS_COPY.saveActionLabel}
+                                onPrimaryAction={() => void saveCollectionSelection()}
+                                busy={savingCollectionEntryId === activeCollectionEntryId}
+                                align="right"
+                                widthClassName="w-72"
+                                trigger={({ toggle }) => (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggle();
+                                    }}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-[var(--color-surface-muted)] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                                    aria-label="Add to collections"
+                                  >
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="1.7"
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden="true"
+                                    >
+                                      <path
+                                        d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.8L6 20V5.5a1 1 0 0 1 1-1Z"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      />
+                                    </svg>
+                                  </button>
+                                )}
+                              />
                               {canComment && getCommentCount(entry) > 0 ? (
                                 <button
                                   type="button"

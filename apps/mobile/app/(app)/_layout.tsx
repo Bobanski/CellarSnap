@@ -382,6 +382,10 @@ export default function AppLayout() {
         options={{ href: null }}
       />
       <Tabs.Screen
+        name="entries/collections/[collectionId]"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="profile/index"
         options={{ href: null }}
       />
