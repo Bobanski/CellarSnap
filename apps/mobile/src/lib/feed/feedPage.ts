@@ -1065,6 +1065,7 @@ export async function fetchFeedPage({
 
     return {
       ...entry,
+      entry_privacy: entryPrivacy,
       drinking_now: entry.drinking_now === true,
       author_name: getPublicProfileName(authorProfile),
       author_avatar_url: avatarPath ? signedUrlByPath.get(avatarPath) ?? null : null,

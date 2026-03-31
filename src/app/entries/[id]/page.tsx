@@ -22,6 +22,7 @@ import {
   buildEntryLocationDisplayLabel,
   buildEntryShareText,
   grapeProfileUrl,
+  normalizePrivacyLevel,
   producerProfileUrl,
   regionProfileUrl,
   type EntryCollectionSummary,
@@ -127,7 +128,8 @@ export default function EntryDetailPage() {
   const [fromCellarBanner, setFromCellarBanner] = useState(
     searchParams.get("from_cellar") === "1"
   );
-  const canShareEntry = entry?.entry_privacy === "public";
+  const canShareEntry =
+    entry ? normalizePrivacyLevel(entry.entry_privacy, "public") === "public" : false;
 
   // Reactions & comments state
   const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;

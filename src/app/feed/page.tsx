@@ -8,6 +8,7 @@ import {
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
 import {
+  buildEntryShareText,
   buildFeedEntryMetaFields as buildEntryMetaFields,
   COLLECTIONS_COPY,
   DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
@@ -22,6 +23,7 @@ import {
   FEED_TITLE_CIRCLE,
   type CollectionOption,
   type EntryCollectionSummary,
+  normalizePrivacyLevel,
   type FeedReportReason as ReportReason,
   EVENT_TYPE_LABELS,
   type EventTypeValue,
@@ -110,6 +112,31 @@ type FeedComment = {
   is_deleted?: boolean;
   replies: FeedReply[];
 };
+
+async function copyTextToClipboard(value: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "absolute";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textArea);
+  }
+}
 
 function buildFeedScoreBatchItems(entries: FeedEntry[]) {
   return entries
@@ -385,6 +412,8 @@ export default function FeedPage() {
     {}
   );
   const [postMenuEntryId, setPostMenuEntryId] = useState<string | null>(null);
+  const [postMenuView, setPostMenuView] = useState<"actions" | "report">("actions");
+  const [sharingEntryId, setSharingEntryId] = useState<string | null>(null);
   const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
   const [postReportReasonByEntryId, setPostReportReasonByEntryId] = useState<
     Record<string, ReportReason>
@@ -422,6 +451,12 @@ export default function FeedPage() {
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
+  }, [postMenuEntryId]);
+
+  useEffect(() => {
+    if (!postMenuEntryId) {
+      setPostMenuView("actions");
+    }
   }, [postMenuEntryId]);
 
   const toggleNotesExpanded = (entryId: string) => {
@@ -939,6 +974,98 @@ export default function FeedPage() {
     });
   };
 
+  const shareEntry = async (entry: FeedEntry) => {
+    if (!viewerUserId) {
+      setModerationNotice({
+        kind: "error",
+        message: "Sign in to share posts.",
+      });
+      return;
+    }
+
+    if (normalizePrivacyLevel(entry.entry_privacy, "public") !== "public") {
+      setModerationNotice({
+        kind: "error",
+        message: "Only public posts can be shared.",
+      });
+      return;
+    }
+
+    setSharingEntryId(entry.id);
+    setPostMenuEntryId(null);
+    setModerationNotice(null);
+
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ postId: entry.id }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+
+      if (!response.ok || typeof payload.url !== "string") {
+        setModerationNotice({
+          kind: "error",
+          message: payload.error ?? "Unable to create share link.",
+        });
+        return;
+      }
+
+      const shareUrl = payload.url;
+      const shareText = buildEntryShareText();
+
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            text: shareText,
+            url: shareUrl,
+          });
+          setModerationNotice({
+            kind: "success",
+            message: "Share link ready.",
+          });
+          return;
+        } catch (shareError) {
+          if (shareError instanceof Error && shareError.name === "AbortError") {
+            return;
+          }
+        }
+      }
+
+      const copied = await copyTextToClipboard(shareUrl);
+      if (copied) {
+        setModerationNotice({
+          kind: "success",
+          message: "Share link copied to clipboard.",
+        });
+      } else if (typeof window !== "undefined" && typeof window.prompt === "function") {
+        window.prompt("Copy share link", shareUrl);
+        setModerationNotice({
+          kind: "success",
+          message: "Share link ready. Copy it from the prompt.",
+        });
+      } else {
+        setModerationNotice({
+          kind: "error",
+          message: "Unable to copy link automatically.",
+        });
+      }
+    } catch {
+      setModerationNotice({
+        kind: "error",
+        message: "Unable to create share link.",
+      });
+    } finally {
+      setSharingEntryId(null);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -990,6 +1117,7 @@ export default function FeedPage() {
           setCommentErrorByEntryId({});
           setReactionPopupEntryId(null);
           setPostMenuEntryId(null);
+          setSharingEntryId(null);
           setReportingEntryId(null);
           setPostReportReasonByEntryId({});
           setCommentMenuKey(null);
@@ -1205,9 +1333,13 @@ export default function FeedPage() {
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              setPostMenuEntryId((current) =>
-                                current === entry.id ? null : entry.id
-                              );
+                              setPostMenuEntryId((current) => {
+                                const nextEntryId = current === entry.id ? null : entry.id;
+                                if (nextEntryId) {
+                                  setPostMenuView("actions");
+                                }
+                                return nextEntryId;
+                              });
                             }}
                             className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-tertiary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
                             aria-label="More actions"
@@ -1226,53 +1358,82 @@ export default function FeedPage() {
                                 aria-hidden="true"
                               />
                               <div
-                                className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
+                                className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] p-2 text-left shadow-lg"
                                 onClick={(event) => event.stopPropagation()}
                               >
-                              <div className="px-3 pb-1">
-                                <label
-                                  htmlFor={`post-report-reason-${entry.id}`}
-                                  className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]"
-                                >
-                                  Reason
-                                </label>
-                                <select
-                                  id={`post-report-reason-${entry.id}`}
-                                  value={postReportReasonByEntryId[entry.id] ?? DEFAULT_REPORT_REASON}
-                                  onChange={(event) =>
-                                    setPostReportReasonByEntryId((current) => ({
-                                      ...current,
-                                      [entry.id]: event.target.value as ReportReason,
-                                    }))
-                                  }
-                                  className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
-                                >
-                                  {REPORT_REASON_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <button
-                                type="button"
-                                disabled={reportingEntryId === entry.id}
-                                onClick={() =>
-                                  void reportContent({
-                                    targetType: "entry",
-                                    entryId: entry.id,
-                                    targetUserId: entry.user_id,
-                                    reason:
-                                      postReportReasonByEntryId[entry.id] ??
-                                      DEFAULT_REPORT_REASON,
-                                  })
-                                }
-                                className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
-                              >
-                                {reportingEntryId === entry.id
-                                  ? "Reporting..."
-                                  : "Report post"}
-                              </button>
+                                {postMenuView === "actions" ? (
+                                  <div className="flex flex-col gap-2">
+                                    {normalizePrivacyLevel(entry.entry_privacy, "public") === "public" ? (
+                                      <button
+                                        type="button"
+                                        disabled={sharingEntryId === entry.id || reportingEntryId === entry.id}
+                                        onClick={() => void shareEntry(entry)}
+                                        className="flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                      >
+                                        {sharingEntryId === entry.id ? "Sharing..." : "Share via text"}
+                                      </button>
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      disabled={sharingEntryId === entry.id || reportingEntryId === entry.id}
+                                      onClick={() => setPostMenuView("report")}
+                                      className="flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                    >
+                                      Report post
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between gap-2 px-1">
+                                      <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]">
+                                        Report post
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setPostMenuView("actions")}
+                                        className="text-[11px] font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]"
+                                      >
+                                        Back
+                                      </button>
+                                    </div>
+                                    <select
+                                      id={`post-report-reason-${entry.id}`}
+                                      value={postReportReasonByEntryId[entry.id] ?? DEFAULT_REPORT_REASON}
+                                      onChange={(event) =>
+                                        setPostReportReasonByEntryId((current) => ({
+                                          ...current,
+                                          [entry.id]: event.target.value as ReportReason,
+                                        }))
+                                      }
+                                      className="w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-2 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                                    >
+                                      {REPORT_REASON_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      disabled={reportingEntryId === entry.id}
+                                      onClick={() =>
+                                        void reportContent({
+                                          targetType: "entry",
+                                          entryId: entry.id,
+                                          targetUserId: entry.user_id,
+                                          reason:
+                                            postReportReasonByEntryId[entry.id] ??
+                                            DEFAULT_REPORT_REASON,
+                                        })
+                                      }
+                                      className="flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                    >
+                                      {reportingEntryId === entry.id
+                                        ? "Reporting..."
+                                        : "Submit report"}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </>
                           ) : null}

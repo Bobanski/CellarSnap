@@ -14,6 +14,7 @@ import {
   EVENT_TYPE_LABELS,
   type CollectionOption,
   type EntryCollectionSummary,
+  normalizePrivacyLevel,
   type EventTypeValue,
 } from "@cellarsnap/shared";
 import {
@@ -485,7 +486,7 @@ function FeedCard({
   } | null>(null);
   const hasMultiplePhotos = galleryPhotos.length > 1;
   const showCommentsControl = item.can_comment;
-  const canShare = item.entry_privacy === "public";
+  const canShare = normalizePrivacyLevel(item.entry_privacy, "public") === "public";
   const canSave = Boolean(viewerUserId);
   const canReport = Boolean(viewerUserId && viewerUserId !== item.user_id);
   const showEntryMenu = canShare || canReport;
