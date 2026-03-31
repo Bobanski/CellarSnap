@@ -13,7 +13,7 @@ import {
   StyleSheet,
   View
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import {
   compareEntryChronology,
@@ -81,6 +81,23 @@ type PrimaryGrape = {
   name: string;
   position: number;
 };
+
+const VISIBLE_CELLAR_TABS: EntryStatus[] = ["consumed", "cellaring", "events"];
+const COLLECTIONS_HEADER = {
+  eyebrow: "Collections",
+  title: "Your collections.",
+} as const;
+
+function normalizeRequestedEntryTab(
+  value: string | string[] | undefined
+): EntryStatus {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate === "cellaring" ||
+    candidate === "events" ||
+    candidate === "collections"
+    ? candidate
+    : "consumed";
+}
 type EntryPrimaryGrapeRow = {
   entry_id: string;
   position: number;
@@ -491,7 +508,10 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
 
 export default function EntriesScreen() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<EntryStatus>("consumed");
+  const params = useLocalSearchParams<{ tab?: string | string[] }>();
+  const [activeTab, setActiveTab] = useState<EntryStatus>(() =>
+    normalizeRequestedEntryTab(params.tab)
+  );
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [entries, setEntries] = useState<MobileEntry[]>([]);
   const [cellarEntries, setCellarEntries] = useState<CellarEntry[]>([]);
@@ -516,6 +536,7 @@ export default function EntriesScreen() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const isCollectionsView = activeTab === "collections";
   const isSearchActive = normalizedSearchQuery.length > 0;
   const isRangeFilterActive =
     (filterType === "rating" || filterType === "vintage") && (filterMin !== "" || filterMax !== "");
@@ -844,6 +865,10 @@ export default function EntriesScreen() {
   }, [loadEntries]);
 
   useEffect(() => {
+    setActiveTab(normalizeRequestedEntryTab(params.tab));
+  }, [params.tab]);
+
+  useEffect(() => {
     if (activeTab === "cellaring") {
       void loadCellarEntries();
     } else if (activeTab === "collections") {
@@ -904,44 +929,41 @@ export default function EntriesScreen() {
         <AppTopBar />
 
         <View style={styles.header}>
-          <AppText style={styles.eyebrow}>{ENTRIES_LIBRARY_HEADER.eyebrow}</AppText>
-          <AppText style={styles.title}>{ENTRIES_LIBRARY_HEADER.title}</AppText>
+          <AppText style={styles.eyebrow}>
+            {isCollectionsView
+              ? COLLECTIONS_HEADER.eyebrow
+              : ENTRIES_LIBRARY_HEADER.eyebrow}
+          </AppText>
+          <AppText style={styles.title}>
+            {isCollectionsView
+              ? COLLECTIONS_HEADER.title
+              : ENTRIES_LIBRARY_HEADER.title}
+          </AppText>
         </View>
 
-        <View style={styles.tabToggle}>
-          <Pressable
-            style={[styles.tabToggleBtn, activeTab === "consumed" ? styles.tabToggleBtnActive : null]}
-            onPress={() => setActiveTab("consumed")}
-          >
-            <AppText style={[styles.tabToggleText, activeTab === "consumed" ? styles.tabToggleTextActive : null]}>
-              {CELLAR_TAB_LABELS.consumed}
-            </AppText>
-          </Pressable>
-          <Pressable
-            style={[styles.tabToggleBtn, activeTab === "cellaring" ? styles.tabToggleBtnActive : null]}
-            onPress={() => setActiveTab("cellaring")}
-          >
-            <AppText style={[styles.tabToggleText, activeTab === "cellaring" ? styles.tabToggleTextActive : null]}>
-              {CELLAR_TAB_LABELS.cellaring}
-            </AppText>
-          </Pressable>
-          <Pressable
-            style={[styles.tabToggleBtn, activeTab === "events" ? styles.tabToggleBtnActive : null]}
-            onPress={() => setActiveTab("events")}
-          >
-            <AppText style={[styles.tabToggleText, activeTab === "events" ? styles.tabToggleTextActive : null]}>
-              {CELLAR_TAB_LABELS.events}
-            </AppText>
-          </Pressable>
-          <Pressable
-            style={[styles.tabToggleBtn, activeTab === "collections" ? styles.tabToggleBtnActive : null]}
-            onPress={() => setActiveTab("collections")}
-          >
-            <AppText style={[styles.tabToggleText, activeTab === "collections" ? styles.tabToggleTextActive : null]}>
-              {CELLAR_TAB_LABELS.collections}
-            </AppText>
-          </Pressable>
-        </View>
+        {isCollectionsView ? null : (
+          <View style={styles.tabToggle}>
+            {VISIBLE_CELLAR_TABS.map((tab) => (
+              <Pressable
+                key={tab}
+                style={[
+                  styles.tabToggleBtn,
+                  activeTab === tab ? styles.tabToggleBtnActive : null,
+                ]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <AppText
+                  style={[
+                    styles.tabToggleText,
+                    activeTab === tab ? styles.tabToggleTextActive : null,
+                  ]}
+                >
+                  {CELLAR_TAB_LABELS[tab]}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         {activeTab === "cellaring" ? (
           isCellarLoading ? (

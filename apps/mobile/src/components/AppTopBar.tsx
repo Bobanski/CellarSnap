@@ -805,6 +805,23 @@ export function AppTopBar() {
                   style={menuStyles.menuItem}
                   onPress={() => {
                     setMenuOpen(false);
+                    router.push({
+                      pathname: "/(app)/entries",
+                      params: { tab: "collections" },
+                    } as Parameters<typeof router.push>[0]);
+                  }}
+                >
+                  <Feather
+                    name="bookmark"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>My Collections</AppText>
+                </Pressable>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
                     router.push("/(app)/friends");
                   }}
                 >

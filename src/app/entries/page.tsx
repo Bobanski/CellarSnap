@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
 import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
@@ -65,6 +65,18 @@ type EntryListItem = WineEntryWithUrls & {
 type EventHistoryEntry = EntryListItem & {
   entry_group_id: string;
 };
+
+const VISIBLE_CELLAR_TABS: CellarTab[] = ["consumed", "cellaring", "events"];
+const COLLECTIONS_HEADER = {
+  eyebrow: "Collections",
+  title: "Your collections.",
+} as const;
+
+function normalizeRequestedCellarTab(value: string | null): CellarTab {
+  return value === "cellaring" || value === "events" || value === "collections"
+    ? value
+    : "consumed";
+}
 
 async function attachEntryCollections<T extends { id: string }>(
   items: T[]
@@ -955,7 +967,11 @@ function CellarView() {
 }
 
 export default function EntriesPage() {
-  const [activeTab, setActiveTab] = useState<CellarTab>("consumed");
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<CellarTab>(() =>
+    normalizeRequestedCellarTab(requestedTab)
+  );
   const [entries, setEntries] = useState<EntryListItem[]>([]);
   const [collections, setCollections] = useState<UserCollectionSummary[]>([]);
   const [collectionsLoading, setCollectionsLoading] = useState(false);
@@ -987,6 +1003,7 @@ export default function EntriesPage() {
   const isRangeFilterActive =
     (filterType === "rating" || filterType === "vintage") &&
     (filterMin !== "" || filterMax !== "");
+  const isCollectionsView = activeTab === "collections";
   const isFilterActive =
     filterType === "country" ? filterValue !== "" : isRangeFilterActive;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -1188,6 +1205,10 @@ export default function EntriesPage() {
   }, []);
 
   useEffect(() => {
+    setActiveTab(normalizeRequestedCellarTab(requestedTab));
+  }, [requestedTab]);
+
+  useEffect(() => {
     if (activeTab !== "collections" || collections.length > 0) {
       return;
     }
@@ -1314,7 +1335,9 @@ export default function EntriesPage() {
                 color: "var(--color-accent-secondary)",
               }}
             >
-              {ENTRIES_LIBRARY_HEADER.eyebrow}
+              {isCollectionsView
+                ? COLLECTIONS_HEADER.eyebrow
+                : ENTRIES_LIBRARY_HEADER.eyebrow}
             </span>
             <h1
               className="mt-1"
@@ -1326,27 +1349,31 @@ export default function EntriesPage() {
                 lineHeight: 1.2,
               }}
             >
-              {ENTRIES_LIBRARY_HEADER.title}
+              {isCollectionsView
+                ? COLLECTIONS_HEADER.title
+                : ENTRIES_LIBRARY_HEADER.title}
             </h1>
           </header>
 
           {/* ─── Consumed / Cellar tab toggle ─── */}
-          <div className="flex items-center justify-center gap-2">
-            {(["consumed", "cellaring", "events", "collections"] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  activeTab === tab
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                {CELLAR_TAB_LABELS[tab]}
-              </button>
-            ))}
-          </div>
+          {isCollectionsView ? null : (
+            <div className="flex items-center justify-center gap-2">
+              {VISIBLE_CELLAR_TABS.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    activeTab === tab
+                      ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                      : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
+                  }`}
+                >
+                  {CELLAR_TAB_LABELS[tab]}
+                </button>
+              ))}
+            </div>
+          )}
 
           {activeTab === "cellaring" ? (
             <CellarView />
