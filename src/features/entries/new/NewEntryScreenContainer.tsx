@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
+import CollectionPickerPopover, {
+  CollectionFieldTrigger,
+} from "@/components/collections/CollectionPickerPopover";
 import DatePicker from "@/components/DatePicker";
 import PrivacyBadge from "@/components/PrivacyBadge";
 import PrimaryGrapeSelector from "@/components/PrimaryGrapeSelector";
@@ -50,6 +53,7 @@ import {
   NEW_ENTRY_SINGLE_BOTTLE_COPY,
   NEW_ENTRY_UPLOAD_COPY,
   EVENT_TYPE_OPTIONS,
+  type CollectionOption,
 } from "@shared";
 import {
   buildResolvedPhotoTypeMap,
@@ -75,6 +79,11 @@ import {
 } from "@shared/entry-flow";
 import { buildOriginalPhotoPath } from "@/lib/entryFlow/web/photoPath";
 import { submitPostSaveSurveyRequest } from "@/lib/entryFlow/web/postSaveSurveyClient";
+import {
+  addEntryToCollectionsClient,
+  createUserCollectionClient,
+  fetchUserCollectionsClient,
+} from "@/lib/collections/client";
 import { snapViewportToTop } from "@/lib/ui/overlayPresentation";
 
 type NewEntryForm = {
@@ -263,6 +272,10 @@ export default function NewEntryPage() {
     { id: string; display_name: string | null; email: string | null; tasting_count: number }[]
   >([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [collectionsPickerOpen, setCollectionsPickerOpen] = useState(false);
+  const [creatingCollection, setCreatingCollection] = useState(false);
   const [friendSearch, setFriendSearch] = useState("");
   const [selectedPrimaryGrapes, setSelectedPrimaryGrapes] = useState<
     PrimaryGrapeSelection[]
@@ -478,8 +491,22 @@ export default function NewEntryPage() {
       }
     };
 
+    const loadCollections = async () => {
+      const result = await fetchUserCollectionsClient();
+      if (!result.ok || !isMounted) {
+        return;
+      }
+      setCollections(
+        result.collections.map((collection) => ({
+          id: collection.id,
+          name: collection.name,
+        }))
+      );
+    };
+
     loadProfile();
     loadUsers();
+    void loadCollections();
 
     return () => {
       isMounted = false;
@@ -1565,6 +1592,31 @@ export default function NewEntryPage() {
     };
   };
 
+  const handleCreateCollection = useCallback(async (name: string) => {
+    setCreatingCollection(true);
+    const result = await createUserCollectionClient(name);
+    setCreatingCollection(false);
+
+    if (!result.ok) {
+      if (typeof window !== "undefined") {
+        window.alert(result.errorMessage);
+      }
+      return;
+    }
+
+    setCollections((current) => {
+      if (current.some((collection) => collection.id === result.collection.id)) {
+        return current;
+      }
+      return [...current, result.collection];
+    });
+    setSelectedCollectionIds((current) =>
+      current.includes(result.collection.id)
+        ? current
+        : [...current, result.collection.id]
+    );
+  }, []);
+
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -1757,6 +1809,19 @@ export default function NewEntryPage() {
       step: "survey",
       surveyAnswers: null,
     });
+
+    if (selectedCollectionIds.length > 0) {
+      void addEntryToCollectionsClient({
+        entryId: entry.id,
+        collectionIds: selectedCollectionIds,
+      }).then((collectionResult) => {
+        if (!collectionResult.ok && typeof window !== "undefined") {
+          window.alert(
+            `The entry was saved, but we couldn't add it to your collections. ${collectionResult.errorMessage}`
+          );
+        }
+      });
+    }
   });
 
   const applyAutofill = async (data: {
@@ -4263,6 +4328,40 @@ export default function NewEntryPage() {
                       </div>
                     );
                   })()}
+                </details>
+
+                <details className={collapsibleSectionClassName}>
+                  <summary className={collapsibleSummaryClassName}>
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.collectionsTitle}
+                  </summary>
+                  <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
+                    {NEW_ENTRY_SINGLE_BOTTLE_COPY.collectionsDescription}
+                  </p>
+                  <div className="mt-3">
+                    <CollectionPickerPopover
+                      open={collectionsPickerOpen}
+                      onOpenChange={setCollectionsPickerOpen}
+                      collections={collections}
+                      selectedIds={selectedCollectionIds}
+                      onToggleCollection={(collectionId) =>
+                        setSelectedCollectionIds((current) =>
+                          current.includes(collectionId)
+                            ? current.filter((id) => id !== collectionId)
+                            : [...current, collectionId]
+                        )
+                      }
+                      onCreateCollection={handleCreateCollection}
+                      creating={creatingCollection}
+                      trigger={({ toggle }) => (
+                        <CollectionFieldTrigger
+                          description=""
+                          collections={collections}
+                          selectedIds={selectedCollectionIds}
+                          onPress={toggle}
+                        />
+                      )}
+                    />
+                  </div>
                 </details>
 
                 <details className={collapsibleSectionClassName}>

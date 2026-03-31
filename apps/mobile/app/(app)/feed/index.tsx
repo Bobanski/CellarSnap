@@ -1,6 +1,7 @@
 import {
   buildEntryShareText,
   buildFeedEntryMetaFields as buildEntryMetaFields,
+  COLLECTIONS_COPY,
   FEED_EYEBROW,
   FEED_LOAD_MORE_LABEL,
   FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
@@ -11,6 +12,8 @@ import {
   getFeedDisplayRatingLabel as getDisplayRating,
   getFeedEmptyStateMessage,
   EVENT_TYPE_LABELS,
+  type CollectionOption,
+  type EntryCollectionSummary,
   type EventTypeValue,
 } from "@cellarsnap/shared";
 import {
@@ -21,6 +24,7 @@ import {
   useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   PixelRatio,
@@ -32,8 +36,10 @@ import {
   View
 } from "react-native";
 import * as SMS from "expo-sms";
+import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { CollectionPickerModal } from "@/src/components/collections/CollectionPickerModal";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import {
@@ -48,6 +54,12 @@ import {
   type MobileFeedEntry,
   type QprLevel,
 } from "@/src/lib/feed/feedPage";
+import {
+  addEntryToUserCollections,
+  createUserCollection,
+  fetchEntryCollections,
+  fetchUserCollections,
+} from "@/src/lib/api/collections";
 import {
   REPORT_REASON_OPTIONS,
   useFeedInteractions,
@@ -198,7 +210,7 @@ function GroupedPostGallery({
       if (!scrollRef.current || photoFrameWidth <= 0) return;
       scrollRef.current.scrollTo({ x: clamped * photoFrameWidth, animated });
     },
-    [slides.length, photoFrameWidth]
+    [onIndexChange, photoFrameWidth, slides.length]
   );
 
   const handleTap = useCallback(() => {
@@ -377,6 +389,7 @@ function FeedCard({
   reportMenuOpen,
   reportBusy,
   shareBusy,
+  savingCollectionEntryId,
   notesExpanded,
   onToggleNotes,
   commentsExpanded,
@@ -401,6 +414,7 @@ function FeedCard({
   onToggleReaction,
   onToggleReportMenu,
   onSharePost,
+  onSavePost,
   onReportPost,
   onToggleCommentMenu,
   onReportComment,
@@ -414,6 +428,7 @@ function FeedCard({
   reportMenuOpen: boolean;
   reportBusy: boolean;
   shareBusy: boolean;
+  savingCollectionEntryId: string | null;
   notesExpanded: boolean;
   onToggleNotes: () => void;
   commentsExpanded: boolean;
@@ -438,6 +453,7 @@ function FeedCard({
   onToggleReaction: (emoji: string) => void;
   onToggleReportMenu: () => void;
   onSharePost: () => void;
+  onSavePost: (entryId: string) => void;
   onReportPost: () => void;
   onToggleCommentMenu: (commentId: string) => void;
   onReportComment: (commentId: string, targetUserId: string) => void;
@@ -470,6 +486,7 @@ function FeedCard({
   const hasMultiplePhotos = galleryPhotos.length > 1;
   const showCommentsControl = item.can_comment;
   const canShare = item.entry_privacy === "public";
+  const canSave = Boolean(viewerUserId);
   const canReport = Boolean(viewerUserId && viewerUserId !== item.user_id);
   const showEntryMenu = canShare || canReport;
   const clampedActivePhotoIndex = Math.max(
@@ -479,6 +496,12 @@ function FeedCard({
   const activePhoto =
     galleryPhotos[clampedActivePhotoIndex] ?? null;
   const authorWithCompanionsLabel = useMemo(() => buildAuthorWithCompanionsLabel(item), [item]);
+  const activeCollectionEntryId =
+    isGrouped && groupSlides.length > 0
+      ? groupSlides[Math.max(0, Math.min(groupSlides.length - 1, galleryActiveIndex))]?.entry_id ??
+        item.id
+      : item.id;
+  const saveBusy = savingCollectionEntryId === activeCollectionEntryId;
 
   const beginGallerySwipe = useCallback(() => {
     if (swipeActiveRef.current) {
@@ -1038,6 +1061,25 @@ function FeedCard({
               />
             </View>
           </Pressable>
+          {canSave ? (
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation();
+                onSavePost(activeCollectionEntryId);
+              }}
+              style={[
+                styles.reactionAddButton,
+                saveBusy ? styles.reactionAddButtonDisabled : null,
+              ]}
+              disabled={saveBusy}
+            >
+              <Feather
+                name="bookmark"
+                size={15}
+                color={saveBusy ? colors.textSecondary : colors.textPrimary}
+              />
+            </Pressable>
+          ) : null}
         </View>
       </Pressable>
 
@@ -1287,6 +1329,16 @@ export default function FeedScreen() {
   const [isGallerySwipeActive, setIsGallerySwipeActive] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [sharingEntryId, setSharingEntryId] = useState<string | null>(null);
+  const [savingCollectionEntryId, setSavingCollectionEntryId] = useState<string | null>(null);
+  const [collections, setCollections] = useState<CollectionOption[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [collectionMembershipsByEntryId, setCollectionMembershipsByEntryId] = useState<
+    Record<string, EntryCollectionSummary[]>
+  >({});
+  const [collectionPickerOpen, setCollectionPickerOpen] = useState(false);
+  const [collectionPickerEntryId, setCollectionPickerEntryId] = useState<string | null>(null);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const {
     closeReportMenu,
     closePendingReport,
@@ -1439,6 +1491,127 @@ export default function FeedScreen() {
     [closeReportMenu, sharingEntryId]
   );
 
+  const ensureCollectionsLoaded = useCallback(async () => {
+    const result = await fetchUserCollections();
+    if (!result.ok) {
+      throw new Error(result.errorMessage);
+    }
+    setCollections(
+      result.collections.map((collection) => ({
+        id: collection.id,
+        name: collection.name,
+      }))
+    );
+    return result.collections;
+  }, []);
+
+  const openCollectionsForEntry = useCallback(
+    async (entryId: string) => {
+      setErrorMessage(null);
+      closeReportMenu();
+      setIsLoadingCollections(true);
+
+      try {
+        const [collectionResult, membershipResult] = await Promise.all([
+          ensureCollectionsLoaded(),
+          fetchEntryCollections([entryId]),
+        ]);
+
+        const memberships = membershipResult.ok
+          ? membershipResult.memberships[entryId] ?? []
+          : collectionMembershipsByEntryId[entryId] ?? [];
+
+        if (!membershipResult.ok) {
+          setErrorMessage(membershipResult.errorMessage);
+        }
+
+        setCollections(
+          collectionResult.map((collection) => ({
+            id: collection.id,
+            name: collection.name,
+          }))
+        );
+        setCollectionMembershipsByEntryId((current) => ({
+          ...current,
+          [entryId]: memberships,
+        }));
+        setSelectedCollectionIds(memberships.map((membership) => membership.id));
+        setCollectionPickerEntryId(entryId);
+        setCollectionPickerOpen(true);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error ? error.message : "Unable to load collections."
+        );
+      } finally {
+        setIsLoadingCollections(false);
+      }
+    },
+    [closeReportMenu, collectionMembershipsByEntryId, ensureCollectionsLoaded]
+  );
+
+  const handleCreateCollection = useCallback(async (name: string) => {
+    setIsCreatingCollection(true);
+    const result = await createUserCollection(name);
+    setIsCreatingCollection(false);
+
+    if (!result.ok) {
+      Alert.alert("Unable to create collection", result.errorMessage);
+      return;
+    }
+
+    setCollections((current) => {
+      if (current.some((collection) => collection.id === result.collection.id)) {
+        return current;
+      }
+      return [...current, result.collection];
+    });
+    setSelectedCollectionIds((current) =>
+      current.includes(result.collection.id)
+        ? current
+        : [...current, result.collection.id]
+    );
+  }, []);
+
+  const saveCollectionsForEntry = useCallback(async () => {
+    if (!collectionPickerEntryId || savingCollectionEntryId === collectionPickerEntryId) {
+      return;
+    }
+
+    const lockedCollectionIds =
+      collectionMembershipsByEntryId[collectionPickerEntryId]?.map((membership) => membership.id) ?? [];
+
+    setSavingCollectionEntryId(collectionPickerEntryId);
+    const result = await addEntryToUserCollections({
+      entryId: collectionPickerEntryId,
+      collectionIds: Array.from(new Set([...lockedCollectionIds, ...selectedCollectionIds])),
+    });
+    setSavingCollectionEntryId(null);
+
+    if (!result.ok) {
+      Alert.alert("Unable to save", result.errorMessage);
+      return;
+    }
+
+    setCollectionMembershipsByEntryId((current) => ({
+      ...current,
+      [collectionPickerEntryId]: result.memberships,
+    }));
+    setCollectionPickerOpen(false);
+    Alert.alert(
+      "Saved to collections",
+      result.addedCollectionIds.length > 0
+        ? `Added to ${result.addedCollectionIds.length} collection${
+            result.addedCollectionIds.length === 1 ? "" : "s"
+          }.`
+        : "Already saved to the selected collection(s)."
+    );
+  }, [
+    collectionMembershipsByEntryId,
+    collectionPickerEntryId,
+    savingCollectionEntryId,
+    selectedCollectionIds,
+  ]);
+
   const loadMore = async () => {
     if (!viewerUserId || isLoadingMore || !hasMore || !nextCursor) {
       return;
@@ -1582,6 +1755,7 @@ export default function FeedScreen() {
                   reportMenuOpen={interaction.reportMenuOpen}
                   reportBusy={interaction.reportBusy}
                   shareBusy={sharingEntryId === entry.id}
+                  savingCollectionEntryId={savingCollectionEntryId}
                   notesExpanded={interaction.notesExpanded}
                   onToggleNotes={() => toggleNotes(entry.id)}
                   commentsExpanded={interaction.commentsExpanded}
@@ -1610,6 +1784,7 @@ export default function FeedScreen() {
                   onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
                   onToggleReportMenu={() => toggleReportMenu(entry.id)}
                   onSharePost={() => void shareEntryByText(entry.id)}
+                  onSavePost={(entryId) => void openCollectionsForEntry(entryId)}
                   onReportPost={() =>
                     openReportReasonSheet({
                       targetType: "entry",
@@ -1661,6 +1836,37 @@ export default function FeedScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
+
+      <CollectionPickerModal
+        visible={collectionPickerOpen}
+        title={COLLECTIONS_COPY.pickerTitle}
+        subtitle={
+          isLoadingCollections
+            ? "Loading your collections..."
+            : "Pick one or more collections for this wine."
+        }
+        collections={collections}
+        selectedIds={selectedCollectionIds}
+        lockedIds={
+          collectionPickerEntryId
+            ? collectionMembershipsByEntryId[collectionPickerEntryId]?.map((membership) => membership.id) ?? []
+            : []
+        }
+        onToggleCollection={(collectionId) =>
+          setSelectedCollectionIds((current) =>
+            current.includes(collectionId)
+              ? current.filter((id) => id !== collectionId)
+              : [...current, collectionId]
+          )
+        }
+        onClose={() => setCollectionPickerOpen(false)}
+        onCreateCollection={handleCreateCollection}
+        creating={isCreatingCollection}
+        primaryActionLabel={COLLECTIONS_COPY.saveActionLabel}
+        onPrimaryAction={() => void saveCollectionsForEntry()}
+        primaryActionDisabled={isLoadingCollections}
+        busy={savingCollectionEntryId === collectionPickerEntryId}
+      />
 
       <Modal
         visible={Boolean(pendingReport)}

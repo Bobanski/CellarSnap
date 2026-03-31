@@ -3,6 +3,7 @@ import {
   PRIVACY_LEVEL_VALUES,
   type PrivacyLevel,
 } from "./entries";
+import { COLLECTIONS_COPY } from "./collections";
 
 export type NewEntryUploadPhotoType =
   | "label"
@@ -44,6 +45,8 @@ export const NEW_ENTRY_SINGLE_BOTTLE_COPY = {
   tastedWithDescription: "Tag friends who were with you.",
   searchFriendsLabel: "Search friends",
   searchFriendsPlaceholder: "Search friends...",
+  collectionsTitle: COLLECTIONS_COPY.sectionTitle,
+  collectionsDescription: COLLECTIONS_COPY.fieldDescription,
   advancedNotesTitle: "Advanced notes",
   advancedNotesDescription: "Optional structure for deeper tasting notes.",
   visibilityTitle: "Visibility & interaction",

@@ -17,12 +17,14 @@ import {
 } from "@/lib/algorithm/api";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import {
+  COLLECTIONS_COPY,
   buildEntryGoogleMapsLocationUrl,
   buildEntryLocationDisplayLabel,
   buildEntryShareText,
   grapeProfileUrl,
   producerProfileUrl,
   regionProfileUrl,
+  type EntryCollectionSummary,
 } from "@shared";
 import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
@@ -30,6 +32,7 @@ import RatingBadge from "@/components/RatingBadge";
 import ScoreBreakdown from "@/components/ScoreBreakdown";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import WineMatchScore from "@/components/WineMatchScore";
+import { fetchEntryCollectionsClient } from "@/lib/collections/client";
 import type { EntryPhoto, WineEntryWithUrls, WineType } from "@/types/wine";
 
 type EntryDetail = WineEntryWithUrls & {
@@ -120,6 +123,7 @@ export default function EntryDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareToast, setShareToast] = useState<ShareToast | null>(null);
+  const [entryCollections, setEntryCollections] = useState<EntryCollectionSummary[]>([]);
   const [fromCellarBanner, setFromCellarBanner] = useState(
     searchParams.get("from_cellar") === "1"
   );
@@ -238,6 +242,30 @@ export default function EntryDetailPage() {
     };
 
     loadEntry();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [entryId]);
+
+  useEffect(() => {
+    if (!entryId) {
+      setEntryCollections([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadCollections = async () => {
+      const result = await fetchEntryCollectionsClient([entryId]);
+      if (!isMounted || !result.ok) {
+        return;
+      }
+
+      setEntryCollections(result.memberships[entryId] ?? []);
+    };
+
+    void loadCollections();
 
     return () => {
       isMounted = false;
@@ -1297,6 +1325,30 @@ export default function EntryDetailPage() {
                 <p className="text-sm text-[var(--color-text-primary)]">
                   {entry.notes || "Not set"}
                 </p>
+              </div>
+            ) : null}
+
+            {entryCollections.length > 0 ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                  {COLLECTIONS_COPY.sectionTitle}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {entryCollections.map((collection) => (
+                    <Link
+                      key={collection.id}
+                      href={`/entries/collections/${collection.id}`}
+                      className="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold transition hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)]"
+                      style={{
+                        borderColor: "var(--color-border-strong)",
+                        background: "var(--color-surface-tinted)",
+                        color: "var(--color-text-primary)",
+                      }}
+                    >
+                      {collection.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
             ) : null}
 

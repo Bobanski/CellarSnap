@@ -52,9 +52,15 @@ import {
   type EntryLibrarySortOrder as SortOrder,
   type EntryLibraryViewMode as LibraryViewMode,
   type EventTypeValue,
+  type EntryCollectionSummary,
   type QprLevel,
+  type UserCollectionSummary,
   type WineEntrySummary,
 } from "@cellarsnap/shared";
+import {
+  fetchEntryCollections,
+  fetchUserCollections,
+} from "@/src/lib/api/collections";
 import { fetchCellarEntries, drinkFromCellar } from "@/src/lib/api/cellar";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -110,6 +116,7 @@ type MobileEntry = WineEntrySummary & {
   entry_group_id?: string | null;
   entry_group?: MobileEntryGroup | null;
   group_slides?: MobileGroupedEntrySlide[] | null;
+  collections?: EntryCollectionSummary[];
 };
 
 type EntryGroup = {
@@ -134,6 +141,36 @@ type EventHistoryEntry = {
   group_slides: MobileGroupedEntrySlide[];
 };
 
+function CollectionListCard({ item }: { item: UserCollectionSummary }) {
+  return (
+    <Pressable
+      style={styles.collectionCard}
+      onPress={() => router.push(`/(app)/entries/collections/${item.id}`)}
+    >
+      <View style={styles.collectionCover}>
+        {item.cover_image_url ? (
+          <Image
+            source={{ uri: item.cover_image_url }}
+            style={styles.collectionCoverImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <AppText style={styles.collectionCoverPlaceholder}>No cover</AppText>
+        )}
+      </View>
+
+      <View style={styles.collectionCardCopy}>
+        <AppText style={styles.collectionCardTitle}>{item.name}</AppText>
+        <AppText style={styles.collectionCardSubtitle}>
+          {item.item_count} wine{item.item_count === 1 ? "" : "s"}
+        </AppText>
+      </View>
+
+      <Feather name="chevron-right" size={18} color={colors.textSecondary} />
+    </Pressable>
+  );
+}
+
 function formatConsumedDate(raw: string) {
   const date = new Date(`${raw}T00:00:00`);
   if (Number.isNaN(date.getTime())) return raw;
@@ -150,6 +187,13 @@ function normalizeVariety(
     return variety[0] ?? null;
   }
   return variety;
+}
+
+function getPrimaryCollectionLabel(collections?: EntryCollectionSummary[]) {
+  if (!collections || collections.length === 0) {
+    return null;
+  }
+  return collections.length > 1 ? `${collections[0]?.name ?? ""}...` : collections[0]?.name ?? null;
 }
 
 function Pill({
@@ -173,6 +217,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
   const producer = hideProducer ? null : (item.producer?.trim() ?? null);
   const vintage = item.vintage?.trim() ?? null;
   const displayRating = getEntryListDisplayRating(item.rating);
+  const collectionLabel = getPrimaryCollectionLabel(item.collections);
   return (
     <Pressable
       style={styles.entryCard}
@@ -193,6 +238,9 @@ function EntryCard({ item }: { item: MobileEntry }) {
               {producer ?? ""}
               {producer && vintage ? ` · ${vintage}` : vintage ?? ""}
             </AppText>
+          ) : null}
+          {collectionLabel ? (
+            <AppText style={styles.collectionTag}>{collectionLabel}</AppText>
           ) : null}
         </View>
         <View style={styles.entryMeta}>
@@ -232,6 +280,7 @@ function CellarEntryCard({
   const producer = item.producer?.trim() ?? null;
   const vintage = item.vintage?.trim() ?? null;
   const formatLabel = getBottleFormatLabel(item.bottle_format);
+  const collectionLabel = getPrimaryCollectionLabel(item.collections);
 
   return (
     <Pressable
@@ -253,6 +302,9 @@ function CellarEntryCard({
               {producer ?? ""}
               {producer && vintage ? ` · ${vintage}` : vintage ?? ""}
             </AppText>
+          ) : null}
+          {collectionLabel ? (
+            <AppText style={styles.collectionTag}>{collectionLabel}</AppText>
           ) : null}
           <View style={styles.cellarMetaRow}>
             <View style={styles.quantityBadge}>
@@ -443,8 +495,10 @@ export default function EntriesScreen() {
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [entries, setEntries] = useState<MobileEntry[]>([]);
   const [cellarEntries, setCellarEntries] = useState<CellarEntry[]>([]);
+  const [collectionsList, setCollectionsList] = useState<UserCollectionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCellarLoading, setIsCellarLoading] = useState(false);
+  const [isCollectionsLoading, setIsCollectionsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDrinking, setIsDrinking] = useState(false);
@@ -587,6 +641,55 @@ export default function EntriesScreen() {
       }));
   }, [entries]);
 
+  const attachCollectionMemberships = useCallback(
+    async <T extends { id: string },>(
+      items: T[]
+    ): Promise<Array<T & { collections?: EntryCollectionSummary[] }>> => {
+      if (items.length === 0) {
+        return items;
+      }
+
+      const result = await fetchEntryCollections(items.map((item) => item.id));
+      if (!result.ok) {
+        return items;
+      }
+
+      return items.map((item) => ({
+        ...item,
+        collections: result.memberships[item.id] ?? [],
+      }));
+    },
+    []
+  );
+
+  const loadCollections = useCallback(
+    async (refresh = false) => {
+      if (!user) {
+        return;
+      }
+
+      if (refresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsCollectionsLoading(true);
+      }
+      setErrorMessage(null);
+
+      const result = await fetchUserCollections();
+      if (result.ok) {
+        setCollectionsList(result.collections);
+      } else {
+        setErrorMessage(result.errorMessage);
+      }
+
+      setIsCollectionsLoading(false);
+      if (refresh) {
+        setIsRefreshing(false);
+      }
+    },
+    [user]
+  );
+
   const loadEntries = useCallback(
     async (refresh = false) => {
       if (!user) return;
@@ -663,19 +766,19 @@ export default function EntriesScreen() {
             }),
           ]);
 
-          setEntries(
-            rows.map((entry) => {
-              const groupedPost = groupedPostByEntryId.get(entry.id);
-              return {
-                ...entry,
-                label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
-                primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
-                entry_group_id: entry.entry_group_id ?? null,
-                entry_group: groupedPost?.entry_group ?? null,
-                group_slides: groupedPost?.group_slides ?? null,
-              };
-            })
-          );
+          const hydratedEntries = rows.map((entry) => {
+            const groupedPost = groupedPostByEntryId.get(entry.id);
+            return {
+              ...entry,
+              label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
+              primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
+              entry_group_id: entry.entry_group_id ?? null,
+              entry_group: groupedPost?.entry_group ?? null,
+              group_slides: groupedPost?.group_slides ?? null,
+            };
+          });
+
+          setEntries(await attachCollectionMemberships(hydratedEntries));
         } else {
           setEntries([]);
         }
@@ -684,7 +787,7 @@ export default function EntriesScreen() {
         setIsRefreshing(false);
       }
     },
-    [user]
+    [attachCollectionMemberships, user]
   );
 
   const loadCellarEntries = useCallback(
@@ -695,13 +798,13 @@ export default function EntriesScreen() {
 
       const result = await fetchCellarEntries();
       if (result.ok) {
-        setCellarEntries(result.entries);
+        setCellarEntries(await attachCollectionMemberships(result.entries));
       } else {
         setErrorMessage(result.errorMessage);
       }
       setIsCellarLoading(false);
     },
-    [user]
+    [attachCollectionMemberships, user]
   );
 
   const handleDrink = useCallback(
@@ -743,8 +846,10 @@ export default function EntriesScreen() {
   useEffect(() => {
     if (activeTab === "cellaring") {
       void loadCellarEntries();
+    } else if (activeTab === "collections") {
+      void loadCollections();
     }
-  }, [activeTab, loadCellarEntries]);
+  }, [activeTab, loadCellarEntries, loadCollections]);
 
   const updateFilterType = (newFilterType: FilterType) => {
     setFilterType(newFilterType);
@@ -780,7 +885,21 @@ export default function EntriesScreen() {
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { if (activeTab === "cellaring") { void loadCellarEntries(true); } else { void loadEntries(true); } }} tintColor={colors.grenache} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => {
+              if (activeTab === "cellaring") {
+                void loadCellarEntries(true);
+              } else if (activeTab === "collections") {
+                void loadCollections(true);
+              } else {
+                void loadEntries(true);
+              }
+            }}
+            tintColor={colors.grenache}
+          />
+        }
       >
         <AppTopBar />
 
@@ -812,6 +931,14 @@ export default function EntriesScreen() {
           >
             <AppText style={[styles.tabToggleText, activeTab === "events" ? styles.tabToggleTextActive : null]}>
               {CELLAR_TAB_LABELS.events}
+            </AppText>
+          </Pressable>
+          <Pressable
+            style={[styles.tabToggleBtn, activeTab === "collections" ? styles.tabToggleBtnActive : null]}
+            onPress={() => setActiveTab("collections")}
+          >
+            <AppText style={[styles.tabToggleText, activeTab === "collections" ? styles.tabToggleTextActive : null]}>
+              {CELLAR_TAB_LABELS.collections}
             </AppText>
           </Pressable>
         </View>
@@ -1033,6 +1160,27 @@ export default function EntriesScreen() {
               <View style={styles.stack}>{sortedEntries.map((item) => <EntryCard key={item.id} item={item} />)}</View>
             )}
           </>
+        ) : activeTab === "collections" ? (
+          <>
+            {isCollectionsLoading ? (
+              <View style={styles.cellarLoadingWrap}>
+                <ActivityIndicator color={colors.grenache} />
+              </View>
+            ) : errorMessage ? (
+              <AppText style={styles.errorText}>{errorMessage}</AppText>
+            ) : collectionsList.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.collectionsEmptyTitle}</AppText>
+                <AppText style={styles.emptyText}>{CELLAR_COPY.collectionsEmptySubtitle}</AppText>
+              </View>
+            ) : (
+              <View style={styles.stack}>
+                {collectionsList.map((collection) => (
+                  <CollectionListCard key={collection.id} item={collection} />
+                ))}
+              </View>
+            )}
+          </>
         ) : null}
       </ScrollView>
     </View>
@@ -1227,6 +1375,20 @@ const styles = StyleSheet.create({
   entryCopy: { flex: 1, minWidth: 0, justifyContent: "center" },
   entryTitle: { color: colors.textPrimary, fontFamily: fonts.serif.light, fontSize: 19, lineHeight: 25 },
   entrySubtitle: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 16 },
+  collectionTag: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
+    color: colors.accentSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   ratingWrap: { flexDirection: "row", alignItems: "center", minWidth: 0 },
   ratingStack: { minWidth: 0, gap: 4, alignItems: "flex-end" },
   qprTag: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden", fontSize: 8, fontWeight: "700", letterSpacing: 0.25, textTransform: "uppercase" },
@@ -1376,5 +1538,49 @@ const styles = StyleSheet.create({
   addCellarDisabledText: {
     color: colors.textTertiary,
     fontSize: 11,
+  },
+  collectionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    padding: 16,
+  },
+  collectionCover: {
+    width: 88,
+    height: 88,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: colors.surfaceTinted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  collectionCoverImage: {
+    width: "100%",
+    height: "100%",
+  },
+  collectionCoverPlaceholder: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    textAlign: "center",
+    paddingHorizontal: 10,
+  },
+  collectionCardCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  collectionCardTitle: {
+    color: colors.textPrimary,
+    fontFamily: fonts.serif.light,
+    fontSize: 21,
+    lineHeight: 27,
+  },
+  collectionCardSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
