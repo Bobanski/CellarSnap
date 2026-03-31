@@ -1,3 +1,4 @@
+/** @deprecated Use /api/badges instead. This route uses the old emoji badge system. */
 import { NextResponse } from "next/server";
 import { PROFILE_BADGE_DEFINITIONS } from "@shared";
 import { createSupabaseServerClient } from "@/lib/supabase/server";

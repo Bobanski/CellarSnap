@@ -496,6 +496,17 @@ export async function GET() {
       ? audienceModeRow.audience_mode
       : "explorer";
 
+  const { data: featuredBadgeRow } = await supabase
+    .from("profiles")
+    .select("featured_badge_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const featured_badge_id =
+    typeof featuredBadgeRow?.featured_badge_id === "string"
+      ? featuredBadgeRow.featured_badge_id
+      : null;
+
   return NextResponse.json(
     {
       profile: {
@@ -503,6 +514,7 @@ export async function GET() {
         phone,
         bio,
         audience_mode,
+        featured_badge_id,
         avatar_path: avatarPath,
         avatar_url,
       },

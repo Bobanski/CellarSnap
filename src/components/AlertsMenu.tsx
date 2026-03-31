@@ -30,10 +30,19 @@ type FriendRequestAcceptedNotification = {
   created_at: string;
 };
 
+type BadgeNotification = {
+  id: string;
+  type: "badge_earned";
+  badge_id: string;
+  badge_name: string;
+  earned_at: string;
+};
+
 type NotificationItem =
   | TagNotification
   | FriendRequestNotification
-  | FriendRequestAcceptedNotification;
+  | FriendRequestAcceptedNotification
+  | BadgeNotification;
 
 export default function AlertsMenu() {
   const router = useRouter();
@@ -55,6 +64,7 @@ export default function AlertsMenu() {
   const [respondingRequestAction, setRespondingRequestAction] = useState<
     "accept" | "decline" | null
   >(null);
+  const [badgesSeenAt, setBadgesSeenAt] = useState<string | null>(null);
   const respondingRequestRef = useRef(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
@@ -114,10 +124,34 @@ export default function AlertsMenu() {
     persistBadgeBaseline(badgeBaseline);
   }, [badgeBaseline, persistBadgeBaseline, viewerUserId]);
 
+  // Initialize badges_seen_at from localStorage. If no value exists (first visit
+  // or backfill scenario), set it to now so backfilled badges don't show as new.
+  useEffect(() => {
+    if (!viewerUserId) return;
+    const key = `cellarsnap:badges_seen_at:${viewerUserId}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setBadgesSeenAt(stored);
+      } else {
+        const now = new Date().toISOString();
+        localStorage.setItem(key, now);
+        setBadgesSeenAt(now);
+      }
+    } catch {
+      // Ignore storage failures (private mode, etc).
+      setBadgesSeenAt(new Date().toISOString());
+    }
+  }, [viewerUserId]);
+
   const refreshCount = useCallback(async () => {
-    const response = await fetch("/api/notifications?count_only=true", {
-      cache: "no-store",
-    });
+    const badgesParam = badgesSeenAt
+      ? `&badges_since=${encodeURIComponent(badgesSeenAt)}`
+      : "";
+    const response = await fetch(
+      `/api/notifications?count_only=true${badgesParam}`,
+      { cache: "no-store" }
+    );
     if (!response.ok) return;
     const data = await response.json().catch(() => ({}));
     const unseen =
@@ -136,7 +170,7 @@ export default function AlertsMenu() {
       }
       return next;
     });
-  }, [persistBadgeBaseline]);
+  }, [badgesSeenAt, persistBadgeBaseline]);
 
   const refreshItems = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -144,7 +178,10 @@ export default function AlertsMenu() {
         setLoading(true);
       }
       setActionError(null);
-      const response = await fetch("/api/notifications", {
+      const badgesParam = badgesSeenAt
+        ? `?badges_since=${encodeURIComponent(badgesSeenAt)}`
+        : "";
+      const response = await fetch(`/api/notifications${badgesParam}`, {
         cache: "no-store",
       });
       if (!response.ok) {
@@ -181,7 +218,7 @@ export default function AlertsMenu() {
       }
       if (!silent) setLoading(false);
     },
-    [persistBadgeBaseline]
+    [badgesSeenAt, persistBadgeBaseline]
   );
 
   const scheduleRefresh = useCallback(() => {
@@ -201,6 +238,19 @@ export default function AlertsMenu() {
       setOpenPathname(pathname);
       setBadgeBaseline(count);
       persistBadgeBaseline(count);
+      // Mark all badge notifications as seen by advancing the timestamp
+      if (viewerUserId) {
+        const now = new Date().toISOString();
+        setBadgesSeenAt(now);
+        try {
+          localStorage.setItem(
+            `cellarsnap:badges_seen_at:${viewerUserId}`,
+            now
+          );
+        } catch {
+          // Ignore storage failures.
+        }
+      }
       return;
     }
     setOpenPathname(null);
@@ -286,6 +336,16 @@ export default function AlertsMenu() {
           event: "*",
           schema: "public",
           table: "friend_notifications",
+          filter: `user_id=eq.${viewerUserId}`,
+        },
+        scheduleRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_badges",
           filter: `user_id=eq.${viewerUserId}`,
         },
         scheduleRefresh
@@ -593,6 +653,28 @@ export default function AlertsMenu() {
                           {deletingId === item.id ? "..." : "x"}
                         </button>
                       </div>
+                    </li>
+                  );
+                }
+
+                if (item.type === "badge_earned") {
+                  return (
+                    <li
+                      key={item.id}
+                      className="border-b border-white/5 last:border-none"
+                    >
+                      <Link
+                        href={`/badges/${item.badge_id}`}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10"
+                        onClick={() => setOpenPathname(null)}
+                      >
+                        <span className="min-w-0 flex-1 truncate">
+                          Badge unlocked:{" "}
+                          <span className="accent-text font-semibold">
+                            {item.badge_name}
+                          </span>
+                        </span>
+                      </Link>
                     </li>
                   );
                 }

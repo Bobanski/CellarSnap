@@ -806,7 +806,7 @@ export function AppTopBar() {
                   onPress={() => {
                     setMenuOpen(false);
                     router.push({
-                      pathname: "/(app)/entries",
+                      pathname: "/(app)/collections",
                       params: { tab: "collections" },
                     } as Parameters<typeof router.push>[0]);
                   }}
@@ -817,6 +817,20 @@ export function AppTopBar() {
                     color={colors.textSecondary}
                   />
                   <AppText style={menuStyles.menuItemText}>My Collections</AppText>
+                </Pressable>
+                <Pressable
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    router.push("/(app)/badges" as Parameters<typeof router.push>[0]);
+                  }}
+                >
+                  <Feather
+                    name="award"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <AppText style={menuStyles.menuItemText}>Badges</AppText>
                 </Pressable>
                 <Pressable
                   style={menuStyles.menuItem}

@@ -18,6 +18,7 @@ import { persistEntryResolution } from "@/server/algorithm/persistEntryResolutio
 import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
 import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
 import { resolveEntrySensoryProfile } from "@/server/algorithm/resolveEntrySensory";
+import { evaluateAndAwardBadges } from "@/server/badges/evaluator";
 
 type RequestSupabaseClient = Awaited<ReturnType<typeof requireRequestAuth>>["supabase"];
 
@@ -686,6 +687,29 @@ export function createEntryPostHandler(
       primary_grapes: createdEntryPrimaryGrapes.get(data.id) ?? [],
     };
 
+  // Badge evaluation — best-effort, non-blocking.
+  let newlyEarnedBadges: Array<{ id: string; name: string; toastText: string; tier: string; color: string; accent: string; shape: string }> = [];
+  try {
+    const grapes = (entryWithPrimaryGrapes.primary_grapes as Array<{ variety?: string; name?: string }>)
+      .map((g) => g.variety ?? g.name ?? "")
+      .filter(Boolean);
+    const result = await evaluateAndAwardBadges({
+      supabase,
+      userId: user.id,
+      entryData: {
+        wine_type: createdEntry.wine_type as string | undefined,
+        country: createdEntry.country as string | undefined,
+        region: createdEntry.region as string | undefined,
+        appellation: createdEntry.appellation as string | undefined,
+        grapes,
+        rating: createdEntry.rating as number | undefined,
+      },
+    });
+    newlyEarnedBadges = result.newlyEarned;
+  } catch {
+    // Badge evaluation is best-effort.
+  }
+
     let comparisonCandidate: ComparisonCandidate | null = null;
     if (!payload.data.skip_comparison_candidate) {
       try {
@@ -702,6 +726,7 @@ export function createEntryPostHandler(
     return NextResponse.json({
       entry: entryWithPrimaryGrapes,
       comparison_candidate: comparisonCandidate,
+      newly_earned_badges: newlyEarnedBadges,
     });
   };
 }

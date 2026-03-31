@@ -12,6 +12,7 @@ export * from "./feed";
 export * from "./home";
 export * from "./listScan";
 export * from "./newEntry";
+export * from "./badges";
 export * from "./profile";
 export * from "./sommelier";
 export * from "./tasteSurvey";

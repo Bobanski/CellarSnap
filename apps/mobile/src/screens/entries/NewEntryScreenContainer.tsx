@@ -2023,6 +2023,43 @@ export default function NewEntryScreen() {
         candidate: result.comparisonCandidate,
       });
 
+      // Best-effort badge evaluation — don't block the flow
+      if (WEB_API_BASE_URL) {
+        void (async () => {
+          try {
+            const token = await getAccessTokenForApi();
+            if (!token) return;
+            const res = await fetch(`${WEB_API_BASE_URL}/api/badges/evaluate`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                country: parsed.data.country,
+                region: parsed.data.region,
+                appellation: parsed.data.appellation,
+                rating: parsed.data.rating ? Number(parsed.data.rating) : undefined,
+                grapes: selectedPrimaryGrapes.length > 0
+                  ? selectedPrimaryGrapes.map((g) => g.name)
+                  : undefined,
+              }),
+            });
+            if (res.ok) {
+              const data = (await res.json()) as {
+                newly_earned_badges?: Array<{ name: string; toastText: string }>;
+              };
+              if (data.newly_earned_badges && data.newly_earned_badges.length > 0) {
+                const badge = data.newly_earned_badges[0];
+                Alert.alert("Badge Unlocked!", `${badge.name}\n\n${badge.toastText}`);
+              }
+            }
+          } catch {
+            // Best-effort — don't block entry creation
+          }
+        })();
+      }
+
       if (selectedCollectionIds.length > 0) {
         void addEntryToUserCollections({
           entryId: result.entryId,

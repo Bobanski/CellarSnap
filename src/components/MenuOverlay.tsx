@@ -220,6 +220,12 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             onClose={onClose}
           />
           <MenuLink
+            href="/badges"
+            label="Badges"
+            subtitle="Your earned badges and achievements"
+            onClose={onClose}
+          />
+          <MenuLink
             href="/friends"
             label="Friends"
             subtitle="Requests, search, suggestions"
