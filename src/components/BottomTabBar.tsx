@@ -84,7 +84,7 @@ const ALL_TABS: TabDef[] = [
   { label: "Scan", href: "/list-scan", icon: <ScanIcon />, betaOnly: true },
 ];
 
-function isTabActive(href: string, pathname: string, fromFeed: boolean): boolean {
+function isTabActive(href: string, pathname: string, fromFeed: boolean, tab: string | null): boolean {
   const onEntryDetail =
     pathname.startsWith("/entries/") && !pathname.startsWith("/entries/new");
 
@@ -93,6 +93,7 @@ function isTabActive(href: string, pathname: string, fromFeed: boolean): boolean
   }
   if (href === "/entries") {
     if (fromFeed && onEntryDetail) return false;
+    if (tab === "collections") return false;
     return pathname === "/entries" || onEntryDetail;
   }
   if (href === "/entries/new") {
@@ -114,7 +115,7 @@ export default function BottomTabBar() {
   return (
     <nav className="bottom-tab-bar flex shrink-0 items-end justify-around" style={{ overflow: "visible" }}>
       {tabs.map((tab) => {
-        const active = isTabActive(tab.href, pathname, fromFeed);
+        const active = isTabActive(tab.href, pathname, fromFeed, searchParams.get("tab"));
 
         if (tab.isFab) {
           return (

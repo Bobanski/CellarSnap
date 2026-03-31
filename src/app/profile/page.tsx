@@ -10,9 +10,10 @@ import {
   PROFILE_PRIVACY_OPTIONS,
   PROFILE_SETTINGS_COPY,
   formatProfileMemberSince,
-  getProfileBadgeRequirementText,
+  getBadgeById,
   type ProfileNameDisplayPreference,
 } from "@shared";
+import BadgeIcon from "@/features/badges/BadgeIcon";
 import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -50,6 +51,7 @@ type Profile = {
   default_comments_privacy: PrivacyLevel | null;
   created_at: string | null;
   avatar_url?: string | null;
+  featured_badge_id?: string | null;
 };
 
 type Entry = {
@@ -106,30 +108,7 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Badges state
-  type Badge = {
-    id: string;
-    name: string;
-    symbol: string;
-    threshold: number;
-    count: number;
-    earned: boolean;
-  };
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [flippedBadgeIds, setFlippedBadgeIds] = useState<Set<string>>(
-    () => new Set()
-  );
-
-  const toggleBadgeFlip = useCallback((badgeId: string) => {
-    setFlippedBadgeIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(badgeId)) {
-        next.delete(badgeId);
-      } else {
-        next.add(badgeId);
-      }
-      return next;
-    });
-  }, []);
+  const [earnedBadgeCount, setEarnedBadgeCount] = useState<number>(0);
 
   // Privacy state
   const [entryPrivacyValue, setEntryPrivacyValue] = useState<PrivacyLevel>("public");
@@ -170,6 +149,12 @@ export default function ProfilePage() {
   const [taggedEntries, setTaggedEntries] = useState<Entry[]>([]);
   const [taggedLoading, setTaggedLoading] = useState(false);
   const [taggedLoaded, setTaggedLoaded] = useState(false);
+
+  const featuredBadge = useMemo(() => {
+    const id = profile?.featured_badge_id;
+    if (!id) return null;
+    return getBadgeById(id) ?? null;
+  }, [profile?.featured_badge_id]);
 
   const galleryEntries = useMemo(() => {
     const seenGroupIds = new Set<string>();
@@ -511,11 +496,12 @@ export default function ProfilePage() {
       })
       .catch(() => null);
 
-    // Load badges in parallel (independent of profile)
-    fetch("/api/profile/badges", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.badges) setBadges(data.badges);
+    // Load earned badge count
+    supabase
+      .from("user_badges")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }: { count: number | null }) => {
+        setEarnedBadgeCount(count ?? 0);
       })
       .catch(() => null);
 
@@ -1745,96 +1731,33 @@ export default function ProfilePage() {
                 </div>
 
                 {/* ── Badges ── */}
-                {badges.length > 0 ? (
-                  <div className="space-y-3 border-t border-[var(--color-border)] pt-6">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      {PROFILE_SETTINGS_COPY.badgesTitle}
-                    </h3>
-                    <p className="text-xs text-[var(--color-text-tertiary)]">
-                      {PROFILE_SETTINGS_COPY.badgesDescription}
-                    </p>
-
-                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-                      {badges.map((badge) => {
-                        const flipped = flippedBadgeIds.has(badge.id);
-                        const baseClass =
-                          "rounded-xl border px-3 py-4 text-center transition";
-                        const visualClass = badge.earned
-                          ? "border-[var(--color-accent-secondary)]/55 bg-[var(--color-accent-primary)]/10 ring-1 ring-[var(--color-accent-primary)]/25 shadow-[0_18px_40px_-28px_rgba(251,191,36,0.65)]"
-                          : badge.count > 0
-                            ? "border-[var(--color-border)] bg-[var(--color-surface-muted)] opacity-80 saturate-50"
-                            : "border-white/5 bg-[var(--color-surface-muted)] opacity-45 grayscale";
-
-                        if (badge.earned) {
-                          const requirement = getProfileBadgeRequirementText(badge);
-                          return (
-                            <button
-                              key={badge.id}
-                              type="button"
-                              className={`${baseClass} ${visualClass} cursor-pointer [perspective:900px] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30`}
-                              onClick={() => toggleBadgeFlip(badge.id)}
-                              aria-pressed={flipped}
-                              aria-label={`${
-                                flipped ? "Hide" : "Show"
-                              } how you earned the ${badge.name} badge`}
-                            >
-                              <div
-                                className={`relative h-full w-full transition-transform duration-500 motion-reduce:transition-none [transform-style:preserve-3d] ${
-                                  flipped ? "[transform:rotateY(180deg)]" : ""
-                                }`}
-                              >
-                                <div className="flex h-full flex-col items-center justify-center gap-1.5 [backface-visibility:hidden]">
-                                  <span className="text-2xl drop-shadow-[0_10px_18px_rgba(251,191,36,0.25)]">
-                                    {badge.symbol}
-                                  </span>
-                                  <span className="text-xs font-semibold leading-tight text-[var(--color-accent-secondary)]">
-                                    {badge.name}
-                                  </span>
-                                </div>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
-                                  <p className="text-xs font-semibold leading-snug text-[var(--color-accent-secondary)]">
-                                    {requirement}
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        }
-
-                        return (
-                          <div
-                            key={badge.id}
-                            className={`${baseClass} ${visualClass} flex flex-col items-center justify-center gap-1.5`}
-                          >
-                            <span
-                              className={`text-2xl ${
-                                badge.count > 0 ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-tertiary)]"
-                              }`}
-                            >
-                              {badge.symbol}
-                            </span>
-                            <span
-                              className={`text-xs font-semibold leading-tight ${
-                                badge.count > 0 ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-tertiary)]"
-                              }`}
-                            >
-                              {badge.name}
-                            </span>
-                            <span
-                              className={`text-[10px] tabular-nums ${
-                                badge.count > 0
-                                  ? "font-medium text-[var(--color-accent-secondary)]/80"
-                                  : "text-[var(--color-text-tertiary)]"
-                              }`}
-                            >
-                              {badge.count}/{badge.threshold}
-                            </span>
-                          </div>
-                        );
-                      })}
+                <div className="space-y-3 border-t border-[var(--color-border)] pt-6">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    Badges
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    {featuredBadge && (
+                      <BadgeIcon
+                        shape={featuredBadge.shape}
+                        color={featuredBadge.color}
+                        accent={featuredBadge.accent}
+                        tier={featuredBadge.tier}
+                        size={48}
+                      />
+                    )}
+                    <div>
+                      <p className="text-sm text-[var(--color-text-primary)]">
+                        {earnedBadgeCount} {earnedBadgeCount === 1 ? "badge" : "badges"} earned
+                      </p>
+                      <Link
+                        href="/badges"
+                        className="text-xs text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-primary)]"
+                      >
+                        View all badges &rarr;
+                      </Link>
                     </div>
                   </div>
-                ) : null}
+                </div>
 
                 {/* ── Privacy Settings ── */}
                 {profile.default_entry_privacy !== null && profile.default_entry_privacy !== undefined ? (

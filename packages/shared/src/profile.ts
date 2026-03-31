@@ -7,6 +7,7 @@ export type ProfileFriendStatus =
   | "request_received"
   | "friends";
 
+/** @deprecated Use BadgeDefinition from badges.ts instead */
 export type ProfileBadgeDefinition = {
   id: string;
   name: string;
@@ -16,6 +17,7 @@ export type ProfileBadgeDefinition = {
   ilike?: [string, string];
 };
 
+/** @deprecated Use BADGE_DEFINITIONS from badges.ts instead */
 export const PROFILE_BADGE_DEFINITIONS: readonly ProfileBadgeDefinition[] = [
   {
     id: "burgundy_bitch",

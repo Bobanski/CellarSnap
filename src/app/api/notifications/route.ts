@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPublicProfileName } from "@/lib/publicProfiles";
+import { getBadgeById } from "@shared";
 
 type WineNotificationRow = {
   id: string;
@@ -141,10 +142,24 @@ export async function GET(request: Request) {
     .eq("status", "pending")
     .is("seen_at", null);
 
+  // Badge notifications — only show badges earned after a caller-supplied baseline
+  // timestamp. This prevents backfilled badges from appearing as new alerts.
+  const badgesSince = url.searchParams.get("badges_since");
+  let badgeCount = 0;
+
+  if (badgesSince) {
+    const { count: bCount } = await supabase
+      .from("user_badges")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gt("earned_at", badgesSince);
+    badgeCount = bCount ?? 0;
+  }
+
   // Fast path: only return the count (used by AlertsMenu badge on mount)
   if (countOnly) {
     return NextResponse.json({
-      unseen_count: effectiveTagCount + (requestCount ?? 0),
+      unseen_count: effectiveTagCount + (requestCount ?? 0) + badgeCount,
     });
   }
 
@@ -238,12 +253,44 @@ export async function GET(request: Request) {
     created_at: request.created_at,
   }));
 
-  const result = [...tagItems, ...requestItems].sort((a, b) =>
-    b.created_at.localeCompare(a.created_at)
-  );
+  // Fetch badge notifications (only badges earned after the baseline)
+  let badgeItems: Array<{
+    id: string;
+    type: "badge_earned";
+    badge_id: string;
+    badge_name: string;
+    earned_at: string;
+  }> = [];
+
+  if (badgesSince) {
+    const { data: userBadges } = await supabase
+      .from("user_badges")
+      .select("id, badge_id, earned_at")
+      .eq("user_id", user.id)
+      .gt("earned_at", badgesSince)
+      .order("earned_at", { ascending: false })
+      .limit(10);
+
+    badgeItems = (userBadges ?? []).map((row) => {
+      const def = getBadgeById(row.badge_id);
+      return {
+        id: row.id,
+        type: "badge_earned" as const,
+        badge_id: row.badge_id,
+        badge_name: def?.name ?? row.badge_id,
+        earned_at: row.earned_at,
+      };
+    });
+  }
+
+  const result = [
+    ...tagItems,
+    ...requestItems,
+    ...badgeItems.map((b) => ({ ...b, created_at: b.earned_at })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return NextResponse.json({
-    unseen_count: effectiveTagCount + (requestCount ?? 0),
+    unseen_count: effectiveTagCount + (requestCount ?? 0) + badgeCount,
     notifications: result,
   });
 }

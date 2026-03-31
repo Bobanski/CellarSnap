@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -966,7 +966,7 @@ function CellarView() {
   );
 }
 
-export default function EntriesPage() {
+function EntriesPageContent() {
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<CellarTab>(() =>
@@ -2173,5 +2173,13 @@ export default function EntriesPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function EntriesPage() {
+  return (
+    <Suspense>
+      <EntriesPageContent />
+    </Suspense>
   );
 }

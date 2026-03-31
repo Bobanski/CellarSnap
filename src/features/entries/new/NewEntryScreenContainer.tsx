@@ -85,6 +85,7 @@ import {
   fetchUserCollectionsClient,
 } from "@/lib/collections/client";
 import { snapViewportToTop } from "@/lib/ui/overlayPresentation";
+import BadgeToast from "@/features/badges/BadgeToast";
 
 type NewEntryForm = {
   wine_name: string;
@@ -110,9 +111,20 @@ type NewEntryForm = {
   advanced_notes: AdvancedNotesFormValues;
 };
 
+type EarnedBadgeInfo = {
+  id: string;
+  name: string;
+  toastText: string;
+  tier: string;
+  color: string;
+  accent: string;
+  shape: string;
+};
+
 type CreateEntryResponse = {
   entry: SurveyEntryCard;
   comparison_candidate?: SurveyComparisonCandidate | null;
+  newly_earned_badges?: EarnedBadgeInfo[];
 };
 
 type PrimaryGrapeSelection = Pick<PrimaryGrape, "id" | "name">;
@@ -294,6 +306,7 @@ export default function NewEntryPage() {
   const [isSubmittingPostSaveSurvey, setIsSubmittingPostSaveSurvey] = useState(
     false
   );
+  const [earnedBadgeToast, setEarnedBadgeToast] = useState<EarnedBadgeInfo | null>(null);
   const scrollToTopForOverlay = useCallback(() => {
     snapViewportToTop();
   }, []);
@@ -1740,6 +1753,10 @@ export default function NewEntryPage() {
 
     const entry = createPayload.entry;
     const comparisonCandidate = createPayload.comparison_candidate ?? null;
+    const newBadges = createPayload.newly_earned_badges ?? [];
+    if (newBadges.length > 0) {
+      setEarnedBadgeToast(newBadges[0]);
+    }
 
     if (!entry?.id) {
       setIsSubmitting(false);
@@ -3340,6 +3357,7 @@ export default function NewEntryPage() {
 
   return (
     <AppShell>
+      <BadgeToast badge={earnedBadgeToast} onDismiss={() => setEarnedBadgeToast(null)} />
       <div className="px-6 py-6 text-[var(--color-text-primary)]">
       <div className="mx-auto w-full max-w-3xl space-y-8">
         <header className="space-y-1">

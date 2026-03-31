@@ -24,7 +24,6 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import {
   PHONE_FORMAT_MESSAGE,
-  PROFILE_BADGE_DEFINITIONS,
   PROFILE_GALLERY_MESSAGES,
   PROFILE_GALLERY_TAB_LABELS,
   PROFILE_NAME_DISPLAY_OPTIONS,
@@ -35,13 +34,14 @@ import {
   USERNAME_MIN_LENGTH_MESSAGE,
   formatPhoneForInput,
   formatProfileMemberSince,
+  getBadgeById,
   isUsernameFormatValid,
   normalizePhone,
   normalizePrivacyLevel,
-  type ProfileBadgeDefinition,
   type ProfileNameDisplayPreference,
   type PrivacyLevel,
 } from "@cellarsnap/shared";
+import BadgeIcon from "@/src/components/BadgeIcon";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -71,16 +71,6 @@ type EntryTile = {
   group_slides?: MobileGroupedEntrySlide[] | null;
 };
 
-type Badge = {
-  id: string;
-  name: string;
-  symbol: string;
-  threshold: number;
-  count: number;
-  earned: boolean;
-};
-
-type BadgeConfig = ProfileBadgeDefinition;
 
 type FriendProfile = {
   id: string;
@@ -121,6 +111,7 @@ type ProfileData = {
   created_at: string | null;
   avatar_path: string | null;
   avatar_url: string | null;
+  featured_badge_id: string | null;
 };
 
 type SearchUser = {
@@ -142,7 +133,6 @@ type FriendRequestRow = {
 
 const PAGE_SIZE = 30;
 const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
-const BADGE_DEFINITIONS: BadgeConfig[] = [...PROFILE_BADGE_DEFINITIONS];
 
 function displayFriendName(profile: FriendProfile | null) {
   return getPublicProfileName(profile);
@@ -209,7 +199,7 @@ export default function ProfileScreen() {
   const [taggedLoading, setTaggedLoading] = useState(false);
 
   const [friendCount, setFriendCount] = useState<number | null>(null);
-  const [badges, setBadges] = useState<Badge[]>([]);
+  const [earnedBadgeCount, setEarnedBadgeCount] = useState<number>(0);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -272,6 +262,12 @@ export default function ProfileScreen() {
       .filter((value): value is string => Boolean(value))
       .join(" ");
   }, [profile]);
+
+  const featuredBadge = useMemo(() => {
+    const id = profile?.featured_badge_id;
+    if (!id) return null;
+    return getBadgeById(id) ?? null;
+  }, [profile?.featured_badge_id]);
 
   const galleryEntries = useMemo(() => {
     const seenGroupIds = new Set<string>();
@@ -356,7 +352,7 @@ export default function ProfileScreen() {
       const fullAttempt = await supabase
         .from("profiles")
         .select(
-          "id, display_name, first_name, last_name, email, phone, bio, name_display_preference, default_entry_privacy, default_reaction_privacy, default_comments_privacy, created_at, avatar_path"
+          "id, display_name, first_name, last_name, email, phone, bio, name_display_preference, default_entry_privacy, default_reaction_privacy, default_comments_privacy, created_at, avatar_path, featured_badge_id"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -508,6 +504,10 @@ export default function ProfileScreen() {
           typeof profileRow.created_at === "string" ? profileRow.created_at : null,
         avatar_path: avatarPath,
         avatar_url: avatarUrl,
+        featured_badge_id:
+          typeof profileRow.featured_badge_id === "string"
+            ? profileRow.featured_badge_id
+            : null,
       };
 
       setProfile(nextProfile);
@@ -653,38 +653,19 @@ export default function ProfileScreen() {
     setFriendCount(count ?? 0);
   }, [user]);
 
-  const loadBadges = useCallback(async () => {
+  const loadBadgeCount = useCallback(async () => {
     if (!user) {
       return;
     }
 
-    const nextBadges = await Promise.all(
-      BADGE_DEFINITIONS.map(async (badge) => {
-        let query = supabase
-          .from("wine_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
+    const { count, error } = await supabase
+      .from("user_badges")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
 
-        if (badge.orFilter) {
-          query = query.or(badge.orFilter);
-        } else if (badge.ilike) {
-          query = query.ilike(badge.ilike[0], badge.ilike[1]);
-        }
-
-        const { count } = await query;
-        const badgeCount = count ?? 0;
-        return {
-          id: badge.id,
-          name: badge.name,
-          symbol: badge.symbol,
-          threshold: badge.threshold,
-          count: badgeCount,
-          earned: badgeCount >= badge.threshold,
-        } satisfies Badge;
-      })
-    );
-
-    setBadges(nextBadges);
+    if (!error) {
+      setEarnedBadgeCount(count ?? 0);
+    }
   }, [user]);
 
   const loadProfileScreen = useCallback(
@@ -704,7 +685,7 @@ export default function ProfileScreen() {
           loadProfileData(syncEditFields),
           loadEntriesData(true),
           loadFriendCount(),
-          loadBadges(),
+          loadBadgeCount(),
           fetchTasteSurvey().then((r) => {
             setHasTasteSurvey(r.ok && r.survey != null);
           }).catch(() => null),
@@ -723,7 +704,7 @@ export default function ProfileScreen() {
         }
       }
     },
-    [loadBadges, loadEntriesData, loadFriendCount, loadProfileData, user]
+    [loadBadgeCount, loadEntriesData, loadFriendCount, loadProfileData, user]
   );
 
   const loadProfilesByIds = useCallback(async (ids: string[]) => {
@@ -1203,7 +1184,7 @@ export default function ProfileScreen() {
       await Promise.all([
         loadProfileData(true),
         loadFriendCount(),
-        loadBadges(),
+        loadBadgeCount(),
       ]);
 
       // Keep fresh avatar URL visible immediately even if profile reload raced.
@@ -1247,7 +1228,7 @@ export default function ProfileScreen() {
     editLastName,
     editPhone,
     editUsername,
-    loadBadges,
+    loadBadgeCount,
     loadFriendCount,
     loadProfileData,
     pendingAvatarAsset,
@@ -2528,37 +2509,28 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
 
-              {badges.length > 0 ? (
-                <View style={styles.sectionBlockTopBorder}>
-                  <AppText style={styles.sectionTitle}>
-                    {PROFILE_SETTINGS_COPY.badgesTitle}
-                  </AppText>
-                  <AppText style={styles.hintText}>
-                    {PROFILE_SETTINGS_COPY.badgesDescription}
-                  </AppText>
-                  <View style={styles.badgeGrid}>
-                    {badges.map((badge) => (
-                      <View
-                        key={badge.id}
-                        style={[
-                          styles.badgeCard,
-                          badge.earned
-                            ? styles.badgeCardEarned
-                            : badge.count > 0
-                              ? styles.badgeCardProgress
-                              : styles.badgeCardMuted,
-                        ]}
-                      >
-                        <AppText style={styles.badgeSymbol}>{badge.symbol}</AppText>
-                        <AppText style={styles.badgeName}>{badge.name}</AppText>
-                        <AppText style={styles.badgeCount}>
-                          {badge.count}/{badge.threshold}
-                        </AppText>
-                      </View>
-                    ))}
+              <View style={styles.sectionBlockTopBorder}>
+                <AppText style={styles.sectionTitle}>Badges</AppText>
+                <View style={styles.badgeSummaryRow}>
+                  {featuredBadge && (
+                    <BadgeIcon
+                      shape={featuredBadge.shape}
+                      color={featuredBadge.color}
+                      accent={featuredBadge.accent}
+                      tier={featuredBadge.tier}
+                      size={48}
+                    />
+                  )}
+                  <View>
+                    <AppText style={styles.badgeSummaryCount}>
+                      {earnedBadgeCount} {earnedBadgeCount === 1 ? "badge" : "badges"} earned
+                    </AppText>
+                    <Pressable onPress={() => router.push("/(app)/badges")}>
+                      <AppText style={styles.badgeSummaryLink}>View all badges</AppText>
+                    </Pressable>
                   </View>
                 </View>
-              ) : null}
+              </View>
 
               <View style={styles.sectionBlockTopBorder}>
                 <AppText style={styles.sectionTitle}>
@@ -3340,45 +3312,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
   },
-  badgeGrid: {
+  badgeSummaryRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  badgeCard: {
-    width: "31.7%",
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 7,
     alignItems: "center",
-    gap: 2,
+    gap: 12,
+    marginTop: 4,
   },
-  badgeCardEarned: {
-    borderColor: "rgba(252,211,77,0.52)",
-    backgroundColor: "rgba(251,191,36,0.12)",
-  },
-  badgeCardProgress: {
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfacePrimary,
-  },
-  badgeCardMuted: {
-    borderColor: colors.border,
-    backgroundColor: colors.surfacePrimary,
-    opacity: 0.62,
-  },
-  badgeSymbol: {
-    fontSize: 20,
-  },
-  badgeName: {
+  badgeSummaryCount: {
     color: colors.textPrimary,
-    fontSize: 10,
-    fontWeight: "700",
-    textAlign: "center",
+    fontSize: 14,
   },
-  badgeCount: {
-    color: colors.textSecondary,
-    fontSize: 10,
+  badgeSummaryLink: {
+    color: colors.accentSecondary,
+    fontSize: 12,
+    marginTop: 2,
   },
   privacyBlock: {
     borderRadius: 12,

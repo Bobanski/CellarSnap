@@ -421,6 +421,14 @@ export default function AppLayout() {
         name="explore-browse"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="collections"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="badges"
+        options={{ href: null, headerShown: false }}
+      />
     </Tabs>
   );
 }
