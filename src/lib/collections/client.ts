@@ -33,6 +33,16 @@ type CollectionDetailResponse = {
   error?: string;
 };
 
+type UpdateCollectionResponse = {
+  collection?: UserCollectionSummary;
+  error?: string;
+};
+
+type DeleteCollectionResponse = {
+  deleted?: boolean;
+  error?: string;
+};
+
 export async function fetchUserCollectionsClient() {
   const response = await fetch("/api/collections", { cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as
@@ -170,5 +180,84 @@ export async function fetchCollectionDetailClient(collectionId: string) {
     ok: true as const,
     collection: payload.collection,
     items: payload.items ?? [],
+  };
+}
+
+export async function updateUserCollectionClient(
+  collectionId: string,
+  name: string
+) {
+  const response = await fetch(`/api/collections/${collectionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | UpdateCollectionResponse
+    | null;
+
+  if (!response.ok || !payload?.collection) {
+    return {
+      ok: false as const,
+      errorMessage: payload?.error ?? "Unable to update collection.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    collection: payload.collection,
+  };
+}
+
+export async function uploadUserCollectionCoverClient(
+  collectionId: string,
+  file: File
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`/api/collections/${collectionId}/cover`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | UpdateCollectionResponse
+    | null;
+
+  if (!response.ok || !payload?.collection) {
+    return {
+      ok: false as const,
+      errorMessage: payload?.error ?? "Unable to update collection cover.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    collection: payload.collection,
+  };
+}
+
+export async function deleteUserCollectionClient(collectionId: string) {
+  const response = await fetch(`/api/collections/${collectionId}`, {
+    method: "DELETE",
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | DeleteCollectionResponse
+    | null;
+
+  if (!response.ok || payload?.deleted !== true) {
+    return {
+      ok: false as const,
+      errorMessage: payload?.error ?? "Unable to delete collection.",
+    };
+  }
+
+  return {
+    ok: true as const,
   };
 }

@@ -29,6 +29,16 @@ type CollectionDetailResponse = {
   error?: string;
 };
 
+type UpdateCollectionResponse = {
+  collection?: UserCollectionSummary;
+  error?: string;
+};
+
+type DeleteCollectionResponse = {
+  deleted?: boolean;
+  error?: string;
+};
+
 type EntryCollectionsResponse = {
   memberships?: Record<string, EntryCollectionSummary[]>;
   error?: string;
@@ -253,5 +263,132 @@ export async function fetchCollectionDetail(
     ok: true,
     collection: payload.collection,
     items: payload.items ?? [],
+  };
+}
+
+export async function updateUserCollectionDetails({
+  collectionId,
+  name,
+}: {
+  collectionId: string;
+  name: string;
+}): Promise<
+  | {
+      ok: true;
+      collection: UserCollectionSummary;
+    }
+  | { ok: false; errorMessage: string }
+> {
+  const result = await authorizedFetch(`/api/collections/${collectionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const payload = (await result.response.json().catch(() => null)) as
+    | UpdateCollectionResponse
+    | null;
+
+  if (!result.response.ok || !payload?.collection) {
+    return {
+      ok: false,
+      errorMessage: payload?.error ?? "Unable to update collection.",
+    };
+  }
+
+  return {
+    ok: true,
+    collection: payload.collection,
+  };
+}
+
+export async function uploadUserCollectionCover({
+  collectionId,
+  uri,
+  fileName,
+  mimeType,
+}: {
+  collectionId: string;
+  uri: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+}): Promise<
+  | {
+      ok: true;
+      collection: UserCollectionSummary;
+    }
+  | { ok: false; errorMessage: string }
+> {
+  const normalizedMimeType = mimeType ?? "image/jpeg";
+  const normalizedFileName =
+    fileName && fileName.trim().length > 0
+      ? fileName
+      : `collection-cover.${normalizedMimeType === "image/png" ? "png" : normalizedMimeType === "image/webp" ? "webp" : normalizedMimeType === "image/gif" ? "gif" : "jpg"}`;
+  const formData = new FormData();
+  formData.append("file", {
+    uri,
+    name: normalizedFileName,
+    type: normalizedMimeType,
+  } as unknown as Blob);
+
+  const result = await authorizedFetch(`/api/collections/${collectionId}/cover`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const payload = (await result.response.json().catch(() => null)) as
+    | UpdateCollectionResponse
+    | null;
+
+  if (!result.response.ok || !payload?.collection) {
+    return {
+      ok: false,
+      errorMessage: payload?.error ?? "Unable to update collection cover.",
+    };
+  }
+
+  return {
+    ok: true,
+    collection: payload.collection,
+  };
+}
+
+export async function deleteUserCollection(
+  collectionId: string
+): Promise<
+  | { ok: true }
+  | { ok: false; errorMessage: string }
+> {
+  const result = await authorizedFetch(`/api/collections/${collectionId}`, {
+    method: "DELETE",
+  });
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const payload = (await result.response.json().catch(() => null)) as
+    | DeleteCollectionResponse
+    | null;
+
+  if (!result.response.ok || payload?.deleted !== true) {
+    return {
+      ok: false,
+      errorMessage: payload?.error ?? "Unable to delete collection.",
+    };
+  }
+
+  return {
+    ok: true,
   };
 }
