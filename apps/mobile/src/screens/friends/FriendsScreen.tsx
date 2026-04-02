@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +35,34 @@ function displayName(value: { display_name: string | null; email: string | null 
 
 function friendSearchLabel(user: MobileFriendSearchUser) {
   return user.display_name?.trim() || user.username?.trim() || "Unknown";
+}
+
+function profileInitial(value: {
+  display_name?: string | null;
+  email?: string | null;
+  username?: string | null;
+}) {
+  const label =
+    value.display_name?.trim() || value.username?.trim() || value.email?.trim() || "?";
+  return label.slice(0, 1).toUpperCase();
+}
+
+function FriendAvatar({
+  avatarUrl,
+  fallbackLabel,
+}: {
+  avatarUrl?: string | null;
+  fallbackLabel: string;
+}) {
+  return (
+    <View style={styles.avatarWrap}>
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
+      ) : (
+        <AppText style={styles.avatarFallback}>{fallbackLabel}</AppText>
+      )}
+    </View>
+  );
 }
 
 function friendStatusLabel(status?: MobileFriendSearchUser["friend_status"]) {
@@ -235,10 +266,15 @@ export default function FriendsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
       >
         <AppTopBar />
 
@@ -286,13 +322,19 @@ export default function FriendsScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`View ${displayName(friend)} profile`}
                   >
-                    <AppText style={styles.rowName}>{displayName(friend)}</AppText>
-                    {friend.tasting_count > 0 ? (
-                      <AppText style={styles.rowHint}>
-                        {friend.tasting_count} shared tasting
-                        {friend.tasting_count === 1 ? "" : "s"}
-                      </AppText>
-                    ) : null}
+                    <FriendAvatar
+                      avatarUrl={friend.avatar_url}
+                      fallbackLabel={profileInitial(friend)}
+                    />
+                    <View style={styles.rowText}>
+                      <AppText style={styles.rowName}>{displayName(friend)}</AppText>
+                      {friend.tasting_count > 0 ? (
+                        <AppText style={styles.rowHint}>
+                          {friend.tasting_count} shared tasting
+                          {friend.tasting_count === 1 ? "" : "s"}
+                        </AppText>
+                      ) : null}
+                    </View>
                   </Pressable>
 
                   {friend.request_id ? (
@@ -341,7 +383,13 @@ export default function FriendsScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`View ${displayName(request.recipient)} profile`}
                     >
-                      <AppText style={styles.rowName}>{displayName(request.recipient)}</AppText>
+                      <FriendAvatar
+                        avatarUrl={request.recipient.avatar_url}
+                        fallbackLabel={profileInitial(request.recipient)}
+                      />
+                      <View style={styles.rowText}>
+                        <AppText style={styles.rowName}>{displayName(request.recipient)}</AppText>
+                      </View>
                     </Pressable>
 
                     {confirmingCancel === request.id ? (
@@ -398,11 +446,18 @@ export default function FriendsScreen() {
               {incomingRequests.map((request) => (
                 <View key={request.id} style={styles.requestCard}>
                   <Pressable
+                    style={styles.rowMain}
                     onPress={() => openProfile(request.requester.id)}
                     accessibilityRole="button"
                     accessibilityLabel={`View ${displayName(request.requester)} profile`}
                   >
-                    <AppText style={styles.rowName}>{displayName(request.requester)}</AppText>
+                    <FriendAvatar
+                      avatarUrl={request.requester.avatar_url}
+                      fallbackLabel={profileInitial(request.requester)}
+                    />
+                    <View style={styles.rowText}>
+                      <AppText style={styles.rowName}>{displayName(request.requester)}</AppText>
+                    </View>
                   </Pressable>
                   <View style={styles.actionRow}>
                     <Pressable
@@ -461,8 +516,14 @@ export default function FriendsScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`View ${friendSearchLabel(user)} profile`}
                     >
-                      <AppText style={styles.rowName}>{friendSearchLabel(user)}</AppText>
-                      {statusLabel ? <AppText style={styles.rowStatus}>{statusLabel}</AppText> : null}
+                      <FriendAvatar
+                        avatarUrl={user.avatar_url}
+                        fallbackLabel={profileInitial(user)}
+                      />
+                      <View style={styles.rowText}>
+                        <AppText style={styles.rowName}>{friendSearchLabel(user)}</AppText>
+                        {statusLabel ? <AppText style={styles.rowStatus}>{statusLabel}</AppText> : null}
+                      </View>
                     </Pressable>
                     <Pressable
                       style={styles.secondaryButton}
@@ -505,12 +566,18 @@ export default function FriendsScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`View ${displayName(person)} profile`}
                     >
-                      <AppText style={styles.rowName}>{displayName(person)}</AppText>
-                      <AppText style={styles.rowStatus}>
-                        {person.mutual_count === 1
-                          ? "1 mutual friend"
-                          : `${person.mutual_count} mutual friends`}
-                      </AppText>
+                      <FriendAvatar
+                        avatarUrl={person.avatar_url}
+                        fallbackLabel={profileInitial(person)}
+                      />
+                      <View style={styles.rowText}>
+                        <AppText style={styles.rowName}>{displayName(person)}</AppText>
+                        <AppText style={styles.rowStatus}>
+                          {person.mutual_count === 1
+                            ? "1 mutual friend"
+                            : `${person.mutual_count} mutual friends`}
+                        </AppText>
+                      </View>
                     </Pressable>
                     <Pressable
                       style={styles.secondaryButton}
@@ -528,7 +595,7 @@ export default function FriendsScreen() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -652,6 +719,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   rowMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
     gap: 4,
   },
   rowName: {
@@ -667,6 +743,27 @@ const styles = StyleSheet.create({
     color: colors.accentSecondary,
     fontSize: 11,
     fontWeight: "600",
+  },
+  avatarWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarFallback: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: "700",
   },
   rowActions: {
     flexDirection: "row",

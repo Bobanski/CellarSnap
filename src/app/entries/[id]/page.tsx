@@ -1094,7 +1094,7 @@ export default function EntryDetailPage() {
                         band={scoreResult.band}
                         confidence={scoreResult.confidence}
                       />
-                      <ScoreBreakdown result={scoreResult} defaultOpen />
+                      <ScoreBreakdown result={scoreResult} />
                     </>
                   )
                   : (

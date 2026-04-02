@@ -3,11 +3,12 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -19,6 +20,7 @@ import {
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 import {
   deleteUserCollection,
   fetchCollectionDetail,
@@ -299,8 +301,16 @@ export default function CollectionDetailScreen() {
   };
 
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+      >
         <AppTopBar />
 
         <View style={styles.header}>
@@ -404,10 +414,13 @@ export default function CollectionDetailScreen() {
         animationType="fade"
         onRequestClose={() => setIsRenameModalOpen(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
           <View style={styles.modalCard}>
             <AppText style={styles.modalTitle}>{COLLECTIONS_COPY.renameActionLabel}</AppText>
-            <TextInput
+            <DoneTextInput
               value={draftName}
               onChangeText={setDraftName}
               placeholder="Collection name"
@@ -438,9 +451,9 @@ export default function CollectionDetailScreen() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

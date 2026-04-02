@@ -27,7 +27,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   PixelRatio,
   Pressable,
   RefreshControl,
@@ -1653,10 +1655,16 @@ export default function FeedScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
       <ScrollView
         scrollEnabled={!isGallerySwipeActive}
         scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
         onScroll={() => {
           markFeedScrolling(220);
         }}
@@ -1928,7 +1936,7 @@ export default function FeedScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

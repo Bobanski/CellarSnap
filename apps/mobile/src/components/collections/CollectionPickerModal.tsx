@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -133,7 +135,10 @@ export function CollectionPickerModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalRoot}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.modalRoot}
+      >
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
@@ -152,6 +157,8 @@ export function CollectionPickerModal({
             style={styles.modalList}
             contentContainerStyle={styles.modalListContent}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+            automaticallyAdjustKeyboardInsets
           >
             {collections.length > 0 ? (
               collections.map((collection) => {
@@ -272,7 +279,7 @@ export function CollectionPickerModal({
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

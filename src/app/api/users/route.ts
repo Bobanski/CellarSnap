@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { executeSelectWithFallback } from "@/server/db/compat";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 type PublicProfileUserRow = {
   id: string;
   display_name: string | null;
   username?: string | null;
+  avatar_path?: string | null;
 };
 
 function sanitizeUserSearch(search: string) {
@@ -41,13 +43,22 @@ export async function GET(request: Request) {
   const buildProfileQuery = ({
     includeNameColumns,
     includeUsernameColumn,
+    includeAvatarColumn,
   }: {
     includeNameColumns: boolean;
     includeUsernameColumn: boolean;
+    includeAvatarColumn: boolean;
   }) => {
+    const selectColumns = [
+      "id",
+      "display_name",
+      ...(includeUsernameColumn ? ["username"] : []),
+      ...(includeAvatarColumn ? ["avatar_path"] : []),
+    ].join(", ");
+
     const query = supabase
       .from("public_profiles")
-      .select(includeUsernameColumn ? "id, display_name, username" : "id, display_name")
+      .select(selectColumns)
       .neq("id", user.id)
       .order("display_name", { ascending: true });
 
@@ -91,19 +102,51 @@ export async function GET(request: Request) {
         {
           includeNameColumns: true,
           includeUsernameColumn: true,
+          includeAvatarColumn: true,
+          missingColumns: ["username", "first_name", "last_name", "avatar_path"] as const,
+        },
+        {
+          includeNameColumns: true,
+          includeUsernameColumn: true,
+          includeAvatarColumn: false,
           missingColumns: ["username", "first_name", "last_name"] as const,
         },
         {
           includeNameColumns: true,
           includeUsernameColumn: false,
+          includeAvatarColumn: true,
+          missingColumns: ["first_name", "last_name", "avatar_path"] as const,
+        },
+        {
+          includeNameColumns: true,
+          includeUsernameColumn: false,
+          includeAvatarColumn: false,
           missingColumns: ["first_name", "last_name"] as const,
         },
         {
           includeNameColumns: false,
           includeUsernameColumn: true,
+          includeAvatarColumn: true,
+          missingColumns: ["username", "avatar_path"] as const,
+        },
+        {
+          includeNameColumns: false,
+          includeUsernameColumn: true,
+          includeAvatarColumn: false,
           missingColumns: ["username"] as const,
         },
-        { includeNameColumns: false, includeUsernameColumn: false, missingColumns: [] as const },
+        {
+          includeNameColumns: false,
+          includeUsernameColumn: false,
+          includeAvatarColumn: true,
+          missingColumns: ["avatar_path"] as const,
+        },
+        {
+          includeNameColumns: false,
+          includeUsernameColumn: false,
+          includeAvatarColumn: false,
+          missingColumns: [] as const,
+        },
       ],
       getFallbackColumns: (attempt) => attempt.missingColumns,
       attempt: async (attempt) => {
@@ -117,12 +160,32 @@ export async function GET(request: Request) {
     data = searchResult.data;
     error = searchResult.error;
   } else {
-    const response = await buildProfileQuery({
-      includeNameColumns: false,
-      includeUsernameColumn: false,
+    const listResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          includeNameColumns: false,
+          includeUsernameColumn: false,
+          includeAvatarColumn: true,
+          missingColumns: ["avatar_path"] as const,
+        },
+        {
+          includeNameColumns: false,
+          includeUsernameColumn: false,
+          includeAvatarColumn: false,
+          missingColumns: [] as const,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      attempt: async (attempt) => {
+        const response = await buildProfileQuery(attempt);
+        return {
+          data: response.data as PublicProfileUserRow[] | null,
+          error: response.error,
+        };
+      },
     });
-    data = response.data as PublicProfileUserRow[] | null;
-    error = response.error;
+    data = listResult.data;
+    error = listResult.error;
   }
 
   if (error) {
@@ -135,6 +198,11 @@ export async function GET(request: Request) {
   if (userIds.length === 0) {
     return NextResponse.json({ users: [] });
   }
+
+  const avatarUrlByPath = await signPhotoUrls(
+    users.map((candidate) => candidate.avatar_path ?? null),
+    supabase
+  );
 
   const [{ data: outgoingRows, error: outgoingError }, { data: incomingRows, error: incomingError }] = await Promise.all([
     supabase
@@ -188,7 +256,12 @@ export async function GET(request: Request) {
       const follows_you = friends || incomingPending;
 
       return {
-        ...candidate,
+        id: candidate.id,
+        display_name: candidate.display_name ?? null,
+        username: candidate.username ?? null,
+        avatar_url: candidate.avatar_path
+          ? avatarUrlByPath.get(candidate.avatar_path) ?? null
+          : null,
         following,
         follows_you,
         friends,
