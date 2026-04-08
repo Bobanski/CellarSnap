@@ -16,6 +16,15 @@ import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 type RequestSupabaseClient = Awaited<ReturnType<typeof requireRequestAuth>>["supabase"];
 
+const COLLECTION_COVER_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
+const COLLECTION_COVER_ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+] as const;
+const COLLECTION_COVER_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+
 type CollectionRow = {
   id: string;
   user_id: string;
@@ -80,6 +89,33 @@ function compareCollectionNames(left: string, right: string) {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
 }
 
+function extensionForCollectionCoverType(mimeType: string) {
+  if (mimeType === "image/png") {
+    return "png";
+  }
+  if (mimeType === "image/webp") {
+    return "webp";
+  }
+  if (mimeType === "image/gif") {
+    return "gif";
+  }
+  return "jpg";
+}
+
+function buildCollectionCoverPath(
+  userId: string,
+  collectionId: string,
+  extension: (typeof COLLECTION_COVER_EXTENSIONS)[number]
+) {
+  return `${userId}/collections/${collectionId}/cover.${extension}`;
+}
+
+function listCollectionCoverVariantPaths(userId: string, collectionId: string) {
+  return COLLECTION_COVER_EXTENSIONS.map((extension) =>
+    buildCollectionCoverPath(userId, collectionId, extension)
+  );
+}
+
 async function loadCollectionRowsForUser(
   supabase: RequestSupabaseClient,
   userId: string
@@ -103,6 +139,29 @@ function toCollectionOptions(rows: CollectionRow[]): CollectionOption[] {
     id: row.id,
     name: row.name,
   }));
+}
+
+async function loadOwnedCollectionRow({
+  supabase,
+  userId,
+  collectionId,
+}: {
+  supabase: RequestSupabaseClient;
+  userId: string;
+  collectionId: string;
+}) {
+  const { data, error } = await supabase
+    .from("user_collections")
+    .select("id, user_id, name, cover_image_path, created_at, updated_at")
+    .eq("user_id", userId)
+    .eq("id", collectionId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error("Collection not found.");
+  }
+
+  return data as CollectionRow;
 }
 
 export async function createOrFindUserCollection({
@@ -595,6 +654,164 @@ export async function getCollectionDetail({
       added_at: item.created_at,
     })) satisfies UserCollectionItemSummary[],
   };
+}
+
+export async function updateUserCollectionName({
+  supabase,
+  userId,
+  collectionId,
+  name,
+}: {
+  supabase: RequestSupabaseClient;
+  userId: string;
+  collectionId: string;
+  name: string;
+}) {
+  const normalizedName = normalizeCollectionName(name);
+  if (!normalizedName) {
+    throw new Error("Collection name is required.");
+  }
+
+  const currentCollection = await loadOwnedCollectionRow({
+    supabase,
+    userId,
+    collectionId,
+  });
+
+  if (!compareCollectionNames(currentCollection.name, normalizedName)) {
+    const existingRows = await loadCollectionRowsForUser(supabase, userId);
+    const conflictingCollection = existingRows.find(
+      (row) =>
+        row.id !== collectionId && compareCollectionNames(row.name, normalizedName)
+    );
+
+    if (conflictingCollection) {
+      throw new Error("You already have a collection with that name.");
+    }
+  }
+
+  const { error } = await supabase
+    .from("user_collections")
+    .update({
+      name: normalizedName,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .eq("id", collectionId);
+
+  if (error) {
+    throw new Error(error.message ?? "Unable to update collection.");
+  }
+
+  const detail = await getCollectionDetail({
+    supabase,
+    userId,
+    collectionId,
+  });
+  return detail.collection;
+}
+
+export async function updateUserCollectionCover({
+  supabase,
+  userId,
+  collectionId,
+  file,
+}: {
+  supabase: RequestSupabaseClient;
+  userId: string;
+  collectionId: string;
+  file: File;
+}) {
+  const currentCollection = await loadOwnedCollectionRow({
+    supabase,
+    userId,
+    collectionId,
+  });
+
+  if (file.size > COLLECTION_COVER_MAX_SIZE_BYTES) {
+    throw new Error("Image must be 5 MB or smaller.");
+  }
+
+  if (!COLLECTION_COVER_ALLOWED_TYPES.includes(file.type as (typeof COLLECTION_COVER_ALLOWED_TYPES)[number])) {
+    throw new Error("Image must be JPEG, PNG, WebP, or GIF.");
+  }
+
+  const extension = extensionForCollectionCoverType(file.type);
+  const nextPath = buildCollectionCoverPath(userId, collectionId, extension);
+
+  const { error: uploadError } = await supabase.storage
+    .from("wine-photos")
+    .upload(nextPath, file, {
+      upsert: true,
+      contentType: file.type,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message ?? "Unable to upload collection cover.");
+  }
+
+  const { error: updateError } = await supabase
+    .from("user_collections")
+    .update({
+      cover_image_path: nextPath,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .eq("id", collectionId);
+
+  if (updateError) {
+    if (currentCollection.cover_image_path !== nextPath) {
+      await supabase.storage.from("wine-photos").remove([nextPath]);
+    }
+    throw new Error(updateError.message ?? "Unable to save collection cover.");
+  }
+
+  const stalePaths = listCollectionCoverVariantPaths(userId, collectionId).filter(
+    (path) => path !== nextPath
+  );
+  if (stalePaths.length > 0) {
+    await supabase.storage.from("wine-photos").remove(stalePaths);
+  }
+
+  const detail = await getCollectionDetail({
+    supabase,
+    userId,
+    collectionId,
+  });
+  return detail.collection;
+}
+
+export async function deleteUserCollection({
+  supabase,
+  userId,
+  collectionId,
+}: {
+  supabase: RequestSupabaseClient;
+  userId: string;
+  collectionId: string;
+}) {
+  await loadOwnedCollectionRow({
+    supabase,
+    userId,
+    collectionId,
+  });
+
+  const { error } = await supabase
+    .from("user_collections")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", collectionId);
+
+  if (error) {
+    throw new Error(error.message ?? "Unable to delete collection.");
+  }
+
+  const customCoverPaths = listCollectionCoverVariantPaths(userId, collectionId);
+  if (customCoverPaths.length > 0) {
+    await supabase.storage.from("wine-photos").remove(customCoverPaths);
+  }
+
+  return { deleted: true as const };
 }
 
 export async function getCollectionOptionsForUser({

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { router } from "expo-router";
 import { toExploreSlug, WINE_REGIONS } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { colors } from "@/src/lib/theme";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -173,8 +175,17 @@ export default function ExploreBrowseScreen() {
   const typeLabels: Record<string, string> = { grape: "Grapes", region: "Regions", producer: "Producers" };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+      >
         {/* Header */}
         <AppText style={styles.eyebrow}>EXPLORE</AppText>
         <AppText style={styles.title}>Discover wines matched to your taste.</AppText>
@@ -183,7 +194,7 @@ export default function ExploreBrowseScreen() {
         </AppText>
 
         {/* Search */}
-        <TextInput
+        <DoneTextInput
           style={styles.searchInput}
           value={query}
           onChangeText={onQueryChange}
@@ -298,7 +309,7 @@ export default function ExploreBrowseScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

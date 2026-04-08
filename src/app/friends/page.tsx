@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 
 type Profile = {
   id: string;
   display_name: string | null;
-  email: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+  username?: string | null;
 };
 
 type Friend = Profile & { request_id: string | null };
@@ -29,7 +32,7 @@ export default function FriendsPage() {
     { id: string; recipient: Profile }[]
   >([]);
   const [searchResults, setSearchResults] = useState<
-    { id: string; display_name: string | null }[]
+    { id: string; display_name: string | null; username?: string | null; avatar_url?: string | null }[]
   >([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [friendSearch, setFriendSearch] = useState("");
@@ -45,6 +48,29 @@ export default function FriendsPage() {
 
   const displayName = (profile: Profile | null) =>
     profile?.display_name ?? "Unknown";
+
+  const profileInitial = (profile: {
+    display_name?: string | null;
+    email?: string | null;
+    username?: string | null;
+  }) => {
+    const label =
+      profile.display_name?.trim() ||
+      profile.username?.trim() ||
+      profile.email?.trim() ||
+      "?";
+    return label.slice(0, 1).toUpperCase();
+  };
+
+  const FriendAvatar = ({ profile }: { profile: Profile }) => (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-sm font-semibold text-[var(--color-text-tertiary)]">
+      {profile.avatar_url ? (
+        <AppImage src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span>{profileInitial(profile)}</span>
+      )}
+    </div>
+  );
 
   const parseMutationPayload = async (
     response: Response
@@ -290,9 +316,10 @@ export default function FriendsPage() {
                   >
                     <Link
                       href={`/profile/${friend.id}`}
-                      className="text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
+                      className="flex min-w-0 items-center gap-3 text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
                     >
-                      {displayName(friend)}
+                      <FriendAvatar profile={friend} />
+                      <span className="truncate">{displayName(friend)}</span>
                     </Link>
 
                     {friend.request_id ? (
@@ -343,9 +370,13 @@ export default function FriendsPage() {
                       key={request.id}
                       className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                     >
-                      <span className="text-sm text-[var(--color-text-primary)]">
-                        {displayName(request.recipient)}
-                      </span>
+                      <Link
+                        href={`/profile/${request.recipient.id}`}
+                        className="flex min-w-0 items-center gap-3 text-sm text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
+                      >
+                        <FriendAvatar profile={request.recipient} />
+                        <span className="truncate">{displayName(request.recipient)}</span>
+                      </Link>
 
                       {confirmingCancel === request.id ? (
                         <div className="flex items-center gap-2">
@@ -409,9 +440,13 @@ export default function FriendsPage() {
                     key={request.id}
                     className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"
                   >
-                    <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                      {displayName(request.requester)}
-                    </p>
+                    <Link
+                      href={`/profile/${request.requester.id}`}
+                      className="flex min-w-0 items-center gap-3 text-sm font-medium text-[var(--color-text-primary)] underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
+                    >
+                      <FriendAvatar profile={request.requester} />
+                      <span className="truncate">{displayName(request.requester)}</span>
+                    </Link>
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
@@ -459,7 +494,7 @@ export default function FriendsPage() {
             {searchResults.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {searchResults.slice(0, 5).map((user) => {
-                  const label = user.display_name ?? "Unknown";
+                  const label = user.display_name ?? user.username ?? "Unknown";
                   const isFriend = friendIds.has(user.id);
                   const isOutgoing = outgoingIds.has(user.id);
                   const isIncoming = incomingIds.has(user.id);
@@ -468,7 +503,9 @@ export default function FriendsPage() {
                       key={user.id}
                       className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                     >
-                      <div>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <FriendAvatar profile={user} />
+                        <div className="min-w-0">
                         <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {label}
                         </p>
@@ -485,6 +522,7 @@ export default function FriendsPage() {
                             Requested you
                           </p>
                         ) : null}
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -528,12 +566,18 @@ export default function FriendsPage() {
                       key={person.id}
                       className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
                     >
-                      <div>
+                      <Link
+                        href={`/profile/${person.id}`}
+                        className="flex min-w-0 items-center gap-3 underline-offset-2 hover:underline hover:text-[var(--color-accent-secondary)]"
+                      >
+                        <FriendAvatar profile={person} />
+                        <div className="min-w-0">
                         <p className="text-sm font-medium text-[var(--color-text-primary)]">
                           {displayName(person)}
                         </p>
                         <p className="text-xs text-[var(--color-accent-secondary)]">{mutualLabel}</p>
-                      </div>
+                        </div>
+                      </Link>
                       <button
                         type="button"
                         disabled={isFriend || isOutgoing || isMutating}

@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   COLLECTIONS_COPY,
@@ -15,7 +20,13 @@ import {
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { AppText } from "@/src/components/AppText";
-import { fetchCollectionDetail } from "@/src/lib/api/collections";
+import { DoneTextInput } from "@/src/components/DoneTextInput";
+import {
+  deleteUserCollection,
+  fetchCollectionDetail,
+  updateUserCollectionDetails,
+  uploadUserCollectionCover,
+} from "@/src/lib/api/collections";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
 
@@ -38,7 +49,7 @@ function formatCollectionDate(value: string | null) {
 }
 
 function buildItemSubtitle(item: UserCollectionItemSummary) {
-  return [item.producer, item.vintage].filter(Boolean).join(" · ");
+  return [item.producer, item.vintage].filter(Boolean).join(" - ");
 }
 
 function CollectionItemCard({ item }: { item: UserCollectionItemSummary }) {
@@ -62,9 +73,44 @@ function CollectionItemCard({ item }: { item: UserCollectionItemSummary }) {
         <AppText style={styles.itemTitle}>{item.wine_name?.trim() || "Untitled wine"}</AppText>
         {subtitle ? <AppText style={styles.itemSubtitle}>{subtitle}</AppText> : null}
         <AppText style={styles.itemMeta}>
-          {item.consumed_at ? `Consumed ${formatCollectionDate(item.consumed_at)}` : "Saved to collection"}
+          {item.consumed_at
+            ? `Consumed ${formatCollectionDate(item.consumed_at)}`
+            : "Saved to collection"}
         </AppText>
       </View>
+    </Pressable>
+  );
+}
+
+function ActionButton({
+  label,
+  onPress,
+  disabled,
+  destructive = false,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[
+        styles.actionButton,
+        destructive ? styles.actionButtonDestructive : null,
+        disabled ? styles.actionButtonDisabled : null,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <AppText
+        style={[
+          styles.actionButtonText,
+          destructive ? styles.actionButtonTextDestructive : null,
+        ]}
+      >
+        {label}
+      </AppText>
     </Pressable>
   );
 }
@@ -79,6 +125,11 @@ export default function CollectionDetailScreen() {
   const [items, setItems] = useState<UserCollectionItemSummary[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(collectionId));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState("");
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isDeletingCollection, setIsDeletingCollection] = useState(false);
 
   useEffect(() => {
     if (!collectionId) {
@@ -103,6 +154,7 @@ export default function CollectionDetailScreen() {
       }
 
       setCollection(result.collection);
+      setDraftName(result.collection.name);
       setItems(result.items);
       setIsLoading(false);
     };
@@ -114,9 +166,151 @@ export default function CollectionDetailScreen() {
     };
   }, [collectionId]);
 
+  const handleSaveTitle = async () => {
+    if (!collectionId) {
+      return;
+    }
+
+    setIsSavingTitle(true);
+    setErrorMessage(null);
+    const result = await updateUserCollectionDetails({
+      collectionId,
+      name: draftName,
+    });
+    setIsSavingTitle(false);
+
+    if (!result.ok) {
+      setErrorMessage(result.errorMessage);
+      return;
+    }
+
+    setCollection(result.collection);
+    setDraftName(result.collection.name);
+    setIsRenameModalOpen(false);
+  };
+
+  const uploadCoverFromAsset = async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!collectionId || !asset.uri) {
+      return;
+    }
+
+    setIsUploadingCover(true);
+    setErrorMessage(null);
+    const result = await uploadUserCollectionCover({
+      collectionId,
+      uri: asset.uri,
+      fileName: asset.fileName,
+      mimeType: asset.mimeType,
+    });
+    setIsUploadingCover(false);
+
+    if (!result.ok) {
+      setErrorMessage(result.errorMessage);
+      return;
+    }
+
+    setCollection(result.collection);
+  };
+
+  const chooseCoverFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setErrorMessage("Allow photo access to choose a collection thumbnail.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: false,
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    await uploadCoverFromAsset(result.assets[0]);
+  };
+
+  const takeCoverPhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setErrorMessage("Allow camera access to take a collection thumbnail.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    await uploadCoverFromAsset(result.assets[0]);
+  };
+
+  const openCoverOptions = () => {
+    Alert.alert(COLLECTIONS_COPY.changeCoverActionLabel, undefined, [
+      {
+        text: COLLECTIONS_COPY.choosePhotoActionLabel,
+        onPress: () => {
+          void chooseCoverFromLibrary();
+        },
+      },
+      {
+        text: COLLECTIONS_COPY.takePhotoActionLabel,
+        onPress: () => {
+          void takeCoverPhoto();
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const handleDeleteCollection = () => {
+    if (!collectionId) {
+      return;
+    }
+
+    Alert.alert(
+      COLLECTIONS_COPY.deleteConfirmTitle,
+      COLLECTIONS_COPY.deleteConfirmBody,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: COLLECTIONS_COPY.deleteActionLabel,
+          style: "destructive",
+          onPress: async () => {
+            setIsDeletingCollection(true);
+            setErrorMessage(null);
+            const result = await deleteUserCollection(collectionId);
+            setIsDeletingCollection(false);
+
+            if (!result.ok) {
+              setErrorMessage(result.errorMessage);
+              return;
+            }
+
+            router.replace("/(app)/entries?tab=collections");
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+      >
         <AppTopBar />
 
         <View style={styles.header}>
@@ -135,7 +329,9 @@ export default function CollectionDetailScreen() {
           </View>
         ) : errorMessage || !collectionId ? (
           <View style={styles.messageCard}>
-            <AppText style={styles.errorText}>{errorMessage ?? "Collection not found."}</AppText>
+            <AppText style={styles.errorText}>
+              {errorMessage ?? "Collection not found."}
+            </AppText>
           </View>
         ) : collection ? (
           <>
@@ -161,12 +357,45 @@ export default function CollectionDetailScreen() {
                   Updated {formatCollectionDate(collection.updated_at)}
                 </AppText>
               </View>
+              <View style={styles.actionRow}>
+                <ActionButton
+                  label={COLLECTIONS_COPY.renameActionLabel}
+                  onPress={() => {
+                    setDraftName(collection.name);
+                    setIsRenameModalOpen(true);
+                  }}
+                  disabled={isSavingTitle || isUploadingCover || isDeletingCollection}
+                />
+                <ActionButton
+                  label={
+                    isUploadingCover
+                      ? "Uploading..."
+                      : COLLECTIONS_COPY.changeCoverActionLabel
+                  }
+                  onPress={openCoverOptions}
+                  disabled={isSavingTitle || isUploadingCover || isDeletingCollection}
+                />
+                <ActionButton
+                  label={
+                    isDeletingCollection
+                      ? "Deleting..."
+                      : COLLECTIONS_COPY.deleteActionLabel
+                  }
+                  onPress={handleDeleteCollection}
+                  disabled={isSavingTitle || isUploadingCover || isDeletingCollection}
+                  destructive
+                />
+              </View>
             </View>
 
             {items.length === 0 ? (
               <View style={styles.messageCard}>
-                <AppText style={styles.emptyTitle}>{COLLECTIONS_COPY.detailEmptyTitle}</AppText>
-                <AppText style={styles.emptySubtitle}>{COLLECTIONS_COPY.detailEmptySubtitle}</AppText>
+                <AppText style={styles.emptyTitle}>
+                  {COLLECTIONS_COPY.detailEmptyTitle}
+                </AppText>
+                <AppText style={styles.emptySubtitle}>
+                  {COLLECTIONS_COPY.detailEmptySubtitle}
+                </AppText>
               </View>
             ) : (
               <View style={styles.stack}>
@@ -178,7 +407,53 @@ export default function CollectionDetailScreen() {
           </>
         ) : null}
       </ScrollView>
-    </View>
+
+      <Modal
+        visible={isRenameModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRenameModalOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalCard}>
+            <AppText style={styles.modalTitle}>{COLLECTIONS_COPY.renameActionLabel}</AppText>
+            <DoneTextInput
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="Collection name"
+              placeholderTextColor={colors.textTertiary}
+              style={styles.modalInput}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+            <View style={styles.modalActions}>
+              <ActionButton
+                label={COLLECTIONS_COPY.renameCancelActionLabel}
+                onPress={() => {
+                  setDraftName(collection?.name ?? "");
+                  setIsRenameModalOpen(false);
+                }}
+                disabled={isSavingTitle}
+              />
+              <ActionButton
+                label={
+                  isSavingTitle
+                    ? "Saving..."
+                    : COLLECTIONS_COPY.renameSaveActionLabel
+                }
+                onPress={() => {
+                  void handleSaveTitle();
+                }}
+                disabled={isSavingTitle}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -295,6 +570,34 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
   },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  actionButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  actionButtonDestructive: {
+    borderColor: "rgba(192, 57, 43, 0.35)",
+    backgroundColor: "rgba(192, 57, 43, 0.08)",
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  actionButtonText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  actionButtonTextDestructive: {
+    color: colors.error,
+  },
   stack: {
     gap: 10,
   },
@@ -345,5 +648,40 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     fontSize: 12,
     lineHeight: 16,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfacePrimary,
+    padding: 16,
+    gap: 14,
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontFamily: fonts.serif.light,
+    fontSize: 24,
+    lineHeight: 30,
+  },
+  modalInput: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceTinted,
+    color: colors.textPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
   },
 });

@@ -102,6 +102,7 @@ export type MobileFriendSearchUser = {
   id: string;
   display_name: string | null;
   username?: string | null;
+  avatar_url?: string | null;
   friend_status?: "none" | "request_sent" | "request_received" | "friends";
   outgoing_request_id?: string | null;
   incoming_request_id?: string | null;
