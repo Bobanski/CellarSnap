@@ -4,7 +4,12 @@ import type {
   UserCollectionItemSummary,
   UserCollectionSummary,
 } from "@cellarsnap/shared";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+import {
+  ensurePhotoMimeType,
+  extensionForMimeType,
+} from "@/src/lib/entryFlow/photoIO";
 
 type ApiErrorResponse = {
   error?: string;
@@ -43,6 +48,57 @@ type EntryCollectionsResponse = {
   memberships?: Record<string, EntryCollectionSummary[]>;
   error?: string;
 };
+
+const COLLECTION_COVER_REENCODE_MIME_TYPES = new Set(["image/heic", "image/heif"]);
+
+function buildCollectionCoverFileName(
+  fileName: string | null | undefined,
+  mimeType: string
+) {
+  const baseName = fileName?.trim().replace(/\.[^.]+$/, "") || "collection-cover";
+  return `${baseName}.${extensionForMimeType(mimeType)}`;
+}
+
+async function prepareCollectionCoverUpload({
+  uri,
+  fileName,
+  mimeType,
+}: {
+  uri: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+}) {
+  const resolvedMimeType = ensurePhotoMimeType(mimeType, fileName, uri);
+  if (COLLECTION_COVER_REENCODE_MIME_TYPES.has(resolvedMimeType)) {
+    const converted = await manipulateAsync(uri, [], {
+      compress: 0.9,
+      format: SaveFormat.JPEG,
+    });
+
+    return {
+      uri: converted.uri,
+      mimeType: "image/jpeg",
+      fileName: buildCollectionCoverFileName(fileName, "image/jpeg"),
+    };
+  }
+
+  if (
+    ![
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ].includes(resolvedMimeType)
+  ) {
+    throw new Error("Image must be JPEG, PNG, WebP, or GIF.");
+  }
+
+  return {
+    uri,
+    mimeType: resolvedMimeType,
+    fileName: buildCollectionCoverFileName(fileName, resolvedMimeType),
+  };
+}
 
 async function authorizedFetch(
   input: string,
@@ -325,42 +381,53 @@ export async function uploadUserCollectionCover({
     }
   | { ok: false; errorMessage: string }
 > {
-  const normalizedMimeType = mimeType ?? "image/jpeg";
-  const normalizedFileName =
-    fileName && fileName.trim().length > 0
-      ? fileName
-      : `collection-cover.${normalizedMimeType === "image/png" ? "png" : normalizedMimeType === "image/webp" ? "webp" : normalizedMimeType === "image/gif" ? "gif" : "jpg"}`;
-  const formData = new FormData();
-  formData.append("file", {
-    uri,
-    name: normalizedFileName,
-    type: normalizedMimeType,
-  } as unknown as Blob);
+  try {
+    const preparedUpload = await prepareCollectionCoverUpload({
+      uri,
+      fileName,
+      mimeType,
+    });
 
-  const result = await authorizedFetch(`/api/collections/${collectionId}/cover`, {
-    method: "POST",
-    body: formData,
-  });
+    const formData = new FormData();
+    formData.append("file", {
+      uri: preparedUpload.uri,
+      name: preparedUpload.fileName,
+      type: preparedUpload.mimeType,
+    } as unknown as Blob);
 
-  if (!result.ok) {
-    return result;
-  }
+    const result = await authorizedFetch(`/api/collections/${collectionId}/cover`, {
+      method: "POST",
+      body: formData,
+    });
 
-  const payload = (await result.response.json().catch(() => null)) as
-    | UpdateCollectionResponse
-    | null;
+    if (!result.ok) {
+      return result;
+    }
 
-  if (!result.response.ok || !payload?.collection) {
+    const payload = (await result.response.json().catch(() => null)) as
+      | UpdateCollectionResponse
+      | null;
+
+    if (!result.response.ok || !payload?.collection) {
+      return {
+        ok: false,
+        errorMessage: payload?.error ?? "Unable to update collection cover.",
+      };
+    }
+
+    return {
+      ok: true,
+      collection: payload.collection,
+    };
+  } catch (error) {
     return {
       ok: false,
-      errorMessage: payload?.error ?? "Unable to update collection cover.",
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Unable to update collection cover.",
     };
   }
-
-  return {
-    ok: true,
-    collection: payload.collection,
-  };
 }
 
 export async function deleteUserCollection(
