@@ -90,12 +90,12 @@ const SCAN_PROGRESS_TIMELINES: Record<
 > = {
   image: [
     {
-      until: 30,
+      until: 20,
       label: "Reading the list",
       detail: "Extracting text from your photo.",
     },
     {
-      until: 70,
+      until: 55,
       label: "Parsing wines",
       detail: "Identifying entries, prices, and regions.",
     },
@@ -107,12 +107,12 @@ const SCAN_PROGRESS_TIMELINES: Record<
   ],
   pdf: [
     {
-      until: 30,
+      until: 20,
       label: "Reading the PDF",
       detail: "Extracting text and finding the wine section.",
     },
     {
-      until: 70,
+      until: 55,
       label: "Parsing wines",
       detail: "Identifying entries, prices, and regions.",
     },
@@ -124,12 +124,12 @@ const SCAN_PROGRESS_TIMELINES: Record<
   ],
   url: [
     {
-      until: 40,
+      until: 25,
       label: "Fetching the page",
       detail: "Loading the wine-list link.",
     },
     {
-      until: 75,
+      until: 55,
       label: "Parsing wines",
       detail: "Extracting entries from the menu.",
     },
@@ -164,7 +164,17 @@ function buildScanProgress(
 ): ScanProgressState {
   const targetDurationMs =
     kind === "image" ? 6_000 : kind === "pdf" ? 4_000 : 8_000;
-  const progressCurve = 1 - Math.exp(-elapsedMs / targetDurationMs);
+  // Two-phase curve: fast ramp to ~50% in the first third, then slow crawl.
+  // Phase 1 uses a steep decay (3x rate) mapped to 0–55%.
+  // Phase 2 uses a gentle decay for the remaining 55–100%.
+  const midpointMs = targetDurationMs * 0.33;
+  let progressCurve: number;
+  if (elapsedMs <= midpointMs) {
+    progressCurve = 0.55 * (1 - Math.exp((-3 * elapsedMs) / targetDurationMs));
+  } else {
+    const tail = 1 - Math.exp(-(elapsedMs - midpointMs) / (targetDurationMs * 1.8));
+    progressCurve = 0.55 + 0.45 * tail;
+  }
   const percent = Math.max(6, Math.min(99, Math.round(6 + progressCurve * 93)));
   const timeline =
     SCAN_PROGRESS_TIMELINES[kind].find((step) => percent <= step.until) ??
@@ -255,7 +265,7 @@ export default function ListScanIntakeScreen() {
 
     const interval = window.setInterval(() => {
       setScanProgress(buildScanProgress(sourceKind, Date.now() - startTime));
-    }, 700);
+    }, 400);
 
     return () => {
       window.clearInterval(interval);
