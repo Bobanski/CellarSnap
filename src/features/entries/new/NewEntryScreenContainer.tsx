@@ -279,6 +279,7 @@ export default function NewEntryPage() {
     "idle" | "loading" | "success" | "error" | "timeout"
   >("idle");
   const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
+  const [autofillProgress, setAutofillProgress] = useState(0);
   const [lastScanConfidence, setLastScanConfidence] = useState<number | null>(null);
   const [users, setUsers] = useState<
     { id: string; display_name: string | null; email: string | null; tasting_count: number }[]
@@ -580,6 +581,30 @@ export default function NewEntryPage() {
       document.body.style.overflow = previousOverflow;
     };
   }, [cropPhotoIndex]);
+
+  // Simulated progress bar for label autofill — same two-phase curve as list scan.
+  useEffect(() => {
+    if (autofillStatus !== "loading") {
+      setAutofillProgress(0);
+      return;
+    }
+    const targetMs = 8_000;
+    const midMs = targetMs * 0.33;
+    const start = Date.now();
+    setAutofillProgress(6);
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - start;
+      let curve: number;
+      if (elapsed <= midMs) {
+        curve = 0.55 * (1 - Math.exp((-3 * elapsed) / targetMs));
+      } else {
+        const tail = 1 - Math.exp(-(elapsed - midMs) / (targetMs * 1.8));
+        curve = 0.55 + 0.45 * tail;
+      }
+      setAutofillProgress(Math.max(6, Math.min(99, Math.round(6 + curve * 93))));
+    }, 400);
+    return () => window.clearInterval(interval);
+  }, [autofillStatus]);
 
   const MAX_PHOTOS = MAX_ENTRY_PHOTOS_PER_TYPE;
   const MAX_UPLOAD_RETRIES = 3;
@@ -3563,12 +3588,22 @@ export default function NewEntryPage() {
               {autofillMessage ? (
                 autofillStatus === "loading" ? (
                   <div
-                    className="mt-3 flex items-center gap-2 text-sm text-[var(--color-accent-secondary)]"
+                    className="mt-3 rounded-2xl border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)]/10 p-3"
                     role="status"
                     aria-live="polite"
                   >
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--color-accent-secondary)] border-t-transparent" />
-                    <span>{autofillMessage}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-[var(--color-text-on-accent)]/85">{autofillMessage}</span>
+                      <span className="shrink-0 rounded-full border border-[var(--color-accent-secondary)]/20 bg-[var(--color-surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-text-on-accent)]">
+                        {autofillProgress}%
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-secondary)] via-[var(--color-accent-secondary)] to-emerald-300 transition-[width] duration-500 ease-out"
+                        style={{ width: `${autofillProgress}%` }}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <p
