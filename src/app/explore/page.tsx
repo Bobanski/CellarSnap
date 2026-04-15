@@ -38,26 +38,11 @@ type FeaturedCard = {
 // Constants
 // ---------------------------------------------------------------------------
 
-const POPULAR_GRAPES = [
-  "Pinot Noir", "Cabernet Sauvignon", "Chardonnay", "Sauvignon Blanc",
-  "Syrah / Shiraz", "Nebbiolo", "Riesling", "Grenache",
-  "Merlot", "Malbec", "Tempranillo", "Sangiovese",
-];
-
-const POPULAR_REGIONS = [
-  "Burgundy", "Bordeaux", "Napa Valley", "Tuscany",
-  "Champagne", "Piedmont", "Rioja", "Barossa Valley",
-  "Willamette Valley", "Mendoza", "Mosel", "Rhone Valley",
-  "Sonoma", "Stellenbosch",
-];
-
 const TYPE_BADGE_STYLE: Record<string, string> = {
-  region: "border-[var(--color-accent-primary)]/40 text-[var(--color-accent-secondary)]",
-  grape: "border-[var(--color-accent-gold)]/40 text-[var(--color-accent-gold)]",
-  producer: "border-[var(--color-accent-purple)]/40 text-[var(--color-accent-purple)]",
+  region: "border-[var(--color-accent-primary)]/40 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]",
+  grape: "border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-gold)]/10 text-[var(--color-accent-gold)]",
+  producer: "border-[var(--color-accent-purple)]/40 bg-[var(--color-accent-purple)]/10 text-[var(--color-accent-purple)]",
 };
-
-const COLLAPSE_KEY = "cellarsnap:explore-categories-collapsed";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -79,21 +64,7 @@ export default function ExplorePage() {
   const [grapeSpotlight, setGrapeSpotlight] = useState<FeaturedCard | null>(null);
   const [editorialLoading, setEditorialLoading] = useState(true);
 
-  // Category collapse
-  const [categoriesCollapsed, setCategoriesCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(COLLAPSE_KEY) === "true";
-  });
-
-  const toggleCategories = () => {
-    setCategoriesCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(COLLAPSE_KEY, String(next));
-      return next;
-    });
-  };
-
-  // Load user's most-logged producers (for search)
+  // Load user's producers for search
   useEffect(() => {
     let mounted = true;
     const loadProducers = async () => {
@@ -112,11 +83,7 @@ export default function ExplorePage() {
         const p = (row.producer as string)?.trim();
         if (p) counts.set(p, (counts.get(p) ?? 0) + 1);
       }
-      const sorted = [...counts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12)
-        .map(([name]) => name);
-      if (mounted) setProducers(sorted);
+      if (mounted) setProducers([...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).map(([n]) => n));
     };
     loadProducers();
     return () => { mounted = false; };
@@ -135,24 +102,17 @@ export default function ExplorePage() {
           setFeaturedRegion(data.featured_region ?? null);
           setGrapeSpotlight(data.grape_spotlight ?? null);
         }
-      } catch {
-        // Trending is non-critical — page still works without it
-      } finally {
-        if (mounted) setEditorialLoading(false);
-      }
+      } catch { /* non-critical */ }
+      finally { if (mounted) setEditorialLoading(false); }
     };
     load();
     return () => { mounted = false; };
   }, []);
 
-  // Search logic (preserved from previous implementation)
+  // Search logic
   const search = useCallback(async (q: string) => {
     const trimmed = q.trim().toLowerCase();
-    if (!trimmed) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
+    if (!trimmed) { setResults([]); setSearching(false); return; }
     setSearching(true);
     const found: SearchResult[] = [];
 
@@ -168,17 +128,10 @@ export default function ExplorePage() {
       }
     } catch { /* ignore */ }
 
-    const matchedRegions = WINE_REGIONS.filter(r =>
-      r.toLowerCase().includes(trimmed)
-    ).slice(0, 5);
-    for (const r of matchedRegions) {
+    for (const r of WINE_REGIONS.filter(r => r.toLowerCase().includes(trimmed)).slice(0, 5)) {
       found.push({ type: "region", name: r, href: `/explore/region/${toExploreSlug(r)}` });
     }
-
-    const matchedProducers = producers.filter(p =>
-      p.toLowerCase().includes(trimmed)
-    ).slice(0, 5);
-    for (const p of matchedProducers) {
+    for (const p of producers.filter(p => p.toLowerCase().includes(trimmed)).slice(0, 5)) {
       found.push({ type: "producer", name: p, href: `/explore/producer/${toExploreSlug(p)}` });
     }
 
@@ -274,138 +227,69 @@ export default function ExplorePage() {
         {!isSearching && (
           <>
             {/* ── Category cards ───────────────────────── */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                  Browse
-                </p>
-                <button
-                  type="button"
-                  onClick={toggleCategories}
-                  className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]"
+            <div className="mt-8 grid grid-cols-3 gap-3">
+              {[
+                {
+                  label: "Regions",
+                  subtitle: "From Burgundy to Barossa",
+                  href: "/explore/regions",
+                  icon: (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="9" stroke="var(--color-accent-secondary)" strokeWidth="0.8" opacity="0.5" />
+                      <circle cx="12" cy="12" r="4.5" stroke="var(--color-accent-secondary)" strokeWidth="0.6" opacity="0.3" />
+                      <circle cx="12" cy="5" r="1.2" fill="var(--color-accent-secondary)" opacity="0.8" />
+                      <circle cx="17" cy="14" r="1" fill="var(--color-accent-secondary)" opacity="0.6" />
+                      <circle cx="7" cy="16" r="0.8" fill="var(--color-accent-secondary)" opacity="0.4" />
+                    </svg>
+                  ),
+                },
+                {
+                  label: "Grapes",
+                  subtitle: "Pinot Noir to Riesling",
+                  href: "/explore/grapes",
+                  icon: (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-accent-secondary)">
+                      <circle cx="12" cy="8" r="2.6" opacity="0.45" />
+                      <circle cx="9" cy="12.5" r="2.6" opacity="0.35" />
+                      <circle cx="15" cy="12.5" r="2.6" opacity="0.45" />
+                      <circle cx="12" cy="16.5" r="2.6" opacity="0.3" />
+                      <line x1="12" y1="5.4" x2="12" y2="3.5" stroke="var(--color-accent-secondary)" strokeWidth="0.7" opacity="0.6" />
+                      <path d="M12 3.5 Q14.5 2.5 15.5 3.5" stroke="var(--color-accent-secondary)" strokeWidth="0.5" fill="none" opacity="0.4" />
+                    </svg>
+                  ),
+                },
+                {
+                  label: "Producers",
+                  subtitle: "The makers behind the wine",
+                  href: "/explore/producers",
+                  icon: (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <rect x="8" y="3" width="8" height="13" rx="4" fill="var(--color-accent-secondary)" opacity="0.35" />
+                      <rect x="10" y="16" width="4" height="4" rx="0.6" fill="var(--color-accent-secondary)" opacity="0.5" />
+                      <line x1="7" y1="20" x2="17" y2="20" stroke="var(--color-accent-secondary)" strokeWidth="0.8" opacity="0.4" />
+                    </svg>
+                  ),
+                },
+              ].map((cat) => (
+                <Link
+                  key={cat.label}
+                  href={cat.href}
+                  className="flex flex-col items-center gap-2.5 rounded-2xl border border-[var(--color-accent-secondary)]/12 p-5 text-center transition hover:border-[var(--color-accent-secondary)]/30"
+                  style={{
+                    background: "linear-gradient(to bottom, rgba(123,29,58,0.18) 0%, var(--color-surface-primary) 100%)",
+                  }}
                 >
-                  {categoriesCollapsed ? "Show" : "Hide"}
-                </button>
-              </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-3">
-                {[
-                  {
-                    label: "Regions",
-                    subtitle: `From Burgundy to Barossa`,
-                    href: "#regions",
-                    icon: (
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <circle cx="10" cy="10" r="7" fill="none" stroke="var(--color-accent-secondary)" strokeWidth="0.8" opacity="0.6" />
-                        <circle cx="10" cy="10" r="3.5" fill="none" stroke="var(--color-accent-secondary)" strokeWidth="0.6" opacity="0.4" />
-                        <circle cx="10" cy="5" r="1" fill="var(--color-accent-secondary)" opacity="0.8" />
-                        <circle cx="14" cy="12" r="0.8" fill="var(--color-accent-secondary)" opacity="0.6" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    label: "Grapes",
-                    subtitle: "Pinot Noir to Riesling",
-                    href: "#grapes",
-                    icon: (
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--color-accent-secondary)">
-                        <circle cx="10" cy="7" r="2.2" opacity="0.4" />
-                        <circle cx="7.5" cy="10.5" r="2.2" opacity="0.35" />
-                        <circle cx="12.5" cy="10.5" r="2.2" opacity="0.4" />
-                        <circle cx="10" cy="13.5" r="2.2" opacity="0.3" />
-                        <line x1="10" y1="4.8" x2="10" y2="3.5" stroke="var(--color-accent-secondary)" strokeWidth="0.6" opacity="0.5" />
-                      </svg>
-                    ),
-                  },
-                  {
-                    label: "Producers",
-                    subtitle: "The makers behind the wine",
-                    href: "#producers",
-                    icon: (
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <rect x="7" y="3" width="6" height="10" rx="3" fill="var(--color-accent-secondary)" opacity="0.3" />
-                        <rect x="8.5" y="13" width="3" height="4" rx="0.5" fill="var(--color-accent-secondary)" opacity="0.5" />
-                        <line x1="6" y1="17" x2="14" y2="17" stroke="var(--color-accent-secondary)" strokeWidth="0.8" opacity="0.4" />
-                      </svg>
-                    ),
-                  },
-                ].map((cat) => (
-                  <div
-                    key={cat.label}
-                    className="flex flex-col items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-gradient-to-b from-[var(--color-accent-primary)]/15 to-[var(--color-surface-primary)] p-4 text-center"
-                  >
+                  <div className="flex h-10 w-10 items-center justify-center">
                     {cat.icon}
-                    <p className="text-xs font-semibold text-[var(--color-text-primary)]">
-                      {cat.label}
-                    </p>
-                    <p className="text-[10px] leading-tight text-[var(--color-text-tertiary)]">
-                      {cat.subtitle}
-                    </p>
                   </div>
-                ))}
-              </div>
-
-              {/* Collapsible browse lists */}
-              {!categoriesCollapsed && (
-                <div className="mt-5 space-y-5">
-                  <div id="grapes">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Popular Grapes
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {POPULAR_GRAPES.map((g) => (
-                        <Link
-                          key={g}
-                          href={`/explore/grape/${toExploreSlug(g)}`}
-                          className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5 text-xs text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                        >
-                          {g}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div id="regions">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Popular Regions
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {POPULAR_REGIONS.map((r) => (
-                        <Link
-                          key={r}
-                          href={`/explore/region/${toExploreSlug(r)}`}
-                          className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5 text-xs text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                        >
-                          {r}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div id="producers">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                      Your Producers
-                    </p>
-                    {producers.length === 0 ? (
-                      <p className="text-xs text-[var(--color-text-tertiary)]">
-                        Log wines with producers to see them here.
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {producers.map((p) => (
-                          <Link
-                            key={p}
-                            href={`/explore/producer/${toExploreSlug(p)}`}
-                            className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5 text-xs text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                          >
-                            {p}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                  <p className="text-xs font-semibold text-[var(--color-text-primary)]">
+                    {cat.label}
+                  </p>
+                  <p className="text-[10px] leading-tight text-[var(--color-text-tertiary)]">
+                    {cat.subtitle}
+                  </p>
+                </Link>
+              ))}
             </div>
 
             {/* ── Trending ─────────────────────────────── */}
@@ -415,15 +299,15 @@ export default function ExplorePage() {
               </p>
 
               {editorialLoading ? (
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 space-y-1">
                   {[0, 1, 2].map((i) => (
-                    <div key={i} className="flex items-center gap-4 rounded-xl bg-[var(--color-surface-primary)] px-4 py-3.5 animate-pulse">
+                    <div key={i} className="flex items-center gap-4 rounded-xl px-4 py-3.5 animate-pulse">
                       <div className="h-5 w-4 rounded bg-[var(--color-surface-raised)]" />
                       <div className="flex-1 space-y-1.5">
                         <div className="h-3.5 w-28 rounded bg-[var(--color-surface-raised)]" />
                         <div className="h-2.5 w-20 rounded bg-[var(--color-surface-raised)]" />
                       </div>
-                      <div className="h-5 w-14 rounded-full bg-[var(--color-surface-raised)]" />
+                      <div className="h-5 w-16 rounded-full bg-[var(--color-surface-raised)]" />
                     </div>
                   ))}
                 </div>
@@ -433,10 +317,10 @@ export default function ExplorePage() {
                     <Link
                       key={`${item.type}-${item.slug}`}
                       href={item.href}
-                      className="flex items-center gap-4 rounded-xl px-4 py-3.5 transition hover:bg-[var(--color-surface-primary)]"
+                      className="flex items-center gap-4 px-4 py-3.5 transition hover:bg-[var(--color-surface-primary)]/60"
                     >
                       <span
-                        className="w-4 text-center text-base font-light text-[var(--color-text-tertiary)]"
+                        className="w-5 text-center text-lg font-light text-[var(--color-text-tertiary)]"
                         style={{ fontFamily: "var(--font-serif)" }}
                       >
                         {item.rank}
@@ -457,11 +341,11 @@ export default function ExplorePage() {
                     </Link>
                   ))}
                 </div>
-              ) : !editorialLoading ? (
+              ) : (
                 <p className="mt-3 text-xs text-[var(--color-text-tertiary)]">
                   Nothing trending yet. Log wines to light this up.
                 </p>
-              ) : null}
+              )}
             </div>
 
             {/* ── Featured Region ──────────────────────── */}
@@ -472,23 +356,26 @@ export default function ExplorePage() {
                 </p>
                 <Link
                   href={featuredRegion.href}
-                  className="mt-3 block overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-accent-primary)]/20 to-[var(--color-surface-primary)] transition hover:border-[var(--color-border-strong)]"
+                  className="mt-3 block overflow-hidden rounded-2xl border border-[var(--color-accent-secondary)]/12 transition hover:border-[var(--color-accent-secondary)]/30"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(123,29,58,0.25) 0%, rgba(74,48,96,0.15) 50%, var(--color-surface-primary) 100%)",
+                  }}
                 >
-                  <div className="p-5">
+                  <div className="p-6">
                     <h3
-                      className="text-xl font-light"
+                      className="text-2xl font-light"
                       style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
                     >
                       {featuredRegion.display_name}
                     </h3>
                     <p
-                      className="mt-1.5 text-xs leading-relaxed"
+                      className="mt-2 text-xs leading-relaxed"
                       style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-secondary)" }}
                     >
                       {featuredRegion.tagline}
                     </p>
                     {featuredRegion.characteristics.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
+                      <div className="mt-4 flex flex-wrap gap-1.5">
                         {featuredRegion.characteristics.map((c) => (
                           <span
                             key={c}
@@ -517,11 +404,11 @@ export default function ExplorePage() {
                   href={grapeSpotlight.href}
                   className="mt-3 block overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] transition hover:border-[var(--color-border-strong)]"
                 >
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <h3
-                          className="text-xl font-light"
+                          className="text-2xl font-light"
                           style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
                         >
                           {grapeSpotlight.display_name}
@@ -530,10 +417,10 @@ export default function ExplorePage() {
                           {grapeSpotlight.tagline}
                         </p>
                       </div>
-                      <div className="h-10 w-10 shrink-0 rounded-full bg-[var(--color-accent-secondary)]/15" />
+                      <div className="h-12 w-12 shrink-0 rounded-full bg-[var(--color-accent-secondary)]/12" />
                     </div>
                     {grapeSpotlight.characteristics.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
+                      <div className="mt-4 flex flex-wrap gap-1.5">
                         {grapeSpotlight.characteristics.map((c) => (
                           <span
                             key={c}
@@ -553,9 +440,12 @@ export default function ExplorePage() {
             <div className="mt-10">
               <Link
                 href="/explore/grape/pinot-noir"
-                className="flex items-center gap-4 rounded-2xl border border-[var(--color-accent-secondary)]/20 bg-[var(--color-accent-primary)]/10 p-5 transition hover:border-[var(--color-accent-secondary)]/40"
+                className="flex items-center gap-4 rounded-2xl border border-[var(--color-accent-secondary)]/15 p-5 transition hover:border-[var(--color-accent-secondary)]/30"
+                style={{
+                  background: "linear-gradient(135deg, rgba(123,29,58,0.12) 0%, var(--color-surface-primary) 100%)",
+                }}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent-primary)]/20">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent-primary)]/15">
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="var(--color-accent-secondary)">
                     <rect x="4" y="2" width="12" height="16" rx="2" opacity="0.3" />
                     <line x1="7" y1="6" x2="13" y2="6" stroke="var(--color-accent-secondary)" strokeWidth="1" opacity="0.5" />
