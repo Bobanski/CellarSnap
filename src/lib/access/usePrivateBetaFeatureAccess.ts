@@ -15,7 +15,7 @@ function isMissingTestAccountSchemaError(message: string) {
 }
 
 export function usePrivateBetaFeatureAccess() {
-  const [hasPrivateBetaFeatureAccess, setHasPrivateBetaFeatureAccess] = useState(false);
+  const [hasPrivateBetaFeatureAccess, setHasPrivateBetaFeatureAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
