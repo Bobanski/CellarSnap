@@ -162,6 +162,51 @@ export const styles = StyleSheet.create({
   uploadStatusTextError: {
     color: colors.error,
   },
+  autofillProgressCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(196,96,122,0.20)",
+    backgroundColor: "rgba(123,29,58,0.10)",
+    padding: 12,
+    gap: 8,
+  },
+  autofillProgressHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    gap: 10,
+  },
+  autofillProgressText: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    lineHeight: 17,
+    flex: 1,
+    opacity: 0.85,
+  },
+  autofillProgressBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(196,96,122,0.20)",
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  autofillProgressBadgeText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "700" as const,
+  },
+  autofillProgressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceMuted,
+    overflow: "hidden" as const,
+  },
+  autofillProgressFill: {
+    height: "100%" as unknown as number,
+    borderRadius: 999,
+    backgroundColor: colors.accentSecondary,
+  },
   retryActionButton: {
     alignSelf: "flex-start",
     borderRadius: 999,

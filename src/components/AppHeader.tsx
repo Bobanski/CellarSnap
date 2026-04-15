@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import AlertsMenu from "@/components/AlertsMenu";
 
 type AppHeaderProps = {
@@ -9,8 +8,6 @@ type AppHeaderProps = {
 };
 
 export default function AppHeader({ onMenuOpen }: AppHeaderProps) {
-  const pathname = usePathname();
-  const isNewEntry = pathname === "/entries/new";
 
   return (
     <header className="app-header flex shrink-0 items-center justify-between px-4" style={{ height: 50 }}>
@@ -31,20 +28,6 @@ export default function AppHeader({ onMenuOpen }: AppHeaderProps) {
 
       {/* Right: actions */}
       <div className="flex items-center gap-2">
-        {isNewEntry ? (
-          <span className="accent-soft-chip rounded-full border px-3 py-1.5 text-sm font-semibold">
-            + New
-          </span>
-        ) : (
-          <Link
-            href="/entries/new"
-            prefetch={false}
-            className="accent-solid-button rounded-full px-3 py-1.5 text-sm font-semibold transition"
-          >
-            + New
-          </Link>
-        )}
-
         <AlertsMenu />
 
         <button

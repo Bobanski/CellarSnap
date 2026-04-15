@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LIST_SCAN_MAX_IMAGE_COUNT } from "@cellarsnap/shared";
 import {
-  ActivityIndicator,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -47,12 +47,108 @@ function createImageKey(image: SelectedImage) {
   return `${image.uri}|${image.name}`;
 }
 
+type ScanSourceKind = "image" | "pdf" | "url";
+
+type ScanProgressState = {
+  percent: number;
+  label: string;
+  detail: string;
+};
+
+const SCAN_PROGRESS_TIMELINES: Record<
+  ScanSourceKind,
+  Array<{ until: number; label: string; detail: string }>
+> = {
+  image: [
+    { until: 20, label: "Reading the list", detail: "Extracting text from your photo." },
+    { until: 55, label: "Parsing wines", detail: "Identifying entries, prices, and regions." },
+    { until: 94, label: "Scoring matches", detail: "Computing your personalized match scores." },
+  ],
+  pdf: [
+    { until: 20, label: "Reading the PDF", detail: "Extracting text and finding the wine section." },
+    { until: 55, label: "Parsing wines", detail: "Identifying entries, prices, and regions." },
+    { until: 94, label: "Scoring matches", detail: "Computing your personalized match scores." },
+  ],
+  url: [
+    { until: 25, label: "Fetching the page", detail: "Loading the wine-list link." },
+    { until: 55, label: "Parsing wines", detail: "Extracting entries from the menu." },
+    { until: 94, label: "Scoring matches", detail: "Computing your personalized match scores." },
+  ],
+};
+
+function buildScanProgress(kind: ScanSourceKind, elapsedMs: number): ScanProgressState {
+  const targetDurationMs = kind === "image" ? 6_000 : kind === "pdf" ? 4_000 : 8_000;
+  const midpointMs = targetDurationMs * 0.33;
+  let progressCurve: number;
+  if (elapsedMs <= midpointMs) {
+    progressCurve = 0.55 * (1 - Math.exp((-3 * elapsedMs) / targetDurationMs));
+  } else {
+    const tail = 1 - Math.exp(-(elapsedMs - midpointMs) / (targetDurationMs * 1.8));
+    progressCurve = 0.55 + 0.45 * tail;
+  }
+  const percent = Math.max(6, Math.min(99, Math.round(6 + progressCurve * 93)));
+  const timeline =
+    SCAN_PROGRESS_TIMELINES[kind].find((step) => percent <= step.until) ??
+    SCAN_PROGRESS_TIMELINES[kind][SCAN_PROGRESS_TIMELINES[kind].length - 1];
+  const isTakingLongerThanExpected = elapsedMs > targetDurationMs * 1.15;
+
+  return {
+    percent,
+    label: isTakingLongerThanExpected ? "Still working" : timeline.label,
+    detail: isTakingLongerThanExpected
+      ? "This one is taking a little longer than usual, but the scan is still running."
+      : timeline.detail,
+  };
+}
+
+function resolveScanSourceKind(params: {
+  selectedImages: SelectedImage[];
+  selectedPdf: SelectedPdf | null;
+  urlValue: string;
+}): ScanSourceKind | null {
+  if (params.selectedImages.length > 0) return "image";
+  if (params.selectedPdf) return "pdf";
+  if (params.urlValue.trim()) return "url";
+  return null;
+}
+
 export default function ListScanIntakeScreen() {
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
   const [urlValue, setUrlValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<ScanProgressState | null>(null);
+  const progressBarWidth = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setScanProgress(null);
+      progressBarWidth.setValue(0);
+      return;
+    }
+
+    const sourceKind = resolveScanSourceKind({ selectedImages, selectedPdf, urlValue });
+    if (!sourceKind) {
+      setScanProgress(null);
+      return;
+    }
+
+    const startTime = Date.now();
+    setScanProgress(buildScanProgress(sourceKind, 0));
+
+    const interval = setInterval(() => {
+      const progress = buildScanProgress(sourceKind, Date.now() - startTime);
+      setScanProgress(progress);
+      Animated.timing(progressBarWidth, {
+        toValue: progress.percent,
+        duration: 350,
+        useNativeDriver: false,
+      }).start();
+    }, 400);
+
+    return () => clearInterval(interval);
+  }, [isSubmitting, selectedImages, selectedPdf, urlValue]);
 
   const appendImages = (incomingImages: SelectedImage[]) => {
     if (incomingImages.length === 0) {
@@ -304,6 +400,36 @@ export default function ListScanIntakeScreen() {
             </View>
           ) : null}
 
+          {isSubmitting && scanProgress ? (
+            <View style={styles.progressCard}>
+              <View style={styles.progressHeader}>
+                <View style={styles.progressTextWrap}>
+                  <AppText style={styles.progressLabel}>{scanProgress.label}</AppText>
+                  <AppText style={styles.progressDetail}>{scanProgress.detail}</AppText>
+                </View>
+                <View style={styles.progressBadge}>
+                  <AppText style={styles.progressBadgeText}>{scanProgress.percent}%</AppText>
+                </View>
+              </View>
+              <View style={styles.progressTrack}>
+                <Animated.View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: progressBarWidth.interpolate({
+                        inputRange: [0, 100],
+                        outputRange: ["0%", "100%"],
+                      }),
+                    },
+                  ]}
+                />
+              </View>
+              <AppText style={styles.progressHint}>
+                Longer PDFs and multi-page lists can take a little while, but the scan is still running.
+              </AppText>
+            </View>
+          ) : null}
+
           <Pressable
             style={[styles.submitButton, isSubmitting ? styles.submitButtonDisabled : null]}
             disabled={
@@ -312,14 +438,9 @@ export default function ListScanIntakeScreen() {
             }
             onPress={() => void submitScan()}
           >
-            {isSubmitting ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator color={colors.screenBg} />
-                <AppText style={styles.submitButtonText}>Scanning...</AppText>
-              </View>
-            ) : (
-              <AppText style={styles.submitButtonText}>Scan list</AppText>
-            )}
+            <AppText style={styles.submitButtonText}>
+              {isSubmitting ? "Scanning..." : "Scan list"}
+            </AppText>
           </Pressable>
         </View>
       </ScrollView>
@@ -501,6 +622,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  progressCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(196,96,122,0.20)",
+    backgroundColor: "rgba(123,29,58,0.10)",
+    padding: 16,
+    gap: 12,
+  },
+  progressHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  progressTextWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  progressLabel: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  progressDetail: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    lineHeight: 19,
+    opacity: 0.85,
+  },
+  progressBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(196,96,122,0.20)",
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  progressBadgeText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceMuted,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: colors.accentSecondary,
+  },
+  progressHint: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    lineHeight: 16,
+    opacity: 0.65,
+  },
   submitButton: {
     borderRadius: 11,
     backgroundColor: colors.accentPrimary,
@@ -516,10 +696,5 @@ const styles = StyleSheet.create({
     color: colors.screenBg,
     fontSize: 16,
     fontWeight: "700",
-  },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
   },
 });

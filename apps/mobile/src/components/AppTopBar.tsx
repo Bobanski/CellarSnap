@@ -522,13 +522,6 @@ export function AppTopBar() {
         </Pressable>
         <View style={styles.headerActions}>
           <Pressable
-            style={styles.newBtn}
-            onPress={() => router.push("/(app)/entries/new")}
-          >
-            <AppText style={styles.newBtnText}>+ New</AppText>
-          </Pressable>
-
-          <Pressable
             style={styles.iconButton}
             onPress={toggleAlerts}
             accessibilityRole="button"
@@ -939,17 +932,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  newBtn: {
-    borderRadius: 999,
-    backgroundColor: colors.accentPrimary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  newBtnText: {
-    color: colors.champagne,
-    fontSize: 12,
-    fontWeight: "700",
   },
   iconButton: {
     width: 36,

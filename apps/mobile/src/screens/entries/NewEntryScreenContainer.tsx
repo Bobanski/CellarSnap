@@ -8,6 +8,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   findNodeHandle,
   Image,
   KeyboardAvoidingView,
@@ -428,6 +429,8 @@ export default function NewEntryScreen() {
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [isAutofillLoading, setIsAutofillLoading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [autofillProgress, setAutofillProgress] = useState(0);
+  const autofillBarWidth = useRef(new Animated.Value(0)).current;
   const [cropPhotoId, setCropPhotoId] = useState<string | null>(null);
   const [cropLineupWineId, setCropLineupWineId] = useState<string | null>(null);
   const [savedCropByPhotoId, setSavedCropByPhotoId] = useState<
@@ -493,6 +496,37 @@ export default function NewEntryScreen() {
   useEffect(() => {
     setShowManualFields(false);
   }, []);
+
+  // Simulated progress bar for label autofill — same two-phase curve as list scan.
+  useEffect(() => {
+    if (uploadAnalysisStatus !== "loading") {
+      setAutofillProgress(0);
+      autofillBarWidth.setValue(0);
+      return;
+    }
+    const targetMs = 8_000;
+    const midMs = targetMs * 0.33;
+    const start = Date.now();
+    setAutofillProgress(6);
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      let curve: number;
+      if (elapsed <= midMs) {
+        curve = 0.55 * (1 - Math.exp((-3 * elapsed) / targetMs));
+      } else {
+        const tail = 1 - Math.exp(-(elapsed - midMs) / (targetMs * 1.8));
+        curve = 0.55 + 0.45 * tail;
+      }
+      const pct = Math.max(6, Math.min(99, Math.round(6 + curve * 93)));
+      setAutofillProgress(pct);
+      Animated.timing(autofillBarWidth, {
+        toValue: pct,
+        duration: 350,
+        useNativeDriver: false,
+      }).start();
+    }, 400);
+    return () => clearInterval(interval);
+  }, [uploadAnalysisStatus]);
 
   useFocusEffect(
     useCallback(() => {
@@ -2271,9 +2305,26 @@ export default function NewEntryScreen() {
             ) : null}
             {uploadMessage ? (
               uploadAnalysisStatus === "loading" ? (
-                <View style={styles.uploadLoadingRow}>
-                  <ActivityIndicator size="small" color={colors.accentPrimary} />
-                  <AppText style={styles.uploadLoadingText}>{uploadMessage}</AppText>
+                <View style={styles.autofillProgressCard}>
+                  <View style={styles.autofillProgressHeader}>
+                    <AppText style={styles.autofillProgressText}>{uploadMessage}</AppText>
+                    <View style={styles.autofillProgressBadge}>
+                      <AppText style={styles.autofillProgressBadgeText}>{autofillProgress}%</AppText>
+                    </View>
+                  </View>
+                  <View style={styles.autofillProgressTrack}>
+                    <Animated.View
+                      style={[
+                        styles.autofillProgressFill,
+                        {
+                          width: autofillBarWidth.interpolate({
+                            inputRange: [0, 100],
+                            outputRange: ["0%", "100%"],
+                          }),
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
               ) : (
                 <AppText

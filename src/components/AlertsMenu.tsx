@@ -517,19 +517,18 @@ export default function AlertsMenu() {
         <svg
           width="18"
           height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          viewBox="0 0 20 20"
+          fill="currentColor"
           aria-hidden="true"
         >
-          <path d="M15 17H9" />
-          <path d="M10 21a2 2 0 0 0 4 0" />
-          <path d="M7 8a5 5 0 0 1 10 0v4l2 3H5l2-3z" />
-          <path d="M8 3 6.5 4.5" />
-          <path d="M16 3 17.5 4.5" />
+          <circle cx="10" cy="5.6" r="3" opacity="0.35" />
+          <circle cx="6.8" cy="8.8" r="3" opacity="0.3" />
+          <circle cx="13.2" cy="8.8" r="3" opacity="0.35" />
+          <circle cx="8.4" cy="12" r="3" opacity="0.3" />
+          <circle cx="11.6" cy="12" r="3" opacity="0.35" />
+          <circle cx="10" cy="14.8" r="3" opacity="0.25" />
+          <line x1="10" y1="2.6" x2="10" y2="1.6" stroke="currentColor" strokeWidth="0.8" opacity="0.6" fill="none" />
+          <path d="M10 1.6 Q12 1 12.8 1.6" stroke="currentColor" strokeWidth="0.6" fill="none" opacity="0.5" />
         </svg>
         {displayCount > 0 ? (
           <span className="accent-count-badge absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-semibold">

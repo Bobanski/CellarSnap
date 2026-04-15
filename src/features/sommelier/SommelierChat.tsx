@@ -196,6 +196,7 @@ export default function SommelierChat() {
     });
     setPending(true);
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let accumulated = "";
 
     try {
       const payload = {
@@ -247,34 +248,22 @@ export default function SommelierChat() {
         buffer += decoder.decode(value, { stream: true });
         buffer = parseSseBuffer(buffer, (event, data) => {
           if (event === "delta") {
-            const delta = typeof data.text === "string" ? data.text : "";
-            startTransition(() => {
-              setMessages((current) =>
-                current.map((message) =>
-                  message.id === assistantId
-                    ? {
-                        ...message,
-                        content: `${message.content}${delta}`,
-                        isStreaming: true,
-                      }
-                    : message
-                )
-              );
-            });
+            accumulated += typeof data.text === "string" ? data.text : "";
             return;
           }
 
           if (event === "done") {
+            const finalText =
+              typeof data.text === "string" && data.text.trim().length > 0
+                ? data.text
+                : accumulated;
             startTransition(() => {
               setMessages((current) =>
                 current.map((message) =>
                   message.id === assistantId
                     ? {
                         ...message,
-                        content:
-                          typeof data.text === "string" && data.text.trim().length > 0
-                            ? data.text
-                            : message.content,
+                        content: finalText,
                         isStreaming: false,
                       }
                     : message
@@ -310,8 +299,8 @@ export default function SommelierChat() {
               ? {
                   ...message,
                   content:
-                    message.content.trim().length > 0
-                      ? message.content
+                    accumulated.trim().length > 0
+                      ? accumulated
                       : "I couldn't finish that answer. Try again in a moment.",
                   isStreaming: false,
                 }
