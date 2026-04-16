@@ -92,7 +92,7 @@ export default function SensoryRadarChart({
   );
 
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] bg-black/20 p-5">
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[#1A0810]/20 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-[9px] font-bold uppercase tracking-[2px] text-[var(--color-text-tertiary)]">
           Sensory map
@@ -127,7 +127,7 @@ export default function SensoryRadarChart({
                 })
                 .join(" ")}
               fill="none"
-              stroke={ring === neutralRing ? "rgba(196, 96, 122, 0.14)" : "rgba(196, 96, 122, 0.05)"}
+              stroke={ring === neutralRing ? "rgba(196, 96, 122, 0.14)" : "rgba(196, 96, 122, 0.12)"}
               strokeWidth={ring === neutralRing ? "1.5" : "1"}
             />
           ))}
@@ -146,7 +146,7 @@ export default function SensoryRadarChart({
                   y1={center}
                   x2={spokeEnd.x}
                   y2={spokeEnd.y}
-                  stroke="rgba(196, 96, 122, 0.05)"
+                  stroke="rgba(196, 96, 122, 0.12)"
                   strokeWidth="1"
                 />
                 <text
@@ -154,7 +154,7 @@ export default function SensoryRadarChart({
                   y={ly}
                   textAnchor={lx < center - 15 ? "end" : lx > center + 15 ? "start" : "middle"}
                   dominantBaseline="middle"
-                  fill="rgba(155, 147, 168, 0.9)"
+                  fill="#C4A882"
                   fontSize="10.5"
                   fontWeight="500"
                 >

@@ -42,10 +42,10 @@ export default function SommelierInput({
         }}
         disabled={disabled}
         placeholder={SOMMELIER_INPUT_PLACEHOLDER}
-        className="flex-1 outline-none transition focus:border-[var(--color-border-strong)]"
+        className="flex-1 outline-none transition focus:border-[rgba(196,96,122,0.35)]"
         style={{
-          background: "rgba(245, 237, 214, 0.04)",
-          border: "0.5px solid var(--color-border-strong)",
+          background: "#180A10",
+          border: "0.5px solid rgba(196, 96, 122, 0.12)",
           borderRadius: "20px",
           padding: "8px 13px",
           fontSize: "11px",
@@ -66,7 +66,7 @@ export default function SommelierInput({
           width: "30px",
           height: "30px",
           borderRadius: "50%",
-          background: "var(--color-accent-primary)",
+          background: "var(--color-accent-secondary)",
         }}
       >
         <svg
@@ -74,7 +74,7 @@ export default function SommelierInput({
           height="14"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="var(--color-text-on-accent)"
+          stroke="#F5EDD6"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"

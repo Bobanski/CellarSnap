@@ -202,7 +202,7 @@ export default function ExplorePage() {
               <div className="space-y-4">
                 {Object.entries(groupedResults).map(([type, items]) => (
                   <div key={type}>
-                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]">
                       {typeLabels[type] ?? type}
                     </p>
                     <div className="space-y-1">
@@ -294,7 +294,7 @@ export default function ExplorePage() {
 
             {/* ── Trending ─────────────────────────────── */}
             <div className="mt-10">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]">
                 Trending
               </p>
 
@@ -351,7 +351,7 @@ export default function ExplorePage() {
             {/* ── Featured Region ──────────────────────── */}
             {featuredRegion && (
               <div className="mt-10">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]">
                   Featured Region
                 </p>
                 <Link
@@ -397,7 +397,7 @@ export default function ExplorePage() {
             {/* ── Grape Spotlight ──────────────────────── */}
             {grapeSpotlight && (
               <div className="mt-10">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]">
                   Grape Spotlight
                 </p>
                 <Link

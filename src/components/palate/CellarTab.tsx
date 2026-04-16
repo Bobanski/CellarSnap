@@ -7,8 +7,8 @@ import AppImage from "@/components/AppImage";
 
 const GRENACHE = "#7B1D3A";
 const ROSE = "#C4607A";
-const CHAMPAGNE = "#F0ECE4";
-const FOG = "#8A8078";
+const CHAMPAGNE = "#F5EDD6";
+const FOG = "#C4A882";
 const VIOGNIER = "#C9A84C";
 
 type CellarWine = {
@@ -55,7 +55,7 @@ export function CellarTab() {
     return (
       <div className="space-y-2 animate-pulse">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "#0F0810" }}>
+          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "#1A0810" }}>
             <div className="h-12 w-12 shrink-0 rounded-lg bg-[var(--color-surface-raised)]" />
             <div className="flex-1 space-y-1.5">
               <div className="h-3 w-32 rounded bg-[var(--color-surface-raised)]" />
@@ -71,7 +71,7 @@ export function CellarTab() {
     return (
       <div
         className="rounded-2xl p-8 text-center"
-        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #0F0810 100%)`, border: `1px solid ${GRENACHE}15` }}
+        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #1A0810 100%)`, border: `1px solid ${GRENACHE}15` }}
       >
         <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
           Your cellar is empty.

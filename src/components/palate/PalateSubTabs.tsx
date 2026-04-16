@@ -27,7 +27,7 @@ export function PalateSubTabs({
           className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
             active === tab.id
               ? "bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
-              : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)]"
+              : "border border-[rgba(196,96,122,0.12)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)]"
           }`}
         >
           {tab.label}

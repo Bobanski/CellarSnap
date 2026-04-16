@@ -9,8 +9,8 @@ import SensoryRadarChart from "@/components/SensoryRadarChart";
 const COLORS = {
   GRENACHE: "#7B1D3A",
   ROSE: "#C4607A",
-  CHAMPAGNE: "#F0ECE4",
-  FOG: "#8A8078",
+  CHAMPAGNE: "#F5EDD6",
+  FOG: "#C4A882",
   VIOGNIER: "#C9A84C",
   NEBBIOLO: "#4A3060",
 } as const;

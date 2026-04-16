@@ -44,7 +44,7 @@ const COLOR_HEX: Record<BadgeColor, string> = {
   champagne: "#F5EDD6",
   viognier: "#C9A84C",
   green: "#3D6B4F",
-  fog: "#8A8078",
+  fog: "#C4A882",
 };
 
 const TIER_RING: Record<BadgeTier, string> = {

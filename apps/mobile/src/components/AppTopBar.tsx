@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif.light,
     color: colors.textPrimary,
     fontSize: 22,
-    letterSpacing: 7,
+    letterSpacing: 0,
     textTransform: "lowercase",
   },
   headerActions: {

@@ -330,6 +330,9 @@ export async function GET(request: Request) {
     acidity: "high acidity", body: "full-bodied", tannin: "tannic",
     alcohol_perception: "high alcohol", fruit_ripeness: "fruit-forward",
     oak_presence: "oaky", complexity: "complex", freshness: "fresh",
+    finish_length: "long on the finish", concentration: "concentrated",
+    aromatic_intensity: "aromatically intense", mineral: "mineral-driven",
+    earthy: "earthy", savory: "savory", bitterness_phenolic_grip: "grippy",
   };
   let topSensoryInsight: { label: string; pct: number } | null = null;
   if (leansInto.length > 0) {
