@@ -52,8 +52,7 @@ function formatDate(iso: string | null) {
 
 function ratingDisplay(rating: number | null) {
   if (rating == null) return null;
-  const stars = Math.round(rating / 20);
-  return `${stars}/5`;
+  return `${rating}`;
 }
 
 function titleCase(s: string) {
@@ -466,8 +465,8 @@ export function LibraryTab() {
                 className="shrink-0 rounded px-1.5 py-0.5 text-xs"
                 style={{
                   fontFamily: "var(--font-serif)",
-                  background: `${VIOGNIER}18`,
-                  color: VIOGNIER,
+                  background: `${GRENACHE}20`,
+                  color: ROSE,
                 }}
               >
                 {ratingDisplay(entry.rating)}
