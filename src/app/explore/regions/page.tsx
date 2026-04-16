@@ -7,6 +7,18 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
 
 // ---------------------------------------------------------------------------
+// Colors — matching profile page palette
+// ---------------------------------------------------------------------------
+
+const GRENACHE = "#7B1D3A";
+const ROSE = "#C4607A";
+const CHAMPAGNE = "#F0ECE4";
+const FOG = "#8A8078";
+const VIOGNIER = "#C9A84C";
+const NEBBIOLO = "#4A3060";
+const BG_SECTION = "#140A0F";
+
+// ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
 
@@ -18,18 +30,12 @@ const POPULAR_REGIONS = [
 ];
 
 type UserRegion = { name: string; count: number };
-
 type SpotlightData = {
   display_name: string;
   tagline: string;
-  slug: string;
   href: string;
   characteristics: string[];
 };
-
-// Grenache-inspired accent for region pages
-const ACCENT = "var(--color-accent-primary)";
-const ACCENT_LIGHT = "var(--color-accent-secondary)";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -51,7 +57,6 @@ export default function RegionsBrowsePage() {
     return WINE_REGIONS.filter((r) => r.toLowerCase().includes(trimmed));
   }, [query]);
 
-  // Remaining regions grouped by letter
   const remainingRegions = useMemo(() => {
     const remaining = WINE_REGIONS.filter((r) => !POPULAR_REGIONS.includes(r)).sort();
     const groups = new Map<string, string[]>();
@@ -69,7 +74,6 @@ export default function RegionsBrowsePage() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !mounted) { setUserRegionsLoaded(true); return; }
-
       const { data } = await supabase
         .from("wine_entries")
         .select("canonical_region")
@@ -77,22 +81,14 @@ export default function RegionsBrowsePage() {
         .not("canonical_region", "is", null)
         .order("created_at", { ascending: false })
         .limit(500);
-
       if (!mounted || !data) { setUserRegionsLoaded(true); return; }
-
       const counts = new Map<string, number>();
       for (const row of data) {
         const r = (row.canonical_region as string)?.trim();
         if (r) counts.set(r, (counts.get(r) ?? 0) + 1);
       }
-
       if (mounted) {
-        setUserRegions(
-          [...counts.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 8)
-            .map(([name, count]) => ({ name, count }))
-        );
+        setUserRegions([...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, count]) => ({ name, count })));
         setUserRegionsLoaded(true);
       }
     };
@@ -112,7 +108,6 @@ export default function RegionsBrowsePage() {
           setSpotlight({
             display_name: data.featured_region.display_name,
             tagline: data.featured_region.tagline,
-            slug: data.featured_region.slug,
             href: data.featured_region.href,
             characteristics: data.featured_region.characteristics ?? [],
           });
@@ -126,45 +121,49 @@ export default function RegionsBrowsePage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
-        {/* ── Back + Header ─────────────────────────── */}
+        {/* ── Back ───────────────────────────────────── */}
         <Link
           href="/explore"
-          className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]"
+          className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80"
+          style={{ color: ROSE }}
         >
           &larr; Explore
         </Link>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `color-mix(in srgb, ${ACCENT} 15%, transparent)` }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke={ACCENT_LIGHT} strokeWidth="0.8" opacity="0.5" />
-              <circle cx="12" cy="12" r="4.5" stroke={ACCENT_LIGHT} strokeWidth="0.6" opacity="0.3" />
-              <circle cx="12" cy="5" r="1.2" fill={ACCENT_LIGHT} opacity="0.8" />
-              <circle cx="17" cy="14" r="1" fill={ACCENT_LIGHT} opacity="0.6" />
-              <circle cx="7" cy="16" r="0.8" fill={ACCENT_LIGHT} opacity="0.4" />
-            </svg>
-          </div>
-          <div>
-            <h1
-              className="text-2xl font-light leading-tight"
-              style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
+        {/* ── Hero header ────────────────────────────── */}
+        <div
+          className="mt-4 rounded-2xl p-6"
+          style={{ background: `linear-gradient(135deg, ${GRENACHE}35 0%, ${NEBBIOLO}18 60%, ${BG_SECTION} 100%)` }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl"
+              style={{ background: `${GRENACHE}25` }}
             >
-              Regions
-            </h1>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              The places that give wine its character.
-            </p>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke={ROSE} strokeWidth="0.8" opacity="0.5" />
+                <circle cx="12" cy="12" r="4.5" stroke={ROSE} strokeWidth="0.6" opacity="0.3" />
+                <circle cx="12" cy="5" r="1.4" fill={ROSE} opacity="0.8" />
+                <circle cx="17" cy="14" r="1.1" fill={ROSE} opacity="0.6" />
+                <circle cx="7" cy="16" r="0.9" fill={ROSE} opacity="0.4" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-light leading-tight" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
+                Regions
+              </h1>
+              <p className="text-xs" style={{ color: FOG }}>
+                The places that give wine its character.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* ── Search ─────────────────────────────────── */}
         <div className="mt-6 relative">
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
-            width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
-          >
-            <circle cx="8.2" cy="8.2" r="5.4" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            <line x1="12" y1="12" x2="16.6" y2="16.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <circle cx="8.2" cy="8.2" r="5.4" stroke={FOG} strokeWidth="1.4" />
+            <line x1="12" y1="12" x2="16.6" y2="16.6" stroke={FOG} strokeWidth="1.6" strokeLinecap="round" />
           </svg>
           <input
             type="text"
@@ -179,18 +178,14 @@ export default function RegionsBrowsePage() {
         {isSearching && (
           <div className="mt-4">
             {filtered.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 text-center">
-                <p className="text-sm text-[var(--color-text-tertiary)]">No regions found.</p>
+              <div className="rounded-2xl p-5 text-center" style={{ background: BG_SECTION, border: `1px solid ${GRENACHE}20` }}>
+                <p className="text-sm" style={{ color: FOG }}>No regions found.</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {filtered.map((r) => (
-                  <Link
-                    key={r}
-                    href={`/explore/region/${toExploreSlug(r)}`}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-raised)]"
-                  >
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ACCENT_LIGHT, opacity: 0.6 }} />
+                  <Link key={r} href={`/explore/region/${toExploreSlug(r)}`} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-[var(--color-surface-raised)]" style={{ color: CHAMPAGNE }}>
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: GRENACHE }} />
                     {r}
                   </Link>
                 ))}
@@ -202,42 +197,37 @@ export default function RegionsBrowsePage() {
         {/* ── Discovery content ──────────────────────── */}
         {!isSearching && (
           <>
-            {/* Spotlight */}
+            {/* ── Spotlight ────────────────────────────── */}
             {spotlight && (
               <div className="mt-8">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>
                   Region of the Day
                 </p>
                 <Link
                   href={spotlight.href}
-                  className="mt-3 block overflow-hidden rounded-2xl border border-[var(--color-accent-secondary)]/12 transition hover:border-[var(--color-accent-secondary)]/30"
+                  className="mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
                   style={{
-                    background: "linear-gradient(135deg, rgba(123,29,58,0.25) 0%, rgba(74,48,96,0.15) 50%, var(--color-surface-primary) 100%)",
+                    background: `linear-gradient(135deg, ${GRENACHE}40 0%, ${NEBBIOLO}20 50%, ${BG_SECTION} 100%)`,
+                    border: `1px solid ${GRENACHE}30`,
                   }}
                 >
-                  <div className="p-5">
-                    <h3
-                      className="text-xl font-light"
-                      style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
-                    >
+                  <div className="p-6">
+                    <h3 className="text-xl font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
                       {spotlight.display_name}
                     </h3>
-                    <p
-                      className="mt-1.5 text-xs leading-relaxed"
-                      style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-secondary)" }}
-                    >
+                    <p className="mt-2 text-xs leading-relaxed" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
                       {spotlight.tagline}
                     </p>
                     {spotlight.characteristics.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
+                      <div className="mt-4 flex flex-wrap gap-1.5">
                         {spotlight.characteristics.map((c) => (
-                          <span key={c} className="rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                          <span key={c} className="rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: `${GRENACHE}25`, color: ROSE, border: `1px solid ${GRENACHE}30` }}>
                             {c}
                           </span>
                         ))}
                       </div>
                     )}
-                    <span className="mt-3 inline-block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-accent-secondary)]">
+                    <span className="mt-4 inline-block text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: ROSE }}>
                       Explore &rarr;
                     </span>
                   </div>
@@ -245,22 +235,23 @@ export default function RegionsBrowsePage() {
               </div>
             )}
 
-            {/* Your Top Regions */}
+            {/* ── Your Top Regions ─────────────────────── */}
             {userRegionsLoaded && userRegions.length > 0 && (
-              <div className="mt-8">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${GRENACHE}18` }}>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: VIOGNIER }}>
                   Your Top Regions
                 </p>
-                <div className="space-y-1">
-                  {userRegions.map((r) => (
+                <div className="space-y-0.5">
+                  {userRegions.map((r, i) => (
                     <Link
                       key={r.name}
                       href={`/explore/region/${toExploreSlug(r.name)}`}
-                      className="flex items-center justify-between rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                     >
-                      <span className="text-sm text-[var(--color-text-primary)]">{r.name}</span>
-                      <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
-                        {r.count} {r.count === 1 ? "entry" : "entries"}
+                      <span className="w-4 text-center text-xs font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>{i + 1}</span>
+                      <span className="flex-1 text-sm" style={{ color: CHAMPAGNE }}>{r.name}</span>
+                      <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${GRENACHE}25`, color: ROSE }}>
+                        {r.count}
                       </span>
                     </Link>
                   ))}
@@ -268,9 +259,9 @@ export default function RegionsBrowsePage() {
               </div>
             )}
 
-            {/* Popular */}
+            {/* ── Popular ──────────────────────────────── */}
             <div className="mt-8">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>
                 Popular Regions
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -280,11 +271,14 @@ export default function RegionsBrowsePage() {
                     <Link
                       key={r}
                       href={`/explore/region/${toExploreSlug(r)}`}
-                      className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3.5 py-3 transition hover:border-[var(--color-border-strong)]"
+                      className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
+                      style={{ background: `${GRENACHE}12`, border: `1px solid ${GRENACHE}18` }}
                     >
-                      <span className="text-xs font-medium text-[var(--color-text-primary)]">{r}</span>
-                      {userEntry && (
-                        <span className="text-[10px] text-[var(--color-text-tertiary)]">{userEntry.count}</span>
+                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{r}</span>
+                      {userEntry ? (
+                        <span className="text-[10px]" style={{ color: VIOGNIER }}>{userEntry.count}</span>
+                      ) : (
+                        <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}
                     </Link>
                   );
@@ -292,28 +286,19 @@ export default function RegionsBrowsePage() {
               </div>
             </div>
 
-            {/* All Regions A-Z */}
+            {/* ── All Regions A-Z ───────────────────────── */}
             <div className="mt-8">
-              <button
-                type="button"
-                onClick={() => setShowAllRegions(!showAllRegions)}
-                className="flex w-full items-center justify-between"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                  All Regions
-                </p>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]">
+              <button type="button" onClick={() => setShowAllRegions(!showAllRegions)} className="flex w-full items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>All Regions</p>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80" style={{ color: ROSE }}>
                   {showAllRegions ? "Hide" : `Show ${WINE_REGIONS.length - POPULAR_REGIONS.length} more`}
                 </span>
               </button>
               {showAllRegions && (
-                <div className="mt-4 space-y-4">
+                <div className="mt-4 space-y-5">
                   {remainingRegions.map(([letter, regions]) => (
                     <div key={letter}>
-                      <p
-                        className="mb-2 text-sm font-light text-[var(--color-text-tertiary)]"
-                        style={{ fontFamily: "var(--font-serif)" }}
-                      >
+                      <p className="mb-2 text-base font-light" style={{ fontFamily: "var(--font-serif)", color: `${ROSE}80` }}>
                         {letter}
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -321,7 +306,8 @@ export default function RegionsBrowsePage() {
                           <Link
                             key={r}
                             href={`/explore/region/${toExploreSlug(r)}`}
-                            className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
+                            className="rounded-full px-3 py-1.5 text-xs transition hover:opacity-80"
+                            style={{ background: `${GRENACHE}10`, color: FOG, border: `1px solid ${GRENACHE}15` }}
                           >
                             {r}
                           </Link>

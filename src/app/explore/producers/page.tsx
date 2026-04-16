@@ -6,10 +6,23 @@ import { toExploreSlug } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
 
-// Rose-inspired accent for producer pages
-const ACCENT = "var(--color-accent-secondary)";
+// ---------------------------------------------------------------------------
+// Colors — matching profile page palette
+// ---------------------------------------------------------------------------
+
+const ROSE = "#C4607A";
+const GRENACHE = "#7B1D3A";
+const CHAMPAGNE = "#F0ECE4";
+const FOG = "#8A8078";
+const VIOGNIER = "#C9A84C";
+const NEBBIOLO = "#4A3060";
+const BG_SECTION = "#140A0F";
 
 type Producer = { name: string; count: number };
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export default function ProducersBrowsePage() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -37,11 +50,7 @@ export default function ProducersBrowsePage() {
         if (p) counts.set(p, (counts.get(p) ?? 0) + 1);
       }
       if (mounted) {
-        setProducers(
-          [...counts.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({ name, count }))
-        );
+        setProducers([...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })));
         setLoading(false);
       }
     };
@@ -63,43 +72,47 @@ export default function ProducersBrowsePage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
-        {/* ── Back + Header ─────────────────────────── */}
+        {/* ── Back ───────────────────────────────────── */}
         <Link
           href="/explore"
-          className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]"
+          className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80"
+          style={{ color: ROSE }}
         >
           &larr; Explore
         </Link>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `color-mix(in srgb, ${ACCENT} 15%, transparent)` }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <rect x="8" y="3" width="8" height="13" rx="4" fill={ACCENT} opacity="0.35" />
-              <rect x="10" y="16" width="4" height="4" rx="0.6" fill={ACCENT} opacity="0.5" />
-              <line x1="7" y1="20" x2="17" y2="20" stroke={ACCENT} strokeWidth="0.8" opacity="0.4" />
-            </svg>
-          </div>
-          <div>
-            <h1
-              className="text-2xl font-light leading-tight"
-              style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
+        {/* ── Hero header ────────────────────────────── */}
+        <div
+          className="mt-4 rounded-2xl p-6"
+          style={{ background: `linear-gradient(135deg, ${ROSE}20 0%, ${GRENACHE}15 60%, ${BG_SECTION} 100%)` }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl"
+              style={{ background: `${ROSE}18` }}
             >
-              Producers
-            </h1>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              The makers behind the wine.
-            </p>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                <rect x="8" y="3" width="8" height="13" rx="4" fill={ROSE} opacity="0.4" />
+                <rect x="10" y="16" width="4" height="4" rx="0.6" fill={ROSE} opacity="0.55" />
+                <line x1="7" y1="20" x2="17" y2="20" stroke={ROSE} strokeWidth="0.8" opacity="0.4" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-light leading-tight" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
+                Producers
+              </h1>
+              <p className="text-xs" style={{ color: FOG }}>
+                The makers behind the wine.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* ── Search ─────────────────────────────────── */}
         <div className="mt-6 relative">
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
-            width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
-          >
-            <circle cx="8.2" cy="8.2" r="5.4" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            <line x1="12" y1="12" x2="16.6" y2="16.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <circle cx="8.2" cy="8.2" r="5.4" stroke={FOG} strokeWidth="1.4" />
+            <line x1="12" y1="12" x2="16.6" y2="16.6" stroke={FOG} strokeWidth="1.6" strokeLinecap="round" />
           </svg>
           <input
             type="text"
@@ -114,11 +127,11 @@ export default function ProducersBrowsePage() {
         {isSearching && (
           <div className="mt-4">
             {filtered.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 text-center">
-                <p className="text-sm text-[var(--color-text-tertiary)]">No producers found.</p>
+              <div className="rounded-2xl p-5 text-center" style={{ background: BG_SECTION, border: `1px solid ${ROSE}15` }}>
+                <p className="text-sm" style={{ color: FOG }}>No producers found.</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {filtered.map((p) => (
                   <Link
                     key={p.name}
@@ -126,11 +139,11 @@ export default function ProducersBrowsePage() {
                     className="flex items-center justify-between rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ACCENT, opacity: 0.6 }} />
-                      <span className="text-sm text-[var(--color-text-primary)]">{p.name}</span>
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: ROSE }} />
+                      <span className="text-sm" style={{ color: CHAMPAGNE }}>{p.name}</span>
                     </div>
-                    <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
-                      {p.count} {p.count === 1 ? "entry" : "entries"}
+                    <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>
+                      {p.count}
                     </span>
                   </Link>
                 ))}
@@ -145,48 +158,55 @@ export default function ProducersBrowsePage() {
             {loading ? (
               <div className="mt-8 space-y-2 animate-pulse">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center justify-between rounded-xl bg-[var(--color-surface-primary)] px-4 py-3.5">
+                  <div key={i} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: BG_SECTION }}>
                     <div className="h-3.5 w-32 rounded bg-[var(--color-surface-raised)]" />
                     <div className="h-3 w-14 rounded-full bg-[var(--color-surface-raised)]" />
                   </div>
                 ))}
               </div>
             ) : producers.length === 0 ? (
-              <div className="mt-8 rounded-2xl border border-[var(--color-border)] p-6 text-center" style={{ background: `color-mix(in srgb, ${ACCENT} 5%, var(--color-surface-primary))` }}>
-                <p
-                  className="text-lg font-light"
-                  style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
+              <div
+                className="mt-8 rounded-2xl p-8 text-center"
+                style={{ background: `linear-gradient(135deg, ${ROSE}10 0%, ${BG_SECTION} 100%)`, border: `1px solid ${ROSE}15` }}
+              >
+                <div
+                  className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+                  style={{ background: `${ROSE}12` }}
                 >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <rect x="8" y="3" width="8" height="13" rx="4" fill={ROSE} opacity="0.3" />
+                    <rect x="10" y="16" width="4" height="4" rx="0.6" fill={ROSE} opacity="0.4" />
+                    <line x1="7" y1="20" x2="17" y2="20" stroke={ROSE} strokeWidth="0.8" opacity="0.3" />
+                  </svg>
+                </div>
+                <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
                   No producers yet.
                 </p>
-                <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+                <p className="mt-2 text-xs" style={{ color: FOG }}>
                   Log wines with producer names and they&apos;ll appear here — ranked by how often you reach for them.
                 </p>
               </div>
             ) : (
               <>
-                {/* Most Logged */}
-                <div className="mt-8">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                {/* ── Most Logged ─────────────────────────── */}
+                <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${ROSE}12` }}>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: VIOGNIER }}>
                     Most Logged
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {topProducers.map((p, i) => (
                       <Link
                         key={p.name}
                         href={`/explore/producer/${toExploreSlug(p.name)}`}
-                        className="flex items-center gap-4 rounded-xl px-4 py-3 transition hover:bg-[var(--color-surface-raised)]"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                       >
-                        <span
-                          className="w-5 text-center text-sm font-light text-[var(--color-text-tertiary)]"
-                          style={{ fontFamily: "var(--font-serif)" }}
-                        >
+                        <span className="w-5 text-center text-sm font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
                           {i + 1}
                         </span>
-                        <span className="min-w-0 flex-1 text-sm text-[var(--color-text-primary)]">
+                        <span className="min-w-0 flex-1 text-sm" style={{ color: CHAMPAGNE }}>
                           {p.name}
                         </span>
-                        <span className="shrink-0 rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                        <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>
                           {p.count} {p.count === 1 ? "entry" : "entries"}
                         </span>
                       </Link>
@@ -194,18 +214,12 @@ export default function ProducersBrowsePage() {
                   </div>
                 </div>
 
-                {/* All Producers */}
+                {/* ── All Producers ───────────────────────── */}
                 {restProducers.length > 0 && (
                   <div className="mt-8">
-                    <button
-                      type="button"
-                      onClick={() => setShowAll(!showAll)}
-                      className="flex w-full items-center justify-between"
-                    >
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                        All Producers
-                      </p>
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]">
+                    <button type="button" onClick={() => setShowAll(!showAll)} className="flex w-full items-center justify-between">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>All Producers</p>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80" style={{ color: ROSE }}>
                         {showAll ? "Hide" : `Show ${restProducers.length} more`}
                       </span>
                     </button>
@@ -215,7 +229,8 @@ export default function ProducersBrowsePage() {
                           <Link
                             key={p.name}
                             href={`/explore/producer/${toExploreSlug(p.name)}`}
-                            className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
+                            className="rounded-full px-3 py-1.5 text-xs transition hover:opacity-80"
+                            style={{ background: `${ROSE}10`, color: FOG, border: `1px solid ${ROSE}15` }}
                           >
                             {p.name}
                           </Link>

@@ -7,6 +7,17 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
 
 // ---------------------------------------------------------------------------
+// Colors — matching profile page palette
+// ---------------------------------------------------------------------------
+
+const NEBBIOLO = "#4A3060";
+const ROSE = "#C4607A";
+const CHAMPAGNE = "#F0ECE4";
+const FOG = "#8A8078";
+const VIOGNIER = "#C9A84C";
+const BG_SECTION = "#0F0810";
+
+// ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
 
@@ -27,18 +38,13 @@ const MORE_GRAPES = [
 ];
 
 type GrapeResult = { name: string; href: string };
-
 type UserGrape = { name: string; count: number };
-
 type SpotlightData = {
   display_name: string;
   tagline: string;
-  slug: string;
   href: string;
+  characteristics: string[];
 };
-
-// Nebbiolo-inspired accent for grape pages
-const ACCENT = "var(--color-accent-purple)";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -61,29 +67,20 @@ export default function GrapesBrowsePage() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !mounted) { setUserGrapesLoaded(true); return; }
-
       const { data } = await supabase
         .from("entry_primary_grapes")
         .select("grape_varieties(name)")
         .order("created_at", { ascending: false })
         .limit(500);
-
       if (!mounted || !data) { setUserGrapesLoaded(true); return; }
-
       const counts = new Map<string, number>();
       for (const row of data) {
         const variety = row.grape_varieties as unknown as { name: string } | null;
         const name = variety?.name?.trim();
         if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
       }
-
       if (mounted) {
-        setUserGrapes(
-          [...counts.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 8)
-            .map(([name, count]) => ({ name, count }))
-        );
+        setUserGrapes([...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, count]) => ({ name, count })));
         setUserGrapesLoaded(true);
       }
     };
@@ -91,7 +88,7 @@ export default function GrapesBrowsePage() {
     return () => { mounted = false; };
   }, [supabase]);
 
-  // Load grape spotlight from wine_profiles
+  // Load grape spotlight
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -103,8 +100,8 @@ export default function GrapesBrowsePage() {
           setSpotlight({
             display_name: data.grape_spotlight.display_name,
             tagline: data.grape_spotlight.tagline,
-            slug: data.grape_spotlight.slug,
             href: data.grape_spotlight.href,
+            characteristics: data.grape_spotlight.characteristics ?? [],
           });
         }
       } catch { /* non-critical */ }
@@ -119,27 +116,20 @@ export default function GrapesBrowsePage() {
     if (!trimmed) { setApiResults([]); setSearching(false); return; }
     setSearching(true);
     const found: GrapeResult[] = [];
-
     try {
       const res = await fetch(`/api/grapes?q=${encodeURIComponent(trimmed)}&limit=12`);
       if (res.ok) {
         const data = await res.json();
-        const grapes = Array.isArray(data.grapes) ? data.grapes : [];
-        for (const g of grapes) {
+        for (const g of (Array.isArray(data.grapes) ? data.grapes : [])) {
           const name = typeof g === "string" ? g : g.name;
           if (name) found.push({ name, href: `/explore/grape/${toExploreSlug(name)}` });
         }
       }
     } catch { /* ignore */ }
-
     const allStatic = [...POPULAR_GRAPES, ...MORE_GRAPES];
-    const staticMatches = allStatic
-      .filter((g) => g.toLowerCase().includes(trimmed))
-      .filter((g) => !found.some((f) => f.name.toLowerCase() === g.toLowerCase()));
-    for (const g of staticMatches.slice(0, 8)) {
+    for (const g of allStatic.filter((g) => g.toLowerCase().includes(trimmed) && !found.some((f) => f.name.toLowerCase() === g.toLowerCase())).slice(0, 8)) {
       found.push({ name: g, href: `/explore/grape/${toExploreSlug(g)}` });
     }
-
     setApiResults(found);
     setSearching(false);
   }, []);
@@ -155,46 +145,53 @@ export default function GrapesBrowsePage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
-        {/* ── Back + Header ─────────────────────────── */}
+        {/* ── Back ───────────────────────────────────── */}
         <Link
           href="/explore"
-          className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]"
+          className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80"
+          style={{ color: ROSE }}
         >
           &larr; Explore
         </Link>
 
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `color-mix(in srgb, ${ACCENT} 15%, transparent)` }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill={ACCENT}>
-              <circle cx="12" cy="8" r="2.6" opacity="0.45" />
-              <circle cx="9" cy="12.5" r="2.6" opacity="0.35" />
-              <circle cx="15" cy="12.5" r="2.6" opacity="0.45" />
-              <circle cx="12" cy="16.5" r="2.6" opacity="0.3" />
-              <line x1="12" y1="5.4" x2="12" y2="3.5" stroke={ACCENT} strokeWidth="0.7" opacity="0.6" />
-              <path d="M12 3.5 Q14.5 2.5 15.5 3.5" stroke={ACCENT} strokeWidth="0.5" fill="none" opacity="0.4" />
-            </svg>
-          </div>
-          <div>
-            <h1
-              className="text-2xl font-light leading-tight"
-              style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
+        {/* ── Hero header ────────────────────────────── */}
+        <div
+          className="mt-4 rounded-2xl p-6"
+          style={{ background: `linear-gradient(135deg, ${NEBBIOLO}30 0%, ${BG_SECTION} 100%)` }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl"
+              style={{ background: `${NEBBIOLO}25` }}
             >
-              Grapes
-            </h1>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              The varieties that shape every glass.
-            </p>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill={ROSE}>
+                <circle cx="12" cy="8" r="2.6" opacity="0.5" />
+                <circle cx="9" cy="12.5" r="2.6" opacity="0.4" />
+                <circle cx="15" cy="12.5" r="2.6" opacity="0.5" />
+                <circle cx="12" cy="16.5" r="2.6" opacity="0.35" />
+                <line x1="12" y1="5.4" x2="12" y2="3.5" stroke={ROSE} strokeWidth="0.7" opacity="0.6" />
+                <path d="M12 3.5 Q14.5 2.5 15.5 3.5" stroke={ROSE} strokeWidth="0.5" fill="none" opacity="0.4" />
+              </svg>
+            </div>
+            <div>
+              <h1
+                className="text-2xl font-light leading-tight"
+                style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}
+              >
+                Grapes
+              </h1>
+              <p className="text-xs" style={{ color: FOG }}>
+                The varieties that shape every glass.
+              </p>
+            </div>
           </div>
         </div>
 
         {/* ── Search ─────────────────────────────────── */}
         <div className="mt-6 relative">
-          <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]"
-            width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
-          >
-            <circle cx="8.2" cy="8.2" r="5.4" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            <line x1="12" y1="12" x2="16.6" y2="16.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2" width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <circle cx="8.2" cy="8.2" r="5.4" stroke={FOG} strokeWidth="1.4" />
+            <line x1="12" y1="12" x2="16.6" y2="16.6" stroke={FOG} strokeWidth="1.6" strokeLinecap="round" />
           </svg>
           <input
             type="text"
@@ -209,20 +206,16 @@ export default function GrapesBrowsePage() {
         {isSearching && (
           <div className="mt-4">
             {searching ? (
-              <p className="text-sm text-[var(--color-text-secondary)]">Searching...</p>
+              <p className="text-sm" style={{ color: FOG }}>Searching...</p>
             ) : apiResults.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 text-center">
-                <p className="text-sm text-[var(--color-text-tertiary)]">No grapes found. Try a different spelling or alias.</p>
+              <div className="rounded-2xl border border-[var(--color-border)] p-5 text-center" style={{ background: BG_SECTION }}>
+                <p className="text-sm" style={{ color: FOG }}>No grapes found. Try a different spelling or alias.</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {apiResults.map((g) => (
-                  <Link
-                    key={g.name}
-                    href={g.href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-raised)]"
-                  >
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ACCENT, opacity: 0.6 }} />
+                  <Link key={g.name} href={g.href} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-[var(--color-surface-raised)]" style={{ color: CHAMPAGNE }}>
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: NEBBIOLO }} />
                     {g.name}
                   </Link>
                 ))}
@@ -234,35 +227,42 @@ export default function GrapesBrowsePage() {
         {/* ── Discovery content ──────────────────────── */}
         {!isSearching && (
           <>
-            {/* Spotlight */}
+            {/* ── Spotlight ────────────────────────────── */}
             {spotlight && (
               <div className="mt-8">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>
                   Grape of the Day
                 </p>
                 <Link
                   href={spotlight.href}
-                  className="mt-3 block overflow-hidden rounded-2xl border border-[var(--color-border)] transition hover:border-[var(--color-border-strong)]"
+                  className="mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
                   style={{
-                    background: `linear-gradient(135deg, color-mix(in srgb, ${ACCENT} 20%, transparent) 0%, var(--color-surface-primary) 100%)`,
+                    background: `linear-gradient(135deg, ${NEBBIOLO}40 0%, ${ROSE}18 60%, ${BG_SECTION} 100%)`,
+                    border: `1px solid ${NEBBIOLO}35`,
                   }}
                 >
-                  <div className="p-5">
+                  <div className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <h3
-                          className="text-xl font-light"
-                          style={{ fontFamily: "var(--font-serif)", color: "var(--color-text-primary)" }}
-                        >
+                        <h3 className="text-xl font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
                           {spotlight.display_name}
                         </h3>
-                        <p className="mt-1.5 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                        <p className="mt-2 text-xs leading-relaxed" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
                           {spotlight.tagline}
                         </p>
                       </div>
-                      <div className="h-10 w-10 shrink-0 rounded-full" style={{ background: `color-mix(in srgb, ${ACCENT} 15%, transparent)` }} />
+                      <div className="h-11 w-11 shrink-0 rounded-full" style={{ background: `${NEBBIOLO}30`, border: `1px solid ${NEBBIOLO}40` }} />
                     </div>
-                    <span className="mt-3 inline-block text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: ACCENT }}>
+                    {spotlight.characteristics.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-1.5">
+                        {spotlight.characteristics.map((c) => (
+                          <span key={c} className="rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: `${NEBBIOLO}25`, color: ROSE, border: `1px solid ${NEBBIOLO}30` }}>
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <span className="mt-4 inline-block text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: ROSE }}>
                       Explore &rarr;
                     </span>
                   </div>
@@ -270,22 +270,23 @@ export default function GrapesBrowsePage() {
               </div>
             )}
 
-            {/* Your Top Grapes */}
+            {/* ── Your Top Grapes ──────────────────────── */}
             {userGrapesLoaded && userGrapes.length > 0 && (
-              <div className="mt-8">
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${NEBBIOLO}18` }}>
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: VIOGNIER }}>
                   Your Top Grapes
                 </p>
-                <div className="space-y-1">
-                  {userGrapes.map((g) => (
+                <div className="space-y-0.5">
+                  {userGrapes.map((g, i) => (
                     <Link
                       key={g.name}
                       href={`/explore/grape/${toExploreSlug(g.name)}`}
-                      className="flex items-center justify-between rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                     >
-                      <span className="text-sm text-[var(--color-text-primary)]">{g.name}</span>
-                      <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
-                        {g.count} {g.count === 1 ? "entry" : "entries"}
+                      <span className="w-4 text-center text-xs font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>{i + 1}</span>
+                      <span className="flex-1 text-sm" style={{ color: CHAMPAGNE }}>{g.name}</span>
+                      <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${NEBBIOLO}25`, color: ROSE }}>
+                        {g.count}
                       </span>
                     </Link>
                   ))}
@@ -293,9 +294,9 @@ export default function GrapesBrowsePage() {
               </div>
             )}
 
-            {/* Popular */}
+            {/* ── Popular ──────────────────────────────── */}
             <div className="mt-8">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>
                 Popular Grapes
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -305,11 +306,14 @@ export default function GrapesBrowsePage() {
                     <Link
                       key={g}
                       href={`/explore/grape/${toExploreSlug(g)}`}
-                      className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3.5 py-3 transition hover:border-[var(--color-border-strong)]"
+                      className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
+                      style={{ background: `${NEBBIOLO}15`, border: `1px solid ${NEBBIOLO}20` }}
                     >
-                      <span className="text-xs font-medium text-[var(--color-text-primary)]">{g}</span>
-                      {userEntry && (
-                        <span className="text-[10px] text-[var(--color-text-tertiary)]">{userEntry.count}</span>
+                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
+                      {userEntry ? (
+                        <span className="text-[10px]" style={{ color: VIOGNIER }}>{userEntry.count}</span>
+                      ) : (
+                        <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}
                     </Link>
                   );
@@ -317,17 +321,11 @@ export default function GrapesBrowsePage() {
               </div>
             </div>
 
-            {/* All Varieties */}
+            {/* ── All Varieties ─────────────────────────── */}
             <div className="mt-8">
-              <button
-                type="button"
-                onClick={() => setShowAllGrapes(!showAllGrapes)}
-                className="flex w-full items-center justify-between"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                  All Varieties
-                </p>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-secondary)]">
+              <button type="button" onClick={() => setShowAllGrapes(!showAllGrapes)} className="flex w-full items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>All Varieties</p>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80" style={{ color: ROSE }}>
                   {showAllGrapes ? "Hide" : `Show ${MORE_GRAPES.length} more`}
                 </span>
               </button>
@@ -337,7 +335,8 @@ export default function GrapesBrowsePage() {
                     <Link
                       key={g}
                       href={`/explore/grape/${toExploreSlug(g)}`}
-                      className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
+                      className="rounded-full px-3 py-1.5 text-xs transition hover:opacity-80"
+                      style={{ background: `${NEBBIOLO}12`, color: FOG, border: `1px solid ${NEBBIOLO}18` }}
                     >
                       {g}
                     </Link>
