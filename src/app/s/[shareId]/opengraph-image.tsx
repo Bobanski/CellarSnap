@@ -3,9 +3,9 @@ import path from "node:path";
 import { ImageResponse } from "next/og";
 import { resolvePublicPostShare } from "@/lib/shares";
 
-const SCREEN_BG = "#1A0810";
-const SURFACE_PRIMARY = "#211018";
-const SURFACE_RAISED = "#2C0A14";
+const SCREEN_BG = "#220E14";
+const SURFACE_PRIMARY = "#2E1420";
+const SURFACE_RAISED = "#3A1020";
 const TEXT_PRIMARY = "#F5EDD6";
 const TEXT_SECONDARY = "#C4A882";
 const ACCENT_PRIMARY = "#7B1D3A";

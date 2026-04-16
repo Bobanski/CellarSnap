@@ -49,7 +49,7 @@ export function PalateHeaderCard({
       <div
         className="rounded-2xl p-6 animate-pulse"
         style={{
-          background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #1A0810 100%)`,
+          background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #220E14 100%)`,
           border: `1px solid ${GRENACHE}20`,
         }}
       >
@@ -73,7 +73,7 @@ export function PalateHeaderCard({
     <div
       className="relative rounded-2xl p-6"
       style={{
-        background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #1A0810 100%)`,
+        background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #220E14 100%)`,
         border: `1px solid ${GRENACHE}20`,
       }}
     >

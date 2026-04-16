@@ -16,7 +16,7 @@ const CHAMPAGNE = "#F5EDD6";
 const FOG = "#C4A882";
 const VIOGNIER = "#C9A84C";
 const NEBBIOLO = "#4A3060";
-const BG_SECTION = "#1A0810";
+const BG_SECTION = "#220E14";
 
 // ---------------------------------------------------------------------------
 // Data

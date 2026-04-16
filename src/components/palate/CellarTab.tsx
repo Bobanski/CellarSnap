@@ -55,7 +55,7 @@ export function CellarTab() {
     return (
       <div className="space-y-2 animate-pulse">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "#1A0810" }}>
+          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "#220E14" }}>
             <div className="h-12 w-12 shrink-0 rounded-lg bg-[var(--color-surface-raised)]" />
             <div className="flex-1 space-y-1.5">
               <div className="h-3 w-32 rounded bg-[var(--color-surface-raised)]" />
@@ -71,7 +71,7 @@ export function CellarTab() {
     return (
       <div
         className="rounded-2xl p-8 text-center"
-        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #1A0810 100%)`, border: `1px solid ${GRENACHE}15` }}
+        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #220E14 100%)`, border: `1px solid ${GRENACHE}15` }}
       >
         <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
           Your cellar is empty.
@@ -94,8 +94,8 @@ export function CellarTab() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-xs" style={{ color: FOG }}>
-          <span style={{ color: VIOGNIER, fontWeight: 600 }}>{totalBottles}</span> bottle{totalBottles !== 1 ? "s" : ""} across{" "}
-          <span style={{ color: VIOGNIER, fontWeight: 600 }}>{wines.length}</span> wine{wines.length !== 1 ? "s" : ""}
+          <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{totalBottles}</span> bottle{totalBottles !== 1 ? "s" : ""} across{" "}
+          <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{wines.length}</span> wine{wines.length !== 1 ? "s" : ""}
         </p>
         <Link
           href="/entries?tab=cellaring"

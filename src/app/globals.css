@@ -4,12 +4,12 @@
 :root {
   /* ─── WARM NOIR — SCREENS & SURFACES ──────────────────── */
   /* Deep editorial theme with warm wine-red undertones */
-  --color-screen-bg:       #1A0810;
-  --color-surface-primary: #211018;
-  --color-surface-raised:  #2C0A14;
-  --color-surface-hover:   #2E1220;
+  --color-screen-bg:       #220E14;
+  --color-surface-primary: #2E1420;
+  --color-surface-raised:  #3A1020;
+  --color-surface-hover:   #3E1828;
   --color-surface-tinted:  rgba(74, 48, 96, 0.12);
-  --color-surface-muted:   #2C0A14;
+  --color-surface-muted:   #3A1020;
 
   /* ─── TEXT HIERARCHY ────────────────────────────────────– */
   --color-text-primary:    #F5EDD6;

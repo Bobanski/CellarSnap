@@ -97,7 +97,7 @@ function FilterDropdown({
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
             className="absolute left-0 top-full z-20 mt-1 max-h-48 w-40 overflow-y-auto rounded-xl py-1 shadow-lg"
-            style={{ background: "#2C0A14", border: `1px solid ${NEBBIOLO}40` }}
+            style={{ background: "#3A1020", border: `1px solid ${NEBBIOLO}40` }}
           >
             <button
               type="button"
@@ -254,7 +254,7 @@ export function LibraryTab() {
     return (
       <div
         className="rounded-2xl p-8 text-center"
-        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #1A0810 100%)`, border: `1px solid ${GRENACHE}15` }}
+        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #220E14 100%)`, border: `1px solid ${GRENACHE}15` }}
       >
         <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
           No wines logged yet.
@@ -465,8 +465,8 @@ export function LibraryTab() {
                 className="shrink-0 rounded px-1.5 py-0.5 text-xs"
                 style={{
                   fontFamily: "var(--font-serif)",
-                  background: `${GRENACHE}20`,
-                  color: ROSE,
+                  background: `${VIOGNIER}18`,
+                  color: VIOGNIER,
                 }}
               >
                 {ratingDisplay(entry.rating)}
