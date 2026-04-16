@@ -66,11 +66,12 @@ function PalatePageContent() {
       let profileData: PalateProfile | null = null;
       if (profileRes.ok) {
         const data = await profileRes.json();
+        const p = data.profile ?? data;
         profileData = {
-          display_name: data.display_name ?? null,
-          avatar_url: data.avatar_url ?? null,
-          featured_badge_id: data.featured_badge_id ?? null,
-          created_at: data.created_at ?? null,
+          display_name: p.display_name ?? null,
+          avatar_url: p.avatar_url ?? null,
+          featured_badge_id: p.featured_badge_id ?? null,
+          created_at: p.created_at ?? null,
         };
       }
 
@@ -127,8 +128,7 @@ function PalatePageContent() {
           stats={stats}
           loading={loading}
           onSettingsOpen={() => {
-            // Navigate to the existing profile page for settings (for now)
-            router.push("/profile/settings");
+            router.push("/profile");
           }}
         />
 
