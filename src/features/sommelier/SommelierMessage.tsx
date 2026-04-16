@@ -1,3 +1,6 @@
+"use client";
+
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 
@@ -93,16 +96,27 @@ export default function SommelierMessage({
                     {children}
                   </code>
                 ),
-                a: ({ children, href }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/40 underline-offset-4 transition hover:text-[var(--color-accent-secondary)]"
-                  >
-                    {children}
-                  </a>
-                ),
+                a: ({ children, href }) => {
+                  const linkClassName =
+                    "text-[var(--color-accent-secondary)] underline decoration-[var(--color-accent-secondary)]/40 underline-offset-4 transition hover:text-[var(--color-accent-secondary)]";
+                  if (href?.startsWith("/")) {
+                    return (
+                      <Link href={href} className={linkClassName}>
+                        {children}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={linkClassName}
+                    >
+                      {children}
+                    </a>
+                  );
+                },
               }}
             >
               {content}

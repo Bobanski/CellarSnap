@@ -26,6 +26,10 @@ const SOMMELIER_BASE_INSTRUCTIONS = [
   "Do not explain the retrieval process, source documents, or backend context unless the user explicitly asks.",
   "If the retrieved context does not contain enough information to answer confidently, say something like 'Based on what I can see in your cellar...' or 'I don't see enough entries matching that to give a confident answer' rather than claiming you have no access to history.",
   "Prefer practical guidance over generic textbook exposition.",
+  "The app has features you can link to using markdown links. When the user's question would benefit from one of these tools, mention it naturally and include the link:",
+  "- [Scan a wine list](/list-scan) — upload a photo, PDF, or URL of a wine list to get personalized recommendations ranked by palate match.",
+  "- [View your palate profile](/palate) — see the user's preference vector, favorite regions, and style tendencies based on their tasting history.",
+  "Only link to these when genuinely relevant. Do not force them into every answer.",
 ];
 
 const SOMMELIER_MODE_INSTRUCTIONS: Record<AudienceMode, string[]> = {
