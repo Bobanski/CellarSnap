@@ -53,7 +53,7 @@ function SommIcon() {
   );
 }
 
-function ScanIcon() {
+function ExploreIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <circle cx="8.8" cy="10" r="6" fill="currentColor" opacity="0.9" />
@@ -68,6 +68,17 @@ function ScanIcon() {
   );
 }
 
+function PalateIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <ellipse cx="10" cy="13" rx="6" ry="4.5" fill="currentColor" opacity="0.3" />
+      <path d="M7 13 Q7 6 10 4 Q13 6 13 13" fill="currentColor" opacity="0.7" />
+      <ellipse cx="10" cy="13.5" rx="3.5" ry="2" fill="currentColor" opacity="0.4" />
+      <circle cx="10" cy="8" r="1.2" fill="currentColor" opacity="0.9" />
+    </svg>
+  );
+}
+
 type TabDef = {
   label: string;
   href: string;
@@ -78,26 +89,24 @@ type TabDef = {
 
 const ALL_TABS: TabDef[] = [
   { label: "Feed", href: "/feed", icon: <FeedIcon /> },
-  { label: "Cellar", href: "/entries", icon: <CellarIcon /> },
-  { label: "Log", href: "/entries/new", icon: <LogFabIcon />, isFab: true },
   { label: "Somm", href: "/sommelier", icon: <SommIcon />, betaOnly: true },
-  { label: "Explore", href: "/explore", icon: <ScanIcon />, betaOnly: true },
+  { label: "Log", href: "/entries/new", icon: <LogFabIcon />, isFab: true },
+  { label: "Explore", href: "/explore", icon: <ExploreIcon />, betaOnly: true },
+  { label: "Palate", href: "/palate", icon: <PalateIcon /> },
 ];
 
-function isTabActive(href: string, pathname: string, fromFeed: boolean, tab: string | null): boolean {
+function isTabActive(href: string, pathname: string, fromFeed: boolean): boolean {
   const onEntryDetail =
     pathname.startsWith("/entries/") && !pathname.startsWith("/entries/new");
 
   if (href === "/feed") {
     return pathname === "/feed" || pathname === "/" || (fromFeed && onEntryDetail);
   }
-  if (href === "/entries") {
-    if (fromFeed && onEntryDetail) return false;
-    if (tab === "collections") return false;
-    return pathname === "/entries" || onEntryDetail;
-  }
   if (href === "/entries/new") {
     return pathname === "/entries/new";
+  }
+  if (href === "/palate") {
+    return pathname === "/palate" || pathname === "/profile" || pathname === "/badges" || pathname === "/friends";
   }
   return pathname.startsWith(href);
 }
@@ -115,7 +124,7 @@ export default function BottomTabBar() {
   return (
     <nav className="bottom-tab-bar flex shrink-0 items-end justify-around" style={{ overflow: "visible" }}>
       {tabs.map((tab) => {
-        const active = isTabActive(tab.href, pathname, fromFeed, searchParams.get("tab"));
+        const active = isTabActive(tab.href, pathname, fromFeed);
 
         if (tab.isFab) {
           return (
