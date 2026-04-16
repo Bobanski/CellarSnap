@@ -13,7 +13,7 @@ import AppShell from "@/components/AppShell";
 const ROSE = "#C4607A";
 const GRENACHE = "#7B1D3A";
 const CHAMPAGNE = "#F5EDD6";
-const FOG = "#C4A882";
+const FOG = "#A08878";
 const VIOGNIER = "#C9A84C";
 const NEBBIOLO = "#4A3060";
 const BG_SECTION = "#220E14";

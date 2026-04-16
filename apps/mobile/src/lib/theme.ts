@@ -16,7 +16,7 @@ export const colors = {
 
   // ─── TEXT HIERARCHY ────────────────────────────────────
   textPrimary:      "#F5EDD6",      // Champagne — warm brand white
-  textSecondary:    "#C4A882",      // Warm muted gold — wine identity
+  textSecondary:    "#A08878",      // Dust — warm muted supporting text
   textTertiary:     "#5D5570",      // Muted purple — placeholders
   textOnAccent:     "#F5EDD6",      // Text on accent buttons
   textHighlight:    "#C4607A",      // Rose — for highlighted text, links
@@ -56,9 +56,9 @@ export const colors = {
   rose:             "#C4607A",
   nebbiolo:         "#4A3060",
   champagne:        "#F5EDD6",      // Warm brand white
-  limestone:        "#C4A882",      // Maps to textSecondary (warm gold)
+  limestone:        "#A08878",      // Maps to textSecondary (Dust)
   terroir:          "#3A1020",      // Maps to surfaceRaised
-  fog:              "#C4A882",      // Maps to textSecondary
+  fog:              "#A08878",      // Maps to textSecondary (Dust)
   viognier:         "#C9A84C",
 
   // ─── DERIVED / UI helpers ──────────────────────────────

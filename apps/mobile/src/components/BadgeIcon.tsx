@@ -11,7 +11,7 @@ const COLOR_HEX: Record<string, string> = {
   champagne: "#F5EDD6",
   viognier: "#C9A84C",
   green: "#3D6B4F",
-  fog: "#C4A882",
+  fog: "#A08878",
 };
 
 const TIER_RING: Record<string, string> = {

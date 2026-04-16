@@ -154,7 +154,7 @@ export default function SensoryRadarChart({
                   y={ly}
                   textAnchor={lx < center - 15 ? "end" : lx > center + 15 ? "start" : "middle"}
                   dominantBaseline="middle"
-                  fill="#C4A882"
+                  fill="#A08878"
                   fontSize="10.5"
                   fontWeight="500"
                 >
