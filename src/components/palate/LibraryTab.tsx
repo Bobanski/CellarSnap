@@ -186,6 +186,7 @@ export function LibraryTab() {
   }, [entries]);
 
   const activeFilterCount = [filters.region, filters.producer, filters.vintage, filters.wineType].filter(Boolean).length;
+  const hasActiveControls = activeFilterCount > 0 || sortMode !== "recent";
 
   // Filter + sort
   const displayEntries = useMemo(() => {
@@ -275,9 +276,9 @@ export function LibraryTab() {
 
   return (
     <div>
-      {/* ── Controls row ─────────────────────────── */}
+      {/* ── Controls ────────────────────────────── */}
       <div className="mb-3 space-y-3">
-        {/* Search + filter toggle */}
+        {/* Search + sort/filter toggle */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="13" height="13" viewBox="0 0 20 20" fill="none">
@@ -297,9 +298,9 @@ export function LibraryTab() {
             onClick={() => setFiltersVisible(!filtersVisible)}
             className="flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-semibold transition"
             style={{
-              background: filtersVisible || activeFilterCount > 0 ? `${GRENACHE}25` : "transparent",
-              color: activeFilterCount > 0 ? ROSE : FOG,
-              border: `1px solid ${activeFilterCount > 0 ? `${GRENACHE}40` : `${FOG}25`}`,
+              background: filtersVisible || hasActiveControls ? `${GRENACHE}25` : "transparent",
+              color: hasActiveControls ? ROSE : FOG,
+              border: `1px solid ${hasActiveControls ? `${GRENACHE}40` : `${FOG}25`}`,
             }}
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
@@ -307,69 +308,82 @@ export function LibraryTab() {
               <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.2" />
               <line x1="5" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.2" />
             </svg>
-            {activeFilterCount > 0 && (
+            {hasActiveControls && (
               <span className="rounded-full px-1 text-[9px]" style={{ background: GRENACHE, color: CHAMPAGNE }}>
-                {activeFilterCount}
+                {activeFilterCount + (sortMode !== "recent" ? 1 : 0)}
               </span>
             )}
           </button>
         </div>
 
-        {/* Sort pills */}
-        <div className="flex items-center gap-1">
-          <span className="mr-1 text-[10px]" style={{ color: FOG }}>Sort:</span>
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setSortMode(opt.value)}
-              className="rounded-full px-2.5 py-1 text-[10px] font-semibold transition"
-              style={{
-                background: sortMode === opt.value ? `${GRENACHE}30` : "transparent",
-                color: sortMode === opt.value ? ROSE : FOG,
-                border: `1px solid ${sortMode === opt.value ? `${GRENACHE}40` : "transparent"}`,
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Filter dropdowns */}
+        {/* Sort + Filter panel */}
         {filtersVisible && (
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterDropdown
-              label="Region"
-              value={filters.region}
-              options={filterOptions.regions}
-              onChange={(v) => setFilters((f) => ({ ...f, region: v }))}
-            />
-            <FilterDropdown
-              label="Producer"
-              value={filters.producer}
-              options={filterOptions.producers}
-              onChange={(v) => setFilters((f) => ({ ...f, producer: v }))}
-            />
-            <FilterDropdown
-              label="Vintage"
-              value={filters.vintage}
-              options={filterOptions.vintages}
-              onChange={(v) => setFilters((f) => ({ ...f, vintage: v }))}
-            />
-            <FilterDropdown
-              label="Type"
-              value={filters.wineType}
-              options={filterOptions.wineTypes}
-              onChange={(v) => setFilters((f) => ({ ...f, wineType: v }))}
-            />
-            {activeFilterCount > 0 && (
+          <div
+            className="space-y-3 rounded-xl p-3"
+            style={{ background: `${NEBBIOLO}12`, border: `1px solid ${NEBBIOLO}25` }}
+          >
+            {/* Sort */}
+            <div>
+              <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>Sort by</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSortMode(opt.value)}
+                    className="rounded-full px-3 py-1 text-[10px] font-semibold transition"
+                    style={{
+                      background: sortMode === opt.value ? `${GRENACHE}35` : `${NEBBIOLO}20`,
+                      color: sortMode === opt.value ? ROSE : FOG,
+                      border: `1px solid ${sortMode === opt.value ? `${GRENACHE}50` : `${NEBBIOLO}30`}`,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filter */}
+            <div>
+              <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>Filter by</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterDropdown
+                  label="Region"
+                  value={filters.region}
+                  options={filterOptions.regions}
+                  onChange={(v) => setFilters((f) => ({ ...f, region: v }))}
+                />
+                <FilterDropdown
+                  label="Producer"
+                  value={filters.producer}
+                  options={filterOptions.producers}
+                  onChange={(v) => setFilters((f) => ({ ...f, producer: v }))}
+                />
+                <FilterDropdown
+                  label="Vintage"
+                  value={filters.vintage}
+                  options={filterOptions.vintages}
+                  onChange={(v) => setFilters((f) => ({ ...f, vintage: v }))}
+                />
+                <FilterDropdown
+                  label="Type"
+                  value={filters.wineType}
+                  options={filterOptions.wineTypes}
+                  onChange={(v) => setFilters((f) => ({ ...f, wineType: v }))}
+                />
+              </div>
+            </div>
+
+            {/* Clear all */}
+            {hasActiveControls && (
               <button
                 type="button"
-                onClick={() => setFilters(EMPTY_FILTERS)}
+                onClick={() => { setFilters(EMPTY_FILTERS); setSortMode("recent"); }}
                 className="text-[10px] font-semibold transition hover:opacity-80"
                 style={{ color: ROSE }}
               >
-                Clear all
+                Reset all
               </button>
             )}
           </div>
