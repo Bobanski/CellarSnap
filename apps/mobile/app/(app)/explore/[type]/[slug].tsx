@@ -22,7 +22,7 @@ import {
 // ─── Constants matching brand guide ────────────────────────
 
 const CHAMPAGNE = "#F5EDD6";
-const FOG = "#8A8078";
+const FOG = "#A08878";
 const ROSE = "#C4607A";
 const GRENACHE = "#7B1D3A";
 const NEBBIOLO = "#4A3060";
@@ -521,7 +521,7 @@ function VarietalPage({
           <>
             <View style={v.statsRow}>
               <View style={v.statCard}>
-                <AppText style={v.statNumber}>{personal_stats.entry_count}</AppText>
+                <AppText style={[v.statNumber, { color: CHAMPAGNE }]}>{personal_stats.entry_count}</AppText>
                 <AppText style={v.statLabel}>wines logged</AppText>
               </View>
               {personal_stats.avg_rating > 0 ? (
@@ -817,7 +817,7 @@ const v = StyleSheet.create({
   },
   exprExample: {
     fontSize: 8,
-    color: "#C9A84C", // Viognier
+    color: FOG, // Dust — supporting text, not gold per Dani Round 2 Task 2
   },
 
   // Notable producers with dot
@@ -1032,14 +1032,14 @@ const p = StyleSheet.create({
     lineHeight: 16,
   },
   personalHighlight: {
-    color: "#C9A84C", // Viognier
+    color: CHAMPAGNE, // Count emphasis in prose — not a score; gold reserved per Dani rule
     fontWeight: "600",
   },
 
   // Philosophy tags
   philoTag: {
     fontSize: 10,
-    color: "#C9A84C", // Viognier
+    color: CHAMPAGNE, // Tag label — not a score; gold reserved per Dani rule
     fontWeight: "500",
     marginBottom: 2,
   },
