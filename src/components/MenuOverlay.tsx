@@ -146,7 +146,7 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
             fontFamily: "var(--font-serif)",
             fontSize: 22,
             fontWeight: 300,
-            letterSpacing: 7,
+            letterSpacing: 0,
             color: "var(--color-text-primary)",
           }}
         >
