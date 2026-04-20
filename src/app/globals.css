@@ -4,7 +4,7 @@
 :root {
   /* ─── WARM NOIR — SCREENS & SURFACES ──────────────────── */
   /* Deep editorial theme with warm wine-red undertones */
-  --color-screen-bg:       #220E14;
+  --color-screen-bg:       #1A0A10;
   --color-surface-primary: #2E1420;
   --color-surface-raised:  #3A1020;
   --color-surface-hover:   #3E1828;
@@ -60,8 +60,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-screen-bg:      #0C0810;
-    --color-text-primary:   #F0ECE4;
+    --color-screen-bg:      #1A0A10;
+    --color-text-primary:   #F5EDD6;
   }
 }
 

@@ -7,7 +7,7 @@
 export const colors = {
   // ─── SCREEN & SURFACE HIERARCHY ────────────────────────
   // Surfaces have warm wine-red undertones
-  screenBg:         "#220E14",      // Warmer, lighter base — visible hierarchy
+  screenBg:         "#1A0A10",      // Scroll void — deeper than card surface to create hierarchy
   surfacePrimary:   "#2E1420",      // Cards visibly sit above the void
   surfaceRaised:    "#3A1020",      // Modals, sheets, dropdowns lift above cards
   surfaceHover:     "#3E1828",      // Hover state above raised
@@ -49,7 +49,7 @@ export const colors = {
 
   // ─── LEGACY / COMPATIBILITY ────────────────────────────
   white:            "#F5EDD6",
-  black:            "#220E14",
+  black:            "#1A0A10",
   
   barolo:           "#4A0E1F",
   grenache:         "#7B1D3A",
@@ -65,7 +65,7 @@ export const colors = {
   cardBg:           "#2E1420",      // Card backgrounds (surfacePrimary)
   inputBg:          "#3A1020",      // Input field backgrounds (surfaceRaised)
   inputBorder:      "rgba(196,96,122,0.10)",  // Rose-tinted input borders
-  surfaceDark:      "#220E14",      // Deep backgrounds (screenBg)
+  surfaceDark:      "#1A0A10",      // Deep backgrounds (screenBg)
 } as const;
 
 export type ColorToken = keyof typeof colors;
