@@ -190,7 +190,7 @@ export default function ProducersBrowsePage() {
               <>
                 {/* ── Most Logged ─────────────────────────── */}
                 <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${ROSE}12` }}>
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: VIOGNIER }}>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: ROSE }}>
                     Most Logged
                   </p>
                   <div className="space-y-0.5">

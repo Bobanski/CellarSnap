@@ -273,7 +273,7 @@ export default function GrapesBrowsePage() {
             {/* ── Your Top Grapes ──────────────────────── */}
             {userGrapesLoaded && userGrapes.length > 0 && (
               <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${NEBBIOLO}18` }}>
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: VIOGNIER }}>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: ROSE }}>
                   Your Top Grapes
                 </p>
                 <div className="space-y-0.5">
