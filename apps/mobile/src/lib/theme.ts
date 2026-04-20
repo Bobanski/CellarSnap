@@ -32,7 +32,7 @@ export const colors = {
   purpleGlow:       "rgba(74,48,96,0.25)",   // Subtle purple glow effects
 
   // ─── BORDERS & DIVIDERS ────────────────────────────────
-  border:           "rgba(196,96,122,0.10)",  // Rose-tinted subtle borders
+  border:           "rgba(196,96,122,0.12)",  // Rose-tinted card border (Round 4 lock)
   borderStrong:     "rgba(196,96,122,0.22)",  // Emphasized borders with rose
   borderAccent:     "rgba(196,96,122,0.18)",  // Rose border accent
 
