@@ -309,7 +309,7 @@ export default function AppLayout() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: colors.surfacePrimary,
+          backgroundColor: colors.surfaceRaised,
           borderTopColor: "rgba(123, 29, 58, 0.3)",
           borderTopWidth: 0.5,
           paddingTop: 6,
