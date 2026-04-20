@@ -1255,7 +1255,7 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-          <div className="grid min-w-0 items-start gap-5">
+          <div className="grid min-w-0 items-start gap-3">
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
@@ -1265,8 +1265,8 @@ export default function FeedPage() {
                     createdAt: entry.created_at,
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
-                    ? "rounded-none border-[rgba(74,48,96,0.4)] bg-[#130d1e] hover:border-[rgba(74,48,96,0.7)]"
-                    : "rounded-none border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 hover:border-[var(--color-accent-secondary)]/40"
+                    ? "rounded-xl border-[rgba(74,48,96,0.4)] bg-[#2E1420] hover:border-[rgba(74,48,96,0.7)]"
+                    : "rounded-xl border-[var(--color-border)] bg-[var(--color-surface-primary)] hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
@@ -1508,7 +1508,7 @@ export default function FeedPage() {
                     !Number.isNaN(entry.rating) ? (
                       <span
                         style={{
-                          color: "#C4607A",
+                          color: "#C9A84C",
                           fontSize: 14,
                           fontWeight: 800,
                         }}

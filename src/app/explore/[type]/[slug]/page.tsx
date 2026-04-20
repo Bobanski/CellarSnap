@@ -8,16 +8,16 @@ import AppImage from "@/components/AppImage";
 // ─── Constants ─────────────────────────────────────────────
 
 const CHAMPAGNE = "#F5EDD6";
-const FOG = "#8A8078";
+const FOG = "#A08878";
 const ROSE = "#C4607A";
 const GRENACHE = "#7B1D3A";
 const NEBBIOLO = "#4A3060";
 const VERDOT = "#3D6B4F";
 const VIOGNIER = "#C9A84C";
-const BG_ODD = "#140A0F";
-const BG_EVEN = "#0F0810";
-const DEVICE_BG = "#0E0608";
-const SECTION_BORDER = "rgba(255,255,255,0.06)";
+const BG_ODD = "#220E14";
+const BG_EVEN = "#2E1420";
+const DEVICE_BG = "#220E14";
+const SECTION_BORDER = "rgba(196,96,122,0.06)";
 const SERIF = "var(--font-serif)";
 const SANS = "var(--font-sans)";
 

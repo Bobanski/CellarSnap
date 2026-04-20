@@ -12,11 +12,11 @@ import AppShell from "@/components/AppShell";
 
 const GRENACHE = "#7B1D3A";
 const ROSE = "#C4607A";
-const CHAMPAGNE = "#F0ECE4";
-const FOG = "#8A8078";
+const CHAMPAGNE = "#F5EDD6";
+const FOG = "#A08878";
 const VIOGNIER = "#C9A84C";
 const NEBBIOLO = "#4A3060";
-const BG_SECTION = "#140A0F";
+const BG_SECTION = "#220E14";
 
 // ---------------------------------------------------------------------------
 // Data
@@ -200,7 +200,7 @@ export default function RegionsBrowsePage() {
             {/* ── Spotlight ────────────────────────────── */}
             {spotlight && (
               <div className="mt-8">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: FOG }}>
                   Region of the Day
                 </p>
                 <Link
@@ -238,7 +238,7 @@ export default function RegionsBrowsePage() {
             {/* ── Your Top Regions ─────────────────────── */}
             {userRegionsLoaded && userRegions.length > 0 && (
               <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${GRENACHE}18` }}>
-                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: VIOGNIER }}>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: VIOGNIER }}>
                   Your Top Regions
                 </p>
                 <div className="space-y-0.5">
@@ -261,7 +261,7 @@ export default function RegionsBrowsePage() {
 
             {/* ── Popular ──────────────────────────────── */}
             <div className="mt-8">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: FOG }}>
                 Popular Regions
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -289,7 +289,7 @@ export default function RegionsBrowsePage() {
             {/* ── All Regions A-Z ───────────────────────── */}
             <div className="mt-8">
               <button type="button" onClick={() => setShowAllRegions(!showAllRegions)} className="flex w-full items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: FOG }}>All Regions</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: FOG }}>All Regions</p>
                 <span className="text-[10px] font-semibold uppercase tracking-[0.15em] transition hover:opacity-80" style={{ color: ROSE }}>
                   {showAllRegions ? "Hide" : `Show ${WINE_REGIONS.length - POPULAR_REGIONS.length} more`}
                 </span>

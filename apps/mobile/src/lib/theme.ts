@@ -6,19 +6,19 @@
  */
 export const colors = {
   // ─── SCREEN & SURFACE HIERARCHY ────────────────────────
-  // Surfaces have subtle purple undertones — felt, not seen
-  screenBg:         "#0C0810",      // Deep purple-black — midnight sky
-  surfacePrimary:   "#151020",      // Cards — barely purple-tinted
-  surfaceRaised:    "#1E1830",      // Elevated elements — more purple shows through
-  surfaceHover:     "#261E3A",      // Hover — nebbiolo influence visible
-  surfaceMuted:     "#1E1830",      // Alternate surface
+  // Surfaces have warm wine-red undertones
+  screenBg:         "#220E14",      // Warmer, lighter base — visible hierarchy
+  surfacePrimary:   "#2E1420",      // Cards visibly sit above the void
+  surfaceRaised:    "#3A1020",      // Modals, sheets, dropdowns lift above cards
+  surfaceHover:     "#3E1828",      // Hover state above raised
+  surfaceMuted:     "#3A1020",      // Alternate surface
   surfaceTinted:    "rgba(74,48,96,0.12)",  // Nebbiolo wash for special sections
 
   // ─── TEXT HIERARCHY ────────────────────────────────────
-  textPrimary:      "#F0ECE4",      // Slightly cooler off-white (less yellow than champagne)
-  textSecondary:    "#9B93A8",      // Lavender-gray — secondary text
+  textPrimary:      "#F5EDD6",      // Champagne — warm brand white
+  textSecondary:    "#A08878",      // Dust — warm muted supporting text
   textTertiary:     "#5D5570",      // Muted purple — placeholders
-  textOnAccent:     "#F0ECE4",      // Text on accent buttons
+  textOnAccent:     "#F5EDD6",      // Text on accent buttons
   textHighlight:    "#C4607A",      // Rose — for highlighted text, links
 
   // ─── ACCENTS ──────────────────────────────────────────
@@ -48,24 +48,24 @@ export const colors = {
   shadowColorWarm:  "rgba(74,48,96,0.25)",
 
   // ─── LEGACY / COMPATIBILITY ────────────────────────────
-  white:            "#F0ECE4",
-  black:            "#0C0810",
+  white:            "#F5EDD6",
+  black:            "#220E14",
   
   barolo:           "#4A0E1F",
   grenache:         "#7B1D3A",
   rose:             "#C4607A",
   nebbiolo:         "#4A3060",
-  champagne:        "#F0ECE4",      // Cooler off-white in this direction
-  limestone:        "#9B93A8",      // Maps to textSecondary (lavender-gray)
-  terroir:          "#1E1830",      // Maps to surfaceRaised
-  fog:              "#9B93A8",      // Maps to textSecondary
+  champagne:        "#F5EDD6",      // Warm brand white
+  limestone:        "#A08878",      // Maps to textSecondary (Dust)
+  terroir:          "#3A1020",      // Maps to surfaceRaised
+  fog:              "#A08878",      // Maps to textSecondary (Dust)
   viognier:         "#C9A84C",
 
   // ─── DERIVED / UI helpers ──────────────────────────────
-  cardBg:           "#151020",      // Card backgrounds (surfacePrimary)
-  inputBg:          "#1E1830",      // Input field backgrounds (surfaceRaised)
+  cardBg:           "#2E1420",      // Card backgrounds (surfacePrimary)
+  inputBg:          "#3A1020",      // Input field backgrounds (surfaceRaised)
   inputBorder:      "rgba(196,96,122,0.10)",  // Rose-tinted input borders
-  surfaceDark:      "#0C0810",      // Deep backgrounds (screenBg)
+  surfaceDark:      "#220E14",      // Deep backgrounds (screenBg)
 } as const;
 
 export type ColorToken = keyof typeof colors;

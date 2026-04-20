@@ -8,7 +8,7 @@ const GRENACHE = "#7B1D3A";
 const NEBBIOLO = "#4A3060";
 const ROSE = "#C4607A";
 const CHAMPAGNE = "#F0ECE4";
-const FOG = "#8A8078";
+const FOG = "#A08878";
 const VIOGNIER = "#C9A84C";
 
 export type PalateProfile = {
@@ -49,7 +49,7 @@ export function PalateHeaderCard({
       <div
         className="rounded-2xl p-6 animate-pulse"
         style={{
-          background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #0C0810 100%)`,
+          background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #220E14 100%)`,
           border: `1px solid ${GRENACHE}20`,
         }}
       >
@@ -73,7 +73,7 @@ export function PalateHeaderCard({
     <div
       className="relative rounded-2xl p-6"
       style={{
-        background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #0C0810 100%)`,
+        background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #220E14 100%)`,
         border: `1px solid ${GRENACHE}20`,
       }}
     >

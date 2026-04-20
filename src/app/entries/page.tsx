@@ -759,7 +759,7 @@ function CellarView() {
           background: "rgba(192, 57, 43, 0.08)",
           padding: "24px 16px",
           fontSize: 12,
-          color: "#e6a0a0",
+          color: "var(--color-error)",
         }}
       >
         {errorMessage}
@@ -1387,7 +1387,7 @@ function EntriesPageContent() {
                     background: "rgba(192, 57, 43, 0.08)",
                     padding: "24px 16px",
                     fontSize: 12,
-                    color: "#e6a0a0",
+                    color: "var(--color-error)",
                   }}
                 >
                   {errorMessage}
@@ -1450,7 +1450,7 @@ function EntriesPageContent() {
                     background: "rgba(192, 57, 43, 0.08)",
                     padding: "24px 16px",
                     fontSize: 12,
-                    color: "#e6a0a0",
+                    color: "var(--color-error)",
                   }}
                 >
                   {errorMessage}
@@ -2014,7 +2014,7 @@ function EntriesPageContent() {
                 background: "rgba(192, 57, 43, 0.08)",
                 padding: "24px 16px",
                 fontSize: 12,
-                color: "#e6a0a0",
+                color: "var(--color-error)",
               }}
             >
               {errorMessage}

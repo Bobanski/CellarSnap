@@ -2,20 +2,20 @@
 @import "tailwindcss";
 
 :root {
-  /* ─── MIDNIGHT NOIR — SCREENS & SURFACES ──────────────── */
-  /* Deep editorial theme with purple-wine undertones */
-  --color-screen-bg:       #0C0810;
-  --color-surface-primary: #151020;
-  --color-surface-raised:  #1E1830;
-  --color-surface-hover:   #261E3A;
+  /* ─── WARM NOIR — SCREENS & SURFACES ──────────────────── */
+  /* Deep editorial theme with warm wine-red undertones */
+  --color-screen-bg:       #220E14;
+  --color-surface-primary: #2E1420;
+  --color-surface-raised:  #3A1020;
+  --color-surface-hover:   #3E1828;
   --color-surface-tinted:  rgba(74, 48, 96, 0.12);
-  --color-surface-muted:   #1E1830;
+  --color-surface-muted:   #3A1020;
 
   /* ─── TEXT HIERARCHY ────────────────────────────────────– */
-  --color-text-primary:    #F0ECE4;
-  --color-text-secondary:  #9B93A8;
+  --color-text-primary:    #F5EDD6;
+  --color-text-secondary:  #A08878;
   --color-text-tertiary:   #5D5570;
-  --color-text-on-accent:  #F0ECE4;
+  --color-text-on-accent:  #F5EDD6;
   --color-text-highlight:  #C4607A;
 
   /* ─── ACCENTS & ACTION ──────────────────────────────– */

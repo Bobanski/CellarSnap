@@ -93,7 +93,7 @@ function ActionButton({
       style={{
         borderColor: destructive ? "rgba(192, 57, 43, 0.35)" : "var(--color-border-strong)",
         background: destructive ? "rgba(192, 57, 43, 0.08)" : "var(--color-surface-tinted)",
-        color: destructive ? "#e6a0a0" : "var(--color-text-primary)",
+        color: destructive ? "var(--color-error)" : "var(--color-text-primary)",
       }}
     >
       {children}
@@ -278,7 +278,7 @@ export default function CollectionDetailPage() {
                 background: "rgba(192, 57, 43, 0.08)",
                 padding: "24px 16px",
                 fontSize: 12,
-                color: "#e6a0a0",
+                color: "var(--color-error)",
               }}
             >
               {errorMessage ?? "Collection not found."}

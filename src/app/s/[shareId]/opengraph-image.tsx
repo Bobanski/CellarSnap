@@ -3,11 +3,11 @@ import path from "node:path";
 import { ImageResponse } from "next/og";
 import { resolvePublicPostShare } from "@/lib/shares";
 
-const SCREEN_BG = "#0C0810";
-const SURFACE_PRIMARY = "#151020";
-const SURFACE_RAISED = "#1E1830";
-const TEXT_PRIMARY = "#F0ECE4";
-const TEXT_SECONDARY = "#9B93A8";
+const SCREEN_BG = "#220E14";
+const SURFACE_PRIMARY = "#2E1420";
+const SURFACE_RAISED = "#3A1020";
+const TEXT_PRIMARY = "#F5EDD6";
+const TEXT_SECONDARY = "#A08878";
 const ACCENT_PRIMARY = "#7B1D3A";
 const ACCENT_SECONDARY = "#C4607A";
 const ACCENT_GOLD = "#C9A84C";

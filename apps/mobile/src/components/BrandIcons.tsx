@@ -2,7 +2,7 @@ import Svg, { Circle, Rect, Path, Line, Ellipse } from "react-native-svg";
 
 type BrandIconProps = { size?: number; color?: string };
 
-export function AlertsIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function AlertsIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Circle cx={s*0.5} cy={s*0.28} r={s*0.15} fill={c} opacity={0.35} />
@@ -17,7 +17,7 @@ export function AlertsIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProp
   );
 }
 
-export function ShareIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function ShareIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Path d={`M${s*0.38} ${s*0.14} L${s*0.46} ${s*0.14} L${s*0.48} ${s*0.32} L${s*0.36} ${s*0.32} Z`} fill={c} opacity={0.9} />
@@ -29,7 +29,7 @@ export function ShareIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps
   );
 }
 
-export function SaveIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function SaveIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Path d={`M${s*0.22} ${s*0.14} Q${s*0.18} ${s*0.46} ${s*0.5} ${s*0.56} Q${s*0.82} ${s*0.46} ${s*0.78} ${s*0.14} Z`} fill={c} opacity={0.18} />
@@ -43,7 +43,7 @@ export function SaveIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps)
   );
 }
 
-export function SettingsIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function SettingsIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   const nodes: JSX.Element[] = [];
   for (let i = 0; i < 6; i++) {
     const a = i * 60 * Math.PI / 180;
@@ -58,7 +58,7 @@ export function SettingsIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconPr
   );
 }
 
-export function SearchIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function SearchIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Circle cx={s*0.41} cy={s*0.41} r={s*0.27} fill={c} opacity={0.15} />
@@ -68,7 +68,7 @@ export function SearchIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProp
   );
 }
 
-export function ProfileIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function ProfileIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Circle cx={s*0.44} cy={s*0.22} r={s*0.14} fill={c} />
@@ -79,7 +79,7 @@ export function ProfileIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconPro
   );
 }
 
-export function ExploreIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function ExploreIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Circle cx={s*0.44} cy={s*0.5} r={s*0.3} fill={c} opacity={0.9} />
@@ -94,7 +94,7 @@ export function ExploreIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconPro
   );
 }
 
-export function FollowIcon({ size: s = 20, color: c = "#F0ECE4" }: BrandIconProps) {
+export function FollowIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
       <Circle cx={s*0.32} cy={s*0.3} r={s*0.13} fill={c} opacity={0.95} />
