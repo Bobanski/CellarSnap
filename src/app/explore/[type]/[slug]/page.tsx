@@ -504,7 +504,7 @@ function VarietalPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
           <>
             <div style={{ display: "flex", gap: 8 }}>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
-                <p style={{ fontFamily: SERIF, fontSize: 20, color: VIOGNIER }}>{personal_stats.entry_count}</p>
+                <p style={{ fontFamily: SERIF, fontSize: 20, color: CHAMPAGNE }}>{personal_stats.entry_count}</p>
                 <p style={{ fontFamily: SANS, fontSize: 8, color: "rgba(245,237,214,0.4)" }}>wines logged</p>
               </div>
               {personal_stats.avg_rating > 0 ? (
@@ -580,7 +580,7 @@ function VarietalPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
             <div key={expr.style} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "10px 12px", marginBottom: 6 }}>
               <p style={{ fontFamily: SERIF, fontSize: 13, color: CHAMPAGNE, marginBottom: 3 }}>{expr.style}</p>
               <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.45)", lineHeight: 1.45, marginBottom: 3 }}>{expr.desc}</p>
-              <p style={{ fontFamily: SANS, fontSize: 8, color: VIOGNIER }}>{expr.example}</p>
+              <p style={{ fontFamily: SANS, fontSize: 8, color: "rgba(245,237,214,0.55)" }}>{expr.example}</p>
             </div>
           ))}
         </Section>
@@ -637,7 +637,7 @@ function ProducerPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
         <SectionLabel color={ROSE}>YOUR {profile.display_name.toUpperCase()}</SectionLabel>
         {hasLogs ? (
           <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.55)", lineHeight: 1.6 }}>
-            You've opened <span style={{ color: VIOGNIER, fontWeight: 600 }}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "bottle" : "bottles"}</span>
+            You've opened <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "bottle" : "bottles"}</span>
             {personal_stats.avg_rating > 0 ? <>. Your average rating: <span style={{ color: VIOGNIER, fontWeight: 600 }}>{personal_stats.avg_rating.toFixed(1)}</span></> : null}.
           </p>
         ) : (
@@ -666,7 +666,7 @@ function ProducerPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
           <SectionLabel>PHILOSOPHY + APPROACH</SectionLabel>
           {philosophyTags.map((item) => (
             <div key={item.tag} style={{ marginBottom: 8 }}>
-              <p style={{ fontFamily: SANS, fontSize: 10, color: VIOGNIER, fontWeight: 500, marginBottom: 2 }}>{item.tag}</p>
+              <p style={{ fontFamily: SANS, fontSize: 10, color: CHAMPAGNE, fontWeight: 500, marginBottom: 2 }}>{item.tag}</p>
               <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.45 }}>{item.note}</p>
             </div>
           ))}

@@ -276,7 +276,7 @@ export default function RegionsBrowsePage() {
                     >
                       <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{r}</span>
                       {userEntry ? (
-                        <span className="text-[10px]" style={{ color: VIOGNIER }}>{userEntry.count}</span>
+                        <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (
                         <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}

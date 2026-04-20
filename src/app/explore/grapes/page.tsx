@@ -311,7 +311,7 @@ export default function GrapesBrowsePage() {
                     >
                       <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
                       {userEntry ? (
-                        <span className="text-[10px]" style={{ color: VIOGNIER }}>{userEntry.count}</span>
+                        <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (
                         <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}
