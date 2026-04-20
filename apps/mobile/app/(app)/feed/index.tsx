@@ -2512,7 +2512,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   feedRating: {
-    color: colors.rose,
+    color: colors.accentGold,
     fontSize: 14,
     fontWeight: "800",
   },
