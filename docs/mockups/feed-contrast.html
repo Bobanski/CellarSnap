@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Cluster — feed contrast mockup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ─── Shared tokens (unchanged across variants) ─────────────── */
+    :root {
+      --serif: "Cormorant Garamond", Georgia, serif;
+      --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+      --void: #1A0A10;            /* screen bg — Dani Round 3 Task 9b lock */
+      --card: #2E1420;            /* Sangiovese — card surface */
+      --champagne: #F5EDD6;       /* text primary */
+      --dust: #A08878;            /* text secondary */
+      --text-tertiary: #5D5570;   /* muted */
+      --grenache: #7B1D3A;        /* accentPrimary */
+      --rose: #C4607A;            /* accentSecondary */
+      --viognier: #C9A84C;        /* accentGold — scores + badges only */
+      --nebbiolo: #4A3060;        /* depth accent */
+      --barolo: #4A0E1F;          /* deepest brand red */
+      --border: rgba(196, 96, 122, 0.12);
+      --border-strong: rgba(196, 96, 122, 0.22);
+      --divider: rgba(196, 96, 122, 0.10);
+    }
+
+    html,
+    body {
+      background: #0b0509;
+      color: var(--champagne);
+      font-family: var(--sans);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    .page-head {
+      margin-bottom: 32px;
+    }
+    .page-head h1 {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 28px;
+      letter-spacing: 0;
+      margin: 0 0 6px;
+      color: var(--champagne);
+    }
+    .page-head p {
+      margin: 0;
+      color: var(--dust);
+      font-size: 13px;
+      line-height: 1.55;
+      max-width: 820px;
+    }
+    .page-head code {
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 12px;
+      color: var(--rose);
+      background: rgba(196, 96, 122, 0.08);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* ─── 3-up phone-frame layout ──────────────────────────────── */
+    .row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      align-items: start;
+    }
+    @media (max-width: 1080px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .variant {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .variant .title {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 18px;
+      letter-spacing: 0;
+      color: var(--champagne);
+      margin: 0;
+    }
+    .variant .subtitle {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: var(--rose);
+      margin: 0;
+    }
+    .variant .desc {
+      font-size: 13px;
+      color: var(--dust);
+      line-height: 1.55;
+      margin: 0;
+    }
+    .variant .values {
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 11px;
+      color: var(--dust);
+      background: rgba(255, 255, 255, 0.03);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      line-height: 1.6;
+    }
+    .variant .values b {
+      color: var(--champagne);
+      font-weight: 600;
+    }
+
+    /* ─── Phone frame ─────────────────────────────────────────── */
+    .phone {
+      width: 100%;
+      aspect-ratio: 375 / 700;
+      border-radius: 28px;
+      overflow: hidden;
+      position: relative;
+      background: var(--void);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+    }
+
+    /* ─── Header/top bar (per variant — see .v-a / .v-b / .v-c) ─ */
+    .header {
+      height: 46px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      position: relative;
+      z-index: 2;
+    }
+    .header .wordmark {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 20px;
+      color: var(--champagne);
+      letter-spacing: 0;
+    }
+    .header .icons {
+      display: flex;
+      gap: 8px;
+    }
+    .header .icon-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 0.5px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dust);
+      font-size: 11px;
+    }
+
+    /* ─── Feed scroll area ─────────────────────────────────────── */
+    .feed {
+      flex: 1;
+      overflow: hidden;
+      padding: 14px 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-userrow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-tertiary);
+    }
+    .card-userrow .who {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-userrow .avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--grenache);
+      color: var(--champagne);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .card-userrow .name {
+      color: var(--champagne);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .card-photo {
+      aspect-ratio: 4 / 3;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a0d14 0%, #3a2030 60%, #2a1420 100%);
+      border: 0.5px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      padding: 10px;
+    }
+    .card-photo .photo-caption {
+      color: rgba(245, 237, 214, 0.45);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .card-body h3 {
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 14px;
+      margin: 0 0 2px;
+      color: var(--champagne);
+      line-height: 1.25;
+    }
+    .card-body .meta {
+      font-size: 12px;
+      color: var(--dust); /* Dani Round 4 Task 13: Producer·Vintage = Dust */
+      margin: 0;
+    }
+
+    .card-note {
+      font-size: 12px;
+      color: var(--dust);
+      line-height: 1.5;
+      margin: 0;
+    }
+    .card-score-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-score-row .score {
+      color: var(--viognier);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .card-score-row .qpr {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 0.5px solid rgba(61, 107, 79, 0.4);
+      color: #3d6b4f;
+      background: rgba(61, 107, 79, 0.1);
+    }
+
+    /* Action bar — Round 4 Task 13 + Task 11 */
+    .card-actions {
+      border-top: 1px solid var(--divider);
+      padding-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .comments-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 0.5px solid rgba(196, 96, 122, 0.25);
+      padding: 3px 9px;
+      font-size: 12px;
+      color: var(--dust);
+    }
+    .comments-pill .count {
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(196, 96, 122, 0.15);
+      color: var(--rose);
+      font-size: 10px;
+    }
+    .actions-right {
+      display: flex;
+      gap: 6px;
+    }
+    .action-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: rgba(196, 96, 122, 0.12);
+      color: var(--dust);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    /* ─── Bottom nav ──────────────────────────────────────────── */
+    .bottom-nav {
+      height: 58px;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 0.5px solid rgba(123, 29, 58, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 8px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+    .nav-item.active {
+      color: var(--rose);
+    }
+    .nav-item .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.7;
+    }
+    .nav-item.log .dot {
+      width: 30px;
+      height: 30px;
+      background: var(--grenache);
+      color: var(--champagne);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 300;
+      opacity: 1;
+      margin-bottom: 2px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════ */
+    /* VARIANT A — Barolo shelf (nav darker than card)             */
+    /* ═══════════════════════════════════════════════════════════ */
+    .v-a .header,
+    .v-a .bottom-nav {
+      background: #4A0E1F; /* Barolo — deeper than both void and card */
+    }
+    .v-a .bottom-nav {
+      border-top-color: rgba(0, 0, 0, 0.4);
+    }
+
+    /* ═══════════════════════════════════════════════════════════ */
+    /* VARIANT B — Nebbiolo-infused nav (different hue, not just   */
+    /*   lightness — adds a subtle purple undertone)               */
+    /* ═══════════════════════════════════════════════════════════ */
+    .v-b .header,
+    .v-b .bottom-nav {
+      background: #2A1830; /* blend: surfaceRaised lightness, Nebbiolo hue */
+    }
+    .v-b .bottom-nav {
+      border-top-color: rgba(74, 48, 96, 0.35);
+    }
+
+    /* ═══════════════════════════════════════════════════════════ */
+    /* VARIANT C — Glass nav (translucent over void with blur)     */
+    /* ═══════════════════════════════════════════════════════════ */
+    .v-c .header,
+    .v-c .bottom-nav {
+      background: rgba(26, 10, 16, 0.72);
+      backdrop-filter: saturate(140%) blur(18px);
+      -webkit-backdrop-filter: saturate(140%) blur(18px);
+      border-bottom: 0.5px solid rgba(196, 96, 122, 0.18);
+    }
+    .v-c .bottom-nav {
+      border-top: 0.5px solid rgba(196, 96, 122, 0.18);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-head">
+      <h1>cluster — feed contrast mockup</h1>
+      <p>
+        Three alternative color balances for the feed header and bottom nav. The void
+        (<code>#1A0A10</code>) and card surface (<code>#2E1420</code> Sangiovese) are
+        unchanged — only the nav shell colors shift. Goal: make the header and tab bar
+        read as distinct layers from the card, without breaking the warm burgundy
+        palette established in the Cluster brand guide.
+      </p>
+    </header>
+
+    <div class="row">
+      <!-- ─── Variant A — Barolo shelf ──────────────────────────── -->
+      <div class="variant">
+        <p class="subtitle">Variant A</p>
+        <h2 class="title">Barolo shelf</h2>
+        <p class="desc">
+          Header + nav use the brand's deepest red, <b style="color:var(--champagne)">Barolo
+          #4A0E1F</b>. The nav sits <em>darker</em> than the card, inverting the usual
+          surface hierarchy so the nav reads as a sunken shelf at the top and bottom of the
+          screen. Feels anchored, editorial, closest to the current brand icon treatment.
+        </p>
+        <div class="values">
+          header · nav &nbsp; <b>#4A0E1F</b> Barolo<br />
+          card &nbsp; #2E1420 Sangiovese<br />
+          void &nbsp; #1A0A10
+        </div>
+        <div class="phone v-a">
+          <div class="header">
+            <span class="wordmark">cluster</span>
+            <div class="icons">
+              <div class="icon-btn">🔔</div>
+              <div class="icon-btn">☰</div>
+            </div>
+          </div>
+          <div class="feed">
+            <article class="card">
+              <div class="card-userrow">
+                <div class="who"><div class="avatar">N</div><span class="name">Nicole</span></div>
+                <span>2d</span>
+              </div>
+              <div class="card-photo"><span class="photo-caption">photo</span></div>
+              <div class="card-body">
+                <h3>Pinot Rosè 2021</h3>
+                <p class="meta">Château Pradeaux · 2021 · Bandol</p>
+              </div>
+              <p class="card-note">Bright strawberry, saline finish. Solid pour for the deck.</p>
+              <div class="card-score-row">
+                <span class="score">85/100</span>
+                <span class="qpr">Good Value</span>
+              </div>
+              <div class="card-actions">
+                <div class="comments-pill">Comments <span class="count">2</span></div>
+                <div class="actions-right">
+                  <div class="action-btn">+</div>
+                  <div class="action-btn">🔖</div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-userrow">
+                <div class="who"><div class="avatar">D</div><span class="name">Dani</span></div>
+                <span>5d</span>
+              </div>
+              <div class="card-body">
+                <h3>Sangiovese di Romagna</h3>
+                <p class="meta">Fattoria Zerbina · 2019 · Emilia-Romagna</p>
+              </div>
+              <p class="card-note">Dusty red cherry, a little grip. Unfussy weeknight.</p>
+              <div class="card-score-row"><span class="score">91/100</span></div>
+              <div class="card-actions">
+                <div class="comments-pill">Comments <span class="count">0</span></div>
+                <div class="actions-right">
+                  <div class="action-btn">+</div>
+                  <div class="action-btn">🔖</div>
+                </div>
+              </div>
+            </article>
+          </div>
+          <nav class="bottom-nav">
+            <div class="nav-item active"><div class="dot"></div>Feed</div>
+            <div class="nav-item"><div class="dot"></div>Explore</div>
+            <div class="nav-item log"><div class="dot">+</div>Log</div>
+            <div class="nav-item"><div class="dot"></div>Somm</div>
+            <div class="nav-item"><div class="dot"></div>Cellar</div>
+          </nav>
+        </div>
+      </div>
+
+      <!-- ─── Variant B — Nebbiolo-infused ──────────────────────── -->
+      <div class="variant">
+        <p class="subtitle">Variant B</p>
+        <h2 class="title">Nebbiolo shelf</h2>
+        <p class="desc">
+          Same approximate lightness as today's Malbec nav, but shifts the hue toward
+          <b style="color:var(--champagne)">Nebbiolo</b> (the brand's purple-wine tone,
+          <code style="color:var(--rose)">#4A3060</code>). Contrast comes from the hue
+          difference rather than lightness — nav feels subtly "other" without
+          dominating. Best bet if you want separation without making the chrome feel
+          heavy.
+        </p>
+        <div class="values">
+          header · nav &nbsp; <b>#2A1830</b> (Nebbiolo-infused)<br />
+          card &nbsp; #2E1420 Sangiovese<br />
+          void &nbsp; #1A0A10
+        </div>
+        <div class="phone v-b">
+          <div class="header">
+            <span class="wordmark">cluster</span>
+            <div class="icons">
+              <div class="icon-btn">🔔</div>
+              <div class="icon-btn">☰</div>
+            </div>
+          </div>
+          <div class="feed">
+            <article class="card">
+              <div class="card-userrow">
+                <div class="who"><div class="avatar">N</div><span class="name">Nicole</span></div>
+                <span>2d</span>
+              </div>
+              <div class="card-photo"><span class="photo-caption">photo</span></div>
+              <div class="card-body">
+                <h3>Pinot Rosè 2021</h3>
+                <p class="meta">Château Pradeaux · 2021 · Bandol</p>
+              </div>
+              <p class="card-note">Bright strawberry, saline finish. Solid pour for the deck.</p>
+              <div class="card-score-row">
+                <span class="score">85/100</span>
+                <span class="qpr">Good Value</span>
+              </div>
+              <div class="card-actions">
+                <div class="comments-pill">Comments <span class="count">2</span></div>
+                <div class="actions-right">
+                  <div class="action-btn">+</div>
+                  <div class="action-btn">🔖</div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-userrow">
+                <div class="who"><div class="avatar">D</div><span class="name">Dani</span></div>
+                <span>5d</span>
+              </div>
+              <div class="card-body">
+                <h3>Sangiovese di Romagna</h3>
+                <p class="meta">Fattoria Zerbina · 2019 · Emilia-Romagna</p>
+              </div>
+              <p class="card-note">Dusty red cherry, a little grip. Unfussy weeknight.</p>
+              <div class="card-score-row"><span class="score">91/100</span></div>
+              <div class="card-actions">
+                <div class="comments-pill">Comments <span class="count">0</span></div>
+                <div class="actions-right">
+                  <div class="action-btn">+</div>
+                  <div class="action-btn">🔖</div>
+                </div>
+              </div>
+            </article>
+          </div>
+          <nav class="bottom-nav">
+            <div class="nav-item active"><div class="dot"></div>Feed</div>
+            <div class="nav-item"><div class="dot"></div>Explore</div>
+            <div class="nav-item log"><div class="dot">+</div>Log</div>
+            <div class="nav-item"><div class="dot"></div>Somm</div>
+            <div class="nav-item"><div class="dot"></div>Cellar</div>
+          </nav>
+        </div>
+      </div>
+
+      <!-- ─── Variant C — Glass nav ─────────────────────────────── -->
+      <div class="variant">
+        <p class="subtitle">Variant C</p>
+        <h2 class="title">Glass over void</h2>
+        <p class="desc">
+          Nav becomes a translucent layer over the void with a blur — so the card
+          material doesn't extend into the chrome. Strongest separation of the three and
+          feels the most modern, but it's the biggest departure from the current
+          "all warm surfaces" direction. Blur may not render on very old mobile GPUs.
+        </p>
+        <div class="values">
+          header · nav &nbsp; <b>rgba(26,10,16,0.72)</b> + blur(18px)<br />
+          card &nbsp; #2E1420 Sangiovese<br />
+          void &nbsp; #1A0A10
+        </div>
+        <div class="phone v-c">
+          <div class="header">
+            <span class="wordmark">cluster</span>
+            <div class="icons">
+              <div class="icon-btn">🔔</div>
+              <div class="icon-btn">☰</div>
+            </div>
+          </div>
+          <div class="feed">
+            <article class="card">
+              <div class="card-userrow">
+                <div class="who"><div class="avatar">N</div><span class="name">Nicole</span></div>
+                <span>2d</span>
+              </div>
+              <div class="card-photo"><span class="photo-caption">photo</span></div>
+              <div class="card-body">
+                <h3>Pinot Rosè 2021</h3>
+                <p class="meta">Château Pradeaux · 2021 · Bandol</p>
+              </div>
+              <p class="card-note">Bright strawberry, saline finish. Solid pour for the deck.</p>
+              <div class="card-score-row">
+                <span class="score">85/100</span>
+                <span class="qpr">Good Value</span>
+              </div>
+              <div class="card-actions">
+                <div class="comments-pill">Comments <span class="count">2</span></div>
+                <div class="actions-right">
+                  <div class="action-btn">+</div>
+                  <div class="action-btn">🔖</div>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-userrow">
+                <div class="who"><div class="avatar">D</div><span class="name">Dani</span></div>
+                <span>5d</span>
+              </div>
+              <div class="card-body">
+                <h3>Sangiovese di Romagna</h3>
+                <p class="meta">Fattoria Zerbina · 2019 · Emilia-Romagna</p>
+              </div>
+              <p class="card-note">Dusty red cherry, a little grip. Unfussy weeknight.</p>
+              <div class="card-score-row"><span class="score">91/100</span></div>
+              <div class="card-actions">
+                <div class="comments-pill">Comments <span class="count">0</span></div>
+                <div class="actions-right">
+                  <div class="action-btn">+</div>
+                  <div class="action-btn">🔖</div>
+                </div>
+              </div>
+            </article>
+          </div>
+          <nav class="bottom-nav">
+            <div class="nav-item active"><div class="dot"></div>Feed</div>
+            <div class="nav-item"><div class="dot"></div>Explore</div>
+            <div class="nav-item log"><div class="dot">+</div>Log</div>
+            <div class="nav-item"><div class="dot"></div>Somm</div>
+            <div class="nav-item"><div class="dot"></div>Cellar</div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <footer style="margin-top:48px; padding-top:24px; border-top: 0.5px solid var(--border); color: var(--text-tertiary); font-size: 12px;">
+      <p style="margin:0 0 4px;">Mockup scaffolding only — not a production component. Non-functional buttons, stock avatars, dummy copy.</p>
+      <p style="margin:0;">Brand tokens from <code>cluster-brand-guide-v4.jsx</code>. Feed card structure mirrors the Round 4 Task 13 lock (single Sangiovese surface, 10px radius, 0.5px border, lightweight action bar with 0.10 divider).</p>
+    </footer>
+  </div>
+</body>
+</html>
