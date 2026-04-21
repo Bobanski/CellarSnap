@@ -1511,8 +1511,8 @@ export default function FeedPage() {
                   }
                   const expanded = Boolean(expandedNotesByEntryId[entry.id]);
                   return (
-                    <div className="mt-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
+                    <div className="mt-3 flex items-baseline justify-between gap-3">
+                      <div className="min-w-0 max-w-[60%] flex-1">
                         {notes ? (
                           <button
                             type="button"
