@@ -1517,7 +1517,7 @@ export default function FeedPage() {
                       <div className="min-w-0 flex-1">
                         {notes ? (
                           <>
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                            <p className="text-base font-semibold leading-snug text-[var(--color-text-primary)]">
                               Tasting notes:
                             </p>
                             <button
@@ -1526,7 +1526,7 @@ export default function FeedPage() {
                                 event.stopPropagation();
                                 toggleNotesExpanded(entry.id);
                               }}
-                              className="mt-1 block w-full text-left text-sm leading-relaxed text-[var(--color-text-primary)]"
+                              className="mt-0.5 block w-full text-left text-sm leading-relaxed text-[var(--color-text-secondary)]"
                               title={expanded ? "Collapse notes" : "Expand notes"}
                             >
                               <span
