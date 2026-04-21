@@ -45,7 +45,7 @@ export default function SommelierSuggestions({
     : SOMMELIER_DEFAULT_SUGGESTIONS;
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Suggested prompts">
+    <div className="grid grid-cols-2 gap-2" aria-label="Suggested prompts">
       {suggestions.map((suggestion) => (
         <button
           key={suggestion}

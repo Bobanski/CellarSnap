@@ -92,7 +92,7 @@ const ALL_TABS: TabDef[] = [
   { label: "Explore", href: "/explore", icon: <ExploreIcon />, betaOnly: true },
   { label: "Log", href: "/entries/new", icon: <LogFabIcon />, isFab: true },
   { label: "Somm", href: "/sommelier", icon: <SommIcon />, betaOnly: true },
-  { label: "Palate", href: "/palate", icon: <PalateIcon /> },
+  { label: "Palate", href: "/palate", icon: <CellarIcon /> },
 ];
 
 function isTabActive(href: string, pathname: string, fromFeed: boolean): boolean {

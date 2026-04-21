@@ -376,10 +376,10 @@ export default function SommelierChat() {
       ) : null}
 
       <div className="shrink-0 space-y-3">
-        {showSuggestions ? (
+        {showSuggestions && audienceMode ? (
           <SommelierSuggestions
             onSelect={(suggestion) => void sendMessage(suggestion)}
-            audienceMode={audienceMode ?? undefined}
+            audienceMode={audienceMode}
           />
         ) : null}
 

@@ -1259,7 +1259,7 @@ export default function FeedPage() {
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
@@ -1319,11 +1319,9 @@ export default function FeedPage() {
                         <span className="ml-1">is drinking:</span>
                       </span>
                     </button>
-                    {entry.entry_group ? (
-                      <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
-                        {entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event") : (entry.entry_group.mode === "event" ? "Event" : "Catch-up")}
-                      </span>
-                    ) : null}
+                    {/* Occasion pill removed from top — the occasion now
+                        reads 'Occasion: {label}' inside the photo gallery's
+                        inner band (GroupedPostGallery header). */}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -1516,27 +1514,23 @@ export default function FeedPage() {
                     <div className="mt-3 flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         {notes ? (
-                          <>
-                            <p className="text-base font-semibold leading-snug text-[var(--color-text-primary)]">
-                              Tasting notes:
-                            </p>
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleNotesExpanded(entry.id);
-                              }}
-                              className="mt-0.5 block w-full text-left text-sm leading-relaxed text-[var(--color-text-secondary)]"
-                              title={expanded ? "Collapse notes" : "Expand notes"}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleNotesExpanded(entry.id);
+                            }}
+                            className="block w-full text-left text-base leading-snug text-[var(--color-text-primary)]"
+                            title={expanded ? "Collapse notes" : "Expand notes"}
+                          >
+                            <span
+                              className="block break-words"
+                              style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
                             >
-                              <span
-                                className="block break-words"
-                                style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
-                              >
-                                {notes}
-                              </span>
-                            </button>
-                          </>
+                              <span className="font-semibold">Notes:</span>{" "}
+                              {notes}
+                            </span>
+                          </button>
                         ) : null}
                       </div>
                       {hasRating || hasQpr ? (
@@ -1560,7 +1554,7 @@ export default function FeedPage() {
                   );
                 })()}
 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-5 flex justify-end">
                   <span className="text-xs text-[var(--color-text-tertiary)]">
                     {formatConsumedDate(entry.created_at)}
                   </span>
