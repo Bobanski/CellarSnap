@@ -89,9 +89,9 @@ type TabDef = {
 
 const ALL_TABS: TabDef[] = [
   { label: "Feed", href: "/feed", icon: <FeedIcon /> },
-  { label: "Somm", href: "/sommelier", icon: <SommIcon />, betaOnly: true },
-  { label: "Log", href: "/entries/new", icon: <LogFabIcon />, isFab: true },
   { label: "Explore", href: "/explore", icon: <ExploreIcon />, betaOnly: true },
+  { label: "Log", href: "/entries/new", icon: <LogFabIcon />, isFab: true },
+  { label: "Somm", href: "/sommelier", icon: <SommIcon />, betaOnly: true },
   { label: "Palate", href: "/palate", icon: <PalateIcon /> },
 ];
 
