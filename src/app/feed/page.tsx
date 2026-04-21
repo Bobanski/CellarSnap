@@ -1291,42 +1291,49 @@ export default function FeedPage() {
                   }
                 }}
               >
-                <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-[var(--color-text-tertiary)]">
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        router.push(`/profile/${entry.user_id}`);
-                      }}
-                        className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/50"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
-                        {entry.author_avatar_url ? (
-                          <AppImage
-                            src={entry.author_avatar_url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center text-[10px] font-medium text-[var(--color-text-tertiary)]">
-                            {(entry.author_name || "?")[0].toUpperCase()}
-                          </span>
-                        )}
-                      </span>
-                      <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
-                        {entry.author_name}
-                      </span>
-                    </button>
-                    {entry.entry_group ? (
-                      <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
-                        {entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event") : (entry.entry_group.mode === "event" ? "Event" : "Catch-up")}
-                      </span>
-                    ) : null}
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {(() => {
+                      // Compute wine name + meta for the top block (mirrors the
+                      // logic that used to live below the photo). For grouped
+                      // posts, pull from the active slide; for solo posts, from
+                      // the entry itself.
+                      let wineName: string | null = null;
+                      let meta = "";
+                      if (entry.entry_group && (entry.group_slides?.length ?? 0) > 0) {
+                        const activeSlide = (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0] ?? null;
+                        wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
+                        meta = activeSlide ? [
+                          activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
+                          activeSlide.vintage,
+                          activeSlide.appellation || activeSlide.region,
+                          activeSlide.country,
+                        ].filter(Boolean).slice(0, 3).join(" · ") : "";
+                      } else {
+                        wineName = entry.wine_name ?? null;
+                        meta = buildEntryMetaFields(entry).join(" · ");
+                      }
+                      return (
+                        <>
+                          {wineName ? (
+                            <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
+                              {wineName}
+                            </h2>
+                          ) : null}
+                          {meta ? (
+                            <p className="mt-0.5 text-sm text-[var(--color-text-secondary)] break-words">{meta}</p>
+                          ) : null}
+                          {entry.entry_group ? (
+                            <span className="mt-1.5 inline-block rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
+                              {entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event") : (entry.entry_group.mode === "event" ? "Event" : "Catch-up")}
+                            </span>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </div>
-                  <div className="shrink-0 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <span>{formatConsumedDate(entry.created_at)}</span>
+                  <div className="shrink-0">
+                    <div className="flex items-center justify-end gap-1 text-xs text-[var(--color-text-tertiary)]">
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
                           <button
@@ -1454,44 +1461,66 @@ export default function FeedPage() {
                     <EntryPhotoGallery entry={entry} />
                   )}
                 </div>
-                <div className="mt-4">
-                  {entry.entry_group ? (() => {
-                    const activeSlide = (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0] ?? null;
-                    const wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
-                    const meta = activeSlide ? [
-                      activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
-                      activeSlide.vintage,
-                      activeSlide.appellation || activeSlide.region,
-                      activeSlide.country,
-                    ].filter(Boolean).slice(0, 3).join(" · ") : "";
+                {/* Byline + notes — Eitan's reorder: user attribution moves below
+                    the photo. "{name}'s notes:" appears as a header for the
+                    notes content when notes exist; if no notes, just show the
+                    byline (avatar + name + date) for attribution. */}
+                <div className="mt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        router.push(`/profile/${entry.user_id}`);
+                      }}
+                      className="flex min-w-0 items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/50"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
+                        {entry.author_avatar_url ? (
+                          <AppImage
+                            src={entry.author_avatar_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-[10px] font-medium text-[var(--color-text-tertiary)]">
+                            {(entry.author_name || "?")[0].toUpperCase()}
+                          </span>
+                        )}
+                      </span>
+                      <span className="block min-w-0 break-words text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
+                        {entry.author_name}{(entry.notes ?? "").trim() ? "'s notes:" : ""}
+                      </span>
+                    </button>
+                    <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
+                      {formatConsumedDate(entry.created_at)}
+                    </span>
+                  </div>
+                  {(() => {
+                    const notes = (entry.notes ?? "").trim();
+                    if (!notes) {
+                      return null;
+                    }
+                    const expanded = Boolean(expandedNotesByEntryId[entry.id]);
                     return (
-                      <div className="min-w-0">
-                        {wineName ? (
-                          <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
-                            {wineName}
-                          </h2>
-                        ) : null}
-                        {meta ? (
-                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
-                        ) : null}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleNotesExpanded(entry.id);
+                        }}
+                        className="mt-2 block w-full text-left text-sm leading-relaxed text-[var(--color-text-secondary)]"
+                        title={expanded ? "Collapse notes" : "Expand notes"}
+                      >
+                        <span
+                          className="block break-words"
+                          style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
+                        >
+                          {notes}
+                        </span>
+                      </button>
                     );
-                  })() : (
-                    <div className="min-w-0">
-                      {entry.wine_name ? (
-                        <h2 className="text-base font-semibold leading-snug text-[var(--color-text-primary)] break-words">
-                          {entry.wine_name}
-                        </h2>
-                      ) : null}
-                      {(() => {
-                        const meta = buildEntryMetaFields(entry).join(" · ");
-
-                        return meta ? (
-                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
+                  })()}
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
                   <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
@@ -1514,38 +1543,14 @@ export default function FeedPage() {
                         }}
                         title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
                       >
-                        {Math.max(0, Math.min(100, Math.round(entry.rating)))}/100
+                        {Math.max(0, Math.min(100, Math.round(entry.rating)))} Pts
                       </span>
                     ) : null}
                     {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                   </div>
                 ) : null}
-                {(() => {
-                  const notes = (entry.notes ?? "").trim();
-                  if (!notes) {
-                    return null;
-                  }
-
-                  const expanded = Boolean(expandedNotesByEntryId[entry.id]);
-                  return (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleNotesExpanded(entry.id);
-                      }}
-                      className="mt-3 block w-full text-left text-xs leading-relaxed text-[var(--color-text-secondary)]"
-                      title={expanded ? "Collapse notes" : "Expand notes"}
-                    >
-                      <span
-                        className="block break-words"
-                        style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
-                      >
-                        {notes}
-                      </span>
-                    </button>
-                  );
-                })()}
+                {/* Notes block moved up into the byline above (under
+                    "{name}'s notes:") per Eitan's reorder. */}
                 {(() => {
                   const entryComments = commentsByEntryId[entry.id] ?? [];
                   const commentDraft = commentDraftByEntryId[entry.id] ?? "";
