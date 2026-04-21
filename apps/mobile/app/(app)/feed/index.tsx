@@ -2534,7 +2534,7 @@ const styles = StyleSheet.create({
   qpr_pricey: {
     borderColor: "rgba(138,128,120,0.4)",
     backgroundColor: "rgba(138,128,120,0.1)",
-    color: "#8A8078",
+    color: "#A08878",
   },
   qpr_mid: {
     borderColor: "rgba(201,168,76,0.4)",
