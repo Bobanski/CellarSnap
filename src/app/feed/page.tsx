@@ -1314,9 +1314,9 @@ export default function FeedPage() {
                           </span>
                         )}
                       </span>
-                      <span className="block min-w-0 whitespace-normal break-words text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
-                        <span className="font-medium">{entry.author_name}</span>
-                        <span className="ml-1 font-normal text-[var(--color-text-tertiary)]">is drinking:</span>
+                      <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
+                        {entry.author_name}
+                        <span className="ml-1">is drinking:</span>
                       </span>
                     </button>
                     {entry.entry_group ? (
@@ -1327,7 +1327,6 @@ export default function FeedPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span>{formatConsumedDate(entry.created_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
                           <button
@@ -1496,33 +1495,10 @@ export default function FeedPage() {
                     <EntryPhotoGallery entry={entry} />
                   )}
                 </div>
-                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
-                  <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
-                    Tasted with:{" "}
-                    {entry.tasted_with_users
-                      .map((user) => user.display_name ?? "Unknown")
-                      .join(", ")}
-                  </div>
-                ) : null}
-
-                {!entry.entry_group ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    {typeof entry.rating === "number" &&
-                    !Number.isNaN(entry.rating) ? (
-                      <span
-                        style={{
-                          color: "#C9A84C",
-                          fontSize: 14,
-                          fontWeight: 800,
-                        }}
-                        title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
-                      >
-                        {Math.max(0, Math.min(100, Math.round(entry.rating)))} Pts
-                      </span>
-                    ) : null}
-                    {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                  </div>
-                ) : null}
+                {/* Order under photo (Eitan reorder v2):
+                    1. Tasting notes (first thing under the photo, if any)
+                    2. Rating row + date (date right-aligned, always renders)
+                    3. Tasted-with line (if any) */}
                 {(() => {
                   const notes = (entry.notes ?? "").trim();
                   if (!notes) {
@@ -1554,6 +1530,36 @@ export default function FeedPage() {
                     </div>
                   );
                 })()}
+
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    {!entry.entry_group && typeof entry.rating === "number" && !Number.isNaN(entry.rating) ? (
+                      <span
+                        style={{
+                          color: "#C9A84C",
+                          fontSize: 14,
+                          fontWeight: 800,
+                        }}
+                        title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
+                      >
+                        {Math.max(0, Math.min(100, Math.round(entry.rating)))} Pts
+                      </span>
+                    ) : null}
+                    {!entry.entry_group && entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
+                  </div>
+                  <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
+                    {formatConsumedDate(entry.created_at)}
+                  </span>
+                </div>
+
+                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
+                  <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
+                    Tasted with:{" "}
+                    {entry.tasted_with_users
+                      .map((user) => user.display_name ?? "Unknown")
+                      .join(", ")}
+                  </div>
+                ) : null}
                 {(() => {
                   const entryComments = commentsByEntryId[entry.id] ?? [];
                   const commentDraft = commentDraftByEntryId[entry.id] ?? "";
