@@ -1314,8 +1314,9 @@ export default function FeedPage() {
                           </span>
                         )}
                       </span>
-                      <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
-                        {entry.author_name}
+                      <span className="block min-w-0 whitespace-normal break-words text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
+                        <span className="font-medium">{entry.author_name}</span>
+                        <span className="ml-1 font-normal text-[var(--color-text-tertiary)]">is drinking:</span>
                       </span>
                     </button>
                     {entry.entry_group ? (
@@ -1442,19 +1443,9 @@ export default function FeedPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 -mx-5">
-                  {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
-                    <GroupedPostGallery
-                      title={entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? entry.entry_group.title) : entry.entry_group.title}
-                      slides={entry.group_slides ?? []}
-                      heightClassName=""
-                      onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}
-                    />
-                  ) : (
-                    <EntryPhotoGallery entry={entry} />
-                  )}
-                </div>
-                <div className="mt-4">
+                {/* Wine name + meta — sits between the "is drinking:" byline
+                    above and the photo below, per Eitan's reorder. */}
+                <div className="mt-1.5">
                   {entry.entry_group ? (() => {
                     const activeSlide = (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0] ?? null;
                     const wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
@@ -1472,7 +1463,7 @@ export default function FeedPage() {
                           </h2>
                         ) : null}
                         {meta ? (
-                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text-secondary)] break-words">{meta}</p>
                         ) : null}
                       </div>
                     );
@@ -1487,10 +1478,22 @@ export default function FeedPage() {
                         const meta = buildEntryMetaFields(entry).join(" · ");
 
                         return meta ? (
-                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text-secondary)] break-words">{meta}</p>
                         ) : null;
                       })()}
                     </div>
+                  )}
+                </div>
+                <div className="mt-3 -mx-5">
+                  {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
+                    <GroupedPostGallery
+                      title={entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? entry.entry_group.title) : entry.entry_group.title}
+                      slides={entry.group_slides ?? []}
+                      heightClassName=""
+                      onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}
+                    />
+                  ) : (
+                    <EntryPhotoGallery entry={entry} />
                   )}
                 </div>
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
@@ -1514,7 +1517,7 @@ export default function FeedPage() {
                         }}
                         title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
                       >
-                        {Math.max(0, Math.min(100, Math.round(entry.rating)))}/100
+                        {Math.max(0, Math.min(100, Math.round(entry.rating)))} Pts
                       </span>
                     ) : null}
                     {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
@@ -1528,22 +1531,27 @@ export default function FeedPage() {
 
                   const expanded = Boolean(expandedNotesByEntryId[entry.id]);
                   return (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleNotesExpanded(entry.id);
-                      }}
-                      className="mt-3 block w-full text-left text-xs leading-relaxed text-[var(--color-text-secondary)]"
-                      title={expanded ? "Collapse notes" : "Expand notes"}
-                    >
-                      <span
-                        className="block break-words"
-                        style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                        Tasting notes:
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleNotesExpanded(entry.id);
+                        }}
+                        className="mt-1 block w-full text-left text-sm leading-relaxed text-[var(--color-text-secondary)]"
+                        title={expanded ? "Collapse notes" : "Expand notes"}
                       >
-                        {notes}
-                      </span>
-                    </button>
+                        <span
+                          className="block break-words"
+                          style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
+                        >
+                          {notes}
+                        </span>
+                      </button>
+                    </div>
                   );
                 })()}
                 {(() => {
