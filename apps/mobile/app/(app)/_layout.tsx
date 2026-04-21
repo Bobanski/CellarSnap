@@ -309,8 +309,12 @@ export default function AppLayout() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: colors.surfaceRaised,
-          borderTopColor: "rgba(123, 29, 58, 0.3)",
+          // Variant C — translucent over void. Mirror of web .bottom-tab-bar.
+          // For true blur, switch to tabBarBackground prop with
+          // expo-blur <BlurView intensity={70} tint="dark" /> in a
+          // follow-up if this direction lands.
+          backgroundColor: "rgba(26, 10, 16, 0.72)",
+          borderTopColor: "rgba(196, 96, 122, 0.18)",
           borderTopWidth: 0.5,
           paddingTop: 6,
           height: 80,

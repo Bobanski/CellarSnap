@@ -166,18 +166,23 @@ select optgroup {
 }
 
 /* ─── BOTTOM TAB BAR ──────────────────────────────── */
-/* Use surface-raised (#3A1020 Malbec) so the nav shell sits visibly
-   above the card surface (#2E1420 Sangiovese) per Dani Round 3 Task 12 /
-   Round 4 layer lock. */
+/* Variant C — translucent "glass" over the void. Header + nav float
+   above the scroll content with a saturated blur, so the chrome reads
+   as a distinct material from both the card surface and the void.
+   Falls back to a solid #1A0A10ish on browsers without backdrop-filter. */
 .bottom-tab-bar {
-  background-color: var(--color-surface-raised);
-  border-top: 0.5px solid rgba(123, 29, 58, 0.3);
+  background-color: rgba(26, 10, 16, 0.72);
+  backdrop-filter: saturate(140%) blur(18px);
+  -webkit-backdrop-filter: saturate(140%) blur(18px);
+  border-top: 0.5px solid rgba(196, 96, 122, 0.18);
   padding: 6px 0 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 /* ─── APP HEADER ──────────────────────────────────── */
 .app-header {
-  background-color: var(--color-surface-raised);
-  border-bottom: 0.5px solid rgba(245, 237, 214, 0.06);
+  background-color: rgba(26, 10, 16, 0.72);
+  backdrop-filter: saturate(140%) blur(18px);
+  -webkit-backdrop-filter: saturate(140%) blur(18px);
+  border-bottom: 0.5px solid rgba(196, 96, 122, 0.18);
 }

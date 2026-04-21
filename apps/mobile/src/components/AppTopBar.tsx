@@ -914,7 +914,12 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
     zIndex: 20,
-    backgroundColor: colors.surfaceRaised,
+    // Variant C — translucent "glass" over the void.
+    // RN doesn't support backdrop-filter; for true blur on iOS/Android
+    // wrap this View in <BlurView> from expo-blur (intensity 60-80,
+    // tint "dark"). For now we use translucency only — the blur is a
+    // follow-up if the direction lands.
+    backgroundColor: "rgba(26, 10, 16, 0.72)",
   },
   headerRow: {
     height: 50,
