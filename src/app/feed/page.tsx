@@ -1495,59 +1495,73 @@ export default function FeedPage() {
                     <EntryPhotoGallery entry={entry} />
                   )}
                 </div>
-                {/* Order under photo (Eitan reorder v2):
-                    1. Tasting notes (first thing under the photo, if any)
-                    2. Rating row + date (date right-aligned, always renders)
-                    3. Tasted-with line (if any) */}
+                {/* Order under photo (Eitan reorder v3):
+                    1. Notes block (label + body, left) with rating + QPR
+                       (right, top-aligned with TASTING NOTES: label so the
+                       rating sits 'just below the image' on the right edge).
+                    2. Date row, right-aligned, mt-4 for the tiny extra
+                       breathing room Eitan asked for.
+                    3. Tasted-with line. */}
                 {(() => {
                   const notes = (entry.notes ?? "").trim();
-                  if (!notes) {
+                  const hasRating = !entry.entry_group
+                    && typeof entry.rating === "number"
+                    && !Number.isNaN(entry.rating);
+                  const hasQpr = !entry.entry_group && Boolean(entry.qpr_level);
+                  if (!notes && !hasRating && !hasQpr) {
                     return null;
                   }
-
                   const expanded = Boolean(expandedNotesByEntryId[entry.id]);
                   return (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                        Tasting notes:
-                      </p>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleNotesExpanded(entry.id);
-                        }}
-                        className="mt-1 block w-full text-left text-sm leading-relaxed text-[var(--color-text-secondary)]"
-                        title={expanded ? "Collapse notes" : "Expand notes"}
-                      >
-                        <span
-                          className="block break-words"
-                          style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
-                        >
-                          {notes}
-                        </span>
-                      </button>
+                    <div className="mt-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        {notes ? (
+                          <>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                              Tasting notes:
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleNotesExpanded(entry.id);
+                              }}
+                              className="mt-1 block w-full text-left text-sm leading-relaxed text-[var(--color-text-primary)]"
+                              title={expanded ? "Collapse notes" : "Expand notes"}
+                            >
+                              <span
+                                className="block break-words"
+                                style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
+                              >
+                                {notes}
+                              </span>
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                      {hasRating || hasQpr ? (
+                        <div className="flex shrink-0 flex-col items-end gap-1.5">
+                          {hasRating ? (
+                            <span
+                              style={{
+                                color: "#C9A84C",
+                                fontSize: 14,
+                                fontWeight: 800,
+                              }}
+                              title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating as number)))} out of 100`}
+                            >
+                              {Math.max(0, Math.min(100, Math.round(entry.rating as number)))} Pts
+                            </span>
+                          ) : null}
+                          {hasQpr ? <QprBadge level={entry.qpr_level!} /> : null}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}
 
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    {!entry.entry_group && typeof entry.rating === "number" && !Number.isNaN(entry.rating) ? (
-                      <span
-                        style={{
-                          color: "#C9A84C",
-                          fontSize: 14,
-                          fontWeight: 800,
-                        }}
-                        title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
-                      >
-                        {Math.max(0, Math.min(100, Math.round(entry.rating)))} Pts
-                      </span>
-                    ) : null}
-                    {!entry.entry_group && entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                  </div>
-                  <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
+                <div className="mt-4 flex justify-end">
+                  <span className="text-xs text-[var(--color-text-tertiary)]">
                     {formatConsumedDate(entry.created_at)}
                   </span>
                 </div>
