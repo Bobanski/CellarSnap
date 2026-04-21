@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 999,
-    backgroundColor: colors.accentPrimary,
+    backgroundColor: colors.accentSecondary,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,

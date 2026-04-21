@@ -4,7 +4,7 @@
 :root {
   /* ─── WARM NOIR — SCREENS & SURFACES ──────────────────── */
   /* Deep editorial theme with warm wine-red undertones */
-  --color-screen-bg:       #220E14;
+  --color-screen-bg:       #1A0A10;
   --color-surface-primary: #2E1420;
   --color-surface-raised:  #3A1020;
   --color-surface-hover:   #3E1828;
@@ -29,7 +29,9 @@
   --color-accent-purple:   #6B4D8A;
 
   /* ─── BORDERS & EFFECTS ────────────────────────────── */
-  --color-border:          rgba(196, 96, 122, 0.10);
+  /* Card/surface border locked at 0.12 alpha per Dani Round 4 Task 13
+     (feed card final spec). Was 0.10 in Round 2. */
+  --color-border:          rgba(196, 96, 122, 0.12);
   --color-border-strong:   rgba(196, 96, 122, 0.22);
   --color-border-accent:   rgba(196, 96, 122, 0.18);
   --color-purple-glow:     rgba(74, 48, 96, 0.25);
@@ -60,8 +62,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-screen-bg:      #0C0810;
-    --color-text-primary:   #F0ECE4;
+    --color-screen-bg:      #1A0A10;
+    --color-text-primary:   #F5EDD6;
   }
 }
 
@@ -164,8 +166,11 @@ select optgroup {
 }
 
 /* ─── BOTTOM TAB BAR ──────────────────────────────── */
+/* Use surface-raised (#3A1020 Malbec) so the nav shell sits visibly
+   above the card surface (#2E1420 Sangiovese) per Dani Round 3 Task 12 /
+   Round 4 layer lock. */
 .bottom-tab-bar {
-  background-color: var(--color-surface-primary);
+  background-color: var(--color-surface-raised);
   border-top: 0.5px solid rgba(123, 29, 58, 0.3);
   padding: 6px 0 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
@@ -173,6 +178,6 @@ select optgroup {
 
 /* ─── APP HEADER ──────────────────────────────────── */
 .app-header {
-  background-color: var(--color-surface-primary);
+  background-color: var(--color-surface-raised);
   border-bottom: 0.5px solid rgba(245, 237, 214, 0.06);
 }

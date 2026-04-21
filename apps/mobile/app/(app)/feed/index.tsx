@@ -1079,7 +1079,7 @@ function FeedCard({
               <Feather
                 name="bookmark"
                 size={15}
-                color={saveBusy ? colors.textSecondary : colors.textPrimary}
+                color={saveBusy ? colors.textTertiary : colors.textSecondary}
               />
             </Pressable>
           ) : null}
@@ -2207,11 +2207,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   feedStack: {
-    gap: 12,
+    gap: 24, // Dani Round 3 Task 9a — scroll void visible between posts
   },
   feedCard: {
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: 10, // Round 4 Task 13 lock
+    borderWidth: 0.5, // Round 4 Task 13 lock
     borderColor: colors.border,
     backgroundColor: colors.surfacePrimary,
     padding: 14,
@@ -2512,7 +2512,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   feedRating: {
-    color: colors.rose,
+    color: colors.accentGold,
     fontSize: 14,
     fontWeight: "800",
   },
@@ -2565,10 +2565,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   feedDivider: {
+    // Dani Task 11: action bar top divider locked at 0.10 alpha.
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: 3,
-    marginBottom: 2,
+    borderTopColor: "rgba(196,96,122,0.10)",
+    marginTop: 10,
+    marginBottom: 10,
   },
   feedInteractionRow: {
     flexDirection: "row",
@@ -2577,31 +2578,34 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commentsButton: {
+    // Dani Round 4 Task 13: transparent bg, thin rose border, dust text.
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surfacePrimary,
+    borderWidth: 0.5,
+    borderColor: "rgba(196,96,122,0.25)",
+    backgroundColor: "transparent",
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
   commentsButtonActive: {
-    borderColor: "rgba(252,211,77,0.45)",
-    backgroundColor: "rgba(251,191,36,0.12)",
+    // Keep active state as accent-secondary highlight (Rose).
+    borderColor: "rgba(196,96,122,0.5)",
+    backgroundColor: "rgba(196,96,122,0.08)",
   },
   commentsButtonText: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12, // Dani Task 11: 12px action bar text
     fontWeight: "700",
   },
   commentsButtonTextActive: {
-    color: colors.textPrimary,
+    color: colors.accentSecondary,
   },
   commentsButtonCount: {
-    color: colors.textSecondary,
-    fontSize: 11,
+    // Dani Round 4: count reads as a small rose chip vs the muted text.
+    color: colors.accentSecondary,
+    fontSize: 12,
     fontWeight: "700",
   },
   reactionRight: {
@@ -2612,17 +2616,16 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   reactionAddButton: {
+    // Dani Round 4 Task 13: borderless rose-tinted chip, dust icon stroke.
     width: 27,
     height: 27,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surfacePrimary,
+    backgroundColor: "rgba(196,96,122,0.12)",
   },
   reactionAddButtonDisabled: {
-    borderColor: colors.border,
+    backgroundColor: "rgba(196,96,122,0.06)",
   },
   plusIcon: {
     width: 12,
@@ -2636,14 +2639,16 @@ const styles = StyleSheet.create({
     width: 12,
     height: 1.6,
     borderRadius: 999,
-    backgroundColor: colors.surfaceRaised,
+    // Dust stroke on rose-tinted chip (was using dark surface which
+    // worked on old filled bg).
+    backgroundColor: colors.textSecondary,
   },
   plusLineVertical: {
     position: "absolute",
     width: 1.6,
     height: 12,
     borderRadius: 999,
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.textSecondary,
   },
   plusLineDisabled: {
     backgroundColor: colors.textSecondary,

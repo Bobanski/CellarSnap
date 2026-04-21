@@ -914,6 +914,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
     zIndex: 20,
+    backgroundColor: colors.surfaceRaised,
   },
   headerRow: {
     height: 50,

@@ -1255,18 +1255,18 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-          <div className="grid min-w-0 items-start gap-3">
+          <div className="grid min-w-0 items-start gap-6">
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
-                    ? "rounded-xl border-[rgba(74,48,96,0.4)] bg-[#2E1420] hover:border-[rgba(74,48,96,0.7)]"
-                    : "rounded-xl border-[var(--color-border)] bg-[var(--color-surface-primary)] hover:border-[var(--color-accent-secondary)]/40"
+                    ? "rounded-[10px] border-[rgba(74,48,96,0.4)] bg-[#2E1420] hover:border-[rgba(74,48,96,0.7)]"
+                    : "rounded-[10px] border-[var(--color-border)] bg-[var(--color-surface-primary)] hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
@@ -1576,11 +1576,14 @@ export default function FeedPage() {
                   return (
                     <>
                       <div
-                        className="mt-auto pt-3"
+                        className="mt-auto"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        <div className="border-t border-[var(--color-border)] pt-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
+                        {/* Action bar — Dani Round 4 Task 13 + Task 11 spec:
+                            quiet footer, transparent bg, top divider at 0.10,
+                            10px vertical padding, 12px text. */}
+                        <div className="border-t border-[rgba(196,96,122,0.10)] py-[10px]">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                             {canComment ? (
                               <button
                                 type="button"
@@ -1588,16 +1591,16 @@ export default function FeedPage() {
                                   event.stopPropagation();
                                   toggleCommentsExpanded(entry.id);
                                 }}
-                                className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                                className={`inline-flex items-center gap-2 rounded-full border-[0.5px] bg-transparent px-2.5 py-1.5 text-xs font-medium transition ${
                                   commentsExpanded
-                                    ? "border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
-                                    : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
+                                    ? "border-[var(--color-accent-secondary)]/50 text-[var(--color-accent-secondary)]"
+                                    : "border-[rgba(196,96,122,0.25)] text-[#A08878] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                                 }`}
                                 aria-label={`Toggle comments (${getCommentCount(entry)})`}
                               >
                                 <CommentBubbleIcon className="h-4 w-4 shrink-0" />
                                 <span>Comments</span>
-                                <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 tabular-nums">
+                                <span className="rounded-full bg-[rgba(196,96,122,0.15)] px-1.5 py-0.5 tabular-nums text-[#C4607A]">
                                   {getCommentCount(entry)}
                                 </span>
                               </button>
@@ -1649,10 +1652,10 @@ export default function FeedPage() {
                                     id === entry.id ? null : entry.id
                                   );
                                 }}
-                                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
+                                className={`inline-flex h-7 w-7 items-center justify-center rounded-full border-0 bg-[rgba(196,96,122,0.12)] text-sm font-semibold leading-none transition ${
                                   canReact
-                                    ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
-                                    : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
+                                    ? "text-[#A08878] hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-accent-secondary)]"
+                                    : "text-[#A08878] hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-text-primary)]"
                                 }`}
                                 aria-label={canReact ? "Add reaction" : "View reaction options"}
                               >
@@ -1697,7 +1700,7 @@ export default function FeedPage() {
                                       e.stopPropagation();
                                       toggle();
                                     }}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-[var(--color-surface-muted)] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border-0 bg-[rgba(196,96,122,0.12)] text-[#A08878] transition hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-accent-secondary)]"
                                     aria-label="Add to collections"
                                   >
                                     <svg
