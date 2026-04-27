@@ -28,7 +28,14 @@ function isMissingTestAccountSchemaError(message: string) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [hasPrivateBetaFeatureAccess, setHasPrivateBetaFeatureAccess] = useState(false);
+  // Beta gate removed (PR #62 follow-up). Default flipped to `true` so
+  // every signed-in user sees Sommelier + List Scan tabs and can call
+  // their APIs. setHasPrivateBetaFeatureAccess is preserved so the
+  // existing async checks in useEffect still execute without TS errors;
+  // they may flip the value back to true (no-op) or false in edge cases
+  // — re-set to true after to honor the ungate. Easy revert: change
+  // the initial value back to false and remove the override below.
+  const [hasPrivateBetaFeatureAccess, setHasPrivateBetaFeatureAccess] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -75,9 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getSession();
       if (isMounted) {
         setSession(currentSession);
-        setHasPrivateBetaFeatureAccess(
-          await resolveAccessForUser(currentSession?.user ?? null)
-        );
+        // Beta gate removed (PR #62 follow-up). Resolve runs only to keep
+        // the supabase round-trip warm/cached; result is ignored and the
+        // flag is forced true.
+        await resolveAccessForUser(currentSession?.user ?? null);
+        setHasPrivateBetaFeatureAccess(true);
         setIsReady(true);
       }
     };
@@ -100,9 +109,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         setSession(nextSession);
-        setHasPrivateBetaFeatureAccess(
-          await resolveAccessForUser(nextSession?.user ?? null)
-        );
+        // Beta gate removed (PR #62 follow-up).
+        await resolveAccessForUser(nextSession?.user ?? null);
+        setHasPrivateBetaFeatureAccess(true);
         setIsReady(true);
       })();
     });

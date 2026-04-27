@@ -67,9 +67,10 @@ export function createSommelierChatHandler(
       throw error;
     }
 
-    if (!(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
-      return createPrivateBetaFeatureDeniedResponse();
-    }
+    // Beta gate removed (PR #62 follow-up). Imports kept referenced via
+    // `void` so linters don't flag them — easy to re-enable later.
+    void createPrivateBetaFeatureDeniedResponse;
+    void userHasPrivateBetaFeatureAccess;
 
     const rateLimit = applyRateLimit({
       request,

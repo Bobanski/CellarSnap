@@ -14,9 +14,9 @@ export async function GET(request: Request) {
     throw error;
   }
 
-  if (!(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
-    return createPrivateBetaFeatureDeniedResponse();
-  }
+  // Beta gate removed (PR #62 follow-up).
+  void createPrivateBetaFeatureDeniedResponse;
+  void userHasPrivateBetaFeatureAccess;
 
   try {
     const scans = await listSavedListScans(auth.supabase, auth.user.id);

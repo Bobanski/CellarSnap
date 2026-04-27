@@ -359,7 +359,10 @@ function formatCommentDate(value: string) {
 export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
+  // Beta gate removed for friend-test access (PR #62 follow-up).
+  // Hook still called so it warms the auth state, but treat as always true.
+  usePrivateBetaFeatureAccess();
+  const hasPrivateBetaFeatureAccess = true;
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [loading, setLoading] = useState(true);
