@@ -1723,7 +1723,7 @@ export default function ProfilePage() {
                       type="button"
                       disabled={isSavingUsername}
                       onClick={saveProfile}
-                      className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
+                      className="min-w-[9rem] rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-center text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                     >
                       {isSavingUsername ? "Saving\u2026" : PROFILE_SETTINGS_COPY.saveProfileLabel}
                     </button>

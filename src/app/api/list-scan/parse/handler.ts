@@ -69,9 +69,9 @@ export function createListScanParseHandler(
       }
     }
 
-    if (auth && !(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
-      return createPrivateBetaFeatureDeniedResponse();
-    }
+    // Beta gate removed (PR #62 follow-up).
+    void createPrivateBetaFeatureDeniedResponse;
+    void userHasPrivateBetaFeatureAccess;
 
     const rateLimit = resolvedDependencies.applyRateLimit({
       request,

@@ -444,9 +444,9 @@ export function createAlgorithmScoreHandler(
       throw error;
     }
 
-    if (!(await userHasPrivateBetaFeatureAccess(auth.supabase, auth.user))) {
-      return createPrivateBetaFeatureDeniedResponse();
-    }
+    // Beta gate removed (PR #62 follow-up).
+    void createPrivateBetaFeatureDeniedResponse;
+    void userHasPrivateBetaFeatureAccess;
 
     let body: unknown;
     try {

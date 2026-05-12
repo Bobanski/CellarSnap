@@ -99,7 +99,9 @@ export default function EntryDetailPage() {
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
-  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
+  // Beta gate removed (PR #62 follow-up).
+  usePrivateBetaFeatureAccess();
+  const hasPrivateBetaFeatureAccess = true;
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(true);

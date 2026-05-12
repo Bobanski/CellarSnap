@@ -3397,8 +3397,11 @@ export default function NewEntryPage() {
           </p>
         </header>
 
-        {/* Drink from cellar option — show skeleton while loading, hide if no wines */}
-        {(cellarLoading || cellarWines.length > 0) && (
+        {/* Drink from cellar option — only render once cellar has loaded
+            AND the user actually has wines. Previously we showed it during
+            loading and then hid it if the cellar was empty, which caused a
+            brief flash for users with no cellar stock. */}
+        {!cellarLoading && cellarWines.length > 0 && (
           <div className="space-y-2">
             <button
               type="button"

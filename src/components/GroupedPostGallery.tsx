@@ -33,8 +33,9 @@ export default function GroupedPostGallery({
         const slide = slides[activeIndex] ?? slides[0];
         return (
           <div className="flex items-start justify-between gap-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent-secondary)]/80">
-              {title}
+            <p className="text-[11px] text-[var(--color-accent-secondary)]/80">
+              <span className="font-semibold">Occasion:</span>{" "}
+              <span>{title}</span>
             </p>
             {slide?.consumed_at ? (
               <span className="shrink-0 text-[11px] text-[var(--color-text-tertiary)]">

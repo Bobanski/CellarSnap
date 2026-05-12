@@ -359,7 +359,10 @@ function formatCommentDate(value: string) {
 export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
+  // Beta gate removed for friend-test access (PR #62 follow-up).
+  // Hook still called so it warms the auth state, but treat as always true.
+  usePrivateBetaFeatureAccess();
+  const hasPrivateBetaFeatureAccess = true;
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1259,7 +1262,7 @@ export default function FeedPage() {
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col overflow-hidden border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
@@ -1316,17 +1319,15 @@ export default function FeedPage() {
                       </span>
                       <span className="block min-w-0 whitespace-normal break-words font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-secondary)]">
                         {entry.author_name}
+                        <span className="ml-1">is drinking:</span>
                       </span>
                     </button>
-                    {entry.entry_group ? (
-                      <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
-                        {entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? "Event") : (entry.entry_group.mode === "event" ? "Event" : "Catch-up")}
-                      </span>
-                    ) : null}
+                    {/* Occasion pill removed from top — the occasion now
+                        reads 'Occasion: {label}' inside the photo gallery's
+                        inner band (GroupedPostGallery header). */}
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span>{formatConsumedDate(entry.created_at)}</span>
                       {viewerUserId && viewerUserId !== entry.user_id ? (
                         <div className="relative">
                           <button
@@ -1442,19 +1443,9 @@ export default function FeedPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 -mx-5">
-                  {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
-                    <GroupedPostGallery
-                      title={entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? entry.entry_group.title) : entry.entry_group.title}
-                      slides={entry.group_slides ?? []}
-                      heightClassName=""
-                      onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}
-                    />
-                  ) : (
-                    <EntryPhotoGallery entry={entry} />
-                  )}
-                </div>
-                <div className="mt-4">
+                {/* Wine name + meta — sits between the "is drinking:" byline
+                    above and the photo below, per Eitan's reorder. */}
+                <div className="mt-1.5">
                   {entry.entry_group ? (() => {
                     const activeSlide = (entry.group_slides ?? [])[groupedSlideIndexByEntryId[entry.id] ?? 0] ?? null;
                     const wineName = activeSlide?.wine_name ?? activeSlide?.producer ?? null;
@@ -1472,7 +1463,7 @@ export default function FeedPage() {
                           </h2>
                         ) : null}
                         {meta ? (
-                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text-secondary)] break-words">{meta}</p>
                         ) : null}
                       </div>
                     );
@@ -1487,12 +1478,91 @@ export default function FeedPage() {
                         const meta = buildEntryMetaFields(entry).join(" · ");
 
                         return meta ? (
-                          <p className="text-sm text-[var(--color-text-tertiary)] break-words">{meta}</p>
+                          <p className="mt-0.5 text-sm text-[var(--color-text-secondary)] break-words">{meta}</p>
                         ) : null;
                       })()}
                     </div>
                   )}
                 </div>
+                <div className="mt-3 -mx-5">
+                  {entry.entry_group && (entry.group_slides?.length ?? 0) > 0 ? (
+                    <GroupedPostGallery
+                      title={entry.entry_group.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? entry.entry_group.title) : entry.entry_group.title}
+                      slides={entry.group_slides ?? []}
+                      heightClassName=""
+                      onIndexChange={(index) => setGroupedSlideIndexByEntryId((prev) => ({ ...prev, [entry.id]: index }))}
+                    />
+                  ) : (
+                    <EntryPhotoGallery entry={entry} />
+                  )}
+                </div>
+                {/* Order under photo (Eitan reorder v3):
+                    1. Notes block (label + body, left) with rating + QPR
+                       (right, top-aligned with TASTING NOTES: label so the
+                       rating sits 'just below the image' on the right edge).
+                    2. Date row, right-aligned, mt-4 for the tiny extra
+                       breathing room Eitan asked for.
+                    3. Tasted-with line. */}
+                {(() => {
+                  const notes = (entry.notes ?? "").trim();
+                  const hasRating = !entry.entry_group
+                    && typeof entry.rating === "number"
+                    && !Number.isNaN(entry.rating);
+                  const hasQpr = !entry.entry_group && Boolean(entry.qpr_level);
+                  if (!notes && !hasRating && !hasQpr) {
+                    return null;
+                  }
+                  const expanded = Boolean(expandedNotesByEntryId[entry.id]);
+                  return (
+                    <div className="mt-3 flex items-baseline justify-between gap-3">
+                      <div className="min-w-0 max-w-[60%] flex-1">
+                        {notes ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleNotesExpanded(entry.id);
+                            }}
+                            className="block w-full text-left text-base leading-snug text-[var(--color-text-primary)]"
+                            title={expanded ? "Collapse notes" : "Expand notes"}
+                          >
+                            <span
+                              className="block break-words"
+                              style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
+                            >
+                              <span className="font-semibold">Notes:</span>{" "}
+                              {notes}
+                            </span>
+                          </button>
+                        ) : null}
+                      </div>
+                      {hasRating || hasQpr ? (
+                        <div className="flex shrink-0 flex-col items-end gap-1.5">
+                          {hasRating ? (
+                            <span
+                              style={{
+                                color: "#C9A84C",
+                                fontSize: 14,
+                                fontWeight: 800,
+                              }}
+                              title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating as number)))} out of 100`}
+                            >
+                              {Math.max(0, Math.min(100, Math.round(entry.rating as number)))} Pts
+                            </span>
+                          ) : null}
+                          {hasQpr ? <QprBadge level={entry.qpr_level!} /> : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+
+                <div className="mt-5 flex justify-end">
+                  <span className="text-xs text-[var(--color-text-tertiary)]">
+                    {formatConsumedDate(entry.created_at)}
+                  </span>
+                </div>
+
                 {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
                   <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
                     Tasted with:{" "}
@@ -1501,51 +1571,6 @@ export default function FeedPage() {
                       .join(", ")}
                   </div>
                 ) : null}
-
-                {!entry.entry_group ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    {typeof entry.rating === "number" &&
-                    !Number.isNaN(entry.rating) ? (
-                      <span
-                        style={{
-                          color: "#C9A84C",
-                          fontSize: 14,
-                          fontWeight: 800,
-                        }}
-                        title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating)))} out of 100`}
-                      >
-                        {Math.max(0, Math.min(100, Math.round(entry.rating)))}/100
-                      </span>
-                    ) : null}
-                    {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
-                  </div>
-                ) : null}
-                {(() => {
-                  const notes = (entry.notes ?? "").trim();
-                  if (!notes) {
-                    return null;
-                  }
-
-                  const expanded = Boolean(expandedNotesByEntryId[entry.id]);
-                  return (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleNotesExpanded(entry.id);
-                      }}
-                      className="mt-3 block w-full text-left text-xs leading-relaxed text-[var(--color-text-secondary)]"
-                      title={expanded ? "Collapse notes" : "Expand notes"}
-                    >
-                      <span
-                        className="block break-words"
-                        style={expanded ? undefined : COLLAPSED_NOTES_STYLE}
-                      >
-                        {notes}
-                      </span>
-                    </button>
-                  );
-                })()}
                 {(() => {
                   const entryComments = commentsByEntryId[entry.id] ?? [];
                   const commentDraft = commentDraftByEntryId[entry.id] ?? "";
