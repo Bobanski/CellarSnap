@@ -15,6 +15,7 @@ export * from "./newEntry";
 export * from "./badges";
 export * from "./profile";
 export * from "./sommelier";
+export * from "./voice";
 export * from "./tasteSurvey";
 export * from "./wineText";
 export * from "./explore";

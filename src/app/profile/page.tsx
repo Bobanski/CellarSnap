@@ -4,13 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  AUDIENCE_MODES,
   PROFILE_GALLERY_MESSAGES,
   PROFILE_GALLERY_TAB_LABELS,
   PROFILE_NAME_DISPLAY_OPTIONS,
   PROFILE_PRIVACY_OPTIONS,
   PROFILE_SETTINGS_COPY,
+  VOICE_PROFILES,
   formatProfileMemberSince,
   getBadgeById,
+  type AudienceMode,
   type ProfileNameDisplayPreference,
 } from "@shared";
 import BadgeIcon from "@/features/badges/BadgeIcon";
@@ -49,6 +52,7 @@ type Profile = {
   default_entry_privacy: PrivacyLevel | null;
   default_reaction_privacy: PrivacyLevel | null;
   default_comments_privacy: PrivacyLevel | null;
+  audience_mode: AudienceMode | null;
   created_at: string | null;
   avatar_url?: string | null;
   featured_badge_id?: string | null;
@@ -119,6 +123,11 @@ export default function ProfilePage() {
     useState<NameDisplayPreference>("real_name");
   const [privacyMessage, setPrivacyMessage] = useState<string | null>(null);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+
+  // Audience mode (voice & tone) state
+  const [audienceModeValue, setAudienceModeValue] = useState<AudienceMode>("explorer");
+  const [audienceModeMessage, setAudienceModeMessage] = useState<string | null>(null);
+  const [isSavingAudienceMode, setIsSavingAudienceMode] = useState(false);
 
   // Password state
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
@@ -298,6 +307,13 @@ export default function ProfilePage() {
         setReactionPrivacyValue(data.profile.default_reaction_privacy ?? "public");
         setCommentsPrivacyValue(
           data.profile.default_comments_privacy ?? "friends_of_friends"
+        );
+        const loadedMode = data.profile.audience_mode;
+        setAudienceModeValue(
+          typeof loadedMode === "string" &&
+            (AUDIENCE_MODES as readonly string[]).includes(loadedMode)
+            ? (loadedMode as AudienceMode)
+            : "explorer"
         );
         setLoading(false);
         if (
@@ -712,6 +728,38 @@ export default function ProfilePage() {
       );
       setPrivacyMessage("Privacy settings updated.");
       setTimeout(() => setPrivacyMessage(null), 3000);
+    }
+  };
+
+  const saveAudienceMode = async (nextMode: AudienceMode) => {
+    setIsSavingAudienceMode(true);
+    setAudienceModeMessage(null);
+
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audience_mode: nextMode }),
+    });
+
+    setIsSavingAudienceMode(false);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setAudienceModeMessage(data.error ?? "Unable to update audience mode.");
+      return;
+    }
+
+    const data = await response.json();
+    if (data.profile) {
+      setProfile((prev) => (prev ? { ...prev, ...data.profile } : data.profile));
+      setAudienceModeValue(
+        typeof data.profile.audience_mode === "string" &&
+          (AUDIENCE_MODES as readonly string[]).includes(data.profile.audience_mode)
+          ? (data.profile.audience_mode as AudienceMode)
+          : nextMode
+      );
+      setAudienceModeMessage("Voice updated.");
+      setTimeout(() => setAudienceModeMessage(null), 3000);
     }
   };
 
@@ -1893,6 +1941,86 @@ export default function ProfilePage() {
                     ) : null}
                   </div>
                 ) : null}
+
+                {/* ── Voice & Tone (audience mode) ── */}
+                <div className="space-y-3 border-t border-[var(--color-border)] pt-6">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                      Voice &amp; Tone
+                    </h3>
+                    <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-tertiary)]">
+                      Currently:{" "}
+                      <span
+                        className="font-semibold"
+                        style={{ color: VOICE_PROFILES[audienceModeValue].accentColor }}
+                      >
+                        {VOICE_PROFILES[audienceModeValue].icon}{" "}
+                        {VOICE_PROFILES[audienceModeValue].label}
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">
+                    Sets the voice Pocket Sommelier and the Explore pages use with you. Switch any time.
+                  </p>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    {AUDIENCE_MODES.map((mode) => {
+                      const profileVoice = VOICE_PROFILES[mode];
+                      const isSelected = audienceModeValue === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => {
+                            if (isSavingAudienceMode || isSelected) return;
+                            setAudienceModeValue(mode);
+                            void saveAudienceMode(mode);
+                          }}
+                          disabled={isSavingAudienceMode && !isSelected}
+                          aria-pressed={isSelected}
+                          className="group relative flex flex-col items-start gap-2 rounded-xl border-2 bg-[var(--color-surface-muted)] p-4 text-left transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                          style={{
+                            borderColor: isSelected
+                              ? profileVoice.accentColor
+                              : "var(--color-border)",
+                          }}
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <span
+                              className="text-2xl leading-none"
+                              aria-hidden="true"
+                            >
+                              {profileVoice.icon}
+                            </span>
+                            {isSelected ? (
+                              <span
+                                className="text-[10px] font-semibold uppercase tracking-[0.18em]"
+                                style={{ color: profileVoice.accentColor }}
+                              >
+                                ✓ Selected
+                              </span>
+                            ) : null}
+                          </div>
+                          <span
+                            className="text-base font-semibold"
+                            style={{ color: profileVoice.accentColor }}
+                          >
+                            {profileVoice.label}
+                          </span>
+                          <span className="text-xs leading-snug text-[var(--color-text-secondary)]">
+                            {profileVoice.selfDescription}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {audienceModeMessage ? (
+                    <p className="mt-3 text-sm text-[var(--color-success)]">
+                      {audienceModeMessage}
+                    </p>
+                  ) : null}
+                </div>
 
                 {/* ── Change Password ── */}
                 <div className="space-y-3 border-t border-[var(--color-border)] pt-6">

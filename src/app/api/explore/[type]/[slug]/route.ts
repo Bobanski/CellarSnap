@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
+import { AUDIENCE_MODES, type AudienceMode, VOICE_PROFILES } from "@shared";
 
 export const maxDuration = 60;
 
@@ -34,10 +35,17 @@ function slugToDisplayName(slug: string): string {
 // GPT prompt builders
 // ---------------------------------------------------------------------------
 
-function buildGrapePrompt(displayName: string): string {
+function voiceBlock(mode: AudienceMode): string {
+  const profile = VOICE_PROFILES[mode];
+  const directives = profile.systemPromptDirectives.map((d) => `- ${d}`).join("\n");
+  return `Audience register: ${profile.label} mode. Write so the content feels native to this register:
+${directives}`;
+}
+
+function buildGrapePrompt(displayName: string, mode: AudienceMode): string {
   return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} grape variety.
 
-Your voice: sensory-first, personal, never textbook. You don't lecture — you make people feel what this grape does in the glass.
+${voiceBlock(mode)}
 
 Write a JSON object with these fields:
 - tagline: one evocative sentence, max 15 words, taste-led (e.g. "The grape that tastes like warm earth and ripe fruit — then surprises you with how long it lingers.")
@@ -60,10 +68,10 @@ Write a JSON object with these fields:
 Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-function buildRegionPrompt(displayName: string): string {
+function buildRegionPrompt(displayName: string, mode: AudienceMode): string {
   return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} wine region.
 
-Your voice: sensory-first, personal, never textbook. You don't lecture — you make people feel what it's like to drink from this place.
+${voiceBlock(mode)}
 
 Write a JSON object with these fields:
 - tagline: one evocative sentence, max 15 words, taste-led (e.g. "Where Grenache burns slow and wild rosemary finds its way into every glass")
@@ -88,16 +96,18 @@ Write a JSON object with these fields:
 Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-function buildProducerPrompt(displayName: string): string {
+function buildProducerPrompt(displayName: string, mode: AudienceMode): string {
   return `You are a wine storyteller writing for the Cluster wine app. Write about ${displayName} (wine producer).
 
-Your voice: sensory-first, personal, never textbook. You're writing a character sketch, not a biography.
+${voiceBlock(mode)}
+
+You're writing a character sketch, not a biography.
 
 Write a JSON object with these fields:
 - tagline: one evocative ethos sentence, max 15 words — what makes them worth knowing, not when they were founded (e.g. "The man who proved Grenache doesn't need Syrah.")
 - region: primary region name
 - country: country name
-- story: exactly 3-4 sentences. Who they are, what they believe, why they matter to wine. Character sketch, not biography. Cluster Enthusiast voice.
+- story: exactly 3-4 sentences. Who they are, what they believe, why they matter to wine. Character sketch, not biography.
 - philosophy_tags: array of 2-4 objects with { tag: string, note: string } — winemaking philosophy/approach tags. Each tag is a short label (e.g. "100% Grenache", "Sand soils", "No technology") and note is one sentence explaining what it means for the wine.
 - key_wines: array of 2-4 objects with { name: string, desc: string, rating: string } — flagship and notable wines. Name is the wine, desc is one evocative sentence, rating is like "96 avg" or "94 avg".
 - region_grapes: array of strings — region(s) and grape(s) as chip labels for cross-linking (e.g. ["Châteauneuf-du-Pape", "Grenache", "Grenache Blanc", "Clairette"])
@@ -112,14 +122,18 @@ Write a JSON object with these fields:
 Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-function getPromptForType(type: ProfileType, displayName: string): string {
+function getPromptForType(
+  type: ProfileType,
+  displayName: string,
+  mode: AudienceMode
+): string {
   switch (type) {
     case "grape":
-      return buildGrapePrompt(displayName);
+      return buildGrapePrompt(displayName, mode);
     case "region":
-      return buildRegionPrompt(displayName);
+      return buildRegionPrompt(displayName, mode);
     case "producer":
-      return buildProducerPrompt(displayName);
+      return buildProducerPrompt(displayName, mode);
   }
 }
 
@@ -571,10 +585,11 @@ async function fetchPersonalStats(
 
 async function generateContent(
   type: ProfileType,
-  displayName: string
+  displayName: string,
+  mode: AudienceMode
 ): Promise<Record<string, unknown> | null> {
   const openai = new OpenAI();
-  const prompt = getPromptForType(type, displayName);
+  const prompt = getPromptForType(type, displayName, mode);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
@@ -622,14 +637,35 @@ export async function GET(
   const slug = normalizeSlug(rawSlug);
   const displayName = slugToDisplayName(slug);
 
+  // 2b. Resolve the viewer's audience mode (falls back to 'explorer' if the
+  //     column is missing or unset). Cache key includes mode so Explorer,
+  //     Enthusiast, and Connoisseur each get content written in their register.
+  let audienceMode: AudienceMode = "explorer";
+  try {
+    const { data: modeRow } = await supabase
+      .from("profiles")
+      .select("audience_mode")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (
+      typeof modeRow?.audience_mode === "string" &&
+      (AUDIENCE_MODES as readonly string[]).includes(modeRow.audience_mode)
+    ) {
+      audienceMode = modeRow.audience_mode as AudienceMode;
+    }
+  } catch {
+    // Fall back to explorer.
+  }
+
   const admin = createSupabaseAdminClient();
 
-  // 3. Check cache
+  // 3. Check cache (mode-aware)
   const { data: cached } = await admin
     .from("wine_profiles")
     .select("*")
     .eq("profile_type", type)
     .eq("slug", slug)
+    .eq("audience_mode", audienceMode)
     .maybeSingle();
 
   const isFresh =
@@ -663,9 +699,11 @@ export async function GET(
       related_slugs: (cached.related_slugs ?? []) as string[],
     };
   } else {
-    // 5. Generate fresh content + fetch image + sensory data in parallel
+    // 5. Generate fresh content + fetch image + sensory data in parallel.
+    //    Content is mode-specific; image and sensory data are not (they
+    //    describe the wine, not the voice describing it).
     const [content, imageResult, sensoryData] = await Promise.all([
-      generateContent(type, displayName),
+      generateContent(type, displayName, audienceMode),
       fetchHeroImage(type, displayName, slug),
       fetchSensoryData(type, displayName),
     ]);
@@ -679,10 +717,11 @@ export async function GET(
 
     const relatedSlugs = extractRelatedSlugs(type, content);
 
-    // Upsert into wine_profiles
+    // Upsert into wine_profiles (cache key = profile_type + slug + audience_mode)
     const upsertPayload = {
       profile_type: type,
       slug,
+      audience_mode: audienceMode,
       display_name: displayName,
       content,
       hero_image_url: imageResult.hero_image_url,
@@ -693,7 +732,7 @@ export async function GET(
     };
 
     await admin.from("wine_profiles").upsert(upsertPayload, {
-      onConflict: "profile_type,slug",
+      onConflict: "profile_type,slug,audience_mode",
     });
 
     profile = {
