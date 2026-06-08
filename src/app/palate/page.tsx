@@ -38,8 +38,6 @@ function PalatePageContent() {
   const [profile, setProfile] = useState<PalateProfile | null>(null);
   const [stats, setStats] = useState<PalateStats>({ wines: 0, friends: 0, badges: 0, countries: 0 });
   const [loading, setLoading] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
   // Track which tabs have been activated (for lazy mounting)
   const [mountedTabs, setMountedTabs] = useState<Set<PalateSubTab>>(
     () => new Set([parseTab(searchParams.get("tab"))])

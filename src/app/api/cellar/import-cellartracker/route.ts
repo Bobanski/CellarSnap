@@ -34,21 +34,6 @@ const CT_LIST_MAPPING: Record<string, string> = {
   Bin: "custom",
 };
 
-const CT_NOTES_MAPPING: Record<string, string> = {
-  Wine: "wine_name",
-  Vintage: "vintage",
-  Country: "country",
-  Region: "region",
-  Locale: "appellation",
-  Type: "wine_type",
-  Varietal: "varietal",
-  Price: "price_paid",
-  Producer: "producer",
-  Note: "notes",
-  Score: "rating",
-  Date: "consumed_at",
-};
-
 const CT_CUSTOM_FIELD_LABELS: Record<string, string> = {
   CT: "CT Score",
   MY: "My Score",

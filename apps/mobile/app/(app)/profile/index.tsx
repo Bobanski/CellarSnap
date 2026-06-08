@@ -3190,7 +3190,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.overlay,
   },
   modalCard: {

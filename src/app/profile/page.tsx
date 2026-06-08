@@ -528,7 +528,7 @@ export default function ProfilePage() {
         setHasTasteSurvey(data?.survey != null);
       })
       .catch(() => null);
-  }, [loadProfile, loadEntries]);
+  }, [loadProfile, loadEntries, supabase]);
 
   const saveProfile = async () => {
     const trimmed = editUsername.trim();

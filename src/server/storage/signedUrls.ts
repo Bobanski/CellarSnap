@@ -56,8 +56,39 @@ export async function signPhotoUrls(
   }
 
   const signedUrlByPath = new Map<string, string | null>();
+  const pathList = Array.from(uniquePaths);
+
+  if (pathList.length === 0) {
+    return signedUrlByPath;
+  }
+
+  const bucket = options?.bucket ?? DEFAULT_PHOTO_BUCKET;
+  const ttlSeconds = options?.ttlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS;
+  const storageBucket = supabase.storage.from(bucket);
+
+  const { data, error } = await storageBucket.createSignedUrls(
+    pathList,
+    ttlSeconds
+  );
+
+  if (!error && data) {
+    data.forEach((item) => {
+      if (item.path) {
+        signedUrlByPath.set(item.path, item.error ? null : item.signedUrl);
+      }
+    });
+
+    pathList.forEach((path) => {
+      if (!signedUrlByPath.has(path)) {
+        signedUrlByPath.set(path, null);
+      }
+    });
+
+    return signedUrlByPath;
+  }
+
   await Promise.all(
-    Array.from(uniquePaths).map(async (path) => {
+    pathList.map(async (path) => {
       signedUrlByPath.set(path, await signPhotoUrl(path, supabase, options));
     })
   );

@@ -1,10 +1,12 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+
 type RateLimitBucket = {
   timestamps: number[];
 };
 
 type RateLimitStore = Map<string, RateLimitBucket>;
 
-type RateLimitResult = {
+export type RateLimitResult = {
   allowed: boolean;
   limit: number;
   remaining: number;
@@ -20,6 +22,14 @@ type ApplyRateLimitParams = {
   userId?: string | null;
 };
 
+type DistributedRateLimitRow = {
+  allowed: boolean;
+  limit_count: number;
+  remaining_count: number;
+  reset_at: string;
+  retry_after_seconds: number;
+};
+
 declare global {
   var __cellarsnapRateLimitStore__: RateLimitStore | undefined;
 }
@@ -27,6 +37,8 @@ declare global {
 const rateLimitStore: RateLimitStore =
   globalThis.__cellarsnapRateLimitStore__ ??
   (globalThis.__cellarsnapRateLimitStore__ = new Map());
+
+let warnedAboutDistributedRateLimit = false;
 
 function getClientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -78,7 +90,7 @@ function cleanupStore(now: number) {
   }
 }
 
-export function applyRateLimit({
+function applyMemoryRateLimit({
   request,
   routeKey,
   windowMs,
@@ -123,6 +135,76 @@ export function applyRateLimit({
     resetAt,
     retryAfterSeconds: Math.max(1, Math.ceil((resetAt - now) / 1000)),
   };
+}
+
+function shouldUseDistributedRateLimit() {
+  if (process.env.CELLARSNAP_RATE_LIMIT_BACKEND === "memory") {
+    return false;
+  }
+
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      (process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE)
+  );
+}
+
+async function applyDistributedRateLimit({
+  request,
+  routeKey,
+  windowMs,
+  maxRequests,
+  userId,
+}: ApplyRateLimitParams): Promise<RateLimitResult | null> {
+  if (!shouldUseDistributedRateLimit()) {
+    return null;
+  }
+
+  try {
+    const supabase = createSupabaseAdminClient();
+    const subject = getRateLimitSubject({ request, userId });
+    const { data, error } = await supabase.rpc("consume_api_rate_limit", {
+      p_route_key: routeKey,
+      p_subject: subject,
+      p_window_seconds: Math.ceil(windowMs / 1000),
+      p_max_requests: maxRequests,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const row = Array.isArray(data)
+      ? (data[0] as DistributedRateLimitRow | undefined)
+      : (data as DistributedRateLimitRow | null);
+
+    if (!row) {
+      throw new Error("consume_api_rate_limit returned no data.");
+    }
+
+    return {
+      allowed: row.allowed,
+      limit: row.limit_count,
+      remaining: row.remaining_count,
+      resetAt: new Date(row.reset_at).getTime(),
+      retryAfterSeconds: row.retry_after_seconds,
+    };
+  } catch (error) {
+    if (!warnedAboutDistributedRateLimit) {
+      warnedAboutDistributedRateLimit = true;
+      console.warn(
+        "Falling back to in-memory rate limiting. Apply supabase/sql/093_api_rate_limits.sql to enable shared buckets.",
+        error
+      );
+    }
+    return null;
+  }
+}
+
+export async function applyRateLimit(
+  params: ApplyRateLimitParams
+): Promise<RateLimitResult> {
+  const distributedResult = await applyDistributedRateLimit(params);
+  return distributedResult ?? applyMemoryRateLimit(params);
 }
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import { readSheet } from "read-excel-file/browser";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 // ─── Constants ──────────────────────────────────────────────
@@ -66,39 +66,26 @@ function parseCSV(file: File): Promise<{ headers: string[]; rows: string[][] }> 
   });
 }
 
-function parseExcel(file: File): Promise<{ headers: string[]; rows: string[][] }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const json: string[][] = XLSX.utils.sheet_to_json(sheet, {
-          header: 1,
-          defval: "",
-          raw: false,
-        });
-        if (json.length < 2) {
-          reject(new Error("File must have a header row and at least one data row."));
-          return;
-        }
-        const headers = json[0].map((h) => String(h));
-        const rows = json
-          .slice(1)
-          .filter((row) => row.some((cell) => String(cell).trim()));
-        resolve({
-          headers,
-          rows: rows.map((row) => row.map((cell) => String(cell))),
-        });
-      } catch {
-        reject(new Error("Unable to read the Excel file."));
-      }
-    };
-    reader.onerror = () => reject(new Error("Failed to read file."));
-    reader.readAsArrayBuffer(file);
-  });
+async function parseExcel(file: File): Promise<{ headers: string[]; rows: string[][] }> {
+  try {
+    const sheetRows = await readSheet(file);
+    if (sheetRows.length < 2) {
+      throw new Error("File must have a header row and at least one data row.");
+    }
+
+    const headers = sheetRows[0].map((header) => String(header ?? ""));
+    const rows = sheetRows
+      .slice(1)
+      .map((row) => row.map((cell) => String(cell ?? "")))
+      .filter((row) => row.some((cell) => cell.trim()));
+
+    return { headers, rows };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("header row")) {
+      throw error;
+    }
+    throw new Error("Unable to read the XLSX file.");
+  }
 }
 
 // ─── Main page ──────────────────────────────────────────────
@@ -142,10 +129,10 @@ export default function CellarUploadPage() {
       let result: { headers: string[]; rows: string[][] };
       if (ext === "csv") {
         result = await parseCSV(file);
-      } else if (ext === "xlsx" || ext === "xls") {
+      } else if (ext === "xlsx") {
         result = await parseExcel(file);
       } else {
-        setParseError("Unsupported file type. Please upload a .csv, .xlsx, or .xls file.");
+        setParseError("Unsupported file type. Please upload a .csv or .xlsx file.");
         return;
       }
 
@@ -386,7 +373,7 @@ export default function CellarUploadPage() {
             className="mt-1 text-2xl font-normal text-[var(--color-text-primary)]"
             style={{ fontFamily: "var(--font-serif)" }}
           >
-            Import from CSV / Excel
+            Import from CSV / XLSX
           </h1>
         </div>
 
@@ -524,13 +511,13 @@ function StepUpload({
             {fileName ? fileName : "Drop your file here"}
           </p>
           <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-            or click to browse -- .csv, .xlsx, .xls
+            or click to browse -- .csv, .xlsx
           </p>
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.xlsx,.xls"
+          accept=".csv,.xlsx"
           onChange={onFileInput}
           className="hidden"
         />

@@ -462,7 +462,8 @@ test.describe("WS3 algorithm UI support", () => {
               [{ id: "mer", name: "Merlot", position: 0 }],
             ],
           ]),
-        buildUserPreferenceVector: (entries, wineType, _survey) => {
+        buildUserPreferenceVector: (entries, wineType, survey) => {
+          void survey;
           preferenceVectorCalls += 1;
           expect(entries).toHaveLength(1);
           expect(wineType).toBe("red");

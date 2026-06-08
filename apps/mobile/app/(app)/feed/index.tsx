@@ -226,21 +226,6 @@ function GroupedPostGallery({
     return null;
   }
 
-  const isWineSlide = Boolean(activeSlide?.entry_id);
-  const slideTitle = isWineSlide
-    ? activeSlide?.wine_name ?? activeSlide?.producer ?? activeSlide?.label ?? "Wine"
-    : activeSlide?.label ?? "Photo";
-  const slideMeta = (() => {
-    if (!activeSlide) return "";
-    const parts = [
-      activeSlide.producer && activeSlide.producer !== activeSlide.wine_name ? activeSlide.producer : null,
-      activeSlide.vintage,
-      activeSlide.appellation || activeSlide.region,
-      activeSlide.country,
-    ].filter(Boolean);
-    return parts.slice(0, 3).join(" · ");
-  })();
-
   return (
     <View style={{ flex: 1 }}>
       {/* Header strip above photos — matching web */}
@@ -1885,7 +1870,7 @@ export default function FeedScreen() {
       >
         <View style={styles.reportModalBackdrop}>
           <Pressable
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             onPress={closePendingReport}
           />
           <View style={styles.reportModalCard}>

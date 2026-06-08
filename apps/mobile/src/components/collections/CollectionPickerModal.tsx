@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(10, 12, 16, 0.72)",
   },
   modalCard: {

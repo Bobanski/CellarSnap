@@ -32,13 +32,6 @@ const BG_EVEN = "#0F0810";
 const DEVICE_BG = "#0E0608";
 const SECTION_BORDER = "rgba(255,255,255,0.06)";
 
-const ACCENTS: Record<string, string> = {
-  region: GRENACHE,
-  grape: NEBBIOLO,
-  producer: ROSE,
-  concept: VERDOT,
-};
-
 // ─── Region page (12-layer architecture) ───────────────────
 
 function RegionPage({
@@ -103,7 +96,7 @@ function RegionPage({
         {hasHeroImage ? (
           <Image
             source={{ uri: profile.hero_image_url }}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             resizeMode="cover"
             onError={onHeroError}
           />
@@ -501,7 +494,7 @@ function VarietalPage({
     <ScrollView style={{ flex: 1, backgroundColor: DEVICE_BG }} contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
       {/* ── Hero ──────────────────────────────────────── */}
       <View style={[r.hero, { height: 180 }]}>
-        {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" onError={onHeroError} /> : null}
+        {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={onHeroError} /> : null}
         <View style={r.heroGradient} />
         <Pressable onPress={() => router.back()} style={r.backBtn}>
           <AppText style={r.backBtnArrow}>{"←"}</AppText>
@@ -880,7 +873,7 @@ function ProducerPage({
     <ScrollView style={{ flex: 1, backgroundColor: DEVICE_BG }} contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
       {/* ── Hero ──────────────────────────────────────── */}
       <View style={[r.hero, { height: 180 }]}>
-        {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" onError={onHeroError} /> : null}
+        {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={onHeroError} /> : null}
         <View style={r.heroGradient} />
         <Pressable onPress={() => router.back()} style={r.backBtn}>
           <AppText style={r.backBtnArrow}>{"←"}</AppText>
@@ -1090,7 +1083,7 @@ const r = StyleSheet.create({
     overflow: "hidden",
   },
   heroGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(14,6,8,0.55)",
   },
   backBtn: {
@@ -1548,7 +1541,7 @@ function FallbackProfilePage({
     >
       <View style={fb.hero}>
         {hasHeroImage ? (
-          <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" onError={onHeroError} />
+          <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={onHeroError} />
         ) : null}
         <View style={[fb.heroOverlay, !hasHeroImage && fb.heroOverlayNoImage]} />
         <Pressable onPress={() => router.back()} style={r.backBtn}>
@@ -1658,19 +1651,27 @@ export default function ExploreProfileScreen() {
 
   useEffect(() => {
     if (!type || !slug) return;
-    setLoading(true);
-    setError(null);
-    setData(null);
-    setHeroFailed(false);
-    (async () => {
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      setLoading(true);
+      setError(null);
+      setData(null);
+      setHeroFailed(false);
       const result = await fetchExploreProfile(type, slug);
+      if (cancelled) return;
       if (result.ok) {
         setData(result.data);
       } else {
         setError(result.errorMessage);
       }
       setLoading(false);
-    })();
+    };
+
+    void loadProfile();
+    return () => {
+      cancelled = true;
+    };
   }, [type, slug]);
 
   if (loading) {
@@ -1711,7 +1712,7 @@ export default function ExploreProfileScreen() {
 
 const fb = StyleSheet.create({
   hero: { height: 250, position: "relative", justifyContent: "flex-end", overflow: "hidden" },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(12,8,16,0.55)" },
+  heroOverlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(12,8,16,0.55)" },
   heroOverlayNoImage: { backgroundColor: colors.surfacePrimary },
   heroContent: { paddingHorizontal: 18, paddingBottom: 18, gap: 4 },
   typeBadge: { fontSize: 9, color: colors.accentSecondary, letterSpacing: 2, fontWeight: "700", marginBottom: 4 },

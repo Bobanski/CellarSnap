@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { saveListScanResult } from "@/server/listScan/persistence";
@@ -27,16 +26,6 @@ function normalizeListScanErrorMessage(error: unknown) {
   return error.message;
 }
 
-function buildRequesterId(request: Request, userId?: string | null) {
-  if (userId) {
-    return userId;
-  }
-
-  const forwarded = request.headers.get("x-forwarded-for") ?? "guest";
-  const ip = forwarded.split(",")[0]?.trim() || "guest";
-  return `guest:${ip.slice(0, 64)}`;
-}
-
 export function createListScanParseHandler(
   dependencies: Partial<{
     requireRequestAuth: typeof requireRequestAuth;
@@ -58,27 +47,22 @@ export function createListScanParseHandler(
   };
 
   return async function POST(request: Request) {
-    let auth:
-      | Awaited<ReturnType<typeof requireRequestAuth>>
-      | null = null;
+    let auth: Awaited<ReturnType<typeof requireRequestAuth>>;
     try {
       auth = await resolvedDependencies.requireRequestAuth(request);
     } catch (error) {
-      if (!(error instanceof RequestAuthError)) {
-        throw error;
+      if (error instanceof RequestAuthError) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
+      throw error;
     }
 
-    // Beta gate removed (PR #62 follow-up).
-    void createPrivateBetaFeatureDeniedResponse;
-    void userHasPrivateBetaFeatureAccess;
-
-    const rateLimit = resolvedDependencies.applyRateLimit({
+    const rateLimit = await resolvedDependencies.applyRateLimit({
       request,
       routeKey: "list-scan-parse",
       windowMs: RATE_LIMIT_WINDOW_MS,
       maxRequests: RATE_LIMIT_MAX_REQUESTS,
-      userId: auth?.user.id,
+      userId: auth.user.id,
     });
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -131,9 +115,9 @@ export function createListScanParseHandler(
         result = await resolvedDependencies.parseWineListSource({
           sourceType: "url",
           url,
-          requesterId: buildRequesterId(request, auth?.user.id),
-          userId: auth?.user.id,
-          userSupabase: auth?.supabase ?? null,
+          requesterId: auth.user.id,
+          userId: auth.user.id,
+          userSupabase: auth.supabase,
         });
       } else if (sourceType === "image") {
         result = await resolvedDependencies.parseWineListSource({
@@ -143,9 +127,9 @@ export function createListScanParseHandler(
             typeof formData.get("sourceLabel") === "string"
               ? String(formData.get("sourceLabel")).trim()
               : uploadFiles[0]?.name ?? null,
-          requesterId: buildRequesterId(request, auth?.user.id),
-          userId: auth?.user.id,
-          userSupabase: auth?.supabase ?? null,
+          requesterId: auth.user.id,
+          userId: auth.user.id,
+          userSupabase: auth.supabase,
         });
       } else {
         result = await resolvedDependencies.parseWineListSource({
@@ -155,28 +139,26 @@ export function createListScanParseHandler(
             typeof formData.get("sourceLabel") === "string"
               ? String(formData.get("sourceLabel")).trim()
               : uploadFiles[0]?.name ?? null,
-          requesterId: buildRequesterId(request, auth?.user.id),
-          userId: auth?.user.id,
-          userSupabase: auth?.supabase ?? null,
+          requesterId: auth.user.id,
+          userId: auth.user.id,
+          userSupabase: auth.supabase,
         });
       }
 
-      if (auth) {
-        try {
-          await resolvedDependencies.saveListScanResult(
-            auth.supabase,
-            auth.user.id,
-            result
-          );
-        } catch {
-          result = {
-            ...result,
-            warnings: [
-              ...result.warnings,
-              "This scan completed, but it could not be saved to your scan history.",
-            ],
-          };
-        }
+      try {
+        await resolvedDependencies.saveListScanResult(
+          auth.supabase,
+          auth.user.id,
+          result
+        );
+      } catch {
+        result = {
+          ...result,
+          warnings: [
+            ...result.warnings,
+            "This scan completed, but it could not be saved to your scan history.",
+          ],
+        };
       }
 
       return NextResponse.json(result);

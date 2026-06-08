@@ -57,6 +57,7 @@ type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  isStreaming?: boolean;
 };
 
 function createMessageId(prefix: "user" | "assistant") {

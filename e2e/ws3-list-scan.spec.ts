@@ -119,18 +119,16 @@ test.describe("WS3 list scan parse handler", () => {
     expect(savedUserId).toBe("user-1");
   });
 
-  test("guest scans still parse without persistence", async () => {
+  test("guest scans are rejected before parsing", async () => {
     let saveCalled = false;
-    let requesterId = "";
-    let parsedUserId: string | null | undefined = "unexpected";
+    let parseCalled = false;
 
     const handler = createListScanParseHandler({
       requireRequestAuth: async () => {
         throw new RequestAuthError("Unauthorized");
       },
-      parseWineListSource: async (params) => {
-        requesterId = params.requesterId;
-        parsedUserId = params.userId;
+      parseWineListSource: async () => {
+        parseCalled = true;
         return baseResult;
       },
       saveListScanResult: async () => {
@@ -151,9 +149,9 @@ test.describe("WS3 list scan parse handler", () => {
       })
     );
 
-    expect(response.status).toBe(200);
-    expect(parsedUserId).toBeUndefined();
-    expect(requesterId).toBe("guest:203.0.113.7");
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(parseCalled).toBeFalsy();
     expect(saveCalled).toBeFalsy();
   });
 

@@ -12,7 +12,6 @@ import type {
   SensoryAxis,
   SensoryVector,
 } from "@/server/algorithm/types";
-import { POPULATION_AXIS_MEANS } from "@/server/algorithm/constants";
 
 // ── Survey row shape (matches taste_survey_responses table) ──────────
 

@@ -5897,7 +5897,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   cropModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.surfacePrimary,
   },
   cropModalCard: {
@@ -5940,7 +5940,7 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   cropFrameOutline: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 2,
     borderColor: "rgba(123, 29, 58, 0.85)",
   },
@@ -6449,7 +6449,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   pickerModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.surfacePrimary,
   },
   pickerModalCard: {

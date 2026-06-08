@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import Svg, { Circle, Rect, Path, Line, Ellipse } from "react-native-svg";
 
 type BrandIconProps = { size?: number; color?: string };
@@ -44,7 +45,7 @@ export function SaveIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps)
 }
 
 export function SettingsIcon({ size: s = 20, color: c = "#F5EDD6" }: BrandIconProps) {
-  const nodes: JSX.Element[] = [];
+  const nodes: ReactElement[] = [];
   for (let i = 0; i < 6; i++) {
     const a = i * 60 * Math.PI / 180;
     nodes.push(<Circle key={i} cx={s/2 + s*0.3*Math.cos(a)} cy={s/2 + s*0.3*Math.sin(a)} r={s*0.1} fill={c} />);

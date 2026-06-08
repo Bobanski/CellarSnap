@@ -7,7 +7,6 @@ import { useBadges } from "./useBadges";
 import {
   BADGE_DEFINITIONS,
   type BadgeCategory,
-  type BadgeDefinition,
 } from "@shared";
 
 const CATEGORY_COLOR: Record<BadgeCategory | "all", string> = {

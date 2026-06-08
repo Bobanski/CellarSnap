@@ -65,3 +65,4 @@
 090_collections.sql
 091_badges.sql
 092_wine_profiles_audience_mode.sql
+093_api_rate_limits.sql

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BadgeIcon from "./BadgeIcon";
 
-type BadgeCategory = "taste" | "region" | "milestone" | "social";
 type BadgeTier = "nouveau" | "vieilles_vignes" | "reserve" | "mise_en_cave";
 type BadgeShape =
   | "cluster"
@@ -49,7 +48,7 @@ export default function BadgeToast({ badge, onDismiss }: BadgeToastProps) {
 
   useEffect(() => {
     if (!badge) {
-      setVisible(false);
+      queueMicrotask(() => setVisible(false));
       return;
     }
 

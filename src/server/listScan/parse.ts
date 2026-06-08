@@ -1523,15 +1523,12 @@ function applyInferenceToWine(
     ...enrichmentRegions,
   ]);
 
-  // Varietals: extracted data is source of truth.
-  // DB grapes only fill gaps when the list didn't provide any.
-  const varietals =
-    wine.varietals.length > 0
-      ? wine.varietals
-      : uniqueValues([
-          ...wine.varietals,
-          ...(inferred?.grapes.length ? inferred.grapes : []),
-        ]);
+  // Varietals: extracted data stays first, and DB inference can append
+  // missing blend components from the same appellation.
+  const varietals = uniqueValues([
+    ...wine.varietals,
+    ...(inferred?.grapes.length ? inferred.grapes : []),
+  ]);
 
   // Wine type: section_type is ABSOLUTE authority.
   // The list says what section a wine is in — no grape, context, or DB

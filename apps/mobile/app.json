@@ -50,7 +50,8 @@
           "cameraPermission": "Cluster uses your camera to scan wine labels for quick and accurate entry creation."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

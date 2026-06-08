@@ -8,12 +8,12 @@ import {
   normalizePrivacyValue,
   resolveInteractionAccessForViewer,
 } from "@/lib/access/interactionVisibility";
-import { isTestAccount } from "@/lib/access/testAccounts";
+import { getTestAccountStatusMap, isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
-import { signPhotoUrl } from "@/server/storage/signedUrls";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 type HomeEntryRow = Record<string, unknown> & {
   id: string;
@@ -398,17 +398,28 @@ export async function GET(request: Request) {
   const profileMap = new Map(
     (friendProfiles ?? []).map((profile) => [profile.id, profile])
   );
-  const avatarUrlEntries = await Promise.all(
-    (friendProfiles ?? []).map(async (profile) => [
-      profile.id,
-      await signPhotoUrl(profile.avatar_path ?? null, supabase),
-    ] as const)
-  );
-  const avatarUrlByUserId = new Map(avatarUrlEntries);
   const acceptedFriendIds = new Set(friendIds);
   const friendsOfFriendsIds = viewerIsTestAccount
     ? new Set<string>()
     : await getFriendsOfFriendsIds(supabase, user.id, acceptedFriendIds);
+  const ownerTestAccountStatuses = await getTestAccountStatusMap(
+    supabase,
+    Array.from(new Set(allEntries.map((entry) => entry.user_id)))
+  );
+
+  const pathsToSign = new Set<string>();
+  (friendProfiles ?? []).forEach((profile) => {
+    if (profile.avatar_path) {
+      pathsToSign.add(profile.avatar_path);
+    }
+  });
+  allEntries.forEach((entry) => {
+    const labelPath = labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path);
+    if (labelPath) {
+      pathsToSign.add(labelPath);
+    }
+  });
+  const signedUrlByPath = await signPhotoUrls(pathsToSign, supabase);
 
   const resolveEntryAccess = (entry: HomeEntryRow) => {
     const entryPrivacy = normalizePrivacyValue(entry.entry_privacy, "public");
@@ -430,7 +441,14 @@ export async function GET(request: Request) {
       ),
       acceptedFriendIds,
       friendsOfFriendsIds,
+      viewerIsTestAccount,
+      ownerIsTestAccount: ownerTestAccountStatuses.get(entry.user_id) ?? false,
     });
+  };
+
+  const getLabelImageUrl = (entry: HomeEntryRow) => {
+    const labelPath = labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path);
+    return labelPath ? signedUrlByPath.get(labelPath) ?? null : null;
   };
 
   const buildReactionUsers = (entryId: string) =>
@@ -463,10 +481,7 @@ export async function GET(request: Request) {
               []
             ).map((id) => getPublicProfileName(profileMap.get(id)))
           : [],
-        label_image_url: await signPhotoUrl(
-          labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
-          supabase
-        ),
+        label_image_url: getLabelImageUrl(entry),
         photo_gallery: groupedPost?.photo_gallery ?? [],
         entry_group: groupedPost?.entry_group ?? null,
         group_slides: groupedPost?.group_slides ?? [],
@@ -506,11 +521,10 @@ export async function GET(request: Request) {
             ).map((id) => getPublicProfileName(profileMap.get(id)))
           : [],
         author_name: getPublicProfileName(profileMap.get(entry.user_id)),
-        author_avatar_url: avatarUrlByUserId.get(entry.user_id) ?? null,
-        label_image_url: await signPhotoUrl(
-          labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
-          supabase
-        ),
+        author_avatar_url: profileMap.get(entry.user_id)?.avatar_path
+          ? signedUrlByPath.get(profileMap.get(entry.user_id)?.avatar_path ?? "") ?? null
+          : null,
+        label_image_url: getLabelImageUrl(entry),
         photo_gallery: groupedPost?.photo_gallery ?? [],
         entry_group: groupedPost?.entry_group ?? null,
         group_slides: groupedPost?.group_slides ?? [],

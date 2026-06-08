@@ -10,7 +10,6 @@ import {
 } from "@/server/algorithm/constants";
 import {
   blendAffinityRecords,
-  blendSensoryVectors,
   buildSurveyCategoricalVector,
   buildSurveySensoryVector,
   type TasteSurveyRow,

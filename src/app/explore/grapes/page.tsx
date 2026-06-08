@@ -14,7 +14,6 @@ const NEBBIOLO = "#4A3060";
 const ROSE = "#C4607A";
 const CHAMPAGNE = "#F5EDD6";
 const FOG = "#A08878";
-const VIOGNIER = "#C9A84C";
 const BG_SECTION = "#220E14";
 
 // ---------------------------------------------------------------------------

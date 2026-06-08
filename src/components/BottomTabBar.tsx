@@ -68,17 +68,6 @@ function ExploreIcon() {
   );
 }
 
-function PalateIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <ellipse cx="10" cy="13" rx="6" ry="4.5" fill="currentColor" opacity="0.3" />
-      <path d="M7 13 Q7 6 10 4 Q13 6 13 13" fill="currentColor" opacity="0.7" />
-      <ellipse cx="10" cy="13.5" rx="3.5" ry="2" fill="currentColor" opacity="0.4" />
-      <circle cx="10" cy="8" r="1.2" fill="currentColor" opacity="0.9" />
-    </svg>
-  );
-}
-
 type TabDef = {
   label: string;
   href: string;

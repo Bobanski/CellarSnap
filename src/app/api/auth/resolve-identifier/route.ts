@@ -27,7 +27,7 @@ function isFunctionLookupError(error: unknown, functionName: string) {
 }
 
 export async function POST(request: Request) {
-  const rateLimit = applyRateLimit({
+  const rateLimit = await applyRateLimit({
     request,
     routeKey: "resolve-identifier",
     windowMs: RATE_LIMIT_WINDOW_MS,

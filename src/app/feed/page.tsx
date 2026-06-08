@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
-  canDisplayAlgorithmMatch,
   fetchAlgorithmScoreBatch,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
@@ -375,7 +374,7 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
-  const [matchScores, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
+  const [, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
   const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [groupedSlideIndexByEntryId, setGroupedSlideIndexByEntryId] = useState<Record<string, number>>({});

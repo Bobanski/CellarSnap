@@ -17,7 +17,6 @@ import { surveyStyles as s } from "@/src/lib/tasteSurvey/styles";
 import { fetchTasteSurvey } from "@/src/lib/api/tasteSurvey";
 import {
   WINE_TYPE_OPTIONS,
-  STARTER_GRAPES,
   STARTER_REGIONS,
   WINE_REGIONS,
   COMMON_GRAPES,
@@ -148,7 +147,7 @@ function SearchChipSelect({
 
   useEffect(() => {
     if (query.length < 2) {
-      setResults([]);
+      queueMicrotask(() => setResults([]));
       return;
     }
 
@@ -500,7 +499,7 @@ function useStepValid(step: number, draft: { wineTypes: string[] }) {
 export default function TasteSurveyScreen() {
   const router = useRouter();
   const ctx = useTasteSurvey();
-  const { step, canGoNext, canGoBack, goNext, goBack, progress, submit, errorMessage, isSubmitting, draft, prefill } = ctx;
+  const { step, canGoBack, goNext, goBack, progress, submit, errorMessage, isSubmitting, draft, prefill } = ctx;
   const [loading, setLoading] = useState(true);
 
   const isValid = useStepValid(step, draft);

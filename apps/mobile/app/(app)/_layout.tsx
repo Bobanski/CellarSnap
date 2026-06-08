@@ -3,6 +3,7 @@ import {
   Pressable,
   StyleSheet,
   View,
+  type ColorValue,
   type GestureResponderEvent,
 } from "react-native";
 import Svg, { Circle, Rect, Path, Line, Ellipse } from "react-native-svg";
@@ -11,7 +12,7 @@ import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 
-function FeedIcon({ color }: { color: string }) {
+function FeedIcon({ color }: { color: ColorValue }) {
   const s = 20;
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
@@ -24,7 +25,7 @@ function FeedIcon({ color }: { color: string }) {
   );
 }
 
-function CellarIcon({ color }: { color: string }) {
+function CellarIcon({ color }: { color: ColorValue }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 64 64" fill="none">
       <Path d="M5.12 56.32 L5.12 28.16 Q5.12 3.84 32 3.84 Q58.88 3.84 58.88 28.16 L58.88 56.32" fill="none" stroke={color} strokeWidth={2.88} strokeLinecap="round" opacity={0.3} />
@@ -37,7 +38,7 @@ function CellarIcon({ color }: { color: string }) {
   );
 }
 
-function SommIcon({ color }: { color: string }) {
+function SommIcon({ color }: { color: ColorValue }) {
   const s = 20;
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
@@ -49,7 +50,7 @@ function SommIcon({ color }: { color: string }) {
   );
 }
 
-function ScanIcon({ color }: { color: string }) {
+function ScanIcon({ color }: { color: ColorValue }) {
   const s = 20;
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
@@ -112,172 +113,6 @@ const fabStyles = StyleSheet.create({
     fontWeight: "500",
     color: colors.accentSecondary,
     marginTop: 4,
-  },
-});
-
-const tabIconStyles = StyleSheet.create({
-  feedIcon: {
-    width: 20,
-    height: 20,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  feedDotTop: {
-    position: "absolute",
-    top: 2,
-    left: 7,
-    width: 5,
-    height: 5,
-    borderRadius: 999,
-  },
-  feedDotLeft: {
-    position: "absolute",
-    top: 8,
-    left: 3,
-    width: 5,
-    height: 5,
-    borderRadius: 999,
-    opacity: 0.82,
-  },
-  feedDotRight: {
-    position: "absolute",
-    top: 8,
-    right: 3,
-    width: 5,
-    height: 5,
-    borderRadius: 999,
-    opacity: 0.68,
-  },
-  feedStem: {
-    position: "absolute",
-    top: 1,
-    left: 9,
-    width: 1.2,
-    height: 5,
-    borderRadius: 999,
-    opacity: 0.8,
-  },
-  feedArc: {
-    position: "absolute",
-    top: 1.1,
-    left: 10.1,
-    width: 5.3,
-    height: 2.4,
-    borderTopWidth: 1.1,
-    borderRightWidth: 1.1,
-    borderTopRightRadius: 999,
-    transform: [{ rotate: "12deg" }],
-    opacity: 0.65,
-  },
-  gridIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    position: "relative",
-  },
-  gridDividerH: {
-    position: "absolute",
-    left: 2,
-    right: 2,
-    top: 8.5,
-    height: 1,
-    opacity: 0.55,
-  },
-  gridDividerV: {
-    position: "absolute",
-    top: 2,
-    bottom: 2,
-    left: 8.5,
-    width: 1,
-    opacity: 0.55,
-  },
-  gridDot: {
-    position: "absolute",
-    width: 2.4,
-    height: 2.4,
-    borderRadius: 999,
-    opacity: 0.75,
-  },
-  gridDotTopLeft: { top: 4, left: 4 },
-  gridDotTopRight: { top: 4, right: 4 },
-  gridDotBottomLeft: { bottom: 4, left: 4 },
-  gridDotBottomRight: { bottom: 4, right: 4 },
-  sommIcon: {
-    width: 20,
-    height: 20,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sommBowl: {
-    position: "absolute",
-    top: 3,
-    width: 10,
-    height: 7,
-    borderWidth: 1.2,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 999,
-    borderTopRightRadius: 999,
-    opacity: 0.85,
-  },
-  sommStem: {
-    position: "absolute",
-    top: 9,
-    width: 1.2,
-    height: 5,
-    borderRadius: 999,
-    opacity: 0.85,
-  },
-  sommBase: {
-    position: "absolute",
-    bottom: 4,
-    width: 8,
-    height: 1.2,
-    borderRadius: 999,
-    opacity: 0.65,
-  },
-  sommRim: {
-    position: "absolute",
-    top: 2,
-    width: 6,
-    height: 1.1,
-    borderRadius: 999,
-    opacity: 0.45,
-  },
-  scanIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    position: "relative",
-  },
-  scanLine: {
-    position: "absolute",
-    left: 3,
-    right: 3,
-    top: 8.5,
-    height: 1.2,
-    opacity: 0.55,
-  },
-  scanTickLeft: {
-    position: "absolute",
-    left: 3.2,
-    top: 4.5,
-    width: 3.6,
-    height: 1.2,
-    borderRadius: 999,
-    opacity: 0.75,
-  },
-  scanTickRight: {
-    position: "absolute",
-    right: 3.2,
-    bottom: 4.5,
-    width: 3.6,
-    height: 1.2,
-    borderRadius: 999,
-    opacity: 0.75,
   },
 });
 
