@@ -6,7 +6,7 @@ import type {
   SommelierMessage,
   SommelierSource,
 } from "@/server/sommelier/types";
-import type { AudienceMode } from "@shared";
+import { type AudienceMode, VOICE_PROFILES } from "@shared";
 
 type ResponsesClient = OpenAI;
 
@@ -32,29 +32,11 @@ const SOMMELIER_BASE_INSTRUCTIONS = [
   "Only link to these when genuinely relevant. Do not force them into every answer.",
 ];
 
-const SOMMELIER_MODE_INSTRUCTIONS: Record<AudienceMode, string[]> = {
-  explorer: [
-    "Speak in warm, simple language. No wine jargon unless the user introduces it first.",
-    "Keep answers short and encouraging. Use emoji sparingly if it fits.",
-    "Frame everything around what they'll enjoy, not what they should know.",
-  ],
-  enthusiast: [
-    "Be curious and conversational. Introduce regional context and producer nuance naturally.",
-    "Build vocabulary gradually — use a term, then briefly explain it.",
-    "QPR framing feels natural here. Reference value when relevant.",
-  ],
-  connoisseur: [
-    "Be precise and technical when warranted. Terroir, phenolic, extraction — use correctly.",
-    "Keep responses concise and data-forward. No hand-holding.",
-    "Treat them as a peer. Wry humor works. Minimal padding.",
-  ],
-};
-
 export function buildSommelierSystemPrompt(
   mode: AudienceMode = "explorer"
 ): string {
-  const modeInstructions = SOMMELIER_MODE_INSTRUCTIONS[mode] ?? SOMMELIER_MODE_INSTRUCTIONS.explorer;
-  return [...SOMMELIER_BASE_INSTRUCTIONS, ...modeInstructions].join(" ");
+  const profile = VOICE_PROFILES[mode] ?? VOICE_PROFILES.explorer;
+  return [...SOMMELIER_BASE_INSTRUCTIONS, ...profile.systemPromptDirectives].join(" ");
 }
 
 /** @deprecated Use buildSommelierSystemPrompt(mode) instead. Kept for backward compat in tests. */

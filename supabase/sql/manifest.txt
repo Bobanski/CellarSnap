@@ -64,3 +64,4 @@
 085_event_type.sql
 090_collections.sql
 091_badges.sql
+092_wine_profiles_audience_mode.sql
