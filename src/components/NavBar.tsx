@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -53,7 +53,7 @@ export default function NavBar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
   const [mobileOpenPathname, setMobileOpenPathname] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);

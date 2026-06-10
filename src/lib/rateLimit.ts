@@ -137,6 +137,13 @@ function applyMemoryRateLimit({
   };
 }
 
+let cachedAdminClient: ReturnType<typeof createSupabaseAdminClient> | null = null;
+
+function getRateLimitAdminClient() {
+  cachedAdminClient ??= createSupabaseAdminClient();
+  return cachedAdminClient;
+}
+
 function shouldUseDistributedRateLimit() {
   if (process.env.CELLARSNAP_RATE_LIMIT_BACKEND === "memory") {
     return false;
@@ -160,7 +167,7 @@ async function applyDistributedRateLimit({
   }
 
   try {
-    const supabase = createSupabaseAdminClient();
+    const supabase = getRateLimitAdminClient();
     const subject = getRateLimitSubject({ request, userId });
     const { data, error } = await supabase.rpc("consume_api_rate_limit", {
       p_route_key: routeKey,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BOTTLE_FORMAT_OPTIONS, type BottleFormat, type CellarEntry } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatConsumedDate } from "@/lib/formatDate";
@@ -140,12 +140,12 @@ export default function CellarTable({
     };
   }, [customFields, entries]);
 
-  const sortedEntries = [...entries].sort((a, b) => {
+  const sortedEntries = useMemo(() => [...entries].sort((a, b) => {
     const aVal = a[sortKey];
     const bVal = b[sortKey];
     const cmp = compareCells(aVal, bVal);
     return sortDir === "asc" ? cmp : -cmp;
-  });
+  }), [entries, sortKey, sortDir]);
 
   const handleHeaderClick = (key: SortKey) => {
     if (sortKey === key) {

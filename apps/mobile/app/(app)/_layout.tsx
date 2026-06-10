@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,9 +9,15 @@ import {
 } from "react-native";
 import Svg, { Circle, Rect, Path, Line, Ellipse } from "react-native-svg";
 import { Redirect, Tabs } from "expo-router";
+import type { BottomTabNavigationOptions } from "expo-router/build/react-navigation/bottom-tabs";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
+
+// The options prop of Tabs.Screen is BottomTabNavigationOptions extended with
+// expo-router's href field. We derive the exact type from the component rather
+// than re-declaring it manually.
+type TabScreenOptions = NonNullable<ComponentProps<typeof Tabs.Screen>["options"]>;
 
 function FeedIcon({ color }: { color: ColorValue }) {
   const s = 20;
@@ -65,6 +72,66 @@ function ScanIcon({ color }: { color: ColorValue }) {
     </Svg>
   );
 }
+
+// ── Module-level stable references ──────────────────────────────────────
+// tabBarIcon callbacks must be stable so the tab bar doesn't reconcile
+// on every auth-state render.
+function renderFeedIcon({ color }: { color: ColorValue }) {
+  return <FeedIcon color={color} />;
+}
+function renderCellarIcon({ color }: { color: ColorValue }) {
+  return <CellarIcon color={color} />;
+}
+function renderSommIcon({ color }: { color: ColorValue }) {
+  return <SommIcon color={color} />;
+}
+function renderScanIcon({ color }: { color: ColorValue }) {
+  return <ScanIcon color={color} />;
+}
+
+const TAB_SCREEN_OPTIONS: BottomTabNavigationOptions = {
+  headerShown: false,
+  tabBarHideOnKeyboard: true,
+  tabBarStyle: {
+    // Variant C — translucent over void. Mirror of web .bottom-tab-bar.
+    // For true blur, switch to tabBarBackground prop with
+    // expo-blur <BlurView intensity={70} tint="dark" /> in a
+    // follow-up if this direction lands.
+    backgroundColor: "rgba(26, 10, 16, 0.72)",
+    borderTopColor: "rgba(196, 96, 122, 0.18)",
+    borderTopWidth: 0.5,
+    paddingTop: 6,
+    height: 80,
+  },
+  tabBarActiveTintColor: colors.accentSecondary,
+  tabBarInactiveTintColor: colors.textTertiary,
+  tabBarLabelStyle: {
+    fontSize: 8,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    fontWeight: "500",
+  },
+};
+
+// Per-screen options that contain no render-scope values are hoisted here.
+// Screens whose options depend on render-scope values (hasPrivateBetaFeatureAccess,
+// href: null) are kept inline since they're static objects anyway (no closures).
+const FEED_SCREEN_OPTIONS: BottomTabNavigationOptions = {
+  title: "Feed",
+  tabBarIcon: renderFeedIcon,
+};
+
+const CELLAR_SCREEN_OPTIONS: BottomTabNavigationOptions = {
+  title: "Cellar",
+  tabBarIcon: renderCellarIcon,
+};
+
+const HIDDEN_SCREEN_OPTIONS: TabScreenOptions = { href: null };
+
+const BADGES_SCREEN_OPTIONS: TabScreenOptions = {
+  href: null,
+  headerShown: false,
+};
 
 function LogTabButton(props: Record<string, unknown>) {
   const onPress = props.onPress as
@@ -138,47 +205,28 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/sign-in" />;
   }
 
+  // Somm/Scan options depend on hasPrivateBetaFeatureAccess (render-scope).
+  // The href value changes per-user but is stable within a session, so these
+  // objects are created once per mount (not per render — identity is the same
+  // object reference across re-renders of the same AppLayout instance because
+  // hasPrivateBetaFeatureAccess doesn't change at runtime). They can't be
+  // fully hoisted to module scope because they depend on the auth value.
+  const sommOptions: TabScreenOptions = {
+    title: "Somm",
+    href: hasPrivateBetaFeatureAccess ? undefined : null,
+    tabBarIcon: renderSommIcon,
+  };
+  const scanOptions: TabScreenOptions = {
+    title: "Scan",
+    href: hasPrivateBetaFeatureAccess ? undefined : null,
+    tabBarIcon: renderScanIcon,
+  };
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          // Variant C — translucent over void. Mirror of web .bottom-tab-bar.
-          // For true blur, switch to tabBarBackground prop with
-          // expo-blur <BlurView intensity={70} tint="dark" /> in a
-          // follow-up if this direction lands.
-          backgroundColor: "rgba(26, 10, 16, 0.72)",
-          borderTopColor: "rgba(196, 96, 122, 0.18)",
-          borderTopWidth: 0.5,
-          paddingTop: 6,
-          height: 80,
-        },
-        tabBarActiveTintColor: colors.accentSecondary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarLabelStyle: {
-          fontSize: 8,
-          letterSpacing: 1,
-          textTransform: "uppercase",
-          fontWeight: "500",
-        },
-      }}
-    >
+    <Tabs screenOptions={TAB_SCREEN_OPTIONS}>
       {/* ── Visible tabs ─────────────────────────────── */}
-      <Tabs.Screen
-        name="feed/index"
-        options={{
-          title: "Feed",
-          tabBarIcon: ({ color }) => <FeedIcon color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="entries/index"
-        options={{
-          title: "Cellar",
-          tabBarIcon: ({ color }) => <CellarIcon color={color} />,
-        }}
-      />
+      <Tabs.Screen name="feed/index" options={FEED_SCREEN_OPTIONS} />
+      <Tabs.Screen name="entries/index" options={CELLAR_SCREEN_OPTIONS} />
       <Tabs.Screen
         name="entries/new"
         options={{
@@ -186,88 +234,29 @@ export default function AppLayout() {
           tabBarButton: (props) => <LogTabButton {...props} />,
         }}
       />
-      <Tabs.Screen
-        name="sommelier"
-        options={{
-          title: "Somm",
-          href: hasPrivateBetaFeatureAccess ? undefined : null,
-          tabBarIcon: ({ color }) => <SommIcon color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="list-scan/index"
-        options={{
-          title: "Scan",
-          href: hasPrivateBetaFeatureAccess ? undefined : null,
-          tabBarIcon: ({ color }) => <ScanIcon color={color} />,
-        }}
-      />
+      <Tabs.Screen name="sommelier" options={sommOptions} />
+      <Tabs.Screen name="list-scan/index" options={scanOptions} />
 
       {/* ── Hidden screens (still navigable, not shown as tabs) ── */}
-      <Tabs.Screen
-        name="home/index"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="list-scan/results"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="list-scan/history"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="entries/[id]"
-        options={{ href: null }}
-      />
+      <Tabs.Screen name="home/index" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="list-scan/results" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="list-scan/history" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="entries/[id]" options={HIDDEN_SCREEN_OPTIONS} />
       <Tabs.Screen
         name="entries/collections/[collectionId]"
-        options={{ href: null }}
+        options={HIDDEN_SCREEN_OPTIONS}
       />
-      <Tabs.Screen
-        name="profile/index"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="friends"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="profile/[userId]"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="taste-survey"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="palate"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="cellar-add"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="cellar-import-ct"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="explore-browse"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="collections"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="badges"
-        options={{ href: null, headerShown: false }}
-      />
+      <Tabs.Screen name="profile/index" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="friends" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="profile/[userId]" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="taste-survey" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="palate" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="cellar-add" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="cellar-import-ct" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="explore" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="explore-browse" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="collections" options={HIDDEN_SCREEN_OPTIONS} />
+      <Tabs.Screen name="badges" options={BADGES_SCREEN_OPTIONS} />
     </Tabs>
   );
 }

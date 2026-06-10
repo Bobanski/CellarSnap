@@ -20,8 +20,8 @@ export const NEW_ENTRY_HEADER_COPY = {
 } as const;
 
 export const NEW_ENTRY_UPLOAD_COPY = {
-  label: "Upload images",
-  hint: "upload photos of the wine and anything else from the night - pairing, people, place. we'll tag them",
+  label: "Photos",
+  hint: "Add the bottle and anything else from the night — pairing, people, place. We'll tag them for you.",
   uploadImagesLabel: "Upload images",
   addImagesLabel: "Add images",
   currentPhotosLabel: "Current photos",

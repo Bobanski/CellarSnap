@@ -19,10 +19,9 @@ type SearchResult = {
 type TrendingItem = {
   rank: number;
   name: string;
-  type: "region" | "grape" | "producer";
+  type: "region" | "grape";
   slug: string;
   href: string;
-  subtitle: string;
 };
 
 type FeaturedCard = {
@@ -41,7 +40,6 @@ type FeaturedCard = {
 const TYPE_BADGE_STYLE: Record<string, string> = {
   region: "border-[var(--color-accent-primary)]/40 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]",
   grape: "border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-gold)]/10 text-[var(--color-accent-gold)]",
-  producer: "border-[var(--color-accent-purple)]/40 bg-[var(--color-accent-purple)]/10 text-[var(--color-accent-purple)]",
 };
 
 // ---------------------------------------------------------------------------
@@ -303,9 +301,8 @@ export default function ExplorePage() {
                   {[0, 1, 2].map((i) => (
                     <div key={i} className="flex items-center gap-4 rounded-xl px-4 py-3.5 animate-pulse">
                       <div className="h-5 w-4 rounded bg-[var(--color-surface-raised)]" />
-                      <div className="flex-1 space-y-1.5">
+                      <div className="flex-1">
                         <div className="h-3.5 w-28 rounded bg-[var(--color-surface-raised)]" />
-                        <div className="h-2.5 w-20 rounded bg-[var(--color-surface-raised)]" />
                       </div>
                       <div className="h-5 w-16 rounded-full bg-[var(--color-surface-raised)]" />
                     </div>
@@ -328,9 +325,6 @@ export default function ExplorePage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-[var(--color-text-primary)]">
                           {item.name}
-                        </p>
-                        <p className="text-[10px] text-[var(--color-text-tertiary)]">
-                          {item.subtitle}
                         </p>
                       </div>
                       <span

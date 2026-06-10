@@ -87,7 +87,7 @@ type FriendMutationPayload = {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const authMode = getAuthMode();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -838,9 +838,9 @@ export default function ProfilePage() {
   };
 
   // Computed friend ID sets for status lookup
-  const friendIds = new Set(friends.map((f) => f.id));
-  const outgoingIds = new Set(outgoingRequests.map((r) => r.recipient.id));
-  const incomingIds = new Set(incomingRequests.map((r) => r.requester.id));
+  const friendIds = useMemo(() => new Set(friends.map((f) => f.id)), [friends]);
+  const outgoingIds = useMemo(() => new Set(outgoingRequests.map((r) => r.recipient.id)), [outgoingRequests]);
+  const incomingIds = useMemo(() => new Set(incomingRequests.map((r) => r.requester.id)), [incomingRequests]);
 
   // Debounced friend search
   useEffect(() => {

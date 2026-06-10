@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useOverlayPresentation } from "@/lib/ui/overlayPresentation";
+import type { EnjoymentIntentResponse } from "@shared";
 
 export type ComparisonResponse = "more" | "less" | "same_or_not_sure";
 export type HowWasItResponse =
@@ -14,7 +15,7 @@ export type ExpectationsResponse =
   | "below_expectations"
   | "met_expectations"
   | "above_expectations";
-export type EnjoymentIntentResponse = "seek_more" | "happily_again" | "if_poured" | "pass";
+export type { EnjoymentIntentResponse };
 
 export type SurveyEntryCard = {
   id: string;

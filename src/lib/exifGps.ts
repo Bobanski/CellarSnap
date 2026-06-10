@@ -1,9 +1,8 @@
-import ExifReader from "exifreader";
-
 export async function extractGpsFromFile(
   file: File
 ): Promise<{ lat: number; lng: number } | null> {
   try {
+    const { default: ExifReader } = await import("exifreader");
     const buffer = await file.arrayBuffer();
     const tags = ExifReader.load(buffer, { expanded: true });
 

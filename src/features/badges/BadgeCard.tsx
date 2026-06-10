@@ -65,14 +65,23 @@ export default function BadgeCard({
   }
 
   return (
-    <button
-      type="button"
+    // div with button semantics: a real <button> here would nest the
+    // "Feature" <button> inside it, which is invalid HTML and breaks hydration
+    <div
+      role="button"
+      tabIndex={0}
       className={`relative cursor-pointer rounded-xl bg-[var(--color-surface-raised)] p-3 transition-shadow focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 [perspective:900px] ${
         isFeatured
           ? "ring-2 ring-[var(--color-accent-gold)] shadow-[0_0_12px_rgba(201,168,76,0.3)]"
           : ""
       }`}
       onClick={() => onSelect(badge.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(badge.id);
+        }
+      }}
       aria-pressed={isSelected}
       aria-label={`${isSelected ? "Hide" : "Show"} details for ${badge.name} badge`}
     >
@@ -116,6 +125,6 @@ export default function BadgeCard({
           </button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

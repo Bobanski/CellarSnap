@@ -5,10 +5,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 type TrendingItem = {
   rank: number;
   name: string;
-  type: "region" | "grape" | "producer";
+  type: "region" | "grape";
   slug: string;
   href: string;
-  subtitle: string;
 };
 
 type FeaturedCard = {
@@ -30,69 +29,66 @@ function normalizeSlug(raw: string): string {
     .replace(/^-|-$/g, "");
 }
 
-async function queryTrending(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
-  cutoff: string | null
-): Promise<Array<{ name: string; type: "region" | "grape" | "producer"; count: number }>> {
-  const counts = new Map<string, { type: "region" | "grape" | "producer"; count: number }>();
+// Trending mirrors the feed: the grapes and regions of the most recently
+// logged public wines, newest first, deduped. No counting windows — with a
+// small community, recency is the honest signal.
+const RECENT_ENTRY_SCAN_LIMIT = 60;
 
-  // --- Regions ---
-  let regionQuery = admin
+async function queryRecentTrending(
+  admin: ReturnType<typeof createSupabaseAdminClient>
+): Promise<Array<{ name: string; type: "region" | "grape" }>> {
+  const { data: recentEntries } = await admin
     .from("wine_entries")
-    .select("canonical_region")
-    .not("canonical_region", "is", null);
-  if (cutoff) regionQuery = regionQuery.gte("created_at", cutoff);
-  const { data: regionRows } = await regionQuery.limit(5000);
+    .select("id, canonical_region, created_at")
+    .or("entry_privacy.eq.public,entry_privacy.is.null")
+    .order("created_at", { ascending: false })
+    .limit(RECENT_ENTRY_SCAN_LIMIT);
 
-  if (regionRows) {
-    for (const row of regionRows) {
-      const name = (row.canonical_region as string)?.trim();
-      if (!name) continue;
-      const key = `region:${name}`;
-      const existing = counts.get(key);
-      counts.set(key, { type: "region", count: (existing?.count ?? 0) + 1 });
-    }
+  if (!recentEntries || recentEntries.length === 0) {
+    return [];
   }
 
-  // --- Producers ---
-  let producerQuery = admin
-    .from("wine_entries")
-    .select("producer")
-    .not("producer", "is", null);
-  if (cutoff) producerQuery = producerQuery.gte("created_at", cutoff);
-  const { data: producerRows } = await producerQuery.limit(5000);
-
-  if (producerRows) {
-    for (const row of producerRows) {
-      const name = (row.producer as string)?.trim();
-      if (!name) continue;
-      const key = `producer:${name}`;
-      const existing = counts.get(key);
-      counts.set(key, { type: "producer", count: (existing?.count ?? 0) + 1 });
-    }
-  }
-
-  // --- Grapes ---
-  let grapeQuery = admin
+  const { data: grapeRows } = await admin
     .from("entry_primary_grapes")
-    .select("grape_varieties(name)");
-  if (cutoff) grapeQuery = grapeQuery.gte("created_at", cutoff);
-  const { data: grapeRows } = await grapeQuery.limit(5000);
+    .select("entry_id, position, grape_varieties(name)")
+    .in(
+      "entry_id",
+      recentEntries.map((entry) => entry.id)
+    )
+    .order("position", { ascending: true });
 
-  if (grapeRows) {
-    for (const row of grapeRows) {
-      const variety = row.grape_varieties as unknown as { name: string } | null;
-      const name = variety?.name?.trim();
-      if (!name) continue;
-      const key = `grape:${name}`;
-      const existing = counts.get(key);
-      counts.set(key, { type: "grape", count: (existing?.count ?? 0) + 1 });
+  const grapesByEntryId = new Map<string, string[]>();
+  for (const row of grapeRows ?? []) {
+    const variety = row.grape_varieties as unknown as { name: string } | null;
+    const name = variety?.name?.trim();
+    if (!name) continue;
+    const list = grapesByEntryId.get(row.entry_id as string) ?? [];
+    list.push(name);
+    grapesByEntryId.set(row.entry_id as string, list);
+  }
+
+  // Walk entries newest-first; each contributes its grape(s) then its region.
+  const seen = new Set<string>();
+  const items: Array<{ name: string; type: "region" | "grape" }> = [];
+  for (const entry of recentEntries) {
+    for (const grape of grapesByEntryId.get(entry.id as string) ?? []) {
+      const key = `grape:${grape}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({ name: grape, type: "grape" });
+      }
+    }
+    const region = (entry.canonical_region as string | null)?.trim();
+    if (region) {
+      const key = `region:${region}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({ name: region, type: "region" });
+      }
     }
   }
 
-  return [...counts.entries()]
-    .map(([key, val]) => ({ name: key.split(":").slice(1).join(":"), ...val }))
-    .sort((a, b) => b.count - a.count);
+  return items;
 }
 
 function extractCharacteristics(
@@ -139,44 +135,30 @@ export async function GET(request: Request) {
 
   // Run trending query and profile lookups in parallel
   const now = new Date();
-  const cutoff7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const cutoff30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [allTrending7d, regionProfiles, grapeProfiles] = await Promise.all([
-    queryTrending(admin, cutoff7d),
-    admin
-      .from("wine_profiles")
-      .select("slug, display_name, content, hero_image_url")
-      .eq("profile_type", "region")
-      .not("content", "is", null)
-      .order("created_at", { ascending: true }),
-    admin
-      .from("wine_profiles")
-      .select("slug, display_name, content, hero_image_url")
-      .eq("profile_type", "grape")
-      .not("content", "is", null)
-      .order("created_at", { ascending: true }),
-  ]);
+  const [recentTrending, regionProfiles, grapeProfiles] =
+    await Promise.all([
+      queryRecentTrending(admin),
+      admin
+        .from("wine_profiles")
+        .select("slug, display_name, content, hero_image_url")
+        .eq("profile_type", "region")
+        .not("content", "is", null)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("wine_profiles")
+        .select("slug, display_name, content, hero_image_url")
+        .eq("profile_type", "grape")
+        .not("content", "is", null)
+        .order("created_at", { ascending: true }),
+    ]);
 
-  // Cascade trending windows if needed
-  let trendingItems = allTrending7d;
-  let subtitle = "logged this week";
-  if (trendingItems.length < 3) {
-    trendingItems = await queryTrending(admin, cutoff30d);
-    subtitle = "logged this month";
-  }
-  if (trendingItems.length < 3) {
-    trendingItems = await queryTrending(admin, null);
-    subtitle = "total logs";
-  }
-
-  const trending: TrendingItem[] = trendingItems.slice(0, 3).map((item, i) => ({
+  const trending: TrendingItem[] = recentTrending.slice(0, 3).map((item, i) => ({
     rank: i + 1,
     name: item.name,
     type: item.type,
     slug: normalizeSlug(item.name),
     href: `/explore/${item.type}/${normalizeSlug(item.name)}`,
-    subtitle: `${item.count} ${subtitle}`,
   }));
 
   // Featured region — deterministic daily rotation
@@ -225,7 +207,8 @@ export async function GET(request: Request) {
     { trending, featured_region, grape_spotlight },
     {
       headers: {
-        "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200",
+        // Short cache so trending tracks the feed; featured cards rotate daily anyway
+        "Cache-Control": "s-maxage=300, stale-while-revalidate=600",
       },
     }
   );
