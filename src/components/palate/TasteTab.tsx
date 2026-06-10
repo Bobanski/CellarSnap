@@ -264,10 +264,11 @@ export function TasteTab() {
           Almost there
         </h2>
         <p className="max-w-md text-sm text-[var(--color-text-secondary)]">
-          Your palate profile unlocks at{" "}
-          {data.totalRated + data.entriesNeeded} rated wines — you&apos;ve
-          rated {data.totalRated} so far. Wines logged without a rating
-          don&apos;t count yet.
+          {`Your palate profile unlocks at ${
+            data.totalRated + data.entriesNeeded
+          } rated wines — you've rated ${
+            data.totalRated
+          } so far. Wines logged without a rating don't count yet.`}
         </p>
         <div className="h-1.5 w-48 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
           <div
