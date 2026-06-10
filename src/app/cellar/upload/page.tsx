@@ -66,6 +66,16 @@ function parseCSV(file: File): Promise<{ headers: string[]; rows: string[][] }> 
   });
 }
 
+// read-excel-file returns Date objects for date-formatted cells; the old
+// xlsx parser returned display strings. Normalize dates to YYYY-MM-DD so
+// column mapping (e.g. consumed_at) keeps receiving parseable values.
+function excelCellToString(cell: unknown): string {
+  if (cell instanceof Date) {
+    return cell.toISOString().slice(0, 10);
+  }
+  return String(cell ?? "");
+}
+
 async function parseExcel(file: File): Promise<{ headers: string[]; rows: string[][] }> {
   try {
     const { readSheet } = await import("read-excel-file/browser");
@@ -74,10 +84,10 @@ async function parseExcel(file: File): Promise<{ headers: string[]; rows: string
       throw new Error("File must have a header row and at least one data row.");
     }
 
-    const headers = sheetRows[0].map((header) => String(header ?? ""));
+    const headers = sheetRows[0].map((header) => excelCellToString(header));
     const rows = sheetRows
       .slice(1)
-      .map((row) => row.map((cell) => String(cell ?? "")))
+      .map((row) => row.map((cell) => excelCellToString(cell)))
       .filter((row) => row.some((cell) => cell.trim()));
 
     return { headers, rows };
