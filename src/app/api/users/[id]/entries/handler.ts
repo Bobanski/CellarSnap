@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveProfileEntryAccess } from "@/server/users/profileVisibility";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
-import { signPhotoUrl } from "@/server/storage/signedUrls";
+import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
 
 type UserEntriesGetHandlerDependencies = {
   createSupabaseServerClient: typeof createSupabaseServerClient;
   requireRequestAuth: typeof requireRequestAuth;
   resolveProfileEntryAccess: typeof resolveProfileEntryAccess;
   signPhotoUrl: typeof signPhotoUrl;
+  signPhotoUrls: typeof signPhotoUrls;
 };
 
 const defaultUserEntriesGetHandlerDependencies: UserEntriesGetHandlerDependencies =
@@ -17,6 +18,7 @@ const defaultUserEntriesGetHandlerDependencies: UserEntriesGetHandlerDependencie
     requireRequestAuth,
     resolveProfileEntryAccess,
     signPhotoUrl,
+    signPhotoUrls,
   };
 
 export function createUserEntriesGetHandler(
@@ -125,19 +127,26 @@ export function createUserEntriesGetHandler(
       }
     });
 
-    const entries = await Promise.all(
-      (data ?? []).map(async (entry) => ({
-        ...entry,
-        label_image_url: await resolvedDependencies.signPhotoUrl(
-          labelMap.get(entry.id) ?? entry.label_image_path,
-          supabase
-        ),
-        place_image_url: await resolvedDependencies.signPhotoUrl(
-          entry.place_image_path,
-          supabase
-        ),
-      }))
+    const rows = data ?? [];
+    const labelPaths = rows.map((e) => labelMap.get(e.id) ?? e.label_image_path);
+    const placePaths = rows.map((e) => e.place_image_path);
+    const signedUrlMap = await resolvedDependencies.signPhotoUrls(
+      [...labelPaths, ...placePaths],
+      supabase
     );
+    const entries = rows.map((entry, i) => {
+      const labelPath = labelPaths[i];
+      const placePath = placePaths[i];
+      return {
+        ...entry,
+        label_image_url: labelPath
+          ? (signedUrlMap.get(labelPath) ?? null)
+          : null,
+        place_image_url: placePath
+          ? (signedUrlMap.get(placePath) ?? null)
+          : null,
+      };
+    });
 
     return NextResponse.json({ entries });
   };

@@ -36,14 +36,33 @@ async function queryTrending(
 ): Promise<Array<{ name: string; type: "region" | "grape" | "producer"; count: number }>> {
   const counts = new Map<string, { type: "region" | "grape" | "producer"; count: number }>();
 
-  // --- Regions ---
+  // --- Build queries ---
   let regionQuery = admin
     .from("wine_entries")
     .select("canonical_region")
     .not("canonical_region", "is", null);
   if (cutoff) regionQuery = regionQuery.gte("created_at", cutoff);
-  const { data: regionRows } = await regionQuery.limit(5000);
 
+  let producerQuery = admin
+    .from("wine_entries")
+    .select("producer")
+    .not("producer", "is", null);
+  if (cutoff) producerQuery = producerQuery.gte("created_at", cutoff);
+
+  let grapeQuery = admin
+    .from("entry_primary_grapes")
+    .select("grape_varieties(name)");
+  if (cutoff) grapeQuery = grapeQuery.gte("created_at", cutoff);
+
+  // --- Fire all three dimension queries concurrently ---
+  const [{ data: regionRows }, { data: producerRows }, { data: grapeRows }] =
+    await Promise.all([
+      regionQuery.limit(5000),
+      producerQuery.limit(5000),
+      grapeQuery.limit(5000),
+    ]);
+
+  // --- Regions ---
   if (regionRows) {
     for (const row of regionRows) {
       const name = (row.canonical_region as string)?.trim();
@@ -55,13 +74,6 @@ async function queryTrending(
   }
 
   // --- Producers ---
-  let producerQuery = admin
-    .from("wine_entries")
-    .select("producer")
-    .not("producer", "is", null);
-  if (cutoff) producerQuery = producerQuery.gte("created_at", cutoff);
-  const { data: producerRows } = await producerQuery.limit(5000);
-
   if (producerRows) {
     for (const row of producerRows) {
       const name = (row.producer as string)?.trim();
@@ -73,12 +85,6 @@ async function queryTrending(
   }
 
   // --- Grapes ---
-  let grapeQuery = admin
-    .from("entry_primary_grapes")
-    .select("grape_varieties(name)");
-  if (cutoff) grapeQuery = grapeQuery.gte("created_at", cutoff);
-  const { data: grapeRows } = await grapeQuery.limit(5000);
-
   if (grapeRows) {
     for (const row of grapeRows) {
       const variety = row.grape_varieties as unknown as { name: string } | null;
@@ -142,31 +148,36 @@ export async function GET(request: Request) {
   const cutoff7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const cutoff30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [allTrending7d, regionProfiles, grapeProfiles] = await Promise.all([
-    queryTrending(admin, cutoff7d),
-    admin
-      .from("wine_profiles")
-      .select("slug, display_name, content, hero_image_url")
-      .eq("profile_type", "region")
-      .not("content", "is", null)
-      .order("created_at", { ascending: true }),
-    admin
-      .from("wine_profiles")
-      .select("slug, display_name, content, hero_image_url")
-      .eq("profile_type", "grape")
-      .not("content", "is", null)
-      .order("created_at", { ascending: true }),
-  ]);
+  const [allTrending7d, allTrending30d, allTrendingAll, regionProfiles, grapeProfiles] =
+    await Promise.all([
+      queryTrending(admin, cutoff7d),
+      queryTrending(admin, cutoff30d),
+      queryTrending(admin, null),
+      admin
+        .from("wine_profiles")
+        .select("slug, display_name, content, hero_image_url")
+        .eq("profile_type", "region")
+        .not("content", "is", null)
+        .order("created_at", { ascending: true }),
+      admin
+        .from("wine_profiles")
+        .select("slug, display_name, content, hero_image_url")
+        .eq("profile_type", "grape")
+        .not("content", "is", null)
+        .order("created_at", { ascending: true }),
+    ]);
 
-  // Cascade trending windows if needed
-  let trendingItems = allTrending7d;
-  let subtitle = "logged this week";
-  if (trendingItems.length < 3) {
-    trendingItems = await queryTrending(admin, cutoff30d);
+  // Pick the first window (7d → 30d → all-time) with >= 3 results
+  let trendingItems: typeof allTrending7d;
+  let subtitle: string;
+  if (allTrending7d.length >= 3) {
+    trendingItems = allTrending7d;
+    subtitle = "logged this week";
+  } else if (allTrending30d.length >= 3) {
+    trendingItems = allTrending30d;
     subtitle = "logged this month";
-  }
-  if (trendingItems.length < 3) {
-    trendingItems = await queryTrending(admin, null);
+  } else {
+    trendingItems = allTrendingAll;
     subtitle = "total logs";
   }
 

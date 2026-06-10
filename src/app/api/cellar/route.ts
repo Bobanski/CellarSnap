@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
-import { signPhotoUrl } from "@/server/storage/signedUrls";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 export async function GET(request: Request) {
   let auth;
@@ -29,15 +29,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const entries = await Promise.all(
-    (data ?? []).map(async (entry) => ({
-      ...entry,
-      label_image_url: await signPhotoUrl(
-        entry.label_image_path,
-        supabase
-      ),
-    }))
+  const rows = data ?? [];
+  const signedUrlMap = await signPhotoUrls(
+    rows.map((e) => e.label_image_path),
+    supabase
   );
+  const entries = rows.map((entry) => ({
+    ...entry,
+    label_image_url: entry.label_image_path
+      ? (signedUrlMap.get(entry.label_image_path) ?? null)
+      : null,
+  }));
 
   return NextResponse.json({ entries });
 }
