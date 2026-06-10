@@ -264,10 +264,24 @@ export function TasteTab() {
           Almost there
         </h2>
         <p className="max-w-md text-sm text-[var(--color-text-secondary)]">
-          Log {data.entriesNeeded} more{" "}
-          {data.entriesNeeded === 1 ? "wine" : "wines"} to unlock your full
-          palate profile. You have {data.totalRated} so far.
+          Your palate profile unlocks at{" "}
+          {data.totalRated + data.entriesNeeded} rated wines — you&apos;ve
+          rated {data.totalRated} so far. Wines logged without a rating
+          don&apos;t count yet.
         </p>
+        <div className="h-1.5 w-48 overflow-hidden rounded-full bg-[var(--color-surface-raised)]">
+          <div
+            className="h-full rounded-full bg-[var(--color-accent-secondary)] transition-[width]"
+            style={{
+              width: `${Math.min(
+                100,
+                Math.round(
+                  (data.totalRated / (data.totalRated + data.entriesNeeded)) * 100
+                )
+              )}%`,
+            }}
+          />
+        </div>
         <Link
           href="/entries/new"
           className="rounded-xl bg-[var(--color-accent-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"

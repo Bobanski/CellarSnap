@@ -289,7 +289,10 @@ export default function FriendsPage() {
           <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Friends
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+          <h1
+            className="text-3xl font-normal text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)" }}
+          >
             Keep your cellar circle close.
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
