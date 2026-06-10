@@ -99,9 +99,6 @@ export default function EntryDetailPage() {
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
   const supabase = createSupabaseBrowserClient();
-  // Beta gate removed (PR #62 follow-up).
-  usePrivateBetaFeatureAccess();
-  const hasPrivateBetaFeatureAccess = true;
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(true);
@@ -369,15 +366,6 @@ export default function EntryDetailPage() {
     let isMounted = true;
 
     const loadScore = async () => {
-      if (!hasPrivateBetaFeatureAccess) {
-        if (isMounted) {
-          setScoreResult(null);
-          setScoreError(null);
-          setScoreLoading(false);
-        }
-        return;
-      }
-
       if (!entry || !currentUserId) {
         return;
       }
@@ -417,7 +405,7 @@ export default function EntryDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [entry, currentUserId, hasPrivateBetaFeatureAccess]);
+  }, [entry, currentUserId]);
 
   const onDelete = async () => {
     if (!entryId) {
@@ -1081,8 +1069,7 @@ export default function EntryDetailPage() {
           </div>
 
           <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
-            {hasPrivateBetaFeatureAccess
-              ? scoreLoading
+            {scoreLoading
                 ? (
                   <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5 text-sm text-[var(--color-text-tertiary)]">
                     Calculating your palate match...
@@ -1131,8 +1118,7 @@ export default function EntryDetailPage() {
                         </Link>
                       </div>
                     </div>
-                  )
-              : null}
+                  )}
 
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">

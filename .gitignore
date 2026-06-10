@@ -45,3 +45,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local QA / one-off automation artifacts
+qa-results/
+test-results/
+test-list-scan.py
+.preserved-stashes/

@@ -3,10 +3,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
-  fetchAlgorithmScoreBatch,
-  type AlgorithmScoreResponse,
-} from "@/lib/algorithm/api";
-import {
   buildEntryShareText,
   buildFeedEntryMetaFields as buildEntryMetaFields,
   COLLECTIONS_COPY,
@@ -27,7 +23,6 @@ import {
   EVENT_TYPE_LABELS,
   type EventTypeValue,
 } from "@shared";
-import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import CollectionPickerPopover from "@/components/collections/CollectionPickerPopover";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
@@ -135,25 +130,6 @@ async function copyTextToClipboard(value: string) {
   } finally {
     document.body.removeChild(textArea);
   }
-}
-
-function buildFeedScoreBatchItems(entries: FeedEntry[]) {
-  return entries
-    .filter((entry) => Boolean(entry.wine_type))
-    .map((entry) => ({
-      request_id: entry.id,
-      entry_id: entry.id,
-      wine_type: entry.wine_type ?? undefined,
-      canonical_region: entry.canonical_region ?? entry.region ?? null,
-      canonical_sub_region: entry.canonical_sub_region ?? entry.appellation ?? null,
-      canonical_country: entry.canonical_country ?? entry.country ?? null,
-      primary_grapes:
-        entry.primary_grapes?.map((grape) => grape.name).filter(Boolean).join(", ") || null,
-      vintage: entry.vintage ? Number(entry.vintage) || null : null,
-      producer: entry.producer ?? null,
-      classification: entry.classification ?? null,
-      quality_tier: entry.classification ?? null,
-    }));
 }
 
 function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
@@ -358,10 +334,6 @@ function formatCommentDate(value: string) {
 export default function FeedPage() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  // Beta gate removed for friend-test access (PR #62 follow-up).
-  // Hook still called so it warms the auth state, but treat as always true.
-  usePrivateBetaFeatureAccess();
-  const hasPrivateBetaFeatureAccess = true;
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -374,8 +346,6 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
-  const [, setMatchScores] = useState<Record<string, AlgorithmScoreResponse>>({});
-  const [, setMatchScoresLoading] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [groupedSlideIndexByEntryId, setGroupedSlideIndexByEntryId] = useState<Record<string, number>>({});
   const [collections, setCollections] = useState<CollectionOption[]>([]);
@@ -477,58 +447,6 @@ export default function FeedPage() {
   };
 
 
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadMatchScores = async () => {
-      if (!hasPrivateBetaFeatureAccess) {
-        if (isMounted) {
-          setMatchScores({});
-          setMatchScoresLoading(false);
-        }
-        return;
-      }
-
-      const items = buildFeedScoreBatchItems(entries);
-      if (items.length === 0) {
-        if (isMounted) {
-          setMatchScores({});
-        }
-        return;
-      }
-
-      setMatchScoresLoading(true);
-      try {
-        const results = await fetchAlgorithmScoreBatch(items);
-        if (!isMounted) {
-          return;
-        }
-
-        const nextScores: Record<string, AlgorithmScoreResponse> = {};
-        results.forEach((result) => {
-          if (result.ok && result.data && result.request_id) {
-            nextScores[result.request_id] = result.data;
-          }
-        });
-        setMatchScores(nextScores);
-      } catch {
-        if (isMounted) {
-          setMatchScores({});
-        }
-      } finally {
-        if (isMounted) {
-          setMatchScoresLoading(false);
-        }
-      }
-    };
-
-    void loadMatchScores();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [entries, hasPrivateBetaFeatureAccess]);
 
   const toggleReaction = async (entryId: string, emoji: string) => {
     const entry = entries.find((e) => e.id === entryId);
