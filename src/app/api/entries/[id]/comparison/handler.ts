@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isMissingDbColumnError, isMissingDbTableError } from "@/lib/supabase/errors";
 import { requireRequestAuth, RequestAuthError } from "@/server/auth/requestAuth";
+import { ENJOYMENT_INTENT_VALUES } from "@shared";
 
 const responseSchema = z.enum(["more", "less", "same_or_not_sure"]);
 const howWasItSchema = z.enum(["awful", "bad", "okay", "good", "exceptional"]);
@@ -11,7 +12,7 @@ const expectationsSchema = z.enum([
   "above_expectations",
 ]);
 const drinkAgainSchema = z.enum(["yes", "no"]);
-const enjoymentIntentSchema = z.enum(["seek_more", "happily_again", "if_poured", "pass"]);
+const enjoymentIntentSchema = z.enum(ENJOYMENT_INTENT_VALUES);
 
 const createComparisonSchema = z
   .object({

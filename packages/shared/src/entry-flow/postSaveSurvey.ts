@@ -1,3 +1,6 @@
+export const ENJOYMENT_INTENT_VALUES = ["seek_more", "happily_again", "if_poured", "pass"] as const;
+export type EnjoymentIntentResponse = (typeof ENJOYMENT_INTENT_VALUES)[number];
+
 export type PostSaveSurveyAnswers<TValue extends string = string> = {
   how_was_it: TValue;
   expectations?: TValue;

@@ -1,4 +1,7 @@
+export * from "./advancedNotes";
 export * from "./auth";
+export * from "./drinkingNow";
+export * from "./publicProfiles";
 export * from "./cellar";
 export * from "./collections";
 export * from "./date";
