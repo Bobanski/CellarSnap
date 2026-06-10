@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { formatConsumedDate } from "@/lib/formatDate";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   ADVANCED_NOTE_FIELDS,
   formatAdvancedNoteValue,
@@ -15,9 +14,9 @@ import {
   fetchAlgorithmScore,
   type AlgorithmScoreResponse,
 } from "@/lib/algorithm/api";
-import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
 import {
   COLLECTIONS_COPY,
+  FEED_REACTION_EMOJIS,
   buildEntryGoogleMapsLocationUrl,
   buildEntryLocationDisplayLabel,
   buildEntryShareText,
@@ -27,6 +26,7 @@ import {
   regionProfileUrl,
   type EntryCollectionSummary,
 } from "@shared";
+
 import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
@@ -34,7 +34,10 @@ import ScoreBreakdown from "@/components/ScoreBreakdown";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import WineMatchScore from "@/components/WineMatchScore";
 import { fetchEntryCollectionsClient } from "@/lib/collections/client";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import type { EntryPhoto, WineEntryWithUrls, WineType } from "@/types/wine";
+
+const REACTION_EMOJIS = FEED_REACTION_EMOJIS;
 
 type EntryDetail = WineEntryWithUrls & {
   tasted_with_users?: { id: string; display_name: string | null }[];
@@ -54,28 +57,6 @@ type ShareToast = {
   message: string;
 };
 
-async function copyTextToClipboard(value: string) {
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return true;
-  }
-
-  if (typeof document === "undefined") {
-    return false;
-  }
-
-  const textArea = document.createElement("textarea");
-  textArea.value = value;
-  textArea.setAttribute("readonly", "");
-  textArea.style.position = "absolute";
-  textArea.style.left = "-9999px";
-  document.body.appendChild(textArea);
-  textArea.select();
-  textArea.setSelectionRange(0, value.length);
-  const copied = document.execCommand("copy");
-  document.body.removeChild(textArea);
-  return copied;
-}
 
 function buildScorePayload(entry: EntryDetail, isOwner: boolean) {
   return {
@@ -98,7 +79,6 @@ export default function EntryDetailPage() {
   const searchParams = useSearchParams();
   const params = useParams<{ id: string | string[] }>();
   const entryId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const supabase = createSupabaseBrowserClient();
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [photos, setPhotos] = useState<EntryPhoto[]>([]);
   const [photosLoading, setPhotosLoading] = useState(true);
@@ -131,7 +111,6 @@ export default function EntryDetailPage() {
     entry ? normalizePrivacyLevel(entry.entry_privacy, "public") === "public" : false;
 
   // Reactions & comments state
-  const REACTION_EMOJIS = ["🍷", "🔥", "❤️", "👀", "🤝"] as const;
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
   const [myReactions, setMyReactions] = useState<string[]>([]);
   const [reactionUsers, setReactionUsers] = useState<Record<string, string[]>>({});
@@ -330,25 +309,6 @@ export default function EntryDetailPage() {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadCurrentUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (isMounted) {
-        setCurrentUserId((prev) => prev ?? user?.id ?? null);
-      }
-    };
-
-    loadCurrentUser();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [supabase]);
 
   useEffect(() => {
     if (!shareToast) {

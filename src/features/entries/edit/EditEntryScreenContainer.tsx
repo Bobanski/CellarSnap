@@ -439,14 +439,6 @@ export default function EditEntryPage() {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
 
-  const sortGalleryPhotos = (list: EntryPhoto[]) =>
-    [...list].sort((a, b) => {
-      if (a.position !== b.position) {
-        return a.position - b.position;
-      }
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
-
   const isLegacyPhoto = (photo: EntryPhoto) => photo.id.startsWith("legacy-");
   const isLegacyFieldType = (type: EntryPhotoType): type is LegacyPhotoType =>
     type === "label" || type === "place" || type === "pairing";
@@ -1905,7 +1897,7 @@ export default function EditEntryPage() {
     );
   }
 
-  const allDisplayPhotos = sortGalleryPhotos(
+  const allDisplayPhotos = sortPhotos(
     ([
       ...displayPhotosByType("label"),
       ...displayPhotosByType("place"),

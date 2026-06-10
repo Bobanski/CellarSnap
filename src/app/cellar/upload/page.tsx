@@ -3,8 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Papa from "papaparse";
-import { readSheet } from "read-excel-file/browser";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 // ─── Constants ──────────────────────────────────────────────
@@ -50,24 +48,27 @@ async function getSession() {
 
 function parseCSV(file: File): Promise<{ headers: string[]; rows: string[][] }> {
   return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      complete: (result: { data: unknown[][] }) => {
-        const data = result.data as string[][];
-        if (data.length < 2) {
-          reject(new Error("File must have a header row and at least one data row."));
-          return;
-        }
-        const headers = data[0];
-        const rows = data.slice(1).filter((row) => row.some((cell) => cell?.trim()));
-        resolve({ headers, rows });
-      },
-      error: (err: { message: string }) => reject(new Error(err.message)),
-    });
+    void import("papaparse").then(({ default: Papa }) => {
+      Papa.parse(file, {
+        complete: (result: { data: unknown[][] }) => {
+          const data = result.data as string[][];
+          if (data.length < 2) {
+            reject(new Error("File must have a header row and at least one data row."));
+            return;
+          }
+          const headers = data[0];
+          const rows = data.slice(1).filter((row) => row.some((cell) => cell?.trim()));
+          resolve({ headers, rows });
+        },
+        error: (err: { message: string }) => reject(new Error(err.message)),
+      });
+    }).catch(reject);
   });
 }
 
 async function parseExcel(file: File): Promise<{ headers: string[]; rows: string[][] }> {
   try {
+    const { readSheet } = await import("read-excel-file/browser");
     const sheetRows = await readSheet(file);
     if (sheetRows.length < 2) {
       throw new Error("File must have a header row and at least one data row.");
