@@ -155,7 +155,11 @@ test.describe("WS3 list scan parse handler", () => {
     expect(saveCalled).toBeFalsy();
   });
 
-  test("inference preserves extracted varietals when appending inferred grapes", () => {
+  // Design decision (ce7f679, reaffirmed 2026-06-10): the list's stated
+  // varietals are source of truth. DB inference never appends blend
+  // partners to a wine that already names its grapes — it only fills the
+  // gap when the list provided none.
+  test("inference keeps extracted varietals untouched and only fills gaps", () => {
     const inferenceMap: ListScanInferenceMap = {
       appellationToGrapes: new Map([
         [
@@ -176,7 +180,7 @@ test.describe("WS3 list scan parse handler", () => {
       regionAliases: new Map(),
     };
 
-    const enriched = __listScanTestUtils.applyInferenceToWine(
+    const withExtracted = __listScanTestUtils.applyInferenceToWine(
       {
         ...baseResult.wines[0],
         wine_type: "unknown",
@@ -186,9 +190,22 @@ test.describe("WS3 list scan parse handler", () => {
       inferenceMap
     );
 
-    expect(enriched.varietals).toEqual(["Sauvignon Blanc", "Semillon"]);
-    expect(enriched.regions).toEqual(["Graves", "France", "Bordeaux"]);
-    expect(enriched.wine_type).toBe("white");
+    expect(withExtracted.varietals).toEqual(["Sauvignon Blanc"]);
+    expect(withExtracted.regions).toEqual(["Graves", "France", "Bordeaux"]);
+    expect(withExtracted.wine_type).toBe("white");
+
+    const withoutExtracted = __listScanTestUtils.applyInferenceToWine(
+      {
+        ...baseResult.wines[0],
+        wine_type: "unknown",
+        varietals: [],
+        regions: ["Graves"],
+      },
+      inferenceMap
+    );
+
+    expect(withoutExtracted.varietals).toEqual(["Sauvignon Blanc", "Semillon"]);
+    expect(withoutExtracted.wine_type).toBe("white");
   });
 
   test("inference normalizes United States country labels to USA", () => {
