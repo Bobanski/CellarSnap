@@ -1,11 +1,13 @@
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -231,7 +233,8 @@ function Pill({
   );
 }
 
-function EntryCard({ item }: { item: MobileEntry }) {
+// Memoized row component — stable identity via id-based callbacks passed from parent
+function EntryCard({ item, onPress }: { item: MobileEntry; onPress: (id: string) => void }) {
   const hideProducer = shouldHideProducerInEntryTile(item.wine_name, item.producer);
   const producer = hideProducer ? null : (item.producer?.trim() ?? null);
   const vintage = item.vintage?.trim() ?? null;
@@ -240,7 +243,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
   return (
     <Pressable
       style={styles.entryCard}
-      onPress={() => router.push(`/(app)/entries/${item.id}`)}
+      onPress={() => onPress(item.id)}
     >
       <View style={styles.photoBox}>
         {item.label_image_url ? (
@@ -281,6 +284,7 @@ function EntryCard({ item }: { item: MobileEntry }) {
     </Pressable>
   );
 }
+const MemoEntryCard = React.memo(EntryCard);
 
 function getBottleFormatLabel(format: string | null): string | null {
   if (!format || format === "750ml") return null;
@@ -508,6 +512,66 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Helpers for enriching a batch of raw rows into MobileEntry[]
+// ---------------------------------------------------------------------------
+
+async function enrichPageRows(
+  pageRows: MobileEntryRow[],
+  existingGrapeMap: Map<string, PrimaryGrape[]>
+): Promise<MobileEntry[]> {
+  if (pageRows.length === 0) return [];
+
+  const entryIds = pageRows.map((e) => e.id);
+
+  // Fetch grapes for this page in parallel with label photos + grouped posts
+  const [primaryGrapeRows, labelByEntryId, groupedPostByEntryId] = await Promise.all([
+    supabase
+      .from("entry_primary_grapes")
+      .select("entry_id, position, grape_varieties(id, name)")
+      .in("entry_id", entryIds)
+      .order("position", { ascending: true })
+      .then((res) => (res.error ? null : (res.data as EntryPrimaryGrapeRow[] | null))),
+    resolveEntryLabelPhotos(pageRows, { supabaseClient: supabase }),
+    resolveMobileGroupedPostData(pageRows, { supabaseClient: supabase }),
+  ]);
+
+  // Merge grapes from this page into the running map
+  if (primaryGrapeRows) {
+    primaryGrapeRows.forEach((row) => {
+      const variety = normalizeVariety(row.grape_varieties);
+      if (!variety) return;
+      const current = existingGrapeMap.get(row.entry_id) ?? [];
+      current.push({ id: variety.id, name: variety.name, position: row.position });
+      existingGrapeMap.set(row.entry_id, current);
+    });
+  }
+
+  return pageRows.map((entry) => {
+    const groupedPost = groupedPostByEntryId.get(entry.id);
+    return {
+      ...entry,
+      label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
+      primary_grapes: existingGrapeMap.get(entry.id) ?? [],
+      entry_group_id: entry.entry_group_id ?? null,
+      entry_group: groupedPost?.entry_group ?? null,
+      group_slides: groupedPost?.group_slides ?? null,
+    };
+  });
+}
+
+async function attachCollectionMembershipsToItems<T extends { id: string }>(
+  items: T[]
+): Promise<Array<T & { collections?: EntryCollectionSummary[] }>> {
+  if (items.length === 0) return items;
+  const result = await fetchEntryCollections(items.map((item) => item.id));
+  if (!result.ok) return items;
+  return items.map((item) => ({
+    ...item,
+    collections: result.memberships[item.id] ?? [],
+  }));
+}
+
 export default function EntriesScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
@@ -536,6 +600,11 @@ export default function EntriesScreen() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [activeControlPanel, setActiveControlPanel] = useState<ControlPanel>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Generation counter — incremented on each fresh loadEntries call.
+  // Background loops compare their captured generation against the ref; if
+  // they differ the component has moved on and they bail out silently.
+  const loadGenRef = useRef(0);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const isCollectionsView = activeTab === "collections";
@@ -668,19 +737,7 @@ export default function EntriesScreen() {
     async <T extends { id: string },>(
       items: T[]
     ): Promise<Array<T & { collections?: EntryCollectionSummary[] }>> => {
-      if (items.length === 0) {
-        return items;
-      }
-
-      const result = await fetchEntryCollections(items.map((item) => item.id));
-      if (!result.ok) {
-        return items;
-      }
-
-      return items.map((item) => ({
-        ...item,
-        collections: result.memberships[item.id] ?? [],
-      }));
+      return attachCollectionMembershipsToItems(items);
     },
     []
   );
@@ -716,19 +773,29 @@ export default function EntriesScreen() {
   const loadEntries = useCallback(
     async (refresh = false) => {
       if (!user) return;
+
+      // Bump generation so any previous background loop knows to stop
+      const gen = loadGenRef.current + 1;
+      loadGenRef.current = gen;
+
       if (refresh) {
         setIsRefreshing(true);
+        setEntries([]);
       } else {
         setIsLoading(true);
       }
       setErrorMessage(null);
 
-      try {
-        const rows: MobileEntryRow[] = [];
-        const pageSize = 100;
-        let start = 0;
+      const grapeMap = new Map<string, PrimaryGrape[]>();
+      const pageSize = 100;
+      let start = 0;
+      let firstPage = true;
 
+      try {
         while (true) {
+          // Bail if a newer load has started
+          if (loadGenRef.current !== gen) return;
+
           const { data, error } = await supabase
             .from("wine_entries")
             .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level, entry_group_id")
@@ -737,80 +804,64 @@ export default function EntriesScreen() {
             .order("created_at", { ascending: false })
             .range(start, start + pageSize - 1);
 
+          // Bail again after await
+          if (loadGenRef.current !== gen) return;
+
           if (error) {
             setErrorMessage(error.message);
             break;
           }
 
           const pageRows = (data ?? []) as MobileEntryRow[];
-          rows.push(...pageRows);
+          const isLastPage = pageRows.length < pageSize;
 
-          if (pageRows.length < pageSize) {
-            break;
-          }
+          if (pageRows.length > 0) {
+            // Enrich this page (grapes + labels + grouped posts) in parallel
+            const hydratedPage = await enrichPageRows(pageRows, grapeMap);
 
-          start += pageSize;
-        }
+            // Bail after enrichment awaits
+            if (loadGenRef.current !== gen) return;
 
-        if (rows.length > 0) {
-          const entryIds = rows.map((entry) => entry.id);
-          const primaryGrapeMap = new Map<string, PrimaryGrape[]>();
+            // Attach collection memberships per page
+            const withCollections = await attachCollectionMembershipsToItems(hydratedPage);
 
-          if (entryIds.length > 0) {
-            const { data: primaryGrapeRows, error: primaryGrapeError } = await supabase
-              .from("entry_primary_grapes")
-              .select("entry_id, position, grape_varieties(id, name)")
-              .in("entry_id", entryIds)
-              .order("position", { ascending: true });
+            if (loadGenRef.current !== gen) return;
 
-            if (!primaryGrapeError && primaryGrapeRows) {
-              (primaryGrapeRows as EntryPrimaryGrapeRow[]).forEach((row) => {
-                const variety = normalizeVariety(row.grape_varieties);
-                if (!variety) {
-                  return;
-                }
-                const current = primaryGrapeMap.get(row.entry_id) ?? [];
-                current.push({
-                  id: variety.id,
-                  name: variety.name,
-                  position: row.position,
-                });
-                primaryGrapeMap.set(row.entry_id, current);
+            if (firstPage) {
+              // Replace spinner with real data
+              setEntries(withCollections);
+              setIsLoading(false);
+              setIsRefreshing(false);
+              firstPage = false;
+            } else {
+              // Append/merge subsequent pages — setEntries derives sortedEntries from
+              // the full dataset so the sorted view recomputes correctly
+              setEntries((prev) => {
+                const existingIds = new Set(prev.map((e) => e.id));
+                const newItems = withCollections.filter((e) => !existingIds.has(e.id));
+                return newItems.length > 0 ? [...prev, ...newItems] : prev;
               });
             }
+          } else if (firstPage) {
+            // Empty dataset
+            setEntries([]);
+            setIsLoading(false);
+            setIsRefreshing(false);
+            firstPage = false;
           }
 
-          const [labelByEntryId, groupedPostByEntryId] = await Promise.all([
-            resolveEntryLabelPhotos(rows, {
-              supabaseClient: supabase,
-            }),
-            resolveMobileGroupedPostData(rows, {
-              supabaseClient: supabase,
-            }),
-          ]);
-
-          const hydratedEntries = rows.map((entry) => {
-            const groupedPost = groupedPostByEntryId.get(entry.id);
-            return {
-              ...entry,
-              label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
-              primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
-              entry_group_id: entry.entry_group_id ?? null,
-              entry_group: groupedPost?.entry_group ?? null,
-              group_slides: groupedPost?.group_slides ?? null,
-            };
-          });
-
-          setEntries(await attachCollectionMemberships(hydratedEntries));
-        } else {
-          setEntries([]);
+          if (isLastPage) break;
+          start += pageSize;
         }
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        // Ensure spinners always clear even if we returned early or threw
+        if (loadGenRef.current === gen) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
       }
     },
-    [attachCollectionMemberships, user]
+    [user]
   );
 
   const loadCellarEntries = useCallback(
@@ -857,6 +908,11 @@ export default function EntriesScreen() {
     },
     [isDrinking, loadCellarEntries]
   );
+
+  // Stable navigation callback passed to memoized row so the row prop never changes
+  const handleEntryPress = useCallback((id: string) => {
+    router.push(`/(app)/entries/${id}`);
+  }, []);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -908,129 +964,244 @@ export default function EntriesScreen() {
     );
   }
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.screen}
-    >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-        automaticallyAdjustKeyboardInsets
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => {
-              if (activeTab === "cellaring") {
-                void loadCellarEntries(true);
-              } else if (activeTab === "collections") {
-                void loadCollections(true);
-              } else {
-                void loadEntries(true);
-              }
-            }}
-            tintColor={colors.grenache}
-          />
-        }
-      >
-        <AppTopBar />
+  // ---------------------------------------------------------------------------
+  // Render helpers for FlatList
+  // ---------------------------------------------------------------------------
 
-        <View style={styles.header}>
-          <AppText style={styles.eyebrow}>
-            {isCollectionsView
-              ? COLLECTIONS_HEADER.eyebrow
-              : ENTRIES_LIBRARY_HEADER.eyebrow}
+  const renderConsumedListHeader = () => (
+    <View style={styles.consumedHeaderWrap}>
+      <AppTopBar />
+
+      <View style={styles.header}>
+        <AppText style={styles.eyebrow}>
+          {ENTRIES_LIBRARY_HEADER.eyebrow}
+        </AppText>
+        <AppText style={styles.title}>
+          {ENTRIES_LIBRARY_HEADER.title}
+        </AppText>
+      </View>
+
+      <View style={styles.tabToggle}>
+        {VISIBLE_CELLAR_TABS.map((tab) => (
+          <Pressable
+            key={tab}
+            style={[
+              styles.tabToggleBtn,
+              activeTab === tab ? styles.tabToggleBtnActive : null,
+            ]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <AppText
+              style={[
+                styles.tabToggleText,
+                activeTab === tab ? styles.tabToggleTextActive : null,
+              ]}
+            >
+              {CELLAR_TAB_LABELS[tab]}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <AppText style={styles.statNumber}>{stats.totalEntries}</AppText>
+          <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.totalEntries}</AppText>
+        </View>
+        <View style={styles.statCard}>
+          <AppText style={styles.statNumber}>
+            {stats.avgRating !== null ? stats.avgRating.toFixed(1) : "—"}
           </AppText>
-          <AppText style={styles.title}>
-            {isCollectionsView
-              ? COLLECTIONS_HEADER.title
-              : ENTRIES_LIBRARY_HEADER.title}
+          <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.avgRating}</AppText>
+        </View>
+        <View style={styles.statCard}>
+          <AppText style={styles.statNumber}>{stats.uniqueCountries}</AppText>
+          <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.countries}</AppText>
+        </View>
+      </View>
+
+      <View style={styles.controls}>
+        <View style={styles.controlButtons}>
+          <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.sort}</AppText></Pressable>
+          <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.filter}</AppText></Pressable>
+          <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.organize}</AppText></Pressable>
+          <Pressable
+            style={[
+              styles.searchToggleButton,
+              isSearchOpen ? styles.searchToggleButtonActive : null,
+            ]}
+            onPress={toggleSearch}
+            accessibilityRole="button"
+            accessibilityLabel={isSearchOpen ? "Hide search" : "Show search"}
+          >
+            <Feather
+              name="search"
+              size={14}
+              color={isSearchOpen ? colors.rose : colors.textSecondary}
+            />
+          </Pressable>
+        </View>
+        {isSearchOpen ? (
+          <View style={styles.searchPanel}>
+            <View style={styles.searchRow}>
+              <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.search} placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
+              {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>{ENTRIES_LIBRARY_ACTION_LABELS.clearSearch}</AppText></Pressable> : null}
+            </View>
+          </View>
+        ) : null}
+
+        {activeControlPanel === "sort" ? (
+          <View style={styles.panel}>
+            <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.sortBy}</AppText>
+            <View style={styles.pills}>{ENTRIES_LIBRARY_SORT_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={sortBy === option.value} onPress={() => setSortBy(option.value)} />)}</View>
+            <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.order}</AppText>
+            <View style={styles.pills}>{sortOrderOptions.map((option) => <Pill key={option.value} label={option.label} active={sortOrder === option.value} onPress={() => setSortOrder(option.value)} />)}</View>
+          </View>
+        ) : null}
+
+        {activeControlPanel === "filter" ? (
+          <View style={styles.panel}>
+            <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.filterBy}</AppText>
+            <View style={styles.pills}>{ENTRIES_LIBRARY_FILTER_OPTIONS.map((option) => <Pill key={option.value || "none"} label={option.label} active={filterType === option.value} onPress={() => updateFilterType(option.value)} />)}</View>
+            {filterType === "country" ? <View style={styles.pills}><Pill label={ENTRIES_LIBRARY_ACTION_LABELS.allCountries} active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
+            {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.min} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.max} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
+          </View>
+        ) : null}
+
+        {activeControlPanel === "organize" ? (
+          <View style={styles.panel}>
+            <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.libraryView}</AppText>
+            <View style={styles.pills}>{ENTRIES_LIBRARY_VIEW_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={libraryViewMode === option.value} onPress={() => setLibraryViewMode(option.value)} />)}</View>
+            {libraryViewMode === "grouped" ? <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.groupBy}</AppText> : null}
+            {libraryViewMode === "grouped" ? <View style={styles.pills}>{ENTRIES_LIBRARY_GROUP_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={groupScheme === option.value} onPress={() => setGroupScheme(option.value)} />)}</View> : null}
+          </View>
+        ) : null}
+        <AppText style={styles.countText}>{getEntriesCountLabel(sortedEntries.length)}</AppText>
+      </View>
+
+      {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+
+      {/* Empty state or grouped view live in the header; flat-all mode is virtualized below */}
+      {sortedEntries.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <AppText style={styles.emptyText}>
+            {getEntriesEmptyStateMessage({
+              isSearchActive,
+              isRangeFilterActive,
+              isFilterActive,
+            })}
           </AppText>
         </View>
-
-        {isCollectionsView ? null : (
-          <View style={styles.tabToggle}>
-            {VISIBLE_CELLAR_TABS.map((tab) => (
-              <Pressable
-                key={tab}
-                style={[
-                  styles.tabToggleBtn,
-                  activeTab === tab ? styles.tabToggleBtnActive : null,
-                ]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <AppText
-                  style={[
-                    styles.tabToggleText,
-                    activeTab === tab ? styles.tabToggleTextActive : null,
-                  ]}
-                >
-                  {CELLAR_TAB_LABELS[tab]}
-                </AppText>
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        {activeTab === "cellaring" ? (
-          isCellarLoading ? (
-            <View style={styles.cellarLoadingWrap}>
-              <ActivityIndicator color={colors.grenache} />
-            </View>
-          ) : errorMessage ? (
-            <AppText style={styles.errorText}>{errorMessage}</AppText>
-          ) : cellarEntries.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.emptyTitle}</AppText>
-              <AppText style={styles.emptyText}>{CELLAR_COPY.emptySubtitle}</AppText>
-              <Pressable
-                style={styles.addCellarButton}
-                onPress={() => setAddMenuOpen((v) => !v)}
-              >
-                <AppText style={styles.addCellarButtonText}>{CELLAR_COPY.addButton}</AppText>
-              </Pressable>
-              {addMenuOpen && (
-                <View style={styles.addOptionsColumn}>
-                  <Pressable
-                    style={styles.addCellarSecondary}
-                    onPress={() => router.push("/(app)/cellar-add")}
-                  >
-                    <Feather name="edit-3" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
-                    <AppText style={styles.addCellarSecondaryText}>Enter manually</AppText>
-                  </Pressable>
-                  <Pressable
-                    style={styles.addCellarSecondary}
-                    onPress={() => router.push("/(app)/entries/new")}
-                  >
-                    <Feather name="camera" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
-                    <AppText style={styles.addCellarSecondaryText}>Scan label(s)</AppText>
-                  </Pressable>
-                  <Pressable
-                    style={styles.addCellarSecondary}
-                    onPress={() => router.push("/(app)/cellar-import-ct")}
-                  >
-                    <Feather name="download" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
-                    <AppText style={styles.addCellarSecondaryText}>Import from CellarTracker</AppText>
-                  </Pressable>
-                  <Pressable style={styles.addCellarDisabled} disabled>
-                    <AppText style={styles.addCellarDisabledText}>Upload CSV — use desktop</AppText>
-                  </Pressable>
+      ) : libraryViewMode === "grouped" ? (
+        <View style={styles.stack}>
+          {groupedEntries.map((group) => {
+            const expanded = Boolean(expandedGroups[group.id]);
+            const visible = expanded ? group.entries : group.entries.slice(0, ENTRY_LIBRARY_GROUP_PREVIEW_COUNT);
+            return (
+              <View key={group.id} style={styles.groupCard}>
+                <View style={styles.groupHeader}>
+                  <View>
+                    <AppText style={styles.groupTitle}>{group.label}</AppText>
+                    <AppText style={styles.groupCount}>{getEntriesCountLabel(group.entries.length)}</AppText>
+                  </View>
+                  {group.entries.length > ENTRY_LIBRARY_GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? ENTRIES_LIBRARY_ACTION_LABELS.showLess : ENTRIES_LIBRARY_ACTION_LABELS.seeAll}</AppText></Pressable> : null}
                 </View>
-              )}
+                <View style={styles.stack}>{visible.map((item) => <MemoEntryCard key={item.id} item={item} onPress={handleEntryPress} />)}</View>
+              </View>
+            );
+          })}
+        </View>
+      ) : null /* flat-all rows rendered by FlatList below */}
+    </View>
+  );
+
+  // ---------------------------------------------------------------------------
+  // Non-consumed tabs and collections view rendered in a plain ScrollView
+  // ---------------------------------------------------------------------------
+
+  if (activeTab !== "consumed") {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.screen}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => {
+                if (activeTab === "cellaring") {
+                  void loadCellarEntries(true);
+                } else if (activeTab === "collections") {
+                  void loadCollections(true);
+                }
+              }}
+              tintColor={colors.grenache}
+            />
+          }
+        >
+          <AppTopBar />
+
+          <View style={styles.header}>
+            <AppText style={styles.eyebrow}>
+              {isCollectionsView
+                ? COLLECTIONS_HEADER.eyebrow
+                : ENTRIES_LIBRARY_HEADER.eyebrow}
+            </AppText>
+            <AppText style={styles.title}>
+              {isCollectionsView
+                ? COLLECTIONS_HEADER.title
+                : ENTRIES_LIBRARY_HEADER.title}
+            </AppText>
+          </View>
+
+          {isCollectionsView ? null : (
+            <View style={styles.tabToggle}>
+              {VISIBLE_CELLAR_TABS.map((tab) => (
+                <Pressable
+                  key={tab}
+                  style={[
+                    styles.tabToggleBtn,
+                    activeTab === tab ? styles.tabToggleBtnActive : null,
+                  ]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <AppText
+                    style={[
+                      styles.tabToggleText,
+                      activeTab === tab ? styles.tabToggleTextActive : null,
+                    ]}
+                  >
+                    {CELLAR_TAB_LABELS[tab]}
+                  </AppText>
+                </Pressable>
+              ))}
             </View>
-          ) : (
-            <View style={styles.stack}>
-              <View style={styles.addOptionsColumn}>
+          )}
+
+          {activeTab === "cellaring" ? (
+            isCellarLoading ? (
+              <View style={styles.cellarLoadingWrap}>
+                <ActivityIndicator color={colors.grenache} />
+              </View>
+            ) : errorMessage ? (
+              <AppText style={styles.errorText}>{errorMessage}</AppText>
+            ) : cellarEntries.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.emptyTitle}</AppText>
+                <AppText style={styles.emptyText}>{CELLAR_COPY.emptySubtitle}</AppText>
                 <Pressable
                   style={styles.addCellarButton}
                   onPress={() => setAddMenuOpen((v) => !v)}
                 >
-                  <Feather name="plus" size={14} color={colors.textOnAccent} style={{ marginRight: 5 }} />
                   <AppText style={styles.addCellarButtonText}>{CELLAR_COPY.addButton}</AppText>
                 </Pressable>
                 {addMenuOpen && (
-                  <View style={styles.addOptionsRow}>
+                  <View style={styles.addOptionsColumn}>
                     <Pressable
                       style={styles.addCellarSecondary}
                       onPress={() => router.push("/(app)/cellar-add")}
@@ -1043,176 +1214,146 @@ export default function EntriesScreen() {
                       onPress={() => router.push("/(app)/entries/new")}
                     >
                       <Feather name="camera" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
-                      <AppText style={styles.addCellarSecondaryText}>Scan</AppText>
+                      <AppText style={styles.addCellarSecondaryText}>Scan label(s)</AppText>
                     </Pressable>
                     <Pressable
                       style={styles.addCellarSecondary}
                       onPress={() => router.push("/(app)/cellar-import-ct")}
                     >
                       <Feather name="download" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
-                      <AppText style={styles.addCellarSecondaryText}>Import CT</AppText>
+                      <AppText style={styles.addCellarSecondaryText}>Import from CellarTracker</AppText>
+                    </Pressable>
+                    <Pressable style={styles.addCellarDisabled} disabled>
+                      <AppText style={styles.addCellarDisabledText}>Upload CSV — use desktop</AppText>
                     </Pressable>
                   </View>
                 )}
               </View>
-              {cellarEntries.map((item) => (
-                <CellarEntryCard key={item.id} item={item} onDrink={handleDrink} />
-              ))}
-            </View>
-          )
-        ) : null}
-
-        {activeTab === "events" ? (
-          <>
-            {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
-
-            {eventEntries.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.eventsEmptyTitle}</AppText>
-                <AppText style={styles.emptyText}>{CELLAR_COPY.eventsEmptySubtitle}</AppText>
-              </View>
             ) : (
               <View style={styles.stack}>
-                {eventEntries.map((item) => <EventHistoryCard key={item.entry_group_id} item={item} />)}
-              </View>
-            )}
-          </>
-        ) : activeTab === "consumed" ? (
-          <>
-            <View style={styles.statsRow}>
-              <View style={styles.statCard}>
-                <AppText style={styles.statNumber}>{stats.totalEntries}</AppText>
-                <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.totalEntries}</AppText>
-              </View>
-              <View style={styles.statCard}>
-                <AppText style={styles.statNumber}>
-                  {stats.avgRating !== null ? stats.avgRating.toFixed(1) : "—"}
-                </AppText>
-                <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.avgRating}</AppText>
-              </View>
-              <View style={styles.statCard}>
-                <AppText style={styles.statNumber}>{stats.uniqueCountries}</AppText>
-                <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.countries}</AppText>
-              </View>
-            </View>
-
-            <View style={styles.controls}>
-              <View style={styles.controlButtons}>
-                <Pressable onPress={() => setActiveControlPanel((v) => (v === "sort" ? null : "sort"))} style={[styles.controlBtn, activeControlPanel === "sort" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.sort}</AppText></Pressable>
-                <Pressable onPress={() => setActiveControlPanel((v) => (v === "filter" ? null : "filter"))} style={[styles.controlBtn, activeControlPanel === "filter" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.filter}</AppText></Pressable>
-                <Pressable onPress={() => setActiveControlPanel((v) => (v === "organize" ? null : "organize"))} style={[styles.controlBtn, activeControlPanel === "organize" && styles.controlBtnActive]}><AppText style={styles.controlBtnLabel}>{ENTRIES_LIBRARY_CONTROL_BUTTON_LABELS.organize}</AppText></Pressable>
-                <Pressable
-                  style={[
-                    styles.searchToggleButton,
-                    isSearchOpen ? styles.searchToggleButtonActive : null,
-                  ]}
-                  onPress={toggleSearch}
-                  accessibilityRole="button"
-                  accessibilityLabel={isSearchOpen ? "Hide search" : "Show search"}
-                >
-                  <Feather
-                    name="search"
-                    size={14}
-                    color={isSearchOpen ? colors.rose : colors.textSecondary}
-                  />
-                </Pressable>
-              </View>
-              {isSearchOpen ? (
-                <View style={styles.searchPanel}>
-                  <View style={styles.searchRow}>
-                    <DoneTextInput value={searchQuery} onChangeText={setSearchQuery} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.search} placeholderTextColor={colors.textTertiary} style={styles.searchInput} autoCapitalize="none" autoCorrect={false} autoFocus />
-                    {isSearchActive ? <Pressable style={styles.secondaryBtn} onPress={clearSearch}><AppText style={styles.secondaryBtnText}>{ENTRIES_LIBRARY_ACTION_LABELS.clearSearch}</AppText></Pressable> : null}
-                  </View>
-                </View>
-              ) : null}
-
-              {activeControlPanel === "sort" ? (
-                <View style={styles.panel}>
-                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.sortBy}</AppText>
-                  <View style={styles.pills}>{ENTRIES_LIBRARY_SORT_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={sortBy === option.value} onPress={() => setSortBy(option.value)} />)}</View>
-                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.order}</AppText>
-                  <View style={styles.pills}>{sortOrderOptions.map((option) => <Pill key={option.value} label={option.label} active={sortOrder === option.value} onPress={() => setSortOrder(option.value)} />)}</View>
-                </View>
-              ) : null}
-
-              {activeControlPanel === "filter" ? (
-                <View style={styles.panel}>
-                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.filterBy}</AppText>
-                  <View style={styles.pills}>{ENTRIES_LIBRARY_FILTER_OPTIONS.map((option) => <Pill key={option.value || "none"} label={option.label} active={filterType === option.value} onPress={() => updateFilterType(option.value)} />)}</View>
-                  {filterType === "country" ? <View style={styles.pills}><Pill label={ENTRIES_LIBRARY_ACTION_LABELS.allCountries} active={filterValue === ""} onPress={() => setFilterValue("")} />{uniqueCountries.map((country) => <Pill key={country} label={country} active={filterValue === country} onPress={() => setFilterValue(country)} />)}</View> : null}
-                  {filterType === "rating" || filterType === "vintage" ? <View style={styles.rangeRow}><DoneTextInput value={filterMin} onChangeText={setFilterMin} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.min} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /><DoneTextInput value={filterMax} onChangeText={setFilterMax} placeholder={ENTRIES_LIBRARY_INPUT_PLACEHOLDERS.max} placeholderTextColor={colors.textTertiary} keyboardType="number-pad" style={styles.rangeInput} /></View> : null}
-                </View>
-              ) : null}
-
-              {activeControlPanel === "organize" ? (
-                <View style={styles.panel}>
-                  <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.libraryView}</AppText>
-                  <View style={styles.pills}>{ENTRIES_LIBRARY_VIEW_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={libraryViewMode === option.value} onPress={() => setLibraryViewMode(option.value)} />)}</View>
-                  {libraryViewMode === "grouped" ? <AppText style={styles.panelLabel}>{ENTRIES_LIBRARY_PANEL_LABELS.groupBy}</AppText> : null}
-                  {libraryViewMode === "grouped" ? <View style={styles.pills}>{ENTRIES_LIBRARY_GROUP_OPTIONS.map((option) => <Pill key={option.value} label={option.label} active={groupScheme === option.value} onPress={() => setGroupScheme(option.value)} />)}</View> : null}
-                </View>
-              ) : null}
-              <AppText style={styles.countText}>{getEntriesCountLabel(sortedEntries.length)}</AppText>
-            </View>
-
-            {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
-
-            {sortedEntries.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <AppText style={styles.emptyText}>
-                  {getEntriesEmptyStateMessage({
-                    isSearchActive,
-                    isRangeFilterActive,
-                    isFilterActive,
-                  })}
-                </AppText>
-              </View>
-            ) : libraryViewMode === "grouped" ? (
-              <View style={styles.stack}>
-                {groupedEntries.map((group) => {
-                  const expanded = Boolean(expandedGroups[group.id]);
-                  const visible = expanded ? group.entries : group.entries.slice(0, ENTRY_LIBRARY_GROUP_PREVIEW_COUNT);
-                  return (
-                    <View key={group.id} style={styles.groupCard}>
-                      <View style={styles.groupHeader}>
-                        <View>
-                          <AppText style={styles.groupTitle}>{group.label}</AppText>
-                          <AppText style={styles.groupCount}>{getEntriesCountLabel(group.entries.length)}</AppText>
-                        </View>
-                        {group.entries.length > ENTRY_LIBRARY_GROUP_PREVIEW_COUNT ? <Pressable style={styles.secondaryBtn} onPress={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !prev[group.id] }))}><AppText style={styles.secondaryBtnText}>{expanded ? ENTRIES_LIBRARY_ACTION_LABELS.showLess : ENTRIES_LIBRARY_ACTION_LABELS.seeAll}</AppText></Pressable> : null}
-                      </View>
-                      <View style={styles.stack}>{visible.map((item) => <EntryCard key={item.id} item={item} />)}</View>
+                <View style={styles.addOptionsColumn}>
+                  <Pressable
+                    style={styles.addCellarButton}
+                    onPress={() => setAddMenuOpen((v) => !v)}
+                  >
+                    <Feather name="plus" size={14} color={colors.textOnAccent} style={{ marginRight: 5 }} />
+                    <AppText style={styles.addCellarButtonText}>{CELLAR_COPY.addButton}</AppText>
+                  </Pressable>
+                  {addMenuOpen && (
+                    <View style={styles.addOptionsRow}>
+                      <Pressable
+                        style={styles.addCellarSecondary}
+                        onPress={() => router.push("/(app)/cellar-add")}
+                      >
+                        <Feather name="edit-3" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                        <AppText style={styles.addCellarSecondaryText}>Enter manually</AppText>
+                      </Pressable>
+                      <Pressable
+                        style={styles.addCellarSecondary}
+                        onPress={() => router.push("/(app)/entries/new")}
+                      >
+                        <Feather name="camera" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                        <AppText style={styles.addCellarSecondaryText}>Scan</AppText>
+                      </Pressable>
+                      <Pressable
+                        style={styles.addCellarSecondary}
+                        onPress={() => router.push("/(app)/cellar-import-ct")}
+                      >
+                        <Feather name="download" size={13} color={colors.textPrimary} style={{ marginRight: 5 }} />
+                        <AppText style={styles.addCellarSecondaryText}>Import CT</AppText>
+                      </Pressable>
                     </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.stack}>{sortedEntries.map((item) => <EntryCard key={item.id} item={item} />)}</View>
-            )}
-          </>
-        ) : activeTab === "collections" ? (
-          <>
-            {isCollectionsLoading ? (
-              <View style={styles.cellarLoadingWrap}>
-                <ActivityIndicator color={colors.grenache} />
-              </View>
-            ) : errorMessage ? (
-              <AppText style={styles.errorText}>{errorMessage}</AppText>
-            ) : collectionsList.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.collectionsEmptyTitle}</AppText>
-                <AppText style={styles.emptyText}>{CELLAR_COPY.collectionsEmptySubtitle}</AppText>
-              </View>
-            ) : (
-              <View style={styles.stack}>
-                {collectionsList.map((collection) => (
-                  <CollectionListCard key={collection.id} item={collection} />
+                  )}
+                </View>
+                {cellarEntries.map((item) => (
+                  <CellarEntryCard key={item.id} item={item} onDrink={handleDrink} />
                 ))}
               </View>
-            )}
-          </>
-        ) : null}
-      </ScrollView>
+            )
+          ) : null}
+
+          {activeTab === "events" ? (
+            <>
+              {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+
+              {eventEntries.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.eventsEmptyTitle}</AppText>
+                  <AppText style={styles.emptyText}>{CELLAR_COPY.eventsEmptySubtitle}</AppText>
+                </View>
+              ) : (
+                <View style={styles.stack}>
+                  {eventEntries.map((item) => <EventHistoryCard key={item.entry_group_id} item={item} />)}
+                </View>
+              )}
+            </>
+          ) : null}
+
+          {activeTab === "collections" ? (
+            <>
+              {isCollectionsLoading ? (
+                <View style={styles.cellarLoadingWrap}>
+                  <ActivityIndicator color={colors.grenache} />
+                </View>
+              ) : errorMessage ? (
+                <AppText style={styles.errorText}>{errorMessage}</AppText>
+              ) : collectionsList.length === 0 ? (
+                <View style={styles.emptyCard}>
+                  <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.collectionsEmptyTitle}</AppText>
+                  <AppText style={styles.emptyText}>{CELLAR_COPY.collectionsEmptySubtitle}</AppText>
+                </View>
+              ) : (
+                <View style={styles.stack}>
+                  {collectionsList.map((collection) => (
+                    <CollectionListCard key={collection.id} item={collection} />
+                  ))}
+                </View>
+              )}
+            </>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Consumed tab — virtualized FlatList
+  // ---------------------------------------------------------------------------
+
+  // In grouped mode sortedEntries is rendered inside the header, so FlatList
+  // data is empty (header does all the work). In flat-all mode the FlatList
+  // renders the entries directly.
+  const flatListData = libraryViewMode === "all" ? sortedEntries : [];
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.screen}
+    >
+      <FlatList<MobileEntry>
+        data={flatListData}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <MemoEntryCard item={item} onPress={handleEntryPress} />
+        )}
+        ListHeaderComponent={renderConsumedListHeader}
+        contentContainerStyle={styles.flatListContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets
+        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void loadEntries(true)}
+            tintColor={colors.grenache}
+          />
+        }
+        removeClippedSubviews
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        initialNumToRender={8}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -1221,6 +1362,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.screenBg },
   loadingScreen: { flex: 1, backgroundColor: colors.screenBg, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
+  flatListContent: { paddingHorizontal: 18, paddingBottom: 28 },
+  consumedHeaderWrap: { gap: 12, paddingTop: 16, paddingBottom: 10 },
+  itemSeparator: { height: 10 },
   secondaryBtn: { borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 10, paddingVertical: 7 },
   secondaryBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
   header: { gap: 6 },

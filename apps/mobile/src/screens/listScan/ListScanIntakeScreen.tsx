@@ -180,7 +180,7 @@ export default function ListScanIntakeScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 1,
+      quality: 0.7,
       allowsMultipleSelection: true,
       ...(Platform.OS === "ios"
         ? {
@@ -212,7 +212,7 @@ export default function ListScanIntakeScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
-      quality: 1,
+      quality: 0.7,
     });
     if (result.canceled || !result.assets[0]) {
       return;

@@ -17,7 +17,7 @@ import {
   normalizePrivacyLevel,
   type EventTypeValue,
 } from "@cellarsnap/shared";
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -26,6 +26,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -371,7 +372,7 @@ function GroupedPostGallery({
   );
 }
 
-function FeedCard({
+const FeedCard = React.memo(function FeedCard({
   item,
   viewerUserId,
   reportMenuOpen,
@@ -1301,7 +1302,118 @@ function FeedCard({
       ) : null}
     </View>
   );
-}
+});
+
+// ---------------------------------------------------------------------------
+// Stable handler bundle type — all functions take entryId as first arg so
+// they can be defined once at the FeedScreen level and passed down without
+// re-creating per-entry closures.
+// ---------------------------------------------------------------------------
+type CardHandlers = {
+  onToggleNotes: (entryId: string) => void;
+  onToggleComments: (entryId: string) => void;
+  onGallerySwipeStart: () => void;
+  onGallerySwipeEnd: () => void;
+  onSetReplyTarget: (entryId: string, commentId: string) => void;
+  onClearReplyTarget: (entryId: string) => void;
+  onChangeCommentDraft: (entryId: string, value: string) => void;
+  onSubmitComment: (entryId: string) => void;
+  onToggleReactionPicker: (entryId: string) => void;
+  onToggleReaction: (entryId: string, emoji: string) => void;
+  onToggleReportMenu: (entryId: string) => void;
+  onSharePost: (entryId: string) => void;
+  onSavePost: (entryId: string) => void;
+  onReportPost: (entryId: string, targetUserId: string) => void;
+  onToggleCommentMenu: (entryId: string, commentId: string) => void;
+  onReportComment: (entryId: string, commentId: string, targetUserId: string) => void;
+  onOpenAuthorProfile: (userId: string, isViewer: boolean) => void;
+  canOpenEntry: () => boolean;
+  onOpenEntry: (entryId: string) => void;
+};
+
+type FeedCardContainerProps = {
+  entry: MobileFeedEntry;
+  viewerUserId: string | null;
+  interaction: import("@/src/lib/feed/useFeedInteractions").FeedEntryInteractionState;
+  sharingEntryId: string | null;
+  savingCollectionEntryId: string | null;
+  handlers: CardHandlers;
+  showDrinkingNowGlow: boolean;
+};
+
+const FeedCardContainer = React.memo(function FeedCardContainer({
+  entry,
+  viewerUserId,
+  interaction,
+  sharingEntryId,
+  savingCollectionEntryId,
+  handlers,
+  showDrinkingNowGlow,
+}: FeedCardContainerProps) {
+  // Stable per-entry closures — these are cheap functions that close only over
+  // the entry.id string (primitive) and the stable handlers object reference.
+  const onToggleNotes = useCallback(() => handlers.onToggleNotes(entry.id), [handlers, entry.id]);
+  const onToggleComments = useCallback(() => handlers.onToggleComments(entry.id), [handlers, entry.id]);
+  const onGallerySwipeStart = useCallback(() => handlers.onGallerySwipeStart(), [handlers]);
+  const onGallerySwipeEnd = useCallback(() => handlers.onGallerySwipeEnd(), [handlers]);
+  const onSetReplyTarget = useCallback((commentId: string) => handlers.onSetReplyTarget(entry.id, commentId), [handlers, entry.id]);
+  const onClearReplyTarget = useCallback(() => handlers.onClearReplyTarget(entry.id), [handlers, entry.id]);
+  const onChangeCommentDraft = useCallback((value: string) => handlers.onChangeCommentDraft(entry.id, value), [handlers, entry.id]);
+  const onSubmitComment = useCallback(() => handlers.onSubmitComment(entry.id), [handlers, entry.id]);
+  const onToggleReactionPicker = useCallback(() => handlers.onToggleReactionPicker(entry.id), [handlers, entry.id]);
+  const onToggleReaction = useCallback((emoji: string) => handlers.onToggleReaction(entry.id, emoji), [handlers, entry.id]);
+  const onToggleReportMenu = useCallback(() => handlers.onToggleReportMenu(entry.id), [handlers, entry.id]);
+  const onSharePost = useCallback(() => handlers.onSharePost(entry.id), [handlers, entry.id]);
+  const onSavePost = useCallback((entryId: string) => handlers.onSavePost(entryId), [handlers]);
+  const onReportPost = useCallback(() => handlers.onReportPost(entry.id, entry.user_id), [handlers, entry.id, entry.user_id]);
+  const onToggleCommentMenu = useCallback((commentId: string) => handlers.onToggleCommentMenu(entry.id, commentId), [handlers, entry.id]);
+  const onReportComment = useCallback((commentId: string, targetUserId: string) => handlers.onReportComment(entry.id, commentId, targetUserId), [handlers, entry.id]);
+  const onOpenAuthorProfile = useCallback(() => handlers.onOpenAuthorProfile(entry.user_id, entry.user_id === viewerUserId), [handlers, entry.user_id, viewerUserId]);
+  const onOpenEntry = useCallback(() => handlers.onOpenEntry(entry.id), [handlers, entry.id]);
+
+  return (
+    <FeedCard
+      item={entry}
+      viewerUserId={viewerUserId}
+      reportMenuOpen={interaction.reportMenuOpen}
+      reportBusy={interaction.reportBusy}
+      shareBusy={sharingEntryId === entry.id}
+      savingCollectionEntryId={savingCollectionEntryId}
+      notesExpanded={interaction.notesExpanded}
+      onToggleNotes={onToggleNotes}
+      commentsExpanded={interaction.commentsExpanded}
+      onToggleComments={onToggleComments}
+      onGallerySwipeStart={onGallerySwipeStart}
+      onGallerySwipeEnd={onGallerySwipeEnd}
+      replyTargetName={interaction.replyTargetName}
+      onSetReplyTarget={onSetReplyTarget}
+      onClearReplyTarget={onClearReplyTarget}
+      commentCount={interaction.commentCount}
+      comments={interaction.comments}
+      commentsLoading={interaction.commentsLoading}
+      commentDraft={interaction.commentDraft}
+      onChangeCommentDraft={onChangeCommentDraft}
+      onSubmitComment={onSubmitComment}
+      postingComment={interaction.postingComment}
+      commentError={interaction.commentError}
+      commentMenuKey={interaction.commentMenuKey}
+      reportingCommentId={interaction.reportingCommentId}
+      reactionPickerOpen={interaction.reactionPickerOpen}
+      onToggleReactionPicker={onToggleReactionPicker}
+      onToggleReaction={onToggleReaction}
+      onToggleReportMenu={onToggleReportMenu}
+      onSharePost={onSharePost}
+      onSavePost={onSavePost}
+      onReportPost={onReportPost}
+      onToggleCommentMenu={onToggleCommentMenu}
+      onReportComment={onReportComment}
+      onOpenAuthorProfile={onOpenAuthorProfile}
+      canOpenEntry={handlers.canOpenEntry}
+      onOpenEntry={onOpenEntry}
+      showDrinkingNowGlow={showDrinkingNowGlow}
+    />
+  );
+});
 
 export default function FeedScreen() {
   const { user } = useAuth();
@@ -1402,8 +1514,6 @@ export default function FeedScreen() {
     },
     [clearFeedScrollIdleTimer]
   );
-
-  const visibleEntries = useMemo(() => entries, [entries]);
 
   const loadFeed = useCallback(
     async (refresh = false) => {
@@ -1631,6 +1741,72 @@ export default function FeedScreen() {
     setIsLoadingMore(false);
   };
 
+  // ---------------------------------------------------------------------------
+  // Stable handler bundle — one stable object reference per FeedScreen mount.
+  // All functions accept entryId so they never need to be recreated per entry.
+  // ---------------------------------------------------------------------------
+  const cardHandlers = useMemo<CardHandlers>(() => ({
+    onToggleNotes: (entryId) => toggleNotes(entryId),
+    onToggleComments: (entryId) => toggleCommentsExpanded(entryId),
+    onGallerySwipeStart: () => setIsGallerySwipeActive((current) => (current ? current : true)),
+    onGallerySwipeEnd: () => setIsGallerySwipeActive((current) => (current ? false : current)),
+    onSetReplyTarget: (entryId, commentId) => setReplyTarget(entryId, commentId),
+    onClearReplyTarget: (entryId) => clearReplyTarget(entryId),
+    onChangeCommentDraft: (entryId, value) => setCommentDraft(entryId, value),
+    onSubmitComment: (entryId) => void submitCommentForEntry(entryId),
+    onToggleReactionPicker: (entryId) => toggleReactionPicker(entryId),
+    onToggleReaction: (entryId, emoji) => void toggleReaction(entryId, emoji),
+    onToggleReportMenu: (entryId) => toggleReportMenu(entryId),
+    onSharePost: (entryId) => void shareEntryByText(entryId),
+    onSavePost: (entryId) => void openCollectionsForEntry(entryId),
+    onReportPost: (entryId, targetUserId) =>
+      openReportReasonSheet({ targetType: "entry", entryId, targetUserId }),
+    onToggleCommentMenu: (entryId, commentId) => toggleCommentMenu(entryId, commentId),
+    onReportComment: (entryId, commentId, targetUserId) =>
+      openReportReasonSheet({ targetType: "comment", entryId, commentId, targetUserId }),
+    onOpenAuthorProfile: (userId, isViewer) =>
+      isViewer ? router.push("/(app)/profile") : router.push(`/(app)/profile/${userId}`),
+    canOpenEntry,
+    onOpenEntry: (entryId) => router.push(`/(app)/entries/${entryId}`),
+  }), [
+    toggleNotes,
+    toggleCommentsExpanded,
+    setReplyTarget,
+    clearReplyTarget,
+    setCommentDraft,
+    submitCommentForEntry,
+    toggleReactionPicker,
+    toggleReaction,
+    toggleReportMenu,
+    shareEntryByText,
+    openCollectionsForEntry,
+    openReportReasonSheet,
+    toggleCommentMenu,
+    canOpenEntry,
+  ]);
+
+  // ---------------------------------------------------------------------------
+  // Precompute a Set of entry IDs whose drinkingNow glow is active.
+  // Only re-runs when currentTimeMs ticks (every 60s) or entries change.
+  // Cards whose boolean hasn't changed are skipped by React.memo.
+  // ---------------------------------------------------------------------------
+  const drinkingNowActiveIds = useMemo(() => {
+    const active = new Set<string>();
+    for (const entry of entries) {
+      if (
+        entry.viewer_is_direct_friend &&
+        isDrinkingNowActive({
+          drinkingNow: entry.drinking_now,
+          createdAt: entry.created_at,
+          now: currentTimeMs,
+        })
+      ) {
+        active.add(entry.id);
+      }
+    }
+    return active;
+  }, [entries, currentTimeMs]);
+
   if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
@@ -1644,7 +1820,9 @@ export default function FeedScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.screen}
     >
-      <ScrollView
+      <FlatList<MobileFeedEntry>
+        data={entries}
+        keyExtractor={(entry) => entry.id}
         scrollEnabled={!isGallerySwipeActive}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
@@ -1673,163 +1851,102 @@ export default function FeedScreen() {
             tintColor={colors.grenache}
           />
         }
-      >
-        <AppTopBar />
+        removeClippedSubviews={Platform.OS === "android"}
+        ListHeaderComponent={
+          <View style={styles.feedListHeader}>
+            <AppTopBar />
 
-        <View style={styles.header}>
-          <AppText style={styles.eyebrow}>{FEED_EYEBROW}</AppText>
-          <AppText style={[styles.title, { fontSize: 18 }]}>{feedScope === "friends" ? FEED_TITLE_CIRCLE : FEED_TITLE_ALL}</AppText>
-        </View>
+            <View style={styles.header}>
+              <AppText style={styles.eyebrow}>{FEED_EYEBROW}</AppText>
+              <AppText style={[styles.title, { fontSize: 18 }]}>{feedScope === "friends" ? FEED_TITLE_CIRCLE : FEED_TITLE_ALL}</AppText>
+            </View>
 
-        <View style={styles.scopeRow}>
-          <Pressable
-            style={[
-              styles.scopePill,
-              feedScope === "public" ? styles.scopePillActive : null,
-            ]}
-            onPress={() => setFeedScope("public")}
-          >
-            <AppText
-              style={[
-                styles.scopePillText,
-                feedScope === "public" ? styles.scopePillTextActive : null,
-              ]}
-            >
-              {FEED_SCOPE_LABELS.public}
-            </AppText>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.scopePill,
-              feedScope === "friends" ? styles.scopePillActive : null,
-            ]}
-            onPress={() => setFeedScope("friends")}
-          >
-            <AppText
-              style={[
-                styles.scopePillText,
-                feedScope === "friends" ? styles.scopePillTextActive : null,
-              ]}
-            >
-              {FEED_SCOPE_LABELS.friends}
-            </AppText>
-          </Pressable>
-        </View>
+            <View style={styles.scopeRow}>
+              <Pressable
+                style={[
+                  styles.scopePill,
+                  feedScope === "public" ? styles.scopePillActive : null,
+                ]}
+                onPress={() => setFeedScope("public")}
+              >
+                <AppText
+                  style={[
+                    styles.scopePillText,
+                    feedScope === "public" ? styles.scopePillTextActive : null,
+                  ]}
+                >
+                  {FEED_SCOPE_LABELS.public}
+                </AppText>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.scopePill,
+                  feedScope === "friends" ? styles.scopePillActive : null,
+                ]}
+                onPress={() => setFeedScope("friends")}
+              >
+                <AppText
+                  style={[
+                    styles.scopePillText,
+                    feedScope === "friends" ? styles.scopePillTextActive : null,
+                  ]}
+                >
+                  {FEED_SCOPE_LABELS.friends}
+                </AppText>
+              </Pressable>
+            </View>
 
-
-
-        {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
-        {moderationNotice ? (
-          <View
-            style={[
-              styles.moderationNotice,
-              moderationNotice.kind === "success"
-                ? styles.moderationNoticeSuccess
-                : styles.moderationNoticeError,
-            ]}
-          >
-            <AppText style={styles.moderationNoticeText}>{moderationNotice.message}</AppText>
+            {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+            {moderationNotice ? (
+              <View
+                style={[
+                  styles.moderationNotice,
+                  moderationNotice.kind === "success"
+                    ? styles.moderationNoticeSuccess
+                    : styles.moderationNoticeError,
+                ]}
+              >
+                <AppText style={styles.moderationNoticeText}>{moderationNotice.message}</AppText>
+              </View>
+            ) : null}
           </View>
-        ) : null}
-
-        {visibleEntries.length === 0 ? (
+        }
+        ListEmptyComponent={
           <View style={styles.emptyCard}>
             <AppText style={styles.emptyText}>{getFeedEmptyStateMessage(null, false)}</AppText>
           </View>
-        ) : (
-          <View style={styles.feedStack}>
-            {visibleEntries.map((entry) => {
-              const interaction = getEntryInteractionState(entry);
-
-              return (
-                <FeedCard
-                  key={entry.id}
-                  item={entry}
-                  viewerUserId={viewerUserId}
-                  reportMenuOpen={interaction.reportMenuOpen}
-                  reportBusy={interaction.reportBusy}
-                  shareBusy={sharingEntryId === entry.id}
-                  savingCollectionEntryId={savingCollectionEntryId}
-                  notesExpanded={interaction.notesExpanded}
-                  onToggleNotes={() => toggleNotes(entry.id)}
-                  commentsExpanded={interaction.commentsExpanded}
-                  onToggleComments={() => toggleCommentsExpanded(entry.id)}
-                  onGallerySwipeStart={() =>
-                    setIsGallerySwipeActive((current) => (current ? current : true))
-                  }
-                  onGallerySwipeEnd={() =>
-                    setIsGallerySwipeActive((current) => (current ? false : current))
-                  }
-                  replyTargetName={interaction.replyTargetName}
-                  onSetReplyTarget={(commentId) => setReplyTarget(entry.id, commentId)}
-                  onClearReplyTarget={() => clearReplyTarget(entry.id)}
-                  commentCount={interaction.commentCount}
-                  comments={interaction.comments}
-                  commentsLoading={interaction.commentsLoading}
-                  commentDraft={interaction.commentDraft}
-                  onChangeCommentDraft={(value) => setCommentDraft(entry.id, value)}
-                  onSubmitComment={() => void submitCommentForEntry(entry.id)}
-                  postingComment={interaction.postingComment}
-                  commentError={interaction.commentError}
-                  commentMenuKey={interaction.commentMenuKey}
-                  reportingCommentId={interaction.reportingCommentId}
-                  reactionPickerOpen={interaction.reactionPickerOpen}
-                  onToggleReactionPicker={() => toggleReactionPicker(entry.id)}
-                  onToggleReaction={(emoji) => void toggleReaction(entry.id, emoji)}
-                  onToggleReportMenu={() => toggleReportMenu(entry.id)}
-                  onSharePost={() => void shareEntryByText(entry.id)}
-                  onSavePost={(entryId) => void openCollectionsForEntry(entryId)}
-                  onReportPost={() =>
-                    openReportReasonSheet({
-                      targetType: "entry",
-                      entryId: entry.id,
-                      targetUserId: entry.user_id,
-                    })
-                  }
-                  onToggleCommentMenu={(commentId) => toggleCommentMenu(entry.id, commentId)}
-                  onReportComment={(commentId, targetUserId) =>
-                    openReportReasonSheet({
-                      targetType: "comment",
-                      entryId: entry.id,
-                      commentId,
-                      targetUserId,
-                    })
-                  }
-                  onOpenAuthorProfile={() =>
-                    entry.user_id === viewerUserId
-                      ? router.push("/(app)/profile")
-                      : router.push(`/(app)/profile/${entry.user_id}`)
-                  }
-                  canOpenEntry={canOpenEntry}
-                  onOpenEntry={() => router.push(`/(app)/entries/${entry.id}`)}
-                  showDrinkingNowGlow={
-                    entry.viewer_is_direct_friend &&
-                    isDrinkingNowActive({
-                      drinkingNow: entry.drinking_now,
-                      createdAt: entry.created_at,
-                      now: currentTimeMs,
-                    })
-                  }
-                />
-              );
-            })}
-          </View>
-        )}
-
-        {hasMore ? (
-          <Pressable
-            style={styles.loadMoreButton}
-            disabled={isLoadingMore}
-            onPress={() => void loadMore()}
-          >
-            {isLoadingMore ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <AppText style={styles.loadMoreText}>{FEED_LOAD_MORE_LABEL}</AppText>
-            )}
-          </Pressable>
-        ) : null}
-      </ScrollView>
+        }
+        ItemSeparatorComponent={() => <View style={styles.feedItemSeparator} />}
+        renderItem={({ item: entry }) => {
+          const interaction = getEntryInteractionState(entry);
+          return (
+            <FeedCardContainer
+              entry={entry}
+              viewerUserId={viewerUserId}
+              interaction={interaction}
+              sharingEntryId={sharingEntryId}
+              savingCollectionEntryId={savingCollectionEntryId}
+              handlers={cardHandlers}
+              showDrinkingNowGlow={drinkingNowActiveIds.has(entry.id)}
+            />
+          );
+        }}
+        ListFooterComponent={
+          hasMore ? (
+            <Pressable
+              style={styles.loadMoreButton}
+              disabled={isLoadingMore}
+              onPress={() => void loadMore()}
+            >
+              {isLoadingMore ? (
+                <ActivityIndicator color={colors.textPrimary} />
+              ) : (
+                <AppText style={styles.loadMoreText}>{FEED_LOAD_MORE_LABEL}</AppText>
+              )}
+            </Pressable>
+          ) : null
+        }
+      />
 
       <CollectionPickerModal
         visible={collectionPickerOpen}
@@ -1940,7 +2057,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 16,
     paddingBottom: 28,
+  },
+  feedListHeader: {
     gap: 12,
+    marginBottom: 12,
+  },
+  feedItemSeparator: {
+    height: 24, // matches old feedStack gap: 24 (Dani Round 3 Task 9a)
   },
   header: {
     gap: 5,
