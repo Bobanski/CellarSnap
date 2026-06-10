@@ -119,18 +119,16 @@ test.describe("WS3 list scan parse handler", () => {
     expect(savedUserId).toBe("user-1");
   });
 
-  test("guest scans still parse without persistence", async () => {
+  test("guest scans are rejected before parsing", async () => {
     let saveCalled = false;
-    let requesterId = "";
-    let parsedUserId: string | null | undefined = "unexpected";
+    let parseCalled = false;
 
     const handler = createListScanParseHandler({
       requireRequestAuth: async () => {
         throw new RequestAuthError("Unauthorized");
       },
-      parseWineListSource: async (params) => {
-        requesterId = params.requesterId;
-        parsedUserId = params.userId;
+      parseWineListSource: async () => {
+        parseCalled = true;
         return baseResult;
       },
       saveListScanResult: async () => {
@@ -151,13 +149,17 @@ test.describe("WS3 list scan parse handler", () => {
       })
     );
 
-    expect(response.status).toBe(200);
-    expect(parsedUserId).toBeUndefined();
-    expect(requesterId).toBe("guest:203.0.113.7");
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    expect(parseCalled).toBeFalsy();
     expect(saveCalled).toBeFalsy();
   });
 
-  test("inference preserves extracted varietals when appending inferred grapes", () => {
+  // Design decision (ce7f679, reaffirmed 2026-06-10): the list's stated
+  // varietals are source of truth. DB inference never appends blend
+  // partners to a wine that already names its grapes — it only fills the
+  // gap when the list provided none.
+  test("inference keeps extracted varietals untouched and only fills gaps", () => {
     const inferenceMap: ListScanInferenceMap = {
       appellationToGrapes: new Map([
         [
@@ -178,7 +180,7 @@ test.describe("WS3 list scan parse handler", () => {
       regionAliases: new Map(),
     };
 
-    const enriched = __listScanTestUtils.applyInferenceToWine(
+    const withExtracted = __listScanTestUtils.applyInferenceToWine(
       {
         ...baseResult.wines[0],
         wine_type: "unknown",
@@ -188,9 +190,22 @@ test.describe("WS3 list scan parse handler", () => {
       inferenceMap
     );
 
-    expect(enriched.varietals).toEqual(["Sauvignon Blanc", "Semillon"]);
-    expect(enriched.regions).toEqual(["Graves", "France", "Bordeaux"]);
-    expect(enriched.wine_type).toBe("white");
+    expect(withExtracted.varietals).toEqual(["Sauvignon Blanc"]);
+    expect(withExtracted.regions).toEqual(["Graves", "France", "Bordeaux"]);
+    expect(withExtracted.wine_type).toBe("white");
+
+    const withoutExtracted = __listScanTestUtils.applyInferenceToWine(
+      {
+        ...baseResult.wines[0],
+        wine_type: "unknown",
+        varietals: [],
+        regions: ["Graves"],
+      },
+      inferenceMap
+    );
+
+    expect(withoutExtracted.varietals).toEqual(["Sauvignon Blanc", "Semillon"]);
+    expect(withoutExtracted.wine_type).toBe("white");
   });
 
   test("inference normalizes United States country labels to USA", () => {

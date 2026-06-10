@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   SOMMELIER_INTRO_MESSAGE,
   SOMMELIER_COLD_GREETINGS,
@@ -8,8 +9,12 @@ import {
   type AudienceMode,
 } from "@shared";
 import SommelierInput from "@/features/sommelier/SommelierInput";
-import SommelierMessage from "@/features/sommelier/SommelierMessage";
 import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
+
+const SommelierMessage = dynamic(
+  () => import("@/features/sommelier/SommelierMessage"),
+  { ssr: false, loading: () => null }
+);
 
 type ChatMessage = {
   id: string;
@@ -317,18 +322,20 @@ export default function SommelierChat() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={resetChat}
-          disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/35 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Clear chat"
-        >
-          <span aria-hidden="true">×</span>
-          <span>Clear chat</span>
-        </button>
-      </div>
+      {!showSuggestions ? (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={resetChat}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/35 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Clear chat"
+          >
+            <span aria-hidden="true">×</span>
+            <span>Clear chat</span>
+          </button>
+        </div>
+      ) : null}
 
       <div
         role="log"

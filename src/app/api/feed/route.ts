@@ -147,10 +147,12 @@ export async function GET(request: Request) {
     Number.isFinite(rawLimit) && rawLimit > 0
       ? Math.min(50, Math.max(1, rawLimit))
       : 30;
-  const viewerIsTestAccount = await isTestAccount(supabase, user.id);
-
-  const blockedUserIdsSet = await getBlockedEitherWayUserIds(supabase, user.id);
-  const acceptedFriendIdsSet = await getAcceptedFriendIds(supabase, user.id);
+  const [viewerIsTestAccount, blockedUserIdsSet, acceptedFriendIdsSet] =
+    await Promise.all([
+      isTestAccount(supabase, user.id),
+      getBlockedEitherWayUserIds(supabase, user.id),
+      getAcceptedFriendIds(supabase, user.id),
+    ]);
   const friendIds = Array.from(acceptedFriendIdsSet).filter(
     (id) => !blockedUserIdsSet.has(id)
   );
@@ -263,6 +265,7 @@ export async function GET(request: Request) {
   let nextCursorAnchor: FeedCursorPosition | null = null;
   let lastScannedRow: FeedCursorPosition | null = null;
   let has_more = false;
+  const testAccountStatusCache = new Map<string, boolean>();
 
   for (let attemptIndex = 0; attemptIndex < MAX_FEED_ITERATIONS; attemptIndex += 1) {
     const entrySelectResult = await executeSelectWithFallback({
@@ -376,10 +379,14 @@ export async function GET(request: Request) {
     }
 
     let reachedOverflow = false;
-    const ownerTestAccountStatuses = await getTestAccountStatusMap(
-      supabase,
-      rawRows.map((row) => row.user_id)
-    );
+    const uncachedUserIds = Array.from(
+      new Set(rawRows.map((row) => row.user_id))
+    ).filter((id) => !testAccountStatusCache.has(id));
+    if (uncachedUserIds.length > 0) {
+      const freshStatuses = await getTestAccountStatusMap(supabase, uncachedUserIds);
+      freshStatuses.forEach((value, key) => testAccountStatusCache.set(key, value));
+    }
+    const ownerTestAccountStatuses = testAccountStatusCache;
 
     for (const row of rawRows) {
       const dedupeKey =
@@ -477,9 +484,11 @@ export async function GET(request: Request) {
     : null;
 
   const entryIds = pageEntries.map((entry) => entry.id);
-  const authorTestAccountStatuses = await getTestAccountStatusMap(
-    supabase,
-    pageEntries.map((entry) => entry.user_id)
+  const authorTestAccountStatuses = new Map<string, boolean>(
+    pageEntries.map((entry) => [
+      entry.user_id,
+      testAccountStatusCache.get(entry.user_id) ?? false,
+    ])
   );
   const groupedPostByEntryId = await resolveGroupedPostData(
     supabase,

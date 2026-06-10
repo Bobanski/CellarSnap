@@ -21,8 +21,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
-    "exifreader": "^4.36.1",
-    "next": "16.1.6",
+    "exifreader": "^4.40.5",
+    "next": "^16.2.7",
     "openai": "^6.18.0",
     "papaparse": "^5.5.3",
     "pdf-parse": "^2.4.5",
@@ -30,8 +30,8 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
     "react-markdown": "^10.1.0",
+    "read-excel-file": "^9.1.1",
     "rehype-sanitize": "^6.0.0",
-    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -43,7 +43,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "^16.2.7",
     "supabase": "^2.78.1",
     "tailwindcss": "^4",
     "typescript": "5.9.3"

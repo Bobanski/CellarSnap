@@ -70,7 +70,7 @@ export function createPasswordSignInHandler(
   };
 
   return async function POST(request: Request) {
-    const rateLimit = applyRateLimit({
+    const rateLimit = await applyRateLimit({
       request,
       routeKey: "password-sign-in",
       windowMs: RATE_LIMIT_WINDOW_MS,

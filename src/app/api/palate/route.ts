@@ -12,7 +12,6 @@ import {
 } from "@/lib/algorithm/matchUi";
 import { normalizeAdvancedNotes } from "@/lib/advancedNotes";
 import { executeSelectWithFallback } from "@/server/db/compat";
-import { SENSORY_AXES } from "@/server/algorithm/types";
 import type { SensoryAxis } from "@/server/algorithm/types";
 import {
   buildUserPreferenceVector,
@@ -46,8 +45,6 @@ const entryRowSchema = z.object({
   producer: z.union([z.string(), z.null()]).optional(),
   classification: z.union([z.string(), z.null()]).optional(),
 });
-
-type EntryRow = z.infer<typeof entryRowSchema>;
 
 const PALATE_RADAR_GROUPS: { key: string; label: string; axes: SensoryAxis[] }[] = [
   { key: "structure", label: "Structure", axes: ["body", "acidity", "tannin", "alcohol_perception"] },

@@ -3442,7 +3442,7 @@ export default function NewEntryPage() {
                     className="flex w-full items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 text-left transition hover:bg-[var(--color-surface-hover)] last:border-b-0 cursor-pointer"
                   >
                     {wine.label_image_url ? (
-                      <img
+                      <AppImage
                         src={wine.label_image_url}
                         alt=""
                         className="h-10 w-10 shrink-0 rounded-lg object-cover"

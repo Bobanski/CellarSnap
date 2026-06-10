@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { resolvePostSaveSurveyTransition } from "@cellarsnap/shared";
+import { resolvePostSaveSurveyTransition, type EnjoymentIntentResponse } from "@cellarsnap/shared";
 import {
   persistPostSaveComparisonResponse,
   persistPostSaveSurveyAnswers,
@@ -16,7 +16,7 @@ export type SurveyExpectationsResponse =
   | "below_expectations"
   | "met_expectations"
   | "above_expectations";
-export type SurveyEnjoymentIntentResponse = "seek_more" | "happily_again" | "if_poured" | "pass";
+export type SurveyEnjoymentIntentResponse = EnjoymentIntentResponse;
 
 export type SurveyComparisonCandidate = {
   id: string;

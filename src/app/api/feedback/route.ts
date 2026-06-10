@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const rateLimit = applyRateLimit({
+  const rateLimit = await applyRateLimit({
     request,
     routeKey: "feedback-submit",
     windowMs: RATE_LIMIT_WINDOW_MS,

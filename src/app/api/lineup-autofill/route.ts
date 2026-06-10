@@ -424,7 +424,7 @@ export async function POST(request: Request) {
   }
   const { user } = auth;
 
-  const rateLimit = applyRateLimit({
+  const rateLimit = await applyRateLimit({
     request,
     routeKey: "lineup-autofill",
     windowMs: RATE_LIMIT_WINDOW_MS,

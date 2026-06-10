@@ -21,13 +21,6 @@ const SECTION_BORDER = "rgba(196,96,122,0.06)";
 const SERIF = "var(--font-serif)";
 const SANS = "var(--font-sans)";
 
-const ACCENTS: Record<string, string> = {
-  region: GRENACHE,
-  grape: NEBBIOLO,
-  producer: ROSE,
-  concept: VERDOT,
-};
-
 // ─── Types ─────────────────────────────────────────────────
 
 type ProfileType = "grape" | "region" | "producer" | "concept";
@@ -361,7 +354,7 @@ function RegionPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse; h
         ) : (
           <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)" }}>
             <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>
-              You haven't explored {profile.display_name} yet. Log your first wine from here to start tracking your taste across this region.
+              You haven&apos;t explored {profile.display_name} yet. Log your first wine from here to start tracking your taste across this region.
             </p>
           </div>
         )}
@@ -524,7 +517,7 @@ function VarietalPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
           </>
         ) : (
           <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)" }}>
-            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>You haven't logged any {profile.display_name} wines yet. Start exploring this grape to discover your personal preferences.</p>
+            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>You haven&apos;t logged any {profile.display_name} wines yet. Start exploring this grape to discover your personal preferences.</p>
           </div>
         )}
       </Section>
@@ -637,12 +630,12 @@ function ProducerPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
         <SectionLabel color={ROSE}>YOUR {profile.display_name.toUpperCase()}</SectionLabel>
         {hasLogs ? (
           <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.55)", lineHeight: 1.6 }}>
-            You've opened <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "bottle" : "bottles"}</span>
+            You&apos;ve opened <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{personal_stats.entry_count} {personal_stats.entry_count === 1 ? "bottle" : "bottles"}</span>
             {personal_stats.avg_rating > 0 ? <>. Your average rating: <span style={{ color: VIOGNIER, fontWeight: 600 }}>{personal_stats.avg_rating.toFixed(1)}</span></> : null}.
           </p>
         ) : (
           <div style={{ background: "rgba(196,96,122,0.1)", borderRadius: 8, padding: "9px 12px", borderLeft: "2px solid rgba(196,96,122,0.5)" }}>
-            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>You haven't logged any {profile.display_name} wines yet. Open your first bottle to start tracking.</p>
+            <p style={{ fontFamily: SANS, fontSize: 11, color: "rgba(245,237,214,0.85)", lineHeight: 1.55 }}>You haven&apos;t logged any {profile.display_name} wines yet. Open your first bottle to start tracking.</p>
           </div>
         )}
       </Section>
@@ -739,22 +732,33 @@ export default function ExploreProfilePage() {
 
   useEffect(() => {
     if (!rawType || !rawSlug) return;
-    setLoading(true);
-    setError(null);
-    setData(null);
-    setHeroFailed(false);
+    let cancelled = false;
 
-    fetch(`/api/explore/${encodeURIComponent(rawType)}/${encodeURIComponent(rawSlug)}`)
-      .then(async (res) => {
+    const loadProfile = async () => {
+      setLoading(true);
+      setError(null);
+      setData(null);
+      setHeroFailed(false);
+
+      try {
+        const res = await fetch(`/api/explore/${encodeURIComponent(rawType)}/${encodeURIComponent(rawSlug)}`);
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           throw new Error(payload.error ?? "Failed to load profile");
         }
-        return res.json();
-      })
-      .then((json) => setData(json as ProfileResponse))
-      .catch((err) => setError(err instanceof Error ? err.message : "Something went wrong"))
-      .finally(() => setLoading(false));
+        const json = await res.json();
+        if (!cancelled) setData(json as ProfileResponse);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadProfile();
+    return () => {
+      cancelled = true;
+    };
   }, [rawType, rawSlug]);
 
   if (loading) {

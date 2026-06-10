@@ -166,9 +166,9 @@ test.describe("Phase 6 entry/share access helpers", () => {
     ).toEqual(["public"]);
   });
 
-  test("share access helper restricts management to the owner", () => {
-    expect(canManageEntryShare("user-1", "user-1")).toBeTruthy();
-    expect(canManageEntryShare("user-1", "user-2")).toBeFalsy();
+  test("share access helper restricts management to public entries", () => {
+    expect(canManageEntryShare("public")).toBeTruthy();
+    expect(canManageEntryShare("friends")).toBeFalsy();
   });
 
   test("entry schemas keep price triplet rules aligned", () => {

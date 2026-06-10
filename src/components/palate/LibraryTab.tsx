@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import Photo from "@/components/Photo";
 
 const GRENACHE = "#7B1D3A";
@@ -128,7 +127,6 @@ function FilterDropdown({
 // ── Main component ─────────────────────────────────────────────
 
 export function LibraryTab() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

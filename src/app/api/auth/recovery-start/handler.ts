@@ -66,7 +66,7 @@ export function createRecoveryStartHandler(
   };
 
   return async function POST(request: Request) {
-    const rateLimit = applyRateLimit({
+    const rateLimit = await applyRateLimit({
       request,
       routeKey: "recovery-start",
       windowMs: RATE_LIMIT_WINDOW_MS,

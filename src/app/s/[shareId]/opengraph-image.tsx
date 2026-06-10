@@ -270,7 +270,6 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
                 {previewImageUrl ? (
                   <>
                     {/* next/og requires a plain img tag for remote image rendering */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={previewImageUrl}
                       alt="Post preview"

@@ -107,6 +107,8 @@ type HomeInteractionSettingsRow = {
 type RecentEntry = HomeApiRecentEntry;
 type CircleEntry = HomeApiCircleEntry;
 
+const BACKGROUND_REFRESH_STALE_MS = 90_000;
+
 function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
 }
@@ -425,6 +427,7 @@ function HomeEntryCard({
 export default function HomeScreen() {
   const { user, hasPrivateBetaFeatureAccess } = useAuth();
   const hasLoadedHomeRef = useRef(false);
+  const lastLoadedAtRef = useRef<number | null>(null);
   const [viewerReactionName, setViewerReactionName] = useState<string | null>(null);
   const [defaultEntryPrivacy, setDefaultEntryPrivacy] = useState<PrivacyLevel>("public");
   const [privacyConfirmedAt, setPrivacyConfirmedAt] = useState<string | null>(null);
@@ -482,6 +485,7 @@ export default function HomeScreen() {
         const apiResult = await fetchMobileHomeFromApi();
         if (apiResult.ok) {
           applyHomePayload(apiResult.payload);
+          lastLoadedAtRef.current = Date.now();
           return;
         }
 
@@ -867,6 +871,7 @@ export default function HomeScreen() {
           recentEntries: recent,
           circleEntries: circle,
         });
+        lastLoadedAtRef.current = Date.now();
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "Unable to load home right now."
@@ -887,7 +892,12 @@ export default function HomeScreen() {
         return;
       }
 
-      void loadHome(true);
+      const msSinceLastLoad = lastLoadedAtRef.current
+        ? Date.now() - lastLoadedAtRef.current
+        : Infinity;
+      if (msSinceLastLoad >= BACKGROUND_REFRESH_STALE_MS) {
+        void loadHome(true);
+      }
     }, [loadHome])
   );
 

@@ -7,10 +7,8 @@ import AppImage from "@/components/AppImage";
 const GRENACHE = "#7B1D3A";
 const NEBBIOLO = "#4A3060";
 const ROSE = "#C4607A";
-const CHAMPAGNE = "#F0ECE4";
+const CHAMPAGNE = "#F5EDD6";
 const FOG = "#A08878";
-const VIOGNIER = "#C9A84C";
-
 export type PalateProfile = {
   display_name: string | null;
   avatar_url: string | null;

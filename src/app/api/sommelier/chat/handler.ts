@@ -72,7 +72,7 @@ export function createSommelierChatHandler(
     void createPrivateBetaFeatureDeniedResponse;
     void userHasPrivateBetaFeatureAccess;
 
-    const rateLimit = applyRateLimit({
+    const rateLimit = await applyRateLimit({
       request,
       routeKey: "sommelier-chat",
       windowMs: RATE_LIMIT_WINDOW_MS,

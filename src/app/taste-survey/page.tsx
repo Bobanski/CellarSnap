@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   WINE_TYPE_OPTIONS,
-  STARTER_GRAPES,
   STARTER_REGIONS,
   WINE_REGIONS,
   COMMON_GRAPES,
@@ -14,14 +13,12 @@ import {
   BUDGET_RETAIL_OPTIONS,
   ADVENTUROUSNESS_MIN,
   ADVENTUROUSNESS_MAX,
-  ADVENTUROUSNESS_DEFAULT,
   TASTE_SURVEY_STEP_COUNT,
   describeAdventurousness,
   emptyTasteSurveyDraft,
   draftToPayload,
   rowToDraft,
   type TasteSurveyDraft,
-  type TasteSurveyRow,
 } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -171,7 +168,7 @@ function SearchChipSelect({
 
   useEffect(() => {
     if (query.length < 2) {
-      setResults([]);
+      queueMicrotask(() => setResults([]));
       return;
     }
 

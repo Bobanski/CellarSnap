@@ -859,7 +859,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surfaceTinted,
   },
   modalDismissLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   visibilityGrid: {
     flexDirection: "row",
@@ -1190,7 +1190,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
   },
   cropFrameOutline: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 2,
     borderColor: colors.accentPrimary,
   },

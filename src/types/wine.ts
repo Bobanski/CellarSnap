@@ -4,6 +4,7 @@ import type {
   PricePaidSource,
   QprLevel,
 } from "@/lib/entryMeta";
+import type { PrivacyLevel } from "@shared";
 
 export const WINE_TYPE_VALUES = [
   "red",
@@ -16,7 +17,7 @@ export const WINE_TYPE_VALUES = [
 
 export type WineType = (typeof WINE_TYPE_VALUES)[number];
 
-export type PrivacyLevel = "public" | "friends_of_friends" | "friends" | "private";
+export type { PrivacyLevel };
 
 export type UserSummary = {
   id: string;

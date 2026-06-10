@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import * as Linking from "expo-linking";
 import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
-import { canAccessPrivateBetaFeatures } from "@cellarsnap/shared";
 import { handleIncomingAuthUrl } from "@/src/lib/authRedirect";
 import { supabase } from "@/src/lib/supabase";
 
@@ -16,56 +15,20 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function isMissingTestAccountSchemaError(message: string) {
-  const lower = message.toLowerCase();
-  return (
-    lower.includes("is_test_account") ||
-    (lower.includes("column") && lower.includes("does not exist")) ||
-    (lower.includes("relation") && lower.includes("does not exist"))
-  );
-}
+// Beta gate removed (PR #62 follow-up): every signed-in user sees the
+// Sommelier + List Scan tabs. Kept in the context shape so consumers
+// don't churn; revert by reintroducing a real access check here.
+const HAS_PRIVATE_BETA_FEATURE_ACCESS = true;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
-  // Beta gate removed (PR #62 follow-up). Default flipped to `true` so
-  // every signed-in user sees Sommelier + List Scan tabs and can call
-  // their APIs. setHasPrivateBetaFeatureAccess is preserved so the
-  // existing async checks in useEffect still execute without TS errors;
-  // they may flip the value back to true (no-op) or false in edge cases
-  // — re-set to true after to honor the ungate. Easy revert: change
-  // the initial value back to false and remove the override below.
-  const [hasPrivateBetaFeatureAccess, setHasPrivateBetaFeatureAccess] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
     if (AppState.currentState === "active") {
       supabase.auth.startAutoRefresh();
     }
-
-    const resolveAccessForUser = async (user: User | null) => {
-      if (!user) {
-        return false;
-      }
-      if (canAccessPrivateBetaFeatures(user.email)) {
-        return true;
-      }
-
-      const { data, error } = await supabase
-        .from("public_profiles")
-        .select("is_test_account")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        if (isMissingTestAccountSchemaError(error.message)) {
-          return false;
-        }
-        throw new Error(error.message);
-      }
-
-      return Boolean(data?.is_test_account);
-    };
 
     const bootstrap = async () => {
       try {
@@ -82,11 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getSession();
       if (isMounted) {
         setSession(currentSession);
-        // Beta gate removed (PR #62 follow-up). Resolve runs only to keep
-        // the supabase round-trip warm/cached; result is ignored and the
-        // flag is forced true.
-        await resolveAccessForUser(currentSession?.user ?? null);
-        setHasPrivateBetaFeatureAccess(true);
         setIsReady(true);
       }
     };
@@ -104,16 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void (async () => {
-        if (!isMounted) {
-          return;
-        }
-        setSession(nextSession);
-        // Beta gate removed (PR #62 follow-up).
-        await resolveAccessForUser(nextSession?.user ?? null);
-        setHasPrivateBetaFeatureAccess(true);
-        setIsReady(true);
-      })();
+      if (!isMounted) {
+        return;
+      }
+      setSession(nextSession);
+      setIsReady(true);
     });
 
     const appStateSubscription = AppState.addEventListener("change", (state) => {
@@ -140,12 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       isReady,
-      hasPrivateBetaFeatureAccess,
+      hasPrivateBetaFeatureAccess: HAS_PRIVATE_BETA_FEATURE_ACCESS,
       signOut: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [hasPrivateBetaFeatureAccess, isReady, session]
+    [isReady, session]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

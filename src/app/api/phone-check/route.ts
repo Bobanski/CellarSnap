@@ -13,7 +13,7 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 180;
 
 export async function POST(request: Request) {
-  const rateLimit = applyRateLimit({
+  const rateLimit = await applyRateLimit({
     request,
     routeKey: "phone-check",
     windowMs: RATE_LIMIT_WINDOW_MS,

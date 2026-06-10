@@ -82,12 +82,7 @@ function RadarChart({ points }: { points: RadarPoint[] }) {
 
           {/* Spokes + labels */}
           {points.map((point, i) => {
-            const angle = (Math.PI * 2 * i) / points.length - Math.PI / 2;
             const end = toXY(sMax, i, points.length, radius, cx, cy, sMin, sMax);
-            const lr = radius + 22;
-            const lx = cx + Math.cos(angle) * lr;
-            const ly = cy + Math.sin(angle) * lr;
-            const anchor = lx < cx - 10 ? "end" : lx > cx + 10 ? "start" : "middle";
             return (
               <Line key={point.key} x1={cx} y1={cy} x2={end.x} y2={end.y} stroke="rgba(196,96,122,0.06)" strokeWidth={1} />
             );

@@ -8,12 +8,12 @@ import {
   normalizePrivacyValue,
   resolveInteractionAccessForViewer,
 } from "@/lib/access/interactionVisibility";
-import { isTestAccount } from "@/lib/access/testAccounts";
+import { getTestAccountStatusMap, isTestAccount } from "@/lib/access/testAccounts";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
-import { signPhotoUrl } from "@/server/storage/signedUrls";
+import { signPhotoUrls } from "@/server/storage/signedUrls";
 
 type HomeEntryRow = Record<string, unknown> & {
   id: string;
@@ -72,35 +72,96 @@ export async function GET(request: Request) {
 
   const { supabase, user } = auth;
 
-  const viewerIsTestAccount = await isTestAccount(supabase, user.id);
+  const [
+    viewerIsTestAccount,
+    profileSelectResult,
+    { count: totalEntryCount },
+    ownEntriesResult,
+    { data: friendRows },
+  ] = await Promise.all([
+    isTestAccount(supabase, user.id),
+    executeSelectWithFallback({
+      attempts: [
+        {
+          select:
+            "display_name, first_name, default_entry_privacy, privacy_confirmed_at",
+          missingColumns: ["default_entry_privacy", "privacy_confirmed_at"] as const,
+          includesPrivacyDefaults: true,
+        },
+        {
+          select: "display_name, first_name, created_at",
+          missingColumns: [] as const,
+          includesPrivacyDefaults: false,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      attempt: async (attempt) => {
+        const response = await supabase
+          .from("profiles")
+          .select(attempt.select)
+          .eq("id", user.id)
+          .maybeSingle();
+        return {
+          data: response.data,
+          error: response.error,
+        };
+      },
+    }),
+    supabase
+      .from("wine_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("entry_status", "consumed"),
+    executeSelectWithFallback({
+      attempts: [
+        {
+          withFeedVisibilityFilter: true,
+          withEntryStatusFilter: true,
+          missingColumns: ["is_feed_visible", "entry_status"] as const,
+        },
+        {
+          withFeedVisibilityFilter: true,
+          withEntryStatusFilter: false,
+          missingColumns: ["is_feed_visible"] as const,
+        },
+        {
+          withFeedVisibilityFilter: false,
+          withEntryStatusFilter: false,
+          missingColumns: [] as const,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      fallbackOnAnyMissingColumn: true,
+      attempt: async (attempt) => {
+        let query = supabase
+          .from("wine_entries")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("consumed_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(12);
 
-  const profileSelectResult = await executeSelectWithFallback({
-    attempts: [
-      {
-        select:
-          "display_name, first_name, default_entry_privacy, privacy_confirmed_at",
-        missingColumns: ["default_entry_privacy", "privacy_confirmed_at"] as const,
-        includesPrivacyDefaults: true,
+        if (attempt.withFeedVisibilityFilter) {
+          query = query.eq("is_feed_visible", true);
+        }
+
+        if (attempt.withEntryStatusFilter) {
+          query = query.eq("entry_status", "consumed");
+        }
+
+        const response = await query;
+        return {
+          data: response.data,
+          error: response.error,
+        };
       },
-      {
-        select: "display_name, first_name, created_at",
-        missingColumns: [] as const,
-        includesPrivacyDefaults: false,
-      },
-    ],
-    getFallbackColumns: (attempt) => attempt.missingColumns,
-    attempt: async (attempt) => {
-      const response = await supabase
-        .from("profiles")
-        .select(attempt.select)
-        .eq("id", user.id)
-        .maybeSingle();
-      return {
-        data: response.data,
-        error: response.error,
-      };
-    },
-  });
+    }),
+    supabase
+      .from("friend_requests")
+      .select("requester_id, recipient_id")
+      .eq("status", "accepted")
+      .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`),
+  ]);
 
   if (profileSelectResult.error) {
     return NextResponse.json(
@@ -122,57 +183,6 @@ export async function GET(request: Request) {
         }
     : null;
 
-  const { count: totalEntryCount } = await supabase
-    .from("wine_entries")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("entry_status", "consumed");
-
-  const ownEntriesResult = await executeSelectWithFallback({
-    attempts: [
-      {
-        withFeedVisibilityFilter: true,
-        withEntryStatusFilter: true,
-        missingColumns: ["is_feed_visible", "entry_status"] as const,
-      },
-      {
-        withFeedVisibilityFilter: true,
-        withEntryStatusFilter: false,
-        missingColumns: ["is_feed_visible"] as const,
-      },
-      {
-        withFeedVisibilityFilter: false,
-        withEntryStatusFilter: false,
-        missingColumns: [] as const,
-      },
-    ],
-    getFallbackColumns: (attempt) => attempt.missingColumns,
-    fallbackOnAnyMissingColumn: true,
-    attempt: async (attempt) => {
-      let query = supabase
-        .from("wine_entries")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("consumed_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(12);
-
-      if (attempt.withFeedVisibilityFilter) {
-        query = query.eq("is_feed_visible", true);
-      }
-
-      if (attempt.withEntryStatusFilter) {
-        query = query.eq("entry_status", "consumed");
-      }
-
-      const response = await query;
-      return {
-        data: response.data,
-        error: response.error,
-      };
-    },
-  });
-
   if (ownEntriesResult.error) {
     return NextResponse.json(
       { error: ownEntriesResult.error.message },
@@ -183,12 +193,6 @@ export async function GET(request: Request) {
   const ownEntries = dedupeHomeEntries(
     ((ownEntriesResult.data ?? []) as HomeEntryRow[]).slice(0, 12)
   ).slice(0, HOME_RECENT_ENTRIES_LIMIT);
-
-  const { data: friendRows } = await supabase
-    .from("friend_requests")
-    .select("requester_id, recipient_id")
-    .eq("status", "accepted")
-    .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
 
   const friendIds = Array.from(
     new Set(
@@ -398,17 +402,32 @@ export async function GET(request: Request) {
   const profileMap = new Map(
     (friendProfiles ?? []).map((profile) => [profile.id, profile])
   );
-  const avatarUrlEntries = await Promise.all(
-    (friendProfiles ?? []).map(async (profile) => [
-      profile.id,
-      await signPhotoUrl(profile.avatar_path ?? null, supabase),
-    ] as const)
-  );
-  const avatarUrlByUserId = new Map(avatarUrlEntries);
   const acceptedFriendIds = new Set(friendIds);
-  const friendsOfFriendsIds = viewerIsTestAccount
-    ? new Set<string>()
-    : await getFriendsOfFriendsIds(supabase, user.id, acceptedFriendIds);
+
+  const pathsToSign = new Set<string>();
+  (friendProfiles ?? []).forEach((profile) => {
+    if (profile.avatar_path) {
+      pathsToSign.add(profile.avatar_path);
+    }
+  });
+  allEntries.forEach((entry) => {
+    const labelPath = labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path);
+    if (labelPath) {
+      pathsToSign.add(labelPath);
+    }
+  });
+
+  const [friendsOfFriendsIds, ownerTestAccountStatuses, signedUrlByPath] =
+    await Promise.all([
+      viewerIsTestAccount
+        ? Promise.resolve(new Set<string>())
+        : getFriendsOfFriendsIds(supabase, user.id, acceptedFriendIds),
+      getTestAccountStatusMap(
+        supabase,
+        Array.from(new Set(allEntries.map((entry) => entry.user_id)))
+      ),
+      signPhotoUrls(pathsToSign, supabase),
+    ]);
 
   const resolveEntryAccess = (entry: HomeEntryRow) => {
     const entryPrivacy = normalizePrivacyValue(entry.entry_privacy, "public");
@@ -430,7 +449,14 @@ export async function GET(request: Request) {
       ),
       acceptedFriendIds,
       friendsOfFriendsIds,
+      viewerIsTestAccount,
+      ownerIsTestAccount: ownerTestAccountStatuses.get(entry.user_id) ?? false,
     });
+  };
+
+  const getLabelImageUrl = (entry: HomeEntryRow) => {
+    const labelPath = labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path);
+    return labelPath ? signedUrlByPath.get(labelPath) ?? null : null;
   };
 
   const buildReactionUsers = (entryId: string) =>
@@ -463,10 +489,7 @@ export async function GET(request: Request) {
               []
             ).map((id) => getPublicProfileName(profileMap.get(id)))
           : [],
-        label_image_url: await signPhotoUrl(
-          labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
-          supabase
-        ),
+        label_image_url: getLabelImageUrl(entry),
         photo_gallery: groupedPost?.photo_gallery ?? [],
         entry_group: groupedPost?.entry_group ?? null,
         group_slides: groupedPost?.group_slides ?? [],
@@ -506,11 +529,10 @@ export async function GET(request: Request) {
             ).map((id) => getPublicProfileName(profileMap.get(id)))
           : [],
         author_name: getPublicProfileName(profileMap.get(entry.user_id)),
-        author_avatar_url: avatarUrlByUserId.get(entry.user_id) ?? null,
-        label_image_url: await signPhotoUrl(
-          labelMap.get(entry.id) ?? normalizeNullableString(entry.label_image_path),
-          supabase
-        ),
+        author_avatar_url: profileMap.get(entry.user_id)?.avatar_path
+          ? signedUrlByPath.get(profileMap.get(entry.user_id)?.avatar_path ?? "") ?? null
+          : null,
+        label_image_url: getLabelImageUrl(entry),
         photo_gallery: groupedPost?.photo_gallery ?? [],
         entry_group: groupedPost?.entry_group ?? null,
         group_slides: groupedPost?.group_slides ?? [],

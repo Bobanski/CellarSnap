@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
   const { user } = auth;
 
-  const rateLimit = applyRateLimit({
+  const rateLimit = await applyRateLimit({
     request,
     routeKey: "photo-context",
     windowMs: RATE_LIMIT_WINDOW_MS,
