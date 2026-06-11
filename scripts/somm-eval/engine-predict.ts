@@ -26,8 +26,8 @@ import type { TasteSurveyRow } from "@/server/algorithm/surveySeeding";
 import type {
   AssembleWineProfileInput,
   EffectiveWineProfile,
-  WineType,
 } from "@/server/algorithm/types";
+import type { WineType } from "@/types/wine";
 
 // Score gaps below this are treated as a tie — the engine's sigmoid puts
 // meaningful style differences well above a 2-point spread.
