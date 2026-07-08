@@ -7,6 +7,7 @@ Required environment variables (in `.env.local`):
 - `SUPABASE_SERVICE_ROLE_KEY` (required for public share page resolver and OG image generation)
 - `PUBLIC_SITE_URL` (absolute site URL used in generated share links/metadata)
 - `OPENAI_API_KEY` (for AI-assisted bottle count and autofill)
+- `ANTHROPIC_API_KEY` (for palate distillation and personalized recommendation notes — see `docs/somm-engine-v2-design.md`; optional `SOMM_DISTILL_MODEL` / `SOMM_NOTES_MODEL` overrides)
 - `GOOGLE_VISION_API_KEY` or `GOOGLE_CLOUD_VISION_API_KEY` (optional, enables OCR-first list-scan image parsing)
 - `POCKET_SOMMELIER_ADMIN_USER_IDS` or `CELLARSNAP_ADMIN_USER_IDS` (comma-separated user IDs allowed to upload/ingest sommelier knowledge)
 

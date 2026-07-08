@@ -480,10 +480,51 @@ function computeDynamicBoost(
   return 1.0 + (rawBoost - 1.0) * confidenceRamp;
 }
 
+/**
+ * A cold-start preference seed. Historically this came only from the taste
+ * survey; a distilled palate profile (src/server/algorithm/palateDistillation.ts)
+ * produces the same shape with its own confidence scaling. Both fade with
+ * SURVEY_FADE_THRESHOLD as real entries accumulate.
+ */
+export type PreferenceSeed = {
+  kind: "distilled";
+  sensory: Partial<SensoryVector>;
+  categorical: CategoricalPreferenceVector | null;
+  adventurousness: number | null;
+  /** 0-1 — scales the fade weight so a low-evidence profile whispers rather than shouts. */
+  confidence: number;
+  completed_at: string | null;
+};
+
+type NormalizedSeed = {
+  sensory: Partial<SensoryVector>;
+  categorical: CategoricalPreferenceVector | null;
+  adventurousness: number | null;
+  confidence: number;
+  completed_at: string | null;
+};
+
+function normalizeSeed(
+  seed: TasteSurveyRow | PreferenceSeed | null | undefined
+): NormalizedSeed | null {
+  if (!seed) return null;
+  if ("kind" in seed && seed.kind === "distilled") {
+    return seed;
+  }
+  const survey = seed as TasteSurveyRow;
+  return {
+    sensory: buildSurveySensoryVector(survey),
+    categorical: buildSurveyCategoricalVector(survey),
+    adventurousness: survey.adventurousness,
+    confidence: 1,
+    completed_at: survey.completed_at,
+  };
+}
+
 export function buildUserPreferenceVector(
   entries: PreferenceSourceEntry[],
   wineType: WineType,
-  survey?: TasteSurveyRow | null
+  seed?: TasteSurveyRow | PreferenceSeed | null
 ): UserPreferenceVector {
   const typeEntries = entries.filter((entry) => entry.wine_type === wineType);
   const effectiveTypeEntries = typeEntries.length > 0 ? typeEntries : entries;
@@ -498,18 +539,18 @@ export function buildUserPreferenceVector(
   const globalCategoricalSummary =
     typeEntries.length > 0 ? buildCategoricalSummary(entries) : typeCategoricalSummary;
 
-  // ── Survey blending ──────────────────────────────────────────────
-  // When the user has few entries, survey answers supplement the
-  // preference vector. The survey weight fades linearly to 0 as the
-  // user logs more wines.
-  const hasSurvey = survey?.completed_at != null;
+  // ── Seed blending ────────────────────────────────────────────────
+  // When the user has few entries, the seed (taste survey or distilled
+  // palate profile) supplements the preference vector. The seed weight
+  // fades linearly to 0 as the user logs more wines.
+  const normalizedSeed = normalizeSeed(seed);
+  const hasSurvey = normalizedSeed?.completed_at != null;
   const surveyWeight = hasSurvey
-    ? Math.max(0, 1 - typeSummary.eventCount / SURVEY_FADE_THRESHOLD)
+    ? Math.max(0, 1 - typeSummary.eventCount / SURVEY_FADE_THRESHOLD) *
+      normalizedSeed.confidence
     : 0;
-  const surveySensory = hasSurvey ? buildSurveySensoryVector(survey) : {};
-  const surveyCategorical = hasSurvey
-    ? buildSurveyCategoricalVector(survey)
-    : null;
+  const surveySensory = hasSurvey ? normalizedSeed.sensory : {};
+  const surveyCategorical = hasSurvey ? normalizedSeed.categorical : null;
 
   const sensory: Partial<SensoryVector> = {};
   const weights: Partial<Record<SensoryAxis, number>> = {};
@@ -626,6 +667,6 @@ export function buildUserPreferenceVector(
     weights,
     categorical,
     event_count: typeSummary.eventCount,
-    adventurousness: survey?.adventurousness ?? DEFAULT_ADVENTUROUSNESS,
+    adventurousness: normalizedSeed?.adventurousness ?? DEFAULT_ADVENTUROUSNESS,
   };
 }

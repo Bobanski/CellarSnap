@@ -1,0 +1,34 @@
+[
+  {
+    "taster_id": "example-friend",
+    "display_name": "Example Friend",
+    "experience_level": "intermediate",
+    "survey": {
+      "wine_types": ["red", "white"],
+      "varietals": ["Cabernet Sauvignon", "Pinot Noir"],
+      "regions": [],
+      "countries": ["France", "United States"],
+      "sensory_loves": ["Big and full-bodied", "Fruit-forward"],
+      "sensory_avoids": ["Too acidic / sour"],
+      "budget_restaurant": "$40-80",
+      "budget_retail": "$15-30",
+      "adventurousness": 5,
+      "free_text": null,
+      "completed_at": "2026-06-01T00:00:00Z"
+    },
+    "logged_wines": [
+      {
+        "producer": "Decoy",
+        "name": "Cabernet Sauvignon",
+        "vintage": 2021,
+        "wine_type": "red",
+        "region": "Sonoma County",
+        "country": "United States",
+        "grapes": "Cabernet Sauvignon",
+        "classification": null,
+        "rating": 4,
+        "notes": "smooth, lots of dark fruit"
+      }
+    ]
+  }
+]
