@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { grapeProfileUrl, regionProfileUrl } from "@shared";
 import TasteMap, { type TasteMapAxis } from "@/features/palate/TasteMap";
+import Button from "@/components/ui/Button";
 
 // ─── Colors (wine-type swatches) ────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -198,19 +199,13 @@ function SommNarrative({
               : "The somm hasn't met your palate yet. A few honest pours — or the taste quiz — and they'll start writing your story."}
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/entries/new"
-              className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
-            >
+            <Button href="/entries/new" variant="primary" size="sm">
               Log a pour
-            </Link>
+            </Button>
             {!hasSurvey ? (
-              <Link
-                href="/taste-survey"
-                className="rounded-full border border-[var(--color-border-strong)] px-5 py-2.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60"
-              >
+              <Button href="/taste-survey" variant="secondary" size="sm">
                 Take the taste quiz
-              </Link>
+              </Button>
             ) : null}
           </div>
         </>
