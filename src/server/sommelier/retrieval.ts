@@ -8,9 +8,12 @@ import { POPULATION_AXIS_MEANS } from "@/server/algorithm/constants";
 import type { SensoryAxis } from "@/server/algorithm/types";
 import { buildUserPreferenceVector } from "@/server/algorithm/userPreferences";
 import type { PreferenceSourceEntry } from "@/server/algorithm/userPreferences";
+import { readPalateProfile } from "@/server/algorithm/palateDistillation";
+import type { PalateProfileRecord } from "@/server/algorithm/palateDistillation";
 import { generateEmbedding } from "@/server/sommelier/embeddings";
 import type {
   AssembledSommelierContext,
+  DistilledProfileContext,
   KnowledgeMatch,
   PreferenceSnippet,
   SommelierSource,
@@ -442,6 +445,83 @@ async function retrieveUserEntryMatchesByEmbedding(
   );
 }
 
+// ── Distilled palate profile (palate_profiles.profile) ────────────────
+// The "master somm reads your history" narrative + per-wine-type leans.
+// Kept deliberately compact (top axes/varietals/regions only) so it never
+// dominates the context budget — see formatDistilledProfileSection.
+
+const MAX_WINE_TYPES_IN_CONTEXT = 5;
+const MAX_AXIS_LEANS_PER_TYPE = 4;
+const MAX_FAVORED_ITEMS = 3;
+const MIN_AXIS_LEAN_CONFIDENCE = 0.3;
+
+function toDistilledProfileContext(
+  record: PalateProfileRecord | null
+): DistilledProfileContext | null {
+  if (!record || !record.profile) return null;
+
+  const wineTypes = [...record.profile.wine_types]
+    .sort((a, b) => {
+      const aConfidence = Math.max(0, ...a.axis_seeds.map((s) => s.confidence));
+      const bConfidence = Math.max(0, ...b.axis_seeds.map((s) => s.confidence));
+      return bConfidence - aConfidence;
+    })
+    .slice(0, MAX_WINE_TYPES_IN_CONTEXT)
+    .map((wt) => ({
+      wineType: wt.wine_type,
+      narrative: wt.narrative,
+      favoredVarietals: wt.favored_varietals.slice(0, MAX_FAVORED_ITEMS),
+      favoredRegions: wt.favored_regions.slice(0, MAX_FAVORED_ITEMS),
+      leans: [...wt.axis_seeds]
+        .filter((seed) => seed.confidence >= MIN_AXIS_LEAN_CONFIDENCE)
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, MAX_AXIS_LEANS_PER_TYPE)
+        .map((seed) => ({ axis: seed.axis, value: seed.value, confidence: seed.confidence })),
+    }));
+
+  return {
+    narrative: record.profile.narrative,
+    wineTypes,
+  };
+}
+
+function describeLean(value: number): string {
+  if (value >= 4) return "high";
+  if (value >= 3.5) return "leans high";
+  if (value <= 2) return "low";
+  if (value <= 2.5) return "leans low";
+  return "average";
+}
+
+function formatDistilledProfileSection(profile: DistilledProfileContext | null): string {
+  if (!profile) return "";
+
+  const lines: string[] = [
+    "Distilled palate profile (a master-somm-style read of this user's full tasting history — trust this over a single logged entry):",
+    profile.narrative,
+  ];
+
+  for (const wt of profile.wineTypes) {
+    const leanFragments = wt.leans.map(
+      (lean) => `${lean.axis.replace(/_/g, " ")} ${describeLean(lean.value)}`
+    );
+    const favored = [
+      wt.favoredVarietals.length > 0 ? `favors ${wt.favoredVarietals.join(", ")}` : null,
+      wt.favoredRegions.length > 0 ? `from ${wt.favoredRegions.join(", ")}` : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    lines.push(
+      `- ${wt.wineType}: ${wt.narrative}${favored ? ` (${favored})` : ""}${
+        leanFragments.length > 0 ? ` — ${leanFragments.join(", ")}` : ""
+      }`
+    );
+  }
+
+  return lines.join("\n");
+}
+
 function formatUserContext(userContext: UserContext) {
   const sections: string[] = [];
 
@@ -531,9 +611,23 @@ function buildSources(
   wineKnowledge: KnowledgeMatch[],
   generalKnowledge: KnowledgeMatch[],
   entryMatches: KnowledgeMatch[],
-  userContext: UserContext
+  userContext: UserContext,
+  distilledProfile: DistilledProfileContext | null
 ) {
   const sources: SommelierSource[] = [
+    ...(distilledProfile
+      ? [
+          {
+            id: "distilled-palate-profile",
+            kind: "preference_summary" as const,
+            label: "Distilled palate profile",
+            excerpt: excerpt(distilledProfile.narrative),
+            metadata: {
+              wine_types: distilledProfile.wineTypes.map((wt) => wt.wineType),
+            },
+          },
+        ]
+      : []),
     ...wineKnowledge.map((match) => ({
       id: `wine-${match.id}`,
       kind: "wine_knowledge" as const,
@@ -613,17 +707,27 @@ export async function assembleContext(
 ): Promise<AssembledSommelierContext> {
   const adminSupabase = dependencies.adminSupabase ?? createSupabaseAdminClient();
   const queryEmbedding = await generateEmbedding(query);
-  const [wineKnowledge, generalKnowledge, userContext, rawEntryMatches] = await Promise.all([
-    retrieveWineKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
-    retrieveGeneralKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
-    retrieveUserContext(dependencies.requestSupabase, userId, query),
-    retrieveUserEntryMatchesByEmbedding(queryEmbedding, userId, 5, {
-      supabase: adminSupabase,
-    }),
-  ]);
+  const [wineKnowledge, generalKnowledge, userContext, rawEntryMatches, palateProfileRecord] =
+    await Promise.all([
+      retrieveWineKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
+      retrieveGeneralKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
+      retrieveUserContext(dependencies.requestSupabase, userId, query),
+      retrieveUserEntryMatchesByEmbedding(queryEmbedding, userId, 5, {
+        supabase: adminSupabase,
+      }),
+      // Read-only: the somm never triggers a (re)distillation inline — it
+      // only reads whatever palate_profiles already has cached.
+      readPalateProfile(adminSupabase, userId).catch(() => null),
+    ]);
   const entryMatches = filterDuplicateEntryMatches(rawEntryMatches, userContext);
+  const distilledProfile = toDistilledProfileContext(palateProfileRecord);
 
+  // Ordered by priority: truncateTextToApproxTokens (chat.ts) trims whole
+  // paragraphs off the END when the combined text exceeds the context
+  // budget, so the distilled profile — the highest-value personalization
+  // signal — goes first and survives trimming longest.
   const contextText = [
+    formatDistilledProfileSection(distilledProfile),
     formatUserContext(userContext),
     formatKnowledgeSection("Matched cellar entries", entryMatches),
     formatKnowledgeSection("Structured wine knowledge", wineKnowledge),
@@ -638,7 +742,8 @@ export async function assembleContext(
     generalKnowledge,
     entryMatches,
     userContext,
+    distilledProfile,
     contextText,
-    sources: buildSources(wineKnowledge, generalKnowledge, entryMatches, userContext),
+    sources: buildSources(wineKnowledge, generalKnowledge, entryMatches, userContext, distilledProfile),
   };
 }
