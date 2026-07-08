@@ -62,6 +62,15 @@
   --motion-duration-fast:     120ms;
   --motion-duration-standard: 200ms;
   --motion-duration-slow:     320ms;
+
+  /* Actual rendered height of .bottom-tab-bar (padding + content + the
+     device's own safe-area inset), kept live by BottomTabBar's
+     ResizeObserver. The fallback below matches the bar's height with
+     zero safe-area inset so non-JS/first-paint layout isn't off by much.
+     Page content should clear the bar with this var instead of a
+     hand-picked pb-* guess — a stale guess is exactly what caused the
+     bar to float above a dead strip of unused padding. */
+  --app-bottom-nav-height: 71px;
 }
 
 @theme inline {

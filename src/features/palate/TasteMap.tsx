@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 /**
  * TasteMap — Cluster's signature palate visualization.
@@ -71,6 +71,59 @@ const AXIS_META: Record<string, { group: TasteGroupKey; label: string }> = {
   freshness: { group: "quality", label: "Freshness" },
 };
 
+// Warm, concrete, zero-snobbery descriptions of what each axis actually
+// tastes/feels like — shown in the tap-to-explore detail card (variant
+// "full", interactive). One sentence, sensory language, brand voice.
+const AXIS_DESCRIPTIONS: Record<string, string> = {
+  body: "How much weight the wine carries on your tongue — light as skim milk or full as cream.",
+  acidity:
+    "The mouthwatering zing that keeps a wine lively — the difference between a squeeze of lemon and a ripe peach.",
+  tannin:
+    "The dry, gripping texture from grape skins and seeds — that feeling of your tongue sticking a little after a sip of black tea.",
+  alcohol_perception:
+    "The warming glow alcohol leaves behind — a gentle hum versus a hot finish that lingers in your throat.",
+  fruit_ripeness:
+    "Where the fruit sits on the ripeness spectrum — tart red berries versus jammy, sun-baked dark fruit.",
+  sweetness_perception:
+    "How much sugar you actually taste — bone-dry with nothing left over, or a noticeable touch of sweetness.",
+  bitterness_phenolic_grip:
+    "The bitter, gripping edge on the finish — think grapefruit pith or walnut skin catching the back of your tongue.",
+  aromatic_intensity:
+    "How loudly the wine announces itself before you even taste it — a quiet whisper or a perfume that fills the glass.",
+  oak_presence:
+    "The vanilla, toast, and baking-spice notes barrel aging leaves behind — none at all versus a wine that tastes like it grew up in a cellar.",
+  earthy:
+    "Forest-floor, mushroom, wet-stone notes — the smell of a walk through the woods after rain.",
+  mineral: "A flinty, stony edge — like licking a wet rock or striking a match.",
+  savory:
+    "Umami, herbal, or meaty notes that pull a wine away from pure fruit — think olive brine, dried herbs, or a whiff of leather.",
+  finish_length:
+    "How long the flavor lingers after you swallow — gone in a blink or still humming a minute later.",
+  concentration:
+    "How densely packed the flavors feel — a whisper of fruit versus a mouth-filling wave.",
+  complexity:
+    "How many different things are happening in the glass at once — a simple one-note sip or a wine that keeps revealing something new.",
+  freshness:
+    "The crisp, energetic lift that makes a wine feel alive — cool and vibrant versus soft and settled.",
+};
+
+/**
+ * Personal-read phrasing bands (spec): value bands describe lean direction
+ * and strength; a confidence floor overrides everything else because a
+ * strong-sounding claim on thin evidence is worse than no claim.
+ */
+function personalRead(label: string, value: number, confidence: number): string {
+  if (confidence < 0.3) {
+    return "We're still reading you on this one.";
+  }
+  const lower = label.toLowerCase();
+  if (value >= 4) return `You lean strongly toward high ${lower}.`;
+  if (value >= 3.5) return `You lean toward high ${lower}.`;
+  if (value >= 2.5) return `You're right in the middle on ${lower} — no strong pull either way.`;
+  if (value >= 2) return `You tend to avoid ${lower}.`;
+  return `You tend to strongly avoid ${lower}.`;
+}
+
 // Canonical wheel order (family-contiguous).
 const AXIS_ORDER = [
   "body",
@@ -117,6 +170,15 @@ export type TasteMapProps = {
   /** Accessible summary. A sensible one is generated if omitted. */
   title?: string;
   className?: string;
+  /**
+   * Lets berries be tapped/focused to open a compact per-axis detail card
+   * (personal read + brand-voice description) beneath the map. Only takes
+   * effect on variant="full" — the "card" variant (used inside links/
+   * ambient surfaces) always stays inert regardless of this prop.
+   */
+  interactive?: boolean;
+  /** Shown in the fixed detail slot beneath the map when nothing is selected. */
+  caption?: ReactNode;
 };
 
 // ── Geometry helpers ───────────────────────────────────────────
@@ -214,12 +276,39 @@ export default function TasteMap({
   compareLabel = "This wine",
   title,
   className = "",
+  interactive = false,
+  caption,
 }: TasteMapProps) {
   const uid = useId().replace(/:/g, "");
   const isCard = variant === "card";
+  // The "card" variant is used inside ambient links/previews — it never
+  // becomes interactive, no matter what the caller passes.
+  const isInteractive = interactive && !isCard;
+  const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const dim = size ?? (isCard ? 168 : 340);
   const showLabels = showAxisLabels ?? !isCard;
   const withLegend = showLegend ?? (!isCard && !compareAxes);
+
+  const selectAxis = (axisKey: string) => {
+    setSelectedAxis((current) => (current === axisKey ? null : axisKey));
+  };
+
+  // Tap/click outside the map dismisses the open detail card.
+  useEffect(() => {
+    if (!isInteractive || !selectedAxis) return;
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setSelectedAxis(null);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isInteractive, selectedAxis]);
 
   const cx = dim / 2;
   const cy = dim / 2;
@@ -232,6 +321,9 @@ export default function TasteMap({
     () => (compareAxes && compareAxes.length > 0 ? normaliseAxes(compareAxes) : null),
     [compareAxes]
   );
+  const selectedData = isInteractive
+    ? (data.find((d) => d.axis === selectedAxis) ?? null)
+    : null;
 
   const values = data.map((d) => d.value);
   const webPoints = polygonPoints(values, cx, cy, radius);
@@ -280,20 +372,29 @@ export default function TasteMap({
     @keyframes tm-${uid}-draw { from { stroke-dashoffset: var(--tm-perim); } to { stroke-dashoffset: 0; } }
     @keyframes tm-${uid}-fade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes tm-${uid}-pop { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+    @keyframes tm-${uid}-card-swap { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
     .tm-${uid}-web { stroke-dasharray: var(--tm-perim); ${animate ? `animation: tm-${uid}-draw 1100ms cubic-bezier(.2,.8,.2,1) forwards;` : "stroke-dashoffset: 0;"} }
     .tm-${uid}-fill { ${animate ? `opacity: 0; animation: tm-${uid}-fade 900ms ease 500ms forwards;` : "opacity: 1;"} }
     .tm-${uid}-cmp { ${animate ? `opacity: 0; animation: tm-${uid}-fade 800ms ease 300ms forwards;` : "opacity: 1;"} }
     .tm-${uid}-static { ${animate ? `opacity: 0; animation: tm-${uid}-fade 700ms ease forwards;` : "opacity: 1;"} }
     .tm-${uid}-berry { transform-box: fill-box; transform-origin: center; ${animate ? `opacity: 0; animation: tm-${uid}-pop 520ms cubic-bezier(.2,1.1,.3,1) forwards;` : "opacity: 1;"} }
+    .tm-${uid}-node { transform-box: fill-box; transform-origin: center; outline: none; transition: transform var(--motion-duration-standard) var(--motion-ease-standard), opacity var(--motion-duration-standard) var(--motion-ease-standard); }
+    .tm-${uid}-node:focus { outline: none; }
+    .tm-${uid}-node:focus-visible { outline: 2px solid var(--color-accent-secondary); outline-offset: 3px; border-radius: 50%; }
+    .tm-${uid}-ring { transition: opacity var(--motion-duration-standard) var(--motion-ease-standard), transform var(--motion-duration-standard) var(--motion-ease-standard); transform-box: fill-box; transform-origin: center; }
+    .tm-${uid}-card { animation: tm-${uid}-card-swap var(--motion-duration-standard) var(--motion-ease-standard); }
     @media (prefers-reduced-motion: reduce) {
-      .tm-${uid}-web, .tm-${uid}-fill, .tm-${uid}-cmp, .tm-${uid}-static, .tm-${uid}-berry {
+      .tm-${uid}-web, .tm-${uid}-fill, .tm-${uid}-cmp, .tm-${uid}-static, .tm-${uid}-berry, .tm-${uid}-card {
         animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; transform: none !important;
+      }
+      .tm-${uid}-node, .tm-${uid}-ring {
+        transition: none !important;
       }
     }
   `;
 
   return (
-    <div className={className}>
+    <div className={className} ref={rootRef}>
       <style dangerouslySetInnerHTML={{ __html: styleTag }} />
       <svg
         viewBox={`0 0 ${dim} ${dim}`}
@@ -418,17 +519,61 @@ export default function TasteMap({
           const opacity = 0.35 + d.confidence * 0.5;
           const isReserve = d.value >= 4.2;
           const color = GROUP_META[d.group].color;
+          const isSelected = selectedAxis === d.axis;
+          const isDimmed = isInteractive && selectedAxis !== null && !isSelected;
+          const nodeLabel = `${d.label}: ${d.value.toFixed(1)} of 5${
+            d.confidence < 0.3 ? ", limited data" : ""
+          }${isSelected ? ", selected" : ""}`;
           return (
             <g
               key={`berry-${d.axis}`}
               className={`tm-${uid}-berry`}
               style={{ animationDelay: `${560 + i * 34}ms` }}
             >
-              {isReserve ? (
-                <circle cx={p.x} cy={p.y} r={r + 2.4} fill="none" stroke="#C9A84C" strokeOpacity={0.9} strokeWidth={1} />
-              ) : null}
-              <circle cx={p.x} cy={p.y} r={r} fill={color} fillOpacity={opacity} />
-              <circle cx={p.x} cy={p.y} r={Math.max(0.8, r * 0.34)} fill="#F5EDD6" fillOpacity={0.5} />
+              <g
+                className={`tm-${uid}-node`}
+                style={{
+                  transform: isSelected ? "scale(1.4)" : "scale(1)",
+                  opacity: isDimmed ? 0.32 : 1,
+                  cursor: isInteractive ? "pointer" : undefined,
+                }}
+                tabIndex={isInteractive ? 0 : undefined}
+                role={isInteractive ? "button" : undefined}
+                aria-label={isInteractive ? nodeLabel : undefined}
+                aria-pressed={isInteractive ? isSelected : undefined}
+                onClick={isInteractive ? () => selectAxis(d.axis) : undefined}
+                onKeyDown={
+                  isInteractive
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectAxis(d.axis);
+                        }
+                      }
+                    : undefined
+                }
+              >
+                {isSelected ? (
+                  <circle
+                    className={`tm-${uid}-ring`}
+                    cx={p.x}
+                    cy={p.y}
+                    r={r + 5}
+                    fill="none"
+                    stroke="#F5EDD6"
+                    strokeOpacity={0.85}
+                    strokeWidth={1.4}
+                  />
+                ) : null}
+                {isReserve ? (
+                  <circle cx={p.x} cy={p.y} r={r + 2.4} fill="none" stroke="#C9A84C" strokeOpacity={0.9} strokeWidth={1} />
+                ) : null}
+                <circle cx={p.x} cy={p.y} r={r} fill={color} fillOpacity={opacity} />
+                <circle cx={p.x} cy={p.y} r={Math.max(0.8, r * 0.34)} fill="#F5EDD6" fillOpacity={0.5} />
+                {isInteractive ? (
+                  <circle cx={p.x} cy={p.y} r={Math.max(14, r + 9)} fill="transparent" />
+                ) : null}
+              </g>
             </g>
           );
         })}
@@ -440,6 +585,8 @@ export default function TasteMap({
               const lp = pointOnCircle(cx, cy, radius + dim * 0.075, angle);
               const anchor =
                 lp.x < cx - dim * 0.02 ? "end" : lp.x > cx + dim * 0.02 ? "start" : "middle";
+              const isSelected = selectedAxis === d.axis;
+              const isDimmed = isInteractive && selectedAxis !== null && !isSelected;
               return (
                 <text
                   key={`label-${d.axis}`}
@@ -449,9 +596,13 @@ export default function TasteMap({
                   textAnchor={anchor}
                   dominantBaseline="middle"
                   fontSize={dim * 0.026}
-                  fontWeight={500}
-                  fill="#A08878"
-                  style={{ animationDelay: "300ms" }}
+                  fontWeight={isSelected ? 700 : 500}
+                  fill={isSelected ? "#F5EDD6" : "#A08878"}
+                  opacity={isDimmed ? 0.5 : 1}
+                  style={{
+                    animationDelay: "300ms",
+                    transition: `opacity var(--motion-duration-standard) var(--motion-ease-standard)`,
+                  }}
                 >
                   {d.label}
                 </text>
@@ -459,6 +610,42 @@ export default function TasteMap({
             })
           : null}
       </svg>
+
+      {isInteractive ? (
+        <div className="mt-4" aria-live="polite">
+          {selectedData ? (
+            <div
+              key={selectedData.axis}
+              className={`tm-${uid}-card relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/25 px-4 py-3.5`}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedAxis(null)}
+                aria-label="Close axis detail"
+                className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+              <p
+                className="pr-6 text-[15px] leading-tight text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                {selectedData.label}
+              </p>
+              <p className="mt-1.5 text-[12.5px] font-medium leading-snug text-[var(--color-accent-secondary)]">
+                {personalRead(selectedData.label, selectedData.value, selectedData.confidence)}
+              </p>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-text-secondary)]">
+                {AXIS_DESCRIPTIONS[selectedData.axis] ?? ""}
+              </p>
+            </div>
+          ) : caption ? (
+            <div key="caption" className={`tm-${uid}-card`}>
+              {caption}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {withLegend ? (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">

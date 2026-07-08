@@ -153,7 +153,7 @@ export default function ExplorePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+      <div className="mx-auto max-w-2xl px-4 pt-8 pb-[var(--app-bottom-nav-height)]">
         {/* ── Header ─────────────────────────────────── */}
         <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]">
           Explore
