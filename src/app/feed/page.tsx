@@ -42,6 +42,8 @@ import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
+import Button, { SegmentedControl } from "@/components/ui/Button";
+import ScoreBadge from "@/components/ui/ScoreBadge";
 import type {
   EntryGroup,
   GroupedEntrySlide,
@@ -1086,30 +1088,15 @@ export default function FeedPage() {
           </h1>
         </header>
 
-        <div className="flex flex-wrap items-center gap-2 px-6">
-          <button
-            type="button"
-            onClick={() => setFeedScope("public")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              feedScope === "public"
-                ? "border border-[var(--color-accent-secondary)]/60 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
-                : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-            }`}
-          >
-            {FEED_SCOPE_LABELS.public}
-          </button>
-          <button
-            type="button"
-            onClick={() => setFeedScope("friends")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              feedScope === "friends"
-                ? "border border-[var(--color-accent-secondary)]/60 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
-                : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-            }`}
-          >
-            {FEED_SCOPE_LABELS.friends}
-          </button>
-
+        <div className="px-6">
+          <SegmentedControl
+            options={[
+              { value: "public", label: FEED_SCOPE_LABELS.public },
+              { value: "friends", label: FEED_SCOPE_LABELS.friends },
+            ]}
+            value={feedScope}
+            onChange={setFeedScope}
+          />
         </div>
 
         {moderationNotice ? (
@@ -1437,16 +1424,7 @@ export default function FeedPage() {
                       {hasRating || hasQpr ? (
                         <div className="flex shrink-0 flex-col items-end gap-1.5">
                           {hasRating ? (
-                            <span
-                              style={{
-                                color: "#C9A84C",
-                                fontSize: 14,
-                                fontWeight: 800,
-                              }}
-                              title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating as number)))} out of 100`}
-                            >
-                              {Math.max(0, Math.min(100, Math.round(entry.rating as number)))} Pts
-                            </span>
+                            <ScoreBadge value={entry.rating as number} kind="rating" label="pts" size="sm" />
                           ) : null}
                           {hasQpr ? <QprBadge level={entry.qpr_level!} /> : null}
                         </div>
@@ -2144,14 +2122,9 @@ export default function FeedPage() {
           </div>
           {hasMore ? (
             <div className="pt-2">
-              <button
-                type="button"
-                onClick={loadMoreFeed}
-                disabled={loadingMore}
-                className="inline-flex rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-primary disabled:opacity-50"
-              >
+              <Button variant="primary" size="sm" onClick={loadMoreFeed} disabled={loadingMore}>
                 {loadingMore ? "Loading..." : FEED_LOAD_MORE_LABEL}
-              </button>
+              </Button>
             </div>
           ) : null}
           </>

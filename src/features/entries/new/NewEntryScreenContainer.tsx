@@ -86,6 +86,7 @@ import {
 } from "@/lib/collections/client";
 import { snapViewportToTop } from "@/lib/ui/overlayPresentation";
 import BadgeToast from "@/features/badges/BadgeToast";
+import Button, { Chip } from "@/components/ui/Button";
 
 type NewEntryForm = {
   wine_name: string;
@@ -3440,7 +3441,7 @@ export default function NewEntryPage() {
           <span className="text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
             {NEW_ENTRY_HEADER_COPY.eyebrow}
           </span>
-          <h1 className="font-serif text-[28px] font-light text-[var(--color-text-primary)]">
+          <h1 className="font-serif text-[28px] font-normal text-[var(--color-text-primary)]">
             {NEW_ENTRY_HEADER_COPY.title}
           </h1>
           <p className="text-xs text-[var(--color-text-secondary)]">
@@ -3541,9 +3542,9 @@ export default function NewEntryPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {showRescanButton ? (
-                    <button
-                      type="button"
-                      className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] sm:text-xs"
+                    <Button
+                      variant="secondary"
+                      size="xs"
                       onClick={() => {
                         if (labelPhotos.length > 0) {
                           runAnalysis(labelPhotos.map((photo) => photo.file));
@@ -3551,18 +3552,18 @@ export default function NewEntryPage() {
                       }}
                     >
                       {NEW_ENTRY_UPLOAD_COPY.rescanLabel}
-                    </button>
+                    </Button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={() => labelInputRef.current?.click()}
                     disabled={!canAddLabelPhoto || autofillStatus === "loading"}
                   >
                     {labelPhotos.length > 0
                       ? NEW_ENTRY_UPLOAD_COPY.addImagesLabel
                       : NEW_ENTRY_UPLOAD_COPY.uploadImagesLabel}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -4103,14 +4104,14 @@ export default function NewEntryPage() {
             {showSingleBottleFields ? (
               <>
                 {!showManualFields ? (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={() => setShowManualFields(true)}
                     aria-expanded={showManualFields}
-                    className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                   >
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.manualEntryCta}
-                  </button>
+                  </Button>
                 ) : null}
 
                 {showManualFields ? (
@@ -4200,18 +4201,14 @@ export default function NewEntryPage() {
                       render={({ field }) => (
                         <div className="flex flex-wrap gap-1.5">
                           {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                            <button
+                            <Chip
                               key={value}
-                              type="button"
-                              className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
-                                field.value === value
-                                  ? "border border-[var(--color-accent-gold)] bg-[rgba(201,168,76,0.22)] font-semibold text-[var(--color-accent-gold)] shadow-[0_0_0_1px_rgba(201,168,76,0.3)]"
-                                  : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
-                              }`}
+                              variant="filter"
+                              selected={field.value === value}
                               onClick={() => field.onChange(field.value === value ? "" : value)}
                             >
                               {label}
-                            </button>
+                            </Chip>
                           ))}
                         </div>
                       )}
@@ -4624,20 +4621,12 @@ export default function NewEntryPage() {
                 ) : null}
 
                 <div className="flex items-center gap-3">
-                  <button
-                    type="submit"
-                    className="rounded-[11px] bg-[var(--color-accent-primary)] px-5 py-3 text-xs font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
-                    disabled={isSubmitting}
-                  >
+                  <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.saveEntryLabel}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-[11px] border-[0.5px] border-[var(--color-border-strong)] bg-transparent px-5 py-3 text-xs font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)]"
-                    onClick={returnAfterCancel}
-                  >
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={returnAfterCancel}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
-                  </button>
+                  </Button>
                 </div>
                   </>
                 ) : null}
