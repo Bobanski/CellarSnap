@@ -69,7 +69,7 @@ export default function ProducersBrowsePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+      <div className="mx-auto max-w-2xl px-4 pt-8 pb-[var(--app-bottom-nav-height)]">
         {/* ── Back ───────────────────────────────────── */}
         <Link
           href="/explore"
