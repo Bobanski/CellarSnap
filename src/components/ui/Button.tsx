@@ -96,9 +96,9 @@ export default function Button(props: ButtonProps) {
   );
 
   if ("href" in props && props.href !== undefined) {
-    const { href, ...anchorRest } = rest as AnchorHTMLAttributes<HTMLAnchorElement>;
+    const anchorRest = rest as AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
     return (
-      <Link href={props.href} className={classes} {...anchorRest}>
+      <Link className={classes} {...anchorRest}>
         {content}
       </Link>
     );

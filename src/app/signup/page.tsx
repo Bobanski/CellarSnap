@@ -13,6 +13,7 @@ import {
   isUsernameFormatValid,
 } from "@/lib/validation/username";
 import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
+import Button from "@/components/ui/Button";
 
 type EmailSignupValues = {
   email: string;
@@ -280,7 +281,7 @@ function SignupForm() {
           </span>
           <h1
             className="text-[var(--color-text-primary)]"
-            style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 500 }}
+            style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 400 }}
           >
             Join cluster
           </h1>
@@ -354,14 +355,15 @@ function SignupForm() {
                     placeholder="********"
                     {...phoneForm.register("password", { required: true })}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
+                    className="absolute inset-y-0 right-2 my-1"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "Hide" : "Show"}
-                  </button>
+                  </Button>
                 </div>
                 <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Must be at least 8 characters.</p>
               </div>
@@ -386,13 +388,14 @@ function SignupForm() {
           {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
           {infoMessage ? <p className="text-sm text-emerald-300">{infoMessage}</p> : null}
 
-          <button
+          <Button
             type="submit"
-            className="w-full rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
+            variant="primary"
+            fullWidth
             disabled={isSubmitting || emailCooldownSeconds > 0}
           >
             Send confirmation code
-          </button>
+          </Button>
 
           {/* Small legal footnote below the primary CTA — intentionally de-emphasized
               so the disclaimer doesn't compete with the value prop for attention. */}
@@ -430,12 +433,9 @@ function SignupForm() {
           ) : null}
 
           <div className="text-center">
-            <Link
-              href="/login"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
-            >
+            <Button href="/login" variant="ghost">
               Back to sign in
-            </Link>
+            </Button>
           </div>
 
           <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import WineMatchScore from "@/components/WineMatchScore";
+import Button from "@/components/ui/Button";
+import ScoreBadge from "@/components/ui/ScoreBadge";
 
 const eyebrowClassName =
   "block text-[10px] uppercase tracking-[0.28em] text-[var(--color-accent-secondary)]";
@@ -83,12 +84,9 @@ export default function LandingPage() {
           >
             cluster
           </span>
-          <Link
-            href="/login"
-            className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-          >
+          <Button href="/login" variant="secondary" size="sm">
             Sign in
-          </Link>
+          </Button>
         </header>
 
         {/* ── Hero: the restaurant moment ── */}
@@ -115,12 +113,9 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3">
-            <Link
-              href="/signup?intent=scan"
-              className="accent-solid-button inline-block rounded-full px-7 py-3 text-base transition"
-            >
+            <Button href="/signup?intent=scan" variant="primary">
               Scan a wine list
-            </Link>
+            </Button>
             <p className="text-xs text-[var(--color-text-tertiary)]">
               Free account &middot; scan your first list in under a minute
             </p>
@@ -180,8 +175,12 @@ export default function LandingPage() {
                 three Syrahs you loved.&rdquo;
               </p>
             </div>
-            <div className="mx-auto w-full max-w-[220px]">
-              <WineMatchScore score={94} band="excellent" size="compact" />
+            <div className="mx-auto flex w-full max-w-[220px] flex-col items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-black/25 p-6 text-center">
+              <ScoreBadge value={94} kind="match" size="lg" animate />
+              <span className="rounded-full border border-[var(--color-accent-primary)]/35 bg-[var(--color-accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--color-text-on-accent)]">
+                Great match
+              </span>
+              <p className="text-xs text-[var(--color-text-tertiary)]">to your palate</p>
             </div>
           </div>
         </section>
@@ -214,12 +213,9 @@ export default function LandingPage() {
           </ul>
 
           <div className="mt-10">
-            <Link
-              href="/signup?intent=scan"
-              className="accent-solid-button inline-block rounded-full px-7 py-3 text-base transition"
-            >
+            <Button href="/signup?intent=scan" variant="primary">
               Scan a wine list
-            </Link>
+            </Button>
           </div>
         </section>
 

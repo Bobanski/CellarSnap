@@ -31,28 +31,25 @@ const SIZE_CLASSES: Record<ScoreBadgeSize, { box: string; text: string; caption:
 };
 
 function useCountUp(target: number | null, active: boolean) {
-  const [display, setDisplay] = useState(active ? 0 : target ?? 0);
+  // Only tracks the in-progress animated value. When not animating, the
+  // caller falls back to `target` directly at render time — no setState
+  // needed for that path, so the effect never sets state synchronously.
+  const [animatedValue, setAnimatedValue] = useState(0);
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (target === null) {
-      setDisplay(0);
-      return;
-    }
-    if (!active) {
-      setDisplay(target);
+    if (target === null || !active) {
       return;
     }
     const start = performance.now();
     const duration = 600;
-    const from = 0;
 
     function tick(now: number) {
       const elapsed = now - start;
       const progress = Math.min(1, elapsed / duration);
       // ease-out-ish, matches --motion-ease-standard's intent
       const eased = 1 - (1 - progress) * (1 - progress);
-      setDisplay(Math.round(from + (target - from) * eased));
+      setAnimatedValue(Math.round((target as number) * eased));
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(tick);
       }
@@ -61,10 +58,11 @@ function useCountUp(target: number | null, active: boolean) {
     return () => {
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, active]);
 
-  return display;
+  if (target === null) return 0;
+  if (!active) return target;
+  return animatedValue;
 }
 
 export default function ScoreBadge({

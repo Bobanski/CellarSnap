@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Button from "@/components/ui/Button";
 
 function GrapeClusterMark() {
   return (
@@ -51,12 +51,9 @@ export default function NotFound() {
           </p>
         </div>
 
-        <Link
-          href="/feed"
-          className="accent-solid-button inline-block rounded-full px-6 py-2.5 text-sm transition"
-        >
+        <Button href="/feed" variant="primary">
           Back to your feed
-        </Link>
+        </Button>
       </div>
     </div>
   );
