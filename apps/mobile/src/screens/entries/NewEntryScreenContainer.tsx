@@ -23,6 +23,7 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { lightImpact } from "@/src/lib/haptics";
 import {
   COLLECTIONS_COPY,
   createEntryInputSchema,
@@ -2048,6 +2049,7 @@ export default function NewEntryScreen() {
       }
 
       setIsSubmitting(false);
+      lightImpact();
       beginPostSaveSurvey({
         entryId: result.entryId,
         wine_name: parsed.data.wine_name,
@@ -2085,6 +2087,7 @@ export default function NewEntryScreen() {
               };
               if (data.newly_earned_badges && data.newly_earned_badges.length > 0) {
                 const badge = data.newly_earned_badges[0];
+                lightImpact();
                 Alert.alert("Badge Unlocked!", `${badge.name}\n\n${badge.toastText}`);
               }
             }

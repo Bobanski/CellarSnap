@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { toExploreSlug } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
@@ -32,6 +33,10 @@ const BG_EVEN = "#0F0810";
 const DEVICE_BG = "#0E0608";
 const SECTION_BORDER = "rgba(255,255,255,0.06)";
 
+// Baseline top inset on a notchless device — see explanation in AppTopBar.tsx.
+const NOTCHLESS_TOP_INSET = 20;
+const BACK_BTN_BASE_TOP = 12;
+
 // ─── Region page (12-layer architecture) ───────────────────
 
 function RegionPage({
@@ -44,6 +49,7 @@ function RegionPage({
   onHeroError: () => void;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { profile, personal_stats } = data;
   const c = profile.content;
   const hasHeroImage = !!profile.hero_image_url && !heroFailed;
@@ -103,7 +109,13 @@ function RegionPage({
         ) : null}
         <View style={r.heroGradient} />
 
-        <Pressable onPress={() => router.back()} style={r.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            r.backBtn,
+            { top: BACK_BTN_BASE_TOP + (insets.top - NOTCHLESS_TOP_INSET) },
+          ]}
+        >
           <AppText style={r.backBtnArrow}>{"←"}</AppText>
           <AppText style={r.backBtnLabel}>Explore</AppText>
         </Pressable>
@@ -474,6 +486,7 @@ function VarietalPage({
   onHeroError: () => void;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { profile, personal_stats } = data;
   const c = profile.content;
   const accent = NEBBIOLO;
@@ -496,7 +509,13 @@ function VarietalPage({
       <View style={[r.hero, { height: 180 }]}>
         {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={onHeroError} /> : null}
         <View style={r.heroGradient} />
-        <Pressable onPress={() => router.back()} style={r.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            r.backBtn,
+            { top: BACK_BTN_BASE_TOP + (insets.top - NOTCHLESS_TOP_INSET) },
+          ]}
+        >
           <AppText style={r.backBtnArrow}>{"←"}</AppText>
           <AppText style={r.backBtnLabel}>Explore</AppText>
         </Pressable>
@@ -851,6 +870,7 @@ function ProducerPage({
   onHeroError: () => void;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { profile, personal_stats } = data;
   const c = profile.content;
   const accent = ROSE;
@@ -875,7 +895,13 @@ function ProducerPage({
       <View style={[r.hero, { height: 180 }]}>
         {hasHeroImage ? <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={onHeroError} /> : null}
         <View style={r.heroGradient} />
-        <Pressable onPress={() => router.back()} style={r.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            r.backBtn,
+            { top: BACK_BTN_BASE_TOP + (insets.top - NOTCHLESS_TOP_INSET) },
+          ]}
+        >
           <AppText style={r.backBtnArrow}>{"←"}</AppText>
           <AppText style={r.backBtnLabel}>Explore</AppText>
         </Pressable>
@@ -1088,7 +1114,6 @@ const r = StyleSheet.create({
   },
   backBtn: {
     position: "absolute",
-    top: 12,
     left: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -1502,6 +1527,7 @@ function FallbackProfilePage({
   onHeroError: () => void;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { profile, personal_stats } = data;
   const c = profile.content;
   const profileType = profile.type as ExploreProfileType;
@@ -1544,7 +1570,13 @@ function FallbackProfilePage({
           <Image source={{ uri: profile.hero_image_url }} style={StyleSheet.absoluteFill} resizeMode="cover" onError={onHeroError} />
         ) : null}
         <View style={[fb.heroOverlay, !hasHeroImage && fb.heroOverlayNoImage]} />
-        <Pressable onPress={() => router.back()} style={r.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            r.backBtn,
+            { top: BACK_BTN_BASE_TOP + (insets.top - NOTCHLESS_TOP_INSET) },
+          ]}
+        >
           <AppText style={r.backBtnArrow}>{"←"}</AppText>
           <AppText style={r.backBtnLabel}>Back</AppText>
         </Pressable>

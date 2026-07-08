@@ -22,6 +22,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { lightImpact } from "@/src/lib/haptics";
 import {
   PHONE_FORMAT_MESSAGE,
   PROFILE_GALLERY_MESSAGES,
@@ -1850,7 +1851,10 @@ export default function ProfileScreen() {
             tintColor={colors.grenache}
             colors={[colors.grenache]}
             refreshing={refreshing}
-            onRefresh={() => void loadProfileScreen(true, false)}
+            onRefresh={() => {
+              lightImpact();
+              void loadProfileScreen(true, false);
+            }}
           />
         }
       >

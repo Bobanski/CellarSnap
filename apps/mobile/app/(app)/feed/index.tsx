@@ -46,6 +46,7 @@ import { AppTopBar } from "@/src/components/AppTopBar";
 import { CollectionPickerModal } from "@/src/components/collections/CollectionPickerModal";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
+import { lightImpact } from "@/src/lib/haptics";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
   isDrinkingNowActive,
@@ -1847,7 +1848,10 @@ export default function FeedScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => void loadFeed(true)}
+            onRefresh={() => {
+              lightImpact();
+              void loadFeed(true);
+            }}
             tintColor={colors.grenache}
           />
         }
