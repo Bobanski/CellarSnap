@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           <p className="text-sm text-[var(--color-text-tertiary)]">Last updated: {LAST_UPDATED}</p>
         </header>
 
-        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
+        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
           <p>
             Cluster stores the account details and wine-log content needed to run the
             app, including profile info, entries, photos, social relationships, and

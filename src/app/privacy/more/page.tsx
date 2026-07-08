@@ -24,7 +24,7 @@ export default function PrivacyMorePage() {
           <p className="text-sm text-[var(--color-text-tertiary)]">Last updated: {LAST_UPDATED}</p>
         </header>
 
-        <section className="space-y-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
+        <section className="space-y-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Overview</h2>
             <p>

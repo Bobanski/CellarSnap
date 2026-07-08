@@ -13,7 +13,7 @@ export default function GlobalError({
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-screen-bg)] px-6 text-[var(--color-text-primary)]">
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="space-y-2">
-          <span className="block text-xs uppercase tracking-[0.3em] text-rose-300/70">
+          <span className="block text-xs uppercase tracking-[0.3em] text-rose-700/70">
             Something went wrong
           </span>
           <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">

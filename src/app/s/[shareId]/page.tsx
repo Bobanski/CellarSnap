@@ -142,7 +142,7 @@ export default async function SharePage({ params }: SharePageProps) {
   if (!share) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--color-screen-bg)] px-6 py-12 text-[var(--color-text-primary)]">
-        <div className="w-full max-w-xl space-y-8 rounded-3xl border border-[var(--color-border)] bg-black/25 p-8 text-center backdrop-blur">
+        <div className="w-full max-w-xl space-y-8 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-8 text-center backdrop-blur">
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-accent-secondary)]/70">
               Cluster share
@@ -162,7 +162,7 @@ export default async function SharePage({ params }: SharePageProps) {
             </Link>
             <Link
               href="/signup"
-              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/40"
+              className="rounded-full border border-[var(--color-border-strong)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border)]"
             >
               Create account
             </Link>
@@ -221,7 +221,7 @@ export default async function SharePage({ params }: SharePageProps) {
           <p className="text-sm text-[var(--color-text-secondary)]">Read-only shared wine post</p>
         </header>
 
-        <article className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10">
+        <article className="overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]">
           {share.labelImageUrl ? (
             <AppImage
               src={share.labelImageUrl}
@@ -230,7 +230,7 @@ export default async function SharePage({ params }: SharePageProps) {
               loading="eager"
             />
           ) : (
-            <div className="flex h-40 items-center justify-center bg-black/35 text-xs uppercase tracking-[0.3em] text-[var(--color-text-tertiary)]">
+            <div className="flex h-40 items-center justify-center bg-[var(--color-surface-raised)] text-xs uppercase tracking-[0.3em] text-[var(--color-text-tertiary)]">
               No label image
             </div>
           )}
@@ -275,7 +275,7 @@ export default async function SharePage({ params }: SharePageProps) {
           </div>
         </article>
 
-        <section className="rounded-2xl border border-[var(--color-border)] bg-black/25 p-5 text-center">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 text-center">
           <p className="text-sm text-[var(--color-text-secondary)]">
             Want to see more tasting details and posts on Cluster?
           </p>
@@ -288,7 +288,7 @@ export default async function SharePage({ params }: SharePageProps) {
             </Link>
             <Link
               href="/signup"
-              className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/40"
+              className="rounded-full border border-[var(--color-border-strong)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border)]"
             >
               Create account
             </Link>
