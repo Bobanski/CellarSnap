@@ -68,3 +68,4 @@
 092_wine_profiles_audience_mode.sql
 093_api_rate_limits.sql
 094_palate_profiles.sql
+095_lock_reference_tables.sql
