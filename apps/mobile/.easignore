@@ -1,0 +1,12 @@
+# Web app (Next.js) — not needed for mobile builds
+../../src/
+../../public/
+../../e2e/
+../../scripts/
+../../.next/
+
+# Dev tooling
+../../.git/
+../../*.config.*
+../../.eslintrc*
+../../.prettierrc*
