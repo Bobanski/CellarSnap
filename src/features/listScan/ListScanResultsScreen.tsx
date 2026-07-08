@@ -244,6 +244,52 @@ function FilterDropdown({
   );
 }
 
+// ── "What should I order?" fallback reason (Wave 3, item 3) ──────────
+// Warm, somm-like one-liner built from the same deterministic signals as
+// buildListScanRationale (varietal / region / price) — used only when the
+// personalized recommendation-note hasn't loaded. Pattern per QA note:
+// [style/place hook] + [personal tie when match data exists] + [price
+// mention only when notable]. One line, no exclamation marks, no jargon.
+function buildSpotlightReason(params: {
+  varietal: string | null;
+  region: string | null;
+  priceValue: number | null;
+  matchPercent: number;
+  personalized: boolean;
+  /** Median price of priced wines on this list — price is "notable" below it. */
+  medianPrice: number | null;
+}): string {
+  const { varietal, region, priceValue, matchPercent, personalized, medianPrice } = params;
+
+  const hook = region && varietal
+    ? `A ${region} ${varietal}`
+    : varietal
+      ? `A ${varietal}`
+      : region
+        ? `A pour from ${region}`
+        : "The strongest pick on this list";
+
+  const tie = personalized
+    ? matchPercent >= 90
+      ? "squarely your kind of bottle"
+      : matchPercent >= 75
+        ? "right in your lane"
+        : "a comfortable fit for your palate"
+    : null;
+
+  const priceIsNotable =
+    typeof priceValue === "number" &&
+    typeof medianPrice === "number" &&
+    priceValue <= medianPrice;
+  const price = priceIsNotable ? `$${priceValue}` : null;
+
+  if (tie && price) return `${hook} — ${tie} at ${price}.`;
+  if (tie) return `${hook} — ${tie}.`;
+  if (price) return `${hook}, and a smart buy at ${price}.`;
+  if (hook.startsWith("The strongest")) return `${hook}.`;
+  return `${hook} — the strongest pick on this list.`;
+}
+
 // ── Mini-palate seeding (Wave 3, item 4) ─────────────────────────────
 // 3 single-tap questions for authed users whose scores are still stubs
 // (buildStubScoreSummary path, no palate data). Answers map straight onto
@@ -659,6 +705,17 @@ export default function ListScanResultsScreen() {
   );
   const spotlightWine =
     spotlightIndex !== null ? topRecommendations[spotlightIndex] ?? null : null;
+  // Median of priced wines on the whole list — the spotlight's fallback
+  // reason only mentions price when the pick sits at or below it.
+  const medianListPrice = useMemo(() => {
+    if (!result) return null;
+    const prices = result.wines
+      .map((wine) => wine.price_value)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+      .sort((left, right) => left - right);
+    if (prices.length === 0) return null;
+    return prices[Math.floor(prices.length / 2)];
+  }, [result]);
   const highlightedIds = useMemo(
     () => new Set(topRecommendations.map((wine) => wine.id)),
     [topRecommendations]
@@ -826,18 +883,27 @@ export default function ListScanResultsScreen() {
                 const location = locationParts.length > 0 ? locationParts.join(", ") : null;
                 const secondaryLine = [varietalLabel, location].filter(Boolean).join(" · ") || null;
                 // Reuse the personalized recommendation note when it's already
-                // loaded; otherwise fall back to the deterministic rationale
-                // computed at scan time — no new LLM call for this moment.
-                const reason = recommendationNotes[spotlightWine.id] ?? spotlightWine.rationale;
+                // loaded; otherwise a warm deterministic one-liner built from
+                // the same signals — no new LLM call for this moment.
+                const reason =
+                  recommendationNotes[spotlightWine.id] ??
+                  buildSpotlightReason({
+                    varietal: spotlightWine.varietals[0] ?? null,
+                    region: structured.displayRegion,
+                    priceValue: spotlightWine.price_value,
+                    matchPercent: spotlightWine.match_percent,
+                    personalized: result.score_summary.mode === "personalized",
+                    medianPrice: medianListPrice,
+                  });
                 const hasAnotherOption = topRecommendations.length > 1;
 
                 return (
                   <div
                     key={spotlightWine.id}
-                    className="animate-badge-unlock-pop overflow-hidden rounded-3xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/12 via-emerald-400/5 to-transparent p-6 shadow-[0_30px_90px_-40px_rgba(16,185,129,0.5)] sm:p-7"
+                    className="animate-badge-unlock-pop overflow-hidden rounded-3xl border border-[var(--color-accent-secondary)]/30 bg-[var(--color-surface-primary)]/20 p-6 shadow-[0_30px_90px_-40px_rgba(0,0,0,0.9)] sm:p-7"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200/80">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
                         What should I order?
                       </p>
                       <ScoreBadge value={spotlightWine.match_percent} kind="match" size="lg" animate />
@@ -857,7 +923,7 @@ export default function ListScanResultsScreen() {
                       </p>
                     ) : null}
                     <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-base font-semibold text-emerald-100">
+                      <span className="text-base font-semibold text-[var(--color-text-primary)]">
                         {formatPriceDisplay(spotlightWine.price_display, spotlightWine.menu_label)}
                       </span>
                       {hasAnotherOption ? (
@@ -870,7 +936,7 @@ export default function ListScanResultsScreen() {
                                 : (current + 1) % topRecommendations.length
                             )
                           }
-                          className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200/80 transition hover:text-emerald-100"
+                          className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent-secondary)] transition hover:text-[var(--color-text-primary)]"
                         >
                           Show me another →
                         </button>
@@ -883,10 +949,10 @@ export default function ListScanResultsScreen() {
               <button
                 type="button"
                 onClick={() => setSpotlightIndex(0)}
-                className="group flex w-full items-center justify-between gap-4 rounded-3xl border border-emerald-300/25 bg-emerald-400/8 px-6 py-5 text-left transition hover:border-emerald-300/45 hover:bg-emerald-400/12 sm:px-7 sm:py-6"
+                className="group flex w-full items-center justify-between gap-4 rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-surface-primary)]/15 px-6 py-5 text-left transition hover:border-[var(--color-accent-secondary)]/50 hover:bg-[var(--color-surface-primary)]/25 sm:px-7 sm:py-6"
               >
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200/80">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
                     Decisive mode
                   </p>
                   <h2
@@ -896,7 +962,7 @@ export default function ListScanResultsScreen() {
                     What should I order?
                   </h2>
                 </div>
-                <span className="shrink-0 rounded-full border border-emerald-300/40 bg-emerald-400/15 px-4 py-2 text-sm font-semibold text-emerald-100 transition group-hover:bg-emerald-400/25">
+                <span className="shrink-0 rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition group-hover:bg-[var(--color-accent-hover)]">
                   Show me
                 </span>
               </button>
