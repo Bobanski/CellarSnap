@@ -234,7 +234,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
                 type="button"
                 aria-label={`Go to photo ${dotIndex + 1}`}
                 className={`h-1.5 w-1.5 rounded-full transition ${
-                  dotIndex === activeIndex ? "bg-[var(--color-accent-primary)]" : "bg-zinc-400/70"
+                  dotIndex === activeIndex ? "bg-accent-primary" : "bg-zinc-400/70"
                 }`}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -1092,7 +1092,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("public")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "public"
-                ? "border border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                ? "border border-[var(--color-accent-secondary)]/60 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
@@ -1103,7 +1103,7 @@ export default function FeedPage() {
             onClick={() => setFeedScope("friends")}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               feedScope === "friends"
-                ? "border border-[var(--color-accent-secondary)]/60 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
+                ? "border border-[var(--color-accent-secondary)]/60 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
                 : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
             }`}
           >
@@ -1129,19 +1129,19 @@ export default function FeedPage() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 animate-pulse"
+                className="rounded-2xl border border-[var(--color-border)] bg-surface-primary/10 p-4 animate-pulse"
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-full bg-[var(--color-surface-raised)]" />
+                  <div className="h-9 w-9 rounded-full bg-surface-raised" />
                   <div className="space-y-1.5 flex-1">
-                    <div className="h-3 w-28 rounded bg-[var(--color-surface-raised)]" />
-                    <div className="h-2.5 w-20 rounded bg-[var(--color-surface-raised)]" />
+                    <div className="h-3 w-28 rounded bg-surface-raised" />
+                    <div className="h-2.5 w-20 rounded bg-surface-raised" />
                   </div>
                 </div>
-                <div className="aspect-[4/3] w-full rounded-xl bg-[var(--color-surface-raised)] mb-4" />
+                <div className="aspect-[4/3] w-full rounded-xl bg-surface-raised mb-4" />
                 <div className="space-y-2">
-                  <div className="h-3 w-3/4 rounded bg-[var(--color-surface-raised)]" />
-                  <div className="h-3 w-1/2 rounded bg-[var(--color-surface-raised)]" />
+                  <div className="h-3 w-3/4 rounded bg-surface-raised" />
+                  <div className="h-3 w-1/2 rounded bg-surface-raised" />
                 </div>
               </div>
             ))}
@@ -1151,7 +1151,7 @@ export default function FeedPage() {
             {errorMessage}
           </div>
         ) : entries.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-surface-primary/10 p-6 text-sm text-[var(--color-text-secondary)]">
             {FEED_EMPTY_STATE_MESSAGE}
           </div>
         ) : (
@@ -1167,7 +1167,7 @@ export default function FeedPage() {
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
                     ? "rounded-[10px] border-[rgba(74,48,96,0.4)] bg-[#2E1420] hover:border-[rgba(74,48,96,0.7)]"
-                    : "rounded-[10px] border-[var(--color-border)] bg-[var(--color-surface-primary)] hover:border-[var(--color-accent-secondary)]/40"
+                    : "rounded-[10px] border-[var(--color-border)] bg-surface-primary hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
                 tabIndex={0}
@@ -1257,7 +1257,7 @@ export default function FeedPage() {
                                 aria-hidden="true"
                               />
                               <div
-                                className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] p-2 text-left shadow-lg"
+                                className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-[var(--color-border-strong)] bg-surface-raised p-2 text-left shadow-lg"
                                 onClick={(event) => event.stopPropagation()}
                               >
                                 {postMenuView === "actions" ? (
@@ -1267,7 +1267,7 @@ export default function FeedPage() {
                                         type="button"
                                         disabled={sharingEntryId === entry.id || reportingEntryId === entry.id}
                                         onClick={() => void shareEntry(entry)}
-                                        className="flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                        className="flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-surface-muted px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-surface-hover disabled:opacity-50"
                                       >
                                         {sharingEntryId === entry.id ? "Sharing..." : "Share via text"}
                                       </button>
@@ -1276,7 +1276,7 @@ export default function FeedPage() {
                                       type="button"
                                       disabled={sharingEntryId === entry.id || reportingEntryId === entry.id}
                                       onClick={() => setPostMenuView("report")}
-                                      className="flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                      className="flex min-h-11 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-surface-muted px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-surface-hover disabled:opacity-50"
                                     >
                                       Report post
                                     </button>
@@ -1304,7 +1304,7 @@ export default function FeedPage() {
                                           [entry.id]: event.target.value as ReportReason,
                                         }))
                                       }
-                                      className="w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-2 py-2 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                                      className="w-full rounded-md border border-[var(--color-border-strong)] bg-surface-muted px-2 py-2 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                     >
                                       {REPORT_REASON_OPTIONS.map((option) => (
                                         <option key={option.value} value={option.value}>
@@ -1325,7 +1325,7 @@ export default function FeedPage() {
                                             DEFAULT_REPORT_REASON,
                                         })
                                       }
-                                      className="flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                      className="flex min-h-10 w-full items-center justify-center rounded-md border border-[var(--color-border)] bg-surface-muted px-3 py-2 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-surface-hover disabled:opacity-50"
                                     >
                                       {reportingEntryId === entry.id
                                         ? "Reporting..."
@@ -1547,14 +1547,14 @@ export default function FeedPage() {
                                               prev === popupKey ? null : popupKey
                                             );
                                           }}
-                                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
+                                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-surface-muted px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                                         >
                                           <span>{emoji}</span>
                                           <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
                                         </button>
                                         {names.length > 0 ? (
                                           <span
-                                            className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${
+                                            className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-surface-raised px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${
                                               showNames
                                                 ? "pointer-events-auto opacity-100"
                                                 : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"
@@ -1658,7 +1658,7 @@ export default function FeedPage() {
                             </div>
                           </div>
                           {reactionPopupEntryId === entry.id ? (
-                            <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1.5">
+                            <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-surface-muted p-1.5">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 {REACTION_EMOJIS.map((emoji) => {
                                   const count = entry.reaction_counts?.[emoji] ?? 0;
@@ -1671,9 +1671,9 @@ export default function FeedPage() {
                                           e.stopPropagation();
                                           toggleReaction(entry.id, emoji);
                                         }}
-                                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${
+                                        className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-surface-hover ${
                                           (entry.my_reactions ?? []).includes(emoji)
-                                            ? "bg-[var(--color-accent-primary)]/20"
+                                            ? "bg-accent-primary/20"
                                             : ""
                                         }`}
                                       >
@@ -1684,7 +1684,7 @@ export default function FeedPage() {
                                   return (
                                     <span
                                       key={emoji}
-                                      className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-1 text-lg text-[var(--color-text-tertiary)]"
+                                      className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-surface-muted px-1 text-lg text-[var(--color-text-tertiary)]"
                                     >
                                       {emoji}
                                       {count > 0 ? (
@@ -1707,7 +1707,7 @@ export default function FeedPage() {
                       </div>
                       {commentsExpanded ? (
                         <div
-                          className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 md:mt-3"
+                          className="mt-4 rounded-2xl border border-[var(--color-border)] bg-surface-muted p-3 md:mt-3"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <div className="mb-2 flex items-center justify-between gap-2">
@@ -1726,15 +1726,15 @@ export default function FeedPage() {
                             </button>
                           </div>
                           {commentsLoading ? (
-                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">
+                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-surface-muted p-3 text-sm text-[var(--color-text-tertiary)]">
                               Loading comments...
                             </div>
                           ) : !canComment ? (
-                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">
+                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-surface-muted p-3 text-sm text-[var(--color-text-tertiary)]">
                               Comments are private for this post.
                             </div>
                           ) : entryComments.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">
+                            <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-surface-muted p-3 text-sm text-[var(--color-text-tertiary)]">
                               No comments yet. Start the thread.
                             </div>
                           ) : (
@@ -1818,7 +1818,7 @@ export default function FeedPage() {
                                             </button>
                                             {commentMenuKey === topCommentMenuKey ? (
                                               <div
-                                                className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
+                                                className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-surface-raised py-1 text-left shadow-lg"
                                                 onClick={(event) => event.stopPropagation()}
                                               >
                                                 <div className="px-3 pb-1">
@@ -1843,7 +1843,7 @@ export default function FeedPage() {
                                                         })
                                                       )
                                                     }
-                                                    className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                                                    className="w-full rounded border border-[var(--color-border-strong)] bg-surface-muted px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                                   >
                                                     {REPORT_REASON_OPTIONS.map((option) => (
                                                       <option key={option.value} value={option.value}>
@@ -1867,7 +1867,7 @@ export default function FeedPage() {
                                                         ] ?? DEFAULT_REPORT_REASON,
                                                     })
                                                   }
-                                                  className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                                  className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-surface-hover disabled:opacity-50"
                                                 >
                                                   {reportingCommentId === comment.id
                                                     ? "Reporting..."
@@ -1926,7 +1926,7 @@ export default function FeedPage() {
                                           return (
                                             <div
                                               key={reply.id}
-                                              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2"
+                                              className="rounded-lg border border-[var(--color-border)] bg-surface-muted px-3 py-2"
                                             >
                                               <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
@@ -1996,7 +1996,7 @@ export default function FeedPage() {
                                                       </button>
                                                       {commentMenuKey === replyMenuKey ? (
                                                         <div
-                                                          className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] py-1 text-left shadow-lg"
+                                                          className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--color-border-strong)] bg-surface-raised py-1 text-left shadow-lg"
                                                           onClick={(event) => event.stopPropagation()}
                                                         >
                                                           <div className="px-3 pb-1">
@@ -2022,7 +2022,7 @@ export default function FeedPage() {
                                                                   })
                                                                 )
                                                               }
-                                                              className="w-full rounded border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
+                                                              className="w-full rounded border border-[var(--color-border-strong)] bg-surface-muted px-1.5 py-1 text-[11px] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]/60 focus:outline-none"
                                                             >
                                                               {REPORT_REASON_OPTIONS.map((option) => (
                                                                 <option key={option.value} value={option.value}>
@@ -2046,7 +2046,7 @@ export default function FeedPage() {
                                                                   ] ?? DEFAULT_REPORT_REASON,
                                                               })
                                                             }
-                                                            className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+                                                            className="block w-full px-3 py-1.5 text-[11px] font-medium text-[var(--color-text-primary)] transition hover:bg-surface-hover disabled:opacity-50"
                                                           >
                                                             {reportingCommentId === reply.id
                                                               ? "Reporting..."
@@ -2073,7 +2073,7 @@ export default function FeedPage() {
                           ) : null}
                           <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                             {replyTarget ? (
-                              <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
+                              <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-surface-muted px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
                                 <span className="truncate">
                                   Replying to {replyTarget.author_name ?? "this thread"}
                                 </span>
@@ -2124,7 +2124,7 @@ export default function FeedPage() {
                                   void submitCommentForEntry(entry.id);
                                 }}
                                 disabled={!commentDraft.trim() || !canComment || postingComment}
-                                className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-accent-primary/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-accent-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {postingComment
                                   ? "Posting..."
@@ -2148,7 +2148,7 @@ export default function FeedPage() {
                 type="button"
                 onClick={loadMoreFeed}
                 disabled={loadingMore}
-                className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
+                className="inline-flex rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-primary disabled:opacity-50"
               >
                 {loadingMore ? "Loading..." : FEED_LOAD_MORE_LABEL}
               </button>

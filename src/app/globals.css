@@ -42,6 +42,11 @@
   --color-warning:         #C4607A;
   --color-info:            #7C8FE6;
 
+  /* Verdot — natural wine, organic, sustainability signals (brand guide "Verdot" #3D6B4F).
+     -light variant is a legibility-adjusted tint for text on the dark Noir surfaces. */
+  --color-natural:         #3D6B4F;
+  --color-natural-light:   #5A8A6C;
+
   /* ─── OVERLAYS & SHADOWS ──────────────────────────– */
   --color-overlay:         rgba(12, 8, 16, 0.75);
   --color-shadow:          rgba(74, 48, 96, 0.3);
@@ -56,7 +61,50 @@
 @theme inline {
   --color-background: var(--color-screen-bg);
   --color-foreground: var(--color-text-primary);
+
+  /* Semantic design tokens exposed as real Tailwind utilities
+     (bg-surface-raised, text-accent-primary, border-border, etc.)
+     so components no longer need bg-[var(--color-*)] arbitrary classes. */
+  --color-screen-bg:         var(--color-screen-bg);
+  --color-surface-primary:   var(--color-surface-primary);
+  --color-surface-raised:    var(--color-surface-raised);
+  --color-surface-hover:     var(--color-surface-hover);
+  --color-surface-tinted:    var(--color-surface-tinted);
+  --color-surface-muted:     var(--color-surface-muted);
+
+  --color-text-primary:      var(--color-text-primary);
+  --color-text-secondary:    var(--color-text-secondary);
+  --color-text-tertiary:     var(--color-text-tertiary);
+  --color-text-on-accent:    var(--color-text-on-accent);
+  --color-text-highlight:    var(--color-text-highlight);
+
+  --color-accent-primary:    var(--color-accent-primary);
+  --color-accent-hover:      var(--color-accent-hover);
+  --color-accent-soft:       var(--color-accent-soft);
+  --color-accent-secondary:  var(--color-accent-secondary);
+  --color-accent-rose:       var(--color-accent-rose);
+  --color-accent-gold:       var(--color-accent-gold);
+  --color-accent-purple:     var(--color-accent-purple);
+
+  --color-border:            var(--color-border);
+  --color-border-strong:     var(--color-border-strong);
+  --color-border-accent:     var(--color-border-accent);
+  --color-purple-glow:       var(--color-purple-glow);
+
+  --color-success:           var(--color-success);
+  --color-error:              var(--color-error);
+  --color-warning:            var(--color-warning);
+  --color-info:                var(--color-info);
+
+  --color-natural:            var(--color-natural);
+  --color-natural-light:      var(--color-natural-light);
+
+  --color-overlay:            var(--color-overlay);
+  --color-shadow:              var(--color-shadow);
+  --color-shadow-warm:         var(--color-shadow-warm);
+
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
 }
 
