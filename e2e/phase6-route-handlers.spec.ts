@@ -38,9 +38,11 @@ function makeAuthOnlySupabase(userId: string) {
 function makeShareSupabase({
   viewerUserId,
   ownerUserId,
+  entryPrivacy = "public",
 }: {
   viewerUserId: string;
   ownerUserId: string;
+  entryPrivacy?: string | null;
 }) {
   return {
     auth: {
@@ -53,7 +55,10 @@ function makeShareSupabase({
 
       return {
         select(columns: string) {
-          expect(columns).toBe("id, user_id");
+          // The route now also selects entry_privacy to gate sharing via
+          // canManageEntryShare (only public posts can be shared) rather
+          // than an ownership check.
+          expect(columns).toBe("id, user_id, entry_privacy");
 
           return {
             eq(column: string, value: string) {
@@ -63,6 +68,7 @@ function makeShareSupabase({
                   data: {
                     id: value,
                     user_id: ownerUserId,
+                    entry_privacy: entryPrivacy,
                   },
                   error: null,
                 }),
@@ -484,13 +490,17 @@ function makeBulkGroupSupabase(userId: string) {
               state.createdGroupPayload = payload;
               return {
                 select(columns: string) {
-                  expect(columns).toBe("id, mode, title, anchor_entry_id");
+                  // The route now also selects/inserts event_type (schema
+                  // at src/server/entries/schema.ts, insert at
+                  // src/app/api/entries/bulk-group/handler.ts:123).
+                  expect(columns).toBe("id, mode, title, event_type, anchor_entry_id");
                   return {
                     single: async () => ({
                       data: {
                         id: "group-1",
                         mode: payload.mode,
                         title: payload.title,
+                        event_type: payload.event_type,
                         anchor_entry_id: payload.anchor_entry_id,
                       },
                       error: null,
@@ -720,12 +730,16 @@ test.describe("Phase 6 route handler regressions", () => {
     });
   });
 
-  test("share route rejects non-owners trying to create a share link", async () => {
+  test("share route rejects creating a share link for a non-public post", async () => {
+    // Sharing is gated on the post's privacy (canManageEntryShare), not on
+    // ownership — any authenticated viewer can share a public post, but no
+    // one (owner included) can share a non-public one.
     const handler = createSharePostHandler({
       createSupabaseServerClient: async () =>
         makeShareSupabase({
           viewerUserId: "viewer-1",
           ownerUserId: "owner-1",
+          entryPrivacy: "private",
         }) as never,
     });
 
@@ -742,7 +756,9 @@ test.describe("Phase 6 route handler regressions", () => {
     );
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+    await expect(response.json()).resolves.toEqual({
+      error: "Only public posts can be shared.",
+    });
   });
 
   test("profile entries route returns an empty list when the target user is blocked", async () => {
@@ -838,6 +854,10 @@ test.describe("Phase 6 route handler regressions", () => {
         classification: null,
         wine_type: null,
         country: null,
+        // putHandler now resolves the entry's current primary grapes and
+        // passes them through so the resolver can use them for partial
+        // saves too (previously only creation did this).
+        primary_grapes: [],
         varietal: null,
       },
     ]);
