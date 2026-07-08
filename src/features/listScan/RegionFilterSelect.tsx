@@ -88,7 +88,7 @@ export default function RegionFilterSelect({
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -109,7 +109,7 @@ export default function RegionFilterSelect({
       </button>
 
       {open ? (
-        <div className="space-y-3 border-t border-white/8 p-4">
+        <div className="space-y-3 border-t border-[var(--color-border)] p-4">
           {regionGroups.length > 0 ? (
             <>
               {/* Country chips */}
@@ -118,7 +118,7 @@ export default function RegionFilterSelect({
                   const isActive = selectedCountry === group.country;
                   const chipClasses = isActive
                     ? "border border-[var(--color-success)]/50 bg-[var(--color-success)]/12 text-[var(--color-success)]"
-                    : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-white/25";
+                    : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]";
 
                   return (
                     <button
@@ -154,7 +154,7 @@ export default function RegionFilterSelect({
                           className={`w-[140px] shrink-0 rounded-xl border px-2.5 py-1.5 text-left text-xs transition ${
                             isSelected
                               ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/12 text-[var(--color-success)]"
-                              : "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-secondary)] hover:border-white/20 hover:bg-white/8"
+                              : "border-[var(--color-border)] bg-[var(--color-surface-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)]"
                           }`}
                           onClick={() => handleSubRegionToggle(region)}
                         >

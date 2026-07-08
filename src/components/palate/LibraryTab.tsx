@@ -5,10 +5,11 @@ import Link from "next/link";
 import Photo from "@/components/Photo";
 
 const GRENACHE = "#7B1D3A";
-const ROSE = "#C4607A";
-const CHAMPAGNE = "#F5EDD6";
-const FOG = "#A08878";
-const VIOGNIER = "#C9A84C";
+const ROSE = "#AC4760"; // Rose, deepened for AA text contrast on Champagne Daylight (matches --color-accent-secondary)
+const CHAMPAGNE = "#F5EDD6"; // used only for light text on solid Grenache CTA/pill backgrounds
+const TERROIR = "#2C1A0E";
+const FOG = "#6E645A"; // Fog #8A8878, darkened for AA text contrast on Champagne Daylight
+const VIOGNIER = "#8F6A1E"; // Viognier gold, darkened — used as text (rating badge), full-brightness gold fails contrast as text
 const NEBBIOLO = "#4A3060";
 
 type LibraryEntry = {
@@ -96,7 +97,7 @@ function FilterDropdown({
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
             className="absolute left-0 top-full z-20 mt-1 max-h-48 w-40 overflow-y-auto rounded-xl py-1 shadow-lg"
-            style={{ background: "#3A1020", border: `1px solid ${NEBBIOLO}40` }}
+            style={{ background: "#FFFFFF", border: `1px solid ${NEBBIOLO}40` }}
           >
             <button
               type="button"
@@ -112,7 +113,7 @@ function FilterDropdown({
                 type="button"
                 onClick={() => { onChange(opt); setOpen(false); }}
                 className="w-full truncate px-3 py-1.5 text-left text-[11px] transition hover:bg-[var(--color-surface-hover)]"
-                style={{ color: value === opt ? ROSE : CHAMPAGNE }}
+                style={{ color: value === opt ? ROSE : TERROIR }}
               >
                 {opt}
               </button>
@@ -236,7 +237,7 @@ export function LibraryTab() {
     return (
       <div className="space-y-2 animate-pulse">
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-center gap-3 py-2.5 px-3" style={{ borderBottom: `0.5px solid rgba(245,237,214,0.04)` }}>
+          <div key={i} className="flex items-center gap-3 py-2.5 px-3" style={{ borderBottom: `0.5px solid rgba(44,26,14,0.06)` }}>
             <div className="h-[76px] w-16 shrink-0 rounded-lg bg-[var(--color-surface-raised)]" />
             <div className="flex-1 space-y-1.5">
               <div className="h-4 w-36 rounded bg-[var(--color-surface-raised)]" />
@@ -252,9 +253,9 @@ export function LibraryTab() {
     return (
       <div
         className="rounded-2xl p-8 text-center"
-        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #220E14 100%)`, border: `1px solid ${GRENACHE}15` }}
+        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #FFFFFF 100%)`, border: `1px solid ${GRENACHE}15` }}
       >
-        <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
+        <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: TERROIR }}>
           No wines logged yet.
         </p>
         <p className="mt-2 text-xs" style={{ color: FOG }}>
@@ -392,7 +393,7 @@ export function LibraryTab() {
         {searchQuery.trim() || activeFilterCount > 0 ? (
           <>{displayEntries.length} result{displayEntries.length !== 1 ? "s" : ""}</>
         ) : (
-          <><span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{entries.length}{hasMore ? "+" : ""}</span> wines</>
+          <><span style={{ color: TERROIR, fontWeight: 600 }}>{entries.length}{hasMore ? "+" : ""}</span> wines</>
         )}
       </p>
 
@@ -408,7 +409,7 @@ export function LibraryTab() {
             key={entry.id}
             href={`/entries/${entry.id}?from=profile`}
             className="group flex items-center gap-3 px-3.5 py-2.5"
-            style={{ borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)" }}
+            style={{ borderBottom: "0.5px solid rgba(44, 26, 14, 0.06)" }}
           >
             {/* Thumbnail */}
             <div
@@ -439,7 +440,7 @@ export function LibraryTab() {
 
             {/* Name + meta */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate" style={{ fontFamily: "var(--font-serif)", fontSize: 18, color: CHAMPAGNE }}>
+              <span className="truncate" style={{ fontFamily: "var(--font-serif)", fontSize: 18, color: TERROIR }}>
                 {entry.wine_name || "Unnamed wine"}
               </span>
               {(entry.producer || entry.canonical_region || entry.region || entry.country) && (

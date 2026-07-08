@@ -95,7 +95,7 @@ export default function EntryPostSaveSurveyModal({
     <div className="fixed inset-0 z-50 px-3 py-3 sm:px-4 sm:py-4">
       <div className="fixed inset-0 bg-black/75" aria-hidden />
       <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
-        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
+        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
               Required survey
@@ -111,7 +111,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setHowWasIt(event.target.value as HowWasItResponse | "")
                 }
-                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
+                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {HOW_WAS_IT_OPTIONS.map((option) => (
@@ -132,7 +132,7 @@ export default function EntryPostSaveSurveyModal({
                   onChange={(event) =>
                     setExpectations(event.target.value as ExpectationsResponse | "")
                   }
-                  className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
+                  className="w-full rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
                 >
                   <option value="">Select one</option>
                   {EXPECTATIONS_OPTIONS.map((option) => (
@@ -153,7 +153,7 @@ export default function EntryPostSaveSurveyModal({
                 onChange={(event) =>
                   setEnjoymentIntent(event.target.value as EnjoymentIntentResponse | "")
                 }
-                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-black/35 px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
+                className="w-full rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-2 text-base text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-accent-primary)]/60 sm:text-sm"
               >
                 <option value="">Select one</option>
                 {ENJOYMENT_INTENT_OPTIONS.map((option) => (
@@ -166,7 +166,7 @@ export default function EntryPostSaveSurveyModal({
           </div>
 
           {errorMessage ? (
-            <p className="mt-4 text-sm text-rose-300">{errorMessage}</p>
+            <p className="mt-4 text-sm text-rose-700">{errorMessage}</p>
           ) : null}
 
           <div className="mt-6 flex items-center justify-end">

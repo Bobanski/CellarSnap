@@ -24,7 +24,7 @@ export default function RatingBadge({
         className={
           variant === "text"
             ? `${baseClasses} text-[var(--color-text-tertiary)] ${className}`.trim()
-            : `${baseClasses} border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-tertiary)] ${className}`.trim()
+            : `${baseClasses} border-[var(--color-border)] bg-[var(--color-surface-primary)] text-[var(--color-text-tertiary)] ${className}`.trim()
         }
       >
         Unrated

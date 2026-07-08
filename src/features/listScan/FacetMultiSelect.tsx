@@ -77,38 +77,39 @@ export default function FacetMultiSelect({
 
   const getTokenClasses = (tone: FacetOptionTone) => {
     if (tone === "rose") {
-      return "border-[#C76886]/45 bg-[#C76886]/16 text-[#fde5ec]";
+      return "border-[#C76886]/45 bg-[#C76886]/16 text-[var(--color-accent-secondary)]";
     }
     if (tone === "orange") {
-      return "border-[#D17A2A]/45 bg-[#D17A2A]/16 text-[#fde6c7]";
+      return "border-[#D17A2A]/45 bg-[#D17A2A]/16 text-[#7A4212]";
     }
     if (tone === "white") {
-      return "border-[var(--color-accent-secondary)]/45 bg-[var(--color-accent-secondary)]/16 text-[var(--color-text-on-accent)]";
+      return "border-[var(--color-accent-secondary)]/45 bg-[var(--color-accent-secondary)]/16 text-[var(--color-accent-secondary)]";
     }
     if (tone === "red") {
-      return "border-[#4A3060]/60 bg-[#4A3060]/70 text-[#f3eef8]";
+      // Nebbiolo at 70% opacity is a substantially opaque dark purple fill — light text is correct here.
+      return "border-[#4A3060]/60 bg-[#4A3060]/70 text-white";
     }
     return "border-[var(--color-success)]/40 bg-[var(--color-success)]/10 text-[var(--color-success)]";
   };
 
   const getSuggestionClasses = (tone: FacetOptionTone) => {
     if (tone === "rose") {
-      return "border-[#C76886]/30 bg-[#C76886]/8 text-[#f1bfd0] hover:border-[#C76886]/55 hover:bg-[#C76886]/14";
+      return "border-[#C76886]/30 bg-[#C76886]/8 text-[var(--color-accent-secondary)] hover:border-[#C76886]/55 hover:bg-[#C76886]/14";
     }
     if (tone === "orange") {
-      return "border-[#D17A2A]/30 bg-[#D17A2A]/8 text-[#f2c78f] hover:border-[#D17A2A]/55 hover:bg-[#D17A2A]/14";
+      return "border-[#D17A2A]/30 bg-[#D17A2A]/8 text-[#7A4212] hover:border-[#D17A2A]/55 hover:bg-[#D17A2A]/14";
     }
     if (tone === "white") {
-      return "border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-secondary)]/8 text-[var(--color-text-on-accent)] hover:border-[var(--color-accent-secondary)]/55 hover:bg-[var(--color-accent-secondary)]/14";
+      return "border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-secondary)]/8 text-[var(--color-accent-secondary)] hover:border-[var(--color-accent-secondary)]/55 hover:bg-[var(--color-accent-secondary)]/14";
     }
     if (tone === "red") {
-      return "border-[#4A3060]/45 bg-[#4A3060]/15 text-[#dbcfe7] hover:border-[#4A3060]/75 hover:bg-[#4A3060]/26";
+      return "border-[#4A3060]/45 bg-[#4A3060]/15 text-[#4A3060] hover:border-[#4A3060]/75 hover:bg-[#4A3060]/26";
     }
-    return "border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-primary)] hover:border-white/20 hover:bg-white/8";
+    return "border-[var(--color-border)] bg-[var(--color-surface-primary)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)]";
   };
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -127,7 +128,7 @@ export default function FacetMultiSelect({
       </button>
 
       {open ? (
-        <div className="space-y-3 border-t border-white/8 p-4">
+        <div className="space-y-3 border-t border-[var(--color-border)] p-4">
           {selected.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {selected.map((value) => {
@@ -142,7 +143,7 @@ export default function FacetMultiSelect({
                     {value}
                     <button
                       type="button"
-                      className="rounded-full border border-[var(--color-border-strong)] px-1 text-[10px] leading-4 text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-200"
+                      className="rounded-full border border-[var(--color-border-strong)] px-1 text-[10px] leading-4 text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-700"
                       onClick={() => removeOption(value)}
                       aria-label={`Remove ${value}`}
                     >

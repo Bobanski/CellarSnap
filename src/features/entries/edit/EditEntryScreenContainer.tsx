@@ -1854,7 +1854,7 @@ export default function EditEntryPage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-3xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm text-[var(--color-text-secondary)]">
               Loading entry...
             </div>
           </div>
@@ -1957,7 +1957,7 @@ export default function EditEntryPage() {
         <form
           id="entry-edit-form"
           noValidate
-          className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]"
+          className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)]"
           onSubmit={onSubmit}
         >
           {isBulkReview ? (
@@ -1992,7 +1992,7 @@ export default function EditEntryPage() {
                     <label className="relative block">
                       <select
                         value={photo.type}
-                        className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-primary)]/50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-on-accent)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-primary)]/50 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={isLegacyPhoto(photo) || savingPhotoId === photo.id}
                         onClick={(event) => event.stopPropagation()}
                         onMouseDown={(event) => event.stopPropagation()}
@@ -2017,7 +2017,7 @@ export default function EditEntryPage() {
                       <label className="relative block">
                         <select
                           value={index}
-                          className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-primary)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)]/50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-on-accent)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)]/50 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={
                             hasLegacyGalleryPhoto ||
                             isLegacyPhoto(photo) ||
@@ -2278,7 +2278,7 @@ export default function EditEntryPage() {
               <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text-primary)]">Group type</label>
-                  <div className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-black/40 p-1">
+                  <div className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1">
                     {[
                       { value: "event", label: "Event" },
                       { value: "catch_up", label: "Catch-up" },
@@ -2457,7 +2457,7 @@ export default function EditEntryPage() {
                       <label key={user.id} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-white/20 bg-black/40 text-[var(--color-accent-primary)]"
+                          className="h-4 w-4 rounded border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[var(--color-accent-primary)]"
                           checked={isChecked}
                           onChange={(event) => {
                             setSelectedUserIds((prev) =>
@@ -2658,12 +2658,12 @@ export default function EditEntryPage() {
                     return (
                       <div
                         key={photo.id}
-                        className="rounded-xl border border-[var(--color-border)] bg-black/40 p-3"
+                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3"
                       >
                         <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)]">
                           <button
                             type="button"
-                            className="relative block h-28 overflow-hidden rounded-lg border border-[var(--color-border)] bg-black/50 text-left disabled:cursor-not-allowed disabled:opacity-70"
+                            className="relative block h-28 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-left disabled:cursor-not-allowed disabled:opacity-70"
                             onClick={() => openCropEditor(photo)}
                             disabled={!photo.signed_url || saving}
                             aria-label={`Crop ${PHOTO_TYPE_LABELS[photo.type].toLowerCase()} photo`}
@@ -2676,7 +2676,7 @@ export default function EditEntryPage() {
                                   alt={`${PHOTO_TYPE_LABELS[photo.type]} photo ${index + 1}`}
                                   className="h-full w-full object-cover"
                                 />
-                                <span className="absolute bottom-1 left-1 rounded-full border border-[var(--color-border)] bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-primary)]">
+                                <span className="absolute bottom-1 left-1 rounded-full border border-[var(--color-border)] bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-on-accent)]">
                                   Crop
                                 </span>
                               </>
@@ -2795,7 +2795,7 @@ export default function EditEntryPage() {
                 disabled={savingCrop}
               />
               <div className="relative h-full overflow-y-auto p-3 pt-4 sm:flex sm:items-center sm:justify-center sm:p-4">
-                <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-primary)] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+                <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-primary)] p-5 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
@@ -2818,10 +2818,10 @@ export default function EditEntryPage() {
                   </button>
                 </div>
 
-                <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-black/40">
+                <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
                   <div
                     ref={cropFrameRef}
-                    className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
+                    className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-[var(--color-surface-raised)]"
                   >
                   {cropSourceLoading ? (
                     <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-secondary)]">

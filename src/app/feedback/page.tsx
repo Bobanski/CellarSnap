@@ -80,7 +80,7 @@ export default function FeedbackPage() {
 
         <form
           onSubmit={onSubmit}
-          className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6"
+          className="space-y-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6"
         >
           <div>
             <label htmlFor="category" className="text-sm font-medium text-[var(--color-text-primary)]">
@@ -142,9 +142,9 @@ export default function FeedbackPage() {
             />
           </div>
 
-          {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
+          {errorMessage ? <p className="text-sm text-rose-700">{errorMessage}</p> : null}
           {successMessage ? (
-            <p className="text-sm text-emerald-300">{successMessage}</p>
+            <p className="text-sm text-emerald-700">{successMessage}</p>
           ) : null}
 
           <div className="flex flex-wrap items-center gap-3">

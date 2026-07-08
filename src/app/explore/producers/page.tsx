@@ -10,11 +10,12 @@ import AppShell from "@/components/AppShell";
 // Colors — matching profile page palette
 // ---------------------------------------------------------------------------
 
-const ROSE = "#C4607A";
+const ROSE = "#AC4760"; // Rose, deepened for AA text contrast on Champagne Daylight (matches --color-accent-secondary)
 const GRENACHE = "#7B1D3A";
 const CHAMPAGNE = "#F5EDD6";
-const FOG = "#A08878";
-const BG_SECTION = "#220E14";
+const TERROIR = "#2C1A0E";
+const FOG = "#6E645A"; // Fog #8A8078, darkened for AA text contrast on Champagne Daylight
+const BG_SECTION = "#4A0E1F"; // Barolo — kept dark for hero/highlight moments per brand guide
 
 type Producer = { name: string; count: number };
 
@@ -125,7 +126,7 @@ export default function ProducersBrowsePage() {
         {isSearching && (
           <div className="mt-4">
             {filtered.length === 0 ? (
-              <div className="rounded-2xl p-5 text-center" style={{ background: BG_SECTION, border: `1px solid ${ROSE}15` }}>
+              <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: `1px solid ${ROSE}15` }}>
                 <p className="text-sm" style={{ color: FOG }}>No producers found.</p>
               </div>
             ) : (
@@ -138,7 +139,7 @@ export default function ProducersBrowsePage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: ROSE }} />
-                      <span className="text-sm" style={{ color: CHAMPAGNE }}>{p.name}</span>
+                      <span className="text-sm" style={{ color: TERROIR }}>{p.name}</span>
                     </div>
                     <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>
                       {p.count}
@@ -156,7 +157,7 @@ export default function ProducersBrowsePage() {
             {loading ? (
               <div className="mt-8 space-y-2 animate-pulse">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: BG_SECTION }}>
+                  <div key={i} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: "#FFFFFF" }}>
                     <div className="h-3.5 w-32 rounded bg-[var(--color-surface-raised)]" />
                     <div className="h-3 w-14 rounded-full bg-[var(--color-surface-raised)]" />
                   </div>
@@ -165,7 +166,7 @@ export default function ProducersBrowsePage() {
             ) : producers.length === 0 ? (
               <div
                 className="mt-8 rounded-2xl p-8 text-center"
-                style={{ background: `linear-gradient(135deg, ${ROSE}10 0%, ${BG_SECTION} 100%)`, border: `1px solid ${ROSE}15` }}
+                style={{ background: `linear-gradient(135deg, ${ROSE}10 0%, #FFFFFF 100%)`, border: `1px solid ${ROSE}15` }}
               >
                 <div
                   className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
@@ -177,7 +178,7 @@ export default function ProducersBrowsePage() {
                     <line x1="7" y1="20" x2="17" y2="20" stroke={ROSE} strokeWidth="0.8" opacity="0.3" />
                   </svg>
                 </div>
-                <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
+                <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: TERROIR }}>
                   No producers yet.
                 </p>
                 <p className="mt-2 text-xs" style={{ color: FOG }}>
@@ -187,7 +188,7 @@ export default function ProducersBrowsePage() {
             ) : (
               <>
                 {/* ── Most Logged ─────────────────────────── */}
-                <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${ROSE}12` }}>
+                <div className="mt-8 rounded-2xl p-5" style={{ background: "#FFFFFF", border: `1px solid ${ROSE}12` }}>
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: ROSE }}>
                     Most Logged
                   </p>
@@ -201,7 +202,7 @@ export default function ProducersBrowsePage() {
                         <span className="w-5 text-center text-sm font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
                           {i + 1}
                         </span>
-                        <span className="min-w-0 flex-1 text-sm" style={{ color: CHAMPAGNE }}>
+                        <span className="min-w-0 flex-1 text-sm" style={{ color: TERROIR }}>
                           {p.name}
                         </span>
                         <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>

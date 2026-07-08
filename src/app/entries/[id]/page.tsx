@@ -828,7 +828,7 @@ export default function EntryDetailPage() {
               wrapperClassName="rounded-b-none"
             />
             )}
-            <div className="rounded-b-3xl border border-t-0 border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4" ref={reactionMenuRef}>
+            <div className="rounded-b-3xl border border-t-0 border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4" ref={reactionMenuRef}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {canComment ? (
                   <button
@@ -878,8 +878,8 @@ export default function EntryDetailPage() {
                     onClick={() => setReactionPopupOpen((prev) => !prev)}
                     className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
                       canReact
-                        ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
-                        : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
+                        ? "border-[var(--color-border-strong)] text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                        : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]"
                     }`}
                     aria-label={canReact ? "Add reaction" : "View reaction options"}
                   >
@@ -930,7 +930,7 @@ export default function EntryDetailPage() {
                         const isDeleted = Boolean(comment.is_deleted);
                         const deleting = deletingCommentId === comment.id;
                         return (
-                          <li key={comment.id} className="rounded-xl border border-[var(--color-border)] bg-black/25 p-3">
+                          <li key={comment.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 {!isDeleted && comment.author_name ? (
@@ -943,7 +943,7 @@ export default function EntryDetailPage() {
                               <div className="flex shrink-0 items-center gap-2">
                                 <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(comment.created_at)}</span>
                                 {!isDeleted && currentUserId === comment.user_id ? (
-                                  <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                  <button type="button" disabled={deleting} onClick={() => deleteComment(comment.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50">
                                     {deleting ? "Deleting..." : "Delete"}
                                   </button>
                                 ) : null}
@@ -974,7 +974,7 @@ export default function EntryDetailPage() {
                                         <div className="flex shrink-0 items-center gap-2">
                                           <span className="text-[11px] text-[var(--color-text-tertiary)]">{formatCommentDate(reply.created_at)}</span>
                                           {!replyDeleted && currentUserId === reply.user_id ? (
-                                            <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <button type="button" disabled={deletingReply} onClick={() => deleteComment(reply.id)} className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50">
                                               {deletingReply ? "Deleting..." : "Delete"}
                                             </button>
                                           ) : null}
@@ -1009,7 +1009,7 @@ export default function EntryDetailPage() {
                       }}
                       rows={2}
                       placeholder={replyTarget ? "Write a reply..." : "Write a comment..."}
-                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                      className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                       disabled={!canComment || postingComment}
                     />
                     <div className="mt-2 flex items-center justify-end">
@@ -1028,10 +1028,10 @@ export default function EntryDetailPage() {
             </div>
           </div>
 
-          <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
             {scoreLoading
                 ? (
-                  <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5 text-sm text-[var(--color-text-tertiary)]">
+                  <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5 text-sm text-[var(--color-text-tertiary)]">
                     Calculating your palate match...
                   </div>
                 )
@@ -1047,7 +1047,7 @@ export default function EntryDetailPage() {
                     </>
                   )
                   : (
-                    <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5">
+                    <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
                       <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
                         Palate match
                       </p>
@@ -1445,17 +1445,17 @@ export default function EntryDetailPage() {
         ) : null}
 
         {isOwner ? (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6">
+          <div className="rounded-2xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-rose-100">Delete</h2>
-                <p className="text-xs text-rose-200/80">
+                <h2 className="text-sm font-semibold text-[var(--color-error)]">Delete</h2>
+                <p className="text-xs text-[var(--color-error)]/80">
                   Deleting removes this entry and its photos.
                 </p>
               </div>
               <button
                 type="button"
-                className="rounded-full border border-rose-400/40 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:border-rose-300"
+                className="rounded-full border border-[var(--color-error)]/40 px-4 py-2 text-sm font-semibold text-[var(--color-error)] transition hover:border-[var(--color-error)]"
                 onClick={() => setShowDeleteConfirm(true)}
               >
                 Delete entry
@@ -1468,10 +1468,10 @@ export default function EntryDetailPage() {
       {showDeleteConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div
-            className="absolute inset-0 bg-black/70"
+            className="absolute inset-0 bg-[var(--color-overlay)]"
             onClick={() => setShowDeleteConfirm(false)}
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+          <div className="relative w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)]">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               Delete this entry?
             </h3>
@@ -1488,7 +1488,7 @@ export default function EntryDetailPage() {
               </button>
               <button
                 type="button"
-                className="rounded-full bg-rose-400 px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-rose-300"
+                className="rounded-full bg-[var(--color-error)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:opacity-90"
                 onClick={async () => {
                   setShowDeleteConfirm(false);
                   await onDelete();
@@ -1503,7 +1503,7 @@ export default function EntryDetailPage() {
 
       {shareToast ? (
         <div
-          className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
+          className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(44,26,14,0.35)] ${
             shareToast.kind === "success"
               ? "border-[var(--color-success)]/50 bg-[var(--color-success)]/15 text-[var(--color-success)]"
               : "border-[var(--color-error)]/50 bg-[var(--color-error)]/15 text-[var(--color-error)]"

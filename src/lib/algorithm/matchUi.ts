@@ -47,38 +47,38 @@ export const MATCH_BAND_COPY: Record<
   excellent: {
     title: "Perfect match",
     pillLabel: "Perfect match",
-    scoreColorClassName: "text-emerald-200",
+    scoreColorClassName: "text-emerald-700",
     ringColor: "#2D7D46",
-    glowColor: "rgba(52, 211, 153, 0.28)",
+    glowColor: "rgba(45, 125, 70, 0.22)",
     chipClassName:
-      "border border-emerald-300/35 bg-emerald-400/15 text-emerald-100",
+      "border border-emerald-300/45 bg-emerald-400/15 text-emerald-700",
   },
   strong: {
     title: "Great match",
     pillLabel: "Great match",
-    scoreColorClassName: "text-[var(--color-text-on-accent)]",
+    scoreColorClassName: "text-[var(--color-accent-gold-text)]",
     ringColor: "#C9A84C",
-    glowColor: "rgba(251, 191, 36, 0.24)",
+    glowColor: "rgba(201, 168, 76, 0.22)",
     chipClassName:
-      "border border-[var(--color-accent-primary)]/35 bg-[var(--color-accent-primary)]/15 text-[var(--color-text-on-accent)]",
+      "border border-[var(--color-accent-primary)]/35 bg-[var(--color-accent-primary)]/12 text-[var(--color-accent-primary)]",
   },
   decent: {
     title: "Decent match",
     pillLabel: "Decent match",
-    scoreColorClassName: "text-zinc-100",
+    scoreColorClassName: "text-zinc-700",
     ringColor: "#5D5570",
-    glowColor: "rgba(212, 212, 216, 0.18)",
+    glowColor: "rgba(93, 85, 112, 0.18)",
     chipClassName:
-      "border border-zinc-300/20 bg-zinc-400/10 text-zinc-100",
+      "border border-zinc-300/40 bg-zinc-400/10 text-zinc-700",
   },
   not_your_style: {
     title: "Not your style",
     pillLabel: "Not your style",
-    scoreColorClassName: "text-rose-100",
+    scoreColorClassName: "text-rose-700",
     ringColor: "#C4607A",
-    glowColor: "rgba(251, 113, 133, 0.22)",
+    glowColor: "rgba(196, 96, 122, 0.20)",
     chipClassName:
-      "border border-rose-300/30 bg-rose-400/15 text-rose-100",
+      "border border-rose-300/40 bg-rose-400/15 text-rose-700",
   },
 };
 

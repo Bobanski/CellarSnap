@@ -361,7 +361,7 @@ export function TasteTab() {
       {/* ── What you reach for ── */}
       <section className="grid gap-4 sm:grid-cols-2">
         {/* Top grapes */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 space-y-3">
           <SectionLabel>Top grapes</SectionLabel>
           {topGrapes.length > 0 ? (
             <div className="space-y-2">
@@ -398,7 +398,7 @@ export function TasteTab() {
         </div>
 
         {/* Top regions */}
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 space-y-3">
           <SectionLabel>Top regions</SectionLabel>
           {regionStats.length > 0 ? (
             <div className="space-y-2">
@@ -447,7 +447,7 @@ export function TasteTab() {
 
       {/* ── Wine type distribution ── */}
       {wineTypeStats.length > 0 && (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
+        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 space-y-3">
           <SectionLabel>What you drink</SectionLabel>
           <TypeBar stats={wineTypeStats} />
         </section>
@@ -465,7 +465,7 @@ export function TasteTab() {
             />
 
             {/* Standout axes */}
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-5">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 space-y-5">
               {leansInto.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">

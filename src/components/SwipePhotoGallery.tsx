@@ -63,7 +63,7 @@ export default function SwipePhotoGallery({
   if (items.length === 0) {
     return (
       <div
-        className={`flex ${heightClassName || "aspect-[4/3]"} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-black/40 text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
+        className={`flex ${heightClassName || "aspect-[4/3]"} items-center justify-center rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-sm text-[var(--color-text-tertiary)] ${wrapperClassName}`}
       >
         {empty ?? "No photo"}
       </div>
@@ -96,7 +96,7 @@ export default function SwipePhotoGallery({
 
   return (
     <div
-      className={`overflow-hidden ${wrapperClassName || "rounded-3xl border border-[var(--color-border)] bg-black/40"}`}
+      className={`overflow-hidden ${wrapperClassName || "rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]"}`}
       onClickCapture={(event) => {
         if (!didSwipeRef.current) return;
         didSwipeRef.current = false;
@@ -181,7 +181,7 @@ export default function SwipePhotoGallery({
                 {item.badge
                   ? typeof item.badge === "string"
                     ? (
-                        <span className="absolute left-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-primary)]">
+                        <span className="absolute left-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-on-accent)]">
                           {item.badge}
                         </span>
                       )
@@ -192,7 +192,7 @@ export default function SwipePhotoGallery({
                 {topRightBadge
                   ? typeof topRightBadge === "string"
                     ? (
-                        <span className="absolute right-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold text-[var(--color-text-primary)]">
+                        <span className="absolute right-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold text-[var(--color-text-on-accent)]">
                           {topRightBadge}
                         </span>
                       )
@@ -209,7 +209,7 @@ export default function SwipePhotoGallery({
           <>
             <button
               type="button"
-              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
+              className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-on-accent)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
               aria-label="Previous photo"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
             >
@@ -217,7 +217,7 @@ export default function SwipePhotoGallery({
             </button>
             <button
               type="button"
-              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
+              className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-on-accent)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
               aria-label="Next photo"
               onClick={(e) => { e.stopPropagation(); goNext(); }}
             >

@@ -22,7 +22,7 @@ export default function TermsPage() {
           <p className="text-sm text-[var(--color-text-tertiary)]">Last updated: {LAST_UPDATED}</p>
         </header>
 
-        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
+        <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm leading-6 text-[var(--color-text-secondary)]">
           <p>
             Cluster is currently provided as a friends-and-family test product.
             Features may change quickly, and service availability is not guaranteed.

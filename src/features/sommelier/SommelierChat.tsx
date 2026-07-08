@@ -356,7 +356,7 @@ export default function SommelierChat() {
       </div>
 
       {error ? (
-        <div className="flex items-start justify-between gap-3 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700">
           <p>{error}</p>
           <div className="flex items-center gap-2">
             {lastSubmittedPrompt ? (
@@ -366,7 +366,7 @@ export default function SommelierChat() {
                   void sendMessage(lastSubmittedPrompt);
                 }}
                 disabled={pending}
-                className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-100 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-700 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 Retry last prompt
               </button>
@@ -374,7 +374,7 @@ export default function SommelierChat() {
             <button
               type="button"
               onClick={() => setError(null)}
-              className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-100 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40"
+              className="rounded-full border border-rose-200/25 px-3 py-1 text-xs font-medium text-rose-700 transition hover:border-rose-100/40 hover:bg-rose-200/10 focus:outline-none focus:ring-2 focus:ring-rose-200/40"
             >
               Dismiss
             </button>

@@ -3263,7 +3263,7 @@ export default function NewEntryPage() {
           <label className="relative block">
             <select
               value={resolvedType}
-              className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-primary)]/50"
+              className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-on-accent)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-primary)]/50"
               onClick={(event) => event.stopPropagation()}
               onMouseDown={(event) => event.stopPropagation()}
               onTouchStart={(event) => event.stopPropagation()}
@@ -3346,7 +3346,7 @@ export default function NewEntryPage() {
         <label className="relative block">
           <select
             value={index}
-            className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-primary)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)]/50"
+            className="max-w-[4.5rem] appearance-none rounded-full border border-[var(--color-border-strong)] bg-black/55 py-0.5 pl-2 pr-5 text-[10px] font-semibold text-[var(--color-text-on-accent)] outline-none transition hover:border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)]/50"
             onClick={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
@@ -3472,7 +3472,7 @@ export default function NewEntryPage() {
 
         <form
           noValidate
-            className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]"
+            className="space-y-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)]"
             onSubmit={onSubmit}
           >
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
@@ -3659,7 +3659,7 @@ export default function NewEntryPage() {
                       <div className="group relative">
                         <button
                           type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-black/40 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                           aria-label="Explain Event and Catch-up"
                         >
                           i
@@ -3682,7 +3682,7 @@ export default function NewEntryPage() {
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                           Mode
                         </p>
-                        <div className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-black/40 p-1">
+                        <div className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1">
                           {[
                             { value: "event", label: "Event" },
                             { value: "catch_up", label: "Catch-up" },
@@ -3847,7 +3847,7 @@ export default function NewEntryPage() {
                                   >
                                     <input
                                       type="checkbox"
-                                      className="h-4 w-4 rounded border-white/20 bg-black/40 text-[var(--color-accent-primary)]"
+                                      className="h-4 w-4 rounded border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[var(--color-accent-primary)]"
                                       checked={isChecked}
                                       onChange={(event) => {
                                         setSelectedUserIds((prev) =>
@@ -3987,7 +3987,7 @@ export default function NewEntryPage() {
                       className={`flex items-start gap-3 rounded-xl border p-3 transition ${
                         wine.included
                           ? "border-[var(--color-border)] bg-[var(--color-surface-muted)]"
-                          : "border-white/5 bg-black/10 opacity-50"
+                          : "border-[var(--color-border)] bg-[var(--color-surface-muted)] opacity-50"
                       }`}
                     >
                       <button
@@ -4064,7 +4064,7 @@ export default function NewEntryPage() {
 
                 {showManualFields ? (
                   <>
-                <div className="rounded-2xl border border-sky-300/20 bg-sky-950/20 p-4">
+                <div className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
                       <label
@@ -4073,7 +4073,7 @@ export default function NewEntryPage() {
                       >
                         {NEW_ENTRY_DRINKING_NOW_COPY.title}
                       </label>
-                      <p className="text-xs text-[var(--color-text-tertiary)]">
+                      <p className="text-xs text-[var(--color-text-secondary)]">
                         {NEW_ENTRY_DRINKING_NOW_COPY.description}
                       </p>
                     </div>
@@ -4086,7 +4086,7 @@ export default function NewEntryPage() {
                           type="checkbox"
                           checked={field.value === true}
                           onChange={(event) => field.onChange(event.target.checked)}
-                          className="h-5 w-5 rounded border-white/20 bg-black/40 text-sky-300 focus:ring-2 focus:ring-sky-300/40"
+                          className="h-5 w-5 rounded border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-sky-700 focus:ring-2 focus:ring-sky-300/40"
                         />
                       )}
                     />
@@ -4096,7 +4096,7 @@ export default function NewEntryPage() {
                 <div>
                   <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Notes</label>
                   <textarea
-                    className="min-h-[120px] w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                    className="min-h-[120px] w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     {...register("notes")}
                   />
                 </div>
@@ -4109,7 +4109,7 @@ export default function NewEntryPage() {
                     <input
                       type="text"
                       inputMode="numeric"
-                      className={`w-20 rounded-[10px] border-[0.5px] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 ${
+                      className={`w-20 rounded-[10px] border-[0.5px] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 ${
                         errors.rating
                           ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
                           : "border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
@@ -4155,7 +4155,7 @@ export default function NewEntryPage() {
                               className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
                                 field.value === value
                                   ? "border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.15)] text-[var(--color-accent-gold)]"
-                                  : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                  : "border-[0.5px] border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
                               }`}
                               onClick={() => field.onChange(field.value === value ? "" : value)}
                             >
@@ -4183,7 +4183,7 @@ export default function NewEntryPage() {
                     <div>
                       <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Wine name</label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("wine_name")}
                       />
                       {errors.wine_name ? (
@@ -4193,28 +4193,28 @@ export default function NewEntryPage() {
                     <div>
                       <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Producer</label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("producer")}
                       />
                     </div>
                     <div>
                       <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Vintage</label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("vintage")}
                       />
                     </div>
                     <div>
                       <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Country</label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("country")}
                       />
                     </div>
                     <div>
                       <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Region</label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("region")}
                       />
                     </div>
@@ -4223,7 +4223,7 @@ export default function NewEntryPage() {
                         Appellation
                       </label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         {...register("appellation")}
                       />
                     </div>
@@ -4232,7 +4232,7 @@ export default function NewEntryPage() {
                         Classification
                       </label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         placeholder="Optional (e.g. Premier Cru, DOCG)"
                         {...register("classification")}
                       />
@@ -4289,7 +4289,7 @@ export default function NewEntryPage() {
                             value={field.value}
                             onChange={field.onChange}
                             onBlur={field.onBlur}
-                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                             required
                           />
                         )}
@@ -4332,7 +4332,7 @@ export default function NewEntryPage() {
                         <label key={user.id} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
                           <input
                             type="checkbox"
-                            className="h-4 w-4 rounded border-white/20 bg-black/40 text-[var(--color-accent-primary)]"
+                            className="h-4 w-4 rounded border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] text-[var(--color-accent-primary)]"
                             checked={isChecked}
                             onChange={(event) => {
                               setSelectedUserIds((prev) =>
@@ -4360,7 +4360,7 @@ export default function NewEntryPage() {
                             value={friendSearch}
                             onChange={(e) => setFriendSearch(e.target.value)}
                             placeholder={NEW_ENTRY_SINGLE_BOTTLE_COPY.searchFriendsPlaceholder}
-                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                            className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
                           {searchResults.length > 0 && (
                             <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] p-1 shadow-xl">
@@ -4434,7 +4434,7 @@ export default function NewEntryPage() {
                           {field.label}
                         </label>
                         <select
-                          className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                          className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           {...register(`advanced_notes.${field.key}` as const)}
                         >
                           <option value="">Not set</option>
@@ -4476,7 +4476,7 @@ export default function NewEntryPage() {
                                 className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
                                   field.value === option.value
                                     ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
-                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
                                 }`}
                                 onClick={() => field.onChange(option.value)}
                               >
@@ -4506,7 +4506,7 @@ export default function NewEntryPage() {
                                 className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
                                   field.value === option.value
                                     ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
-                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
                                 }`}
                                 onClick={() => field.onChange(option.value)}
                               >
@@ -4536,7 +4536,7 @@ export default function NewEntryPage() {
                                 className={`flex-1 rounded-lg px-1 py-1.5 text-[8px] uppercase tracking-[0.5px] text-center transition ${
                                   field.value === option.value
                                     ? "border border-[rgba(74,48,96,0.5)] bg-[rgba(74,48,96,0.3)] text-[#A888CC]"
-                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
                                 }`}
                                 onClick={() => field.onChange(option.value)}
                               >
@@ -4590,7 +4590,7 @@ export default function NewEntryPage() {
             disabled={savingCrop}
           />
           <div className="relative h-full overflow-y-auto p-3 pt-4 sm:flex sm:items-center sm:justify-center sm:p-4">
-            <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-primary)] p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+            <div className="relative z-10 mx-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface-primary)] p-5 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)]">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
@@ -4613,10 +4613,10 @@ export default function NewEntryPage() {
                 </button>
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-black/40">
+              <div className="mt-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
                 <div
                   ref={cropFrameRef}
-                  className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-black/50"
+                  className="relative mx-auto aspect-square w-full max-w-[28rem] overflow-hidden bg-[var(--color-surface-raised)]"
                 >
                   {cropSourceLoading ? (
                     <div className="flex h-full w-full items-center justify-center gap-2 text-sm text-[var(--color-accent-secondary)]">

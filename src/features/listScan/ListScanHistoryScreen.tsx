@@ -191,11 +191,11 @@ export default function ListScanHistoryScreen() {
         </header>
 
         {isLoading ? (
-          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 text-sm text-[var(--color-text-secondary)]">
             Loading saved scans...
           </section>
         ) : errorMessage ? (
-          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 text-sm text-[var(--color-text-secondary)]">
             <p>{errorMessage}</p>
             <div className="mt-4">
               {isSignedOut ? (
@@ -219,7 +219,7 @@ export default function ListScanHistoryScreen() {
             </div>
           </section>
         ) : items.length === 0 ? (
-          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 text-sm text-[var(--color-text-secondary)]">
             <p>No saved scans yet. Scan a wine list while signed in and it will show up here.</p>
             <Link
               href="/list-scan"
@@ -247,11 +247,11 @@ export default function ListScanHistoryScreen() {
                 <Link
                   key={item.scan_id}
                   href={`/list-scan/results?scanId=${encodeURIComponent(item.scan_id)}`}
-                  className="flex items-center transition hover:bg-white/[0.03]"
+                  className="flex items-center transition hover:bg-[var(--color-surface-hover)]"
                   style={{
                     gap: "10px",
                     padding: "11px 14px",
-                    borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)",
+                    borderBottom: "0.5px solid rgba(44, 26, 14, 0.08)",
                   }}
                 >
                   <span

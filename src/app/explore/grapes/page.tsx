@@ -11,10 +11,11 @@ import AppShell from "@/components/AppShell";
 // ---------------------------------------------------------------------------
 
 const NEBBIOLO = "#4A3060";
-const ROSE = "#C4607A";
+const ROSE = "#AC4760"; // Rose, deepened for AA text contrast on Champagne Daylight (matches --color-accent-secondary)
 const CHAMPAGNE = "#F5EDD6";
-const FOG = "#A08878";
-const BG_SECTION = "#220E14";
+const TERROIR = "#2C1A0E";
+const FOG = "#6E645A"; // Fog #8A8078, darkened for AA text contrast on Champagne Daylight
+const BG_SECTION = "#4A0E1F"; // Barolo — kept dark for hero/highlight moments per brand guide
 
 // ---------------------------------------------------------------------------
 // Data
@@ -207,13 +208,13 @@ export default function GrapesBrowsePage() {
             {searching ? (
               <p className="text-sm" style={{ color: FOG }}>Searching...</p>
             ) : apiResults.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--color-border)] p-5 text-center" style={{ background: BG_SECTION }}>
+              <div className="rounded-2xl border border-[var(--color-border)] p-5 text-center" style={{ background: "#FFFFFF" }}>
                 <p className="text-sm" style={{ color: FOG }}>No grapes found. Try a different spelling or alias.</p>
               </div>
             ) : (
               <div className="space-y-0.5">
                 {apiResults.map((g) => (
-                  <Link key={g.name} href={g.href} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-[var(--color-surface-raised)]" style={{ color: CHAMPAGNE }}>
+                  <Link key={g.name} href={g.href} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-[var(--color-surface-raised)]" style={{ color: TERROIR }}>
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: NEBBIOLO }} />
                     {g.name}
                   </Link>
@@ -271,7 +272,7 @@ export default function GrapesBrowsePage() {
 
             {/* ── Your Top Grapes ──────────────────────── */}
             {userGrapesLoaded && userGrapes.length > 0 && (
-              <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${NEBBIOLO}18` }}>
+              <div className="mt-8 rounded-2xl p-5" style={{ background: "#FFFFFF", border: `1px solid ${NEBBIOLO}18` }}>
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: ROSE }}>
                   Your Top Grapes
                 </p>
@@ -283,7 +284,7 @@ export default function GrapesBrowsePage() {
                       className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                     >
                       <span className="w-4 text-center text-xs font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>{i + 1}</span>
-                      <span className="flex-1 text-sm" style={{ color: CHAMPAGNE }}>{g.name}</span>
+                      <span className="flex-1 text-sm" style={{ color: TERROIR }}>{g.name}</span>
                       <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${NEBBIOLO}25`, color: ROSE }}>
                         {g.count}
                       </span>
@@ -308,7 +309,7 @@ export default function GrapesBrowsePage() {
                       className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
                       style={{ background: `${NEBBIOLO}15`, border: `1px solid ${NEBBIOLO}20` }}
                     >
-                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
+                      <span className="text-xs font-medium" style={{ color: TERROIR }}>{g}</span>
                       {userEntry ? (
                         <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (

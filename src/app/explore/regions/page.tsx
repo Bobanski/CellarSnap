@@ -11,11 +11,12 @@ import AppShell from "@/components/AppShell";
 // ---------------------------------------------------------------------------
 
 const GRENACHE = "#7B1D3A";
-const ROSE = "#C4607A";
+const ROSE = "#AC4760"; // Rose, deepened for AA text contrast on Champagne Daylight (matches --color-accent-secondary)
 const CHAMPAGNE = "#F5EDD6";
-const FOG = "#A08878";
+const TERROIR = "#2C1A0E";
+const FOG = "#6E645A"; // Fog #8A8078, darkened for AA text contrast on Champagne Daylight
 const NEBBIOLO = "#4A3060";
-const BG_SECTION = "#220E14";
+const BG_SECTION = "#4A0E1F"; // Barolo — kept dark for hero/highlight moments per brand guide
 
 // ---------------------------------------------------------------------------
 // Data
@@ -177,13 +178,13 @@ export default function RegionsBrowsePage() {
         {isSearching && (
           <div className="mt-4">
             {filtered.length === 0 ? (
-              <div className="rounded-2xl p-5 text-center" style={{ background: BG_SECTION, border: `1px solid ${GRENACHE}20` }}>
+              <div className="rounded-2xl p-5 text-center" style={{ background: "#FFFFFF", border: `1px solid ${GRENACHE}20` }}>
                 <p className="text-sm" style={{ color: FOG }}>No regions found.</p>
               </div>
             ) : (
               <div className="space-y-0.5">
                 {filtered.map((r) => (
-                  <Link key={r} href={`/explore/region/${toExploreSlug(r)}`} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-[var(--color-surface-raised)]" style={{ color: CHAMPAGNE }}>
+                  <Link key={r} href={`/explore/region/${toExploreSlug(r)}`} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition hover:bg-[var(--color-surface-raised)]" style={{ color: TERROIR }}>
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: GRENACHE }} />
                     {r}
                   </Link>
@@ -236,7 +237,7 @@ export default function RegionsBrowsePage() {
 
             {/* ── Your Top Regions ─────────────────────── */}
             {userRegionsLoaded && userRegions.length > 0 && (
-              <div className="mt-8 rounded-2xl p-5" style={{ background: BG_SECTION, border: `1px solid ${GRENACHE}18` }}>
+              <div className="mt-8 rounded-2xl p-5" style={{ background: "#FFFFFF", border: `1px solid ${GRENACHE}18` }}>
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: ROSE }}>
                   Your Top Regions
                 </p>
@@ -248,7 +249,7 @@ export default function RegionsBrowsePage() {
                       className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                     >
                       <span className="w-4 text-center text-xs font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>{i + 1}</span>
-                      <span className="flex-1 text-sm" style={{ color: CHAMPAGNE }}>{r.name}</span>
+                      <span className="flex-1 text-sm" style={{ color: TERROIR }}>{r.name}</span>
                       <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${GRENACHE}25`, color: ROSE }}>
                         {r.count}
                       </span>
@@ -273,7 +274,7 @@ export default function RegionsBrowsePage() {
                       className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
                       style={{ background: `${GRENACHE}12`, border: `1px solid ${GRENACHE}18` }}
                     >
-                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{r}</span>
+                      <span className="text-xs font-medium" style={{ color: TERROIR }}>{r}</span>
                       {userEntry ? (
                         <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (
@@ -297,7 +298,7 @@ export default function RegionsBrowsePage() {
                 <div className="mt-4 space-y-5">
                   {remainingRegions.map(([letter, regions]) => (
                     <div key={letter}>
-                      <p className="mb-2 text-base font-light" style={{ fontFamily: "var(--font-serif)", color: `${ROSE}80` }}>
+                      <p className="mb-2 text-base font-light" style={{ fontFamily: "var(--font-serif)", color: ROSE }}>
                         {letter}
                       </p>
                       <div className="flex flex-wrap gap-2">

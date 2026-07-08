@@ -341,7 +341,7 @@ export default function FriendProfilePage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm text-[var(--color-text-secondary)]">
               Loading profile...
             </div>
           </div>
@@ -361,7 +361,7 @@ export default function FriendProfilePage() {
             >
               ← Back to Friends
             </Link>
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-700">
               {errorMessage ?? "Profile not found."}
             </div>
           </div>
@@ -419,7 +419,7 @@ export default function FriendProfilePage() {
               <div className="shrink-0 space-y-2">
                 {isBlocked ? (
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    <span className="rounded-full border border-rose-400/35 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100">
+                    <span className="rounded-full border border-rose-400/35 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-700">
                       Blocked
                     </span>
                     <button
@@ -441,7 +441,7 @@ export default function FriendProfilePage() {
                             type="button"
                             disabled={friendActionLoading}
                             onClick={removeFriend}
-                            className="rounded-full bg-rose-500/80 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                            className="rounded-full bg-rose-600/90 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
                           >
                             {friendActionLoading ? "Removing..." : "Yes, remove"}
                           </button>
@@ -456,7 +456,7 @@ export default function FriendProfilePage() {
                         </div>
                       ) : (
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-700">
                             <svg
                               width="14"
                               height="14"
@@ -478,7 +478,7 @@ export default function FriendProfilePage() {
                               setFriendActionError(null);
                               setConfirmingUnfriend(true);
                             }}
-                            className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-rose-400/40 hover:text-rose-700 disabled:opacity-50"
                           >
                             Remove
                           </button>
@@ -528,10 +528,10 @@ export default function FriendProfilePage() {
                   </>
                 )}
                 {friendActionError ? (
-                  <p className="text-right text-xs text-rose-200">{friendActionError}</p>
+                  <p className="text-right text-xs text-rose-700">{friendActionError}</p>
                 ) : null}
                 {blockActionError ? (
-                  <p className="text-right text-xs text-rose-200">{blockActionError}</p>
+                  <p className="text-right text-xs text-rose-700">{blockActionError}</p>
                 ) : null}
               </div>
             ) : null}
@@ -539,7 +539,7 @@ export default function FriendProfilePage() {
         </header>
 
         {!isOwnProfile && isBlocked ? (
-          <section className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-100">
+          <section className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-700">
             This user&apos;s content is hidden while blocked.
           </section>
         ) : (
@@ -549,7 +549,7 @@ export default function FriendProfilePage() {
                 {isOwnProfile ? "Wines you've uploaded" : "Wines they've uploaded"}
               </h2>
               {theirEntries.length === 0 ? (
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-tertiary)]">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm text-[var(--color-text-tertiary)]">
                   {isOwnProfile ? "You haven't uploaded any wines yet." : "No wines uploaded yet."}
                 </div>
               ) : (
@@ -558,9 +558,9 @@ export default function FriendProfilePage() {
                     <Link
                       key={entry.id}
                       href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
+                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 shadow-[0_20px_50px_-30px_rgba(44,26,14,0.35)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
                     >
-                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[var(--color-surface-raised)] text-xs text-[var(--color-text-tertiary)]">
                         {entry.label_image_url ? (
                           <Photo
                             src={entry.label_image_url}
@@ -637,7 +637,7 @@ export default function FriendProfilePage() {
                 {isOwnProfile ? "Tagged entries" : "Tagged in by others"}
               </h2>
               {taggedEntries.length === 0 ? (
-                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-tertiary)]">
+                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm text-[var(--color-text-tertiary)]">
                   {isOwnProfile
                     ? "You are not tagged in any entries yet."
                     : "Not tagged in any entries yet."}
@@ -648,9 +648,9 @@ export default function FriendProfilePage() {
                     <Link
                       key={entry.id}
                       href={`/entries/${entry.id}?from=profile&profile=${encodeURIComponent(userId)}`}
-                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
+                      className="group flex gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 shadow-[0_20px_50px_-30px_rgba(44,26,14,0.35)] transition hover:-translate-y-0.5 hover:border-[var(--color-accent-secondary)]/40"
                     >
-                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black/40 text-xs text-[var(--color-text-tertiary)]">
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[var(--color-surface-raised)] text-xs text-[var(--color-text-tertiary)]">
                         {entry.label_image_url ? (
                           <Photo
                             src={entry.label_image_url}

@@ -2,7 +2,7 @@ import React from "react";
 
 type BrandIconProps = { size?: number; color?: string; className?: string };
 
-export function AlertsIcon({ size: s = 20, color: c = "#F5EDD6", className }: BrandIconProps) {
+export function AlertsIcon({ size: s = 20, color: c = "#2C1A0E", className }: BrandIconProps) {
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none" className={className}>
       <circle cx={s*0.5} cy={s*0.28} r={s*0.15} fill={c} opacity={0.35} />
@@ -17,7 +17,7 @@ export function AlertsIcon({ size: s = 20, color: c = "#F5EDD6", className }: Br
   );
 }
 
-export function SettingsIcon({ size: s = 20, color: c = "#F5EDD6", className }: BrandIconProps) {
+export function SettingsIcon({ size: s = 20, color: c = "#2C1A0E", className }: BrandIconProps) {
   const nodes: React.ReactElement[] = [];
   for (let i = 0; i < 6; i++) {
     const a = i * 60 * Math.PI / 180;
@@ -32,7 +32,7 @@ export function SettingsIcon({ size: s = 20, color: c = "#F5EDD6", className }: 
   );
 }
 
-export function SearchIcon({ size: s = 20, color: c = "#F5EDD6", className }: BrandIconProps) {
+export function SearchIcon({ size: s = 20, color: c = "#2C1A0E", className }: BrandIconProps) {
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none" className={className}>
       <circle cx={s*0.41} cy={s*0.41} r={s*0.27} fill={c} opacity={0.15} />

@@ -449,7 +449,7 @@ export default function ListScanIntakeScreen() {
             </p>
           </header>
 
-          <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+          <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)] backdrop-blur">
             {isSignedIn === false ? (
               <div className="rounded-2xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 px-4 py-4 text-sm text-[var(--color-text-on-accent)]">
                 <p className="font-semibold text-[var(--color-accent-secondary)]">
@@ -644,7 +644,7 @@ export default function ListScanIntakeScreen() {
 
             {selectedPdf ? (
               <div className="relative flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-3">
-                <span className="rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
+                <span className="rounded-full bg-[var(--color-surface-raised)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-text-tertiary)]">
                   PDF
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--color-text-primary)]">

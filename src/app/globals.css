@@ -2,50 +2,58 @@
 @import "tailwindcss";
 
 :root {
-  /* ─── WARM NOIR — SCREENS & SURFACES ──────────────────── */
-  /* Deep editorial theme with warm wine-red undertones */
-  --color-screen-bg:       #1A0A10;
-  --color-surface-primary: #2E1420;
-  --color-surface-raised:  #3A1020;
-  --color-surface-hover:   #3E1828;
-  --color-surface-tinted:  rgba(74, 48, 96, 0.12);
-  --color-surface-muted:   #3A1020;
+  /* ─── CHAMPAGNE DAYLIGHT — SCREENS & SURFACES ─────────── */
+  /* Warm editorial light theme. 60% Champagne + Limestone backgrounds,
+     white cards per brand-guide Card spec (10px radius, 1px Limestone border). */
+  --color-screen-bg:       #F5EDD6;   /* Champagne */
+  --color-surface-primary: #FFFFFF;   /* Card white */
+  --color-surface-raised:  #E8E0D0;   /* Limestone */
+  --color-surface-hover:   #FDF6EE;   /* warm near-white hover/selected tint */
+  --color-surface-tinted:  rgba(74, 48, 96, 0.08);   /* Nebbiolo tint, light */
+  --color-surface-muted:   #E8E0D0;   /* Limestone */
 
   /* ─── TEXT HIERARCHY ────────────────────────────────────– */
-  --color-text-primary:    #F5EDD6;
-  --color-text-secondary:  #A08878;
-  --color-text-tertiary:   #5D5570;
-  --color-text-on-accent:  #F5EDD6;
-  --color-text-highlight:  #C4607A;
+  /* Fog (#8A8078) is the brand secondary-text colour, but at 3.3:1 on
+     Champagne it fails WCAG AA for body text — darkened ~15% here to
+     ~4.9:1 while keeping the same warm-grey identity. */
+  --color-text-primary:    #2C1A0E;   /* Terroir */
+  --color-text-secondary:  #6E645A;   /* Fog, darkened for AA text contrast */
+  --color-text-tertiary:   #8A8078;   /* Fog — decorative/non-text-critical use only */
+  --color-text-on-accent:  #F5EDD6;   /* Champagne, unchanged — sits on dark accent fills */
+  --color-text-highlight:  #AC4760;   /* Rose, deepened for AA text contrast */
 
   /* ─── ACCENTS & ACTION ──────────────────────────────– */
-  --color-accent-primary:  #7B1D3A;
+  --color-accent-primary:  #7B1D3A;   /* Grenache — unchanged, brand primary in both themes */
   --accent-rgb:            123,29,58;        /* Accent primary as RGB for gradients */
-  --color-accent-hover:    #9B2449;
-  --color-accent-soft:     rgba(123, 29, 58, 0.18);
-  --color-accent-secondary: #C4607A;
-  --color-accent-rose:     rgba(196, 96, 122, 0.12);
-  --color-accent-gold:     #C9A84C;
-  --color-accent-purple:   #6B4D8A;
+  --color-accent-hover:    #63152C;   /* deepened Grenache — press/hover darkens on light bg */
+  --color-accent-soft:     rgba(123, 29, 58, 0.12);
+  /* Rose (#C4607A) is only 3.4-4:1 on Champagne/white — fails AA when used as
+     text, which is by far its most common use across the app (labels, tags,
+     eyebrows). Deepened here so every existing `text-[var(--color-accent-secondary)]`
+     call site stays AA-safe without a file-by-file hunt. Full-brightness Rose
+     is still available via --color-accent-rose for decorative fills/tints. */
+  --color-accent-secondary: #AC4760;  /* Rose, deepened — hover states, tags, energy per brand guide */
+  --color-accent-rose:     rgba(196, 96, 122, 0.16);
+  --color-accent-gold:     #C9A84C;   /* Viognier — premium moments only, borders/fills/rings on light bg */
+  --color-accent-gold-text: #8F6A1E;  /* Viognier, deepened — use when gold renders as text (fails AA at full brightness) */
+  --color-accent-purple:   #4A3060;   /* Nebbiolo — depth accent, section moments */
 
   /* ─── BORDERS & EFFECTS ────────────────────────────── */
-  /* Card/surface border locked at 0.12 alpha per Dani Round 4 Task 13
-     (feed card final spec). Was 0.10 in Round 2. */
-  --color-border:          rgba(196, 96, 122, 0.12);
-  --color-border-strong:   rgba(196, 96, 122, 0.22);
-  --color-border-accent:   rgba(196, 96, 122, 0.18);
-  --color-purple-glow:     rgba(74, 48, 96, 0.25);
+  --color-border:          rgba(44, 26, 14, 0.10);   /* Terroir-tinted, reads as Limestone hairline */
+  --color-border-strong:   rgba(44, 26, 14, 0.20);
+  --color-border-accent:   rgba(123, 29, 58, 0.22);  /* Grenache-tinted accent border */
+  --color-purple-glow:     rgba(74, 48, 96, 0.16);
 
   /* ─── SEMANTIC ────────────────────────────────────── */
-  --color-success:         #2D7D46;
-  --color-error:           #C0392B;
+  --color-success:         #3D6B4F;   /* Verdot */
+  --color-error:           #B8382A;
   --color-warning:         #C4607A;
   --color-info:            #7C8FE6;
 
   /* ─── OVERLAYS & SHADOWS ──────────────────────────– */
-  --color-overlay:         rgba(12, 8, 16, 0.75);
-  --color-shadow:          rgba(74, 48, 96, 0.3);
-  --color-shadow-warm:     rgba(74, 48, 96, 0.25);
+  --color-overlay:         rgba(30, 16, 10, 0.55);   /* warm Terroir scrim over light content */
+  --color-shadow:          rgba(44, 26, 14, 0.14);   /* soft warm shadow, dark-tinted Terroir */
+  --color-shadow-warm:     rgba(44, 26, 14, 0.10);
 
   /* ─── TYPOGRAPHY ──────────────────────────────────– */
   --font-serif:            "Cormorant Garamond", serif;
@@ -60,12 +68,9 @@
   --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-screen-bg:      #1A0A10;
-    --color-text-primary:   #F5EDD6;
-  }
-}
+/* Champagne Daylight is a deliberate light-theme variant, not a system-dark
+   responsive theme — it stays champagne regardless of OS colour-scheme
+   preference, so there is intentionally no prefers-color-scheme override here. */
 
 html {
   background-color: var(--color-screen-bg);
@@ -117,9 +122,9 @@ html {
 
 /* Native <select> dropdown menus are rendered by the OS and can look wildly
    different (especially on Windows). Keep the option list readable and aligned
-   with the app's dark UI. */
+   with the app's light UI. */
 select {
-  color-scheme: dark;
+  color-scheme: light;
   background-color: var(--color-surface-raised);
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
@@ -142,7 +147,7 @@ select optgroup {
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='rgb(240,236,228)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 8 10 12 14 8'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='rgb(44,26,14)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 8 10 12 14 8'/></svg>");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 0.6rem 0.6rem;
@@ -166,23 +171,23 @@ select optgroup {
 }
 
 /* ─── BOTTOM TAB BAR ──────────────────────────────── */
-/* Variant C — translucent "glass" over the void. Header + nav float
+/* Variant C — translucent "glass" over the daylight. Header + nav float
    above the scroll content with a saturated blur, so the chrome reads
-   as a distinct material from both the card surface and the void.
-   Falls back to a solid #1A0A10ish on browsers without backdrop-filter. */
+   as a distinct material from both the card surface and the Champagne bg.
+   Falls back to a solid Champagne on browsers without backdrop-filter. */
 .bottom-tab-bar {
-  background-color: rgba(26, 10, 16, 0.72);
+  background-color: rgba(245, 237, 214, 0.82);
   backdrop-filter: saturate(140%) blur(18px);
   -webkit-backdrop-filter: saturate(140%) blur(18px);
-  border-top: 0.5px solid rgba(196, 96, 122, 0.18);
+  border-top: 0.5px solid rgba(44, 26, 14, 0.10);
   padding: 6px 0 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 /* ─── APP HEADER ──────────────────────────────────── */
 .app-header {
-  background-color: rgba(26, 10, 16, 0.72);
+  background-color: rgba(245, 237, 214, 0.82);
   backdrop-filter: saturate(140%) blur(18px);
   -webkit-backdrop-filter: saturate(140%) blur(18px);
-  border-bottom: 0.5px solid rgba(196, 96, 122, 0.18);
+  border-bottom: 0.5px solid rgba(44, 26, 14, 0.10);
 }

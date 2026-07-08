@@ -271,7 +271,7 @@ export default function SignupPage() {
         <div className="absolute -top-40 right-10 h-96 w-96 rounded-full bg-[var(--color-accent-primary)]/10 blur-3xl" />
         <div className="absolute -bottom-40 left-0 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl" />
       </div>
-      <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+      <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)] backdrop-blur">
         <div className="space-y-2">
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Create account
@@ -374,8 +374,8 @@ export default function SignupPage() {
             </div>
           )}
 
-          {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
-          {infoMessage ? <p className="text-sm text-emerald-300">{infoMessage}</p> : null}
+          {errorMessage ? <p className="text-sm text-rose-700">{errorMessage}</p> : null}
+          {infoMessage ? <p className="text-sm text-emerald-700">{infoMessage}</p> : null}
 
           <button
             type="submit"

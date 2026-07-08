@@ -6,9 +6,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppImage from "@/components/AppImage";
 
 const GRENACHE = "#7B1D3A";
-const ROSE = "#C4607A";
-const CHAMPAGNE = "#F5EDD6";
-const FOG = "#A08878";
+const ROSE = "#AC4760"; // Rose, deepened for AA text contrast on Champagne Daylight (matches --color-accent-secondary)
+const CHAMPAGNE = "#F5EDD6"; // used only for light text on the solid Grenache CTA button
+const TERROIR = "#2C1A0E";
+const FOG = "#6E645A"; // Fog #8A8878, darkened for AA text contrast on Champagne Daylight
 type CellarWine = {
   id: string;
   wine_name: string | null;
@@ -53,7 +54,7 @@ export function CellarTab() {
     return (
       <div className="space-y-2 animate-pulse">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "#220E14" }}>
+          <div key={i} className="flex items-center gap-3 rounded-xl p-3" style={{ background: "#FFFFFF" }}>
             <div className="h-12 w-12 shrink-0 rounded-lg bg-[var(--color-surface-raised)]" />
             <div className="flex-1 space-y-1.5">
               <div className="h-3 w-32 rounded bg-[var(--color-surface-raised)]" />
@@ -69,9 +70,9 @@ export function CellarTab() {
     return (
       <div
         className="rounded-2xl p-8 text-center"
-        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #220E14 100%)`, border: `1px solid ${GRENACHE}15` }}
+        style={{ background: `linear-gradient(135deg, ${GRENACHE}10 0%, #FFFFFF 100%)`, border: `1px solid ${GRENACHE}15` }}
       >
-        <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
+        <p className="text-lg font-light" style={{ fontFamily: "var(--font-serif)", color: TERROIR }}>
           Your cellar is empty.
         </p>
         <p className="mt-2 text-xs" style={{ color: FOG }}>
@@ -92,8 +93,8 @@ export function CellarTab() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-xs" style={{ color: FOG }}>
-          <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{totalBottles}</span> bottle{totalBottles !== 1 ? "s" : ""} across{" "}
-          <span style={{ color: CHAMPAGNE, fontWeight: 600 }}>{wines.length}</span> wine{wines.length !== 1 ? "s" : ""}
+          <span style={{ color: TERROIR, fontWeight: 600 }}>{totalBottles}</span> bottle{totalBottles !== 1 ? "s" : ""} across{" "}
+          <span style={{ color: TERROIR, fontWeight: 600 }}>{wines.length}</span> wine{wines.length !== 1 ? "s" : ""}
         </p>
         <Link
           href="/entries?tab=cellaring"
@@ -133,7 +134,7 @@ export function CellarTab() {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm" style={{ color: CHAMPAGNE }}>
+              <p className="truncate text-sm" style={{ color: TERROIR }}>
                 {wine.wine_name ?? "Unknown wine"}
               </p>
               <p className="truncate text-[10px]" style={{ color: FOG }}>

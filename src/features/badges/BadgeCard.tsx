@@ -115,7 +115,7 @@ export default function BadgeCard({
           </p>
           <button
             type="button"
-            className="mt-1 rounded-full bg-[var(--color-accent-gold)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-surface-primary)]"
+            className="mt-1 rounded-full bg-[var(--color-accent-gold)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-accent-gold-text)]"
             onClick={(e) => {
               e.stopPropagation();
               onFeature(badge.id);
