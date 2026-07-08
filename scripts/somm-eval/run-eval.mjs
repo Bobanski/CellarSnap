@@ -325,7 +325,9 @@ function describeCrowd(comparison, stats) {
 async function predictClaude(model, manual, comparison, tasterById, crowdStats) {
   const taster = tasterById.get(comparison.taster_id);
   const user = [
-    "Two wines were tasted head-to-head BLIND by the taster below — labels, producers, and prices were hidden, so prestige and reputation could not influence the pick. Judge purely on wine style versus the taster's demonstrated palate. Using the recommendation manual, predict which wine the taster preferred.",
+    comparison.blind === "y"
+      ? "Two wines were tasted head-to-head BLIND by the taster below — labels, producers, and prices were hidden, so prestige and reputation could not influence the pick. Judge purely on wine style versus the taster's demonstrated palate. Using the recommendation manual, predict which wine the taster preferred."
+      : "Two wines were tasted head-to-head by the taster below with labels VISIBLE — reputation, familiarity, and price may have influenced the pick alongside taste. Weigh both the taster's demonstrated palate and plausible label influence. Using the recommendation manual, predict which wine the taster preferred.",
     "",
     describeTaster(taster),
     "",
@@ -404,7 +406,7 @@ const PALATE_PROFILE_SCHEMA = {
 };
 
 const FAST_PREDICT_SYSTEM = [
-  "You are a master sommelier predicting the outcome of a BLIND head-to-head tasting.",
+  "You are a master sommelier predicting the outcome of a head-to-head tasting (blindness varies — trust the stated context).",
   "You are given a distilled palate profile for the taster and two wines. Labels and prices were hidden from the taster — judge purely on how each wine's style fits the profile.",
   "Wine quality matters too: between two wines a taster has no strong stylistic lean between, the better-made, more balanced wine usually wins.",
   "Reason briefly first, then commit to a winner.",
@@ -535,7 +537,7 @@ function describeTaster(taster) {
   }
   const history = taster.comparison_history ?? [];
   if (history.length > 0) {
-    lines.push("", "Prior blind head-to-head picks by this taster (strongest available signal):");
+    lines.push("", "Prior head-to-head picks by this taster (strongest available signal):");
     for (const row of history) lines.push(describeComparisonPick(row));
   }
   return lines.join("\n");
