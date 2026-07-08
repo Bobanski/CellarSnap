@@ -24,7 +24,7 @@ type CacheTableApi = {
     eq: (column: string, value: string) => Promise<{ error: SupabaseErrorLike | null }>;
   };
   upsert: (
-    values: Record<string, unknown>,
+    values: Record<string, unknown> | Record<string, unknown>[],
     options: { onConflict: string }
   ) => Promise<{ error: SupabaseErrorLike | null }>;
 };
@@ -175,6 +175,48 @@ export async function writeCachedEntryScore(
       computed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    {
+      onConflict: "wine_entry_id,user_id",
+    }
+  );
+
+  if (response.error && !isCacheUnavailable(response.error)) {
+    throw new Error(response.error.message);
+  }
+}
+
+/**
+ * Bulk-upsert cached scores for many entries in a single round trip.
+ * Behaviorally equivalent to calling writeCachedEntryScore() once per row —
+ * use this whenever multiple rows are being written together (e.g. batch
+ * scoring) to avoid one Supabase round trip per entry.
+ */
+export async function writeCachedEntryScoresBulk(
+  supabase: CacheClient | null | undefined,
+  userId: string,
+  rows: Array<{ entryId: string; payload: AlgorithmScoreResponse }>
+) {
+  if (!supabase?.from || rows.length === 0) {
+    return;
+  }
+
+  const table = supabase.from("wine_entry_scores") as CacheTableApi;
+  const now = new Date().toISOString();
+  const response = await table.upsert(
+    rows.map(({ entryId, payload }) => ({
+      wine_entry_id: entryId,
+      user_id: userId,
+      match_score: payload.score,
+      match_band: payload.band,
+      confidence: payload.confidence,
+      display_score: payload.display_score,
+      axis_breakdown: payload.axis_contributions,
+      effective_profile: payload.effective_profile,
+      modifiers_applied: payload.modifiers_applied,
+      preference_event_count: payload.preference_event_count,
+      computed_at: now,
+      updated_at: now,
+    })),
     {
       onConflict: "wine_entry_id,user_id",
     }

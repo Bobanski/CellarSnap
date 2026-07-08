@@ -628,6 +628,22 @@ export function createEntryPostHandler(
 
   let createdEntry = data as { id: string } & Record<string, unknown>;
 
+  // These two only need data.id (already committed above) and don't depend
+  // on entry resolution, so kick them off now and await later, in parallel
+  // with the resolution + best-effort post-processing below.
+  const primaryGrapesPromise = resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [
+    data.id,
+  ]);
+  const comparisonCandidatePromise = payload.data.skip_comparison_candidate
+    ? Promise.resolve<ComparisonCandidate | null>(null)
+    : resolvedDependencies
+        .getRandomComparisonCandidate({
+          userId: user.id,
+          newEntryId: data.id,
+          supabase,
+        })
+        .catch(() => null);
+
   try {
     const persistedResolution = await resolvedDependencies.persistEntryResolution({
       supabase,
@@ -651,41 +667,49 @@ export function createEntryPostHandler(
     // Resolution is best-effort and should not block entry creation.
   }
 
-  // Materialize the 16-axis sensory profile from base_profiles + modifiers.
-  // Best-effort — entry creation continues even if assembly fails.
-  try {
-    await resolveEntrySensoryProfile(supabase, data.id, {
-      id: data.id,
-      wine_type: createdEntry.wine_type as string | null ?? null,
-      canonical_region: createdEntry.canonical_region as string | null ?? null,
-      canonical_sub_region: createdEntry.canonical_sub_region as string | null ?? null,
-      canonical_country: createdEntry.canonical_country as string | null ?? null,
-      region: createdEntry.region as string | null ?? null,
-      appellation: createdEntry.appellation as string | null ?? null,
-      country: createdEntry.country as string | null ?? null,
-      vintage: createdEntry.vintage as string | null ?? null,
-      producer: createdEntry.producer as string | null ?? null,
-      classification: createdEntry.classification as string | null ?? null,
-      primary_grapes: primaryGrapeNames.join(", ") || null,
-    });
-  } catch {
-    // Sensory resolution is best-effort.
-  }
+  // Sensory profile assembly and score-cache refresh are both best-effort
+  // side effects that don't feed the response and don't depend on each
+  // other's output — run them concurrently. (Cache invalidation must still
+  // complete before the refresh that repopulates it, so that pair stays
+  // sequential within its own branch.)
+  const postProcessing = Promise.allSettled([
+    (async () => {
+      // Materialize the 16-axis sensory profile from base_profiles + modifiers.
+      // Best-effort — entry creation continues even if assembly fails.
+      try {
+        await resolveEntrySensoryProfile(supabase, data.id, {
+          id: data.id,
+          wine_type: createdEntry.wine_type as string | null ?? null,
+          canonical_region: createdEntry.canonical_region as string | null ?? null,
+          canonical_sub_region: createdEntry.canonical_sub_region as string | null ?? null,
+          canonical_country: createdEntry.canonical_country as string | null ?? null,
+          region: createdEntry.region as string | null ?? null,
+          appellation: createdEntry.appellation as string | null ?? null,
+          country: createdEntry.country as string | null ?? null,
+          vintage: createdEntry.vintage as string | null ?? null,
+          producer: createdEntry.producer as string | null ?? null,
+          classification: createdEntry.classification as string | null ?? null,
+          primary_grapes: primaryGrapeNames.join(", ") || null,
+        });
+      } catch {
+        // Sensory resolution is best-effort.
+      }
+    })(),
+    (async () => {
+      try {
+        await invalidateUserScoreCache(supabase, user.id);
+        await refreshRecentUserScoreCache(supabase, user.id);
+      } catch {
+        // Cache refresh is best-effort and should not block entry creation.
+      }
+    })(),
+  ]);
 
-  try {
-    await invalidateUserScoreCache(supabase, user.id);
-    await refreshRecentUserScoreCache(supabase, user.id);
-  } catch {
-    // Cache refresh is best-effort and should not block entry creation.
-  }
-
-    const createdEntryPrimaryGrapes = await resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [
-    data.id,
-    ]);
-    const entryWithPrimaryGrapes = {
-      ...createdEntry,
-      primary_grapes: createdEntryPrimaryGrapes.get(data.id) ?? [],
-    };
+  const createdEntryPrimaryGrapes = await primaryGrapesPromise;
+  const entryWithPrimaryGrapes = {
+    ...createdEntry,
+    primary_grapes: createdEntryPrimaryGrapes.get(data.id) ?? [],
+  };
 
   // Badge evaluation — best-effort, non-blocking.
   let newlyEarnedBadges: Array<{ id: string; name: string; toastText: string; tier: string; color: string; accent: string; shape: string }> = [];
@@ -710,24 +734,18 @@ export function createEntryPostHandler(
     // Badge evaluation is best-effort.
   }
 
-    let comparisonCandidate: ComparisonCandidate | null = null;
-    if (!payload.data.skip_comparison_candidate) {
-      try {
-        comparisonCandidate = await resolvedDependencies.getRandomComparisonCandidate({
-          userId: user.id,
-          newEntryId: data.id,
-          supabase,
-        });
-      } catch {
-        comparisonCandidate = null;
-      }
-    }
+  const comparisonCandidate = await comparisonCandidatePromise;
 
-    return NextResponse.json({
-      entry: entryWithPrimaryGrapes,
-      comparison_candidate: comparisonCandidate,
-      newly_earned_badges: newlyEarnedBadges,
-    });
+  // Best-effort post-processing doesn't feed the response, but we still
+  // await it (rather than firing-and-forgetting) so serverless doesn't tear
+  // down the function before it finishes.
+  await postProcessing;
+
+  return NextResponse.json({
+    entry: entryWithPrimaryGrapes,
+    comparison_candidate: comparisonCandidate,
+    newly_earned_badges: newlyEarnedBadges,
+  });
   };
 }
 

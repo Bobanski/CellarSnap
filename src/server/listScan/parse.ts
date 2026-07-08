@@ -2177,61 +2177,62 @@ async function extractTextFromImagesViaCloudVision(
     throw new Error("GOOGLE_CLOUD_VISION_API_KEY not configured.");
   }
 
-  const results: string[] = [];
+  // One request per file, in parallel. Promise.all preserves the original
+  // for-loop's "first error aborts the whole call" semantics (it rejects as
+  // soon as any file fails) and its result ordering (resolved values keep
+  // input order regardless of which fetch finishes first).
+  const results = await Promise.all(
+    files.map(async (file) => {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const base64Content = buffer.toString("base64");
 
-  for (const file of files) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const base64Content = buffer.toString("base64");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
-
-    try {
-      const response = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            requests: [
-              {
-                image: { content: base64Content },
-                features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-              },
-            ],
-          }),
-          signal: controller.signal,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Vision API returned ${response.status}`);
-      }
-
-      const data = (await response.json()) as {
-        responses?: Array<{
-          fullTextAnnotation?: { text?: string };
-          error?: { message?: string };
-        }>;
-      };
-
-      const annotation = data.responses?.[0];
-      if (annotation?.error) {
-        throw new Error(
-          annotation.error.message ?? "Vision API returned an error."
+      try {
+        const response = await fetch(
+          `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              requests: [
+                {
+                  image: { content: base64Content },
+                  features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+                },
+              ],
+            }),
+            signal: controller.signal,
+          }
         );
-      }
 
-      const text = annotation?.fullTextAnnotation?.text?.trim();
-      if (text) {
-        results.push(text);
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
+        if (!response.ok) {
+          throw new Error(`Vision API returned ${response.status}`);
+        }
 
-  return results.join("\n\n");
+        const data = (await response.json()) as {
+          responses?: Array<{
+            fullTextAnnotation?: { text?: string };
+            error?: { message?: string };
+          }>;
+        };
+
+        const annotation = data.responses?.[0];
+        if (annotation?.error) {
+          throw new Error(
+            annotation.error.message ?? "Vision API returned an error."
+          );
+        }
+
+        return annotation?.fullTextAnnotation?.text?.trim() ?? "";
+      } finally {
+        clearTimeout(timeout);
+      }
+    })
+  );
+
+  return results.filter((text) => text.length > 0).join("\n\n");
 }
 
 async function parseImageSource({
@@ -2330,34 +2331,38 @@ async function parseImageSource({
   _imageDiag.path = "openai_vision_fallback";
   console.log(`[ListScan Image] ⚠️ Falling back to OpenAI Vision: ${JSON.stringify(_imageDiag)}`);
   const tOpenAi0 = Date.now();
-  const preparedImages: string[] = [];
-  for (const file of files) {
-    try {
-      const prepared = await prepareOpenAiImageDataUrl(file, {
-        maxInputBytes: MAX_IMAGE_INPUT_BYTES,
-        maxOutputBytes: MAX_IMAGE_PROCESSED_BYTES,
-        maxDimension: 2200,
-        jpegQuality: 86,
-      });
-      preparedImages.push(prepared.dataUrl);
-    } catch (error) {
-      if (
-        error instanceof OpenAiImagePreparationError &&
-        error.code === "output_too_large"
-      ) {
-        throw new Error("List image is too large.");
+  // One prep per file, in parallel. Promise.all keeps results in input order
+  // (needed downstream — multi-image continuity relies on page order) and
+  // preserves the original loop's "first error aborts everything" behavior.
+  const preparedImages = await Promise.all(
+    files.map(async (file) => {
+      try {
+        const prepared = await prepareOpenAiImageDataUrl(file, {
+          maxInputBytes: MAX_IMAGE_INPUT_BYTES,
+          maxOutputBytes: MAX_IMAGE_PROCESSED_BYTES,
+          maxDimension: 2200,
+          jpegQuality: 86,
+        });
+        return prepared.dataUrl;
+      } catch (error) {
+        if (
+          error instanceof OpenAiImagePreparationError &&
+          error.code === "output_too_large"
+        ) {
+          throw new Error("List image is too large.");
+        }
+        if (
+          error instanceof OpenAiImagePreparationError &&
+          error.code === "unsupported_format"
+        ) {
+          throw new Error(
+            "That photo format could not be processed. Try a JPG, PNG, or WebP image."
+          );
+        }
+        throw error;
       }
-      if (
-        error instanceof OpenAiImagePreparationError &&
-        error.code === "unsupported_format"
-      ) {
-        throw new Error(
-          "That photo format could not be processed. Try a JPG, PNG, or WebP image."
-        );
-      }
-      throw error;
-    }
-  }
+    })
+  );
 
   const sourceHint =
     files.length > 1
