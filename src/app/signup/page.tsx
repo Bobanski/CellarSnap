@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
 import {
@@ -25,10 +25,12 @@ type PhoneSignupValues = {
   password: string;
 };
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const authMode = getAuthMode();
+  const isScanIntent = searchParams.get("intent") === "scan";
 
   const emailForm = useForm<EmailSignupValues>();
   const phoneForm = useForm<PhoneSignupValues>();
@@ -251,7 +253,7 @@ export default function SignupPage() {
           return;
         }
 
-        router.push("/");
+        router.push("/taste-survey");
         return;
       }
 
@@ -276,11 +278,18 @@ export default function SignupPage() {
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Create account
           </span>
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Join Cluster</h1>
+          <h1
+            className="text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 500 }}
+          >
+            Join cluster
+          </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            {isPhoneMode
-              ? "Create your account with username, phone, email, and password."
-              : "Enter your email to get started. We'll send a confirmation code, then you'll set your password."}
+            {isScanIntent
+              ? "Create a free account and we'll take you straight to your scan."
+              : isPhoneMode
+                ? "Create your account with username, phone, email, and password."
+                : "Enter your email to get started. We'll send a confirmation code, then you'll set your password."}
           </p>
         </div>
 
@@ -385,43 +394,29 @@ export default function SignupPage() {
             Send confirmation code
           </button>
 
+          {/* Small legal footnote below the primary CTA — intentionally de-emphasized
+              so the disclaimer doesn't compete with the value prop for attention. */}
           {isPhoneMode ? (
-            <p className="text-xs leading-5 text-[var(--color-text-tertiary)]">
-              By entering your phone number and selecting Send confirmation code, you
-              consent to receive transactional SMS verification codes for login and
-              account security. Message frequency varies. Message and data rates may
-              apply. Reply STOP to opt out and HELP for help. See{" "}
-              <Link
-                href="/privacy/more"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
+            <p className="text-center text-[10px] leading-4 text-[var(--color-text-tertiary)]/70">
+              By continuing you consent to transactional SMS for login &amp; security.
+              Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. See{" "}
+              <Link href="/privacy/more" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
                 Privacy
               </Link>{" "}
-              and{" "}
-              <Link
-                href="/terms"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
+              &amp;{" "}
+              <Link href="/terms" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
                 Terms
               </Link>
               .
             </p>
           ) : (
-            <p className="text-xs leading-5 text-[var(--color-text-tertiary)]">
-              This button sends an email confirmation code. For phone-based signup, users
-              opt in to transactional SMS by entering a phone number and selecting Send
-              confirmation code. Reply STOP to opt out and HELP for help. See{" "}
-              <Link
-                href="/privacy/more"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
-                Privacy
+            <p className="text-center text-[10px] leading-4 text-[var(--color-text-tertiary)]/70">
+              By creating an account you agree to our{" "}
+              <Link href="/privacy/more" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
+                Privacy Policy
               </Link>{" "}
               and{" "}
-              <Link
-                href="/terms"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
+              <Link href="/terms" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
                 Terms
               </Link>
               .
@@ -455,5 +450,13 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }
