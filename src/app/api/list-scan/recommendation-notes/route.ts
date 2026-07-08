@@ -10,12 +10,18 @@ import {
   listScanParsedWineSchema,
   resolveListScanWineType,
 } from "@shared";
-import { assembleWineProfile } from "@/server/algorithm/profileAssembly";
+import {
+  assembleWineProfileWithDataSource,
+  batchPrefetchProfileData,
+  createPreFetchedProfileDataSource,
+  createSupabaseProfileAssemblyDataSource,
+} from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import {
   buildUserPreferenceVector,
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
+import type { AssembleWineProfileInput } from "@/server/algorithm/types";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { defaultLoadUserPreferenceEntries } from "../../algorithm/score/handler";
 
@@ -367,32 +373,60 @@ export async function POST(request: Request) {
     return NextResponse.json({ notes: [] });
   }
 
+  // Resolve wine_type per item first (up to 3 items) so we can prefetch the
+  // reference tables for every distinct wine_type/vintage combination once,
+  // instead of assembleWineProfile() issuing its own ~8 Supabase reads per item.
+  const eligibleWithProfileInput = eligibleItems
+    .map((item) => {
+      const resolvedWineType = resolveListScanWineType(item);
+      if (resolvedWineType === "unknown") {
+        return null;
+      }
+      const algorithmWineType: AssembleWineProfileInput["wine_type"] =
+        resolvedWineType === "dessert_fortified" ? "sweet" : resolvedWineType;
+
+      const profileInput: AssembleWineProfileInput = {
+        wine_type: algorithmWineType,
+        canonical_region: item.regions[0] ?? null,
+        canonical_sub_region:
+          item.regions.length > 1 ? item.regions[item.regions.length - 1] : null,
+        canonical_country: item.canonical_country ?? null,
+        primary_grapes: item.varietals.length > 0 ? item.varietals.join(", ") : null,
+        vintage: item.vintage ? Number.parseInt(item.vintage, 10) || null : null,
+        producer: item.producer,
+        classification: null,
+        quality_tier: null,
+      };
+
+      return { item, algorithmWineType, profileInput };
+    })
+    .filter(
+      (entry): entry is { item: NoteItem; algorithmWineType: AssembleWineProfileInput["wine_type"]; profileInput: AssembleWineProfileInput } =>
+        entry !== null
+    );
+
+  if (eligibleWithProfileInput.length === 0) {
+    return NextResponse.json({ notes: [] });
+  }
+
   const referenceSupabase = createSupabaseAdminClient();
+  const prefetchedData = await batchPrefetchProfileData(
+    createSupabaseProfileAssemblyDataSource(referenceSupabase),
+    Array.from(new Set(eligibleWithProfileInput.map((entry) => entry.algorithmWineType))),
+    Array.from(
+      new Set(
+        eligibleWithProfileInput
+          .map((entry) => entry.profileInput.vintage)
+          .filter((vintage): vintage is number => typeof vintage === "number")
+      )
+    )
+  );
+  const prefetchedDataSource = createPreFetchedProfileDataSource(prefetchedData);
+
   const signalSummaries = (
     await Promise.all(
-      eligibleItems.map(async (item) => {
-        const resolvedWineType = resolveListScanWineType(item);
-        if (resolvedWineType === "unknown") {
-          return null;
-        }
-        const algorithmWineType: Parameters<typeof assembleWineProfile>[0]["wine_type"] =
-          resolvedWineType === "dessert_fortified" ? "sweet" : resolvedWineType;
-
-        const profile = await assembleWineProfile(
-          {
-            wine_type: algorithmWineType,
-            canonical_region: item.regions[0] ?? null,
-            canonical_sub_region:
-              item.regions.length > 1 ? item.regions[item.regions.length - 1] : null,
-            canonical_country: item.canonical_country ?? null,
-            primary_grapes: item.varietals.length > 0 ? item.varietals.join(", ") : null,
-            vintage: item.vintage ? Number.parseInt(item.vintage, 10) || null : null,
-            producer: item.producer,
-            classification: null,
-            quality_tier: null,
-          },
-          referenceSupabase
-        );
+      eligibleWithProfileInput.map(async ({ item, algorithmWineType, profileInput }) => {
+        const profile = await assembleWineProfileWithDataSource(profileInput, prefetchedDataSource);
 
         const preferenceVector = buildUserPreferenceVector(preferenceEntries, algorithmWineType);
         const score = computeMatchScore(profile, preferenceVector);
