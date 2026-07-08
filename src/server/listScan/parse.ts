@@ -28,6 +28,11 @@ import {
 } from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import {
+  distilledSeedForWineType,
+  readPalateProfile,
+  type PalateProfileRecord,
+} from "@/server/algorithm/palateDistillation";
+import {
   buildUserPreferenceVector,
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
@@ -1810,8 +1815,17 @@ async function enrichParsedWines(params: {
     }
   }
 
+  // A distilled palate profile stands in for logged history: cold-start
+  // users with a profile get real personalized scores instead of stubs.
+  let palateRecord: PalateProfileRecord | null = null;
+  try {
+    palateRecord = await readPalateProfile(params.userSupabase, params.userId);
+  } catch {
+    // Profile table may not exist yet — fall through to the entry-count gate.
+  }
+
   const qualifyingEntryCount = preferenceEntries.filter((entry) => entry.advanced_notes).length;
-  if (qualifyingEntryCount < 5) {
+  if (qualifyingEntryCount < 5 && !palateRecord) {
     return {
       wines: stubbedWines,
       scoreSummary: buildStubScoreSummary(
@@ -1902,7 +1916,11 @@ async function enrichParsedWines(params: {
         const profile = await profilePromise;
         const preferenceVector =
           preferenceVectors.get(wineType) ??
-          buildUserPreferenceVector(preferenceEntries, wineType);
+          buildUserPreferenceVector(
+            preferenceEntries,
+            wineType,
+            palateRecord ? distilledSeedForWineType(palateRecord, wineType) : null
+          );
         preferenceVectors.set(wineType, preferenceVector);
         const match = computeMatchScore(profile, preferenceVector);
         scoredWineCount += 1;

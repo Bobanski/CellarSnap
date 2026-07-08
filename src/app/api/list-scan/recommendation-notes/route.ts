@@ -17,9 +17,16 @@ import {
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
+import { anthropicToolCall, isAnthropicConfigured } from "@/server/anthropic/client";
+import {
+  distilledSeedForWineType,
+  readPalateProfile,
+  type PalateProfileRecord,
+} from "@/server/algorithm/palateDistillation";
 import { defaultLoadUserPreferenceEntries } from "../../algorithm/score/handler";
 
 const NOTE_MODEL = "gpt-5.4-mini";
+const CLAUDE_NOTE_MODEL = process.env.SOMM_NOTES_MODEL ?? "claude-haiku-4-5-20251001";
 const NOTE_TIMEOUT_MS = 3000;
 
 const noteRequestSchema = z.object({
@@ -356,14 +363,20 @@ export async function POST(request: Request) {
   }
 
   let preferenceEntries: PreferenceSourceEntry[];
+  let palateRecord: PalateProfileRecord | null = null;
   try {
-    preferenceEntries = await defaultLoadUserPreferenceEntries(auth.supabase, auth.user.id);
+    [preferenceEntries, palateRecord] = await Promise.all([
+      defaultLoadUserPreferenceEntries(auth.supabase, auth.user.id),
+      readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
+    ]);
   } catch {
     return NextResponse.json({ notes: [] });
   }
 
+  // A distilled palate profile stands in for logged history (same unlock as
+  // the list-scan scoring path).
   const qualifyingEntryCount = preferenceEntries.filter((entry) => entry.advanced_notes).length;
-  if (qualifyingEntryCount < 5) {
+  if (qualifyingEntryCount < 5 && !palateRecord) {
     return NextResponse.json({ notes: [] });
   }
 
@@ -394,7 +407,11 @@ export async function POST(request: Request) {
           referenceSupabase
         );
 
-        const preferenceVector = buildUserPreferenceVector(preferenceEntries, algorithmWineType);
+        const preferenceVector = buildUserPreferenceVector(
+          preferenceEntries,
+          algorithmWineType,
+          palateRecord ? distilledSeedForWineType(palateRecord, algorithmWineType) : null
+        );
         const score = computeMatchScore(profile, preferenceVector);
         return buildSignalSummary({
           item,
@@ -412,6 +429,82 @@ export async function POST(request: Request) {
   const fallbackNotes = new Map(
     signalSummaries.map((signal) => [signal.id, buildFallbackNote(signal)])
   );
+
+  // Preferred path: Claude with the distilled palate narrative — notes speak
+  // to THIS user's palate instead of generic wine descriptions. Falls through
+  // to the OpenAI path (then static fallbacks) on any failure.
+  if (isAnthropicConfigured()) {
+    try {
+      const narrative = palateRecord?.profile?.narrative ?? null;
+      const { input } = await anthropicToolCall<{ notes?: Array<{ id: string; note: string | null }> }>({
+        model: CLAUDE_NOTE_MODEL,
+        system: [
+          "You are the Cluster pocket sommelier writing one-line reasons a specific wine suits a specific person.",
+          "Warm and direct, never condescending, no wine-snob gatekeeping. No score percentages, no 'match', no backend details.",
+          "Each note: a conversational fragment of 16 words or fewer, starting with a capital letter.",
+          "When the taster's palate profile is provided, tie the reason to their palate (e.g. 'the savory, structured style you keep coming back to').",
+          "Never mention tannins for non-red wines. If a wine reads dry, say dryness or drier finish instead of sweetness.",
+        ].join("\n"),
+        user: [
+          narrative ? `Taster palate profile: ${narrative}` : "No palate profile available — reason from the signals alone.",
+          "",
+          buildPrompt(signalSummaries),
+        ].join("\n"),
+        toolName: "recommendation_notes",
+        toolDescription: "Record one note per recommendation id.",
+        inputSchema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            notes: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  id: { type: "string" },
+                  note: { type: ["string", "null"] },
+                },
+                required: ["id", "note"],
+              },
+            },
+          },
+          required: ["notes"],
+        },
+        maxTokens: 300,
+        timeoutMs: NOTE_TIMEOUT_MS,
+        maxRetries: 0,
+      });
+
+      const noteMap = new Map<string, string>();
+      (input.notes ?? []).forEach((entry) => {
+        const sourceSignal = signalSummaries.find((signal) => signal.id === entry.id);
+        if (!sourceSignal) return;
+        const sanitized = sanitizeNote(entry.note);
+        if (!sanitized) return;
+        if (sourceSignal.wine_type !== "red" && /\btannins?\b/i.test(sanitized)) return;
+        if (
+          /\bsweetness\b/i.test(sanitized) &&
+          sourceSignal.wine_type !== "dessert_fortified" &&
+          !/\bdry|drier\b/i.test(sanitized)
+        ) {
+          return;
+        }
+        noteMap.set(entry.id, sanitized);
+      });
+
+      if (noteMap.size > 0) {
+        return NextResponse.json({
+          notes: signalSummaries.map((signal) => ({
+            id: signal.id,
+            note: noteMap.get(signal.id) ?? fallbackNotes.get(signal.id) ?? null,
+          })),
+        });
+      }
+    } catch {
+      // fall through to the OpenAI path
+    }
+  }
 
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({
