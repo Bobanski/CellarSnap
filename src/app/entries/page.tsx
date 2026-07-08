@@ -1447,14 +1447,9 @@ function EntriesPageContent() {
 
               {hasMore ? (
                 <div className="pt-1 text-center">
-                  <button
-                    type="button"
-                    onClick={() => void loadMore()}
-                    disabled={loadingMore}
-                    className="rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>
                     {loadingMore ? "Loading..." : "Load more"}
-                  </button>
+                  </Button>
                 </div>
               ) : null}
             </>
@@ -1488,13 +1483,10 @@ function EntriesPageContent() {
                 }}
               >
                 <span
-                  className="block"
+                  className="text-numeric block"
                   style={{
-                    fontFamily: "var(--font-serif)",
                     fontSize: 38,
-                    fontWeight: 300,
                     color: "var(--color-text-primary)",
-                    lineHeight: 1.2,
                   }}
                 >
                   {stat.value}
