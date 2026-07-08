@@ -10,6 +10,10 @@
  *   engine    — the real deterministic algorithm via engine-predict.ts (tsx)
  *   consensus — group-consensus baseline: wine with the higher win rate among
  *               other tasters (plus this taster's train picks under --holdout) wins
+ *   comparisons-nudge — EVAL-ONLY per-taster Bradley-Terry-style logistic
+ *               regression on style features (grape family, big/light, old/
+ *               new world, vintage age), regularized toward a group-fit
+ *               prior. Requires --holdout > 0. See comparisons-nudge.mjs.
  *   price     — naive baseline: more expensive bottle wins
  *   random    — deterministic coin flip baseline
  *
@@ -34,6 +38,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import OpenAI from "openai";
+import { buildNudgeModels, predictNudge } from "./comparisons-nudge.mjs";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 const EVAL_DIR = path.join(ROOT, "scripts/somm-eval");
@@ -99,8 +104,11 @@ function parseArgs(argv) {
     else if (arg.startsWith("--predictors=")) args.predictors = arg.slice(13).split(",").map((s) => s.trim());
     else if (arg.startsWith("--model=")) args.model = arg.slice(8);
     else if (arg.startsWith("--claude-model=")) args.claudeModel = arg.slice(15);
-    else if (arg.startsWith("--tasters=")) args.tasters = path.resolve(arg.slice(10));
-    else if (arg.startsWith("--comparisons=")) args.comparisons = path.resolve(arg.slice(14));
+    // Resolved against EVAL_DIR (not process.cwd()) so `--tasters=data/x.json`
+    // matches the default paths' convention regardless of where the command
+    // is invoked from; absolute paths pass through unchanged.
+    else if (arg.startsWith("--tasters=")) args.tasters = path.resolve(EVAL_DIR, arg.slice(10));
+    else if (arg.startsWith("--comparisons=")) args.comparisons = path.resolve(EVAL_DIR, arg.slice(14));
     else if (arg.startsWith("--limit=")) args.limit = Number(arg.slice(8));
     else if (arg.startsWith("--holdout=")) args.holdout = Number(arg.slice(10));
     else if (arg.startsWith("--fold-seed=")) args.foldSeed = Number(arg.slice(12));
@@ -494,13 +502,31 @@ async function predictEngineBatch(comparisons, tasterById) {
   return JSON.parse(stdout).results;
 }
 
+// Set once in main() from the loaded tasters — the spreadsheet dataset rates
+// 1-5, the live in-app export rates 1-100 (packages/shared rating scale).
+// Label honestly instead of rescaling either dataset.
+let ratingScaleMax = 5;
+
+/** Infer the rating scale (5 or 100) from the loaded data instead of
+ *  assuming — mixing datasets with a hardcoded "/5" label silently lies to
+ *  the model about magnitude. */
+function inferRatingScaleMax(tasters) {
+  let max = 0;
+  for (const taster of tasters) {
+    for (const wine of taster.logged_wines ?? []) {
+      if (typeof wine.rating === "number" && wine.rating > max) max = wine.rating;
+    }
+  }
+  return max > 5 ? 100 : 5;
+}
+
 function describeTaster(taster) {
   const lines = [`Taster: ${taster.display_name ?? taster.taster_id}`];
   if (taster.experience_level) lines.push(`Experience level: ${taster.experience_level}`);
   if (taster.survey) lines.push(`Taste survey: ${JSON.stringify(taster.survey)}`);
   const logged = taster.logged_wines ?? [];
   if (logged.length > 0) {
-    lines.push("Logged wines (rating out of 5):");
+    lines.push(`Logged wines (rating out of ${ratingScaleMax}):`);
     for (const wine of logged) {
       lines.push(`- ${wine.rating}★ ${[wine.producer, wine.name, wine.vintage, wine.region, wine.country, wine.grapes].filter(Boolean).join(", ")}${wine.notes ? ` — "${wine.notes}"` : ""}`);
     }
@@ -583,6 +609,7 @@ async function main() {
     for (const error of errors) console.error(`  - ${error}`);
     process.exit(1);
   }
+  ratingScaleMax = inferRatingScaleMax(tasters);
   console.log(`Loaded ${tasters.length} tasters, ${rows.length} comparisons.`);
   if (args.dryRun) {
     console.log("Dry run — data is valid. Exiting before prediction.");
@@ -637,6 +664,20 @@ async function main() {
       }
       evalRowList.forEach((row, i) => {
         perComparison[i].predictions.consensus = predictConsensus(row, statsByTaster.get(row.taster_id));
+      });
+    } else if (predictor === "comparisons-nudge") {
+      if (args.holdout <= 0) {
+        throw new Error("comparisons-nudge requires --holdout > 0 — it fits on each taster's TRAIN comparisons");
+      }
+      console.log("Running comparisons-nudge predictor (per-user Bradley-Terry-style logistic on style features, group prior)...");
+      const excludeIndexesByTaster = new Map();
+      perComparison.forEach((c) => {
+        if (!excludeIndexesByTaster.has(c.taster_id)) excludeIndexesByTaster.set(c.taster_id, new Set());
+        excludeIndexesByTaster.get(c.taster_id).add(c.index);
+      });
+      const modelsByTaster = buildNudgeModels(rows, excludeIndexesByTaster, trainRowsByTaster);
+      evalRowList.forEach((row, i) => {
+        perComparison[i].predictions["comparisons-nudge"] = predictNudge(row, modelsByTaster.get(row.taster_id));
       });
     } else if (predictor === "engine") {
       console.log("Running engine predictor (tsx bridge, live Supabase reference data)...");
