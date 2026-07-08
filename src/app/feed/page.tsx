@@ -8,7 +8,6 @@ import {
   COLLECTIONS_COPY,
   DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
   FEED_EYEBROW,
-  FEED_EMPTY_STATE_MESSAGE,
   FEED_LOAD_MORE_LABEL,
   FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
   FEED_REACTION_EMOJIS as REACTION_EMOJIS,
@@ -24,6 +23,7 @@ import {
   type EventTypeValue,
 } from "@shared";
 import CollectionPickerPopover from "@/components/collections/CollectionPickerPopover";
+import FirstRunChecklist from "@/features/feed/FirstRunChecklist";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   addEntryToCollectionsClient,
@@ -1151,8 +1151,8 @@ export default function FeedPage() {
             {errorMessage}
           </div>
         ) : entries.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-surface-primary/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            {FEED_EMPTY_STATE_MESSAGE}
+          <div className="mx-6">
+            <FirstRunChecklist />
           </div>
         ) : (
           <>
