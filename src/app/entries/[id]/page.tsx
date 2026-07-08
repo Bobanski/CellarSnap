@@ -825,14 +825,26 @@ export default function EntryDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={sharing || !canShareEntry}
-              onClick={onShare}
-            >
-              {sharing ? "Sharing..." : "Share"}
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={sharing || !canShareEntry}
+                title={!canShareEntry ? "Make this entry public to share it" : undefined}
+                aria-describedby={!canShareEntry ? "share-disabled-hint" : undefined}
+                onClick={onShare}
+              >
+                {sharing ? "Sharing..." : "Share"}
+              </Button>
+              {!canShareEntry ? (
+                <p
+                  id="share-disabled-hint"
+                  className="text-xs text-[var(--color-text-tertiary)]"
+                >
+                  Make this entry public to share it.
+                </p>
+              ) : null}
+            </div>
             {isOwner ? (
               <Button variant="secondary" size="sm" href={`/entries/${entry.id}/edit`}>
                 Edit entry
