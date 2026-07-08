@@ -23,16 +23,16 @@ export default function WineMatchScore({
   const captionClassName = size === "compact" ? "text-xs" : "text-sm";
 
   return (
-    <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5">
+    <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
       <div className="flex flex-col items-center gap-4 text-center">
         <div
-          className={`relative flex ${diameterClassName} items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_25px_60px_-35px_rgba(0,0,0,0.9)]`}
+          className={`relative flex ${diameterClassName} items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_25px_60px_-35px_rgba(44,26,14,0.35)]`}
           style={{
-            background: `conic-gradient(${copy.ringColor} 0deg ${clampedScore * 3.6}deg, rgba(255,255,255,0.09) ${clampedScore * 3.6}deg 360deg)`,
+            background: `conic-gradient(${copy.ringColor} 0deg ${clampedScore * 3.6}deg, rgba(44,26,14,0.12) ${clampedScore * 3.6}deg 360deg)`,
             boxShadow: `0 24px 60px -32px ${copy.glowColor}`,
           }}
         >
-          <div className="flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full bg-[var(--color-screen-bg)]">
+          <div className="flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full bg-[var(--color-surface-raised)]">
             <span className={`font-semibold ${copy.scoreColorClassName} ${valueClassName}`}>
               {clampedScore}%
             </span>

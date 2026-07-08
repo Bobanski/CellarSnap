@@ -10,13 +10,13 @@ type PrivacyBadgeProps = {
 
 const PRIVACY_STYLES: Record<PrivacyLevel, string> = {
   public:
-    "border-sky-300/40 bg-sky-500/10 text-sky-100",
+    "border-sky-300/40 bg-sky-500/10 text-sky-700",
   friends_of_friends:
-    "border-teal-300/40 bg-teal-500/10 text-teal-100",
+    "border-teal-300/40 bg-teal-500/10 text-teal-700",
   friends:
     "accent-soft-chip",
   private:
-    "border-rose-300/40 bg-rose-500/10 text-rose-100",
+    "border-rose-300/40 bg-rose-500/10 text-rose-700",
 };
 
 const PRIVACY_LABELS: Record<PrivacyLevel, string> = {

@@ -134,7 +134,7 @@ export default function PrimaryGrapeSelector({
               {item.name}
               <button
                 type="button"
-                className="rounded-full border border-white/20 px-1 text-[10px] leading-4 text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-200"
+                className="rounded-full border border-[var(--color-border-strong)] px-1 text-[10px] leading-4 text-[var(--color-text-primary)] transition hover:border-rose-300 hover:text-rose-700"
                 onClick={() => removeSelection(item.id)}
                 disabled={disabled}
                 aria-label={`Remove ${item.name}`}
@@ -200,7 +200,7 @@ export default function PrimaryGrapeSelector({
         <p className="text-xs text-[var(--color-text-tertiary)]">No grape matches found.</p>
       ) : null}
 
-      {searchError ? <p className="text-xs text-rose-300">{searchError}</p> : null}
+      {searchError ? <p className="text-xs text-rose-700">{searchError}</p> : null}
     </div>
   );
 }

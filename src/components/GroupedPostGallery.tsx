@@ -27,7 +27,7 @@ export default function GroupedPostGallery({
         alt: `${slide.wine_name ?? slide.producer ?? title} ${slide.label}`,
       }))}
       heightClassName={heightClassName}
-      wrapperClassName="overflow-hidden bg-black/40"
+      wrapperClassName="overflow-hidden bg-[var(--color-surface-raised)]"
       onIndexChange={onIndexChange}
       header={(_active, activeIndex) => {
         const slide = slides[activeIndex] ?? slides[0];

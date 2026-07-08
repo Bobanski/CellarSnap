@@ -538,7 +538,7 @@ export default function AlertsMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)]">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
             <span className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Alerts
@@ -571,9 +571,9 @@ export default function AlertsMenu() {
                   return (
                     <li
                       key={item.id}
-                      className="border-b border-white/5 last:border-none"
+                      className="border-b border-[var(--color-border)] last:border-none"
                     >
-                      <div className="px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10">
+                      <div className="px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]">
                         <div className="min-w-0">
                           <Link
                             href={`/profile/${item.requester_id}`}
@@ -605,7 +605,7 @@ export default function AlertsMenu() {
                               respondToFriendRequest(item.id, "decline")
                             }
                             aria-label="Decline friend request"
-                            className="rounded-full border border-rose-400/40 px-3 py-1 text-[11px] font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-70"
+                            className="rounded-full border border-rose-400/40 px-3 py-1 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-70"
                           >
                             {declining ? "Declining..." : "Decline"}
                           </button>
@@ -626,9 +626,9 @@ export default function AlertsMenu() {
                   return (
                     <li
                       key={item.id}
-                      className="border-b border-white/5 last:border-none"
+                      className="border-b border-[var(--color-border)] last:border-none"
                     >
-                      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]">
                         <Link
                           href={`/profile/${item.actor_id}`}
                           className="min-w-0 flex-1 truncate"
@@ -660,11 +660,11 @@ export default function AlertsMenu() {
                   return (
                     <li
                       key={item.id}
-                      className="border-b border-white/5 last:border-none"
+                      className="border-b border-[var(--color-border)] last:border-none"
                     >
                       <Link
                         href={`/badges/${item.badge_id}`}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10"
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]"
                         onClick={() => setOpenPathname(null)}
                       >
                         <span className="min-w-0 flex-1 truncate">
@@ -681,7 +681,7 @@ export default function AlertsMenu() {
                 return (
                   <li
                     key={item.id}
-                    className="border-b border-white/5 last:border-none"
+                    className="border-b border-[var(--color-border)] last:border-none"
                   >
                     <div className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
                       <div className="flex items-start justify-between gap-3">
@@ -711,7 +711,7 @@ export default function AlertsMenu() {
                           }
                           className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-70 ${
                             confirmDeleteId === item.id
-                              ? "border-rose-400/40 text-rose-200 hover:border-rose-300"
+                              ? "border-rose-400/40 text-rose-700 hover:border-rose-300"
                               : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
@@ -803,7 +803,7 @@ export default function AlertsMenu() {
             </ul>
           )}
           {actionError ? (
-            <div className="border-t border-[var(--color-border)] px-4 py-3 text-xs text-rose-200">
+            <div className="border-t border-[var(--color-border)] px-4 py-3 text-xs text-rose-700">
               {actionError}
             </div>
           ) : null}

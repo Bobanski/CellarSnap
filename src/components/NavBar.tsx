@@ -96,7 +96,7 @@ export default function NavBar({
   };
 
   return (
-    <nav ref={menuRef} className="relative border-b border-white/5 pb-6">
+    <nav ref={menuRef} className="relative border-b border-[var(--color-border)] pb-6">
       {/* ── Top bar (always visible) ── */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -217,7 +217,7 @@ export default function NavBar({
 
       {/* ── Mobile dropdown menu ── */}
       {mobileOpen ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-3 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:hidden">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-3 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)] md:hidden">
           <div className="space-y-1">
             {navItems.map(({ label, href }) => {
               const active = isItemActive({ href, pathname, activeHrefOverride });
@@ -228,7 +228,7 @@ export default function NavBar({
                   className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     active
                       ? "accent-soft-chip border"
-                      : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]/10"
+                      : "text-[var(--color-text-primary)] hover:bg-[var(--color-surface-primary)]"
                   }`}
                 >
                   {label}
@@ -247,7 +247,7 @@ export default function NavBar({
             <button
               type="button"
               onClick={onSignOut}
-              className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-surface-primary)]/10 hover:text-[var(--color-text-primary)]"
+              className="block w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-surface-primary)] hover:text-[var(--color-text-primary)]"
             >
               Sign out
             </button>

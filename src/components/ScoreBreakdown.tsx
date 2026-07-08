@@ -24,7 +24,7 @@ export default function ScoreBreakdown({
 
   return (
     <details
-      className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5"
+      className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5"
       open={defaultOpen}
     >
       <summary className="cursor-pointer select-none text-sm font-semibold text-[var(--color-text-primary)]">
@@ -36,7 +36,7 @@ export default function ScoreBreakdown({
 
         <div className="grid gap-4 lg:grid-cols-2">
           <section className="rounded-2xl border border-emerald-300/15 bg-emerald-400/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-700/80">
               Strongest matches
             </p>
             <div className="mt-3 space-y-3">
@@ -50,7 +50,7 @@ export default function ScoreBreakdown({
           </section>
 
           <section className="rounded-2xl border border-rose-300/15 bg-rose-400/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-rose-200/80">
+            <p className="text-xs uppercase tracking-[0.2em] text-rose-700/80">
               Biggest gaps
             </p>
             <div className="mt-3 space-y-3">
