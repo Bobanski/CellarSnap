@@ -1387,7 +1387,13 @@ export default function NewEntryPage() {
   };
 
   const returnAfterSave = (entryId: string) => {
-    returnToPreviousPage(`/entries/${entryId}`);
+    // Deterministic navigation to the created entry's detail page. Do NOT use
+    // the referrer/history heuristic here — after the post-save survey /
+    // comparison step, `document.referrer` and `window.history` reflect
+    // wherever the user was *before* starting entry creation, not the entry
+    // that was just saved. That heuristic previously stranded users on
+    // about:blank or bounced them back to Feed instead of the new entry.
+    router.push(`/entries/${entryId}`);
   };
 
   const returnAfterCancel = () => {
