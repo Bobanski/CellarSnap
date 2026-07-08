@@ -441,6 +441,10 @@ export default function EntryDetailPage() {
       const shareUrl = payload.url;
       const shareText = buildEntryShareText();
 
+      // From this point on the share link has already been created
+      // successfully (200 + valid url). Any failure below is a client-side
+      // share-sheet/clipboard problem, not a link-creation failure — it must
+      // never be reported back as "Unable to create share link."
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         try {
           await navigator.share({
@@ -456,17 +460,19 @@ export default function EntryDetailPage() {
           if (shareError instanceof Error && shareError.name === "AbortError") {
             return;
           }
+          // Native share sheet failed for a reason other than user cancel —
+          // fall through to the clipboard fallback below.
         }
       }
 
-      const copied = await copyTextToClipboard(shareUrl);
-      if (copied) {
-        setShareToast({
-          kind: "success",
-          message: "Share link copied to clipboard.",
-        });
-      } else {
-        if (typeof window !== "undefined" && typeof window.prompt === "function") {
+      try {
+        const copied = await copyTextToClipboard(shareUrl);
+        if (copied) {
+          setShareToast({
+            kind: "success",
+            message: "Share link copied to clipboard.",
+          });
+        } else if (typeof window !== "undefined" && typeof window.prompt === "function") {
           window.prompt("Copy share link", shareUrl);
           setShareToast({
             kind: "success",
@@ -474,10 +480,18 @@ export default function EntryDetailPage() {
           });
         } else {
           setShareToast({
-            kind: "error",
-            message: "Unable to copy link automatically.",
+            kind: "success",
+            message: "Share link ready, but couldn't copy automatically.",
           });
         }
+      } catch {
+        if (typeof window !== "undefined" && typeof window.prompt === "function") {
+          window.prompt("Copy share link", shareUrl);
+        }
+        setShareToast({
+          kind: "success",
+          message: "Share link ready, but couldn't copy automatically.",
+        });
       }
     } catch {
       setShareToast({
@@ -1649,11 +1663,12 @@ export default function EntryDetailPage() {
 
       {shareToast ? (
         <div
-          className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
+          className={`fixed right-3 z-[60] max-w-[min(80vw,20rem)] rounded-2xl border px-4 py-3 text-right text-sm font-semibold shadow-[0_12px_32px_-12px_rgba(0,0,0,0.9)] backdrop-blur-md sm:right-6 ${
             shareToast.kind === "success"
-              ? "border-[var(--color-success)]/50 bg-success/15 text-[var(--color-success)]"
-              : "border-[var(--color-error)]/50 bg-error/15 text-[var(--color-error)]"
+              ? "border-[var(--color-success)]/50 bg-[var(--color-surface-raised)]/95 text-[var(--color-success)]"
+              : "border-[var(--color-error)]/50 bg-[var(--color-surface-raised)]/95 text-[var(--color-error)]"
           }`}
+          style={{ top: "calc(50px + env(safe-area-inset-top, 0px) + 12px)" }}
           role="status"
           aria-live="polite"
         >
