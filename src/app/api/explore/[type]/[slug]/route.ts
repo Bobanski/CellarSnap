@@ -4,8 +4,14 @@ import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 import { AUDIENCE_MODES, type AudienceMode, VOICE_PROFILES } from "@shared";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
 export const maxDuration = 60;
+
+// Strictest limit of the AI-cost routes — this is the one that can call
+// openai.images.generate on a cache miss, the most expensive OpenAI call type.
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -619,6 +625,20 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     throw error;
+  }
+
+  const rateLimit = await applyRateLimit({
+    request,
+    routeKey: "explore-profile",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    userId: auth.user.id,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many explore requests. Please wait a bit and try again." },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
   }
 
   const { supabase, user } = auth;
