@@ -351,12 +351,19 @@ export default function PalateProfile() {
       {tasteMap.length > 0 ? (
         <section className="rounded-3xl border border-[var(--color-border)] bg-gradient-to-b from-[var(--color-surface-primary)]/25 to-[var(--color-surface-primary)]/5 px-4 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto max-w-[380px]">
-            <TasteMap axes={tasteMap} variant="full" />
+            <TasteMap
+              axes={tasteMap}
+              variant="full"
+              interactive
+              caption={
+                <p className="mx-auto max-w-sm text-center text-[11px] leading-relaxed text-[var(--color-text-tertiary)]">
+                  Tap a berry to see what it means. Distance from centre is how far you
+                  lean into each note — bigger, brighter berries are the ones
+                  we&apos;re most sure of.
+                </p>
+              }
+            />
           </div>
-          <p className="mx-auto mt-4 max-w-sm text-center text-[11px] leading-relaxed text-[var(--color-text-tertiary)]">
-            Distance from centre is how far you lean into each note. Bigger, brighter
-            berries are the ones we&apos;re most sure of.
-          </p>
         </section>
       ) : null}
 
