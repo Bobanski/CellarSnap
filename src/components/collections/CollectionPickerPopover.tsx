@@ -80,7 +80,7 @@ export function CollectionFieldTrigger({
       </div>
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[11px] text-left"
+        className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-3 py-[11px] text-left"
         onClick={onPress}
       >
         <span

@@ -68,7 +68,7 @@ export default function EntryWineComparisonModal({
     <div className="fixed inset-0 z-50 px-3 py-3 sm:px-4 sm:py-4">
       <div className="fixed inset-0 bg-black/75" aria-hidden />
       <div className="relative flex min-h-[calc(100svh-0.75rem)] items-center justify-center">
-        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
+        <div className="relative w-full max-w-3xl max-h-[calc(100svh-0.75rem)] overflow-y-auto overscroll-contain rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)] [scrollbar-gutter:stable] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:max-h-[calc(100svh-1.5rem)] sm:p-8">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">
               Which of these wines did you enjoy more?
@@ -95,7 +95,7 @@ export default function EntryWineComparisonModal({
               className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-left transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               aria-label="Select the wine you just logged"
             >
-              <div className="h-32 w-full bg-black/40 sm:h-40">
+              <div className="h-32 w-full bg-[var(--color-surface-raised)] sm:h-40">
                 {newWineImageUrl ? (
                   <AppImage
                     src={newWineImageUrl}
@@ -126,7 +126,7 @@ export default function EntryWineComparisonModal({
               className="group overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-left transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               aria-label="Select the previous wine"
             >
-              <div className="h-32 w-full bg-black/40 sm:h-40">
+              <div className="h-32 w-full bg-[var(--color-surface-raised)] sm:h-40">
                 {candidate.label_image_url ? (
                   <AppImage
                     src={candidate.label_image_url}
