@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { router, usePathname } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { AlertsIcon } from "@/src/components/BrandIcons";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
@@ -65,8 +66,17 @@ function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
 }
 
+// Baseline top inset on a notchless device (standard status bar, no notch /
+// Dynamic Island). Hardcoded offsets below were tuned by eye on a notchless
+// simulator, so we subtract this baseline out of the safe-area inset to keep
+// the same visual result there while adding real clearance on notched devices.
+const NOTCHLESS_TOP_INSET = 20;
+const FLOATING_PANEL_BASE_TOP = 54;
+const MENU_SHEET_BASE_PADDING_TOP = 60;
+
 export function AppTopBar() {
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
@@ -554,7 +564,13 @@ export function AppTopBar() {
 
       {/* ── Alerts panel ────────────────────────────── */}
       {alertsOpen ? (
-        <View style={[styles.panel, styles.floatingPanel]}>
+        <View
+          style={[
+            styles.panel,
+            styles.floatingPanel,
+            { top: FLOATING_PANEL_BASE_TOP + (insets.top - NOTCHLESS_TOP_INSET) },
+          ]}
+        >
           <View style={styles.panelHeader}>
             <AppText style={styles.panelTitle}>Alerts</AppText>
             <Pressable onPress={() => void markAllSeen()}>
@@ -680,7 +696,15 @@ export function AppTopBar() {
         onRequestClose={() => setMenuOpen(false)}
       >
         <View style={menuStyles.backdrop}>
-          <View style={menuStyles.sheet}>
+          <View
+            style={[
+              menuStyles.sheet,
+              {
+                paddingTop:
+                  MENU_SHEET_BASE_PADDING_TOP + (insets.top - NOTCHLESS_TOP_INSET),
+              },
+            ]}
+          >
             <View style={menuStyles.sheetHeader}>
               <AppText style={styles.wordmark}>cluster</AppText>
               <Pressable
@@ -976,7 +1000,6 @@ const styles = StyleSheet.create({
   },
   floatingPanel: {
     position: "absolute",
-    top: 54,
     left: 0,
     right: 0,
     zIndex: 40,
@@ -1125,7 +1148,6 @@ const menuStyles = StyleSheet.create({
   sheet: {
     flex: 1,
     backgroundColor: colors.screenBg,
-    paddingTop: 60,
   },
   sheetHeader: {
     flexDirection: "row",

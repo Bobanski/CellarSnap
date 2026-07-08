@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
@@ -20,6 +21,10 @@ import {
   WINE_REGIONS,
 } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+
+// Baseline top inset on a notchless device — see explanation in AppTopBar.tsx.
+const NOTCHLESS_TOP_INSET = 20;
+const SCROLL_BASE_PADDING_TOP = 16;
 
 // ─── Constants ──────────────────────────────────────────────
 const WINE_TYPES = [
@@ -255,6 +260,7 @@ function wineTypeToApiValue(type: string): string {
 // ─── Main screen ────────────────────────────────────────────
 export default function CellarAddScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [wineName, setWineName] = useState("");
   const [producer, setProducer] = useState("");
@@ -375,7 +381,13 @@ export default function CellarAddScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop:
+              SCROLL_BASE_PADDING_TOP + (insets.top - NOTCHLESS_TOP_INSET),
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -562,7 +574,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 22,
-    paddingTop: 16,
     paddingBottom: 48,
     gap: 20,
   },
