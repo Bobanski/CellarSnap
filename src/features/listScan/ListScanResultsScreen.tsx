@@ -6,7 +6,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   buildListScanVarietalAccentMap,
@@ -35,6 +34,8 @@ import FacetMultiSelect from "@/features/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/features/listScan/RegionFilterSelect";
 import AppShell from "@/components/AppShell";
 import { readListScanResult, saveListScanResult } from "@/lib/listScan/storage";
+import Button, { Chip } from "@/components/ui/Button";
+import ScoreBadge from "@/components/ui/ScoreBadge";
 
 const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
 const EMPTY_STRING_LIST: string[] = [];
@@ -232,13 +233,9 @@ function FilterDropdown({
         <div className="space-y-3 border-t border-white/8 p-4">
           {children}
           <div className="flex justify-end">
-            <button
-              type="button"
-              className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-              onClick={onDone ?? onToggle}
-            >
+            <Button variant="secondary" size="xs" onClick={onDone ?? onToggle}>
               Done
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -504,18 +501,12 @@ export default function ListScanResultsScreen() {
             <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
               {loadError ?? "This scan result is no longer available in the current session."}
               <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href="/list-scan"
-                  className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
-                >
+                <Button href="/list-scan" variant="primary" size="sm">
                   Scan another
-                </Link>
-                <Link
-                  href={historyHref}
-                  className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                >
+                </Button>
+                <Button href={historyHref} variant="secondary" size="sm">
                   My scans
-                </Link>
+                </Button>
               </div>
             </div>
           </div>
@@ -533,7 +524,10 @@ export default function ListScanResultsScreen() {
           <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             List results
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+          <h1
+            className="text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 32, fontWeight: 400 }}
+          >
             {result.venue_name || result.list_title || "Scanned wine list"}
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
@@ -541,18 +535,12 @@ export default function ListScanResultsScreen() {
             list in its original order.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/list-scan"
-              className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
-            >
+            <Button href="/list-scan" variant="primary" size="sm">
               Scan another
-            </Link>
-            <Link
-              href={historyHref}
-              className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-            >
+            </Button>
+            <Button href={historyHref} variant="secondary" size="sm">
               My scans
-            </Link>
+            </Button>
           </div>
         </header>
 
@@ -630,28 +618,21 @@ export default function ListScanResultsScreen() {
                     { value: "under", label: "Under" },
                     { value: "between", label: "Between" },
                     { value: "over", label: "Over" },
-                  ].map((option) => {
-                    const selected = filters.price_mode === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() =>
-                          setFilters((current) => ({
-                            ...current,
-                            price_mode: option.value as typeof current.price_mode,
-                          }))
-                        }
-                        className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                          selected
-                            ? "bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
-                            : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
+                  ].map((option) => (
+                    <Chip
+                      key={option.value}
+                      variant="filter"
+                      selected={filters.price_mode === option.value}
+                      onClick={() =>
+                        setFilters((current) => ({
+                          ...current,
+                          price_mode: option.value as typeof current.price_mode,
+                        }))
+                      }
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -894,9 +875,7 @@ export default function ListScanResultsScreen() {
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
                           Recommendation {index + 1}
                         </p>
-                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
-                          {wine.match_percent}%
-                        </span>
+                        <ScoreBadge value={wine.match_percent} kind="match" size="sm" />
                       </div>
 
                       <div className="mt-3 flex items-start justify-between gap-4">

@@ -8,6 +8,9 @@ import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import CellarTable from "@/features/entries/CellarTable";
+import Button, { SegmentedControl } from "@/components/ui/Button";
+import ScoreBadge from "@/components/ui/ScoreBadge";
+import EmptyState from "@/components/ui/EmptyState";
 import {
   fetchEntryCollectionsClient,
   fetchUserCollectionsClient,
@@ -37,7 +40,6 @@ import {
   getEntriesEmptyStateMessage,
   getEntriesSortOrderOptions,
   getEntryLibraryGroupLabel,
-  getEntryListDisplayRating,
   shouldHideProducerInEntryTile,
   toEntryVintageNumber,
   type EntryLibraryControlPanel as ControlPanel,
@@ -192,7 +194,6 @@ function EntryRow({ entry }: { entry: EntryListItem }) {
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
   const producer = hideProducer ? null : entry.producer;
   const metaParts = [producer, entry.region || entry.country].filter(Boolean);
-  const displayRating = getEntryListDisplayRating(entry.rating);
 
   return (
     <Link
@@ -247,22 +248,7 @@ function EntryRow({ entry }: { entry: EntryListItem }) {
 
       {/* Right: rating + date */}
       <div className="flex shrink-0 flex-col items-end gap-0.5">
-        {displayRating ? (
-          <span
-            className="inline-flex items-center justify-center"
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontSize: 16,
-              background: "rgba(196, 96, 122, 0.12)",
-              color: "var(--color-accent-secondary)",
-              borderRadius: 4,
-              padding: "1px 6px",
-              lineHeight: 1.4,
-            }}
-          >
-            {displayRating}
-          </span>
-        ) : null}
+        <ScoreBadge value={entry.rating} kind="rating" size="sm" />
         <span className="text-[var(--color-text-tertiary)]" style={{ fontSize: 12 }}>
           {formatConsumedDate(entry.created_at)}
         </span>
@@ -806,39 +792,23 @@ function CellarView() {
           {CELLAR_COPY.emptySubtitle}
         </p>
         <div className="mt-5 flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setAddMenuOpen((v) => !v)}
-            className="rounded-xl bg-accent-primary px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-hover cursor-pointer"
-          >
+          <Button variant="primary" size="sm" onClick={() => setAddMenuOpen((v) => !v)}>
             {CELLAR_COPY.addButton}
-          </button>
+          </Button>
           {addMenuOpen && (
             <div className="flex flex-wrap justify-center gap-2">
-              <Link
-                href="/cellar/add"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-              >
+              <Button href="/cellar/add" variant="secondary" size="xs">
                 Enter manually
-              </Link>
-              <Link
-                href="/entries/new?cellar=1"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-              >
+              </Button>
+              <Button href="/entries/new?cellar=1" variant="secondary" size="xs">
                 Scan label(s)
-              </Link>
-              <Link
-                href="/cellar/upload"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-              >
+              </Button>
+              <Button href="/cellar/upload" variant="secondary" size="xs">
                 Upload CSV / Excel
-              </Link>
-              <Link
-                href="/cellar/import-cellartracker"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-              >
+              </Button>
+              <Button href="/cellar/import-cellartracker" variant="secondary" size="xs">
                 Import from CellarTracker
-              </Link>
+              </Button>
             </div>
           )}
         </div>
@@ -850,39 +820,23 @@ function CellarView() {
     <>
       {/* Add to cellar */}
       <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setAddMenuOpen((v) => !v)}
-          className="rounded-xl bg-accent-primary px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-hover cursor-pointer"
-        >
+        <Button variant="primary" size="xs" onClick={() => setAddMenuOpen((v) => !v)}>
           {CELLAR_COPY.addButton}
-        </button>
+        </Button>
         {addMenuOpen && (
           <div className="flex flex-wrap justify-center gap-2">
-            <Link
-              href="/cellar/add"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-            >
+            <Button href="/cellar/add" variant="secondary" size="xs">
               Enter manually
-            </Link>
-            <Link
-              href="/entries/new?cellar=1"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-            >
+            </Button>
+            <Button href="/entries/new?cellar=1" variant="secondary" size="xs">
               Scan label(s)
-            </Link>
-            <Link
-              href="/cellar/upload"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-            >
+            </Button>
+            <Button href="/cellar/upload" variant="secondary" size="xs">
               Upload CSV / Excel
-            </Link>
-            <Link
-              href="/cellar/import-cellartracker"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
-            >
+            </Button>
+            <Button href="/cellar/import-cellartracker" variant="secondary" size="xs">
               Import from CellarTracker
-            </Link>
+            </Button>
           </div>
         )}
       </div>
@@ -1368,21 +1322,12 @@ function EntriesPageContent() {
 
           {/* ─── Consumed / Cellar tab toggle ─── */}
           {isCollectionsView ? null : (
-            <div className="flex items-center justify-center gap-2">
-              {VISIBLE_CELLAR_TABS.map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                    activeTab === tab
-                      ? "bg-surface-hover text-[var(--color-text-primary)]"
-                      : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                  }`}
-                >
-                  {CELLAR_TAB_LABELS[tab]}
-                </button>
-              ))}
+            <div className="flex items-center justify-center">
+              <SegmentedControl
+                options={VISIBLE_CELLAR_TABS.map((tab) => ({ value: tab, label: CELLAR_TAB_LABELS[tab] }))}
+                value={activeTab}
+                onChange={setActiveTab}
+              />
             </div>
           )}
 
@@ -1502,14 +1447,9 @@ function EntriesPageContent() {
 
               {hasMore ? (
                 <div className="pt-1 text-center">
-                  <button
-                    type="button"
-                    onClick={() => void loadMore()}
-                    disabled={loadingMore}
-                    className="rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-60"
-                  >
+                  <Button variant="secondary" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>
                     {loadingMore ? "Loading..." : "Load more"}
-                  </button>
+                  </Button>
                 </div>
               ) : null}
             </>
@@ -1543,13 +1483,10 @@ function EntriesPageContent() {
                 }}
               >
                 <span
-                  className="block"
+                  className="text-numeric block"
                   style={{
-                    fontFamily: "var(--font-serif)",
                     fontSize: 38,
-                    fontWeight: 300,
                     color: "var(--color-text-primary)",
-                    lineHeight: 1.2,
                   }}
                 >
                   {stat.value}
@@ -2031,48 +1968,23 @@ function EntriesPageContent() {
               {errorMessage}
             </div>
           ) : sortedEntries.length === 0 ? (
-            <div
-              style={{
-                background: "var(--color-surface-primary)",
-                border: "0.5px solid var(--color-border)",
-                borderRadius: 14,
-                padding: "32px 16px",
-                fontSize: 12,
-                color: "var(--color-text-secondary)",
-                textAlign: "center",
-              }}
-            >
-              <p>
-                {getEntriesEmptyStateMessage({
-                  hasMore,
-                  isFilterActive,
-                  isRangeFilterActive,
-                  isSearchActive,
-                })}
-              </p>
-              {hasMore ? (
-                <button
-                  type="button"
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="mt-4 transition disabled:opacity-50"
-                  style={{
-                    background: "var(--color-accent-primary)",
-                    color: "var(--color-text-on-accent)",
-                    borderRadius: 20,
-                    padding: "5px 14px",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: 1,
-                    textTransform: "uppercase" as const,
-                  }}
-                >
-                  {loadingMore
-                    ? ENTRIES_LIBRARY_ACTION_LABELS.loadingMore
-                    : ENTRIES_LIBRARY_ACTION_LABELS.loadMore}
-                </button>
-              ) : null}
-            </div>
+            <EmptyState
+              title={getEntriesEmptyStateMessage({
+                hasMore,
+                isFilterActive,
+                isRangeFilterActive,
+                isSearchActive,
+              })}
+              cta={
+                hasMore ? (
+                  <Button variant="secondary" size="xs" onClick={loadMore} disabled={loadingMore}>
+                    {loadingMore
+                      ? ENTRIES_LIBRARY_ACTION_LABELS.loadingMore
+                      : ENTRIES_LIBRARY_ACTION_LABELS.loadMore}
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <>
               {libraryViewMode === "grouped" ? (

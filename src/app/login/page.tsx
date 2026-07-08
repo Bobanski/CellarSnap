@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
+import Button from "@/components/ui/Button";
 
 type LoginFormValues = {
   identifier: string;
@@ -118,7 +119,7 @@ export default function LoginPage() {
           <div>
             <h1
               className="text-[var(--color-text-primary)]"
-              style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 500 }}
+              style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 400 }}
             >
               cluster
             </h1>
@@ -170,14 +171,15 @@ export default function LoginPage() {
                 placeholder="********"
                 {...register("password", { required: true })}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
+                className="absolute inset-y-0 right-2 my-1"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? "Hide" : "Show"}
-              </button>
+              </Button>
             </div>
           </div>
           {errorMessage ? (
@@ -187,27 +189,17 @@ export default function LoginPage() {
             <p className="text-sm text-emerald-300">{infoMessage}</p>
           ) : null}
 
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-[var(--color-accent-primary)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" variant="primary" fullWidth disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign In"}
-          </button>
+          </Button>
 
-          <Link
-            href="/signup"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-center text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-          >
+          <Button href="/signup" variant="secondary" fullWidth>
             Create Account
-          </Link>
+          </Button>
           <div className="text-center">
-            <Link
-              href="/forgot-password"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
-            >
+            <Button href="/forgot-password" variant="ghost">
               Forgot password?
-            </Link>
+            </Button>
           </div>
 
           <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
