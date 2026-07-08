@@ -17,6 +17,15 @@ export const WINE_TYPE_VALUES = [
 
 export type WineType = (typeof WINE_TYPE_VALUES)[number];
 
+export const WINE_TYPE_LABELS: Record<WineType, string> = {
+  red: "Red",
+  white: "White",
+  rose: "Rosé",
+  sparkling: "Sparkling",
+  sweet: "Sweet",
+  orange: "Orange",
+};
+
 export type { PrivacyLevel };
 
 export type UserSummary = {

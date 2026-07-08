@@ -38,6 +38,7 @@ import { fetchEntryCollectionsClient } from "@/lib/collections/client";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { SENSORY_AXES } from "@/server/algorithm/types";
 import type { EntryPhoto, WineEntryWithUrls, WineType } from "@/types/wine";
+import { WINE_TYPE_LABELS } from "@/types/wine";
 
 const ENJOYMENT_INTENT_COPY: Record<string, { label: string; tone: "gold" | "rose" | "neutral" }> = {
   seek_more: { label: "Seeking more", tone: "gold" },
@@ -1293,6 +1294,17 @@ export default function EntryDetailPage() {
                 ) : (
                   <p className="text-sm text-[var(--color-text-primary)]">Not set</p>
                 )}
+              </div>
+            ) : null}
+
+            {isOwner || entry.wine_type ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                  Wine type
+                </p>
+                <p className="text-sm text-[var(--color-text-primary)]">
+                  {entry.wine_type ? WINE_TYPE_LABELS[entry.wine_type] : "Not set"}
+                </p>
               </div>
             ) : null}
 
