@@ -10,6 +10,10 @@
  *   engine    — the real deterministic algorithm via engine-predict.ts (tsx)
  *   consensus — group-consensus baseline: wine with the higher win rate among
  *               other tasters (plus this taster's train picks under --holdout) wins
+ *   comparisons-nudge — EVAL-ONLY per-taster Bradley-Terry-style logistic
+ *               regression on style features (grape family, big/light, old/
+ *               new world, vintage age), regularized toward a group-fit
+ *               prior. Requires --holdout > 0. See comparisons-nudge.mjs.
  *   price     — naive baseline: more expensive bottle wins
  *   random    — deterministic coin flip baseline
  *
@@ -34,6 +38,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import OpenAI from "openai";
+import { buildNudgeModels, predictNudge } from "./comparisons-nudge.mjs";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
 const EVAL_DIR = path.join(ROOT, "scripts/somm-eval");
@@ -659,6 +664,20 @@ async function main() {
       }
       evalRowList.forEach((row, i) => {
         perComparison[i].predictions.consensus = predictConsensus(row, statsByTaster.get(row.taster_id));
+      });
+    } else if (predictor === "comparisons-nudge") {
+      if (args.holdout <= 0) {
+        throw new Error("comparisons-nudge requires --holdout > 0 — it fits on each taster's TRAIN comparisons");
+      }
+      console.log("Running comparisons-nudge predictor (per-user Bradley-Terry-style logistic on style features, group prior)...");
+      const excludeIndexesByTaster = new Map();
+      perComparison.forEach((c) => {
+        if (!excludeIndexesByTaster.has(c.taster_id)) excludeIndexesByTaster.set(c.taster_id, new Set());
+        excludeIndexesByTaster.get(c.taster_id).add(c.index);
+      });
+      const modelsByTaster = buildNudgeModels(rows, excludeIndexesByTaster, trainRowsByTaster);
+      evalRowList.forEach((row, i) => {
+        perComparison[i].predictions["comparisons-nudge"] = predictNudge(row, modelsByTaster.get(row.taster_id));
       });
     } else if (predictor === "engine") {
       console.log("Running engine predictor (tsx bridge, live Supabase reference data)...");

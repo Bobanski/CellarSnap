@@ -13,6 +13,7 @@ a cold-start recommender before we have enough logged data.
 | `claude` | Same shape on the Anthropic Messages API (default `claude-sonnet-5`, manual prompt-cached, reasoning-first tool schema). `--crowd-context` additionally shows it group win rates |
 | `claude-profile` | Two-stage, mirroring the proposed production architecture: one distillation call per taster (`--claude-model`) compresses their history into a compact palate profile, then a small fast model (`--fast-model`, default Haiku) predicts each pair from the profile alone — no manual in the pairwise prompt. Pairwise latency is the number that matters for scan-time viability |
 | `consensus` | Baseline: group win rates over the same bottles (other tasters' picks + this taster's train picks), Laplace-smoothed |
+| `comparisons-nudge` | EVAL-ONLY: per-taster Bradley-Terry-style logistic regression on cheap style features (grape family, big/light, old/new world, vintage age), regularized toward a group-fit prior. Requires `--holdout > 0` — it fits on each taster's TRAIN comparisons. Mirrors the "tiny logistic" result in `docs/somm-engine-v2-design.md`; does not touch production scoring code. See `comparisons-nudge.mjs` |
 | `engine` | The real algorithm, unmodified: survey-seeded preference vector (`buildUserPreferenceVector`) + assembled wine profile (`assembleWineProfile`, live Supabase reference data) + `computeMatchScore`. Runs via `npx tsx scripts/somm-eval/engine-predict.ts` |
 | `price` | Baseline: the more expensive bottle wins |
 | `random` | Baseline: deterministic coin flip |
@@ -61,6 +62,19 @@ Drop real data into `scripts/somm-eval/data/` (gitignored):
 The `.template` versions of both files show the format and are used (with a
 warning) when the real files are missing.
 
+**`live-tasters.json` / `live-comparisons.csv`** — same shape, sourced from
+LIVE in-app signal instead of a spreadsheet: `node
+scripts/somm-eval/export-live-data.mjs` pulls `entry_comparison_feedback`
+("did you enjoy this more/less than X?") joined to `wine_entries` (name,
+producer, vintage, wine_type, canonical region/country, primary grapes,
+rating), plus each taster's own rated entries as `logged_wines`, straight
+from prod via `SUPABASE_SERVICE_ROLE_KEY` — read-only, no writes. Taster ids
+are anonymized to `user-<8charhash>`. Rating scale is honestly labeled from
+the data (the harness infers 5 vs. 100 from the max observed rating —
+`live-*` is out of 100, the spreadsheet dataset is out of 5; neither is
+rescaled to match the other). Run against `data/live-*` with
+`--tasters=data/live-tasters.json --comparisons=data/live-comparisons.csv`.
+
 ## Running
 
 ```bash
@@ -75,7 +89,14 @@ npm run eval:somm -- --predictors=llm,engine,price,random
 
 # holdout: predict held-out picks from partial history (the production question)
 npm run eval:somm -- --predictors=claude,claude-profile,consensus,random --holdout=0.5 --fold-seed=2
+
+# comparisons-nudge requires --holdout (it fits on each taster's TRAIN picks)
+npm run eval:somm -- --predictors=consensus,comparisons-nudge,random --holdout=0.5 --fold-seed=1 \
+  --tasters=data/live-tasters.json --comparisons=data/live-comparisons.csv
 ```
+
+Export fresh live data first with `node scripts/somm-eval/export-live-data.mjs`
+(same `.env.local` requirements as the `engine` predictor below).
 
 Flags: `--model=` (OpenAI model), `--claude-model=` (Anthropic model),
 `--fast-model=` (pairwise model for `claude-profile`), `--holdout=` /
