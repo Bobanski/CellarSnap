@@ -902,7 +902,7 @@ export default function ProfilePage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="mx-auto max-w-2xl animate-pulse rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+            <div className="mx-auto max-w-2xl animate-pulse rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
               <div className="flex items-center gap-4">
                 {/* Avatar placeholder */}
                 <div className="h-24 w-24 shrink-0 rounded-full bg-[var(--color-surface-raised)] sm:h-28 sm:w-28" />
@@ -950,7 +950,7 @@ export default function ProfilePage() {
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <div className="mx-auto max-w-2xl space-y-6">
           {/* ── Identity Card ── */}
-          <div className="relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
 
             <div className="flex items-center gap-4">
               <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-tertiary)] ring-2 ring-white/5 sm:h-28 sm:w-28">
@@ -1018,7 +1018,7 @@ export default function ProfilePage() {
                     ? "/palate"
                     : "/taste-survey"
               }
-              className="mt-5 block rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 transition hover:border-[var(--color-border-strong)]"
+              className="mt-5 block rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 transition hover:border-[var(--color-border-strong)]"
             >
               <p className="text-[9px] font-bold uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
                 MY PALATE
@@ -1096,7 +1096,7 @@ export default function ProfilePage() {
                       <Link
                         key={entry.id}
                         href={`/entries/${entry.id}`}
-                        className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]/10"
+                        className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]"
                       >
                         {entry.group_slides?.[0]?.url || entry.label_image_url ? (
                           <AppImage
@@ -1117,7 +1117,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : !entriesLoading ? (
-                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-center text-sm text-[var(--color-text-tertiary)]">
+                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 text-center text-sm text-[var(--color-text-tertiary)]">
                     {PROFILE_GALLERY_MESSAGES.emptyEntries}
                   </div>
                 ) : null}
@@ -1155,7 +1155,7 @@ export default function ProfilePage() {
                       <Link
                         key={entry.id}
                         href={`/entries/${entry.id}`}
-                        className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]/10"
+                        className="aspect-square overflow-hidden rounded-lg bg-[var(--color-surface-primary)]"
                       >
                         {entry.label_image_url ? (
                           <AppImage
@@ -1176,7 +1176,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : !taggedLoading ? (
-                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-center text-sm text-[var(--color-text-tertiary)]">
+                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 text-center text-sm text-[var(--color-text-tertiary)]">
                     {PROFILE_GALLERY_MESSAGES.emptyTagged}
                   </div>
                 ) : null}
@@ -1188,7 +1188,7 @@ export default function ProfilePage() {
                 ) : null}
               </>
             ) : (
-              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 sm:p-5">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 sm:p-5">
                 {friendError ? (
                   <p className="mb-4 text-sm text-[var(--color-error)]">{friendError}</p>
                 ) : null}
@@ -1366,7 +1366,7 @@ export default function ProfilePage() {
                                         type="button"
                                         disabled={isMutating}
                                         onClick={() => deleteRequest(req.id)}
-                                        className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                                        className="rounded-full bg-rose-600/90 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
                                       >
                                         Yes
                                       </button>
@@ -1374,7 +1374,7 @@ export default function ProfilePage() {
                                         type="button"
                                         disabled={isMutating}
                                         onClick={() => setConfirmingCancel(null)}
-                                        className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-white/20 disabled:opacity-50"
+                                        className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                                       >
                                         No
                                       </button>
@@ -1386,7 +1386,7 @@ export default function ProfilePage() {
                                       onClick={() =>
                                         setConfirmingCancel(req.id)
                                       }
-                                      className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                                      className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-700 disabled:opacity-50"
                                     >
                                       Cancel
                                     </button>
@@ -1513,7 +1513,7 @@ export default function ProfilePage() {
                                       onClick={() =>
                                         deleteRequest(friend.request_id!)
                                       }
-                                      className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                                      className="rounded-full bg-rose-600/90 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
                                     >
                                       Yes
                                     </button>
@@ -1521,7 +1521,7 @@ export default function ProfilePage() {
                                       type="button"
                                       disabled={isMutating}
                                       onClick={() => setConfirmingRemove(null)}
-                                      className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-white/20 disabled:opacity-50"
+                                      className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                                     >
                                       No
                                     </button>
@@ -1533,7 +1533,7 @@ export default function ProfilePage() {
                                     onClick={() =>
                                       setConfirmingRemove(friend.request_id!)
                                     }
-                                    className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                                    className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-700 disabled:opacity-50"
                                   >
                                     Remove
                                   </button>
@@ -1560,7 +1560,7 @@ export default function ProfilePage() {
               className="fixed inset-0 bg-black/70"
               onClick={closeSettings}
             />
-            <div className="relative w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+            <div className="relative w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.35)]">
               {/* Header */}
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">

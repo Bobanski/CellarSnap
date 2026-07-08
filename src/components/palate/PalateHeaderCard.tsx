@@ -4,8 +4,12 @@ import { getBadgeById } from "@shared";
 import BadgeIcon from "@/features/badges/BadgeIcon";
 import AppImage from "@/components/AppImage";
 
+// This whole card is a deliberate dark Barolo hero moment (matches the profile-page gradient
+// banner pattern) — every color below is unchanged from the dark theme on purpose, because all
+// text here sits on the dark gradient, not on the page's light Champagne Daylight background.
 const GRENACHE = "#7B1D3A";
 const NEBBIOLO = "#4A3060";
+const BAROLO = "#4A0E1F"; // was a raw near-black "#220E14"; same dark hero moment, now the on-brand hex
 const ROSE = "#C4607A";
 const CHAMPAGNE = "#F5EDD6";
 const FOG = "#A08878";
@@ -47,7 +51,7 @@ export function PalateHeaderCard({
       <div
         className="rounded-2xl p-6 animate-pulse"
         style={{
-          background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #220E14 100%)`,
+          background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, ${BAROLO} 100%)`,
           border: `1px solid ${GRENACHE}20`,
         }}
       >
@@ -71,7 +75,7 @@ export function PalateHeaderCard({
     <div
       className="relative rounded-2xl p-6"
       style={{
-        background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, #220E14 100%)`,
+        background: `linear-gradient(135deg, ${GRENACHE}30 0%, ${NEBBIOLO}18 50%, ${BAROLO} 100%)`,
         border: `1px solid ${GRENACHE}20`,
       }}
     >

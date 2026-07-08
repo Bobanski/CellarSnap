@@ -61,7 +61,16 @@ export function BadgesPage() {
             key={tab.value}
             type="button"
             onClick={() => setActiveCategory(tab.value)}
-            style={activeCategory === tab.value ? { backgroundColor: CATEGORY_COLOR[tab.value] } : undefined}
+            style={
+              activeCategory === tab.value
+                ? {
+                    backgroundColor: CATEGORY_COLOR[tab.value],
+                    // Viognier gold is too light for the Champagne on-accent text used by the
+                    // other category pills — use dark Terroir text for this one instead.
+                    ...(tab.value === "milestone" ? { color: "#2C1A0E" } : null),
+                  }
+                : undefined
+            }
             className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium tracking-wide transition-colors ${
               activeCategory === tab.value
                 ? "text-[var(--color-text-on-accent)]"

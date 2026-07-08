@@ -272,7 +272,7 @@ export default function FriendsPage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm text-[var(--color-text-secondary)]">
               Loading friends...
             </div>
           </div>
@@ -301,7 +301,7 @@ export default function FriendsPage() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Your friends</h2>
             <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               People you&rsquo;re connected with.
@@ -333,7 +333,7 @@ export default function FriendsPage() {
                             type="button"
                             disabled={isMutating}
                             onClick={() => deleteRequest(friend.request_id!)}
-                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                            className="rounded-full bg-rose-600/90 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
                           >
                             Yes
                           </button>
@@ -341,7 +341,7 @@ export default function FriendsPage() {
                             type="button"
                             disabled={isMutating}
                             onClick={() => setConfirmingRemove(null)}
-                            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-white/20 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                           >
                             No
                           </button>
@@ -351,7 +351,7 @@ export default function FriendsPage() {
                           type="button"
                           disabled={isMutating}
                           onClick={() => setConfirmingRemove(friend.request_id!)}
-                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-700 disabled:opacity-50"
                         >
                           Remove
                         </button>
@@ -388,7 +388,7 @@ export default function FriendsPage() {
                             type="button"
                             disabled={isMutating}
                             onClick={() => deleteRequest(request.id)}
-                            className="rounded-full bg-rose-500/80 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
+                            className="rounded-full bg-rose-600/90 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
                           >
                             Yes
                           </button>
@@ -396,7 +396,7 @@ export default function FriendsPage() {
                             type="button"
                             disabled={isMutating}
                             onClick={() => setConfirmingCancel(null)}
-                            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-white/20 disabled:opacity-50"
+                            className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)] disabled:opacity-50"
                           >
                             No
                           </button>
@@ -406,7 +406,7 @@ export default function FriendsPage() {
                           type="button"
                           disabled={isMutating}
                           onClick={() => setConfirmingCancel(request.id)}
-                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-200 disabled:opacity-50"
+                          className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-tertiary)] transition hover:border-rose-400/40 hover:text-rose-700 disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -418,7 +418,7 @@ export default function FriendsPage() {
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
                 Incoming requests
@@ -461,7 +461,7 @@ export default function FriendsPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-200 transition hover:border-rose-300"
+                        className="rounded-full border border-rose-400/40 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:border-rose-300"
                         disabled={isMutating}
                         onClick={() => respondToRequest(request.id, "decline")}
                       >
@@ -474,7 +474,7 @@ export default function FriendsPage() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Find friends</h2>
             <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
               Search by username or name. Results show usernames only.
@@ -486,10 +486,10 @@ export default function FriendsPage() {
               className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
             />
             {friendError ? (
-              <p className="mt-2 text-sm text-rose-200">{friendError}</p>
+              <p className="mt-2 text-sm text-rose-700">{friendError}</p>
             ) : null}
             {searchError ? (
-              <p className="mt-2 text-sm text-rose-200">{searchError}</p>
+              <p className="mt-2 text-sm text-rose-700">{searchError}</p>
             ) : null}
             {searchLoading ? (
               <p className="mt-2 text-sm text-[var(--color-text-tertiary)]">Searching...</p>
@@ -513,7 +513,7 @@ export default function FriendsPage() {
                           {label}
                         </p>
                         {isFriend ? (
-                          <p className="text-xs text-emerald-200">
+                          <p className="text-xs text-emerald-700">
                             Already friends
                           </p>
                         ) : isOutgoing ? (
@@ -544,7 +544,7 @@ export default function FriendsPage() {
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 backdrop-blur">
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
               People you may know
             </h2>
