@@ -778,21 +778,75 @@ function normalizeProfileMetadata(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Reference-table TTL cache (eng audit M6)
+//
+// producer_modifiers, base_profiles, and friends are static, CSV-seeded
+// reference data that rarely changes, but were being refetched via plain
+// `.select("*")` on every request from 6 separate call sites — confirmed via
+// pg_stat_statements as the single largest query by cumulative DB time in
+// the whole database. This is a short-TTL in-process cache shared across
+// requests within the same server instance (module-level, like the
+// rateLimit.ts store), scoped to those 6 hot reference-table reads only.
+// Transparent: same return shapes, callers are unaffected beyond staleness
+// bounded by the TTL. Cross-instance/cross-region staleness is bounded by
+// the same TTL — acceptable for data that's otherwise only updated via
+// migration/CSV re-seed (per README bulk-data convention), not live writes.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_REFERENCE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+function getReferenceCacheTtlMs(): number {
+  const raw = Number(process.env.PROFILE_ASSEMBLY_REFERENCE_CACHE_TTL_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_REFERENCE_CACHE_TTL_MS;
+}
+
+type ReferenceCacheEntry = {
+  value: unknown;
+  expiresAt: number;
+};
+
+declare global {
+  var __cellarsnapProfileAssemblyReferenceCache__: Map<string, ReferenceCacheEntry> | undefined;
+}
+
+const referenceCache: Map<string, ReferenceCacheEntry> =
+  globalThis.__cellarsnapProfileAssemblyReferenceCache__ ??
+  (globalThis.__cellarsnapProfileAssemblyReferenceCache__ = new Map());
+
+function cloneCachedValue<T>(value: T): T {
+  return (Array.isArray(value) ? [...value] : value) as T;
+}
+
+async function getWithReferenceCache<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const cached = referenceCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cloneCachedValue(cached.value as T);
+  }
+
+  const value = await fetcher();
+  referenceCache.set(key, { value, expiresAt: now + getReferenceCacheTtlMs() });
+  return cloneCachedValue(value);
+}
+
 export function createSupabaseProfileAssemblyDataSource(
   supabase: SupabaseClient
 ): ProfileAssemblyDataSource {
   return {
     async listBaseProfiles(wineType) {
-      const { data, error } = await supabase
-        .from("base_profiles")
-        .select("*")
-        .or(buildWineTypeOrFilter(["wine_type"], wineType));
-      if (error) {
-        throw error;
-      }
-      return ((data ?? []) as BaseProfileRow[]).filter((row) =>
-        wineTypeMatches(row.wine_type, wineType)
-      );
+      return getWithReferenceCache(`base_profiles:${wineType}`, async () => {
+        const { data, error } = await supabase
+          .from("base_profiles")
+          .select("*")
+          .or(buildWineTypeOrFilter(["wine_type"], wineType));
+        if (error) {
+          throw error;
+        }
+        return ((data ?? []) as BaseProfileRow[]).filter((row) =>
+          wineTypeMatches(row.wine_type, wineType)
+        );
+      });
     },
     async listAgingCurves(wineType) {
       const { data, error } = await supabase
@@ -818,47 +872,57 @@ export function createSupabaseProfileAssemblyDataSource(
       return (data ?? []) as VintageWeatherRow[];
     },
     async listGrapeSensitivityCoefficients() {
-      const { data, error } = await supabase
-        .from("grape_sensitivity_coefficients")
-        .select("*");
-      if (error) {
-        throw error;
-      }
-      return (data ?? []) as GrapeSensitivityRow[];
+      return getWithReferenceCache("grape_sensitivity_coefficients", async () => {
+        const { data, error } = await supabase
+          .from("grape_sensitivity_coefficients")
+          .select("*");
+        if (error) {
+          throw error;
+        }
+        return (data ?? []) as GrapeSensitivityRow[];
+      });
     },
     async listClassificationTaxonomy() {
-      const { data, error } = await supabase
-        .from("taxonomy_classification_tiers")
-        .select("*");
-      if (error) {
-        throw error;
-      }
-      return (data ?? []) as ClassificationTaxonomyRow[];
+      return getWithReferenceCache("taxonomy_classification_tiers", async () => {
+        const { data, error } = await supabase
+          .from("taxonomy_classification_tiers")
+          .select("*");
+        if (error) {
+          throw error;
+        }
+        return (data ?? []) as ClassificationTaxonomyRow[];
+      });
     },
     async listClassificationTierModifiers() {
-      const { data, error } = await supabase
-        .from("classification_tier_modifiers")
-        .select("*");
-      if (error) {
-        throw error;
-      }
-      return (data ?? []) as ClassificationTierModifierRow[];
+      return getWithReferenceCache("classification_tier_modifiers", async () => {
+        const { data, error } = await supabase
+          .from("classification_tier_modifiers")
+          .select("*");
+        if (error) {
+          throw error;
+        }
+        return (data ?? []) as ClassificationTierModifierRow[];
+      });
     },
     async listProducerModifiers() {
-      const { data, error } = await supabase.from("producer_modifiers").select("*");
-      if (error) {
-        throw error;
-      }
-      return (data ?? []) as ProducerModifierRow[];
+      return getWithReferenceCache("producer_modifiers", async () => {
+        const { data, error } = await supabase.from("producer_modifiers").select("*");
+        if (error) {
+          throw error;
+        }
+        return (data ?? []) as ProducerModifierRow[];
+      });
     },
     async listProducerRegionCrosswalk() {
-      const { data, error } = await supabase
-        .from("producer_region_crosswalk")
-        .select("*");
-      if (error) {
-        throw error;
-      }
-      return (data ?? []) as ProducerRegionCrosswalkRow[];
+      return getWithReferenceCache("producer_region_crosswalk", async () => {
+        const { data, error } = await supabase
+          .from("producer_region_crosswalk")
+          .select("*");
+        if (error) {
+          throw error;
+        }
+        return (data ?? []) as ProducerRegionCrosswalkRow[];
+      });
     },
   };
 }

@@ -38,7 +38,7 @@ export const NEW_ENTRY_DRINKING_NOW_COPY = {
 export const NEW_ENTRY_SINGLE_BOTTLE_COPY = {
   manualEntryCta: "Don't have a pic? Manually enter details",
   wineDetailsTitle: "Wine details",
-  wineDetailsDescription: "Optional identity details for this bottle.",
+  wineDetailsDescription: "Wine name is required. Everything else here is optional.",
   locationDateTitle: "Location & date",
   locationDateDescription: "Where and when this bottle was consumed.",
   tastedWithTitle: "Tasted with",

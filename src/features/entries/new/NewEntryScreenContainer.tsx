@@ -448,6 +448,28 @@ export default function NewEntryPage() {
   const [bulkEventType, setBulkEventType] = useState<string>("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [showManualFields, setShowManualFields] = useState(false);
+  // The "Wine details" section is a native <details> element, collapsed by
+  // default independent of showManualFields — controlled here so a wine_name
+  // validation error can force it open instead of setting an error message
+  // that's invisible inside a collapsed <details>.
+  const [wineDetailsOpen, setWineDetailsOpen] = useState(false);
+
+  // Whenever a wine_name validation error appears — whether from the
+  // client-side `validate` rule on register("wine_name") blocking submit
+  // before onSubmit ever runs, or from a server 4xx fieldError set after a
+  // round trip — force the "Wine details" section open and surface a top
+  // banner. Without this, the error sits on a field inside a collapsed
+  // <details>, which is exactly the invisible-failure bug this fixes
+  // (UX audit P0-1).
+  useEffect(() => {
+    if (errors.wine_name?.message) {
+      setShowManualFields(true);
+      setWineDetailsOpen(true);
+      setErrorMessage((current) =>
+        current ?? "Wine name is required. We opened Wine details for you."
+      );
+    }
+  }, [errors.wine_name]);
 
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
@@ -1661,7 +1683,25 @@ export default function NewEntryPage() {
     setPendingPostSaveSurvey(null);
     setPostSaveSurveyErrorMessage(null);
 
-    clearErrors(["rating", "price_paid", "price_paid_source"]);
+    clearErrors(["rating", "price_paid", "price_paid_source", "wine_name"]);
+
+    // Note: wine_name emptiness is caught client-side by the `validate` rule
+    // on its `register(...)` call below, before this callback ever runs —
+    // react-hook-form calls the invalid-fields effect (see the
+    // errors.wine_name effect near the other state declarations) instead of
+    // this function when that happens. This is a defense-in-depth guard for
+    // the (currently unreachable) case where that changes.
+    if (!values.wine_name.trim()) {
+      setIsSubmitting(false);
+      setShowManualFields(true);
+      setWineDetailsOpen(true);
+      setError("wine_name", {
+        type: "manual",
+        message: "Wine name is required.",
+      });
+      setErrorMessage("Wine name is required. We opened Wine details for you.");
+      return;
+    }
 
     const ratingRaw = values.rating?.trim() ?? "";
     const pricePaidRaw = values.price_paid?.trim() ?? "";
@@ -1743,6 +1783,15 @@ export default function NewEntryPage() {
         return true;
       };
 
+      if (fieldErrors?.wine_name?.[0]) {
+        // The field lives inside the collapsible "Wine details" <details>
+        // section — expand both the manual-fields block and the <details>
+        // itself so the inline error below is actually visible instead of
+        // silently failing to save.
+        setShowManualFields(true);
+        setWineDetailsOpen(true);
+      }
+
       const hadFieldErrors = Boolean(
         setFieldError("rating", fieldErrors?.rating?.[0]) ||
           setFieldError("price_paid", fieldErrors?.price_paid?.[0]) ||
@@ -1761,7 +1810,9 @@ export default function NewEntryPage() {
         typeof payload?.error === "string"
           ? payload.error
           : flattened?.formErrors?.[0] ??
-            (hadFieldErrors ? null : "Unable to create entry.");
+            (hadFieldErrors
+              ? "Please fix the highlighted fields below."
+              : "Unable to create entry.");
       setIsSubmitting(false);
       setErrorMessage(apiError);
       return;
@@ -4172,7 +4223,13 @@ export default function NewEntryPage() {
                 </div>
 
                 {showManualFields && (
-                  <details className={collapsibleSectionClassName}>
+                  <details
+                    className={collapsibleSectionClassName}
+                    open={wineDetailsOpen}
+                    onToggle={(event) =>
+                      setWineDetailsOpen(event.currentTarget.open)
+                    }
+                  >
                   <summary className={collapsibleSummaryClassName}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsTitle}
                   </summary>
@@ -4181,13 +4238,22 @@ export default function NewEntryPage() {
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Wine name</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                        Wine name <span className="text-[var(--color-error)]">*</span>
+                      </label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("wine_name")}
+                        className={`w-full rounded-[10px] border-[0.5px] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
+                          errors.wine_name
+                            ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
+                            : "border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
+                        }`}
+                        {...register("wine_name", {
+                          validate: (value) =>
+                            value.trim().length > 0 || "Wine name is required.",
+                        })}
                       />
-                      {errors.wine_name ? (
-                        <p className="mt-1 text-xs text-[var(--color-error)]">{errors.wine_name.message}</p>
+                      {errors.wine_name?.message ? (
+                        <p className="mt-1 text-xs font-semibold text-[var(--color-error)]">{errors.wine_name.message}</p>
                       ) : null}
                     </div>
                     <div>
