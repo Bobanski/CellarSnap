@@ -89,7 +89,7 @@ const DISTILLATION_SCHEMA = {
     narrative: {
       type: "string",
       description:
-        "2-3 warm, non-condescending sentences telling the user what their palate favors — shown in the app. No wine-snob gatekeeping.",
+        "2-3 warm, non-condescending sentences telling the user what their palate favors — shown in the app. No wine-snob gatekeeping. Speak only about their palate — never mention data quality, test entries, filtering, or how much/little they have logged.",
     },
     adventurousness: { type: "integer", description: "1-10 estimate from the evidence (default 5 if unclear)" },
     confidence: { type: "number", description: "0-1: overall evidence strength for this whole profile" },
