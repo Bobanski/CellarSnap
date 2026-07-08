@@ -8,6 +8,10 @@ import {
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import {
+  distilledSeedForWineType,
+  readPalateProfile,
+} from "@/server/algorithm/palateDistillation";
+import {
   RequestAuthError,
   requireRequestAuth,
 } from "@/server/auth/requestAuth";
@@ -148,10 +152,10 @@ export function createAlgorithmScoreBatchHandler(
       return NextResponse.json({ error: payload.error.flatten() }, { status: 400 });
     }
 
-    const preferenceEntries = await resolvedDependencies.loadUserPreferenceEntries(
-      auth.supabase,
-      auth.user.id
-    );
+    const [preferenceEntries, palateRecord] = await Promise.all([
+      resolvedDependencies.loadUserPreferenceEntries(auth.supabase, auth.user.id),
+      readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
+    ]);
     const preferenceCache = new Map<WineType, ReturnType<typeof buildUserPreferenceVector>>();
     const cachedScores = await resolvedDependencies.readCachedEntryScores(
       auth.supabase,
@@ -241,7 +245,10 @@ export function createAlgorithmScoreBatchHandler(
             preferenceCache.get(scoreInput.wine_type) ??
             resolvedDependencies.buildUserPreferenceVector(
               preferenceEntries,
-              scoreInput.wine_type
+              scoreInput.wine_type,
+              palateRecord
+                ? distilledSeedForWineType(palateRecord, scoreInput.wine_type)
+                : null
             );
 
           if (!preferenceCache.has(scoreInput.wine_type)) {

@@ -23,6 +23,10 @@ import {
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import {
+  distilledSeedForWineType,
+  readPalateProfile,
+} from "@/server/algorithm/palateDistillation";
+import {
   readCachedEntryScore,
   writeCachedEntryScore,
 } from "@/server/algorithm/scoreCache";
@@ -538,14 +542,16 @@ export function createAlgorithmScoreHandler(
       quality_tier: scoreInput.quality_tier,
     });
 
-    const preferenceEntries =
-      await resolvedDependencies.loadUserPreferenceEntries(
-        auth.supabase,
-        auth.user.id
-      );
+    const [preferenceEntries, palateRecord] = await Promise.all([
+      resolvedDependencies.loadUserPreferenceEntries(auth.supabase, auth.user.id),
+      readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
+    ]);
     const userPreference = resolvedDependencies.buildUserPreferenceVector(
       preferenceEntries,
-      scoreInput.wine_type
+      scoreInput.wine_type,
+      palateRecord
+        ? distilledSeedForWineType(palateRecord, scoreInput.wine_type)
+        : null
     );
     const match = resolvedDependencies.computeMatchScore(
       effectiveProfile,
