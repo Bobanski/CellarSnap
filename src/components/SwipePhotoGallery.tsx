@@ -229,8 +229,11 @@ export default function SwipePhotoGallery({
                   key={dotIndex}
                   type="button"
                   aria-label={`Go to photo ${dotIndex + 1}`}
-                  className={`h-1.5 w-1.5 rounded-full transition ${
-                    dotIndex === activeIndex ? "bg-[var(--color-accent-primary)]" : "bg-zinc-400/70"
+                  aria-current={dotIndex === activeIndex}
+                  className={`h-2 rounded-full transition-all ${
+                    dotIndex === activeIndex
+                      ? "w-5 bg-accent-primary"
+                      : "w-2 bg-zinc-400/70"
                   }`}
                   onClick={(e) => { e.stopPropagation(); setActiveByIndex(dotIndex); }}
                 />

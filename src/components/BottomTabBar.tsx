@@ -95,7 +95,15 @@ function isTabActive(href: string, pathname: string, fromFeed: boolean): boolean
     return pathname === "/entries/new";
   }
   if (href === "/palate") {
-    return pathname === "/palate" || pathname === "/profile" || pathname === "/badges" || pathname === "/friends";
+    // "/profile" covers the settings page; "/profile/[userId]" also needs to
+    // light up here since a friend's profile can also be the current user's own.
+    return (
+      pathname === "/palate" ||
+      pathname === "/profile" ||
+      pathname.startsWith("/profile/") ||
+      pathname === "/badges" ||
+      pathname === "/friends"
+    );
   }
   return pathname.startsWith(href);
 }

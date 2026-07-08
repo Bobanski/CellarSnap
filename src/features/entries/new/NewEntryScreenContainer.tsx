@@ -4154,7 +4154,7 @@ export default function NewEntryPage() {
                               type="button"
                               className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
                                 field.value === value
-                                  ? "border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.15)] text-[var(--color-accent-gold)]"
+                                  ? "border border-[var(--color-accent-gold)] bg-[rgba(201,168,76,0.22)] font-semibold text-[var(--color-accent-gold)] shadow-[0_0_0_1px_rgba(201,168,76,0.3)]"
                                   : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
                               }`}
                               onClick={() => field.onChange(field.value === value ? "" : value)}
