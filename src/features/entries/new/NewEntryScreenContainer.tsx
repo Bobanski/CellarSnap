@@ -43,7 +43,9 @@ import type {
   EntryPhotoType,
   PrimaryGrape,
   PrivacyLevel,
+  WineType,
 } from "@/types/wine";
+import { WINE_TYPE_LABELS, WINE_TYPE_VALUES } from "@/types/wine";
 import {
   NEW_ENTRY_BULK_COPY,
   NEW_ENTRY_DRINKING_NOW_COPY,
@@ -96,6 +98,7 @@ type NewEntryForm = {
   region: string;
   appellation: string;
   classification: string;
+  wine_type: WineType | "";
   rating?: string;
   price_paid?: string;
   price_paid_currency: PricePaidCurrency;
@@ -248,6 +251,7 @@ export default function NewEntryPage() {
       price_paid_source: "",
       qpr_level: "",
       classification: "",
+      wine_type: "",
       drinking_now: false,
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
@@ -1387,7 +1391,13 @@ export default function NewEntryPage() {
   };
 
   const returnAfterSave = (entryId: string) => {
-    returnToPreviousPage(`/entries/${entryId}`);
+    // Deterministic navigation to the created entry's detail page. Do NOT use
+    // the referrer/history heuristic here — after the post-save survey /
+    // comparison step, `document.referrer` and `window.history` reflect
+    // wherever the user was *before* starting entry creation, not the entry
+    // that was just saved. That heuristic previously stranded users on
+    // about:blank or bounced them back to Feed instead of the new entry.
+    router.push(`/entries/${entryId}`);
   };
 
   const returnAfterCancel = () => {
@@ -1742,6 +1752,7 @@ export default function NewEntryPage() {
           region: values.region || null,
           appellation: values.appellation || null,
           classification: values.classification || null,
+          wine_type: values.wine_type || null,
           primary_grape_ids: selectedPrimaryGrapes.map((grape) => grape.id),
           rating,
           price_paid: pricePaid ?? null,
@@ -4299,6 +4310,37 @@ export default function NewEntryPage() {
                         placeholder="Optional (e.g. Premier Cru, DOCG)"
                         {...register("classification")}
                       />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                        Wine type
+                      </label>
+                      <Controller
+                        control={control}
+                        name="wine_type"
+                        render={({ field }) => (
+                          <div className="flex flex-wrap gap-1.5">
+                            {WINE_TYPE_VALUES.map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={field.value === value}
+                                className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
+                                  field.value === value
+                                    ? "border border-[var(--color-accent-gold)] bg-[rgba(201,168,76,0.22)] font-semibold text-[var(--color-accent-gold)] shadow-[0_0_0_1px_rgba(201,168,76,0.3)]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(field.value === value ? "" : value)}
+                              >
+                                {WINE_TYPE_LABELS[value]}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
+                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                        Optional — helps Palate Match score this bottle.
+                      </p>
                     </div>
                     <div className="md:col-span-2">
                       <PrimaryGrapeSelector

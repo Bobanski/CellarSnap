@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import OpenAI from "openai";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -21,6 +21,9 @@ const VALID_PROFILE_TYPES = ["grape", "region", "producer"] as const;
 type ProfileType = (typeof VALID_PROFILE_TYPES)[number];
 
 const CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// How long a "generating" placeholder row is trusted before a new request
+// gives up waiting on the original background job and retries generation.
+const PLACEHOLDER_STALE_MS = 45 * 1000;
 
 // ---------------------------------------------------------------------------
 // Slug helpers
@@ -377,21 +380,6 @@ async function generateHeroImage(
   }
 }
 
-async function fetchHeroImage(
-  type: ProfileType,
-  displayName: string,
-  slug: string
-): Promise<ImageResult> {
-  // Try Unsplash first
-  const unsplashResult = await fetchUnsplashImage(type, displayName);
-  if (unsplashResult.hero_image_url) {
-    return unsplashResult;
-  }
-
-  // Fall back to GPT Image generation
-  return generateHeroImage(type, displayName, slug);
-}
-
 // ---------------------------------------------------------------------------
 // Sensory data from base_profiles
 // ---------------------------------------------------------------------------
@@ -609,6 +597,39 @@ async function generateContent(
 }
 
 // ---------------------------------------------------------------------------
+// In-process fallback cache for background generation
+// ---------------------------------------------------------------------------
+//
+// The `wine_profiles` DB cache is keyed by (profile_type, slug, audience_mode)
+// — but if that column's migration hasn't been applied in a given
+// environment, every read/write against `audience_mode` fails silently
+// (Supabase JS returns an error object rather than throwing, and callers
+// here only destructure `data`), which would make every request look like a
+// cache miss forever and leave the polling client waiting on a background
+// job whose result can never be persisted. This lightweight in-memory map is
+// a safety net so the deferred-generation flow still completes correctly
+// within a single server process even when the DB cache is unavailable, in
+// addition to being a simple perf win (avoids re-hitting OpenAI for
+// concurrent/rapid polls of the same profile within one process).
+type GeneratedProfileResult = {
+  display_name: string;
+  content: Record<string, unknown>;
+  hero_image_url: string | null;
+  hero_image_attribution: { photographer: string; url: string } | null;
+  sensory_data: SensoryData | null;
+  related_slugs: string[];
+  completedAt: number;
+};
+
+const IN_MEMORY_RESULT_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const inMemoryProfileResults = new Map<string, GeneratedProfileResult>();
+const inFlightGenerations = new Map<string, Promise<void>>();
+
+function profileCacheKey(type: ProfileType, slug: string, audienceMode: AudienceMode) {
+  return `${type}:${slug}:${audienceMode}`;
+}
+
+// ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
 
@@ -625,20 +646,6 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     throw error;
-  }
-
-  const rateLimit = await applyRateLimit({
-    request,
-    routeKey: "explore-profile",
-    windowMs: RATE_LIMIT_WINDOW_MS,
-    maxRequests: RATE_LIMIT_MAX_REQUESTS,
-    userId: auth.user.id,
-  });
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many explore requests. Please wait a bit and try again." },
-      { status: 429, headers: rateLimitHeaders(rateLimit) }
-    );
   }
 
   const { supabase, user } = auth;
@@ -678,19 +685,42 @@ export async function GET(
   }
 
   const admin = createSupabaseAdminClient();
+  const memoryKey = profileCacheKey(type, slug, audienceMode);
 
-  // 3. Check cache (mode-aware)
-  const { data: cached } = await admin
-    .from("wine_profiles")
-    .select("*")
-    .eq("profile_type", type)
-    .eq("slug", slug)
-    .eq("audience_mode", audienceMode)
-    .maybeSingle();
+  // 3. Check cache (mode-aware). Prefer the in-memory result if we have a
+  // fresh one — it's cheaper, and it's the only cache that's guaranteed to
+  // work if the `wine_profiles.audience_mode` DB migration hasn't landed in
+  // this environment (see the comment on inMemoryProfileResults above).
+  const memoryHit = inMemoryProfileResults.get(memoryKey);
+  const memoryHitFresh =
+    memoryHit && Date.now() - memoryHit.completedAt < IN_MEMORY_RESULT_TTL_MS;
+
+  const { data: cached } = memoryHitFresh
+    ? { data: null }
+    : await admin
+        .from("wine_profiles")
+        .select("*")
+        .eq("profile_type", type)
+        .eq("slug", slug)
+        .eq("audience_mode", audienceMode)
+        .maybeSingle();
 
   const isFresh =
     cached?.last_refreshed &&
     Date.now() - new Date(cached.last_refreshed).getTime() < CACHE_MAX_AGE_MS;
+
+  // A cache row with empty `content` is a placeholder written while
+  // narrative generation is running in the background (see below) — it's
+  // not real cached content yet.
+  const cachedContent = (cached?.content ?? null) as Record<string, unknown> | null;
+  const isPlaceholder = Boolean(cached) && (!cachedContent || Object.keys(cachedContent).length === 0);
+  // Self-heal: if the background job that wrote the placeholder died or
+  // never ran, don't wait forever — retry generation once the placeholder
+  // is stale enough that any legitimate in-flight job should have finished.
+  const placeholderIsStale =
+    isPlaceholder &&
+    (!cached?.last_refreshed ||
+      Date.now() - new Date(cached.last_refreshed).getTime() > PLACEHOLDER_STALE_MS);
 
   let profile: {
     type: ProfileType;
@@ -702,9 +732,25 @@ export async function GET(
     sensory_data: SensoryData | null;
     related_slugs: string[];
   };
+  // True while the narrative content (and possibly the hero image) is still
+  // being generated in the background — the client should show a loading
+  // state for those specific sections and poll this endpoint again.
+  let generating = false;
 
-  if (cached && isFresh) {
-    // 4. Return cached content
+  if (memoryHitFresh && memoryHit) {
+    // 4a. Return the in-memory fallback result (see comment above).
+    profile = {
+      type,
+      slug,
+      display_name: memoryHit.display_name,
+      content: memoryHit.content,
+      hero_image_url: memoryHit.hero_image_url,
+      hero_image_attribution: memoryHit.hero_image_attribution,
+      sensory_data: memoryHit.sensory_data,
+      related_slugs: memoryHit.related_slugs,
+    };
+  } else if (cached && isFresh && !isPlaceholder) {
+    // 4b. Return cached content
     profile = {
       type,
       slug,
@@ -718,53 +764,202 @@ export async function GET(
       sensory_data: (cached.sensory_data ?? null) as SensoryData | null,
       related_slugs: (cached.related_slugs ?? []) as string[],
     };
+  } else if (cached && isFresh && isPlaceholder && !placeholderIsStale) {
+    // A generation job is already in flight for this profile (kicked off by
+    // an earlier request) — report "still generating" without starting a
+    // second, redundant OpenAI call. No rate-limit check here: this request
+    // isn't triggering any new OpenAI usage.
+    profile = {
+      type,
+      slug,
+      display_name: cached.display_name ?? displayName,
+      content: {},
+      hero_image_url: cached.hero_image_url ?? null,
+      hero_image_attribution: (cached.hero_image_attribution ?? null) as {
+        photographer: string;
+        url: string;
+      } | null,
+      sensory_data: (cached.sensory_data ?? null) as SensoryData | null,
+      related_slugs: [],
+    };
+    generating = true;
+  } else if (inFlightGenerations.has(memoryKey)) {
+    // 5. Another request already kicked off generation for this exact
+    //    profile within this process (this is the DB-cache-unavailable
+    //    equivalent of the isPlaceholder branch above — reachable because
+    //    every DB read/write against `audience_mode` fails in this
+    //    environment, so `cached` is always null and every poll would
+    //    otherwise fall through to the cache-miss branch below). Report
+    //    "still generating" without touching the rate limiter or refetching
+    //    anything — this request isn't triggering any new OpenAI usage.
+    profile = {
+      type,
+      slug,
+      display_name: displayName,
+      content: {},
+      hero_image_url: null,
+      hero_image_attribution: null,
+      sensory_data: null,
+      related_slugs: [],
+    };
+    generating = true;
   } else {
-    // 5. Generate fresh content + fetch image + sensory data in parallel.
-    //    Content is mode-specific; image and sensory data are not (they
-    //    describe the wine, not the voice describing it).
-    const [content, imageResult, sensoryData] = await Promise.all([
-      generateContent(type, displayName, audienceMode),
-      fetchHeroImage(type, displayName, slug),
-      fetchSensoryData(type, displayName),
-    ]);
-
-    if (!content) {
+    // 6. Cache miss (or a stale/abandoned placeholder) — we're about to
+    //    start real OpenAI generation, so this is the only branch that
+    //    consumes rate-limit budget. Polls that land in the branches above
+    //    (real cache hit, in-memory hit, or "already generating") never
+    //    reach here and are free, which matters because the client polls
+    //    this same endpoint every few seconds while content is generating.
+    const rateLimit = await applyRateLimit({
+      request,
+      routeKey: "explore-profile",
+      windowMs: RATE_LIMIT_WINDOW_MS,
+      maxRequests: RATE_LIMIT_MAX_REQUESTS,
+      userId: user.id,
+    });
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Failed to generate profile content" },
-        { status: 502 }
+        { error: "Too many explore requests. Please wait a bit and try again." },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
       );
     }
 
-    const relatedSlugs = extractRelatedSlugs(type, content);
-
-    // Upsert into wine_profiles (cache key = profile_type + slug + audience_mode)
-    const upsertPayload = {
-      profile_type: type,
-      slug,
-      audience_mode: audienceMode,
-      display_name: displayName,
-      content,
-      hero_image_url: imageResult.hero_image_url,
-      hero_image_attribution: imageResult.hero_image_attribution,
-      sensory_data: sensoryData,
-      related_slugs: relatedSlugs,
-      last_refreshed: new Date().toISOString(),
-    };
-
-    await admin.from("wine_profiles").upsert(upsertPayload, {
-      onConflict: "profile_type,slug,audience_mode",
-    });
+    // The narrative content generation (`generateContent`, a single OpenAI
+    // chat completion asking for ~2000 tokens of structured JSON) routinely
+    // takes 15-25s on its own — independent of, and often larger than, the
+    // hero image generation. Blocking the response on it was the root cause
+    // of the 20-23s uncached page loads (on top of the hero image problem
+    // handled below). The pragmatic fix: return immediately with
+    // `generating: true` and no narrative content, doing the slow OpenAI
+    // work in the background via `after()` and persisting it to the cache
+    // once ready. The client polls this same endpoint (with a short
+    // interval) until `generating` is false.
+    //
+    // Sensory data and the Unsplash lookup are cheap (plain DB/HTTP calls,
+    // not LLM calls) so they're still awaited inline — no reason to defer
+    // fast, non-AI work.
+    const [sensoryData, unsplashImage] = await Promise.all([
+      fetchSensoryData(type, displayName),
+      fetchUnsplashImage(type, displayName),
+    ]);
 
     profile = {
       type,
       slug,
       display_name: displayName,
-      content,
-      hero_image_url: imageResult.hero_image_url,
-      hero_image_attribution: imageResult.hero_image_attribution,
+      content: {},
+      hero_image_url: unsplashImage.hero_image_url,
+      hero_image_attribution: unsplashImage.hero_image_attribution,
       sensory_data: sensoryData,
-      related_slugs: relatedSlugs,
+      related_slugs: [],
     };
+    generating = true;
+
+    // Write a placeholder row immediately (fast, no LLM calls) so concurrent
+    // or rapid-poll requests for the same profile see "generating" instead
+    // of each kicking off their own redundant OpenAI generation. Best-effort
+    // — if this fails (e.g. the audience_mode migration is missing in this
+    // environment), the inFlightGenerations dedupe above/below still
+    // prevents redundant OpenAI calls and redundant rate-limit consumption
+    // within this process.
+    void admin.from("wine_profiles").upsert(
+      {
+        profile_type: type,
+        slug,
+        audience_mode: audienceMode,
+        display_name: displayName,
+        content: {},
+        hero_image_url: unsplashImage.hero_image_url,
+        hero_image_attribution: unsplashImage.hero_image_attribution,
+        sensory_data: sensoryData,
+        related_slugs: [],
+        last_refreshed: new Date().toISOString(),
+      },
+      { onConflict: "profile_type,slug,audience_mode" }
+    );
+
+    {
+      const job = (async () => {
+        const backfillAdmin = createSupabaseAdminClient();
+        try {
+          // Step 1: narrative content. Persist and unblock the client (flips
+          // `generating` to false on the next poll) as soon as this
+          // resolves — don't make the client wait on hero image generation
+          // too, since that's a second, independently slow OpenAI call (see
+          // step 2).
+          const content = await generateContent(type, displayName, audienceMode);
+          if (!content) {
+            // Best-effort background job — leave the placeholder in place;
+            // once it goes stale, the next request retries generation.
+            return;
+          }
+
+          const relatedSlugs = extractRelatedSlugs(type, content);
+
+          // Populate the in-memory fallback immediately so polling requests
+          // pick it up even if the DB write below fails.
+          inMemoryProfileResults.set(memoryKey, {
+            display_name: displayName,
+            content,
+            hero_image_url: unsplashImage.hero_image_url,
+            hero_image_attribution: unsplashImage.hero_image_attribution,
+            sensory_data: sensoryData,
+            related_slugs: relatedSlugs,
+            completedAt: Date.now(),
+          });
+
+          await backfillAdmin.from("wine_profiles").upsert(
+            {
+              profile_type: type,
+              slug,
+              audience_mode: audienceMode,
+              display_name: displayName,
+              content,
+              hero_image_url: unsplashImage.hero_image_url,
+              hero_image_attribution: unsplashImage.hero_image_attribution,
+              sensory_data: sensoryData,
+              related_slugs: relatedSlugs,
+              last_refreshed: new Date().toISOString(),
+            },
+            { onConflict: "profile_type,slug,audience_mode" }
+          );
+
+          // Step 2: hero image fallback, only if Unsplash had nothing. This
+          // is a separate, independent backfill — it doesn't block
+          // "generating" from clearing, since the client already has real
+          // narrative content to show and only needs to pick up the image
+          // whenever it lands.
+          if (!unsplashImage.hero_image_url) {
+            const generatedImage = await generateHeroImage(type, displayName, slug);
+            if (generatedImage.hero_image_url) {
+              const memoryEntry = inMemoryProfileResults.get(memoryKey);
+              if (memoryEntry) {
+                memoryEntry.hero_image_url = generatedImage.hero_image_url;
+                memoryEntry.hero_image_attribution = generatedImage.hero_image_attribution;
+              }
+              await backfillAdmin
+                .from("wine_profiles")
+                .update({
+                  hero_image_url: generatedImage.hero_image_url,
+                  hero_image_attribution: generatedImage.hero_image_attribution,
+                })
+                .eq("profile_type", type)
+                .eq("slug", slug)
+                .eq("audience_mode", audienceMode);
+            }
+          }
+        } catch {
+          // Best-effort background job — swallow failures.
+        } finally {
+          inFlightGenerations.delete(memoryKey);
+        }
+      })();
+
+      inFlightGenerations.set(memoryKey, job);
+      after(async () => {
+        await job;
+      });
+    }
   }
 
   // 6. Personal stats (always fresh, user-specific)
@@ -818,5 +1013,6 @@ export async function GET(
     profile,
     personal_stats: personalStats,
     community_qpr,
+    generating,
   });
 }
