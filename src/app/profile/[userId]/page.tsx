@@ -341,8 +341,36 @@ export default function FriendProfilePage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
-              Loading profile...
+            <div className="animate-pulse space-y-2">
+              <div className="h-3 w-28 rounded-md bg-surface-raised" />
+              <div className="h-2.5 w-20 rounded-md bg-surface-raised" />
+              <div className="flex flex-wrap items-start justify-between gap-4 pt-1">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="h-14 w-14 shrink-0 rounded-full bg-surface-raised sm:h-16 sm:w-16" />
+                  <div className="min-w-0 space-y-2">
+                    <div className="h-6 w-40 rounded-md bg-surface-raised" />
+                    <div className="h-3.5 w-32 rounded-md bg-surface-raised" />
+                    <div className="h-3.5 w-48 rounded-md bg-surface-raised" />
+                  </div>
+                </div>
+                <div className="h-9 w-24 shrink-0 rounded-full bg-surface-raised" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-2xl border border-[var(--color-border)] bg-surface-primary/10"
+                />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="aspect-[3/4] animate-pulse rounded-2xl bg-surface-raised"
+                />
+              ))}
             </div>
           </div>
         </div>

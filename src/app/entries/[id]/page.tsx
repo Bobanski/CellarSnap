@@ -483,15 +483,15 @@ export default function EntryDetailPage() {
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-5xl space-y-8 animate-pulse">
             <div className="space-y-3">
-              <div className="h-4 w-24 rounded bg-[var(--color-surface-raised)]" />
-              <div className="h-7 w-3/4 rounded bg-[var(--color-surface-raised)]" />
-              <div className="h-4 w-1/2 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-24 rounded bg-surface-raised" />
+              <div className="h-7 w-3/4 rounded bg-surface-raised" />
+              <div className="h-4 w-1/2 rounded bg-surface-raised" />
             </div>
-            <div className="aspect-[4/3] w-full rounded-2xl bg-[var(--color-surface-raised)]" />
+            <div className="aspect-[4/3] w-full rounded-2xl bg-surface-raised" />
             <div className="space-y-3">
-              <div className="h-4 w-full rounded bg-[var(--color-surface-raised)]" />
-              <div className="h-4 w-5/6 rounded bg-[var(--color-surface-raised)]" />
-              <div className="h-4 w-2/3 rounded bg-[var(--color-surface-raised)]" />
+              <div className="h-4 w-full rounded bg-surface-raised" />
+              <div className="h-4 w-5/6 rounded bg-surface-raised" />
+              <div className="h-4 w-2/3 rounded bg-surface-raised" />
             </div>
           </div>
         </div>
@@ -504,7 +504,7 @@ export default function EntryDetailPage() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-5xl space-y-8">
-            <div className="rounded-2xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-sm text-[var(--color-error)]">
+            <div className="rounded-2xl border border-[var(--color-error)]/30 bg-error/10 p-6 text-sm text-[var(--color-error)]">
               {errorMessage ?? "Entry unavailable."}
             </div>
           </div>
@@ -756,7 +756,7 @@ export default function EntryDetailPage() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-[var(--color-accent-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-accent-primary/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
               disabled={sharing || !canShareEntry}
               onClick={onShare}
             >
@@ -774,19 +774,19 @@ export default function EntryDetailPage() {
         </div>
 
         {fromCellarBanner ? (
-          <div className="rounded-2xl border border-[var(--color-accent-rose)] bg-[var(--color-accent-soft)] p-5 space-y-4">
+          <div className="rounded-2xl border border-[var(--color-accent-rose)] bg-accent-soft p-5 space-y-4">
             <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
               🍷 Opened from your cellar
             </h2>
             <div className="flex flex-wrap gap-3">
               <Link
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+                className="rounded-full border border-[var(--color-border)] bg-surface-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                 href={`/entries/${entry.id}/edit`}
               >
                 Add photos from tonight
               </Link>
               <Link
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
+                className="rounded-full border border-[var(--color-border)] bg-surface-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                 href={`/entries/${entry.id}/edit`}
               >
                 Add tasting notes
@@ -795,7 +795,7 @@ export default function EntryDetailPage() {
             <div className="space-y-1">
               <p className="text-sm text-[var(--color-text-secondary)]">Opening with other wines?</p>
               <Link
-                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] inline-block"
+                className="rounded-full border border-[var(--color-border)] bg-surface-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] inline-block"
                 href="/entries/new"
               >
                 Add more wines to this event
@@ -828,7 +828,7 @@ export default function EntryDetailPage() {
               wrapperClassName="rounded-b-none"
             />
             )}
-            <div className="rounded-b-3xl border border-t-0 border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4" ref={reactionMenuRef}>
+            <div className="rounded-b-3xl border border-t-0 border-[var(--color-border)] bg-surface-primary/10 p-4" ref={reactionMenuRef}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {canComment ? (
                   <button
@@ -841,13 +841,13 @@ export default function EntryDetailPage() {
                     }}
                     className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
                       commentsExpanded
-                        ? "border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
+                        ? "border-[var(--color-accent-secondary)]/50 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
+                        : "border-[var(--color-border)] bg-surface-muted text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                     }`}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0" aria-hidden><path d="M7 18H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-5 4v-4z" /></svg>
                     <span>Comments</span>
-                    <span className="rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 tabular-nums">{commentCount}</span>
+                    <span className="rounded-full border border-[var(--color-border-strong)] bg-surface-muted px-1.5 py-0.5 tabular-nums">{commentCount}</span>
                   </button>
                 ) : null}
                 <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
@@ -860,13 +860,13 @@ export default function EntryDetailPage() {
                         <button
                           type="button"
                           onClick={() => setReactionUsersPopup((prev) => prev === popupKey ? null : popupKey)}
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)] bg-surface-muted px-1.5 py-0.5 text-[11px] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/40"
                         >
                           <span>{emoji}</span>
                           <span className="tabular-nums text-[var(--color-text-tertiary)]">{count}</span>
                         </button>
                         {names.length > 0 ? (
-                          <span className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${showNames ? "pointer-events-auto opacity-100" : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"}`}>
+                          <span className={`pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-surface-raised px-2.5 py-1.5 text-[11px] text-[var(--color-text-primary)] shadow-lg transition-opacity ${showNames ? "pointer-events-auto opacity-100" : "opacity-0 group-hover/reaction:pointer-events-auto group-hover/reaction:opacity-100"}`}>
                             {names.join(", ")}
                           </span>
                         ) : null}
@@ -876,7 +876,7 @@ export default function EntryDetailPage() {
                   <button
                     type="button"
                     onClick={() => setReactionPopupOpen((prev) => !prev)}
-                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-[var(--color-surface-muted)] text-sm font-semibold leading-none transition ${
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border bg-surface-muted text-sm font-semibold leading-none transition ${
                       canReact
                         ? "border-white/20 text-[var(--color-text-primary)] hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                         : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:border-white/40 hover:text-[var(--color-text-primary)]"
@@ -888,19 +888,19 @@ export default function EntryDetailPage() {
                 </div>
               </div>
               {reactionPopupOpen ? (
-                <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1.5">
+                <div className="mt-2 rounded-xl border border-[var(--color-border)] bg-surface-muted p-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {REACTION_EMOJIS.map((emoji) => {
                       if (canReact) {
                         return (
-                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-[var(--color-surface-hover)] ${myReactions.includes(emoji) ? "bg-[var(--color-accent-primary)]/20" : ""}`}>
+                          <button key={emoji} type="button" onClick={() => toggleReaction(emoji)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-surface-hover ${myReactions.includes(emoji) ? "bg-accent-primary/20" : ""}`}>
                             {emoji}
                           </button>
                         );
                       }
                       const count = reactionCounts[emoji] ?? 0;
                       return (
-                        <span key={emoji} className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-1 text-lg text-[var(--color-text-tertiary)]">
+                        <span key={emoji} className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-surface-muted px-1 text-lg text-[var(--color-text-tertiary)]">
                           {emoji}
                           {count > 0 ? <span className="ml-0.5 text-[10px] font-medium text-[var(--color-text-tertiary)]">{count}</span> : null}
                         </span>
@@ -912,17 +912,17 @@ export default function EntryDetailPage() {
               ) : null}
 
               {commentsExpanded ? (
-                <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3">
+                <div className="mt-4 rounded-2xl border border-[var(--color-border)] bg-surface-muted p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">Comments</p>
                     <button type="button" onClick={() => setCommentsExpanded(false)} className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Collapse</button>
                   </div>
                   {loadingComments ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Loading comments...</div>
+                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-surface-muted p-3 text-sm text-[var(--color-text-tertiary)]">Loading comments...</div>
                   ) : !canComment ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">Comments are private for this post.</div>
+                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-surface-muted p-3 text-sm text-[var(--color-text-tertiary)]">Comments are private for this post.</div>
                   ) : comments.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-text-tertiary)]">No comments yet. Start the thread.</div>
+                    <div className="rounded-xl border border-dashed border-[var(--color-border-strong)] bg-surface-muted p-3 text-sm text-[var(--color-text-tertiary)]">No comments yet. Start the thread.</div>
                   ) : (
                     <ul className="space-y-2">
                       {comments.map((comment) => {
@@ -965,7 +965,7 @@ export default function EntryDetailPage() {
                                   const replyDeleted = Boolean(reply.is_deleted);
                                   const deletingReply = deletingCommentId === reply.id;
                                   return (
-                                    <div key={reply.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2">
+                                    <div key={reply.id} className="rounded-lg border border-[var(--color-border)] bg-surface-muted px-3 py-2">
                                       <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
                                           {!replyDeleted && reply.author_name ? <p className="text-xs font-semibold text-[var(--color-text-primary)]">{reply.author_name}</p> : null}
@@ -993,7 +993,7 @@ export default function EntryDetailPage() {
                   {commentError ? <p className="mt-2 text-xs text-[var(--color-error)]">{commentError}</p> : null}
                   <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                     {replyTarget ? (
-                      <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
+                      <div className="mb-2 flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-surface-muted px-2.5 py-1.5 text-xs text-[var(--color-text-secondary)]">
                         <span className="truncate">Replying to {replyTarget.author_name ?? "this thread"}</span>
                         <button type="button" onClick={() => setReplyTargetId(null)} className="shrink-0 text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]">Cancel</button>
                       </div>
@@ -1017,7 +1017,7 @@ export default function EntryDetailPage() {
                         type="button"
                         onClick={() => void submitComment()}
                         disabled={!commentDraft.trim() || !canComment || postingComment}
-                        className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-[var(--color-accent-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-[var(--color-accent-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex rounded-full border border-[var(--color-accent-secondary)]/50 bg-accent-primary/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-secondary)] transition hover:bg-accent-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {postingComment ? "Posting..." : replyTarget ? "Post reply" : "Post comment"}
                       </button>
@@ -1028,7 +1028,7 @@ export default function EntryDetailPage() {
             </div>
           </div>
 
-          <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 backdrop-blur">
+          <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-surface-primary/10 p-6 backdrop-blur">
             {scoreLoading
                 ? (
                   <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5 text-sm text-[var(--color-text-tertiary)]">
@@ -1066,7 +1066,7 @@ export default function EntryDetailPage() {
                       <div className="mt-4 flex flex-wrap gap-3">
                         <Link
                           href="/entries/new"
-                          className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
+                          className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-primary"
                         >
                           Log another wine
                         </Link>
@@ -1328,7 +1328,7 @@ export default function EntryDetailPage() {
             ) : null}
 
             {populatedAdvancedNotes.length > 0 ? (
-              <details className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+              <details className="rounded-2xl border border-[var(--color-border)] bg-surface-muted p-4">
                 <summary className="cursor-pointer select-none text-sm font-medium text-[var(--color-text-primary)]">
                   Advanced notes
                 </summary>
@@ -1355,7 +1355,7 @@ export default function EntryDetailPage() {
 
         {isTagged ? (
           addToLogEntryId ? (
-            <div className="rounded-2xl border border-[var(--color-success)]/25 bg-[var(--color-success)]/10 p-6">
+            <div className="rounded-2xl border border-[var(--color-success)]/25 bg-success/10 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--color-success)]">
@@ -1379,7 +1379,7 @@ export default function EntryDetailPage() {
               ) : null}
             </div>
           ) : (
-            <div className="rounded-2xl border border-[var(--color-border-accent)] bg-[var(--color-accent-primary)]/10 p-6">
+            <div className="rounded-2xl border border-[var(--color-border-accent)] bg-accent-primary/10 p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-[var(--color-accent-secondary)]">
@@ -1392,7 +1392,7 @@ export default function EntryDetailPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-primary disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={addingToLog}
                     onClick={async () => {
                       if (!entryId) return;
@@ -1471,7 +1471,7 @@ export default function EntryDetailPage() {
             className="absolute inset-0 bg-black/70"
             onClick={() => setShowDeleteConfirm(false)}
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+          <div className="relative w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-surface-primary p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               Delete this entry?
             </h3>
@@ -1505,8 +1505,8 @@ export default function EntryDetailPage() {
         <div
           className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
             shareToast.kind === "success"
-              ? "border-[var(--color-success)]/50 bg-[var(--color-success)]/15 text-[var(--color-success)]"
-              : "border-[var(--color-error)]/50 bg-[var(--color-error)]/15 text-[var(--color-error)]"
+              ? "border-[var(--color-success)]/50 bg-success/15 text-[var(--color-success)]"
+              : "border-[var(--color-error)]/50 bg-error/15 text-[var(--color-error)]"
           }`}
           role="status"
           aria-live="polite"

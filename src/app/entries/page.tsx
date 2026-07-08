@@ -599,7 +599,18 @@ function CellarDetailOverlay({
               <span className="block uppercase" style={{ fontSize: 9, letterSpacing: 1.5, color: "var(--color-text-tertiary)" }}>
                 Type
               </span>
-              <span style={{ color: "var(--color-text-primary)" }}>{entry.wine_type}</span>
+              {/* Orange/skin-contact wines carry the natural-wine signal — a subtle
+                  Verdot tint, per brand guide (Verdot = natural/organic/sustainability). */}
+              <span
+                style={{
+                  color:
+                    entry.wine_type === "orange"
+                      ? "var(--color-natural-light)"
+                      : "var(--color-text-primary)",
+                }}
+              >
+                {entry.wine_type}
+              </span>
             </div>
           ) : null}
           <div>
@@ -798,7 +809,7 @@ function CellarView() {
           <button
             type="button"
             onClick={() => setAddMenuOpen((v) => !v)}
-            className="rounded-xl bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)] cursor-pointer"
+            className="rounded-xl bg-accent-primary px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-hover cursor-pointer"
           >
             {CELLAR_COPY.addButton}
           </button>
@@ -806,25 +817,25 @@ function CellarView() {
             <div className="flex flex-wrap justify-center gap-2">
               <Link
                 href="/cellar/add"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
               >
                 Enter manually
               </Link>
               <Link
                 href="/entries/new?cellar=1"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
               >
                 Scan label(s)
               </Link>
               <Link
                 href="/cellar/upload"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
               >
                 Upload CSV / Excel
               </Link>
               <Link
                 href="/cellar/import-cellartracker"
-                className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+                className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
               >
                 Import from CellarTracker
               </Link>
@@ -842,7 +853,7 @@ function CellarView() {
         <button
           type="button"
           onClick={() => setAddMenuOpen((v) => !v)}
-          className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)] cursor-pointer"
+          className="rounded-xl bg-accent-primary px-4 py-2 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-hover cursor-pointer"
         >
           {CELLAR_COPY.addButton}
         </button>
@@ -850,25 +861,25 @@ function CellarView() {
           <div className="flex flex-wrap justify-center gap-2">
             <Link
               href="/cellar/add"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
             >
               Enter manually
             </Link>
             <Link
               href="/entries/new?cellar=1"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
             >
               Scan label(s)
             </Link>
             <Link
               href="/cellar/upload"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
             >
               Upload CSV / Excel
             </Link>
             <Link
               href="/cellar/import-cellartracker"
-              className="rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-tinted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
+              className="rounded-xl border border-[var(--color-border-strong)] bg-surface-tinted px-3 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-primary)]"
             >
               Import from CellarTracker
             </Link>
@@ -1365,7 +1376,7 @@ function EntriesPageContent() {
                   onClick={() => setActiveTab(tab)}
                   className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                     activeTab === tab
-                      ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                      ? "bg-surface-hover text-[var(--color-text-primary)]"
                       : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
                   }`}
                 >

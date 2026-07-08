@@ -15,7 +15,9 @@ export const BOTTLE_FORMAT_OPTIONS: { value: BottleFormat; label: string }[] = [
 ];
 
 export const CELLAR_TAB_LABELS = {
-  consumed: "Consumed",
+  // Brand guide: "You don't consume wine. You open it." — display label only,
+  // the underlying data value/enum stays "consumed".
+  consumed: "Opened",
   cellaring: "In My Cellar",
   events: "My Events",
   collections: "My Collections",
