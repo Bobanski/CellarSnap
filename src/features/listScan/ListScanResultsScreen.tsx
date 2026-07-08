@@ -210,7 +210,7 @@ function FilterDropdown({
   children,
 }: FilterDropdownProps) {
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-black/25">
+    <div className="w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -229,7 +229,7 @@ function FilterDropdown({
       </button>
 
       {open ? (
-        <div className="space-y-3 border-t border-white/8 p-4">
+        <div className="space-y-3 border-t border-[var(--color-border)] p-4">
           {children}
           <div className="flex justify-end">
             <button
@@ -249,7 +249,7 @@ function FilterDropdown({
 function ResultsLoadingSkeleton() {
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8">
+      <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8">
         <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
         <div className="mt-4 h-8 w-72 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
         <div className="mt-3 h-4 w-full max-w-2xl animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
@@ -262,7 +262,7 @@ function ResultsLoadingSkeleton() {
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6"
+            className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6"
           >
             <div className="h-3 w-24 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
             <div className="mt-4 h-6 w-40 animate-pulse rounded-full bg-[var(--color-surface-hover)]" />
@@ -501,7 +501,7 @@ export default function ListScanResultsScreen() {
       <AppShell>
         <div className="px-6 py-6 text-[var(--color-text-primary)]">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-            <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
+            <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-8 text-sm text-[var(--color-text-secondary)]">
               {loadError ?? "This scan result is no longer available in the current session."}
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link
@@ -557,13 +557,13 @@ export default function ListScanResultsScreen() {
         </header>
 
         {loadError ? (
-          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 text-sm text-[var(--color-text-primary)] shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)]">
             {loadError}
           </section>
         ) : null}
 
         {result.score_summary.warning ? (
-          <section className="rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 p-5 text-sm text-[var(--color-text-on-accent)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+          <section className="rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-accent-primary)]/10 p-5 text-sm text-[var(--color-text-on-accent)] shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)]">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/80">
               Match scoring
             </p>
@@ -573,7 +573,7 @@ export default function ListScanResultsScreen() {
           </section>
         ) : null}
 
-        <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+        <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 shadow-[0_30px_80px_-40px_rgba(44,26,14,0.28)] backdrop-blur">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
@@ -588,9 +588,9 @@ export default function ListScanResultsScreen() {
               type="button"
               onClick={toggleFiltersVisibility}
               aria-expanded={filtersVisible}
-              className="inline-flex items-center gap-3 self-start rounded-full border border-white/12 bg-black/25 px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-white/25 hover:bg-black/35"
+              className="inline-flex items-center gap-3 self-start rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-hover)]"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 text-[var(--color-text-primary)]">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] text-[var(--color-text-primary)]">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -608,7 +608,7 @@ export default function ListScanResultsScreen() {
               </span>
               <span>{filtersVisible ? "Hide filters" : "Show filters"}</span>
               {activeFilterCount > 0 ? (
-                <span className="rounded-full border border-[var(--color-border)] bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)]">
                   {activeFilterCount}
                 </span>
               ) : null}
@@ -835,7 +835,7 @@ export default function ListScanResultsScreen() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/8 bg-black/15 px-4 py-4 text-sm text-[var(--color-text-tertiary)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-4 text-sm text-[var(--color-text-tertiary)]">
               {activeFilterCount > 0
                 ? `${activeFilterCount} filter ${
                     activeFilterCount === 1 ? "setting is" : "settings are"
@@ -891,10 +891,10 @@ export default function ListScanResultsScreen() {
                       className="rounded-2xl border border-emerald-300/20 bg-emerald-400/7 p-4 shadow-[0_20px_60px_-40px_rgba(16,185,129,0.55)] sm:rounded-3xl sm:p-5"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">
                           Recommendation {index + 1}
                         </p>
-                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
+                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-700">
                           {wine.match_percent}%
                         </span>
                       </div>
@@ -910,7 +910,7 @@ export default function ListScanResultsScreen() {
                             </p>
                           ) : null}
                         </div>
-                        <span className="shrink-0 text-right text-base font-semibold text-emerald-100">
+                        <span className="shrink-0 text-right text-base font-semibold text-emerald-700">
                           {formatPriceDisplay(wine.price_display, wine.menu_label)}
                         </span>
                       </div>
@@ -926,7 +926,7 @@ export default function ListScanResultsScreen() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-secondary)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5 text-sm text-[var(--color-text-secondary)]">
               No wines match the current filters.
             </div>
           )}
@@ -948,7 +948,7 @@ export default function ListScanResultsScreen() {
               </p>
             </div>
 
-            <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-black/25 p-1">
+            <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-1">
               {(
                 [
                   { value: "list_order", label: "List Order" },
@@ -963,7 +963,7 @@ export default function ListScanResultsScreen() {
                     onClick={() => setSortMode(option.value)}
                     className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                       active
-                        ? "bg-white/12 text-[var(--color-text-primary)] shadow-sm"
+                        ? "bg-[var(--color-surface-primary)] text-[var(--color-text-primary)] shadow-sm"
                         : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
                     }`}
                   >
@@ -1021,18 +1021,18 @@ export default function ListScanResultsScreen() {
                     return (
                       <div key={wine.id}>
                         {showSectionHeader ? (
-                          <div className="border-b border-white/8 bg-white/4 px-5 py-2">
+                          <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-hover)] px-5 py-2">
                             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                               {getListScanSectionTitle(resolvedType)}
                             </span>
                           </div>
                         ) : null}
-                        <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-white/6 px-5 py-3 text-sm">
+                        <div className="grid grid-cols-[minmax(0,1fr)_120px_88px] gap-3 border-b border-[var(--color-border)] px-5 py-3 text-sm">
                           <div className="min-w-0">
                             <p
                               className={`max-h-16 overflow-hidden break-words text-[15px] leading-5 md:max-h-none md:truncate ${
                                 highlighted
-                                  ? "font-bold text-emerald-300"
+                                  ? "font-bold text-emerald-700"
                                   : "font-medium text-[var(--color-text-primary)]"
                               }`}
                             >
@@ -1046,14 +1046,14 @@ export default function ListScanResultsScreen() {
                           </div>
                           <span
                             className={`text-right font-medium ${
-                              highlighted ? "text-emerald-300" : "text-[var(--color-text-primary)]"
+                              highlighted ? "text-emerald-700" : "text-[var(--color-text-primary)]"
                             }`}
                           >
                             {formatPriceDisplay(wine.price_display, wine.menu_label)}
                           </span>
                           <span
                             className={`text-right font-semibold ${
-                              highlighted ? "text-emerald-300" : "text-[var(--color-text-tertiary)]"
+                              highlighted ? "text-emerald-700" : "text-[var(--color-text-tertiary)]"
                             }`}
                           >
                             {wine.match_percent}%

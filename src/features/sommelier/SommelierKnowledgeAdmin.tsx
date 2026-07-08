@@ -213,7 +213,7 @@ export default function SommelierKnowledgeAdmin() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5"
+                className="rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-5"
               >
                 <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-text-tertiary)]">{item.label}</p>
                 <p className="mt-3 text-3xl font-semibold text-[var(--color-text-primary)]">{item.value}</p>
@@ -222,7 +222,7 @@ export default function SommelierKnowledgeAdmin() {
           </section>
         ) : null}
 
-        <section className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6">
+        <section className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Upload a document</h2>
@@ -243,7 +243,7 @@ export default function SommelierKnowledgeAdmin() {
                 type="button"
                 onClick={() => void reingestEntries()}
                 disabled={reingestingEntries}
-                className="rounded-full border border-white/12 bg-[var(--color-surface-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/35 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/35 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {reingestingEntries ? "Re-ingesting..." : "Re-ingest cellar entries"}
               </button>
@@ -307,12 +307,12 @@ export default function SommelierKnowledgeAdmin() {
         </section>
 
         {error ? (
-          <div className="rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          <div className="rounded-2xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700">
             {error}
           </div>
         ) : null}
 
-        <section className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6">
+        <section className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6">
           <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Uploaded documents</h2>
           <p className="mt-2 text-sm leading-7 text-[var(--color-text-secondary)]">
             Review chunk counts and ingest status at a glance.
@@ -323,7 +323,7 @@ export default function SommelierKnowledgeAdmin() {
               Loading knowledge documents...
             </div>
           ) : documents.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-white/12 bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-tertiary)]">
+            <div className="mt-5 rounded-2xl border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-muted)] px-4 py-6 text-sm text-[var(--color-text-tertiary)]">
               No documents uploaded yet.
             </div>
           ) : (
