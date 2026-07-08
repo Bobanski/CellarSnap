@@ -26,6 +26,7 @@ import {
 } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { AppTopBar } from "@/src/components/AppTopBar";
+import { lightImpact } from "@/src/lib/haptics";
 import {
   acceptMobileFriendRequest,
   deleteMobileFriendRequest,
@@ -372,7 +373,13 @@ export default function UserProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => void loadUserProfile(true)} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              lightImpact();
+              void loadUserProfile(true);
+            }}
+          />
         }
       >
         <AppTopBar />

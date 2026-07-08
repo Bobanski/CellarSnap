@@ -2,6 +2,7 @@ import { ActivityIndicator, Image, Modal, Pressable, View } from "react-native";
 import { SelectField } from "@/src/components/entries/newEntryFormParts";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
+import { selectionTap } from "@/src/lib/haptics";
 import {
   formatSurveyWineMeta,
   formatSurveyWineTitle,
@@ -83,9 +84,10 @@ export function PostSaveSurveyModal({
                 label="How was it?"
                 value={surveyHowWasIt}
                 options={howWasItOptions}
-                onChange={(value) =>
-                  onSurveyHowWasItChange(value as SurveyHowWasItResponse | "")
-                }
+                onChange={(value) => {
+                  selectionTap();
+                  onSurveyHowWasItChange(value as SurveyHowWasItResponse | "");
+                }}
                 placeholderLabel="Select one"
                 tone="accent"
                 hideModalCloseAction

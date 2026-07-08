@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { lightImpact } from "@/src/lib/haptics";
 import {
   compareEntryChronology,
   createEntryLibraryGroupId,
@@ -1134,6 +1135,7 @@ export default function EntriesScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => {
+                lightImpact();
                 if (activeTab === "cellaring") {
                   void loadCellarEntries(true);
                 } else if (activeTab === "collections") {
@@ -1345,7 +1347,10 @@ export default function EntriesScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => void loadEntries(true)}
+            onRefresh={() => {
+              lightImpact();
+              void loadEntries(true);
+            }}
             tintColor={colors.grenache}
           />
         }
