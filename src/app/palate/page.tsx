@@ -14,7 +14,7 @@ import {
   PalateSubTabs,
   type PalateSubTab,
 } from "@/components/palate/PalateSubTabs";
-import { TasteTab } from "@/components/palate/TasteTab";
+import PalateProfileTab from "@/features/palate/PalateProfile";
 import { LibraryTab } from "@/components/palate/LibraryTab";
 import { CellarTab } from "@/components/palate/CellarTab";
 import { BadgesTab } from "@/components/palate/BadgesTab";
@@ -135,7 +135,7 @@ function PalatePageContent() {
         </div>
 
         <div className="mt-6">
-          {activeTab === "palate" && mountedTabs.has("palate") && <TasteTab />}
+          {activeTab === "palate" && mountedTabs.has("palate") && <PalateProfileTab />}
           {activeTab === "library" && mountedTabs.has("library") && <LibraryTab />}
           {activeTab === "cellar" && mountedTabs.has("cellar") && <CellarTab />}
           {activeTab === "badges" && mountedTabs.has("badges") && <BadgesTab />}
