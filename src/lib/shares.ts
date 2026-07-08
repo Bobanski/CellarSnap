@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import {
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
+  getPublicRatingBandLabel,
   normalizePrivacyLevel,
   type QprLevel,
 } from "@shared";
@@ -59,6 +60,11 @@ type PrimaryGrapeRow = {
     | null;
 };
 
+type EntryScoreRow = {
+  match_score: number;
+  display_score: boolean;
+};
+
 export type PublicSharedPost = {
   shareId: string;
   postId: string;
@@ -68,7 +74,21 @@ export type PublicSharedPost = {
   wineName: string | null;
   producer: string | null;
   vintage: string | null;
+  /**
+   * The raw 1-100 private rating. Never render this directly on a public
+   * surface (overhaul-plan decision 1) — use `ratingBandLabel` instead.
+   * Kept on the type for any future owner-only path.
+   */
   rating: number | null;
+  /** Warm qualitative band derived from `rating` — safe for public display. */
+  ratingBandLabel: string | null;
+  /**
+   * The entry owner's own cached palate match score for this wine (0-100),
+   * when one has already been computed (e.g. they viewed their own entry
+   * detail). Null when no fresh score exists — the share/OG card omits the
+   * match line entirely rather than compute one on the fly for a stranger.
+   */
+  matchScore: number | null;
   notes: string | null;
   notePreview: string | null;
   consumedAt: string;
@@ -155,8 +175,11 @@ function buildMetadataDescription(entry: EntryRow) {
   const note = normalizeText(entry.notes);
   const fragments: string[] = [];
 
-  if (typeof entry.rating === "number") {
-    fragments.push(`Rating ${entry.rating}/100`);
+  // Decision 1 (overhaul-plan): public metadata never carries the raw
+  // 1-100 rating — a warm band stands in.
+  const bandLabel = getPublicRatingBandLabel(entry.rating);
+  if (bandLabel) {
+    fragments.push(bandLabel);
   }
 
   if (note) {
@@ -276,6 +299,7 @@ async function resolvePublicPostShareUncached(
     { data: rawFirstPhoto },
     { data: rawProfile },
     { data: rawGroupedPreviewPhoto },
+    { data: rawEntryScore },
   ] = await Promise.all([
     supabase
       .from("entry_photos")
@@ -311,6 +335,18 @@ async function resolvePublicPostShareUncached(
           .limit(1)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    // The entry owner's own cached palate match score, if one has already
+    // been computed (e.g. they viewed their own entry detail). Not gated by
+    // the 6hr TTL used for live scoring — a slightly stale number is fine
+    // for a static share card, and "no match yet" is a safe fallback.
+    supabase
+      .from("wine_entry_scores")
+      .select("match_score, display_score")
+      .eq("wine_entry_id", entry.id)
+      .eq("user_id", entry.user_id)
+      .order("computed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (rawLabelPhoto) {
@@ -357,6 +393,11 @@ async function resolvePublicPostShareUncached(
   ]);
 
   const normalizedNotes = normalizeText(entry.notes);
+  const entryScore = rawEntryScore as EntryScoreRow | null;
+  const matchScore =
+    entryScore && entryScore.display_score && typeof entryScore.match_score === "number"
+      ? Math.max(0, Math.min(100, Math.round(entryScore.match_score)))
+      : null;
 
   return {
     shareId: share.id,
@@ -368,6 +409,8 @@ async function resolvePublicPostShareUncached(
     producer: entry.producer,
     vintage: entry.vintage,
     rating: entry.rating,
+    ratingBandLabel: getPublicRatingBandLabel(entry.rating),
+    matchScore,
     notes: entry.notes,
     notePreview: normalizedNotes ? truncateClean(normalizedNotes, 160) : null,
     consumedAt: entry.consumed_at,

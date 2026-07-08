@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { toExploreSlug, WINE_REGIONS } from "@shared";
 import AppShell from "@/components/AppShell";
+import { Chip } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,11 +37,6 @@ type FeaturedCard = {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const TYPE_BADGE_STYLE: Record<string, string> = {
-  region: "border-[var(--color-accent-primary)]/40 bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-secondary)]",
-  grape: "border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-gold)]/10 text-[var(--color-accent-gold)]",
-};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -327,11 +323,16 @@ export default function ExplorePage() {
                           {item.name}
                         </p>
                       </div>
-                      <span
-                        className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${TYPE_BADGE_STYLE[item.type] ?? ""}`}
+                      {/* Design-audit spec D: taxonomy chips are neutral by
+                          default — gold/rose per-category coloring removed
+                          (gold is reserved for premium/Réserve moments). */}
+                      <Chip
+                        variant="tag"
+                        tone="neutral"
+                        className="shrink-0 text-[10px] uppercase tracking-[0.1em]"
                       >
                         {item.type}
-                      </span>
+                      </Chip>
                     </Link>
                   ))}
                 </div>

@@ -21,9 +21,11 @@ import {
   type FeedReportReason as ReportReason,
   EVENT_TYPE_LABELS,
   type EventTypeValue,
+  getPublicRatingBandLabel,
 } from "@shared";
 import CollectionPickerPopover from "@/components/collections/CollectionPickerPopover";
 import FirstRunChecklist from "@/features/feed/FirstRunChecklist";
+import PalateGlimpse from "@/features/palate/PalateGlimpse";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   addEntryToCollectionsClient,
@@ -42,7 +44,7 @@ import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
-import Button, { SegmentedControl } from "@/components/ui/Button";
+import Button, { Chip, SegmentedControl } from "@/components/ui/Button";
 import ScoreBadge from "@/components/ui/ScoreBadge";
 import type {
   EntryGroup,
@@ -1099,6 +1101,14 @@ export default function FeedPage() {
           />
         </div>
 
+        {/* "Your palate, read by the somm" — the returning-user moment
+            (overhaul-plan §4). Self-gated: renders nothing until the
+            viewer has enough palate data, so it's safe to place
+            unconditionally at the top of the home surface. */}
+        <div className="px-6">
+          <PalateGlimpse />
+        </div>
+
         {moderationNotice ? (
           <div
             className={`rounded-xl border px-3 py-2 text-xs mx-6 ${
@@ -1398,6 +1408,14 @@ export default function FeedPage() {
                     return null;
                   }
                   const expanded = Boolean(expandedNotesByEntryId[entry.id]);
+                  // Decision 1 (overhaul-plan): the raw 1-100 rating is a
+                  // private input. Only the entry owner sees their own
+                  // number (ScoreBadge, as before); every other viewer sees
+                  // a warm qualitative band instead — never the score.
+                  const isOwnEntry = viewerUserId !== null && viewerUserId === entry.user_id;
+                  const publicBandLabel = hasRating && !isOwnEntry
+                    ? getPublicRatingBandLabel(entry.rating)
+                    : null;
                   return (
                     <div className="mt-3 flex items-baseline justify-between gap-3">
                       <div className="min-w-0 max-w-[60%] flex-1">
@@ -1424,7 +1442,13 @@ export default function FeedPage() {
                       {hasRating || hasQpr ? (
                         <div className="flex shrink-0 flex-col items-end gap-1.5">
                           {hasRating ? (
-                            <ScoreBadge value={entry.rating as number} kind="rating" label="pts" size="sm" />
+                            isOwnEntry ? (
+                              <ScoreBadge value={entry.rating as number} kind="rating" label="pts" size="sm" />
+                            ) : publicBandLabel ? (
+                              <Chip variant="tag" tone="neutral">
+                                {publicBandLabel}
+                              </Chip>
+                            ) : null
                           ) : null}
                           {hasQpr ? <QprBadge level={entry.qpr_level!} /> : null}
                         </div>

@@ -32,6 +32,7 @@ import QprBadge from "@/components/QprBadge";
 import ScoreBreakdown from "@/components/ScoreBreakdown";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import WineMatchScore from "@/components/WineMatchScore";
+import Button from "@/components/ui/Button";
 import TasteMap, { type TasteMapAxis } from "@/features/palate/TasteMap";
 import { fetchEntryCollectionsClient } from "@/lib/collections/client";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -809,21 +810,18 @@ export default function EntryDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-accent-primary/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
+            <Button
+              variant="secondary"
+              size="sm"
               disabled={sharing || !canShareEntry}
               onClick={onShare}
             >
               {sharing ? "Sharing..." : "Share"}
-            </button>
+            </Button>
             {isOwner ? (
-              <Link
-                className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                href={`/entries/${entry.id}/edit`}
-              >
+              <Button variant="secondary" size="sm" href={`/entries/${entry.id}/edit`}>
                 Edit entry
-              </Link>
+              </Button>
             ) : null}
           </div>
         </div>
