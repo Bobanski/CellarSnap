@@ -131,7 +131,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
 
   return (
     <div
-      className="relative overflow-hidden bg-black/40"
+      className="relative overflow-hidden bg-[var(--color-surface-raised)]"
       style={{ aspectRatio: "4 / 3" }}
       onClickCapture={(event) => {
         if (!didSwipeRef.current) {
@@ -196,7 +196,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
               className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
               loading="lazy"
             />
-            <span className="absolute left-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-primary)]">
+            <span className="absolute left-2 top-2 rounded-full border border-[var(--color-border-strong)] bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-on-accent)]">
               {PHOTO_TYPE_LABELS[photo.type]}
             </span>
           </div>
@@ -207,7 +207,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
         <>
           <button
             type="button"
-            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
+            className="absolute left-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-on-accent)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
             aria-label="Previous photo"
             onClick={(event) => {
               event.stopPropagation();
@@ -218,7 +218,7 @@ function EntryPhotoGallery({ entry }: { entry: FeedEntry }) {
           </button>
           <button
             type="button"
-            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
+            className="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/55 text-sm text-[var(--color-text-on-accent)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] md:inline-flex"
             aria-label="Next photo"
             onClick={(event) => {
               event.stopPropagation();
@@ -287,7 +287,7 @@ function CommentAuthorAvatar({
 
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-black/40 text-[10px] font-semibold text-[var(--color-text-secondary)]"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] text-[10px] font-semibold text-[var(--color-text-secondary)]"
       aria-hidden
     >
       {fallbackInitial}
@@ -1116,8 +1116,8 @@ export default function FeedPage() {
           <div
             className={`rounded-xl border px-3 py-2 text-xs mx-6 ${
               moderationNotice.kind === "success"
-                ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
-                : "border-rose-500/40 bg-rose-500/10 text-rose-100"
+                ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-700"
+                : "border-rose-500/40 bg-rose-500/10 text-rose-700"
             }`}
           >
             {moderationNotice.message}
@@ -1129,7 +1129,7 @@ export default function FeedPage() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4 animate-pulse"
+                className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-4 animate-pulse"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-9 w-9 rounded-full bg-[var(--color-surface-raised)]" />
@@ -1147,11 +1147,11 @@ export default function FeedPage() {
             ))}
           </div>
         ) : errorMessage ? (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+          <div className="rounded-2xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 p-6 text-sm text-[var(--color-error)]">
             {errorMessage}
           </div>
         ) : entries.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 text-sm text-[var(--color-text-secondary)]">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm text-[var(--color-text-secondary)]">
             {FEED_EMPTY_STATE_MESSAGE}
           </div>
         ) : (
@@ -1160,13 +1160,13 @@ export default function FeedPage() {
             {sortedEntries.map((entry) => (
               <article
                 key={entry.id}
-                className={`group flex min-w-0 cursor-pointer flex-col border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 ${
+                className={`group flex min-w-0 cursor-pointer flex-col border-[0.5px] p-4 px-5 shadow-[0_20px_50px_-30px_rgba(44,26,14,0.35)] transition hover:-translate-y-0.5 ${
                   isDrinkingNowActive({
                     drinkingNow: entry.drinking_now,
                     createdAt: entry.created_at,
                     now: currentTimeMs,
                   }) && entry.viewer_is_direct_friend === true
-                    ? "rounded-[10px] border-[rgba(74,48,96,0.4)] bg-[#2E1420] hover:border-[rgba(74,48,96,0.7)]"
+                    ? "rounded-[10px] border-[rgba(123,29,58,0.35)] bg-[rgba(123,29,58,0.06)] hover:border-[rgba(123,29,58,0.6)]"
                     : "rounded-[10px] border-[var(--color-border)] bg-[var(--color-surface-primary)] hover:border-[var(--color-accent-secondary)]/40"
                 }`}
                 role="button"
@@ -1202,7 +1202,7 @@ export default function FeedPage() {
                       }}
                         className="flex min-w-0 max-w-full items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/50"
                     >
-                      <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
+                      <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
                         {entry.author_avatar_url ? (
                           <AppImage
                             src={entry.author_avatar_url}
@@ -1439,7 +1439,7 @@ export default function FeedPage() {
                           {hasRating ? (
                             <span
                               style={{
-                                color: "#C9A84C",
+                                color: "var(--color-accent-gold-text)",
                                 fontSize: 14,
                                 fontWeight: 800,
                               }}
@@ -1517,13 +1517,13 @@ export default function FeedPage() {
                                 className={`inline-flex items-center gap-2 rounded-full border-[0.5px] bg-transparent px-2.5 py-1.5 text-xs font-medium transition ${
                                   commentsExpanded
                                     ? "border-[var(--color-accent-secondary)]/50 text-[var(--color-accent-secondary)]"
-                                    : "border-[rgba(196,96,122,0.25)] text-[#A08878] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
+                                    : "border-[rgba(196,96,122,0.25)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
                                 }`}
                                 aria-label={`Toggle comments (${(commentCountMap.get(entry.id) ?? 0)})`}
                               >
                                 <CommentBubbleIcon className="h-4 w-4 shrink-0" />
                                 <span>Comments</span>
-                                <span className="rounded-full bg-[rgba(196,96,122,0.15)] px-1.5 py-0.5 tabular-nums text-[#C4607A]">
+                                <span className="rounded-full bg-[rgba(196,96,122,0.15)] px-1.5 py-0.5 tabular-nums text-[var(--color-text-highlight)]">
                                   {(commentCountMap.get(entry.id) ?? 0)}
                                 </span>
                               </button>
@@ -1577,8 +1577,8 @@ export default function FeedPage() {
                                 }}
                                 className={`inline-flex h-7 w-7 items-center justify-center rounded-full border-0 bg-[rgba(196,96,122,0.12)] text-sm font-semibold leading-none transition ${
                                   canReact
-                                    ? "text-[#A08878] hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-accent-secondary)]"
-                                    : "text-[#A08878] hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-text-primary)]"
+                                    ? "text-[var(--color-text-secondary)] hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-accent-secondary)]"
+                                    : "text-[var(--color-text-secondary)] hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-text-primary)]"
                                 }`}
                                 aria-label={canReact ? "Add reaction" : "View reaction options"}
                               >
@@ -1623,7 +1623,7 @@ export default function FeedPage() {
                                       e.stopPropagation();
                                       toggle();
                                     }}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border-0 bg-[rgba(196,96,122,0.12)] text-[#A08878] transition hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-accent-secondary)]"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border-0 bg-[rgba(196,96,122,0.12)] text-[var(--color-text-secondary)] transition hover:bg-[rgba(196,96,122,0.2)] hover:text-[var(--color-accent-secondary)]"
                                     aria-label="Add to collections"
                                   >
                                     <svg
@@ -1751,7 +1751,7 @@ export default function FeedPage() {
                                 return (
                                   <li
                                     key={comment.id}
-                                    className="rounded-xl border border-[var(--color-border)] bg-black/25 p-3"
+                                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3"
                                   >
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="min-w-0">
@@ -1788,7 +1788,7 @@ export default function FeedPage() {
                                             onClick={() => {
                                               void deleteCommentForEntry(entry.id, comment.id);
                                             }}
-                                            className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                                           >
                                             {deletingComment ? "Deleting..." : "Delete"}
                                           </button>
@@ -1966,7 +1966,7 @@ export default function FeedPage() {
                                                           reply.id
                                                         );
                                                       }}
-                                                      className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                      className="text-[11px] font-medium text-[var(--color-text-tertiary)] transition hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                       {deletingReply ? "Deleting..." : "Delete"}
                                                     </button>
@@ -2069,7 +2069,7 @@ export default function FeedPage() {
                             </ul>
                           )}
                           {commentError ? (
-                            <p className="mt-2 text-xs text-rose-300">{commentError}</p>
+                            <p className="mt-2 text-xs text-rose-700">{commentError}</p>
                           ) : null}
                           <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                             {replyTarget ? (
@@ -2109,7 +2109,7 @@ export default function FeedPage() {
                               placeholder={
                                 replyTarget ? "Write a reply..." : "Write a comment..."
                               }
-                              className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-black/25 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
+                              className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                               disabled={!canComment || postingComment}
                             />
                             <div className="mt-2 flex items-center justify-between">

@@ -198,11 +198,11 @@ function EntryRow({ entry }: { entry: EntryListItem }) {
     <Link
       href={`/entries/${entry.id}`}
       className="group flex items-center gap-3 px-3.5 py-2.5"
-      style={{ borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)" }}
+      style={{ borderBottom: "0.5px solid rgba(44, 26, 14, 0.08)" }}
     >
       {/* Thumbnail */}
       <div
-        className="flex shrink-0 items-center justify-center overflow-hidden bg-black/40"
+        className="flex shrink-0 items-center justify-center overflow-hidden bg-[var(--color-surface-raised)]"
         style={{
           width: 64,
           height: 76,
@@ -370,7 +370,7 @@ function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
           <div
             className="mx-4 flex aspect-[4/3] items-center justify-center rounded-2xl"
             style={{
-              background: "rgba(245, 237, 214, 0.06)",
+              background: "rgba(44, 26, 14, 0.10)",
               border: "0.5px solid var(--color-border)",
               color: "var(--color-text-secondary)",
             }}
@@ -429,11 +429,11 @@ function CellarEntryCard({
       type="button"
       onClick={() => onSelect(entry)}
       className="group flex items-center gap-3 px-3.5 py-2.5 w-full text-left"
-      style={{ borderBottom: "0.5px solid rgba(245, 237, 214, 0.04)" }}
+      style={{ borderBottom: "0.5px solid rgba(44, 26, 14, 0.08)" }}
     >
       {/* Thumbnail */}
       <div
-        className="flex shrink-0 items-center justify-center overflow-hidden bg-black/40"
+        className="flex shrink-0 items-center justify-center overflow-hidden bg-[var(--color-surface-raised)]"
         style={{
           width: 64,
           height: 76,
@@ -755,8 +755,8 @@ function CellarView() {
       <div
         style={{
           borderRadius: 14,
-          border: "0.5px solid rgba(192, 57, 43, 0.3)",
-          background: "rgba(192, 57, 43, 0.08)",
+          border: "0.5px solid rgba(184, 56, 42, 0.3)",
+          background: "rgba(184, 56, 42, 0.08)",
           padding: "24px 16px",
           fontSize: 12,
           color: "var(--color-error)",
@@ -1383,8 +1383,8 @@ function EntriesPageContent() {
                 <div
                   style={{
                     borderRadius: 14,
-                    border: "0.5px solid rgba(192, 57, 43, 0.3)",
-                    background: "rgba(192, 57, 43, 0.08)",
+                    border: "0.5px solid rgba(184, 56, 42, 0.3)",
+                    background: "rgba(184, 56, 42, 0.08)",
                     padding: "24px 16px",
                     fontSize: 12,
                     color: "var(--color-error)",
@@ -1446,8 +1446,8 @@ function EntriesPageContent() {
                 <div
                   style={{
                     borderRadius: 14,
-                    border: "0.5px solid rgba(192, 57, 43, 0.3)",
-                    background: "rgba(192, 57, 43, 0.08)",
+                    border: "0.5px solid rgba(184, 56, 42, 0.3)",
+                    background: "rgba(184, 56, 42, 0.08)",
                     padding: "24px 16px",
                     fontSize: 12,
                     color: "var(--color-error)",
@@ -1585,7 +1585,7 @@ function EntriesPageContent() {
                 className="w-full focus:outline-none"
                 autoFocus
                 style={{
-                  background: "rgba(245, 237, 214, 0.04)",
+                  background: "rgba(44, 26, 14, 0.08)",
                   border: "0.5px solid var(--color-border-strong)",
                   borderRadius: 10,
                   padding: "9px 12px 9px 32px",
@@ -1640,7 +1640,7 @@ function EntriesPageContent() {
                   style={{
                     background: isActive
                       ? "var(--color-accent-primary)"
-                      : "rgba(245, 237, 214, 0.05)",
+                      : "rgba(44, 26, 14, 0.10)",
                     border: isActive
                       ? "none"
                       : "0.5px solid var(--color-border-strong)",
@@ -1737,7 +1737,7 @@ function EntriesPageContent() {
                             background:
                               sortBy === option.value
                                 ? "var(--color-accent-primary)"
-                                : "rgba(245, 237, 214, 0.05)",
+                                : "rgba(44, 26, 14, 0.10)",
                             border:
                               sortBy === option.value
                                 ? "none"
@@ -1772,7 +1772,7 @@ function EntriesPageContent() {
                             background:
                               sortOrder === option.value
                                 ? "var(--color-accent-primary)"
-                                : "rgba(245, 237, 214, 0.05)",
+                                : "rgba(44, 26, 14, 0.10)",
                             border:
                               sortOrder === option.value
                                 ? "none"
@@ -1811,7 +1811,7 @@ function EntriesPageContent() {
                             background:
                               filterType === option.value
                                 ? "var(--color-accent-primary)"
-                                : "rgba(245, 237, 214, 0.05)",
+                                : "rgba(44, 26, 14, 0.10)",
                             border:
                               filterType === option.value
                                 ? "none"
@@ -1841,7 +1841,7 @@ function EntriesPageContent() {
                         value={filterValue}
                         onChange={(event) => setFilterValue(event.target.value)}
                         style={{
-                          background: "rgba(245, 237, 214, 0.04)",
+                          background: "rgba(44, 26, 14, 0.08)",
                           border: "0.5px solid var(--color-border-strong)",
                           borderRadius: 10,
                           padding: "9px 12px",
@@ -1880,7 +1880,7 @@ function EntriesPageContent() {
                           value={filterMin}
                           onChange={(event) => setFilterMin(event.target.value)}
                           style={{
-                            background: "rgba(245, 237, 214, 0.04)",
+                            background: "rgba(44, 26, 14, 0.08)",
                             border: "0.5px solid var(--color-border-strong)",
                             borderRadius: 10,
                             padding: "9px 12px",
@@ -1896,7 +1896,7 @@ function EntriesPageContent() {
                           value={filterMax}
                           onChange={(event) => setFilterMax(event.target.value)}
                           style={{
-                            background: "rgba(245, 237, 214, 0.04)",
+                            background: "rgba(44, 26, 14, 0.08)",
                             border: "0.5px solid var(--color-border-strong)",
                             borderRadius: 10,
                             padding: "9px 12px",
@@ -1930,7 +1930,7 @@ function EntriesPageContent() {
                             background:
                               libraryViewMode === option.value
                                 ? "var(--color-accent-primary)"
-                                : "rgba(245, 237, 214, 0.05)",
+                                : "rgba(44, 26, 14, 0.10)",
                             border:
                               libraryViewMode === option.value
                                 ? "none"
@@ -1969,7 +1969,7 @@ function EntriesPageContent() {
                               background:
                                 groupScheme === option.value
                                   ? "var(--color-accent-primary)"
-                                  : "rgba(245, 237, 214, 0.05)",
+                                  : "rgba(44, 26, 14, 0.10)",
                               border:
                                 groupScheme === option.value
                                   ? "none"
@@ -2010,8 +2010,8 @@ function EntriesPageContent() {
             <div
               style={{
                 borderRadius: 14,
-                border: "0.5px solid rgba(192, 57, 43, 0.3)",
-                background: "rgba(192, 57, 43, 0.08)",
+                border: "0.5px solid rgba(184, 56, 42, 0.3)",
+                background: "rgba(184, 56, 42, 0.08)",
                 padding: "24px 16px",
                 fontSize: 12,
                 color: "var(--color-error)",
