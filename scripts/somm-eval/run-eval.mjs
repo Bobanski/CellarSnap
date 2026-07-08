@@ -99,8 +99,11 @@ function parseArgs(argv) {
     else if (arg.startsWith("--predictors=")) args.predictors = arg.slice(13).split(",").map((s) => s.trim());
     else if (arg.startsWith("--model=")) args.model = arg.slice(8);
     else if (arg.startsWith("--claude-model=")) args.claudeModel = arg.slice(15);
-    else if (arg.startsWith("--tasters=")) args.tasters = path.resolve(arg.slice(10));
-    else if (arg.startsWith("--comparisons=")) args.comparisons = path.resolve(arg.slice(14));
+    // Resolved against EVAL_DIR (not process.cwd()) so `--tasters=data/x.json`
+    // matches the default paths' convention regardless of where the command
+    // is invoked from; absolute paths pass through unchanged.
+    else if (arg.startsWith("--tasters=")) args.tasters = path.resolve(EVAL_DIR, arg.slice(10));
+    else if (arg.startsWith("--comparisons=")) args.comparisons = path.resolve(EVAL_DIR, arg.slice(14));
     else if (arg.startsWith("--limit=")) args.limit = Number(arg.slice(8));
     else if (arg.startsWith("--holdout=")) args.holdout = Number(arg.slice(10));
     else if (arg.startsWith("--fold-seed=")) args.foldSeed = Number(arg.slice(12));
@@ -494,13 +497,31 @@ async function predictEngineBatch(comparisons, tasterById) {
   return JSON.parse(stdout).results;
 }
 
+// Set once in main() from the loaded tasters — the spreadsheet dataset rates
+// 1-5, the live in-app export rates 1-100 (packages/shared rating scale).
+// Label honestly instead of rescaling either dataset.
+let ratingScaleMax = 5;
+
+/** Infer the rating scale (5 or 100) from the loaded data instead of
+ *  assuming — mixing datasets with a hardcoded "/5" label silently lies to
+ *  the model about magnitude. */
+function inferRatingScaleMax(tasters) {
+  let max = 0;
+  for (const taster of tasters) {
+    for (const wine of taster.logged_wines ?? []) {
+      if (typeof wine.rating === "number" && wine.rating > max) max = wine.rating;
+    }
+  }
+  return max > 5 ? 100 : 5;
+}
+
 function describeTaster(taster) {
   const lines = [`Taster: ${taster.display_name ?? taster.taster_id}`];
   if (taster.experience_level) lines.push(`Experience level: ${taster.experience_level}`);
   if (taster.survey) lines.push(`Taste survey: ${JSON.stringify(taster.survey)}`);
   const logged = taster.logged_wines ?? [];
   if (logged.length > 0) {
-    lines.push("Logged wines (rating out of 5):");
+    lines.push(`Logged wines (rating out of ${ratingScaleMax}):`);
     for (const wine of logged) {
       lines.push(`- ${wine.rating}★ ${[wine.producer, wine.name, wine.vintage, wine.region, wine.country, wine.grapes].filter(Boolean).join(", ")}${wine.notes ? ` — "${wine.notes}"` : ""}`);
     }
@@ -583,6 +604,7 @@ async function main() {
     for (const error of errors) console.error(`  - ${error}`);
     process.exit(1);
   }
+  ratingScaleMax = inferRatingScaleMax(tasters);
   console.log(`Loaded ${tasters.length} tasters, ${rows.length} comparisons.`);
   if (args.dryRun) {
     console.log("Dry run — data is valid. Exiting before prediction.");
