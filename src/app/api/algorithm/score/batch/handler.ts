@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { AlgorithmBatchResult } from "@/lib/algorithm/api";
 import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  assembleWineProfileWithDataSource,
+  batchPrefetchProfileData,
+  createPreFetchedProfileDataSource,
+  createSupabaseProfileAssemblyDataSource,
+} from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
+import type { AssembleWineProfileInput, EffectiveWineProfile } from "@/server/algorithm/types";
 import {
   buildUserPreferenceVector,
   type PreferenceSourceEntry,
@@ -14,6 +22,7 @@ import {
 import {
   readCachedEntryScores,
   writeCachedEntryScore,
+  writeCachedEntryScoresBulk,
 } from "@/server/algorithm/scoreCache";
 import { WINE_TYPE_VALUES, type WineType } from "@/types/wine";
 import {
@@ -42,6 +51,7 @@ type BatchDependencies = {
   computeMatchScore: typeof computeMatchScore;
   readCachedEntryScores: typeof readCachedEntryScores;
   writeCachedEntryScore: typeof writeCachedEntryScore;
+  writeCachedEntryScoresBulk: typeof writeCachedEntryScoresBulk;
 };
 
 const nullableString = z.preprocess(
@@ -106,9 +116,33 @@ const batchRequestSchema = z.object({
   items: z.array(batchItemSchema).min(1).max(50),
 });
 
+type BatchItem = z.infer<typeof batchItemSchema>;
+
+// Result of resolving a single batch item's score input, before profile
+// assembly. Splitting resolution from assembly lets us collect every item's
+// wine_type/vintage first and prefetch reference data for all of them in one
+// shot, instead of assembleProfile() hitting Supabase per item.
+type ResolvedScoreItem =
+  | { status: "result"; result: AlgorithmBatchResult }
+  | {
+      status: "pending";
+      item: BatchItem;
+      requestId: string | null;
+      scoreInput: LoadedEntryForScoring & { wine_type: WineType };
+    };
+
 export function createAlgorithmScoreBatchHandler(
   dependencies: Partial<BatchDependencies> = {}
 ) {
+  // If a caller injects its own assembleProfile/writeCachedEntryScore (as unit
+  // tests do), honor it exactly as before — mocked assembly doesn't benefit
+  // from prefetching, and tests assert on these hooks being called per item.
+  // Otherwise (the real production path), use the batched prefetch + bulk
+  // write below.
+  const hasCustomAssembleProfile = typeof dependencies.assembleProfile === "function";
+  const hasCustomWriteCachedEntryScore =
+    typeof dependencies.writeCachedEntryScore === "function";
+
   const resolvedDependencies: BatchDependencies = {
     requireRequestAuth,
     loadEntryForScoring: defaultAlgorithmScoreDependencies.loadEntryForScoring,
@@ -118,6 +152,7 @@ export function createAlgorithmScoreBatchHandler(
     computeMatchScore,
     readCachedEntryScores,
     writeCachedEntryScore,
+    writeCachedEntryScoresBulk,
     ...dependencies,
   };
 
@@ -162,18 +197,25 @@ export function createAlgorithmScoreBatchHandler(
         .filter((entryId): entryId is string => typeof entryId === "string")
     );
 
-    const results = await Promise.all(
-      payload.data.items.map(async (item): Promise<AlgorithmBatchResult> => {
+    // Phase 1: resolve every item's score input (loading entries as needed,
+    // honoring the cache), without assembling a profile yet. This lets us
+    // collect every distinct wine_type/vintage in the request before doing
+    // any profile assembly work.
+    const resolvedItems = await Promise.all(
+      payload.data.items.map(async (item): Promise<ResolvedScoreItem> => {
+        const requestId = item.request_id ?? item.entry_id ?? null;
         try {
-          const requestId = item.request_id ?? item.entry_id ?? null;
           const cached = item.entry_id ? cachedScores.get(item.entry_id) ?? null : null;
           if (cached) {
             return {
-              request_id: requestId,
-              entry_id: item.entry_id ?? null,
-              ok: true,
-              data: cached,
-              error: null,
+              status: "result",
+              result: {
+                request_id: requestId,
+                entry_id: item.entry_id ?? null,
+                ok: true,
+                data: cached,
+                error: null,
+              },
             };
           }
 
@@ -188,11 +230,14 @@ export function createAlgorithmScoreBatchHandler(
 
             if (!loaded) {
               return {
-                request_id: requestId,
-                entry_id: item.entry_id,
-                ok: false,
-                data: null,
-                error: "Entry not found",
+                status: "result",
+                result: {
+                  request_id: requestId,
+                  entry_id: item.entry_id,
+                  ok: false,
+                  data: null,
+                  error: "Entry not found",
+                },
               };
             }
 
@@ -217,15 +262,84 @@ export function createAlgorithmScoreBatchHandler(
 
           if (!scoreInput.wine_type) {
             return {
+              status: "result",
+              result: {
+                request_id: requestId,
+                entry_id: item.entry_id ?? null,
+                ok: false,
+                data: null,
+                error: "Wine type is required to score this entry.",
+              },
+            };
+          }
+
+          return {
+            status: "pending",
+            item,
+            requestId,
+            scoreInput: { ...scoreInput, wine_type: scoreInput.wine_type },
+          };
+        } catch (error) {
+          return {
+            status: "result",
+            result: {
               request_id: requestId,
               entry_id: item.entry_id ?? null,
               ok: false,
               data: null,
-              error: "Wine type is required to score this entry.",
-            };
-          }
+              error: error instanceof Error ? error.message : "Unable to score this entry.",
+            },
+          };
+        }
+      })
+    );
 
-          const effectiveProfile = await resolvedDependencies.assembleProfile({
+    const pendingItems = resolvedItems.filter(
+      (resolved): resolved is Extract<ResolvedScoreItem, { status: "pending" }> =>
+        resolved.status === "pending"
+    );
+
+    // Phase 2: assemble profiles + compute scores. In production (no
+    // assembleProfile override) prefetch every reference table once for the
+    // distinct wine_type/vintage combinations in this request instead of
+    // letting assembleProfile() issue its own ~8 Supabase reads per item.
+    let assembleProfileForItem = resolvedDependencies.assembleProfile;
+
+    if (!hasCustomAssembleProfile && pendingItems.length > 0) {
+      const uniqueWineTypes = Array.from(
+        new Set(pendingItems.map((pending) => pending.scoreInput.wine_type))
+      );
+      const uniqueVintages = Array.from(
+        new Set(
+          pendingItems
+            .map((pending) => pending.scoreInput.vintage)
+            .filter((vintage): vintage is number => typeof vintage === "number")
+        )
+      );
+
+      const referenceSupabase = createSupabaseAdminClient();
+      const prefetchedData = await batchPrefetchProfileData(
+        createSupabaseProfileAssemblyDataSource(referenceSupabase),
+        uniqueWineTypes,
+        uniqueVintages
+      );
+      const prefetchedDataSource = createPreFetchedProfileDataSource(prefetchedData);
+      assembleProfileForItem = (input: AssembleWineProfileInput): Promise<EffectiveWineProfile> =>
+        assembleWineProfileWithDataSource(input, prefetchedDataSource);
+    }
+
+    const cacheWrites: Array<{ entryId: string; payload: ReturnType<typeof buildAlgorithmScoreResponse> }> = [];
+
+    const finalResults = await Promise.all(
+      resolvedItems.map(async (resolved): Promise<AlgorithmBatchResult> => {
+        if (resolved.status === "result") {
+          return resolved.result;
+        }
+
+        const { item, requestId, scoreInput } = resolved;
+
+        try {
+          const effectiveProfile = await assembleProfileForItem({
             wine_type: scoreInput.wine_type,
             canonical_region: scoreInput.canonical_region,
             canonical_sub_region: scoreInput.canonical_sub_region,
@@ -260,12 +374,16 @@ export function createAlgorithmScoreBatchHandler(
           });
 
           if (item.entry_id && !hasDirectScoreOverrides(item)) {
-            await resolvedDependencies.writeCachedEntryScore(
-              auth.supabase,
-              auth.user.id,
-              item.entry_id,
-              responsePayload
-            );
+            if (hasCustomWriteCachedEntryScore) {
+              await resolvedDependencies.writeCachedEntryScore(
+                auth.supabase,
+                auth.user.id,
+                item.entry_id,
+                responsePayload
+              );
+            } else {
+              cacheWrites.push({ entryId: item.entry_id, payload: responsePayload });
+            }
           }
 
           return {
@@ -277,7 +395,7 @@ export function createAlgorithmScoreBatchHandler(
           };
         } catch (error) {
           return {
-            request_id: item.request_id ?? item.entry_id ?? null,
+            request_id: requestId,
             entry_id: item.entry_id ?? null,
             ok: false,
             data: null,
@@ -287,6 +405,14 @@ export function createAlgorithmScoreBatchHandler(
       })
     );
 
-    return NextResponse.json({ results });
+    if (cacheWrites.length > 0) {
+      await resolvedDependencies.writeCachedEntryScoresBulk(
+        auth.supabase,
+        auth.user.id,
+        cacheWrites
+      );
+    }
+
+    return NextResponse.json({ results: finalResults });
   };
 }
