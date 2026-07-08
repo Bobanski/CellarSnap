@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
+import { requireAuthenticatedPageUser } from "@/lib/access/pageAuth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ListScanResultsScreen from "@/features/listScan/ListScanResultsScreen";
 
@@ -23,7 +23,7 @@ export default async function ListScanResultsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  await assertPrivateBetaFeatureAccessAsync(supabase, user);
+  requireAuthenticatedPageUser(user);
 
   return (
     <Suspense fallback={<ListScanResultsPageFallback />}>

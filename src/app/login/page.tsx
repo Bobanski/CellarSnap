@@ -116,9 +116,14 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur sm:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Cluster</h1>
+            <h1
+              className="text-[var(--color-text-primary)]"
+              style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 500 }}
+            >
+              cluster
+            </h1>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              A private cellar journal with a social pour.
+              The somm that learns your palate. Welcome back.
             </p>
           </div>
           <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-hover)] px-3 py-1 text-xs uppercase tracking-[0.2em] text-[var(--color-text-primary)]">

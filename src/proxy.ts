@@ -91,8 +91,10 @@ export async function proxy(request: NextRequest) {
   const isSignupRoute = pathname.startsWith("/signup");
   const isHomeRoute = pathname === "/";
 
-  const isProtected =
-    isHomeRoute || isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
+  // "/" is a real landing page for signed-out visitors (Wave 1b front door) —
+  // it is intentionally NOT in the protected list. Authed users are routed
+  // onward to /feed by app/page.tsx itself.
+  const isProtected = isEntriesRoute || isProfileRoute || isFeedRoute || isFriendsRoute;
   if (isProtected && !user) {
     // Avoid caching false redirects from speculative route prefetches.
     if (isPrefetchRequest) {
