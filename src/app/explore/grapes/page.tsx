@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toExploreSlug } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
+import AppImage from "@/components/AppImage";
 
 // ---------------------------------------------------------------------------
 // Colors — matching profile page palette
@@ -43,6 +44,7 @@ type SpotlightData = {
   tagline: string;
   href: string;
   characteristics: string[];
+  hero_image_url: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -58,6 +60,9 @@ export default function GrapesBrowsePage() {
   const [userGrapesLoaded, setUserGrapesLoaded] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightData | null>(null);
   const [showAllGrapes, setShowAllGrapes] = useState(false);
+  // Cached wine_profiles hero images for the Popular Grapes grid —
+  // cached-only lookup, never triggers generation from this browse surface.
+  const [grapeThumbs, setGrapeThumbs] = useState<Map<string, string>>(new Map());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load user's top grapes
@@ -101,6 +106,7 @@ export default function GrapesBrowsePage() {
             tagline: data.grape_spotlight.tagline,
             href: data.grape_spotlight.href,
             characteristics: data.grape_spotlight.characteristics ?? [],
+            hero_image_url: data.grape_spotlight.hero_image_url ?? null,
           });
         }
       } catch { /* non-critical */ }
@@ -108,6 +114,24 @@ export default function GrapesBrowsePage() {
     load();
     return () => { mounted = false; };
   }, []);
+
+  // Load cached hero images for the Popular Grapes grid — cached-only, no
+  // generation triggered from this browse surface.
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("wine_profiles")
+        .select("slug, hero_image_url")
+        .eq("profile_type", "grape")
+        .in("slug", POPULAR_GRAPES.map(toExploreSlug))
+        .not("hero_image_url", "is", null);
+      if (!mounted || !data) return;
+      setGrapeThumbs(new Map(data.map((r: { slug: string; hero_image_url: string }) => [r.slug, r.hero_image_url])));
+    };
+    load();
+    return () => { mounted = false; };
+  }, [supabase]);
 
   // Search
   const search = useCallback(async (q: string) => {
@@ -230,17 +254,26 @@ export default function GrapesBrowsePage() {
             {spotlight && (
               <div className="mt-8">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: FOG }}>
-                  Grape of the Day
+                  Grape of the Week
                 </p>
                 <Link
                   href={spotlight.href}
-                  className="mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
+                  className="relative mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
                   style={{
-                    background: `linear-gradient(135deg, ${NEBBIOLO}40 0%, ${ROSE}18 60%, ${BG_SECTION} 100%)`,
+                    background: spotlight.hero_image_url
+                      ? undefined
+                      : `linear-gradient(135deg, ${NEBBIOLO}40 0%, ${ROSE}18 60%, ${BG_SECTION} 100%)`,
                     border: `1px solid ${NEBBIOLO}35`,
                   }}
                 >
-                  <div className="p-6">
+                  {/* Cached-only thumbnail — icon/gradient fallback above when absent. */}
+                  {spotlight.hero_image_url && (
+                    <>
+                      <AppImage src={spotlight.hero_image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${BG_SECTION}55 0%, ${BG_SECTION}e8 100%)` }} />
+                    </>
+                  )}
+                  <div className="relative p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <h3 className="text-xl font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
@@ -250,7 +283,11 @@ export default function GrapesBrowsePage() {
                           {spotlight.tagline}
                         </p>
                       </div>
-                      <div className="h-11 w-11 shrink-0 rounded-full" style={{ background: `${NEBBIOLO}30`, border: `1px solid ${NEBBIOLO}40` }} />
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full" style={{ background: `${NEBBIOLO}30`, border: `1px solid ${NEBBIOLO}40` }}>
+                        {spotlight.hero_image_url && (
+                          <AppImage src={spotlight.hero_image_url} alt="" className="h-full w-full object-cover" />
+                        )}
+                      </div>
                     </div>
                     {spotlight.characteristics.length > 0 && (
                       <div className="mt-4 flex flex-wrap gap-1.5">
@@ -301,18 +338,23 @@ export default function GrapesBrowsePage() {
               <div className="grid grid-cols-2 gap-2">
                 {POPULAR_GRAPES.map((g) => {
                   const userEntry = userGrapes.find((ug) => ug.name.toLowerCase() === g.toLowerCase());
+                  const thumb = grapeThumbs.get(toExploreSlug(g));
                   return (
                     <Link
                       key={g}
                       href={`/explore/grape/${toExploreSlug(g)}`}
-                      className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-3 transition hover:opacity-90"
                       style={{ background: `${NEBBIOLO}15`, border: `1px solid ${NEBBIOLO}20` }}
                     >
-                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
+                      {/* Cached-only thumbnail — falls back to a plain dot when no image has been generated yet. */}
+                      <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full" style={{ background: `${NEBBIOLO}40` }}>
+                        {thumb && <AppImage src={thumb} alt="" className="h-full w-full object-cover" />}
+                      </div>
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
                       {userEntry ? (
-                        <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
+                        <span className="shrink-0 text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (
-                        <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
+                        <span className="shrink-0 text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}
                     </Link>
                   );
