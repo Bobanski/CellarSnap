@@ -5,6 +5,28 @@ import ScoreBadge from "@/components/ui/ScoreBadge";
 const eyebrowClassName =
   "block text-[10px] uppercase tracking-[0.28em] text-[var(--color-accent-secondary)]";
 
+/**
+ * Brand mark — six-sphere grape cluster with stem + tendril, lifted from
+ * cluster-brand-guide-v4.jsx (LogoMark, ~line 920). Colors are the fixed
+ * Grenache/Barolo brand palette, not theme tokens — the mark is a brand
+ * asset, not a themed UI element.
+ */
+function ClusterLogoMark({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" aria-hidden="true">
+      <circle cx="40" cy="22" r="10" fill="#7B1D3A" opacity="0.9" />
+      <circle cx="26" cy="34" r="10" fill="#9B2449" opacity="0.85" />
+      <circle cx="54" cy="34" r="10" fill="#7B1D3A" opacity="0.95" />
+      <circle cx="33" cy="48" r="10" fill="#B83060" opacity="0.8" />
+      <circle cx="47" cy="48" r="10" fill="#9B2449" opacity="0.9" />
+      <circle cx="40" cy="61" r="10" fill="#7B1D3A" opacity="0.85" />
+      <circle cx="40" cy="10" r="3" fill="#4A0E1F" />
+      <line x1="40" y1="10" x2="40" y2="14" stroke="#4A0E1F" strokeWidth="2" />
+      <path d="M40 10 Q50 5 55 8" stroke="#4A0E1F" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ScanGlyph() {
   return (
     <svg width="28" height="28" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -46,23 +68,23 @@ const HOW_IT_WORKS_STEPS = [
   {
     icon: <ScanGlyph />,
     title: "Scan",
-    body: "Snap a photo of any wine list, drop in a PDF, or paste a link. No typing required.",
+    body: "Snap a photo of any bottle. No typing, no lookup, no guessing at the label.",
   },
   {
     icon: <MatchGlyph />,
     title: "Matches, with why",
-    body: "Every wine on the list gets a match score and a plain-English reason — not just a number.",
+    body: "Get a match score and a plain-English reason for every pick — not just a number.",
   },
   {
     icon: <PalateGlyph />,
     title: "Your palate learns",
-    body: "Log what you drink and the read on you gets sharper. Next list, better picks.",
+    body: "Log what you drink and the read on you gets sharper. Next bottle, better picks.",
   },
 ];
 
 const MANIFESTO_LINES = [
   "No wrong answers. No wrong palate.",
-  "Specific beats vague — “earthy like wet leaves,” not just “complex.”",
+  "Specific beats vague — “complex and earthy” or just “giving dirt,” we’re here for both.",
   "Every wine, every budget, equal respect.",
   "We surface what you might like. We never tell you what to like.",
 ];
@@ -78,20 +100,23 @@ export default function LandingPage() {
       <div className="relative">
         {/* ── Header ── */}
         <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-          <span
-            className="text-2xl"
-            style={{ fontFamily: "var(--font-serif)", fontWeight: 500 }}
-          >
-            cluster
-          </span>
+          <div className="flex items-center gap-2.5">
+            <ClusterLogoMark size={26} />
+            <span
+              className="text-2xl"
+              style={{ fontFamily: "var(--font-serif)", fontWeight: 500 }}
+            >
+              cluster
+            </span>
+          </div>
           <Button href="/login" variant="secondary" size="sm">
             Sign in
           </Button>
         </header>
 
-        {/* ── Hero: the restaurant moment ── */}
+        {/* ── Hero: your palate, not a scoreboard ── */}
         <section className="mx-auto w-full max-w-4xl px-6 pb-20 pt-10 text-center sm:pt-16">
-          <span className={`${eyebrowClassName} mb-4`}>The pocket sommelier</span>
+          <span className={`${eyebrowClassName} mb-4`}>No wrong answers. No wrong palate.</span>
           <h1
             className="mx-auto max-w-3xl text-[var(--color-text-primary)]"
             style={{
@@ -101,24 +126,25 @@ export default function LandingPage() {
               lineHeight: 1.08,
             }}
           >
-            Know what to order.
+            Know what you&rsquo;ll love.
             <br />
             Instantly.
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-[var(--color-text-secondary)] sm:text-lg">
-            Cluster is a somm that learns <em>your</em>{" "}
-            palate, not the internet&rsquo;s.
-            Scan any restaurant wine list and get picks matched to you &mdash; with a
-            reason for each one.
+            Snap a photo of any bottle and get picks matched to <em>you</em>{" "}
+            as the algorithm learns &mdash; with a reason for each one.
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3">
-            <Button href="/signup?intent=scan" variant="primary">
-              Scan a wine list
+            <Button href="/signup?intent=log" variant="primary">
+              Add your first pour
             </Button>
             <p className="text-xs text-[var(--color-text-tertiary)]">
-              Free account &middot; scan your first list in under a minute
+              Free account &middot; record your first pour in under a minute
             </p>
+            <Button href="/signup?intent=scan" variant="ghost" arrow className="mt-1">
+              Or scan a wine list instead
+            </Button>
           </div>
         </section>
 
@@ -174,6 +200,12 @@ export default function LandingPage() {
                 &ldquo;Bold, structured reds with a savory edge &mdash; like the last
                 three Syrahs you loved.&rdquo;
               </p>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                At the table, scan a restaurant wine list for recommendations
+                in minutes &mdash; or ask the somm chat for more insight, even
+                how to talk to the sommelier in person. We&rsquo;re here to
+                help you have that conversation, not replace it.
+              </p>
             </div>
             <div className="mx-auto flex w-full max-w-[220px] flex-col items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-black/25 p-6 text-center">
               <ScoreBadge value={94} kind="match" size="lg" animate />
@@ -213,8 +245,8 @@ export default function LandingPage() {
           </ul>
 
           <div className="mt-10">
-            <Button href="/signup?intent=scan" variant="primary">
-              Scan a wine list
+            <Button href="/signup?intent=log" variant="primary">
+              Add your first pour
             </Button>
           </div>
         </section>
