@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -67,11 +68,54 @@ export default function AlertsMenu() {
   const [badgesSeenAt, setBadgesSeenAt] = useState<string | null>(null);
   const respondingRequestRef = useRef(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const open = openPathname === pathname;
   const openRef = useRef(open);
   const lastViewerUserIdRef = useRef<string | null>(null);
   const pendingRefreshRef = useRef<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [panelPosition, setPanelPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
+
+  // Portal target isn't available until after mount (SSR-safe).
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // The alerts trigger lives inside `.app-header`, which sets `backdrop-filter`
+  // and therefore establishes its own CSS stacking context. An `absolute`
+  // child confined to that context can never paint above later, unrelated
+  // page content (e.g. feed cards) — its z-index only competes with siblings
+  // inside the header. Portaling the panel to <body> and positioning it with
+  // `fixed` (computed from the trigger's rect) escapes that trap so it
+  // reliably renders above all page content instead of "sometimes" losing to
+  // whatever's underneath.
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const rect = menuRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPanelPosition({
+        top: rect.bottom + 12,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    return () => window.removeEventListener("resize", updatePosition);
+  }, [open]);
+
+  // Move focus into the panel when it opens so keyboard/screen-reader users
+  // land on it immediately instead of it silently appearing behind content.
+  useEffect(() => {
+    if (!open) return;
+    panelRef.current?.focus();
+  }, [open]);
 
   useEffect(() => {
     openRef.current = open;
@@ -487,10 +531,12 @@ export default function AlertsMenu() {
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(event.target as Node)) {
-        setOpenPathname(null);
-      }
+      const target = event.target as Node;
+      // The panel is portaled to <body>, so it's not a DOM descendant of
+      // menuRef anymore — check both refs before treating a click as "outside".
+      if (menuRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpenPathname(null);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -537,8 +583,16 @@ export default function AlertsMenu() {
         ) : null}
       </button>
 
-      {open ? (
-        <div className="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+      {open && mounted && panelPosition
+        ? createPortal(
+            <div
+              ref={panelRef}
+              tabIndex={-1}
+              role="dialog"
+              aria-label="Alerts"
+              className="fixed z-[60] w-80 max-w-[calc(100vw-16px)] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] outline-none"
+              style={{ top: panelPosition.top, right: panelPosition.right }}
+            >
           <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
             <span className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
               Alerts
@@ -807,8 +861,10 @@ export default function AlertsMenu() {
               {actionError}
             </div>
           ) : null}
-        </div>
-      ) : null}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

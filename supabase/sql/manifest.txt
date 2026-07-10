@@ -70,3 +70,4 @@
 094_palate_profiles.sql
 095_lock_reference_tables.sql
 096_notifications_index.sql
+097_featured_badges.sql

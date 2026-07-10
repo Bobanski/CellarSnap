@@ -80,6 +80,7 @@ type FeedEntry = WineEntryWithUrls & {
   can_comment?: boolean;
   comments_privacy?: PrivacyLevel;
   comment_count?: number;
+  comment_preview?: { id: string; author_name: string | null; body: string }[];
   reaction_counts?: Record<string, number>;
   my_reactions?: string[];
   reaction_users?: Record<string, string[]>;
@@ -1338,6 +1339,49 @@ export default function FeedPage() {
                     </div>
                   </div>
                 </div>
+                {/* "Tasted with" — moved to the TOP of the card with avatar
+                    chips (bigger presence) per feedback; used to be a quiet
+                    text line near the bottom. */}
+                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
+                  <div
+                    className="mt-2 flex items-center gap-2 overflow-x-auto"
+                    style={{ scrollbarWidth: "none" }}
+                  >
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]">
+                      Tasted with
+                    </span>
+                    {entry.tasted_with_users.slice(0, 6).map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          router.push(`/profile/${user.id}`);
+                        }}
+                        className="group flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)]/40 py-0.5 pl-0.5 pr-2.5 transition hover:border-[var(--color-accent-secondary)]/50"
+                        title={user.display_name ?? "Friend"}
+                      >
+                        <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
+                          {user.avatar_url ? (
+                            <AppImage src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[9px] font-medium text-[var(--color-text-tertiary)]">
+                              {(user.display_name || "?")[0].toUpperCase()}
+                            </span>
+                          )}
+                        </span>
+                        <span className="max-w-[88px] truncate text-xs font-medium text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-secondary)]">
+                          {user.display_name ?? "Unknown"}
+                        </span>
+                      </button>
+                    ))}
+                    {entry.tasted_with_users.length > 6 ? (
+                      <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
+                        +{entry.tasted_with_users.length - 6}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
                 {/* Wine name + meta — sits between the "is drinking:" byline
                     above and the photo below, per Eitan's reorder. */}
                 <div className="mt-1.5">
@@ -1463,14 +1507,6 @@ export default function FeedPage() {
                   </span>
                 </div>
 
-                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
-                  <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
-                    Tasted with:{" "}
-                    {entry.tasted_with_users
-                      .map((user) => user.display_name ?? "Unknown")
-                      .join(", ")}
-                  </div>
-                ) : null}
                 {(() => {
                   const entryComments = commentsByEntryId[entry.id] ?? [];
                   const commentDraft = commentDraftByEntryId[entry.id] ?? "";
@@ -1645,18 +1681,6 @@ export default function FeedPage() {
                                   </button>
                                 )}
                               />
-                              {canComment && (commentCountMap.get(entry.id) ?? 0) > 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleCommentsExpanded(entry.id);
-                                  }}
-                                  className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
-                                >
-                                  {(commentCountMap.get(entry.id) ?? 0)} {(commentCountMap.get(entry.id) ?? 0) === 1 ? "comment" : "comments"}
-                                </button>
-                              ) : null}
                             </div>
                           </div>
                           {reactionPopupEntryId === entry.id ? (
@@ -1706,6 +1730,37 @@ export default function FeedPage() {
                             </div>
                           ) : null}
                         </div>
+                        {/* Comment preview — first 1-2 comments surfaced directly
+                            on the card (name + line) instead of a bare count;
+                            tapping opens the full thread. More engaging per
+                            feedback. */}
+                        {!commentsExpanded && (entry.comment_preview?.length ?? 0) > 0 ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleCommentsExpanded(entry.id);
+                            }}
+                            className="mt-1.5 block w-full space-y-1 text-left"
+                          >
+                            {(entry.comment_preview ?? []).map((comment) => (
+                              <p
+                                key={comment.id}
+                                className="truncate text-xs text-[var(--color-text-secondary)]"
+                              >
+                                <span className="font-semibold text-[var(--color-text-primary)]">
+                                  {comment.author_name ?? "Someone"}
+                                </span>{" "}
+                                {comment.body}
+                              </p>
+                            ))}
+                            {(commentCountMap.get(entry.id) ?? 0) > (entry.comment_preview?.length ?? 0) ? (
+                              <span className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]">
+                                {`View all ${commentCountMap.get(entry.id) ?? 0} comments`}
+                              </span>
+                            ) : null}
+                          </button>
+                        ) : null}
                       </div>
                       {commentsExpanded ? (
                         <div

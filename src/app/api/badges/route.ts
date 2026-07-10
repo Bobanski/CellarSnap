@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
+import { executeSelectWithFallback } from "@/server/db/compat";
 import { BADGE_MAP } from "@shared";
 
 export async function GET(request: Request) {
@@ -30,18 +31,42 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data: profile, error: profileError } = await auth.supabase
-      .from("profiles")
-      .select("featured_badge_id")
-      .eq("id", targetUserId)
-      .single();
+    // featured_badge_ids (097_featured_badges.sql) may not exist yet on
+    // every environment — fall back to the single-badge column so this
+    // route keeps working either way.
+    const profileSelectResult = await executeSelectWithFallback({
+      attempts: [
+        { fields: "featured_badge_id, featured_badge_ids", includesArray: true },
+        { fields: "featured_badge_id", includesArray: false },
+      ] as const,
+      getFallbackColumns: () => ["featured_badge_ids"],
+      attempt: async (attempt) => {
+        const result = await auth.supabase
+          .from("profiles")
+          .select(attempt.fields)
+          .eq("id", targetUserId)
+          .single();
+        return { data: result.data, error: result.error };
+      },
+    });
 
-    if (profileError) {
+    if (profileSelectResult.error) {
       return NextResponse.json(
-        { error: profileError.message },
+        { error: profileSelectResult.error.message },
         { status: 500 }
       );
     }
+
+    const profile = profileSelectResult.data as {
+      featured_badge_id: string | null;
+      featured_badge_ids?: string[] | null;
+    } | null;
+    const featuredBadgeIds =
+      profile?.featured_badge_ids && profile.featured_badge_ids.length > 0
+        ? profile.featured_badge_ids
+        : profile?.featured_badge_id
+          ? [profile.featured_badge_id]
+          : [];
 
     const badges = (earnedRows ?? [])
       .filter((row) => BADGE_MAP.has(row.badge_id))
@@ -53,6 +78,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       badges,
       featured_badge_id: profile?.featured_badge_id ?? null,
+      featured_badge_ids: featuredBadgeIds,
       total_earned: badges.length,
     });
   } catch (error) {

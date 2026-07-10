@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import BadgeIcon from "./BadgeIcon";
+import { describeBadgeTrigger } from "./badgeTriggerCopy";
 import type {
   BadgeDefinition,
   BadgeCategory,
@@ -16,6 +18,8 @@ interface BadgeCardProps {
   isEarned: boolean;
   isSelected: boolean;
   isFeatured: boolean;
+  /** ISO timestamp the viewer earned this badge, if earned. */
+  earnedAt?: string | null;
   onSelect: (id: string) => void;
   onFeature: (id: string) => void;
 }
@@ -34,39 +38,34 @@ const CATEGORY_DOT_COLOR: Record<BadgeCategory, string> = {
   social: "#7B1D3A",
 };
 
+function formatEarnedDate(iso: string): string | null {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function BadgeCard({
   badge,
   isEarned,
   isSelected,
   isFeatured,
+  earnedAt,
   onSelect,
   onFeature,
 }: BadgeCardProps) {
-  if (!isEarned) {
-    return (
-      <div className="flex flex-col items-center gap-1.5 rounded-xl bg-[var(--color-surface-raised)] p-3">
-        <BadgeIcon
-          shape={badge.shape as BadgeShape}
-          color={badge.color as BadgeColor}
-          accent={badge.accent as BadgeAccentColor}
-          tier={badge.tier as BadgeTier}
-          size={56}
-          locked
-        />
-        <span className="text-xs font-medium text-[var(--color-text-tertiary)]">
-          ???
-        </span>
-        <span
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ backgroundColor: CATEGORY_DOT_COLOR[badge.category] ?? "#5D5570" }}
-        />
-      </div>
-    );
-  }
+  const earnedDateLabel = earnedAt ? formatEarnedDate(earnedAt) : null;
+  const requirement = describeBadgeTrigger(badge.trigger);
 
   return (
     // div with button semantics: a real <button> here would nest the
-    // "Feature" <button> inside it, which is invalid HTML and breaks hydration
+    // "Feature"/"More" affordances inside it, which is invalid HTML and
+    // breaks hydration. Tapping flips the tile in place (CSS 3D flip) instead
+    // of navigating away — the back face carries name/how-earned/progress,
+    // with a "More" link for anyone who wants the full detail page.
     <div
       role="button"
       tabIndex={0}
@@ -75,6 +74,7 @@ export default function BadgeCard({
           ? "ring-2 ring-[var(--color-accent-gold)] shadow-[0_0_12px_rgba(201,168,76,0.3)]"
           : ""
       }`}
+      style={{ minHeight: 116 }}
       onClick={() => onSelect(badge.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -83,7 +83,7 @@ export default function BadgeCard({
         }
       }}
       aria-pressed={isSelected}
-      aria-label={`${isSelected ? "Hide" : "Show"} details for ${badge.name} badge`}
+      aria-label={`${isSelected ? "Hide" : "Show"} details for ${isEarned ? badge.name : "a locked badge"}`}
     >
       <div
         className={`relative h-full w-full transition-transform duration-500 motion-reduce:transition-none [transform-style:preserve-3d] ${
@@ -98,31 +98,65 @@ export default function BadgeCard({
             accent={badge.accent as BadgeAccentColor}
             tier={badge.tier as BadgeTier}
             size={56}
+            locked={!isEarned}
           />
-          <span className="text-xs font-semibold text-[var(--color-text-primary)]">
-            {badge.name}
+          <span
+            className={`text-xs font-semibold ${
+              isEarned
+                ? "text-[var(--color-text-primary)]"
+                : "text-[var(--color-text-tertiary)]"
+            }`}
+          >
+            {isEarned ? badge.name : "???"}
           </span>
           <span
             className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: TIER_DOT_COLOR[badge.tier] }}
+            style={{
+              backgroundColor: isEarned
+                ? TIER_DOT_COLOR[badge.tier]
+                : (CATEGORY_DOT_COLOR[badge.category] ?? "#5D5570"),
+            }}
           />
         </div>
 
-        {/* Back face */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
-          <p className="text-xs leading-snug text-[var(--color-text-secondary)]">
-            {badge.description}
-          </p>
-          <button
-            type="button"
-            className="mt-1 rounded-full bg-[var(--color-accent-gold)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-surface-primary)]"
-            onClick={(e) => {
-              e.stopPropagation();
-              onFeature(badge.id);
-            }}
+        {/* Back face — name, how it's earned / progress, and a "More" link
+            for the full detail page rather than forcing navigation just to
+            read what a badge is. */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
+          <span className="text-xs font-semibold text-[var(--color-text-primary)]">
+            {badge.name}
+          </span>
+          <p
+            className={`text-[9px] font-semibold uppercase tracking-wide ${
+              isEarned ? "text-[var(--color-accent-secondary)]" : "text-[var(--color-text-tertiary)]"
+            }`}
           >
-            Feature
-          </button>
+            {isEarned ? (earnedDateLabel ? `Earned ${earnedDateLabel}` : "Earned") : "Not yet earned"}
+          </p>
+          <p className="line-clamp-3 text-[11px] leading-snug text-[var(--color-text-secondary)]">
+            {isEarned ? badge.description : requirement}
+          </p>
+          <div className="mt-1 flex items-center gap-1.5">
+            {isEarned ? (
+              <button
+                type="button"
+                className="rounded-full bg-[var(--color-accent-gold)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--color-surface-primary)]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFeature(badge.id);
+                }}
+              >
+                Feature
+              </button>
+            ) : null}
+            <Link
+              href={`/badges/${badge.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)]"
+            >
+              More
+            </Link>
+          </div>
         </div>
       </div>
     </div>
