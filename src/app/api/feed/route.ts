@@ -690,28 +690,85 @@ export async function GET(request: Request) {
     });
   }
 
-  // Comments: count per entry (best effort if comments table is unavailable).
+  // Comments: count per entry, plus a short preview (first couple of
+  // top-level, non-deleted comments) so cards can surface "name + line"
+  // instead of a bare count (best effort if comments table is unavailable).
+  type FeedCommentRow = {
+    id: string;
+    entry_id: string;
+    user_id: string;
+    parent_comment_id: string | null;
+    body: string;
+    created_at: string;
+    deleted_at?: string | null;
+  };
   const commentCountsMap = new Map<string, number>();
+  const commentRowsByEntryId = new Map<string, FeedCommentRow[]>();
   if (entryIds.length > 0) {
-    const { data: comments, error: commentsError } = await supabase
-      .from("entry_comments")
-      .select("entry_id")
-      .in("entry_id", entryIds);
+    const commentsSelectResult = await executeSelectWithFallback({
+      attempts: [
+        {
+          select: "id, entry_id, user_id, parent_comment_id, body, created_at, deleted_at",
+          missingColumns: ["deleted_at"] as const,
+        },
+        {
+          select: "id, entry_id, user_id, parent_comment_id, body, created_at",
+          missingColumns: [] as const,
+        },
+      ],
+      getFallbackColumns: (attempt) => attempt.missingColumns,
+      attempt: async (attempt) => {
+        const response = await supabase
+          .from("entry_comments")
+          .select(attempt.select)
+          .in("entry_id", entryIds)
+          .order("created_at", { ascending: true });
+        return { data: response.data, error: response.error };
+      },
+    });
 
-    if (!commentsError) {
-      (comments ?? []).forEach((comment: { entry_id: string }) => {
+    if (commentsSelectResult.error) {
+      const message = commentsSelectResult.error.message ?? "";
+      if (
+        !message.includes("entry_comments") &&
+        !message.includes("relation") &&
+        !message.includes("column")
+      ) {
+        return NextResponse.json({ error: commentsSelectResult.error.message }, { status: 500 });
+      }
+    } else {
+      ((commentsSelectResult.data ?? []) as unknown as FeedCommentRow[]).forEach((comment) => {
         commentCountsMap.set(
           comment.entry_id,
           (commentCountsMap.get(comment.entry_id) ?? 0) + 1
         );
+        const list = commentRowsByEntryId.get(comment.entry_id) ?? [];
+        list.push(comment);
+        commentRowsByEntryId.set(comment.entry_id, list);
       });
-    } else if (
-      !commentsError.message.includes("entry_comments") &&
-      !commentsError.message.includes("relation") &&
-      !commentsError.message.includes("column")
-    ) {
-      return NextResponse.json({ error: commentsError.message }, { status: 500 });
     }
+  }
+
+  // Comment previews need author names for user IDs that may not already be
+  // in profileMap (e.g. a commenter who isn't the author, a friend, or a
+  // reactor).
+  const commenterIds = new Set<string>();
+  commentRowsByEntryId.forEach((rows) => {
+    rows.forEach((row) => commenterIds.add(row.user_id));
+  });
+  const missingCommenterIds = Array.from(commenterIds).filter((id) => !profileMap.has(id));
+  if (missingCommenterIds.length > 0) {
+    const { data: commenterProfiles } = await supabase
+      .from("public_profiles")
+      .select("id, display_name, email")
+      .in("id", missingCommenterIds);
+    (commenterProfiles ?? []).forEach((profile) => {
+      profileMap.set(profile.id, {
+        display_name: profile.display_name ?? null,
+        email: profile.email ?? null,
+        avatar_path: null,
+      });
+    });
   }
 
   type GalleryPhotoType =
@@ -809,6 +866,14 @@ export async function GET(request: Request) {
       pathsToSign.add(avatarPath);
       authorAvatarPathByUserId.set(entry.user_id, avatarPath);
     }
+    // "Tasted with" chips (moved to the top of the card) show avatars now,
+    // so their photo paths need signing too.
+    (entry.tasted_with_user_ids ?? []).forEach((id) => {
+      const tastedWithAvatarPath = profileMap.get(id)?.avatar_path ?? null;
+      if (tastedWithAvatarPath) {
+        pathsToSign.add(tastedWithAvatarPath);
+      }
+    });
     (galleryRowsByEntryId.get(entry.id) ?? []).forEach((photo) => {
       pathsToSign.add(photo.path);
     });
@@ -839,11 +904,17 @@ export async function GET(request: Request) {
     const pairingPhoto =
       photoGallery.find((photo) => photo.type === "pairing")?.url ?? null;
 
-    const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id: string) => ({
-      id,
-      display_name: getPublicProfileName(profileMap.get(id)),
-      email: null,
-    }));
+    const tastedWithUsers = (entry.tasted_with_user_ids ?? []).map((id: string) => {
+      const tastedWithAvatarPath = profileMap.get(id)?.avatar_path ?? null;
+      return {
+        id,
+        display_name: getPublicProfileName(profileMap.get(id)),
+        email: null,
+        avatar_url: tastedWithAvatarPath
+          ? signedUrlByPath.get(tastedWithAvatarPath) ?? null
+          : null,
+      };
+    });
 
     const settings = interactionSettingsByEntryId.get(entry.id);
     const interactionAccess = await resolveInteractionAccessForViewer({
@@ -880,6 +951,21 @@ export async function GET(request: Request) {
     const commentCount = interactionAccess.canComment
       ? commentCountsMap.get(entry.id) ?? 0
       : 0;
+    const commentPreview = interactionAccess.canComment
+      ? (commentRowsByEntryId.get(entry.id) ?? [])
+          .filter(
+            (row) =>
+              row.parent_comment_id === null &&
+              !row.deleted_at &&
+              row.body.trim() !== "[deleted]"
+          )
+          .slice(0, 2)
+          .map((row) => ({
+            id: row.id,
+            author_name: getPublicProfileName(profileMap.get(row.user_id)),
+            body: row.body,
+          }))
+      : [];
     const groupedPost = groupedPostByEntryId.get(entry.id);
 
     return {
@@ -901,6 +987,7 @@ export async function GET(request: Request) {
       can_react: interactionAccess.canReact,
       can_comment: interactionAccess.canComment,
       comment_count: commentCount,
+      comment_preview: commentPreview,
       reaction_counts: reactionCounts,
       my_reactions: myReactions,
       reaction_users: reactionUsers,

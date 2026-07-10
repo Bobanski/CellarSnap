@@ -947,6 +947,8 @@ function EntriesPageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchBarVisible, setSearchBarVisible] = useState(false);
+  const [eventsSearchQuery, setEventsSearchQuery] = useState("");
+  const [eventsSortOrder, setEventsSortOrder] = useState<"newest" | "oldest">("newest");
   const [sortBy, setSortBy] = useState<SortBy>("consumed_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [filterType, setFilterType] = useState<FilterType>("");
@@ -1108,10 +1110,10 @@ function EntriesPageContent() {
     return sorted;
   }, [groupScheme, libraryViewMode, sortedEntries]);
 
-  const eventEntries = useMemo<EventHistoryEntry[]>(() => {
+  const allEventEntries = useMemo<EventHistoryEntry[]>(() => {
     const seenGroupIds = new Set<string>();
 
-    return entries
+    const deduped = entries
       .filter((entry): entry is EventHistoryEntry => (
         typeof entry.entry_group_id === "string" && entry.entry_group_id.length > 0
       ))
@@ -1123,7 +1125,23 @@ function EntriesPageContent() {
         seenGroupIds.add(entry.entry_group_id);
         return true;
       });
-  }, [entries]);
+
+    const mult = eventsSortOrder === "oldest" ? 1 : -1;
+    return [...deduped].sort((a, b) => mult * compareEntryChronology(a, b));
+  }, [entries, eventsSortOrder]);
+
+  const normalizedEventsSearchQuery = eventsSearchQuery.trim().toLowerCase();
+  const isEventsSearchActive = normalizedEventsSearchQuery.length > 0;
+
+  const eventEntries = useMemo<EventHistoryEntry[]>(() => {
+    if (!normalizedEventsSearchQuery) {
+      return allEventEntries;
+    }
+
+    return allEventEntries.filter((entry) =>
+      getGroupedTitle(entry).toLowerCase().includes(normalizedEventsSearchQuery)
+    );
+  }, [allEventEntries, normalizedEventsSearchQuery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1413,6 +1431,83 @@ function EntriesPageContent() {
                 </div>
               ) : null}
 
+              {allEventEntries.length > 0 ? (
+                <div className="space-y-2.5">
+                  {/* ─── Search by title ─── */}
+                  <div className="relative">
+                    <label htmlFor="events-search" className="sr-only">
+                      Search your events by title
+                    </label>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-tertiary)]"
+                      aria-hidden="true"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input
+                      id="events-search"
+                      type="search"
+                      value={eventsSearchQuery}
+                      onChange={(event) => setEventsSearchQuery(event.target.value)}
+                      placeholder="Search events by title"
+                      className="w-full focus:outline-none"
+                      style={{
+                        background: "rgba(245, 237, 214, 0.04)",
+                        border: "0.5px solid var(--color-border-strong)",
+                        borderRadius: 10,
+                        padding: "9px 32px 9px 32px",
+                        fontSize: 12,
+                        color: "var(--color-text-secondary)",
+                      }}
+                    />
+                    {isEventsSearchActive ? (
+                      <button
+                        type="button"
+                        onClick={() => setEventsSearchQuery("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                        style={{
+                          fontSize: 9,
+                          letterSpacing: 1,
+                          color: "var(--color-text-tertiary)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* ─── Chronological sort toggle ─── */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="uppercase"
+                      style={{
+                        fontSize: 10,
+                        letterSpacing: 1.8,
+                        color: "var(--color-text-tertiary)",
+                      }}
+                    >
+                      Sort
+                    </span>
+                    <SegmentedControl
+                      options={[
+                        { value: "newest" as const, label: "Newest" },
+                        { value: "oldest" as const, label: "Oldest" },
+                      ]}
+                      value={eventsSortOrder}
+                      onChange={setEventsSortOrder}
+                    />
+                  </div>
+                </div>
+              ) : null}
+
               {eventEntries.length === 0 ? (
                 <div
                   style={{
@@ -1431,10 +1526,12 @@ function EntriesPageContent() {
                       color: "var(--color-text-primary)",
                     }}
                   >
-                    {CELLAR_COPY.eventsEmptyTitle}
+                    {isEventsSearchActive ? "No matching events" : CELLAR_COPY.eventsEmptyTitle}
                   </p>
                   <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                    {CELLAR_COPY.eventsEmptySubtitle}
+                    {isEventsSearchActive
+                      ? "Try a different title, or clear your search."
+                      : CELLAR_COPY.eventsEmptySubtitle}
                   </p>
                 </div>
               ) : (

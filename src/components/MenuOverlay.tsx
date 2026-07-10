@@ -178,8 +178,7 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
                 className="text-xs"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                {stats.entryCount} pours &middot; {stats.friendCount} friends
-                &middot; {stats.countryCount} countries
+                {`${stats.entryCount} pours · ${stats.friendCount} friends · ${stats.countryCount} countries`}
               </p>
             ) : null}
           </div>

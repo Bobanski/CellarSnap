@@ -17,6 +17,7 @@ import {
   type ProfileNameDisplayPreference,
 } from "@shared";
 import BadgeIcon from "@/features/badges/BadgeIcon";
+import FeaturedBadgesRow from "@/features/badges/FeaturedBadgesRow";
 import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -67,6 +68,12 @@ type Entry = {
   entry_group_id?: string | null;
   entry_group?: EntryGroup | null;
   group_slides?: GroupedEntrySlide[] | null;
+  // Present on the /api/entries payload (consumed/"opened" entries only) —
+  // used to derive the private "Opened" stats band client-side, no extra query.
+  country?: string | null;
+  region?: string | null;
+  rating?: number | null;
+  primary_grapes?: { id: string; name: string; position: number }[] | null;
 };
 
 type FriendProfile = {
@@ -186,6 +193,51 @@ export default function ProfilePage() {
       return true;
     });
   }, [entries]);
+
+  // "Opened" stats band (own-profile only, private framing): derived entirely
+  // client-side from the entries already loaded for the gallery — no extra
+  // query. /api/entries only ever returns consumed ("opened") entries, so
+  // `entries` here already is that set (bottlesOpened uses the exact
+  // `wineCount` total since `entries` itself may only be the first page).
+  const openedStats = useMemo(() => {
+    if (entries.length === 0) return null;
+
+    const countries = new Set<string>();
+    const grapeCounts = new Map<string, number>();
+    const regionCounts = new Map<string, number>();
+    let ratingSum = 0;
+    let ratingCount = 0;
+
+    entries.forEach((entry) => {
+      const country = entry.country?.trim();
+      if (country) countries.add(country);
+
+      const region = entry.region?.trim();
+      if (region) regionCounts.set(region, (regionCounts.get(region) ?? 0) + 1);
+
+      (entry.primary_grapes ?? []).forEach((grape) => {
+        const name = grape.name?.trim();
+        if (!name) return;
+        grapeCounts.set(name, (grapeCounts.get(name) ?? 0) + 1);
+      });
+
+      if (typeof entry.rating === "number" && Number.isFinite(entry.rating)) {
+        ratingSum += entry.rating;
+        ratingCount += 1;
+      }
+    });
+
+    const topOf = (counts: Map<string, number>) =>
+      Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    return {
+      bottlesOpened: wineCount ?? entries.length,
+      countries: countries.size,
+      topGrape: topOf(grapeCounts),
+      topRegion: topOf(regionCounts),
+      avgRating: ratingCount > 0 ? ratingSum / ratingCount : null,
+    };
+  }, [entries, wineCount]);
 
   // Friends tab state
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -1010,6 +1062,113 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* ── Featured badges (up to 5), below the name ── */}
+            <FeaturedBadgesRow />
+
+            {/* ── "Opened" stats band — own profile only, private framing ── */}
+            {openedStats ? (
+              <div className="mt-5">
+                <p className="mb-2 text-[9px] font-bold uppercase tracking-[3px] text-[var(--color-text-tertiary)]">
+                  Your opened bottles &middot; only visible to you
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: openedStats.bottlesOpened, label: "Opened" },
+                    { value: openedStats.countries, label: "Countries" },
+                    {
+                      value:
+                        openedStats.avgRating !== null
+                          ? Math.round(openedStats.avgRating)
+                          : "—",
+                      label: "Avg rating",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="text-center"
+                      style={{
+                        background: "var(--color-surface-primary)",
+                        border: "0.5px solid var(--color-border)",
+                        borderRadius: 12,
+                        padding: "12px 6px",
+                      }}
+                    >
+                      <span
+                        className="text-numeric block"
+                        style={{ fontSize: 26, color: "var(--color-text-primary)" }}
+                      >
+                        {stat.value}
+                      </span>
+                      <span
+                        className="mt-1 block uppercase"
+                        style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--color-text-tertiary)" }}
+                      >
+                        {stat.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {openedStats.topGrape || openedStats.topRegion ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div
+                      className="text-center"
+                      style={{
+                        background: "var(--color-surface-primary)",
+                        border: "0.5px solid var(--color-border)",
+                        borderRadius: 12,
+                        padding: "12px 8px",
+                      }}
+                    >
+                      <span
+                        className="block truncate"
+                        style={{
+                          fontFamily: "var(--font-serif)",
+                          fontSize: 17,
+                          fontWeight: 400,
+                          color: "var(--color-text-primary)",
+                        }}
+                      >
+                        {openedStats.topGrape ?? "—"}
+                      </span>
+                      <span
+                        className="mt-1 block uppercase"
+                        style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--color-text-tertiary)" }}
+                      >
+                        Top grape
+                      </span>
+                    </div>
+                    <div
+                      className="text-center"
+                      style={{
+                        background: "var(--color-surface-primary)",
+                        border: "0.5px solid var(--color-border)",
+                        borderRadius: 12,
+                        padding: "12px 8px",
+                      }}
+                    >
+                      <span
+                        className="block truncate"
+                        style={{
+                          fontFamily: "var(--font-serif)",
+                          fontSize: 17,
+                          fontWeight: 400,
+                          color: "var(--color-text-primary)",
+                        }}
+                      >
+                        {openedStats.topRegion ?? "—"}
+                      </span>
+                      <span
+                        className="mt-1 block uppercase"
+                        style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--color-text-tertiary)" }}
+                      >
+                        Top region
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* ── My Palate card ── */}
             <Link

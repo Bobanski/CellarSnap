@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useMemo, useState } from "react";
 import BadgeCard from "./BadgeCard";
 import { useBadges } from "./useBadges";
 import {
@@ -26,11 +25,15 @@ const CATEGORY_TABS: Array<{ label: string; value: BadgeCategory | "all" }> = [
 ];
 
 export function BadgesPage() {
-  const router = useRouter();
   const { badges: earnedBadges, featuredBadgeId, isLoading, error } = useBadges();
   const [activeCategory, setActiveCategory] = useState<BadgeCategory | "all">("all");
+  const [flippedBadgeId, setFlippedBadgeId] = useState<string | null>(null);
 
   const earnedSet = new Set(earnedBadges.map((b) => b.id));
+  const earnedAtById = useMemo(
+    () => new Map(earnedBadges.map((b) => [b.id, b.earned_at])),
+    [earnedBadges]
+  );
 
   const filteredBadges = (
     activeCategory === "all"
@@ -93,9 +96,12 @@ export function BadgesPage() {
               key={badge.id}
               badge={badge}
               isEarned={earnedSet.has(badge.id)}
-              isSelected={false}
+              isSelected={flippedBadgeId === badge.id}
               isFeatured={featuredBadgeId === badge.id}
-              onSelect={(id) => router.push(`/badges/${id}`)}
+              earnedAt={earnedAtById.get(badge.id) ?? null}
+              onSelect={(id) =>
+                setFlippedBadgeId((prev) => (prev === id ? null : id))
+              }
               onFeature={() => {}}
             />
           ))}
