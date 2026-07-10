@@ -41,6 +41,102 @@ function slugToDisplayName(slug: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Producer curation — grounds GPT's producer name-drops (notable_producers,
+// similar_producers, notable_winemakers, recommendation_picks) in the
+// producer_modifiers reference table instead of letting the model invent
+// producers freely, which was mixing mass-market brands (Meiomi) with
+// unattainable trophy bottlings (DRC) with no consistency. producer_modifiers
+// has a price_tier_numeric (roughly 1=Entry/mass-market through 5=Ultra-
+// luxury) — the roster below excludes tier 1 entirely (mass market) and
+// biases the mix toward accessible-but-high-quality (tier 2-3) with a
+// minority of aspirational (tier 4-5) picks, per feedback from the team.
+// ---------------------------------------------------------------------------
+
+const MASS_MARKET_MAX_TIER = 1;
+const ASPIRATIONAL_MIN_TIER = 4;
+const ROSTER_ACCESSIBLE_COUNT = 6;
+const ROSTER_ASPIRATIONAL_COUNT = 3;
+
+type ProducerCandidateRow = {
+  producer_name: string | null;
+  region: string | null;
+  appellation: string | null;
+  grapes: string | null;
+  price_tier_numeric: number | null;
+  price_tier_label: string | null;
+  house_style_descriptors: string | null;
+  confidence: number | null;
+};
+
+async function fetchProducerRoster(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  type: ProfileType,
+  displayName: string
+): Promise<string> {
+  if (type === "producer") {
+    // For a producer page itself, "similar producers" should be peers in the
+    // same region rather than the producer's own row — look that up first.
+    const { data: ownRows } = await admin
+      .from("producer_modifiers")
+      .select("producer_name, region, appellation, grapes, price_tier_numeric, price_tier_label, house_style_descriptors, confidence")
+      .ilike("producer_name", `%${displayName}%`)
+      .limit(1);
+    const own = (ownRows as ProducerCandidateRow[] | null)?.[0];
+    if (!own?.region) {
+      return "";
+    }
+    const { data: peerRows } = await admin
+      .from("producer_modifiers")
+      .select("producer_name, region, appellation, grapes, price_tier_numeric, price_tier_label, house_style_descriptors, confidence")
+      .ilike("region", `%${own.region}%`)
+      .not("producer_name", "ilike", `%${displayName}%`)
+      .gt("price_tier_numeric", MASS_MARKET_MAX_TIER)
+      .order("confidence", { ascending: false })
+      .limit(30);
+    return formatProducerRoster((peerRows as ProducerCandidateRow[] | null) ?? []);
+  }
+
+  // Grape or region page — candidates are producers whose grapes/region
+  // column mentions this entity.
+  const column = type === "grape" ? "grapes" : "region";
+  const { data } = await admin
+    .from("producer_modifiers")
+    .select("producer_name, region, appellation, grapes, price_tier_numeric, price_tier_label, house_style_descriptors, confidence")
+    .ilike(column, `%${displayName}%`)
+    .gt("price_tier_numeric", MASS_MARKET_MAX_TIER)
+    .order("confidence", { ascending: false })
+    .limit(40);
+
+  return formatProducerRoster((data as ProducerCandidateRow[] | null) ?? []);
+}
+
+function formatProducerRoster(rows: ProducerCandidateRow[]): string {
+  if (rows.length === 0) {
+    return "";
+  }
+
+  const accessible = rows.filter((r) => (r.price_tier_numeric ?? 0) < ASPIRATIONAL_MIN_TIER);
+  const aspirational = rows.filter((r) => (r.price_tier_numeric ?? 0) >= ASPIRATIONAL_MIN_TIER);
+
+  const describe = (r: ProducerCandidateRow) =>
+    `${r.producer_name} (${r.price_tier_label ?? "unrated"}${r.appellation ? `, ${r.appellation}` : r.region ? `, ${r.region}` : ""})`;
+
+  const accessibleList = accessible.slice(0, ROSTER_ACCESSIBLE_COUNT).map(describe);
+  const aspirationalList = aspirational.slice(0, ROSTER_ASPIRATIONAL_COUNT).map(describe);
+
+  if (accessibleList.length === 0 && aspirationalList.length === 0) {
+    return "";
+  }
+
+  return `
+
+CURATED PRODUCER ROSTER — use this when naming notable/similar/reference producers (notable_producers, similar_producers, notable_winemakers, recommendation_picks, most_loved_producer, best_qpr_producer). Favor the "Accessible" set for most picks; include at most one "Aspirational" pick if the field calls for a stretch/trophy option. Never invent mass-market/supermarket-tier producers, and don't reach for ultra-rare trophy bottlings outside this list:
+${accessibleList.length > 0 ? `Accessible, high-quality: ${accessibleList.join("; ")}` : ""}
+${aspirationalList.length > 0 ? `Aspirational: ${aspirationalList.join("; ")}` : ""}
+If a field needs a producer not covered above, use your own knowledge but keep the same bias: real, high-quality, reasonably attainable producers over trophy bottlings, and never mass-market supermarket brands.`;
+}
+
+// ---------------------------------------------------------------------------
 // GPT prompt builders
 // ---------------------------------------------------------------------------
 
@@ -51,10 +147,10 @@ function voiceBlock(mode: AudienceMode): string {
 ${directives}`;
 }
 
-function buildGrapePrompt(displayName: string, mode: AudienceMode): string {
+function buildGrapePrompt(displayName: string, mode: AudienceMode, producerRosterBlock: string): string {
   return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} grape variety.
 
-${voiceBlock(mode)}
+${voiceBlock(mode)}${producerRosterBlock}
 
 Write a JSON object with these fields:
 - tagline: one evocative sentence, max 15 words, taste-led (e.g. "The grape that tastes like warm earth and ripe fruit — then surprises you with how long it lingers.")
@@ -77,10 +173,10 @@ Write a JSON object with these fields:
 Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-function buildRegionPrompt(displayName: string, mode: AudienceMode): string {
+function buildRegionPrompt(displayName: string, mode: AudienceMode, producerRosterBlock: string): string {
   return `You are a wine storyteller writing for the Cluster wine app. Write about the ${displayName} wine region.
 
-${voiceBlock(mode)}
+${voiceBlock(mode)}${producerRosterBlock}
 
 Write a JSON object with these fields:
 - tagline: one evocative sentence, max 15 words, taste-led (e.g. "Where Grenache burns slow and wild rosemary finds its way into every glass")
@@ -105,10 +201,10 @@ Write a JSON object with these fields:
 Return ONLY valid JSON. No markdown, no explanation.`;
 }
 
-function buildProducerPrompt(displayName: string, mode: AudienceMode): string {
+function buildProducerPrompt(displayName: string, mode: AudienceMode, producerRosterBlock: string): string {
   return `You are a wine storyteller writing for the Cluster wine app. Write about ${displayName} (wine producer).
 
-${voiceBlock(mode)}
+${voiceBlock(mode)}${producerRosterBlock}
 
 You're writing a character sketch, not a biography.
 
@@ -134,15 +230,16 @@ Return ONLY valid JSON. No markdown, no explanation.`;
 function getPromptForType(
   type: ProfileType,
   displayName: string,
-  mode: AudienceMode
+  mode: AudienceMode,
+  producerRosterBlock: string
 ): string {
   switch (type) {
     case "grape":
-      return buildGrapePrompt(displayName, mode);
+      return buildGrapePrompt(displayName, mode, producerRosterBlock);
     case "region":
-      return buildRegionPrompt(displayName, mode);
+      return buildRegionPrompt(displayName, mode, producerRosterBlock);
     case "producer":
-      return buildProducerPrompt(displayName, mode);
+      return buildProducerPrompt(displayName, mode, producerRosterBlock);
   }
 }
 
@@ -580,10 +677,12 @@ async function fetchPersonalStats(
 async function generateContent(
   type: ProfileType,
   displayName: string,
-  mode: AudienceMode
+  mode: AudienceMode,
+  admin: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<Record<string, unknown> | null> {
   const openai = new OpenAI();
-  const prompt = getPromptForType(type, displayName, mode);
+  const producerRosterBlock = await fetchProducerRoster(admin, type, displayName).catch(() => "");
+  const prompt = getPromptForType(type, displayName, mode, producerRosterBlock);
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
@@ -887,7 +986,7 @@ export async function GET(
           // resolves — don't make the client wait on hero image generation
           // too, since that's a second, independently slow OpenAI call (see
           // step 2).
-          const content = await generateContent(type, displayName, audienceMode);
+          const content = await generateContent(type, displayName, audienceMode, backfillAdmin);
           if (!content) {
             // Best-effort background job — leave the placeholder in place;
             // once it goes stale, the next request retries generation.

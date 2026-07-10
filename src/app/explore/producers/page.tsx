@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toExploreSlug } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
+import AppImage from "@/components/AppImage";
 
 // ---------------------------------------------------------------------------
 // Colors — matching profile page palette
@@ -18,6 +19,17 @@ const BG_SECTION = "#220E14";
 
 type Producer = { name: string; count: number };
 
+// producer_modifiers.price_tier_numeric runs roughly 1 (Entry/mass-market)
+// through 5 (Ultra-luxury). "Iconic Names" surfaces the trophy/cult tier;
+// "Small Growers" is everything more attainable and human-scale, tier 1
+// (mass-market-priced) included since the split here is about scale/renown,
+// not the accessible-vs-aspirational curation used for recommendation
+// surfaces elsewhere (see the [type]/[slug] route, which excludes tier 1
+// entirely as "mass market").
+const ICONIC_MIN_TIER = 4;
+type TierView = "iconic" | "growers";
+type TierProducer = { name: string; region: string | null; tier: number; tierLabel: string };
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -28,6 +40,14 @@ export default function ProducersBrowsePage() {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
+  // Cached wine_profiles hero images for the Most Logged list — cached-only
+  // lookup, never triggers generation from this browse surface.
+  const [producerThumbs, setProducerThumbs] = useState<Map<string, string>>(new Map());
+
+  // "Iconic Names" vs "Small Growers" entry split (producer_modifiers tier)
+  const [tierView, setTierView] = useState<TierView | null>(null);
+  const [tierProducers, setTierProducers] = useState<TierProducer[]>([]);
+  const [tierLoading, setTierLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -55,6 +75,61 @@ export default function ProducersBrowsePage() {
     load();
     return () => { mounted = false; };
   }, [supabase]);
+
+  // Cached hero images for the Most Logged strip.
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const names = producers.slice(0, 10).map((p) => p.name);
+      if (names.length === 0) return;
+      const { data } = await supabase
+        .from("wine_profiles")
+        .select("slug, hero_image_url")
+        .eq("profile_type", "producer")
+        .in("slug", names.map(toExploreSlug))
+        .not("hero_image_url", "is", null);
+      if (!mounted || !data) return;
+      setProducerThumbs(new Map(data.map((r: { slug: string; hero_image_url: string }) => [r.slug, r.hero_image_url])));
+    };
+    load();
+    return () => { mounted = false; };
+  }, [supabase, producers]);
+
+  // Load the curated producer_modifiers roster for whichever tier card is
+  // selected. producer_modifiers is a public reference table (RLS allows
+  // read for all authenticated users), so this queries it directly.
+  const selectTierView = (view: TierView) => {
+    if (tierView === view) { setTierView(null); return; }
+    setTierView(view);
+    setTierLoading(true);
+    const query = supabase
+      .from("producer_modifiers")
+      .select("producer_name, region, price_tier_numeric, price_tier_label")
+      .order("confidence", { ascending: false })
+      .limit(120);
+    const scoped = view === "iconic"
+      ? query.gte("price_tier_numeric", ICONIC_MIN_TIER)
+      : query.lt("price_tier_numeric", ICONIC_MIN_TIER);
+    scoped.then((result: { data: Array<{ producer_name: string | null; region: string | null; price_tier_numeric: number | null; price_tier_label: string | null }> | null }) => {
+      const { data } = result;
+      const seen = new Set<string>();
+      const rows: TierProducer[] = [];
+      for (const row of data ?? []) {
+        const name = (row.producer_name as string)?.trim();
+        if (!name || seen.has(name.toLowerCase())) continue;
+        seen.add(name.toLowerCase());
+        rows.push({
+          name,
+          region: (row.region as string) ?? null,
+          tier: (row.price_tier_numeric as number) ?? 0,
+          tierLabel: (row.price_tier_label as string) ?? "",
+        });
+      }
+      rows.sort((a, b) => a.name.localeCompare(b.name));
+      setTierProducers(rows);
+      setTierLoading(false);
+    });
+  };
 
   const isSearching = query.trim().length > 0;
 
@@ -153,7 +228,73 @@ export default function ProducersBrowsePage() {
         {/* ── Discovery content ──────────────────────── */}
         {!isSearching && (
           <>
-            {loading ? (
+            {/* ── Iconic Names vs Small Growers entry split ────── */}
+            {/* Dani: producer page was underdeveloped — this splits the
+                catalog by producer_modifiers price tier so a visitor with no
+                logged producers yet still has a way in. */}
+            <div className="mt-8 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => selectTierView("iconic")}
+                className="flex flex-col items-start gap-1.5 rounded-2xl p-4 text-left transition hover:opacity-90"
+                style={{
+                  background: tierView === "iconic" ? `${ROSE}22` : `${ROSE}10`,
+                  border: `1px solid ${tierView === "iconic" ? ROSE : `${ROSE}20`}`,
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2.5 L14.5 9 L21 9.8 L16.2 14.3 L17.6 21 L12 17.5 L6.4 21 L7.8 14.3 L3 9.8 L9.5 9 Z" fill={ROSE} opacity="0.55" />
+                </svg>
+                <p className="text-sm font-semibold" style={{ color: CHAMPAGNE }}>Iconic Names</p>
+                <p className="text-[10px] leading-snug" style={{ color: FOG }}>The legends and cult labels worth knowing</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => selectTierView("growers")}
+                className="flex flex-col items-start gap-1.5 rounded-2xl p-4 text-left transition hover:opacity-90"
+                style={{
+                  background: tierView === "growers" ? `${GRENACHE}25` : `${GRENACHE}12`,
+                  border: `1px solid ${tierView === "growers" ? GRENACHE : `${GRENACHE}20`}`,
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3 C9 6 7 9.5 7 12.5 C7 15.5 9.2 18 12 18 C14.8 18 17 15.5 17 12.5 C17 9.5 15 6 12 3 Z" fill={GRENACHE} opacity="0.6" />
+                  <line x1="12" y1="18" x2="12" y2="21" stroke={GRENACHE} strokeWidth="1" opacity="0.6" />
+                </svg>
+                <p className="text-sm font-semibold" style={{ color: CHAMPAGNE }}>Small Growers</p>
+                <p className="text-[10px] leading-snug" style={{ color: FOG }}>Accessible, high-quality, human-scale</p>
+              </button>
+            </div>
+
+            {tierView && (
+              <div className="mt-4">
+                {tierLoading ? (
+                  <p className="text-xs" style={{ color: FOG }}>Loading…</p>
+                ) : tierProducers.length === 0 ? (
+                  <p className="text-xs" style={{ color: FOG }}>No producers found for this tier yet.</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {tierProducers.map((p) => (
+                      <Link
+                        key={p.name}
+                        href={`/explore/producer/${toExploreSlug(p.name)}`}
+                        className="flex items-center justify-between rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-sm" style={{ color: CHAMPAGNE }}>{p.name}</span>
+                          {p.region && (
+                            <span className="ml-2 text-[10px]" style={{ color: FOG }}>{p.region}</span>
+                          )}
+                        </div>
+                        <span className="shrink-0 text-sm" style={{ color: FOG }}>&rarr;</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tierView ? null : loading ? (
               <div className="mt-8 space-y-2 animate-pulse">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ background: BG_SECTION }}>
@@ -192,23 +333,30 @@ export default function ProducersBrowsePage() {
                     Most Logged
                   </p>
                   <div className="space-y-0.5">
-                    {topProducers.map((p, i) => (
-                      <Link
-                        key={p.name}
-                        href={`/explore/producer/${toExploreSlug(p.name)}`}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
-                      >
-                        <span className="w-5 text-center text-sm font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
-                          {i + 1}
-                        </span>
-                        <span className="min-w-0 flex-1 text-sm" style={{ color: CHAMPAGNE }}>
-                          {p.name}
-                        </span>
-                        <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>
-                          {p.count} {p.count === 1 ? "entry" : "entries"}
-                        </span>
-                      </Link>
-                    ))}
+                    {topProducers.map((p, i) => {
+                      const thumb = producerThumbs.get(toExploreSlug(p.name));
+                      return (
+                        <Link
+                          key={p.name}
+                          href={`/explore/producer/${toExploreSlug(p.name)}`}
+                          className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
+                        >
+                          <span className="w-5 text-center text-sm font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
+                            {i + 1}
+                          </span>
+                          {/* Cached-only thumbnail — falls back to a plain dot when no image has been generated yet. */}
+                          <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full" style={{ background: `${ROSE}25` }}>
+                            {thumb && <AppImage src={thumb} alt="" className="h-full w-full object-cover" />}
+                          </div>
+                          <span className="min-w-0 flex-1 text-sm" style={{ color: CHAMPAGNE }}>
+                            {p.name}
+                          </span>
+                          <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>
+                            {p.count} {p.count === 1 ? "entry" : "entries"}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
 
