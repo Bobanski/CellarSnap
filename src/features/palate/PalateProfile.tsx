@@ -1,10 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { grapeProfileUrl, regionProfileUrl } from "@shared";
-import TasteMap, { type TasteMapAxis } from "@/features/palate/TasteMap";
+import TasteMap, { AXIS_DESCRIPTIONS, personalRead, type TasteMapAxis } from "@/features/palate/TasteMap";
+import WineGlassConfidence from "@/features/palate/WineGlassConfidence";
 import Button from "@/components/ui/Button";
+
+// Auto-distillation (item 5): the palate page is the trigger point for the
+// expensive "master somm reads your history" step — nothing else calls it
+// automatically. ensurePalateProfile (server side, POST /api/palate/distill)
+// already no-ops when the signal is unchanged and the cache is fresh, so it's
+// safe to fire this on every page load once there's enough signal; the route's
+// own rate limit is the cost guard.
+const AUTO_DISTILL_MIN_ENTRIES = 5;
+const AUTO_DISTILL_POLL_INTERVAL_MS = 4000;
+const AUTO_DISTILL_MAX_WAIT_MS = 90_000;
+
+// "Profile confidence" full-mark (src/lib/algorithm/matchUi.ts
+// describePreferenceStrength): progress reaches 100 at 18 detailed entries.
+// Not to be confused with SURVEY_FADE_THRESHOLD (15) in
+// src/server/algorithm/constants.ts, which fades survey seeds in the scoring
+// engine — a related but distinct threshold. This is the one that actually
+// drives the confidence UI already shipping, so the glass stays consistent
+// with it.
+const FULL_CONFIDENCE_ENTRIES = 18;
 
 // ─── Colors (wine-type swatches) ────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -89,11 +109,35 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SensoryBar({ label, value, max = 5 }: { label: string; value: number; max?: number }) {
+// Tappable — mirrors the TasteMap berries' "teach on tap" behavior so the
+// lean-into/avoid chips aren't a dead end. `onSelect` opens the shared
+// AxisDetailCard beneath the section; `selected` gets a subtle highlight.
+function SensoryBar({
+  axis,
+  label,
+  value,
+  max = 5,
+  selected = false,
+  onSelect,
+}: {
+  axis: string;
+  label: string;
+  value: number;
+  max?: number;
+  selected?: boolean;
+  onSelect?: (axis: string) => void;
+}) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
   const isHigh = value >= 3.8;
   return (
-    <div className="space-y-1">
+    <button
+      type="button"
+      onClick={() => onSelect?.(axis)}
+      aria-pressed={onSelect ? selected : undefined}
+      className={`w-full space-y-1 rounded-lg text-left transition ${
+        onSelect ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/35" : ""
+      } ${selected ? "ring-2 ring-[var(--color-accent-secondary)]/50" : ""}`}
+    >
       <div className="flex items-center justify-between text-xs">
         <span className="text-[var(--color-text-secondary)]">{label}</span>
         <span
@@ -113,6 +157,45 @@ function SensoryBar({ label, value, max = 5 }: { label: string; value: number; m
           style={{ width: `${pct}%` }}
         />
       </div>
+    </button>
+  );
+}
+
+// Same compact card pattern as TasteMap's interactive berry detail — personal
+// read + brand-voice axis description, no modal. Shared by the lean-into and
+// avoid sections so tapping either kind of chip teaches the same way.
+function AxisDetailCard({
+  axis,
+  label,
+  value,
+  confidence,
+  onClose,
+}: {
+  axis: string;
+  label: string;
+  value: number;
+  confidence: number;
+  onClose: () => void;
+}) {
+  return (
+    <div className="relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/25 px-4 py-3.5">
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close axis detail"
+        className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-text-tertiary)] transition hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+      <p className="pr-6 text-[15px] leading-tight text-[var(--color-text-primary)]" style={{ fontFamily: "var(--font-serif)" }}>
+        {label}
+      </p>
+      <p className="mt-1.5 text-[12.5px] font-medium leading-snug text-[var(--color-accent-secondary)]">
+        {personalRead(label, value, confidence)}
+      </p>
+      <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--color-text-secondary)]">
+        {AXIS_DESCRIPTIONS[axis] ?? ""}
+      </p>
     </div>
   );
 }
@@ -152,14 +235,43 @@ function TypeBar({ stats }: { stats: WineTypeStat[] }) {
 }
 
 // ─── Somm narrative block ───────────────────────────────────
+// "ready" isn't tracked as its own state — `somm` being non-null already
+// means ready, so SommNarrative branches on `somm` first and only consults
+// this for what to show while there's no narrative yet.
+type DistillStatus = "idle" | "pending" | "timeout";
+
+function SommReadingIndicator() {
+  return (
+    <div
+      className="mt-4 flex items-center gap-2.5 text-[15px] italic leading-[1.6] text-[var(--color-text-secondary)] sm:text-[17px]"
+      style={{ fontFamily: "var(--font-serif)" }}
+      role="status"
+      aria-label="The somm is reading your palate"
+    >
+      <span>The somm is reading your palate…</span>
+      <span className="inline-flex items-center gap-1" aria-hidden="true">
+        {[0, 1, 2].map((index) => (
+          <span
+            key={index}
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-accent-secondary)]/80"
+            style={{ animationDelay: `${index * 180}ms` }}
+          />
+        ))}
+      </span>
+    </div>
+  );
+}
+
 function SommNarrative({
   somm,
   hasSurvey,
   totalRated,
+  distillStatus,
 }: {
   somm: SommProfile | null;
   hasSurvey: boolean;
   totalRated: number;
+  distillStatus: DistillStatus;
 }) {
   return (
     <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 sm:p-7">
@@ -188,6 +300,15 @@ function SommNarrative({
             </div>
           ) : null}
         </>
+      ) : distillStatus === "pending" ? (
+        <SommReadingIndicator />
+      ) : distillStatus === "timeout" ? (
+        <p
+          className="mt-4 text-[19px] leading-[1.6] text-[var(--color-text-primary)] sm:text-[21px]"
+          style={{ fontFamily: "var(--font-serif)" }}
+        >
+          The somm is taking a little longer than usual with your palate — check back in a bit.
+        </p>
       ) : (
         <>
           <p
@@ -219,6 +340,9 @@ export default function PalateProfile() {
   const [data, setData] = useState<PalateData | null>(null);
   const [somm, setSomm] = useState<SommProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [distillTimedOut, setDistillTimedOut] = useState(false);
+  const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
+  const distillTriggeredRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,6 +371,66 @@ export default function PalateProfile() {
       cancelled = true;
     };
   }, []);
+
+  // Auto-distillation (item 5 / Ethan's bug): "Your palate, read by the somm"
+  // never filled because nothing ever called the distill endpoint — it was
+  // POST-only, manual. Once we know the user has enough signal and there's
+  // no distilled profile yet, kick off a background refresh and poll for the
+  // result. ensurePalateProfile (server side) already handles the
+  // hash/staleness check and no-ops when the cache is fresh, and the route
+  // is rate-limited — so firing this fire-and-forget on every qualifying
+  // page load is safe and cheap. We never distill inline on a request path;
+  // this only ever calls the existing POST/GET /api/palate/distill routes.
+  //
+  // No "pending" state is set here directly — the "pending" UI is *derived*
+  // from (data loaded, no somm yet, enough signal, not timed out) below, so
+  // this effect only ever calls setState from inside async callbacks
+  // (fetch .then / setTimeout), never synchronously in the effect body.
+  useEffect(() => {
+    if (!data || somm || distillTriggeredRef.current) return;
+    if (data.totalRated < AUTO_DISTILL_MIN_ENTRIES) return;
+    distillTriggeredRef.current = true;
+
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    // Fire-and-forget — we don't need the response body, only its side
+    // effect (writing/refreshing the cached profile row).
+    fetch("/api/palate/distill", { method: "POST" }).catch(() => {
+      // Best-effort; the poll loop below will simply time out if this failed
+      // (e.g. rate-limited or Anthropic not configured).
+    });
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const res = await fetch("/api/palate/distill");
+        if (res.ok) {
+          const json = (await res.json()) as { profile: SommProfile | null };
+          if (json.profile) {
+            if (!cancelled) setSomm(json.profile);
+            return;
+          }
+        }
+      } catch {
+        // Ignore — retry on the next tick until the timeout.
+      }
+      if (cancelled) return;
+      if (Date.now() - startedAt >= AUTO_DISTILL_MAX_WAIT_MS) {
+        setDistillTimedOut(true);
+        return;
+      }
+      pollTimer = setTimeout(poll, AUTO_DISTILL_POLL_INTERVAL_MS);
+    };
+
+    pollTimer = setTimeout(poll, AUTO_DISTILL_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [data, somm]);
 
   if (error) {
     return (
@@ -321,6 +505,14 @@ export default function PalateProfile() {
     surveyFallback,
   } = data;
 
+  // Derived, not stored: "pending" just means we've kicked off the
+  // background distill (see the effect above) and are still waiting on it.
+  const distillStatus: DistillStatus = distillTimedOut
+    ? "timeout"
+    : totalRated >= AUTO_DISTILL_MIN_ENTRIES
+      ? "pending"
+      : "idle";
+
   return (
     <div className="space-y-7">
       {/* ── Hero headline ── */}
@@ -368,31 +560,74 @@ export default function PalateProfile() {
       ) : null}
 
       {/* ── Somm narrative ── */}
-      <SommNarrative somm={somm} hasSurvey={data.hasSurvey} totalRated={totalRated} />
+      <SommNarrative
+        somm={somm}
+        hasSurvey={data.hasSurvey}
+        totalRated={totalRated}
+        distillStatus={distillStatus}
+      />
 
-      {/* ── Lean into / avoid ── */}
+      {/* ── Lean into / avoid ──
+          Chips teach like the TasteMap berries: tapping one opens the same
+          compact detail card (personal read + axis description) instead of
+          just sitting there as a static bar. Per-axis confidence comes from
+          the same tasteMap array the TasteMap component itself renders from,
+          so the read matches exactly. */}
       {(leansInto.length > 0 || avoids.length > 0) && (
-        <section className="grid gap-4 sm:grid-cols-2">
-          {leansInto.length > 0 ? (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
-                You lean into
-              </p>
-              {leansInto.map((a) => (
-                <SensoryBar key={a.axis} label={a.label} value={a.value} />
-              ))}
-            </div>
-          ) : null}
-          {avoids.length > 0 ? (
-            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                You tend to avoid
-              </p>
-              {avoids.map((a) => (
-                <SensoryBar key={a.axis} label={a.label} value={a.value} />
-              ))}
-            </div>
-          ) : null}
+        <section className="space-y-3">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {leansInto.length > 0 ? (
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
+                  You lean into
+                </p>
+                {leansInto.map((a) => (
+                  <SensoryBar
+                    key={a.axis}
+                    axis={a.axis}
+                    label={a.label}
+                    value={a.value}
+                    selected={selectedAxis === a.axis}
+                    onSelect={(axis) => setSelectedAxis((cur) => (cur === axis ? null : axis))}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {avoids.length > 0 ? (
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                  You tend to avoid
+                </p>
+                {avoids.map((a) => (
+                  <SensoryBar
+                    key={a.axis}
+                    axis={a.axis}
+                    label={a.label}
+                    value={a.value}
+                    selected={selectedAxis === a.axis}
+                    onSelect={(axis) => setSelectedAxis((cur) => (cur === axis ? null : axis))}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+          {(() => {
+            const selected =
+              selectedAxis != null
+                ? ([...leansInto, ...avoids].find((a) => a.axis === selectedAxis) ?? null)
+                : null;
+            if (!selected) return null;
+            const confidence = tasteMap.find((t) => t.axis === selected.axis)?.confidence ?? 0.5;
+            return (
+              <AxisDetailCard
+                axis={selected.axis}
+                label={selected.label}
+                value={selected.value}
+                confidence={confidence}
+                onClose={() => setSelectedAxis(null)}
+              />
+            );
+          })()}
         </section>
       )}
 
@@ -484,19 +719,34 @@ export default function PalateProfile() {
         </section>
       )}
 
-      {/* ── Confidence footer ── */}
+      {/* ── Confidence footer — a filling wine glass ──
+          Fill level mirrors preferenceStrength.progress (0-100), the same
+          number that already drives the "Profile confidence" label — see
+          FULL_CONFIDENCE_ENTRIES above for why that's 18, not the
+          SURVEY_FADE_THRESHOLD (15) from the scoring engine. The countdown
+          caption is an approximation back from that rounded progress
+          percentage — close enough for a motivational nudge, not meant to
+          be exact. */}
       <div className="flex items-center gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-tinted)] px-5 py-3">
+        <WineGlassConfidence progress={preferenceStrength.progress} />
         <div className="flex-1">
           <p className="text-xs font-semibold text-[var(--color-text-primary)]">
             Profile confidence: {preferenceStrength.label}
           </p>
-          <p className="text-[11px] text-[var(--color-text-tertiary)]">{preferenceStrength.detail}</p>
-        </div>
-        <div className="h-1.5 w-24 rounded-full bg-[var(--color-surface-hover)]">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-primary)] to-[var(--color-accent-secondary)]"
-            style={{ width: `${preferenceStrength.progress}%` }}
-          />
+          <p className="mt-0.5 text-[11px] italic text-[var(--color-text-tertiary)]">
+            {(() => {
+              if (preferenceStrength.progress >= 100) {
+                return "I've got a real read on your palate now.";
+              }
+              const remaining = Math.max(
+                1,
+                Math.round(((100 - preferenceStrength.progress) / 100) * FULL_CONFIDENCE_ENTRIES)
+              );
+              return remaining === 1
+                ? "One more pour and I'll really know you."
+                : `${remaining} more pours and I'll really know you.`;
+            })()}
+          </p>
         </div>
       </div>
     </div>

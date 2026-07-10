@@ -74,7 +74,10 @@ const AXIS_META: Record<string, { group: TasteGroupKey; label: string }> = {
 // Warm, concrete, zero-snobbery descriptions of what each axis actually
 // tastes/feels like — shown in the tap-to-explore detail card (variant
 // "full", interactive). One sentence, sensory language, brand voice.
-const AXIS_DESCRIPTIONS: Record<string, string> = {
+// Exported so other tap-to-explore surfaces (e.g. the palate profile's
+// "lean into / avoid" chips) can reuse the exact same copy instead of
+// duplicating it.
+export const AXIS_DESCRIPTIONS: Record<string, string> = {
   body: "How much weight the wine carries on your tongue — light as skim milk or full as cream.",
   acidity:
     "The mouthwatering zing that keeps a wine lively — the difference between a squeeze of lemon and a ripe peach.",
@@ -111,8 +114,11 @@ const AXIS_DESCRIPTIONS: Record<string, string> = {
  * Personal-read phrasing bands (spec): value bands describe lean direction
  * and strength; a confidence floor overrides everything else because a
  * strong-sounding claim on thin evidence is worse than no claim.
+ *
+ * Exported for reuse by other tap-to-explore axis surfaces (e.g. the palate
+ * profile's "lean into / avoid" chips) so the phrasing never drifts.
  */
-function personalRead(label: string, value: number, confidence: number): string {
+export function personalRead(label: string, value: number, confidence: number): string {
   if (confidence < 0.3) {
     return "We're still reading you on this one.";
   }
