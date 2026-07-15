@@ -21,6 +21,7 @@ import {
   IdentifyBottleError,
   isBottleIdentified,
 } from "@/lib/sommelier/identifyBottleApi";
+import SommelierChatErrorBoundary from "@/features/sommelier/SommelierChatErrorBoundary";
 
 const SommelierMessage = dynamic(
   () => import("@/features/sommelier/SommelierMessage"),
@@ -103,12 +104,14 @@ function parseSseBuffer(
  * Maps chat history to the API's {role, content} shape, dropping any
  * empty-content entries (e.g. an in-flight "identifying..." wine-card
  * placeholder) so they never trip the chat route's non-empty content
- * validation.
+ * validation. `content` is typed as always-a-string, but this guards the
+ * boundary defensively anyway (typeof check before .trim()) rather than
+ * trusting the type at runtime.
  */
 function buildPriorApiMessages(history: ChatMessage[]): ApiMessage[] {
   return history
     .map(({ role, content }) => ({ role, content }))
-    .filter((message) => message.content.trim().length > 0);
+    .filter((message) => typeof message.content === "string" && message.content.trim().length > 0);
 }
 
 function pickGreeting(
@@ -126,6 +129,14 @@ function pickGreeting(
 }
 
 export default function SommelierChat() {
+  return (
+    <SommelierChatErrorBoundary>
+      <SommelierChatInner />
+    </SommelierChatErrorBoundary>
+  );
+}
+
+function SommelierChatInner() {
   const [audienceMode, setAudienceMode] = useState<AudienceMode | null>(null);
   const [greeting, setGreeting] = useState(SOMMELIER_INTRO_MESSAGE);
   const [messages, setMessages] = useState<ChatMessage[]>([

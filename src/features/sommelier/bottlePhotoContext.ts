@@ -22,7 +22,11 @@ function describeWine(wine: IdentifiedWine): string {
   const headline = [wine.name ?? "Unknown wine", wine.producer, wine.vintage, wine.region || wine.country]
     .filter(Boolean)
     .join(", ");
-  const grapes = wine.grapes.length > 0 ? ` Grapes: ${wine.grapes.join(", ")}.` : "";
+  // wine.grapes is typed as always string[] (server-side normalization
+  // guarantees this), but this boundary crosses an API response, so guard
+  // defensively rather than trusting the type at runtime.
+  const grapeList = Array.isArray(wine.grapes) ? wine.grapes : [];
+  const grapes = grapeList.length > 0 ? ` Grapes: ${grapeList.join(", ")}.` : "";
   return `${headline}.${grapes}`;
 }
 
