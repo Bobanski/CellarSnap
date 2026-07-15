@@ -3875,6 +3875,34 @@ export async function parseWineListSource(
   } as ListScanResult;
 }
 
+/**
+ * Re-scores an already-parsed list-scan result's wines against the user's
+ * current preferences, without re-running OCR/LLM parsing. Used after a
+ * user completes the mini-palate quick-survey on the results screen so
+ * matches personalize immediately (Wave 3, item 4) — the raw parsed wine
+ * data (producer/varietals/regions/etc.) already round-trips through
+ * `list_scan_results.raw_result`, so `enrichParsedWines` can run again from
+ * that alone.
+ */
+export async function rescoreListScanResult(
+  result: ListScanResult,
+  userId: string,
+  userSupabase: SupabaseClient
+): Promise<ListScanResult> {
+  const enriched = await enrichParsedWines({
+    wines: result.wines,
+    userId,
+    userSupabase,
+  });
+
+  return {
+    ...result,
+    score_summary: enriched.scoreSummary,
+    facets: deriveListScanFacets(enriched.wines),
+    wines: enriched.wines,
+  };
+}
+
 export const __listScanTestUtils = {
   applyInferenceToWine,
   applyStubMatchPercents,

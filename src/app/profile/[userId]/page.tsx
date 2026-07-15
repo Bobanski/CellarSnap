@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { getPublicRatingBandLabel } from "@shared";
 import { formatConsumedDate } from "@/lib/formatDate";
 import { shouldHideProducerInEntryTile } from "@/lib/entryDisplay";
 import type { WineEntryWithUrls } from "@/types/wine";
@@ -11,6 +12,33 @@ import Photo from "@/components/Photo";
 import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
 import RatingBadge from "@/components/RatingBadge";
+
+/**
+ * Decision 1 (overhaul-plan): raw 1-100 ratings are a private input and
+ * never render on a public surface for a viewer who isn't the entry owner.
+ * Friend-profile entry tiles show either the viewer's own rating (when
+ * looking at their own uploads/tags) or a warm public band otherwise.
+ */
+function EntryRatingDisplay({
+  rating,
+  isOwnEntry,
+}: {
+  rating: number | null | undefined;
+  isOwnEntry: boolean;
+}) {
+  if (typeof rating !== "number" || Number.isNaN(rating)) {
+    return null;
+  }
+  if (isOwnEntry) {
+    return <RatingBadge rating={rating} variant="text" />;
+  }
+  const bandLabel = getPublicRatingBandLabel(rating);
+  return bandLabel ? (
+    <span className="text-sm font-bold text-[var(--color-accent-secondary)]">
+      {bandLabel}
+    </span>
+  ) : null;
+}
 
 type EntryWithAuthor = WineEntryWithUrls & { author_name?: string };
 
@@ -634,10 +662,10 @@ export default function FriendProfilePage() {
                         </div>
                         <div className="flex items-center justify-between gap-2 text-xs text-[var(--color-text-tertiary)]">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {typeof entry.rating === "number" &&
-                            !Number.isNaN(entry.rating) ? (
-                              <RatingBadge rating={entry.rating} variant="text" />
-                            ) : null}
+                            <EntryRatingDisplay
+                              rating={entry.rating}
+                              isOwnEntry={entry.user_id === currentUserId}
+                            />
                             {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                           </div>
                           <span>{formatConsumedDate(entry.consumed_at)}</span>
@@ -727,10 +755,10 @@ export default function FriendProfilePage() {
                         </div>
                         <div className="flex items-center justify-between gap-2 text-xs text-[var(--color-text-tertiary)]">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {typeof entry.rating === "number" &&
-                            !Number.isNaN(entry.rating) ? (
-                              <RatingBadge rating={entry.rating} variant="text" />
-                            ) : null}
+                            <EntryRatingDisplay
+                              rating={entry.rating}
+                              isOwnEntry={entry.user_id === currentUserId}
+                            />
                             {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
                           </div>
                           <span>{formatConsumedDate(entry.consumed_at)}</span>

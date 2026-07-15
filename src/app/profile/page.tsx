@@ -17,10 +17,13 @@ import {
   type ProfileNameDisplayPreference,
 } from "@shared";
 import BadgeIcon from "@/features/badges/BadgeIcon";
+import FeaturedBadgesRow from "@/features/badges/FeaturedBadgesRow";
 import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
+import Button, { SegmentedControl } from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
 import type {
   EntryGroup,
   GroupedEntrySlide,
@@ -65,6 +68,12 @@ type Entry = {
   entry_group_id?: string | null;
   entry_group?: EntryGroup | null;
   group_slides?: GroupedEntrySlide[] | null;
+  // Present on the /api/entries payload (consumed/"opened" entries only) —
+  // used to derive the private "Opened" stats band client-side, no extra query.
+  country?: string | null;
+  region?: string | null;
+  rating?: number | null;
+  primary_grapes?: { id: string; name: string; position: number }[] | null;
 };
 
 type FriendProfile = {
@@ -184,6 +193,51 @@ export default function ProfilePage() {
       return true;
     });
   }, [entries]);
+
+  // "Opened" stats band (own-profile only, private framing): derived entirely
+  // client-side from the entries already loaded for the gallery — no extra
+  // query. /api/entries only ever returns consumed ("opened") entries, so
+  // `entries` here already is that set (bottlesOpened uses the exact
+  // `wineCount` total since `entries` itself may only be the first page).
+  const openedStats = useMemo(() => {
+    if (entries.length === 0) return null;
+
+    const countries = new Set<string>();
+    const grapeCounts = new Map<string, number>();
+    const regionCounts = new Map<string, number>();
+    let ratingSum = 0;
+    let ratingCount = 0;
+
+    entries.forEach((entry) => {
+      const country = entry.country?.trim();
+      if (country) countries.add(country);
+
+      const region = entry.region?.trim();
+      if (region) regionCounts.set(region, (regionCounts.get(region) ?? 0) + 1);
+
+      (entry.primary_grapes ?? []).forEach((grape) => {
+        const name = grape.name?.trim();
+        if (!name) return;
+        grapeCounts.set(name, (grapeCounts.get(name) ?? 0) + 1);
+      });
+
+      if (typeof entry.rating === "number" && Number.isFinite(entry.rating)) {
+        ratingSum += entry.rating;
+        ratingCount += 1;
+      }
+    });
+
+    const topOf = (counts: Map<string, number>) =>
+      Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    return {
+      bottlesOpened: wineCount ?? entries.length,
+      countries: countries.size,
+      topGrape: topOf(grapeCounts),
+      topRegion: topOf(regionCounts),
+      avgRating: ratingCount > 0 ? ratingSum / ratingCount : null,
+    };
+  }, [entries, wineCount]);
 
   // Friends tab state
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -994,13 +1048,13 @@ export default function ProfilePage() {
                 ) : null}
                 <div className="mt-3 flex items-center gap-6">
                   <div>
-                    <span className="text-sm font-semibold tabular-nums text-[var(--color-text-primary)]">
+                    <span className="text-numeric text-base text-[var(--color-text-primary)]">
                       {wineCount ?? "\u2014"}
                     </span>{" "}
                     <span className="text-xs text-[var(--color-text-tertiary)]">wines</span>
                   </div>
                   <div>
-                    <span className="text-sm font-semibold tabular-nums text-[var(--color-text-primary)]">
+                    <span className="text-numeric text-base text-[var(--color-text-primary)]">
                       {friendCount ?? "\u2014"}
                     </span>{" "}
                     <span className="text-xs text-[var(--color-text-tertiary)]">friends</span>
@@ -1008,6 +1062,113 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* ── Featured badges (up to 5), below the name ── */}
+            <FeaturedBadgesRow />
+
+            {/* ── "Opened" stats band — own profile only, private framing ── */}
+            {openedStats ? (
+              <div className="mt-5">
+                <p className="mb-2 text-[9px] font-bold uppercase tracking-[3px] text-[var(--color-text-tertiary)]">
+                  Your opened bottles &middot; only visible to you
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: openedStats.bottlesOpened, label: "Opened" },
+                    { value: openedStats.countries, label: "Countries" },
+                    {
+                      value:
+                        openedStats.avgRating !== null
+                          ? Math.round(openedStats.avgRating)
+                          : "—",
+                      label: "Avg rating",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="text-center"
+                      style={{
+                        background: "var(--color-surface-primary)",
+                        border: "0.5px solid var(--color-border)",
+                        borderRadius: 12,
+                        padding: "12px 6px",
+                      }}
+                    >
+                      <span
+                        className="text-numeric block"
+                        style={{ fontSize: 26, color: "var(--color-text-primary)" }}
+                      >
+                        {stat.value}
+                      </span>
+                      <span
+                        className="mt-1 block uppercase"
+                        style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--color-text-tertiary)" }}
+                      >
+                        {stat.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {openedStats.topGrape || openedStats.topRegion ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div
+                      className="text-center"
+                      style={{
+                        background: "var(--color-surface-primary)",
+                        border: "0.5px solid var(--color-border)",
+                        borderRadius: 12,
+                        padding: "12px 8px",
+                      }}
+                    >
+                      <span
+                        className="block truncate"
+                        style={{
+                          fontFamily: "var(--font-serif)",
+                          fontSize: 17,
+                          fontWeight: 400,
+                          color: "var(--color-text-primary)",
+                        }}
+                      >
+                        {openedStats.topGrape ?? "—"}
+                      </span>
+                      <span
+                        className="mt-1 block uppercase"
+                        style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--color-text-tertiary)" }}
+                      >
+                        Top grape
+                      </span>
+                    </div>
+                    <div
+                      className="text-center"
+                      style={{
+                        background: "var(--color-surface-primary)",
+                        border: "0.5px solid var(--color-border)",
+                        borderRadius: 12,
+                        padding: "12px 8px",
+                      }}
+                    >
+                      <span
+                        className="block truncate"
+                        style={{
+                          fontFamily: "var(--font-serif)",
+                          fontSize: 17,
+                          fontWeight: 400,
+                          color: "var(--color-text-primary)",
+                        }}
+                      >
+                        {openedStats.topRegion ?? "—"}
+                      </span>
+                      <span
+                        className="mt-1 block uppercase"
+                        style={{ fontSize: 9, letterSpacing: 1.4, color: "var(--color-text-tertiary)" }}
+                      >
+                        Top region
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* ── My Palate card ── */}
             <Link
@@ -1038,46 +1199,20 @@ export default function ProfilePage() {
             </Link>
 
             {/* Gallery toggle */}
-            <div className="mt-5 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setGalleryTab("mine")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  galleryTab === "mine"
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                {PROFILE_GALLERY_TAB_LABELS.mine}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setGalleryTab("tagged");
-                  if (!taggedLoaded && profile) loadTaggedEntries(profile.id);
+            <div className="mt-5 flex items-center justify-center">
+              <SegmentedControl
+                options={[
+                  { value: "mine" as const, label: PROFILE_GALLERY_TAB_LABELS.mine },
+                  { value: "tagged" as const, label: PROFILE_GALLERY_TAB_LABELS.tagged },
+                  { value: "friends" as const, label: PROFILE_GALLERY_TAB_LABELS.friends },
+                ]}
+                value={galleryTab}
+                onChange={(tab) => {
+                  setGalleryTab(tab);
+                  if (tab === "tagged" && !taggedLoaded && profile) loadTaggedEntries(profile.id);
+                  if (tab === "friends") loadFriends();
                 }}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  galleryTab === "tagged"
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                {PROFILE_GALLERY_TAB_LABELS.tagged}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setGalleryTab("friends");
-                  loadFriends();
-                }}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  galleryTab === "friends"
-                    ? "bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                {PROFILE_GALLERY_TAB_LABELS.friends}
-              </button>
+              />
             </div>
 
             {usernameSuccess ? (
@@ -1117,9 +1252,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : !entriesLoading ? (
-                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-center text-sm text-[var(--color-text-tertiary)]">
-                    {PROFILE_GALLERY_MESSAGES.emptyEntries}
-                  </div>
+                  <EmptyState title={PROFILE_GALLERY_MESSAGES.emptyEntries} />
                 ) : null}
 
                 {entriesLoading ? (
@@ -1135,15 +1268,15 @@ export default function ProfilePage() {
 
                 {entriesHasMore && !entriesLoading ? (
                   <div className="mt-4 text-center">
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => {
                         if (entriesCursor) loadEntries(entriesCursor);
                       }}
-                      className="rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                     >
                       Load more
-                    </button>
+                    </Button>
                   </div>
                 ) : null}
               </>
@@ -1176,9 +1309,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : !taggedLoading ? (
-                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-center text-sm text-[var(--color-text-tertiary)]">
-                    {PROFILE_GALLERY_MESSAGES.emptyTagged}
-                  </div>
+                  <EmptyState title={PROFILE_GALLERY_MESSAGES.emptyTagged} />
                 ) : null}
 
                 {taggedLoading ? (
@@ -1237,14 +1368,14 @@ export default function ProfilePage() {
                                     <p className="text-xs text-[var(--color-accent-secondary)]">Requested you</p>
                                   ) : null}
                                 </div>
-                                <button
-                                  type="button"
+                                <Button
+                                  variant="secondary"
+                                  size="xs"
                                   disabled={isFriend || isOutgoing || isMutating}
                                   onClick={() => sendRequest(user.id)}
-                                  className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {isFriend ? "Friends" : isOutgoing ? "Pending" : "Add"}
-                                </button>
+                                </Button>
                               </div>
                             );
                           })}
@@ -1300,16 +1431,16 @@ export default function ProfilePage() {
                                     </p>
                                   </div>
                                   <div className="mt-2 flex gap-2">
-                                    <button
-                                      type="button"
+                                    <Button
+                                      variant="primary"
+                                      size="xs"
                                       disabled={isMutating}
                                       onClick={() =>
                                         respondToRequest(req.id, "accept")
                                       }
-                                      className="rounded-full bg-[var(--color-accent-primary)] px-3 py-1 text-xs font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                                     >
                                       Accept
-                                    </button>
+                                    </Button>
                                     <button
                                       type="button"
                                       disabled={isMutating}
@@ -1620,13 +1751,13 @@ export default function ProfilePage() {
                         className="hidden"
                         onChange={handleAvatarChange}
                       />
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => avatarInputRef.current?.click()}
-                        className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                       >
                         Choose picture
-                      </button>
+                      </Button>
                       {avatarError ? (
                         <p className="text-sm text-[var(--color-error)]">{avatarError}</p>
                       ) : null}
@@ -1767,14 +1898,15 @@ export default function ProfilePage() {
                   ) : null}
 
                   <div className="flex items-center gap-3">
-                    <button
-                      type="button"
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="min-w-[9rem]"
                       disabled={isSavingUsername}
                       onClick={saveProfile}
-                      className="min-w-[9rem] rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-center text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:opacity-50"
                     >
                       {isSavingUsername ? "Saving\u2026" : PROFILE_SETTINGS_COPY.saveProfileLabel}
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -2035,16 +2167,17 @@ export default function ProfilePage() {
                     </div>
 
                     {!isPasswordOpen ? (
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="shrink-0"
                         onClick={() => {
                           setPasswordSuccess(null);
                           setIsPasswordOpen(true);
                         }}
-                        className="shrink-0 rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
                       >
                         {PROFILE_SETTINGS_COPY.changePasswordLabel}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
 
@@ -2072,14 +2205,15 @@ export default function ProfilePage() {
                             placeholder={PROFILE_SETTINGS_COPY.currentPasswordPlaceholder}
                             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
                             onClick={() => setShowCurrentPassword((p) => !p)}
-                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
+                            className="absolute inset-y-0 right-2 my-1"
                             aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                           >
                             {showCurrentPassword ? "Hide" : "Show"}
-                          </button>
+                          </Button>
                         </div>
                       </div>
 
@@ -2101,14 +2235,15 @@ export default function ProfilePage() {
                             placeholder={PROFILE_SETTINGS_COPY.newPasswordPlaceholder}
                             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
                             onClick={() => setShowNewPassword((p) => !p)}
-                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
+                            className="absolute inset-y-0 right-2 my-1"
                             aria-label={showNewPassword ? "Hide password" : "Show password"}
                           >
                             {showNewPassword ? "Hide" : "Show"}
-                          </button>
+                          </Button>
                         </div>
                       </div>
 
@@ -2130,14 +2265,15 @@ export default function ProfilePage() {
                             placeholder={PROFILE_SETTINGS_COPY.confirmPasswordPlaceholder}
                             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 pr-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                           />
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
                             onClick={() => setShowConfirmPassword((p) => !p)}
-                            className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
+                            className="absolute inset-y-0 right-2 my-1"
                             aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                           >
                             {showConfirmPassword ? "Hide" : "Show"}
-                          </button>
+                          </Button>
                         </div>
                       </div>
 
@@ -2146,16 +2282,16 @@ export default function ProfilePage() {
                       ) : null}
 
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
+                        <Button
+                          variant="primary"
+                          size="sm"
                           disabled={isSavingPassword || !currentPassword || !newPassword || !confirmPassword}
                           onClick={savePassword}
-                          className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isSavingPassword
                             ? "Updating..."
                             : PROFILE_SETTINGS_COPY.updatePasswordLabel}
-                        </button>
+                        </Button>
                         <button
                           type="button"
                           onClick={cancelPasswordChange}

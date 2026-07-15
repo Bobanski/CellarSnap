@@ -29,13 +29,23 @@ import {
 
 import AppShell from "@/components/AppShell";
 import QprBadge from "@/components/QprBadge";
-import RatingBadge from "@/components/RatingBadge";
 import ScoreBreakdown from "@/components/ScoreBreakdown";
 import SwipePhotoGallery from "@/components/SwipePhotoGallery";
 import WineMatchScore from "@/components/WineMatchScore";
+import Button from "@/components/ui/Button";
+import TasteMap, { type TasteMapAxis } from "@/features/palate/TasteMap";
 import { fetchEntryCollectionsClient } from "@/lib/collections/client";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { SENSORY_AXES } from "@/server/algorithm/types";
 import type { EntryPhoto, WineEntryWithUrls, WineType } from "@/types/wine";
+import { WINE_TYPE_LABELS } from "@/types/wine";
+
+const ENJOYMENT_INTENT_COPY: Record<string, { label: string; tone: "gold" | "rose" | "neutral" }> = {
+  seek_more: { label: "Seeking more", tone: "gold" },
+  happily_again: { label: "Happily again", tone: "rose" },
+  if_poured: { label: "If it's poured", tone: "neutral" },
+  pass: { label: "I'd pass next time", tone: "neutral" },
+};
 
 const REACTION_EMOJIS = FEED_REACTION_EMOJIS;
 
@@ -350,7 +360,9 @@ export default function EntryDetailPage() {
         }
       } catch {
         if (isMounted) {
-          setScoreError("Unable to load the palate match right now.");
+          setScoreError(
+            "Add a wine type and a tasting note, and we'll read how this bottle fits your palate."
+          );
           setScoreResult(null);
         }
       } finally {
@@ -429,6 +441,10 @@ export default function EntryDetailPage() {
       const shareUrl = payload.url;
       const shareText = buildEntryShareText();
 
+      // From this point on the share link has already been created
+      // successfully (200 + valid url). Any failure below is a client-side
+      // share-sheet/clipboard problem, not a link-creation failure — it must
+      // never be reported back as "Unable to create share link."
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         try {
           await navigator.share({
@@ -444,17 +460,19 @@ export default function EntryDetailPage() {
           if (shareError instanceof Error && shareError.name === "AbortError") {
             return;
           }
+          // Native share sheet failed for a reason other than user cancel —
+          // fall through to the clipboard fallback below.
         }
       }
 
-      const copied = await copyTextToClipboard(shareUrl);
-      if (copied) {
-        setShareToast({
-          kind: "success",
-          message: "Share link copied to clipboard.",
-        });
-      } else {
-        if (typeof window !== "undefined" && typeof window.prompt === "function") {
+      try {
+        const copied = await copyTextToClipboard(shareUrl);
+        if (copied) {
+          setShareToast({
+            kind: "success",
+            message: "Share link copied to clipboard.",
+          });
+        } else if (typeof window !== "undefined" && typeof window.prompt === "function") {
           window.prompt("Copy share link", shareUrl);
           setShareToast({
             kind: "success",
@@ -462,10 +480,18 @@ export default function EntryDetailPage() {
           });
         } else {
           setShareToast({
-            kind: "error",
-            message: "Unable to copy link automatically.",
+            kind: "success",
+            message: "Share link ready, but couldn't copy automatically.",
           });
         }
+      } catch {
+        if (typeof window !== "undefined" && typeof window.prompt === "function") {
+          window.prompt("Copy share link", shareUrl);
+        }
+        setShareToast({
+          kind: "success",
+          message: "Share link ready, but couldn't copy automatically.",
+        });
       }
     } catch {
       setShareToast({
@@ -721,6 +747,48 @@ export default function EntryDetailPage() {
   const isScoreProfileBuilding =
     typeof scoreResult?.preference_event_count === "number" &&
     scoreResult.preference_event_count < 5;
+  const canShowMatch = Boolean(
+    scoreResult && !isScoreProfileBuilding && scoreResult.display_score
+  );
+
+  // Enjoyment intent lives on the entry as `survey_enjoyment_intent` (returned by
+  // the entry API's `select("*")`), but isn't on the typed shape.
+  const enjoymentIntentValue = (entry as Record<string, unknown>)
+    .survey_enjoyment_intent as string | null | undefined;
+  const enjoymentIntent =
+    typeof enjoymentIntentValue === "string"
+      ? ENJOYMENT_INTENT_COPY[enjoymentIntentValue] ?? null
+      : null;
+
+  // Mini TasteMap data — this wine's sensory profile (berries), with the viewer's
+  // palate as a dashed reference when we have a usable match. Berry size encodes
+  // each axis's weight in the match, so the notes that matter read largest.
+  const wineTasteAxes: TasteMapAxis[] = scoreResult
+    ? (() => {
+        const weights = SENSORY_AXES.map(
+          (axis) => scoreResult.axis_contributions[axis]?.weight ?? 0
+        );
+        const maxWeight = Math.max(...weights, 0.0001);
+        return SENSORY_AXES.map((axis) => {
+          const contrib = scoreResult.axis_contributions[axis];
+          const wineVal =
+            contrib?.wine_value ?? scoreResult.effective_profile.sensory[axis] ?? 3;
+          const weight = contrib?.weight ?? 0;
+          return {
+            axis,
+            value: wineVal,
+            confidence: 0.3 + 0.7 * (weight / maxWeight),
+          };
+        });
+      })()
+    : [];
+  const userTasteAxes: TasteMapAxis[] = canShowMatch
+    ? SENSORY_AXES.map((axis) => {
+        const uv = scoreResult?.axis_contributions[axis]?.user_value;
+        return { axis, value: typeof uv === "number" ? uv : 3, confidence: 0.6 };
+      })
+    : [];
+  const hasTasteMap = wineTasteAxes.length > 0;
 
   return (
     <AppShell>
@@ -737,10 +805,13 @@ export default function EntryDetailPage() {
             <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
               Cellar entry
             </span>
-            <h1 className="max-w-4xl text-5xl font-semibold leading-[0.96] text-[var(--color-text-primary)] sm:text-6xl lg:text-7xl">
+            <h1
+              className="max-w-4xl text-4xl font-light leading-[1.03] text-[var(--color-text-primary)] sm:text-5xl lg:text-6xl"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
               {entry.wine_name || "Untitled wine"}
             </h1>
-            <p className="max-w-3xl text-2xl text-[var(--color-text-secondary)] sm:text-3xl">
+            <p className="max-w-3xl text-lg text-[var(--color-text-secondary)] sm:text-xl">
               {entry.producer ? (
                 <Link
                   href={producerProfileUrl(entry.producer)}
@@ -754,21 +825,30 @@ export default function EntryDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="rounded-full border border-[var(--color-accent-secondary)]/30 bg-accent-primary/10 px-4 py-2 text-sm font-semibold text-[var(--color-accent-secondary)] transition hover:border-[var(--color-accent-secondary)]/60 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={sharing || !canShareEntry}
-              onClick={onShare}
-            >
-              {sharing ? "Sharing..." : "Share"}
-            </button>
-            {isOwner ? (
-              <Link
-                className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                href={`/entries/${entry.id}/edit`}
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={sharing || !canShareEntry}
+                title={!canShareEntry ? "Make this entry public to share it" : undefined}
+                aria-describedby={!canShareEntry ? "share-disabled-hint" : undefined}
+                onClick={onShare}
               >
+                {sharing ? "Sharing..." : "Share"}
+              </Button>
+              {!canShareEntry ? (
+                <p
+                  id="share-disabled-hint"
+                  className="text-xs text-[var(--color-text-tertiary)]"
+                >
+                  Make this entry public to share it.
+                </p>
+              ) : null}
+            </div>
+            {isOwner ? (
+              <Button variant="secondary" size="sm" href={`/entries/${entry.id}/edit`}>
                 Edit entry
-              </Link>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -812,6 +892,131 @@ export default function EntryDetailPage() {
             </div>
           </div>
         ) : null}
+
+        {/* ── The payoff: match, your take, and how it fits your palate ── */}
+        <section className="space-y-3">
+          {scoreLoading ? (
+            <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5 text-sm text-[var(--color-text-tertiary)]">
+              Reading this bottle against your palate…
+            </div>
+          ) : canShowMatch && scoreResult ? (
+            <WineMatchScore
+              score={scoreResult.score}
+              band={scoreResult.band}
+              confidence={scoreResult.confidence}
+            />
+          ) : (
+            <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[var(--color-accent-secondary)]">
+                Palate match
+              </p>
+              <h2
+                className="mt-2 text-2xl font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                {isScoreProfileBuilding ? "Your palate is still forming" : "Match not ready yet"}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                {isScoreProfileBuilding
+                  ? `We need at least 5 scored entries with sensory notes — you have ${
+                      scoreResult?.preference_event_count ?? 0
+                    }.`
+                  : scoreResult?.confidence_warning ??
+                    scoreError ??
+                    "Add a little more detail — a wine type and a tasting note — and we'll read how this bottle fits your palate."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/entries/new"
+                  className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"
+                >
+                  Log another pour
+                </Link>
+                <Link
+                  href="/palate"
+                  className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
+                >
+                  View your taste map
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Your take — rating (private) + enjoyment intent */}
+          {isOwner || enjoymentIntent ? (
+            <div className="flex flex-wrap gap-3">
+              {isOwner ? (
+                <div className="min-w-[150px] flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                      Your rating
+                    </p>
+                    <span className="rounded-full border border-[var(--color-border)] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                      Private
+                    </span>
+                  </div>
+                  <p
+                    className="mt-2 text-3xl font-light text-[var(--color-accent-secondary)]"
+                    style={{ fontFamily: "var(--font-serif)" }}
+                  >
+                    {typeof entry.rating === "number" ? (
+                      <>
+                        {Math.round(entry.rating)}
+                        <span className="text-lg text-[var(--color-text-tertiary)]">/100</span>
+                      </>
+                    ) : (
+                      <span className="text-lg text-[var(--color-text-tertiary)]">Not rated yet</span>
+                    )}
+                  </p>
+                </div>
+              ) : null}
+              {enjoymentIntent ? (
+                <div className="min-w-[150px] flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                    {isOwner ? "Would you again?" : "Their take"}
+                  </p>
+                  <span
+                    className={`mt-2 inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${
+                      enjoymentIntent.tone === "gold"
+                        ? "border-[var(--color-accent-gold)]/40 text-[var(--color-accent-gold)]"
+                        : enjoymentIntent.tone === "rose"
+                          ? "border-[var(--color-accent-secondary)]/40 text-[var(--color-accent-secondary)]"
+                          : "border-[var(--color-border-strong)] text-[var(--color-text-secondary)]"
+                    }`}
+                  >
+                    {enjoymentIntent.label}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Sensory fingerprint — this bottle vs your palate */}
+          {hasTasteMap ? (
+            <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                Sensory fingerprint
+              </p>
+              <div className="mt-3 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
+                <div className="w-[168px] shrink-0">
+                  <TasteMap
+                    axes={wineTasteAxes}
+                    compareAxes={canShowMatch ? userTasteAxes : undefined}
+                    variant="card"
+                    size={168}
+                    primaryLabel="This wine"
+                    compareLabel="Your palate"
+                  />
+                </div>
+                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                  {canShowMatch
+                    ? "The filled shape is this bottle across our 16 sensory axes; the dashed line is your palate. Where they overlap is where it fits you — bigger berries are the notes that mattered most to the match."
+                    : "This bottle's sensory shape across the 16 axes we read — bigger berries are the notes that shape its character most."}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         <div className="space-y-6">
           <div className="space-y-0">
@@ -1029,62 +1234,27 @@ export default function EntryDetailPage() {
           </div>
 
           <div className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-surface-primary/10 p-6 backdrop-blur">
-            {scoreLoading
-                ? (
-                  <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5 text-sm text-[var(--color-text-tertiary)]">
-                    Calculating your palate match...
-                  </div>
-                )
-                : scoreResult && !isScoreProfileBuilding && scoreResult.display_score
-                  ? (
-                    <>
-                      <WineMatchScore
-                        score={scoreResult.score}
-                        band={scoreResult.band}
-                        confidence={scoreResult.confidence}
-                      />
-                      <ScoreBreakdown result={scoreResult} />
-                    </>
-                  )
-                  : (
-                    <div className="rounded-3xl border border-[var(--color-border)] bg-black/25 p-5">
-                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]/70">
-                        Palate match
-                      </p>
-                      <h2 className="mt-2 text-lg font-semibold text-[var(--color-text-primary)]">
-                        {isScoreProfileBuilding
-                          ? "Build your palate profile"
-                          : "Match score not ready yet"}
-                      </h2>
-                      <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                        {isScoreProfileBuilding
-                          ? `We need at least 5 scored entries with sensory notes. You currently have ${scoreResult?.preference_event_count ?? 0}.`
-                          : scoreError ??
-                            scoreResult?.confidence_warning ??
-                            "We need a little more profile detail before showing a stable match score."}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-3">
-                        <Link
-                          href="/entries/new"
-                          className="rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-primary"
-                        >
-                          Log another wine
-                        </Link>
-                        <Link
-                          href="/palate"
-                          className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/50 hover:text-[var(--color-accent-secondary)]"
-                        >
-                          View palate profile
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+            {canShowMatch && scoreResult ? (
+              <div>
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                  Why it matches
+                </p>
+                <ScoreBreakdown result={scoreResult} />
+              </div>
+            ) : null}
+
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+              The details
+            </p>
 
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
                 Date consumed
               </p>
-              <p className="mt-1 text-3xl font-semibold text-[var(--color-text-primary)] sm:text-4xl">
+              <p
+                className="mt-1 text-2xl font-light text-[var(--color-text-primary)]"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
                 {formatConsumedDate(entry.consumed_at)}
               </p>
             </div>
@@ -1140,15 +1310,6 @@ export default function EntryDetailPage() {
               </div>
             ) : null}
 
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
-                Rating
-              </p>
-              <p className="mt-1 text-[var(--color-text-tertiary)]">
-                <RatingBadge rating={entry.rating} variant="text" className="!text-3xl sm:!text-4xl" />
-              </p>
-            </div>
-
             {isOwner || entry.qpr_level ? (
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
@@ -1159,6 +1320,17 @@ export default function EntryDetailPage() {
                 ) : (
                   <p className="text-sm text-[var(--color-text-primary)]">Not set</p>
                 )}
+              </div>
+            ) : null}
+
+            {isOwner || entry.wine_type ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
+                  Wine type
+                </p>
+                <p className="text-sm text-[var(--color-text-primary)]">
+                  {entry.wine_type ? WINE_TYPE_LABELS[entry.wine_type] : "Not set"}
+                </p>
               </div>
             ) : null}
 
@@ -1503,11 +1675,12 @@ export default function EntryDetailPage() {
 
       {shareToast ? (
         <div
-          className={`fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-full border px-4 py-2 text-sm font-semibold shadow-[0_12px_32px_-20px_rgba(0,0,0,0.9)] ${
+          className={`fixed right-3 z-[60] max-w-[min(80vw,20rem)] rounded-2xl border px-4 py-3 text-right text-sm font-semibold shadow-[0_12px_32px_-12px_rgba(0,0,0,0.9)] backdrop-blur-md sm:right-6 ${
             shareToast.kind === "success"
-              ? "border-[var(--color-success)]/50 bg-success/15 text-[var(--color-success)]"
-              : "border-[var(--color-error)]/50 bg-error/15 text-[var(--color-error)]"
+              ? "border-[var(--color-success)]/50 bg-[var(--color-surface-raised)]/95 text-[var(--color-success)]"
+              : "border-[var(--color-error)]/50 bg-[var(--color-surface-raised)]/95 text-[var(--color-error)]"
           }`}
+          style={{ top: "calc(50px + env(safe-area-inset-top, 0px) + 12px)" }}
           role="status"
           aria-live="polite"
         >

@@ -6,32 +6,22 @@ import {
   SOMMELIER_SUGGESTIONS_BY_MODE,
   type AudienceMode,
 } from "@shared";
+import { Chip } from "@/components/ui/Button";
 
 const TOOL_CHIPS: Array<{ label: string; href: string }> = [
   { label: "Scan a wine list", href: "/list-scan" },
 ];
 
-const chipStyle = {
-  minHeight: "56px",
-  width: "100%",
-  background: "var(--color-surface-primary)",
-  border: "0.5px solid var(--color-border)",
-  borderRadius: "18px",
-  padding: "10px 12px",
-  fontSize: "15px",
-  lineHeight: 1.35,
-  color: "var(--color-text-primary)",
-  textAlign: "center" as const,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  whiteSpace: "normal" as const,
-  textWrap: "balance" as const,
-  overflowWrap: "anywhere" as const,
-};
+// Compact chip-scale: text wraps within the pill instead of forcing a
+// menu-sized card, and chips flow left-to-right like chat suggestions
+// rather than filling a 2-column grid. `!font-normal` overrides the shared
+// Chip component's default font-semibold — these are suggested questions,
+// not emphasized UI labels, so they should read as regular weight.
+const promptChipClassName =
+  "max-w-[78vw] whitespace-normal text-left leading-snug !font-normal sm:max-w-[240px]";
 
-const chipClassName =
-  "mx-auto transition hover:border-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-primary)]/10 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/40";
+const toolChipClassName =
+  "inline-flex max-w-[78vw] items-center rounded-full border text-xs font-semibold leading-snug transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] px-3 py-1.5 whitespace-normal text-left sm:max-w-[240px] border-[var(--color-accent-secondary)]/50 bg-transparent text-[var(--color-text-secondary)] hover:border-[var(--color-accent-secondary)] hover:text-[var(--color-accent-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/35";
 
 export default function SommelierSuggestions({
   onSelect,
@@ -45,31 +35,19 @@ export default function SommelierSuggestions({
     : SOMMELIER_DEFAULT_SUGGESTIONS;
 
   return (
-    <div className="grid grid-cols-2 gap-2" aria-label="Suggested prompts">
+    <div className="flex flex-wrap gap-1.5" aria-label="Suggested prompts">
       {suggestions.map((suggestion) => (
-        <button
+        <Chip
           key={suggestion}
-          type="button"
+          variant="filter"
           onClick={() => onSelect(suggestion)}
-          style={chipStyle}
-          className={chipClassName}
+          className={promptChipClassName}
         >
           {suggestion}
-        </button>
+        </Chip>
       ))}
       {TOOL_CHIPS.map((chip) => (
-        <Link
-          key={chip.href}
-          href={chip.href}
-          style={{
-            ...chipStyle,
-            borderColor: "var(--color-accent-secondary)",
-            borderWidth: "0.5px",
-            borderStyle: "solid",
-            textDecoration: "none",
-          }}
-          className={chipClassName}
-        >
+        <Link key={chip.href} href={chip.href} className={toolChipClassName}>
           {chip.label}
         </Link>
       ))}

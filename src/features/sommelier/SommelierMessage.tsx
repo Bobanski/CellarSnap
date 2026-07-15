@@ -66,31 +66,38 @@ export default function SommelierMessage({
             <ReactMarkdown
               rehypePlugins={[rehypeSanitize]}
               components={{
+                // Headers stay at the bubble's own body size (1em, relative
+                // to the bubble's inherited font-size) rather than rem units
+                // — rem resolves against the document root font-size, so a
+                // "1.05rem" header inside an 11px bubble rendered ~50%
+                // larger than the surrounding text. That mismatch, plus the
+                // header's own font-weight, is the "font/font-size glitch"
+                // — one body size, bold-only differentiation fixes it.
                 h1: ({ children }) => (
-                  <h1 className="mb-2 text-[1.05rem] font-semibold leading-tight text-[var(--color-text-primary)] last:mb-0">
+                  <h1 className="mb-2 text-[1em] font-semibold leading-snug text-[var(--color-text-primary)] last:mb-0">
                     {children}
                   </h1>
                 ),
                 h2: ({ children }) => (
-                  <h2 className="mb-2 text-[0.98rem] font-semibold leading-tight text-[var(--color-text-primary)] last:mb-0">
+                  <h2 className="mb-2 text-[1em] font-semibold leading-snug text-[var(--color-text-primary)] last:mb-0">
                     {children}
                   </h2>
                 ),
                 h3: ({ children }) => (
-                  <h3 className="mb-2 text-[0.94rem] font-semibold leading-tight text-[var(--color-text-primary)] last:mb-0">
+                  <h3 className="mb-2 text-[1em] font-semibold leading-snug text-[var(--color-text-primary)] last:mb-0">
                     {children}
                   </h3>
                 ),
-                p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                p: ({ children }) => <p className="mb-3 text-[1em] last:mb-0">{children}</p>,
                 ul: ({ children }) => (
                   <ul className="mb-3 list-disc space-y-1 pl-5 last:mb-0">{children}</ul>
                 ),
                 ol: ({ children }) => (
                   <ol className="mb-3 list-decimal space-y-1 pl-5 last:mb-0">{children}</ol>
                 ),
-                li: ({ children }) => <li className="pl-1">{children}</li>,
-                strong: ({ children }) => <strong className="font-semibold text-[var(--color-text-primary)]">{children}</strong>,
-                em: ({ children }) => <em className="italic text-[var(--color-text-primary)]">{children}</em>,
+                li: ({ children }) => <li className="pl-1 text-[1em]">{children}</li>,
+                strong: ({ children }) => <strong className="text-[1em] font-semibold text-[var(--color-text-primary)]">{children}</strong>,
+                em: ({ children }) => <em className="text-[1em] italic text-[var(--color-text-primary)]">{children}</em>,
                 code: ({ children }) => (
                   <code className="rounded-md bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[0.9em] text-[var(--color-accent-secondary)]">
                     {children}

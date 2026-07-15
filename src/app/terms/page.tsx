@@ -18,7 +18,7 @@ export default function TermsPage() {
               Home
             </Link>
           </div>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">Terms of Use</h1>
+          <h1 className="font-serif text-3xl font-semibold text-[var(--color-text-primary)]">Terms of Use</h1>
           <p className="text-sm text-[var(--color-text-tertiary)]">Last updated: {LAST_UPDATED}</p>
         </header>
 

@@ -2,7 +2,7 @@
 
 **Status:** implemented (first cut) on `feat/distilled-somm` · July 2026
 **Eval evidence:** `scripts/somm-eval/` run against real head-to-head tasting data
-(103 blind pairwise picks, 12 tasters, 2 tastings — data gitignored, results summarized here)
+(103 pairwise picks (labels visible — NOT blind; corrected 2026-07-08), 12 tasters, 2 tastings — data gitignored, results summarized here)
 
 ## The question
 
@@ -12,7 +12,7 @@ do so fast enough to rank a 40-wine restaurant list at scan time?
 
 ## What the eval showed
 
-Holdout protocol: per taster, half their head-to-head picks are shown to the
+Holdout protocol: per taster, half their (non-blind, labels-visible) head-to-head picks are shown to the
 predictor as history; it must predict the other half. Aggregated across fold
 seeds (single-seed numbers at n≈50 swing ±8 points and cannot be trusted).
 

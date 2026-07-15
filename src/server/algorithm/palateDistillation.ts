@@ -89,7 +89,7 @@ const DISTILLATION_SCHEMA = {
     narrative: {
       type: "string",
       description:
-        "2-3 warm, non-condescending sentences telling the user what their palate favors — shown in the app. No wine-snob gatekeeping.",
+        "2-3 warm, non-condescending sentences telling the user what their palate favors — shown in the app. No wine-snob gatekeeping. Speak only about their palate — never mention data quality, test entries, filtering, or how much/little they have logged.",
     },
     adventurousness: { type: "integer", description: "1-10 estimate from the evidence (default 5 if unclear)" },
     confidence: { type: "number", description: "0-1: overall evidence strength for this whole profile" },
@@ -151,7 +151,7 @@ type DistillationEntryRow = {
   country: string | null;
   rating: number | null;
   notes: string | null;
-  updated_at: string | null;
+  created_at: string | null;
 };
 
 type ComparisonRow = {
@@ -172,7 +172,7 @@ export function computeSignalHash(signal: PalateSignal): string {
     entryCount: signal.entries.length,
     latestEntry: signal.entries.reduce<string | null>(
       (latest, entry) =>
-        entry.updated_at && (!latest || entry.updated_at > latest) ? entry.updated_at : latest,
+        entry.created_at && (!latest || entry.created_at > latest) ? entry.created_at : latest,
       null
     ),
     surveyCompletedAt: signal.survey?.completed_at ?? null,
@@ -189,11 +189,13 @@ export async function gatherPalateSignal(
     supabase
       .from("wine_entries")
       .select(
-        "id, wine_name, producer, vintage, wine_type, canonical_region, canonical_country, region, country, rating, notes, updated_at"
+        // wine_entries has created_at but no updated_at column — recency of
+        // logging is the right ordering signal anyway.
+        "id, wine_name, producer, vintage, wine_type, canonical_region, canonical_country, region, country, rating, notes, created_at"
       )
       .eq("user_id", userId)
       .not("rating", "is", null)
-      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(MAX_ENTRIES_IN_PROMPT),
     supabase
       .from("taste_survey_responses")

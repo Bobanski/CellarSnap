@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { log } from "@/server/log";
 import {
   countEntriesForUser,
   countRegionMatches,
@@ -57,8 +58,17 @@ function loadBadgeDefinitions(): readonly BadgeDefinition[] {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const shared = require("@shared");
-    return (shared.BADGE_DEFINITIONS ?? []) as readonly BadgeDefinition[];
-  } catch {
+    const definitions = (shared.BADGE_DEFINITIONS ?? []) as readonly BadgeDefinition[];
+    if (definitions.length === 0) {
+      log.error(
+        "loadBadgeDefinitions: @shared resolved but BADGE_DEFINITIONS is empty — no badges will ever award."
+      );
+    }
+    return definitions;
+  } catch (error) {
+    log.error("loadBadgeDefinitions: failed to require('@shared') — no badges will ever award.", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 }

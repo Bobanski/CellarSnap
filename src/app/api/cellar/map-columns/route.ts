@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 
 const MAX_SAMPLE_ROWS = 5;
+
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
 
 const requestSchema = z.object({
   headers: z.array(z.string()).min(1).max(100),
@@ -121,8 +125,19 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  // Auth verified — user is authenticated
-  void auth;
+  const rateLimit = await applyRateLimit({
+    request,
+    routeKey: "cellar-map-columns",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    userId: auth.user.id,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many column-mapping requests. Please wait a bit and try again." },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
 
   let body: unknown;
   try {

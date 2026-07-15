@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toExploreSlug } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
+import AppImage from "@/components/AppImage";
 
 // ---------------------------------------------------------------------------
 // Colors — matching profile page palette
@@ -43,6 +44,7 @@ type SpotlightData = {
   tagline: string;
   href: string;
   characteristics: string[];
+  hero_image_url: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -101,6 +103,7 @@ export default function GrapesBrowsePage() {
             tagline: data.grape_spotlight.tagline,
             href: data.grape_spotlight.href,
             characteristics: data.grape_spotlight.characteristics ?? [],
+            hero_image_url: data.grape_spotlight.hero_image_url ?? null,
           });
         }
       } catch { /* non-critical */ }
@@ -143,7 +146,7 @@ export default function GrapesBrowsePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+      <div className="mx-auto max-w-2xl px-4 pt-8 pb-[var(--app-bottom-nav-height)]">
         {/* ── Back ───────────────────────────────────── */}
         <Link
           href="/explore"
@@ -230,17 +233,26 @@ export default function GrapesBrowsePage() {
             {spotlight && (
               <div className="mt-8">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: FOG }}>
-                  Grape of the Day
+                  Grape of the Week
                 </p>
                 <Link
                   href={spotlight.href}
-                  className="mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
+                  className="relative mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
                   style={{
-                    background: `linear-gradient(135deg, ${NEBBIOLO}40 0%, ${ROSE}18 60%, ${BG_SECTION} 100%)`,
+                    background: spotlight.hero_image_url
+                      ? undefined
+                      : `linear-gradient(135deg, ${NEBBIOLO}40 0%, ${ROSE}18 60%, ${BG_SECTION} 100%)`,
                     border: `1px solid ${NEBBIOLO}35`,
                   }}
                 >
-                  <div className="p-6">
+                  {/* Cached-only thumbnail — icon/gradient fallback above when absent. */}
+                  {spotlight.hero_image_url && (
+                    <>
+                      <AppImage src={spotlight.hero_image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${BG_SECTION}55 0%, ${BG_SECTION}e8 100%)` }} />
+                    </>
+                  )}
+                  <div className="relative p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <h3 className="text-xl font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
@@ -250,7 +262,11 @@ export default function GrapesBrowsePage() {
                           {spotlight.tagline}
                         </p>
                       </div>
-                      <div className="h-11 w-11 shrink-0 rounded-full" style={{ background: `${NEBBIOLO}30`, border: `1px solid ${NEBBIOLO}40` }} />
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full" style={{ background: `${NEBBIOLO}30`, border: `1px solid ${NEBBIOLO}40` }}>
+                        {spotlight.hero_image_url && (
+                          <AppImage src={spotlight.hero_image_url} alt="" className="h-full w-full object-cover" />
+                        )}
+                      </div>
                     </div>
                     {spotlight.characteristics.length > 0 && (
                       <div className="mt-4 flex flex-wrap gap-1.5">
@@ -305,14 +321,25 @@ export default function GrapesBrowsePage() {
                     <Link
                       key={g}
                       href={`/explore/grape/${toExploreSlug(g)}`}
-                      className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-3 transition hover:opacity-90"
                       style={{ background: `${NEBBIOLO}15`, border: `1px solid ${NEBBIOLO}20` }}
                     >
-                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
+                      {/* Icon, not an AI thumbnail — Dani: browse grids should
+                          read as icons; AI imagery is reserved for the
+                          spotlight hero above and the detail-page hero. */}
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: `${NEBBIOLO}40` }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill={ROSE}>
+                          <circle cx="12" cy="8" r="2.6" opacity="0.6" />
+                          <circle cx="9" cy="12.5" r="2.6" opacity="0.45" />
+                          <circle cx="15" cy="12.5" r="2.6" opacity="0.6" />
+                          <circle cx="12" cy="16.5" r="2.6" opacity="0.4" />
+                        </svg>
+                      </div>
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: CHAMPAGNE }}>{g}</span>
                       {userEntry ? (
-                        <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
+                        <span className="shrink-0 text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (
-                        <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
+                        <span className="shrink-0 text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}
                     </Link>
                   );

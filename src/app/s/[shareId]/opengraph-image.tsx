@@ -178,7 +178,12 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
   const wineName = share.wineName?.trim() || "Untitled wine";
   const vintage = share.vintage?.trim();
   const title = vintage ? `${wineName} (${vintage})` : wineName;
-  const ratingText = typeof share.rating === "number" ? `${share.rating}/100` : "No rating";
+  // Decision 1 (overhaul-plan): the OG card leads with a warm band, never
+  // the raw 1-100 rating. Match-% (when a fresh score exists) reinforces
+  // the palate-matching wedge instead of a Vivino-style number.
+  const ratingText = share.ratingBandLabel ?? "Cluster pick";
+  const matchText =
+    typeof share.matchScore === "number" ? `${share.matchScore}% match to their palate` : null;
   const noteText = share.notePreview ?? "Shared from Cluster";
   const previewImageUrl =
     share.previewImageOgUrl ??
@@ -398,7 +403,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
                     display: "flex",
                     alignItems: "center",
                     marginTop: "22px",
-                    gap: "16px",
+                    gap: "14px",
                   }}
                 >
                   <div
@@ -416,14 +421,23 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
                   >
                     {ratingText}
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      width: "110px",
-                      height: "1px",
-                      background: BORDER_STRONG,
-                    }}
-                  />
+                  {matchText ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        padding: "11px 18px",
+                        borderRadius: "999px",
+                        border: `1px solid rgba(201,168,76,0.4)`,
+                        background: "rgba(201,168,76,0.12)",
+                        color: ACCENT_GOLD,
+                        fontFamily: "Cluster Sans",
+                        fontSize: 22,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {matchText}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

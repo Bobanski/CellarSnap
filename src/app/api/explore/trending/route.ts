@@ -8,6 +8,7 @@ type TrendingItem = {
   type: "region" | "grape";
   slug: string;
   href: string;
+  hero_image_url: string | null;
 };
 
 type FeaturedCard = {
@@ -18,6 +19,21 @@ type FeaturedCard = {
   characteristics: string[];
   href: string;
 };
+
+// Deterministic ISO-8601 week number (Monday-start week, week 1 contains the
+// year's first Thursday), combined with the ISO year into a single
+// monotonic-enough integer so the "of the week" rotation is stable for all
+// visitors within the same calendar week and advances predictably across
+// year boundaries (53 is the ISO max week count in a year).
+function getIsoWeekKey(date: Date): number {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = d.getUTCDay() || 7; // Mon=1 .. Sun=7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // shift to this week's Thursday
+  const isoYear = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const isoWeek = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return isoYear * 53 + isoWeek;
+}
 
 function normalizeSlug(raw: string): string {
   return raw
@@ -153,22 +169,35 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: true }),
     ]);
 
-  const trending: TrendingItem[] = recentTrending.slice(0, 3).map((item, i) => ({
-    rank: i + 1,
-    name: item.name,
-    type: item.type,
-    slug: normalizeSlug(item.name),
-    href: `/explore/${item.type}/${normalizeSlug(item.name)}`,
-  }));
+  // Cached hero images for trending items — cached-only (never triggers
+  // generation from this surface), looked up from the profile rows already
+  // fetched above for the featured-region/grape-spotlight rotation.
+  const imageBySlug = new Map<string, string | null>();
+  for (const row of regionProfiles.data ?? []) {
+    imageBySlug.set(`region:${row.slug}`, row.hero_image_url ?? null);
+  }
+  for (const row of grapeProfiles.data ?? []) {
+    imageBySlug.set(`grape:${row.slug}`, row.hero_image_url ?? null);
+  }
 
-  // Featured region — deterministic daily rotation
+  const trending: TrendingItem[] = recentTrending.slice(0, 3).map((item, i) => {
+    const slug = normalizeSlug(item.name);
+    return {
+      rank: i + 1,
+      name: item.name,
+      type: item.type,
+      slug,
+      href: `/explore/${item.type}/${slug}`,
+      hero_image_url: imageBySlug.get(`${item.type}:${slug}`) ?? null,
+    };
+  });
+
+  // Featured region — deterministic weekly rotation (ISO week)
   let featured_region: FeaturedCard | null = null;
   const rProfiles = regionProfiles.data;
   if (rProfiles && rProfiles.length > 0) {
-    const dayOfYear = Math.floor(
-      (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
-    );
-    const pick = rProfiles[dayOfYear % rProfiles.length];
+    const weekKey = getIsoWeekKey(now);
+    const pick = rProfiles[weekKey % rProfiles.length];
     const content = pick.content as Record<string, unknown>;
     featured_region = {
       slug: pick.slug,
@@ -180,14 +209,12 @@ export async function GET(request: Request) {
     };
   }
 
-  // Grape spotlight — deterministic daily rotation (offset by half so it doesn't match region)
+  // Grape spotlight — deterministic weekly rotation (offset by half so it doesn't match region)
   let grape_spotlight: FeaturedCard | null = null;
   const gProfiles = grapeProfiles.data;
   if (gProfiles && gProfiles.length > 0) {
-    const dayOfYear = Math.floor(
-      (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
-    );
-    const pick = gProfiles[(dayOfYear + Math.floor(gProfiles.length / 2)) % gProfiles.length];
+    const weekKey = getIsoWeekKey(now);
+    const pick = gProfiles[(weekKey + Math.floor(gProfiles.length / 2)) % gProfiles.length];
     const content = pick.content as Record<string, unknown>;
     const story = content.story as string | undefined;
     grape_spotlight = {
@@ -207,7 +234,7 @@ export async function GET(request: Request) {
     { trending, featured_region, grape_spotlight },
     {
       headers: {
-        // Short cache so trending tracks the feed; featured cards rotate daily anyway
+        // Short cache so trending tracks the feed; featured cards rotate weekly anyway
         "Cache-Control": "s-maxage=300, stale-while-revalidate=600",
       },
     }
