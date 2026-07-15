@@ -25,6 +25,7 @@ import {
 } from "@shared";
 import CollectionPickerPopover from "@/components/collections/CollectionPickerPopover";
 import FirstRunChecklist from "@/features/feed/FirstRunChecklist";
+import ListScanCta from "@/features/feed/ListScanCta";
 import PalateGlimpse from "@/features/palate/PalateGlimpse";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
@@ -1102,11 +1103,15 @@ export default function FeedPage() {
           />
         </div>
 
-        {/* "Your palate, read by the somm" — the returning-user moment
-            (overhaul-plan §4). Self-gated: renders nothing until the
-            viewer has enough palate data, so it's safe to place
-            unconditionally at the top of the home surface. */}
-        <div className="px-6">
+        {/* List Scan CTA + "Your palate, read by the somm" — stacked per
+            feedback (round 2, "List Scan prominence on feed": "Maybe
+            replace it with the Palate on Feed? Or just put both on top of
+            each other" — this is the stack). List Scan is a core action so
+            it's not dismissible and sits above; PalateGlimpse is the
+            ambient insight below it, self-gated and still dismissible.
+            Same one-line height language for both rows. */}
+        <div className="px-6 space-y-2">
+          <ListScanCta />
           <PalateGlimpse />
         </div>
 

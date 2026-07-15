@@ -407,16 +407,23 @@ export default function NewEntryPage() {
     primary_grape_confidence?: number | null;
     confidence?: number | null;
     warnings?: string[] | null;
+    // Field names the extraction flagged as inferred/guessed rather than
+    // directly read off the label — by the time this response lands here,
+    // the server has already nulled those fields out (see
+    // extractWineLabel.ts), so applyAutofill leaves them blank automatically.
+    // Kept for the "N fields left blank" messaging below.
+    inferred_fields?: string[] | null;
   };
 
   type NormalizedLabelAutofillResult = Omit<
     LabelAutofillResult,
-    "primary_grape_suggestions" | "primary_grape_confidence" | "confidence" | "warnings"
+    "primary_grape_suggestions" | "primary_grape_confidence" | "confidence" | "warnings" | "inferred_fields"
   > & {
     primary_grape_suggestions: string[];
     primary_grape_confidence: number | null;
     confidence: number | null;
     warnings: string[];
+    inferred_fields: string[];
   };
 
   type LineupWine = {
@@ -3021,6 +3028,11 @@ export default function NewEntryPage() {
                 .map((warning) => warning.trim())
                 .filter((warning) => warning.length > 0)
             : [],
+          inferred_fields: Array.isArray(rawLabelData.inferred_fields)
+            ? rawLabelData.inferred_fields
+                .map((field) => field.trim())
+                .filter((field) => field.length > 0)
+            : [],
         };
       }
 
@@ -3084,9 +3096,18 @@ export default function NewEntryPage() {
             warningCount > 0
               ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
               : null;
+          // Fields the model wasn't confident were directly legible are left
+          // blank rather than filled with a guess (see extractWineLabel.ts) —
+          // surface that so it reads as "left for you to fill in", not a
+          // silent gap.
+          const blankedCount = normalizedLabelData.inferred_fields.length;
+          const blankedLabel =
+            blankedCount > 0
+              ? `${blankedCount} field${blankedCount > 1 ? "s" : ""} left blank — not clearly legible`
+              : null;
           setAutofillMessage(
             (
-              [confidenceLabel, warningLabel]
+              [confidenceLabel, warningLabel, blankedLabel]
                 .filter(Boolean)
                 .join(" • ") || "Autofill complete. Review the details."
             ) + possibleExtraBottleSuffix
