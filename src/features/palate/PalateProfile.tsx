@@ -41,6 +41,11 @@ type GrapeCount = { name: string; count: number };
 type RegionStat = {
   region: string;
   count: number;
+  // How many distinct producers this user has logged from this region —
+  // drives the plain "N bottles · M producers" presentation below instead
+  // of the old "+2.3" rating-delta badge (feedback round 2: the delta read
+  // as an unexplained score, not a stat about the user's own drinking).
+  producerCount: number;
   avgRating: number;
   delta: number;
   deltaLabel: string;
@@ -672,9 +677,9 @@ export default function PalateProfile() {
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 space-y-3">
           <SectionLabel>Top regions</SectionLabel>
           {regionStats.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {regionStats.slice(0, 4).map((r, i) => (
-                <div key={r.region} className="flex items-center justify-between gap-2">
+                <div key={r.region}>
                   <Link
                     href={regionProfileUrl(r.region)}
                     className={`text-sm transition hover:text-[var(--color-accent-secondary)] hover:underline ${
@@ -685,17 +690,20 @@ export default function PalateProfile() {
                   >
                     {r.region}
                   </Link>
-                  {r.delta > 0.5 ? (
-                    <span className="text-[11px] font-semibold tabular-nums text-[var(--color-accent-secondary)]">
-                      +{Math.abs(r.delta).toFixed(1)}
-                    </span>
-                  ) : r.delta < -0.5 ? (
-                    <span className="text-[11px] font-semibold tabular-nums text-[var(--color-text-tertiary)]">
-                      -{Math.abs(r.delta).toFixed(1)}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-[var(--color-text-tertiary)]">On par</span>
-                  )}
+                  {/* Plain counts about this user's own drinking, not a
+                      "+2.3" affinity delta vs. other users — that reads as
+                      an unexplained score (feedback round 2). The "vs rest
+                      of users" comparison stays deferred until there's
+                      population to compare against. */}
+                  <p
+                    className="tabular-nums text-[11px] text-[var(--color-text-tertiary)]"
+                    style={{ fontFamily: "var(--font-serif)" }}
+                  >
+                    {r.count} {r.count === 1 ? "bottle" : "bottles"}
+                    {r.producerCount > 0
+                      ? ` · ${r.producerCount} ${r.producerCount === 1 ? "producer" : "producers"}`
+                      : ""}
+                  </p>
                 </div>
               ))}
             </div>
