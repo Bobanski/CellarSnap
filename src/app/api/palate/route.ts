@@ -212,14 +212,18 @@ export async function GET(request: Request) {
   );
 
   // Regions
-  const regionCounts = new Map<string, { total: number; count: number }>();
+  // `producers` is tracked here (not queried separately) from the same
+  // `rows` already fetched above — the entry select already includes
+  // `producer`, so this is a free aggregation, not a new DB round trip.
+  const regionCounts = new Map<string, { total: number; count: number; producers: Set<string> }>();
   rows.forEach((row) => {
     if (typeof row.rating !== "number") return;
     const key = row.canonical_sub_region ?? row.canonical_region ?? row.region ?? row.canonical_country ?? row.country ?? null;
     if (!key) return;
-    const cur = regionCounts.get(key) ?? { total: 0, count: 0 };
+    const cur = regionCounts.get(key) ?? { total: 0, count: 0, producers: new Set<string>() };
     cur.total += row.rating;
     cur.count += 1;
+    if (row.producer) cur.producers.add(row.producer);
     regionCounts.set(key, cur);
   });
   const overallAvg =
@@ -231,6 +235,7 @@ export async function GET(request: Request) {
       return {
         region,
         count: v.count,
+        producerCount: v.producers.size,
         avgRating: Number((v.total / v.count).toFixed(1)),
         delta,
         deltaLabel: delta > 0.5
