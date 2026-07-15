@@ -69,12 +69,12 @@ export default function BadgeCard({
     <div
       role="button"
       tabIndex={0}
-      className={`relative cursor-pointer rounded-xl bg-[var(--color-surface-raised)] p-3 transition-shadow focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 [perspective:900px] ${
+      className={`relative cursor-pointer overflow-hidden rounded-xl bg-[var(--color-surface-raised)] p-3 transition-shadow focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30 [perspective:900px] ${
         isFeatured
           ? "ring-2 ring-[var(--color-accent-gold)] shadow-[0_0_12px_rgba(201,168,76,0.3)]"
           : ""
       }`}
-      style={{ minHeight: 116 }}
+      style={{ minHeight: 132 }}
       onClick={() => onSelect(badge.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -101,7 +101,7 @@ export default function BadgeCard({
             locked={!isEarned}
           />
           <span
-            className={`text-xs font-semibold ${
+            className={`line-clamp-2 text-center text-xs font-semibold leading-snug ${
               isEarned
                 ? "text-[var(--color-text-primary)]"
                 : "text-[var(--color-text-tertiary)]"
@@ -121,22 +121,30 @@ export default function BadgeCard({
 
         {/* Back face — name, how it's earned / progress, and a "More" link
             for the full detail page rather than forcing navigation just to
-            read what a badge is. */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
-          <span className="text-xs font-semibold text-[var(--color-text-primary)]">
+            read what a badge is. Badge copy length varies a lot (12-93
+            chars for names+descriptions across the 85 definitions), so the
+            middle section scrolls independently instead of letting long
+            copy overflow the fixed-height tile and collide with the
+            actions row below — the name/label header and the actions
+            footer are always fully visible; only the description area
+            ever needs a scroll for the longest outliers. */}
+        <div className="absolute inset-0 flex flex-col items-center gap-1 px-2 py-2 text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
+          <span className="line-clamp-2 shrink-0 text-[11px] font-semibold leading-snug text-[var(--color-text-primary)]">
             {badge.name}
           </span>
           <p
-            className={`text-[9px] font-semibold uppercase tracking-wide ${
+            className={`shrink-0 text-[9px] font-semibold uppercase tracking-wide ${
               isEarned ? "text-[var(--color-accent-secondary)]" : "text-[var(--color-text-tertiary)]"
             }`}
           >
             {isEarned ? (earnedDateLabel ? `Earned ${earnedDateLabel}` : "Earned") : "Not yet earned"}
           </p>
-          <p className="line-clamp-3 text-[11px] leading-snug text-[var(--color-text-secondary)]">
-            {isEarned ? badge.description : requirement}
-          </p>
-          <div className="mt-1 flex items-center gap-1.5">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <p className="text-[10px] leading-snug text-[var(--color-text-secondary)]">
+              {isEarned ? badge.description : requirement}
+            </p>
+          </div>
+          <div className="mt-1 flex shrink-0 items-center gap-1.5">
             {isEarned ? (
               <button
                 type="button"
