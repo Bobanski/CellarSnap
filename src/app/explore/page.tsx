@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { toExploreSlug, WINE_REGIONS } from "@shared";
 import AppShell from "@/components/AppShell";
 import AppImage from "@/components/AppImage";
+import ProducerMark from "@/components/ProducerMark";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -408,8 +409,11 @@ export default function ExplorePage() {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className="block rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-raised)]"
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-raised)]"
                         >
+                          {item.type === "producer" ? (
+                            <ProducerMark name={item.name} size={20} className="shrink-0" />
+                          ) : null}
                           {item.name}
                         </Link>
                       ))}
@@ -533,19 +537,16 @@ export default function ExplorePage() {
                         >
                           {item.rank}
                         </span>
-                        {/* Per-type thumbnail: cached wine_profiles hero image
-                            when one already exists (cheap imagery, no new
-                            generation triggered from this browse surface),
-                            else a small accent-colored type glyph so the row
-                            still visually differentiates regions from
-                            grapes. */}
+                        {/* Clean accent-colored type glyph — not an AI
+                            thumbnail (Dani: trending rows should read as
+                            icons, not pictures; AI-generated imagery is
+                            reserved for the of-the-week heroes and the
+                            detail-page hero below). */}
                         <div
                           className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full"
                           style={{ background: `${accent}22`, border: `1px solid ${accent}40` }}
                         >
-                          {item.hero_image_url ? (
-                            <AppImage src={item.hero_image_url} alt="" className="h-full w-full object-cover" />
-                          ) : item.type === "region" ? (
+                          {item.type === "region" ? (
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                               <circle cx="12" cy="12" r="9" stroke={accent} strokeWidth="1" opacity="0.7" />
                               <circle cx="12" cy="12" r="4.5" stroke={accent} strokeWidth="0.8" opacity="0.5" />

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toExploreSlug } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
-import AppImage from "@/components/AppImage";
+import ProducerMark from "@/components/ProducerMark";
 
 // ---------------------------------------------------------------------------
 // Colors — matching profile page palette
@@ -40,9 +40,6 @@ export default function ProducersBrowsePage() {
   const [producers, setProducers] = useState<Producer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
-  // Cached wine_profiles hero images for the Most Logged list — cached-only
-  // lookup, never triggers generation from this browse surface.
-  const [producerThumbs, setProducerThumbs] = useState<Map<string, string>>(new Map());
 
   // "Iconic Names" vs "Small Growers" entry split (producer_modifiers tier)
   const [tierView, setTierView] = useState<TierView | null>(null);
@@ -75,25 +72,6 @@ export default function ProducersBrowsePage() {
     load();
     return () => { mounted = false; };
   }, [supabase]);
-
-  // Cached hero images for the Most Logged strip.
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      const names = producers.slice(0, 10).map((p) => p.name);
-      if (names.length === 0) return;
-      const { data } = await supabase
-        .from("wine_profiles")
-        .select("slug, hero_image_url")
-        .eq("profile_type", "producer")
-        .in("slug", names.map(toExploreSlug))
-        .not("hero_image_url", "is", null);
-      if (!mounted || !data) return;
-      setProducerThumbs(new Map(data.map((r: { slug: string; hero_image_url: string }) => [r.slug, r.hero_image_url])));
-    };
-    load();
-    return () => { mounted = false; };
-  }, [supabase, producers]);
 
   // Load the curated producer_modifiers roster for whichever tier card is
   // selected. producer_modifiers is a public reference table (RLS allows
@@ -212,7 +190,7 @@ export default function ProducersBrowsePage() {
                     className="flex items-center justify-between rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: ROSE }} />
+                      <ProducerMark name={p.name} size={22} className="shrink-0" />
                       <span className="text-sm" style={{ color: CHAMPAGNE }}>{p.name}</span>
                     </div>
                     <span className="rounded-full px-2 py-0.5 text-[10px]" style={{ background: `${ROSE}18`, color: ROSE }}>
@@ -278,13 +256,16 @@ export default function ProducersBrowsePage() {
                       <Link
                         key={p.name}
                         href={`/explore/producer/${toExploreSlug(p.name)}`}
-                        className="flex items-center justify-between rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
+                        className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 transition hover:bg-[var(--color-surface-raised)]"
                       >
-                        <div className="min-w-0">
-                          <span className="text-sm" style={{ color: CHAMPAGNE }}>{p.name}</span>
-                          {p.region && (
-                            <span className="ml-2 text-[10px]" style={{ color: FOG }}>{p.region}</span>
-                          )}
+                        <div className="flex min-w-0 items-center gap-3">
+                          <ProducerMark name={p.name} size={26} className="shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-sm" style={{ color: CHAMPAGNE }}>{p.name}</span>
+                            {p.region && (
+                              <span className="ml-2 text-[10px]" style={{ color: FOG }}>{p.region}</span>
+                            )}
+                          </div>
                         </div>
                         <span className="shrink-0 text-sm" style={{ color: FOG }}>&rarr;</span>
                       </Link>
@@ -334,7 +315,6 @@ export default function ProducersBrowsePage() {
                   </p>
                   <div className="space-y-0.5">
                     {topProducers.map((p, i) => {
-                      const thumb = producerThumbs.get(toExploreSlug(p.name));
                       return (
                         <Link
                           key={p.name}
@@ -344,10 +324,7 @@ export default function ProducersBrowsePage() {
                           <span className="w-5 text-center text-sm font-light" style={{ fontFamily: "var(--font-serif)", color: FOG }}>
                             {i + 1}
                           </span>
-                          {/* Cached-only thumbnail — falls back to a plain dot when no image has been generated yet. */}
-                          <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full" style={{ background: `${ROSE}25` }}>
-                            {thumb && <AppImage src={thumb} alt="" className="h-full w-full object-cover" />}
-                          </div>
+                          <ProducerMark name={p.name} size={26} className="shrink-0" />
                           <span className="min-w-0 flex-1 text-sm" style={{ color: CHAMPAGNE }}>
                             {p.name}
                           </span>

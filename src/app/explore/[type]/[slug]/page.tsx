@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import AppImage from "@/components/AppImage";
+import ProducerMark from "@/components/ProducerMark";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 // ─── Constants ─────────────────────────────────────────────
 
@@ -20,6 +22,11 @@ const DEVICE_BG = "#220E14";
 const SECTION_BORDER = "rgba(196,96,122,0.06)";
 const SERIF = "var(--font-serif)";
 const SANS = "var(--font-sans)";
+
+// producer_modifiers.price_tier_numeric split — mirrors the "Iconic Names" /
+// "Small Growers" toggle already shipped on the /explore/producers tab
+// (same threshold, same tier-1-included-in-"growers" semantics).
+const ICONIC_MIN_TIER = 4;
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -233,15 +240,21 @@ function CommunityPulse({ c, qpr, bg, displayName }: { c: ProfileContent; qpr?: 
       {hasProducers ? (
         <div style={{ display: "flex", gap: 6, marginTop: hasQpr ? 10 : 0 }}>
           {c.most_loved_producer ? (
-            <Link href={exploreHref("producer", c.most_loved_producer.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", textDecoration: "none" }}>
-              <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 2 }}>{c.most_loved_producer.name}</p>
-              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)" }}>Most loved · {c.most_loved_producer.avg_rating} avg</p>
+            <Link href={exploreHref("producer", c.most_loved_producer.name)} style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", textDecoration: "none" }}>
+              <ProducerMark name={c.most_loved_producer.name} size={24} />
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 2 }}>{c.most_loved_producer.name}</p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)" }}>Most loved · {c.most_loved_producer.avg_rating} avg</p>
+              </div>
             </Link>
           ) : null}
           {c.best_qpr_producer ? (
-            <Link href={exploreHref("producer", c.best_qpr_producer.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", textDecoration: "none" }}>
-              <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 2 }}>{c.best_qpr_producer.name}</p>
-              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)" }}>{bestQprSub}</p>
+            <Link href={exploreHref("producer", c.best_qpr_producer.name)} style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px", textDecoration: "none" }}>
+              <ProducerMark name={c.best_qpr_producer.name} size={24} />
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 2 }}>{c.best_qpr_producer.name}</p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)" }}>{bestQprSub}</p>
+              </div>
             </Link>
           ) : null}
         </div>
@@ -330,6 +343,115 @@ function Hero({ profile, accentColor, badge, heroFailed, onHeroFail }: {
         <h1 style={{ fontFamily: SERIF, fontSize: 26, color: CHAMPAGNE, fontWeight: 300, lineHeight: 1.15, marginBottom: 5 }}>{profile.display_name}</h1>
         {c.tagline ? <p style={{ fontFamily: SERIF, fontSize: 12, color: "rgba(245,237,214,0.55)", fontStyle: "italic" }}>{c.tagline}</p> : null}
       </div>
+    </div>
+  );
+}
+
+// ─── Producer Tier Toggle ───────────────────────────────────
+//
+// Feedback (round 2): "I like the filter for notable and smaller producers
+// in the producers tab. Can we add that to the producers section in a
+// Region or Grape page?" — reuses the producer_modifiers tier logic already
+// shipped on /explore/producers, scoped to this region/grape via the same
+// `region`/`grapes` text-match columns the API route's producer-roster
+// curation already uses (see fetchProducerRoster server-side). Lives inside
+// the region's "Notable Winemakers" / grape's "Notable Producers" section so
+// the curated AI narrative and the live, filterable roster sit together.
+
+type TierView = "iconic" | "growers";
+type TierProducer = { name: string; region: string | null };
+
+function ProducerTierToggle({
+  scopeColumn,
+  scopeValue,
+  accent,
+}: {
+  scopeColumn: "region" | "grapes";
+  scopeValue: string;
+  accent: string;
+}) {
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [tierView, setTierView] = useState<TierView | null>(null);
+  const [producers, setProducers] = useState<TierProducer[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const selectTierView = (view: TierView) => {
+    if (tierView === view) {
+      setTierView(null);
+      return;
+    }
+    setTierView(view);
+    setLoading(true);
+    const query = supabase
+      .from("producer_modifiers")
+      .select("producer_name, region, price_tier_numeric")
+      .ilike(scopeColumn, `%${scopeValue}%`)
+      .order("confidence", { ascending: false })
+      .limit(60);
+    const scoped = view === "iconic"
+      ? query.gte("price_tier_numeric", ICONIC_MIN_TIER)
+      : query.lt("price_tier_numeric", ICONIC_MIN_TIER);
+    scoped.then((result: { data: Array<{ producer_name: string | null; region: string | null }> | null }) => {
+      const seen = new Set<string>();
+      const rows: TierProducer[] = [];
+      for (const row of result.data ?? []) {
+        const name = row.producer_name?.trim();
+        if (!name || seen.has(name.toLowerCase())) continue;
+        seen.add(name.toLowerCase());
+        rows.push({ name, region: row.region ?? null });
+      }
+      rows.sort((a, b) => a.name.localeCompare(b.name));
+      setProducers(rows);
+      setLoading(false);
+    });
+  };
+
+  const pillStyle = (active: boolean): CSSProperties => ({
+    flex: 1,
+    borderRadius: 20,
+    padding: "6px 10px",
+    fontFamily: SANS,
+    fontSize: 9,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    cursor: "pointer",
+    border: `0.5px solid ${active ? accent : "rgba(255,255,255,0.1)"}`,
+    background: active ? `${accent}30` : "rgba(255,255,255,0.04)",
+    color: active ? CHAMPAGNE : "rgba(245,237,214,0.5)",
+  });
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        <button type="button" onClick={() => selectTierView("iconic")} style={pillStyle(tierView === "iconic")}>
+          Iconic Names
+        </button>
+        <button type="button" onClick={() => selectTierView("growers")} style={pillStyle(tierView === "growers")}>
+          Small Growers
+        </button>
+      </div>
+      {tierView ? (
+        loading ? (
+          <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", marginTop: 8 }}>Loading…</p>
+        ) : producers.length === 0 ? (
+          <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", marginTop: 8 }}>No producers found for this tier yet.</p>
+        ) : (
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 2 }}>
+            {producers.slice(0, 12).map((p) => (
+              <Link
+                key={p.name}
+                href={exploreHref("producer", p.name)}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 2px", textDecoration: "none" }}
+              >
+                <ProducerMark name={p.name} size={22} />
+                <span style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, flex: 1, minWidth: 0 }}>{p.name}</span>
+                {p.region ? <span style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", flexShrink: 0 }}>{p.region}</span> : null}
+              </Link>
+            ))}
+          </div>
+        )
+      ) : null}
     </div>
   );
 }
@@ -433,21 +555,20 @@ function RegionPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse; h
         </Section>
       ) : null}
 
-      {/* Notable Winemakers */}
-      {winemakerItems.length > 0 ? (
-        <Section bg={nextBg()}>
-          <SectionLabel>NOTABLE WINEMAKERS</SectionLabel>
-          {winemakerItems.map((wm) => (
-            <Link key={wm.name} href={exploreHref("producer", wm.name)} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start", textDecoration: "none" }}>
-              <div style={{ width: 3, alignSelf: "stretch", background: ROSE, borderRadius: 2, opacity: 0.6, flexShrink: 0 }} />
-              <div>
-                <p style={{ fontFamily: SERIF, fontSize: 13, color: CHAMPAGNE, marginBottom: 2 }}>{wm.name}</p>
-                <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 1.4 }}>{wm.why}</p>
-              </div>
-            </Link>
-          ))}
-        </Section>
-      ) : null}
+      {/* Notable Winemakers + producer tier browse */}
+      <Section bg={nextBg()}>
+        <SectionLabel>NOTABLE WINEMAKERS</SectionLabel>
+        {winemakerItems.map((wm) => (
+          <Link key={wm.name} href={exploreHref("producer", wm.name)} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start", textDecoration: "none" }}>
+            <ProducerMark name={wm.name} size={30} />
+            <div>
+              <p style={{ fontFamily: SERIF, fontSize: 13, color: CHAMPAGNE, marginBottom: 2 }}>{wm.name}</p>
+              <p style={{ fontFamily: SANS, fontSize: 10, color: "rgba(245,237,214,0.5)", lineHeight: 1.4 }}>{wm.why}</p>
+            </div>
+          </Link>
+        ))}
+        <ProducerTierToggle scopeColumn="region" scopeValue={profile.display_name} accent={ROSE} />
+      </Section>
 
       {/* Key Appellations + Zones */}
       {(appellationItems.length > 0 || zones.length > 0) ? (
@@ -604,21 +725,20 @@ function VarietalPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
         </Section>
       ) : null}
 
-      {/* Notable Producers */}
-      {notableProducers.length > 0 ? (
-        <Section bg={nextBg()}>
-          <SectionLabel>NOTABLE PRODUCERS</SectionLabel>
-          {notableProducers.map((prod) => (
-            <Link key={prod.name} href={exploreHref("producer", prod.name)} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start", textDecoration: "none" }}>
-              <div style={{ width: 6, height: 6, borderRadius: 3, background: accent, marginTop: 5, flexShrink: 0 }} />
-              <div>
-                <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE }}>{prod.name}</p>
-                <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.4 }}>{prod.note}</p>
-              </div>
-            </Link>
-          ))}
-        </Section>
-      ) : null}
+      {/* Notable Producers + producer tier browse */}
+      <Section bg={nextBg()}>
+        <SectionLabel>NOTABLE PRODUCERS</SectionLabel>
+        {notableProducers.map((prod) => (
+          <Link key={prod.name} href={exploreHref("producer", prod.name)} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start", textDecoration: "none" }}>
+            <ProducerMark name={prod.name} size={28} />
+            <div>
+              <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE }}>{prod.name}</p>
+              <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.4)", lineHeight: 1.4 }}>{prod.note}</p>
+            </div>
+          </Link>
+        ))}
+        <ProducerTierToggle scopeColumn="grapes" scopeValue={profile.display_name} accent={accent} />
+      </Section>
 
       <CommunityPulse c={c} qpr={community_qpr} bg={nextBg()} displayName={profile.display_name} />
       {c.recommendation_picks ? <Recommendations picks={c.recommendation_picks} bg={nextBg()} /> : null}
@@ -728,6 +848,7 @@ function ProducerPage({ data, heroFailed, onHeroFail }: { data: ProfileResponse;
           <div style={{ display: "flex", gap: 6 }}>
             {similarProducers.map((prod) => (
               <Link key={prod.name} href={exploreHref("producer", prod.name)} style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "9px 8px", border: "0.5px solid rgba(255,255,255,0.06)", textDecoration: "none" }}>
+                <ProducerMark name={prod.name} size={22} className="mb-1.5" />
                 <p style={{ fontFamily: SERIF, fontSize: 12, color: CHAMPAGNE, marginBottom: 3 }}>{prod.name}</p>
                 <p style={{ fontFamily: SANS, fontSize: 9, color: "rgba(245,237,214,0.42)", lineHeight: 1.4 }}>{prod.why}</p>
               </Link>

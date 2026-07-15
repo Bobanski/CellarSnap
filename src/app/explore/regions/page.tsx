@@ -49,9 +49,6 @@ export default function RegionsBrowsePage() {
   const [userRegionsLoaded, setUserRegionsLoaded] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightData | null>(null);
   const [showAllRegions, setShowAllRegions] = useState(false);
-  // Cached wine_profiles hero images for the Popular Regions grid —
-  // cached-only lookup, never triggers generation from this browse surface.
-  const [regionThumbs, setRegionThumbs] = useState<Map<string, string>>(new Map());
 
   const isSearching = query.trim().length > 0;
 
@@ -122,24 +119,6 @@ export default function RegionsBrowsePage() {
     load();
     return () => { mounted = false; };
   }, []);
-
-  // Load cached hero images for the Popular Regions grid — cached-only, no
-  // generation triggered from this browse surface.
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      const { data } = await supabase
-        .from("wine_profiles")
-        .select("slug, hero_image_url")
-        .eq("profile_type", "region")
-        .in("slug", POPULAR_REGIONS.map(toExploreSlug))
-        .not("hero_image_url", "is", null);
-      if (!mounted || !data) return;
-      setRegionThumbs(new Map(data.map((r: { slug: string; hero_image_url: string }) => [r.slug, r.hero_image_url])));
-    };
-    load();
-    return () => { mounted = false; };
-  }, [supabase]);
 
   return (
     <AppShell>
@@ -299,7 +278,6 @@ export default function RegionsBrowsePage() {
               <div className="grid grid-cols-2 gap-2">
                 {POPULAR_REGIONS.map((r) => {
                   const userEntry = userRegions.find((ur) => ur.name.toLowerCase() === r.toLowerCase());
-                  const thumb = regionThumbs.get(toExploreSlug(r));
                   return (
                     <Link
                       key={r}
@@ -307,9 +285,14 @@ export default function RegionsBrowsePage() {
                       className="flex items-center gap-2.5 rounded-xl px-3 py-3 transition hover:opacity-90"
                       style={{ background: `${GRENACHE}12`, border: `1px solid ${GRENACHE}18` }}
                     >
-                      {/* Cached-only thumbnail — falls back to a plain dot when no image has been generated yet. */}
-                      <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full" style={{ background: `${GRENACHE}30` }}>
-                        {thumb && <AppImage src={thumb} alt="" className="h-full w-full object-cover" />}
+                      {/* Icon, not an AI thumbnail — Dani: browse grids should
+                          read as icons; AI imagery is reserved for the
+                          spotlight hero above and the detail-page hero. */}
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: `${GRENACHE}30` }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="9" stroke={ROSE} strokeWidth="1" opacity="0.7" />
+                          <circle cx="12" cy="12" r="4.5" stroke={ROSE} strokeWidth="0.8" opacity="0.5" />
+                        </svg>
                       </div>
                       <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: CHAMPAGNE }}>{r}</span>
                       {userEntry ? (
