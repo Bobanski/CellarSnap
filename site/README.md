@@ -18,7 +18,10 @@ palette from `cluster-brand-guide-v4` / the app's Warm Noir tokens.
 
 ## Deploy (Vercel)
 
-1. New Vercel project from this repo, **Root Directory = `site`**, Framework Preset = *Other*.
+1. Vercel project **`cluster-site`** already exists (created 2026-09-10 via CLI; preview at
+   https://cluster-site-teal.vercel.app). To get auto-deploys on push, connect it to this repo in
+   Vercel → Settings → Git with **Root Directory = `site`**, Framework Preset = *Other*. Until then,
+   `cd site && npx vercel deploy --prod` publishes the folder directly.
    Do NOT reuse the `cellar-snap` project (that is the app) or the stale duplicate `cellarsnap` project.
 2. Add the custom domain in Vercel → Domains, then set DNS at the registrar (see PR description).
 3. `vercel.json` gives clean URLs (`/privacy` serves `privacy.html`).
