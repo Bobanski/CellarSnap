@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluster — Wine that learns your palate</title>
+<meta name="description" content="Snap a photo of any bottle or scan a restaurant wine list and get picks matched to you, with a reason for each one. The anti-gatekeeping wine app.">
+<meta property="og:title" content="Cluster — Wine that learns your palate">
+<meta property="og:description" content="Snap a photo of any bottle or scan a restaurant wine list and get picks matched to you, with a reason for each one. The anti-gatekeeping wine app.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Cluster home"><svg viewBox="0 0 80 80" fill="none" aria-hidden="true">
+  <circle cx="26" cy="34" r="10" fill="#9B2449" opacity="0.85"/>
+  <circle cx="54" cy="34" r="10" fill="#7B1D3A" opacity="0.95"/>
+  <circle cx="33" cy="48" r="10" fill="#B83060" opacity="0.8"/>
+  <circle cx="47" cy="48" r="10" fill="#9B2449" opacity="0.9"/>
+  <circle cx="40" cy="61" r="10" fill="#7B1D3A" opacity="0.85"/>
+  <circle cx="40" cy="10" r="3" fill="#4A0E1F"/>
+  <line x1="40" y1="10" x2="40" y2="14" stroke="#4A0E1F" stroke-width="2"/>
+  <path d="M40 10 Q50 5 55 8" stroke="#4A0E1F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg><span class="wordmark">cluster</span></a>
+    <nav class="nav" aria-label="Primary">
+      <a href="/#how">How it works</a>
+      <a href="/#palate">The palate engine</a>
+      <a href="/#manifesto">Manifesto</a>
+      <a class="btn ghost" href="https://cellarsnap.app/login">Sign in</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="hero-glow" aria-hidden="true"></div>
+  <svg class="hero-cluster" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+  <circle cx="26" cy="34" r="10" fill="#9B2449" opacity="0.85"/>
+  <circle cx="54" cy="34" r="10" fill="#7B1D3A" opacity="0.95"/>
+  <circle cx="33" cy="48" r="10" fill="#B83060" opacity="0.8"/>
+  <circle cx="47" cy="48" r="10" fill="#9B2449" opacity="0.9"/>
+  <circle cx="40" cy="61" r="10" fill="#7B1D3A" opacity="0.85"/>
+  <circle cx="40" cy="10" r="3" fill="#4A0E1F"/>
+  <line x1="40" y1="10" x2="40" y2="14" stroke="#4A0E1F" stroke-width="2"/>
+  <path d="M40 10 Q50 5 55 8" stroke="#4A0E1F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>
+  <div class="wrap">
+    <div class="reveal">
+      <span class="pill"><i></i> Coming soon to the App Store</span>
+      <p class="eyebrow">No wrong answers. No wrong palate.</p>
+      <h1><span class="line">Know what</span><span class="line">you&rsquo;ll love.</span><span class="line accent">Instantly.</span></h1>
+      <p class="lede">Snap a photo of any bottle and get picks matched to <em>you</em> as the algorithm learns &mdash; with a reason for each one.</p>
+      <div>
+        <div class="cta-row">
+          <a class="btn" href="https://cellarsnap.app/signup?intent=log">Add your first pour <span class="arrow">&rarr;</span></a>
+          <a class="btn ghost" href="https://cellarsnap.app/signup?intent=scan">Or scan a wine list instead</a>
+        </div>
+        <p class="cta-note">Free account &middot; record your first pour in under a minute &middot; runs in your browser today</p>
+      </div>
+    </div>
+    <div class="vignette">
+      <div class="phone" role="img" aria-label="A scanned restaurant wine list with match scores">
+        <div class="ph-eyebrow">List results</div>
+        <h3>Tonight&rsquo;s list</h3>
+        <div class="scanline"></div>
+        <div class="row">
+          <div><div class="name">Bandol Rouge, Domaine Tempier</div><div class="meta">Provence &middot; Mourv&egrave;dre blend &middot; 2019</div></div>
+          <span class="match great">94<small>% match</small></span>
+          <div class="why">Bold, structured reds with a savory edge &mdash; like the last three Syrahs you loved.</div>
+        </div>
+        <div class="row">
+          <div><div class="name">Etna Rosso, Terre Nere</div><div class="meta">Sicily &middot; Nerello Mascalese &middot; 2021</div></div>
+          <span class="match ok">81<small>% match</small></span>
+        </div>
+        <div class="row">
+          <div><div class="name">Chablis 1er Cru Vaillons</div><div class="meta">Burgundy &middot; Chardonnay &middot; 2020</div></div>
+          <span class="match low">58<small>% match</small></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2>Three steps. No homework.</h2>
+    <p class="lead">You don&rsquo;t need the vocabulary. You need a friend in your pocket who already knows what you like.</p>
+    <div class="steps">
+      <article class="step">
+        <div class="num">01</div>
+        <h3>Scan</h3>
+        <p>Snap a photo of any bottle. No typing, no lookup, no guessing at the label.</p>
+      </article>
+      <article class="step">
+        <div class="num">02</div>
+        <h3>Matches, with why</h3>
+        <p>Get a match score and a plain-English reason for every pick &mdash; not just a number.</p>
+      </article>
+      <article class="step">
+        <div class="num">03</div>
+        <h3>Your palate learns</h3>
+        <p>Log what you drink and the read on you gets sharper. Next bottle, better picks.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="palate">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">The palate engine</p>
+      <h2>Not a score.<br>A read on you.</h2>
+      <p class="lead">Other apps average a million strangers&rsquo; opinions into one number. Cluster builds a private taste profile from what <em>you</em> log and love &mdash; sixteen sensory dimensions, from body to minerality &mdash; and reads every wine against it. The more you pour, the sharper it gets.</p>
+      <p class="quote">&ldquo;Bold, structured reds with a savory edge &mdash; like the last three Syrahs you loved.&rdquo;</p>
+      <p class="lead">At the table, scan a restaurant wine list for recommendations in minutes &mdash; or ask the somm chat for more insight, even how to talk to the sommelier in person. We&rsquo;re here to help you have that conversation, not replace it.</p>
+    </div>
+    <div class="tastemap"><svg viewBox="0 0 500 500" aria-label="A sixteen-axis taste profile with a 94 percent match">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#4A3060" stop-opacity=".45"/><stop offset="1" stop-color="#4A3060" stop-opacity="0"/></radialGradient></defs>
+  <circle cx="250" cy="250" r="230" fill="url(#g)"/>
+  <circle class="ring" cx="250" cy="250" r="47.5"/><circle class="ring" cx="250" cy="250" r="95.0"/><circle class="ring" cx="250" cy="250" r="142.5"/><circle class="ring" cx="250" cy="250" r="190.0"/><line class="axis" x1="250" y1="250" x2="250.0" y2="60.0"/><line class="axis" x1="250" y1="250" x2="322.7" y2="74.5"/><line class="axis" x1="250" y1="250" x2="384.4" y2="115.6"/><line class="axis" x1="250" y1="250" x2="425.5" y2="177.3"/><line class="axis" x1="250" y1="250" x2="440.0" y2="250.0"/><line class="axis" x1="250" y1="250" x2="425.5" y2="322.7"/><line class="axis" x1="250" y1="250" x2="384.4" y2="384.4"/><line class="axis" x1="250" y1="250" x2="322.7" y2="425.5"/><line class="axis" x1="250" y1="250" x2="250.0" y2="440.0"/><line class="axis" x1="250" y1="250" x2="177.3" y2="425.5"/><line class="axis" x1="250" y1="250" x2="115.6" y2="384.4"/><line class="axis" x1="250" y1="250" x2="74.5" y2="322.7"/><line class="axis" x1="250" y1="250" x2="60.0" y2="250.0"/><line class="axis" x1="250" y1="250" x2="74.5" y2="177.3"/><line class="axis" x1="250" y1="250" x2="115.6" y2="115.6"/><line class="axis" x1="250" y1="250" x2="177.3" y2="74.5"/>
+  <polygon class="shape" points="250.0,86.6 306.7,113.1 333.3,166.7 302.7,228.2 354.5,250.0 379.9,303.8 360.2,360.2 300.9,372.9 250.0,375.4 219.5,323.7 185.5,314.5 148.2,292.2 98.0,250.0 123.6,197.6 169.4,169.4 188.9,102.5"/>
+  <circle class="node" cx="250.0" cy="86.6" r="4.5" opacity="0.95"/><circle class="node" cx="306.7" cy="113.1" r="3" opacity="0.6"/><circle class="node" cx="333.3" cy="166.7" r="4.5" opacity="0.95"/><circle class="node" cx="302.7" cy="228.2" r="3" opacity="0.6"/><circle class="node" cx="354.5" cy="250.0" r="4.5" opacity="0.95"/><circle class="node" cx="379.9" cy="303.8" r="3" opacity="0.6"/><circle class="node" cx="360.2" cy="360.2" r="4.5" opacity="0.95"/><circle class="node" cx="300.9" cy="372.9" r="3" opacity="0.6"/><circle class="node" cx="250.0" cy="375.4" r="4.5" opacity="0.95"/><circle class="node" cx="219.5" cy="323.7" r="3" opacity="0.6"/><circle class="node" cx="185.5" cy="314.5" r="4.5" opacity="0.95"/><circle class="node" cx="148.2" cy="292.2" r="3" opacity="0.6"/><circle class="node" cx="98.0" cy="250.0" r="4.5" opacity="0.95"/><circle class="node" cx="123.6" cy="197.6" r="3" opacity="0.6"/><circle class="node" cx="169.4" cy="169.4" r="4.5" opacity="0.95"/><circle class="node" cx="188.9" cy="102.5" r="3" opacity="0.6"/>
+  <circle cx="250" cy="250" r="58" fill="#1A0A10" stroke="rgba(196,96,122,.35)"/>
+  <text class="badge-num" x="250" y="264" text-anchor="middle">94</text>
+  <text class="badge-lbl" x="250" y="286" text-anchor="middle">% match</text>
+  <text class="lbl" x="250.0" y="37.5" text-anchor="middle">Body</text><text class="lbl" x="402.7" y="100.8" text-anchor="start">Acidity</text><text class="lbl" x="466.0" y="253.5" text-anchor="start">Oak</text><text class="lbl" x="402.7" y="406.2" text-anchor="start">Earth</text><text class="lbl" x="250.0" y="469.5" text-anchor="middle">Spice</text><text class="lbl" x="97.3" y="406.2" text-anchor="end">Herbal</text><text class="lbl" x="34.0" y="253.5" text-anchor="end">Finish</text><text class="lbl" x="97.3" y="100.8" text-anchor="end">Freshness</text>
+</svg></div>
+  </div>
+</section>
+
+<section class="section manifesto" id="manifesto">
+  <div class="wrap">
+    <p class="eyebrow">No gatekeeping</p>
+    <h2>Every palate is equally valid.</h2>
+    <p class="lead">Cluster isn&rsquo;t a scoring machine, an intimidating wine bible, or another app ranking wine for strangers&rsquo; clout. It&rsquo;s wine, made fun again &mdash; for the first-timer and the collector, equally.</p>
+    <ul class="lines">
+      <li><span class="plus">+</span><span>No wrong answers. No wrong palate.</span></li>
+      <li><span class="plus">+</span><span>Specific beats vague &mdash; &ldquo;complex and earthy&rdquo; or just &ldquo;giving dirt,&rdquo; we&rsquo;re here for both.</span></li>
+      <li><span class="plus">+</span><span>Every wine, every budget, equal respect.</span></li>
+      <li><span class="plus">+</span><span>We surface what you might like. We never tell you what to like.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="section store" id="app">
+  <div class="wrap">
+    <div class="icon-tile"><svg viewBox="0 0 80 80" fill="none" aria-hidden="true">
+  <circle cx="26" cy="34" r="10" fill="#9B2449" opacity="0.85"/>
+  <circle cx="54" cy="34" r="10" fill="#7B1D3A" opacity="0.95"/>
+  <circle cx="33" cy="48" r="10" fill="#B83060" opacity="0.8"/>
+  <circle cx="47" cy="48" r="10" fill="#9B2449" opacity="0.9"/>
+  <circle cx="40" cy="61" r="10" fill="#7B1D3A" opacity="0.85"/>
+  <circle cx="40" cy="10" r="3" fill="#4A0E1F"/>
+  <line x1="40" y1="10" x2="40" y2="14" stroke="#4A0E1F" stroke-width="2"/>
+  <path d="M40 10 Q50 5 55 8" stroke="#4A0E1F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg></div>
+    <p class="eyebrow">Cluster for iPhone</p>
+    <h2>On its way to the App Store.</h2>
+    <p class="lead">The iOS app is in the works. Until it lands, everything &mdash; bottle scans, list scans, Pocket Somm, your palate &mdash; runs in your browser, free.</p>
+    <div class="cta-row">
+      <a class="btn" href="https://cellarsnap.app/signup?intent=log">Use Cluster on the web <span class="arrow">&rarr;</span></a>
+      <a class="btn ghost" href="/support">Questions? Talk to us</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <a class="brand" href="/"><svg viewBox="0 0 80 80" fill="none" aria-hidden="true">
+  <circle cx="26" cy="34" r="10" fill="#9B2449" opacity="0.85"/>
+  <circle cx="54" cy="34" r="10" fill="#7B1D3A" opacity="0.95"/>
+  <circle cx="33" cy="48" r="10" fill="#B83060" opacity="0.8"/>
+  <circle cx="47" cy="48" r="10" fill="#9B2449" opacity="0.9"/>
+  <circle cx="40" cy="61" r="10" fill="#7B1D3A" opacity="0.85"/>
+  <circle cx="40" cy="10" r="3" fill="#4A0E1F"/>
+  <line x1="40" y1="10" x2="40" y2="14" stroke="#4A0E1F" stroke-width="2"/>
+  <path d="M40 10 Q50 5 55 8" stroke="#4A0E1F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg><span class="wordmark">cluster</span></a>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/support">Support</a>
+      <a href="mailto:cellarsnap@gmail.com">Contact</a>
+    </nav>
+    <p>&copy; 2026 Cluster. Wine, made fun again.</p>
+  </div>
+</footer>
+</body>
+</html>
