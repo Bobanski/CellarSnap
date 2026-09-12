@@ -4,16 +4,16 @@ Updated September 12, 2026. **58 records: all 50 original audit findings, six br
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
-**Ownership / external tickets:** unassigned unless a row links a PR. PR #80 owns only the implemented B01 slices. No GitHub umbrella or 58 separate GitHub issues have been created by this documentation pass; these stable local IDs are the tickets. Add a GitHub URL and active owner to the existing record when assigned. Issue #70 is closed brand/design work and should not be used as this backlog's umbrella.
+**Ownership / external tickets:** unassigned unless a row links a PR or active branch. PR #80 owns only the implemented B01 slices. B02a's entry-row slice is in [PR #82](https://github.com/Bobanski/CellarSnap/pull/82), tracked by [issue #81](https://github.com/Bobanski/CellarSnap/issues/81) on `codex/b02a-entry-privacy`. There is no GitHub umbrella; these stable local IDs remain the canonical tickets. Issue #70 is closed brand/design work and should not be used as this backlog's umbrella.
 
-**Release boundary:** no finding is marked Closed here. “QC passed — release pending” means the implemented slice passed its applicable checks but is still in PR #80 or awaiting deployment/live checks. “Partial” preserves residual work. Recheck current deployment state when resuming.
+**Release boundary:** no finding is marked Closed here. “QC passed — release pending” means the implemented slice passed its applicable checks but is still in review or awaiting deployment/live checks. B02a has isolated database tests and browser baseline only; migrated integration remains pending. “Partial” preserves residual work. Recheck current deployment state when resuming.
 
 ## Original audit
 
 | ID | Priority | Finding | Status | Batch / next acceptance evidence |
 |---|---|---|---|---|---|
-| AUD-01 | P0 | Entry/photo policies bypass privacy | Open | B02: direct Data API, Storage and app allow/deny matrix for owner, strangers, friends, blocks, test accounts, originals, shared copies and grouped photos; retain legitimate sharing. |
-| AUD-02 | P0 | PUBLIC can write public-assets | QC passed — release pending | B01 → B02 release: [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) migration tested in PGlite, not deployed. Verify live client write denial and retained public reads/admin writes after rollout. |
+| AUD-01 | P0 | Entry/photo policies bypass privacy | Partial | B02a entry-row migration + captured live access helpers + eight PostgreSQL tests implemented on `codex/b02a-entry-privacy` ([PR #82](https://github.com/Bobanski/CellarSnap/pull/82), [#81](https://github.com/Bobanski/CellarSnap/issues/81)); targeted real PostgreSQL/PostgREST integration passed; release/live verification pending. [Handover](handovers/merge-readiness.md). B02b still needs Storage/photo-specific/group policies and real cross-user API/Storage/browser/native verification. |
+| AUD-02 | P0 | PUBLIC can write public-assets | QC passed — release pending | B01 → B02 release: [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) migration tested in PGlite and real PostgreSQL/PostgREST metadata-role checks, not deployed. Verify live client write denial and retained public reads/admin writes after rollout. |
 | AUD-03 | P0 | Client-editable privileged test-account flag | QC passed — release pending | B01 → B02 release: PR #80 guards insert/update. Verify live own-profile editing, escalation/revocation denial and retained admin updates; do not reset existing flags. |
 | AUD-04 | P0 | Personal embeddings globally readable/searchable | Open | B03: owner/entry boundaries in tables and every retrieval path; cross-user denial, retained curated search, update/delete propagation and no orphaned private chunks. |
 | AUD-05 | P1 | Identifier lookup exposes email/phone mappings | Open | B04: non-enumerating public responses and restricted resolver authority; login/recovery and deliberate availability checks still work with abuse limits. |
@@ -21,16 +21,16 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-07 | P1 | Unbounded/unsafe wine-list URL fetching | Open | B04: validate destination and every redirect; total body deadline and byte limits; accept legitimate restaurant sources and reject disallowed destinations. |
 | AUD-08 | P1 | Dependency advisories and undeclared runtime imports | Open | B04: recheck advisories, upgrade compatible Next/Expo sets, declare imports; separate build-only exposure and test auth/scanning/images/mobile build compatibility. |
 | AUD-09 | P1 | Badge trigger/evaluator incompatibility and award authority | Open | B06: exhaustive shared trigger union coverage, server-authoritative awards, checked writes, representative fixtures for all supported trigger families; preserve all 85 definitions. |
-| AUD-10 | P1 | Score-loader/schema drift | Partial | B01 fixes nonexistent quality_tier query and preserves wine_type, with tests/QC in PR #80. B07 still must resolve absent ai_notes_summary deliberately and prove the schema/loader contract. |
+| AUD-10 | P1 | Score-loader/schema drift | Partial | B01 fixes nonexistent quality_tier query and preserves wine_type, with tests/QC in PR #80. B07 still must resolve absent ai_notes_summary and the newly reproduced absent grape_aliases.alias_type resolver query, and prove the schema/loader contract. See merge-review evidence below. |
 | AUD-11 | P1 | Refresh and on-demand scoring use different preferences | Open | B07: identical versioned inputs for seeded/unseeded single, batch, refresh and list-scan paths; numerical parity fixtures. |
 | AUD-12 | P2 | Cached responses lose promised score fields | Open | B07: cold/warm response equivalence including explanation/confidence fields, or an explicit compatible score-only versus detail contract. |
 | AUD-13 | P1 | Web/native entry lifecycle diverges | Open | B08: authoritative command/side-effect contract covering consumed/cellared/shared/group entries; parity across clients while preserving drafts and native I/O. |
 | AUD-14 | P1 | Cellar drink/decrement/clone is non-atomic | Open | B08: ownership-checked transaction, conditional decrement/locking and idempotency; concurrent last-bottle/retry tests with grape cloning and side effects. |
 | AUD-15 | P1 | Multi-table mutations rely on compensation/positions | Open | B08: stable request/row IDs, atomic boundaries, rollback/retry tests; retain intentional partial-import reporting. |
 | AUD-16 | P1 | Import mapping discards custom types | Open | B08 correctness; B12 consolidation: preserve date, number, grape, bottle-format and currency custom fields across both import formats with round-trip fixtures. |
-| AUD-17 | P1 | Explore grape query uses nonexistent column | QC passed — release pending | B01 PR #80 fixes variety join; schema query and browser community pulse passed. Complete release checks; add a positive personal-grape fixture alongside the empty-state UI coverage. |
+| AUD-17 | P1 | Explore grape query uses nonexistent column | QC passed — release pending | B01 PR #80 fixes variety join; schema query and browser community pulse passed. Positive disposable personal-grape fixture now passed in desktop/phone browser (1 wine, 92.0 average), and returned to empty after deletion. Release/live checks remain. |
 | AUD-18 | P2 | Inconsistent validation on write paths | Open | B08: shared bounded runtime schemas, meaningful 400s and partial-update semantics; unsupported input rejected without erasing omitted valid fields. |
-| AUD-19 | P1 | Migration history does not reproduce production | Open | B02 targeted baseline first, B05 complete baseline: reviewed grants/policies/functions/triggers/seeds, disposable replay and drift detection. Never replay all historical SQL on production. |
+| AUD-19 | P1 | Migration history does not reproduce production | Partial | B02a captured affected live policies/grants and executable entry-helper fixtures; documented text-vs-enum drift in the [access contract](b02a-access-contract.md). Targeted real PostgreSQL 17/PostgREST replay passed in merge review. B05 still needs the complete reviewed baseline, replay/drift detection, triggers/seeds and deployment reconciliation. Never replay historical SQL on production. |
 | AUD-20 | P1 | Compatibility branches lack retirement contract | Open | B05 supported schema/mobile window; B15 deletion: instrument fallback usage and remove only obsolete schema branches while preserving nullable/input recovery and access controls. |
 | AUD-21 | P1 | Database types drift from schema/domain DTOs | Open | B05: generate one type source from reviewed schema, adopt client factories/query result typing, keep public DTOs/validators distinct and CI-check drift. |
 | AUD-22 | P2 | Duplicated entry/photo/group representations lack ownership | Open | B08: document canonical writer and derived copies, reconcile before retirement; retain OCR provenance, separate tasting ratings and collection snapshots. |
@@ -59,7 +59,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-45 | P2 | Route auth/validation/errors inconsistent | Open | B13: small typed adapters, cookie/bearer auth and endpoint-specific error contracts tested; no oversized framework abstraction. |
 | AUD-46 | P3 | Unused modules/pass-through layers | Open | B15: prove no dynamic/external consumers, delete bounded candidates, preserve knowledge-admin authorization and verify affected features. Source count alone is not performance evidence. |
 | AUD-47 | P3 | Repeated tokens/visual primitives | Open | B13: small shared token source and stable per-platform primitives; preserve Noir Refined, native SVG/rendering and static marketing deployment. |
-| AUD-48 | P1 | Regression baseline incomplete/untrustworthy | Partial | B01: 173 tests, CI, lint/types/build plus browser/Expo QC. Every batch: add missing lifecycle/import/cache/scoring/access parity fixtures as relevant; unavailable native acceptance stays explicit. |
+| AUD-48 | P1 | Regression baseline incomplete/untrustworthy | Partial | Merge review: 181 tests, 56 app/database access comparisons, 41 real PostgreSQL/PostgREST HTTP assertions, lint/types and production web/Expo/browser checks. [QC limits](../audits/merge-readiness-qc-2026-09-12.md): full Supabase/Storage-service integration, rollout/live and native acceptance outstanding. Continue lifecycle/import/cache/scoring coverage in relevant batches. |
 | AUD-49 | P2 | Nested worktrees enter tooling/watch roots | Partial | B01 excludes .claude from web lint/TypeScript. B05: Metro and remaining scan/watch boundaries still need review; preserve the user's existing nested checkout. |
 | AUD-50 | P2 | Silent degradation and stale engineering context | Partial | This hub/intake/handover improves documentation only. Every batch: request/job IDs, stage latency/query counts, cache/fallback/AI usage and actionable error reporting remain implementation work. |
 
@@ -73,7 +73,8 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-04 | P2 | Maps loader/legacy Places warnings | Open | B11: async loading and supported Places contract; location autocomplete still works, relevant warnings eliminated and load impact measured. Related AUD-37. |
 | QC-05 | P2 | Expo web exposes router group titles | Open | B11: intended headers on sign-in/app screens without `(auth)`/`(app)` labels; verify native stacks when runtime available. Severity is provisional for native impact. |
 | QC-06 | P2 | Mobile web pressables lack button roles | Open | B11: audit affected pressables' role/name/focus/keyboard behavior; DOM and accessible native behavior verified where available. |
-| OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
+| QC-07 | P1 | Mobile entry details read an absent grape table | Open | B08 with AUD-13/21: use canonical relation, surface query failures, retain grapes during unrelated edits; positive web/mobile detail/save fixture. See evidence below. |
+| OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
 ### QC-01 — Public rating exposure on mobile
@@ -100,9 +101,22 @@ Expo web shows `(auth)` above sign-in and `(app)` above the authenticated screen
 
 Expo web's sign-in and several menu controls appear as generic text rather than named buttons in the accessibility tree. They can be clicked, but explicit roles and keyboard behavior need review. Confirmed web semantics issue; no screen-reader or native acceptance claim. B11, unassigned. Audit and fix controls in bounded screen groups, using meaningful labels, roles and focus behavior rather than adding implementation-only test selectors.
 
+### QC-07 — Mobile entry detail reads an absent grape table
+
+- Priority / status: P1 / Open; B08 with AUD-13/21; unassigned, no implementation PR.
+- Discovered: September 12 merge review of `01a3fdd` product code (test additions `d6a6da7`); production Expo web 390/320px. `apps/mobile/app/(app)/entries/[id].tsx:1029` is unchanged from main `778e43c`.
+- Evidence: load a disposable private entry with one canonical `entry_primary_grapes` → Cabernet Sauvignon link. Web detail/grape statistics show the grape; Expo detail shows “Not set.” Its `wine_entry_primary_grapes` query returns PGRST205; live `to_regclass` is null. Errors are discarded. That screen derives selected editor grapes from the empty result, then replaces canonical links on save.
+- Impact: confirmed missing details; possible grape loss during an unrelated mobile save is source-evidenced but not exercised. Existing data was not edited. Related schema/type drift AUD-21 and lifecycle parity AUD-13.
+- Acceptance: load the canonical ordered grape relation, expose meaningful failure state, verify existing multiple grapes survive a notes-only edit and deliberate grape edits persist across web/mobile. Test positive/empty/failed reads with disposable fixtures and native when available.
+- Deployment / recovery: future mobile code release, no migration assumed. Review historical damage separately before any backfill. [QC report](../audits/merge-readiness-qc-2026-09-12.md).
+
+### AUD-10 — Additional merge-review resolver evidence
+
+The B01 score-loader correction remains implemented; do not overwrite its history. A successful disposable web notes save logged `persistEntryResolution` fallback to stub. The unchanged `src/server/algorithm/aliasLookup.ts:164` selects `grape_aliases.alias_type`, which is absent from the live column catalog. Authenticated direct reproduction returns 42703. The resolver catches this through its existing fallback; TypeScript/build do not catch it. B07/B05 acceptance must reconcile this query with the reviewed deployed contract, test a successful grape alias resolution and failure handling, and retain raw inputs/normal saves. It was not silently fixed in this privacy review. Related AUD-19/21/50; [evidence](../audits/merge-readiness-qc-2026-09-12.md).
+
 ### OPS-01 — Duplicate deployment target
 
-The consolidated main/implementation stage reported a successful primary `Vercel – cellar-snap` deployment and failing duplicate `Vercel – cellarsnap`. Source: [progress log](../audits/remediation-progress.md). Root cause and current project/domain ownership need inspection; no duplicate was disabled or deleted. B04, unassigned. A green primary deployment is not evidence that the duplicate is harmless, nor permission to delete it blindly.
+The consolidated main/implementation stage reported a successful primary `Vercel – cellar-snap` deployment and failing duplicate `Vercel – cellarsnap`. Source: [progress log](../audits/remediation-progress.md). Merge review inspected failed deployment `Dtt79wpzaCQPy9hZzu193dahWLo9`: `/entries/new` prerender throws `Missing Supabase environment variables.` Duplicate project ID is `prj_gmWfsDsFQ2AlcPhBH5myZdyzxUAr`; primary `cellar-snap` succeeds. Current domain/ownership disposition still needs inspection; no duplicate was disabled or deleted. B04, unassigned. A green primary deployment is not evidence that the duplicate is harmless, nor permission to delete it blindly.
 
 ### OPS-02 — Older claims are not present-day acceptance
 
@@ -112,6 +126,9 @@ Reconcile these against current code before a related batch: count issues likely
 
 ## Change history
 
+- September 12, 2026, merge review: completed targeted real HTTP integration and production web/Expo QC, added positive personal-grape fixture coverage, confirmed OPS-01 env failure, recorded QC-07 and additional AUD-10 drift. Code recommended for final owner review; no merge, migration deployment or live-fix verification. [Handover](handovers/merge-readiness.md).
+
+- September 12, 2026, B02a: implemented the AUD-01 entry-row slice with an explicit B01 capability dependency, live catalog/function fixtures and policy/app tests; marked AUD-01/19 Partial, updated AUD-48, and published [handover](handovers/batch-02a.md). Known QC-02/03/04 reconfirmed; no unrelated fixes. No merge, production migration or live-fix verification.
 - September 12, 2026: initialized all 50 audit IDs with explicit B01 partial/release boundaries; registered six QC and two operational/intake records. Added ordered batches, intake/completion rules and a fresh-session handover. No production implementation or schema changes in this planning pass.
 
 For new findings, use the [intake template](README.md#finding-intake-and-local-tickets). Append the next ID rather than renumbering this inventory. For completed work, update the row and link dated verification/release evidence; preserve the record and original source.

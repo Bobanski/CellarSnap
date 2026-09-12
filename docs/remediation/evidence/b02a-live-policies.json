@@ -1,0 +1,247 @@
+{
+  "project": "rbmkypbqavmnuycznssv",
+  "captured": "2026-09-12",
+  "scope": "Read-only catalog; pre-B01/B02 deployment. No user rows.",
+  "policies": [
+    {
+      "schemaname": "public",
+      "tablename": "entry_group_slides",
+      "policyname": "Authenticated users can view entry group slides",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.role() = 'authenticated'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "entry_group_slides",
+      "policyname": "Owners can manage entry group slides",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(auth.uid() = ( SELECT entry_groups.user_id\n   FROM entry_groups\n  WHERE (entry_groups.id = entry_group_slides.group_id)))",
+      "with_check": "(auth.uid() = ( SELECT entry_groups.user_id\n   FROM entry_groups\n  WHERE (entry_groups.id = entry_group_slides.group_id)))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "entry_groups",
+      "policyname": "Authenticated users can view entry groups",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.role() = 'authenticated'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "entry_groups",
+      "policyname": "Owners can manage entry groups",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "entry_photos",
+      "policyname": "Owners can manage entry photos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "ALL",
+      "qual": "(auth.uid() = ( SELECT wine_entries.user_id\n   FROM wine_entries\n  WHERE (wine_entries.id = entry_photos.entry_id)))",
+      "with_check": "(auth.uid() = ( SELECT wine_entries.user_id\n   FROM wine_entries\n  WHERE (wine_entries.id = entry_photos.entry_id)))"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "entry_photos",
+      "policyname": "Users can view entry photos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_photos.entry_id) AND can_view_entry(auth.uid(), e.user_id, e.entry_privacy))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "profiles",
+      "policyname": "Users can insert their profile",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "profiles",
+      "policyname": "Users can update their profile",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "profiles",
+      "policyname": "Users can view their own profile",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "wine_entries",
+      "policyname": "Authenticated users can view wine entries",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.role() = 'authenticated'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "wine_entries",
+      "policyname": "Users can delete own wine entries",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "DELETE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "wine_entries",
+      "policyname": "Users can insert own wine entries",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "wine_entries",
+      "policyname": "Users can update own wine entries",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "public",
+      "tablename": "wine_entries",
+      "policyname": "Users can view own wine entries",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Authenticated users can read wine photos",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'wine-photos'::text) AND (auth.role() = 'authenticated'::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Delete_own_photos bzgjph_0",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Delete_own_photos bzgjph_1",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Public read access for public-assets",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'public-assets'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Read_own_photos bzgjph_0",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Service role can update public-assets",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "UPDATE",
+      "qual": "(bucket_id = 'public-assets'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Service role can upload to public-assets",
+      "permissive": "PERMISSIVE",
+      "roles": "{public}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(bucket_id = 'public-assets'::text)"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Update_Own_Photos bzgjph_0",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Update_Own_Photos bzgjph_1",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "Upload_Own_Photos bzgjph_0",
+      "permissive": "PERMISSIVE",
+      "roles": "{authenticated}",
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+    }
+  ]
+}
