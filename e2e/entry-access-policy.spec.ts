@@ -20,6 +20,7 @@ async function asRole(db: PGlite, user: string | null, role = "authenticated") {
   // Only fixed test roles are passed here; user identities are bound parameters.
   await db.exec(`reset role; set role ${role};`);
   await db.query("select set_config('request.jwt.claim.sub', $1, false)", [user ?? ""]);
+  await db.query("select set_config('request.jwt.claim.role', $1, false)", [role]);
 }
 
 async function migrate(db: PGlite) {
@@ -29,64 +30,9 @@ async function migrate(db: PGlite) {
 
 async function database({ protectedCapabilities = true, migrated = true } = {}) {
   const db = new PGlite();
-  await db.exec(`
-    create role anon;
-    create role authenticated;
-    create role service_role bypassrls;
-    create schema auth;
-    create schema storage;
-    create function auth.uid() returns uuid language sql stable as
-      $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-    create function auth.role() returns text language sql stable as
-      $$ select current_user::text $$;
-    grant usage on schema public, auth, storage to anon, authenticated, service_role;
-    create table profiles (id uuid primary key, is_test_account boolean not null default false);
-    create table friend_requests (requester_id uuid, recipient_id uuid, status text);
-    create table user_blocks (blocker_id uuid, blocked_id uuid);
-    create table wine_entries (
-      id uuid primary key, user_id uuid not null, entry_privacy text,
-      rating int check (rating between 1 and 100), notes text,
-      root_entry_id uuid references wine_entries(id), entry_group_id uuid,
-      tasted_with_user_ids uuid[] not null default '{}'
-    );
-    create table entry_photos (id uuid primary key, entry_id uuid references wine_entries(id), path text);
-    create table storage.objects (name text, bucket_id text);
-    grant all on all tables in schema public, storage to anon, authenticated, service_role;
-    alter table profiles enable row level security;
-    create policy "Users can view their own profile" on profiles for select using (auth.uid() = id);
-    create policy "Users can update their profile" on profiles for update using (auth.uid() = id);
-    -- Lookups must work through the captured definer helpers even when relationship
-    -- rows are not visible to the caller; do not replace helpers with permissive mocks.
-    alter table friend_requests enable row level security;
-    alter table user_blocks enable row level security;
-    alter table wine_entries enable row level security;
-    create policy "Authenticated users can view wine entries" on wine_entries for select
-      using (auth.role() = 'authenticated');
-    create policy "Users can view own wine entries" on wine_entries for select using (auth.uid() = user_id);
-    create policy "Users can insert own wine entries" on wine_entries for insert with check (auth.uid() = user_id);
-    create policy "Users can update own wine entries" on wine_entries for update using (auth.uid() = user_id);
-    create policy "Users can delete own wine entries" on wine_entries for delete using (auth.uid() = user_id);
-    alter table entry_photos enable row level security;
-  `);
+  await db.exec(await readFile("e2e/fixtures/entry-access-schema.sql", "utf8"));
   await db.exec(await readFile("e2e/fixtures/entry-access-functions.sql", "utf8"));
-  await db.exec(`
-    create policy "Users can view entry photos" on entry_photos for select using (
-      exists (select 1 from wine_entries e where e.id = entry_id
-        and public.can_view_entry(auth.uid(), e.user_id, e.entry_privacy))
-    );
-  `);
-  for (let n = 1; n <= 7; n++) {
-    await db.query("insert into profiles values ($1, $2)", [uid(n), n === 5 || n === 6]);
-  }
-  await db.query("insert into friend_requests values ($1,$2,'accepted'),($2,$3,'accepted'),($1,$4,'pending')",
-    [owner, friend, distantFriend, pending]);
-  for (const [i, privacy] of privacies.entries()) {
-    await db.query("insert into wine_entries (id,user_id,entry_privacy,rating,notes) values ($1,$2,$3,92,'Synthetic tasting')",
-      [entryId(i), owner, privacy]);
-    await db.query("insert into entry_photos values ($1,$2,$3)", [uid(200 + i), entryId(i), `synthetic/photo-${i}.jpg`]);
-    await db.query("insert into wine_entries (id,user_id,entry_privacy) values ($1,$2,$3)",
-      [entryId(10 + i), tester, privacy]);
-  }
+  await db.exec(await readFile("e2e/fixtures/entry-access-seed.sql", "utf8"));
   if (protectedCapabilities) await db.exec(await readFile(capabilityPath, "utf8"));
   if (migrated) await migrate(db);
   return db;
