@@ -53,3 +53,10 @@ Interactive QC on September 12 tested the first patch (`0e7acb0`) in Chrome agai
 The pass exposed existing issues: numeric ratings remain visible in the mobile social feed; the web library shifts a date-only consumed date back one day; profile/menu counts differ between surfaces. These were not changed by batch one and remain follow-up work. Google Maps loading/deprecation warnings and Expo web presentation/accessibility limitations are also recorded. The security migration is still undeployed, and no native emulator runtime is installed on this Mac.
 
 See [the detailed QC report](batch-1-browser-mobile-qc-2026-09-12.md) for coverage, evidence, and limits. Interactive browser QC and available mobile-emulator testing are now recorded in the project instructions and the owner's global Codex instructions.
+
+
+## B02b2 checkpoint — September 12, 2026
+
+[PR #87](https://github.com/Bobanski/CellarSnap/pull/87), stacked on #86, implements source-authorized Storage reads and public-only anonymous share signing at `eb52b33`. Reclassified and slide-only images remain supported; references cannot unlock private sources. Share authorization is checked per request, OG responses are no-store and new share-image signatures last one hour. Previously issued URLs retain their original expiry.
+
+196 automated tests, 148 real isolated Supabase Storage HTTP assertions, web/mobile lint/types, Next build, Expo export and desktop/phone share QC passed. Expo web confirmed owner/non-owner gallery filtering on disposable live fixtures; native runtimes and hosted transformations/CDN are unverified. Fixtures removed, original counts restored. Implementation CI/primary preview passed; duplicate Vercel remains OPS-01. No merge, production SQL or code deployment occurred. AUD-01/19/48 remain Partial. [Current handover](../remediation/handovers/batch-02b2.md), [QC evidence](b02b2-storage-share-qc-2026-09-12.md), [canonical backlog](../remediation/backlog.md).
