@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
@@ -495,9 +496,14 @@ function useStepValid(step: number, draft: { wineTypes: string[] }) {
   return true; // all other steps are optional
 }
 
+// Baseline top inset on a notchless device — see explanation in AppTopBar.tsx.
+const NOTCHLESS_TOP_INSET = 20;
+const SCROLL_BASE_PADDING_TOP = 16;
+
 // ─── Main screen ─────────────────────────────────────────────
 export default function TasteSurveyScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const ctx = useTasteSurvey();
   const { step, canGoBack, goNext, goBack, progress, submit, errorMessage, isSubmitting, draft, prefill } = ctx;
   const [loading, setLoading] = useState(true);
@@ -544,7 +550,13 @@ export default function TasteSurveyScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[
+          s.scrollContent,
+          {
+            paddingTop:
+              SCROLL_BASE_PADDING_TOP + (insets.top - NOTCHLESS_TOP_INSET),
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

@@ -10,7 +10,6 @@ export const surveyStyles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 22,
-    paddingTop: 16,
     paddingBottom: 48,
     gap: 20,
   },

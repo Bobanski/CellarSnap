@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { toExploreSlug, WINE_REGIONS } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
@@ -41,8 +42,13 @@ const POPULAR_REGIONS = [
   "Sonoma", "Stellenbosch",
 ];
 
+// Baseline top inset on a notchless device — see explanation in AppTopBar.tsx.
+const NOTCHLESS_TOP_INSET = 20;
+const CONTENT_BASE_PADDING_TOP = 60;
+
 export default function ExploreBrowseScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -181,7 +187,13 @@ export default function ExploreBrowseScreen() {
     >
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop:
+              CONTENT_BASE_PADDING_TOP + (insets.top - NOTCHLESS_TOP_INSET),
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets
@@ -323,7 +335,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 80,
   },
   eyebrow: {

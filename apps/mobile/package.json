@@ -24,6 +24,7 @@
     "expo-asset": "56.0.16",
     "expo-constants": "56.0.17",
     "expo-font": "56.0.5",
+    "expo-haptics": "~56.0.3",
     "expo-image-manipulator": "56.0.17",
     "expo-image-picker": "56.0.16",
     "expo-linking": "56.0.13",

@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { router, useFocusEffect, type RelativePathString } from "expo-router";
+import { lightImpact } from "@/src/lib/haptics";
 import {
   FEED_REACTION_EMOJIS,
   HOME_ACTION_LABELS,
@@ -1053,7 +1054,10 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => void loadHome(true)}
+            onRefresh={() => {
+              lightImpact();
+              void loadHome(true);
+            }}
             tintColor={colors.grenache}
           />
         }
