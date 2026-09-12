@@ -568,8 +568,8 @@ async function fetchPersonalStats(
     // Count entries with this grape in entry_primary_grapes
     const { data: grapeEntries } = await supabase
       .from("entry_primary_grapes")
-      .select("entry_id")
-      .ilike("grape", `%${displayName}%`);
+      .select("entry_id, grape_varieties!inner(name)")
+      .ilike("grape_varieties.name", `%${displayName}%`);
 
     const entryIds = (grapeEntries ?? []).map(
       (row: { entry_id: string }) => row.entry_id
@@ -1081,8 +1081,8 @@ export async function GET(
       // For grapes, join through entry_primary_grapes
       const { data: grapeEntries } = await adminClient
         .from("entry_primary_grapes")
-        .select("entry_id")
-        .ilike("grape", `%${displayName}%`);
+        .select("entry_id, grape_varieties!inner(name)")
+        .ilike("grape_varieties.name", `%${displayName}%`);
       const entryIds = (grapeEntries ?? []).map((r: { entry_id: string }) => r.entry_id);
       if (entryIds.length > 0) {
         const { data } = await adminClient

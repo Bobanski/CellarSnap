@@ -3,6 +3,10 @@
 Wine-focused app. Core features: bottle logging, label/photo workflows, recommendations,
 palate matching, social layer, badges/gamification. Product name still TBD (CellarSnap / Clinq / Cluster).
 
+## Remediation continuity
+
+For the audit backlog, priorities, batch sequence, new-finding intake, and session handovers, start at [docs/remediation/README.md](docs/remediation/README.md). Its linked backlog is the canonical work queue; the September audit and individual QC reports are evidence, not competing task lists. Update the backlog and current handover at every batch/session boundary. Never equate a tested migration file with a verified production fix.
+
 ---
 
 ## Stack
@@ -13,7 +17,7 @@ palate matching, social layer, badges/gamification. Product name still TBD (Cell
 - **Database + Auth**: Supabase (PostgreSQL + Supabase Auth + Storage)
 - **AI**: OpenAI API (label autofill, photo context, sommelier RAG), Google Vision (OCR)
 - **Infra**: Vercel (web), Supabase (db/auth/storage)
-- **Testing**: Playwright (e2e), Vitest (unit)
+- **Testing**: Playwright (browser and unit/route suites), PGlite (isolated PostgreSQL policy tests)
 
 ## Project Structure
 
@@ -82,7 +86,7 @@ Friends, entry reactions/comments, entry groups (shared tastings), blocks/report
 
 - For bulk data operations, prefer CSV uploads over repeated SQL INSERT statements. Never use dozens of migration pushes for seed data.
 - Migrations live in `supabase/sql/` and are listed in `supabase/sql/manifest.txt` — always append new migrations to the manifest.
-- Latest migration: `091_badges.sql`
+- The ordered migration list is `supabase/sql/manifest.txt`; branch migrations are not necessarily deployed.
 - Supabase project ID: `rbmkypbqavmnuycznssv`
 
 ## Git Workflow
@@ -98,8 +102,13 @@ Friends, entry reactions/comments, entry groups (shared tastings), blocks/report
 
 ## Test Commands
 
+Web-app QC must include interactive browser testing of the affected user flows, visual checks at desktop and phone widths, and inspection of browser/server errors. Build, lint, and unit-test results alone do not complete QC. Capture screenshots and document actual passes, failures, and coverage limits.
+
+For mobile changes, exercise available iOS simulators or Android emulators. If those runtimes are unavailable, test responsive web layouts and the Expo web runtime where practical; explicitly label that fallback as web testing, not native acceptance. Use designated E2E accounts, keep mutations scoped to disposable fixtures, restore temporary environment changes, and retest any fixes found during QC.
+
 ```bash
-npm run test:routes    # unit tests
+npm run test:unit      # pure, route, and isolated database tests; no live services
+npm run test:routes    # route-handler regression subset
 npm run e2e            # Playwright end-to-end
 npm run lint           # lint all workspaces
 npm run lint:web       # web only

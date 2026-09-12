@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { extractFromNotes } from "./notesNlp";
+import { extractFromNotes } from "../src/server/algorithm/notesNlp";
 
 test.describe("extractFromNotes", () => {
   test("returns null for empty or too-short notes", () => {

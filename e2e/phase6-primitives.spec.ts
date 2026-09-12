@@ -499,6 +499,14 @@ test.describe("Phase 6 server primitive unit coverage", () => {
       storage: {
         from(bucket: string) {
           return {
+            createSignedUrls: async (paths: string[], ttl: number) => {
+              expect(paths).toEqual(["a.jpg", "b.jpg"]);
+              calls.push(...paths.map((path) => ({ bucket, path, ttl })));
+              return {
+                data: paths.map((path) => ({ path, signedUrl: `https://cdn.example/${path}?ttl=${ttl}`, error: null })),
+                error: null,
+              };
+            },
             createSignedUrl: async (path: string, ttl: number) => {
               calls.push({ bucket, path, ttl });
               if (path === "broken.jpg") {

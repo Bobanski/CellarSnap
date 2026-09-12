@@ -53,11 +53,11 @@ type EntryRowWithCanonicalFields = {
   canonical_country: string | null;
   producer: string | null;
   classification: string | null;
-  quality_tier: string | null;
   vintage: string | null;
 };
 
 type EntryRowFallback = {
+  wine_type?: WineType | null;
   id: string;
   user_id: string;
   producer: string | null;
@@ -170,19 +170,23 @@ export async function defaultLoadEntryForScoring(
   const entrySelectAttempts = [
     {
       fields:
-        "id, user_id, wine_type, canonical_region, canonical_sub_region, canonical_country, producer, classification, quality_tier, vintage",
-      includesWineType: true,
+        "id, user_id, wine_type, canonical_region, canonical_sub_region, canonical_country, producer, classification, vintage",
+      includesCanonicalFields: true,
       missingColumns: [
         "wine_type",
         "canonical_region",
         "canonical_sub_region",
         "canonical_country",
-        "quality_tier",
       ] as const,
     },
     {
+      fields: "id, user_id, wine_type, producer, classification, vintage, region, appellation, country",
+      includesCanonicalFields: false,
+      missingColumns: ["wine_type"] as const,
+    },
+    {
       fields: "id, user_id, producer, classification, vintage, region, appellation, country",
-      includesWineType: false,
+      includesCanonicalFields: false,
       missingColumns: [] as const,
     },
   ] as const;
@@ -216,7 +220,7 @@ export async function defaultLoadEntryForScoring(
   const primaryGrapeMap = await fetchPrimaryGrapesByEntryId(supabase, [entryId]);
   const primaryGrapes = primaryGrapeMap.get(entryId)?.map((grape) => grape.name).join(", ") ?? null;
 
-  if (result.usedAttempt?.includesWineType) {
+  if (result.usedAttempt?.includesCanonicalFields) {
     const row = result.data as unknown as EntryRowWithCanonicalFields;
     return {
       wine_type: isWineType(row.wine_type) ? row.wine_type : null,
@@ -227,13 +231,13 @@ export async function defaultLoadEntryForScoring(
       vintage: row.vintage ? Number.parseInt(row.vintage, 10) || null : null,
       producer: row.producer ?? null,
       classification: row.classification ?? null,
-      quality_tier: row.quality_tier ?? row.classification ?? null,
+      quality_tier: row.classification ?? null,
     };
   }
 
   const row = result.data as unknown as EntryRowFallback;
   return {
-    wine_type: null,
+    wine_type: isWineType(row.wine_type) ? row.wine_type : null,
     canonical_region: row.region ?? null,
     canonical_sub_region: row.appellation ?? null,
     canonical_country: row.country ?? null,

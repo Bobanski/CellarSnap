@@ -71,3 +71,4 @@
 095_lock_reference_tables.sql
 096_notifications_index.sql
 097_featured_badges.sql
+20260912185640_protect_profile_capabilities_and_public_assets.sql
