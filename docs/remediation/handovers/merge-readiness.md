@@ -8,7 +8,7 @@ Affected records: AUD-01/02/03/10/17/19/48, OPS-01; new QC-07 (unchanged mobile 
 
 ## Resume here
 
-1. Inspect [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) (base main, head `37f183d`) and [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) (base `codex/audit-remediation`). They are being prepared for review, not merged. B01 issue is now [#83](https://github.com/Bobanski/CellarSnap/issues/83); #70 was an unrelated closed design issue. B02a remains [#81](https://github.com/Bobanski/CellarSnap/issues/81).
+1. Inspect [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) (base main, head `37f183d`) and [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) (base `codex/audit-remediation`). Both are marked ready for review and GitHub reports them mergeable; neither is merged. B01 issue is now [#83](https://github.com/Bobanski/CellarSnap/issues/83); #70 was an unrelated closed design issue. B02a remains [#81](https://github.com/Bobanski/CellarSnap/issues/81).
 2. Read [merge QC report](../../audits/merge-readiness-qc-2026-09-12.md) and [entry access contract](../b02a-access-contract.md). Final code/test revision reviewed locally is `d6a6da7fef138e70559e3cb55640375eaa004e17`, following B02a SQL `50f9fc6`; readiness documentation follows separately. Verify the actual PR head/checks at resumption.
 3. After explicit owner approval, merge B01 first, retarget/rebase B02a onto updated main as necessary, and recheck checks/diff before merging B02a. Do not infer approval to deploy SQL from these files or from a future code-merge approval.
 4. Both SQL migrations remain undeployed. Review the intended target and release procedure, preserve manifest order, apply through the authorized workflow, then verify live API/Storage/app behavior. Production remediation is not complete until that evidence exists.
@@ -57,7 +57,7 @@ Preserve modified `tsconfig.json` formatting, untracked `cellarsnap-fix-plan.md`
 
 Disposable private test entry `c94b3965-ad8e-4d81-ae15-d4ae783fcf25` was created under the designated test account, edited/deleted through web UI. Read-only follow-up confirmed zero entry, grape links, score rows and resolution logs; no files uploaded. Existing fixtures were preserved. Normal app-derived cache refreshes occurred. No environment files changed.
 
-Temporary QC services on 3001/8083 are stopped at session end; test browser sessions signed out and viewport overrides reset. Screenshot directory and sanitized textual evidence are in the report. Temporary runtime and build/log files under `/tmp/cellarsnap-review-*` may disappear without affecting canonical evidence. No secrets are checked in.
+Temporary QC services on 3001/8083 are stopped at session end; test browser sessions signed out and viewport overrides reset. A final listener check found neither port still listening. Screenshot directory and sanitized textual evidence are in the report. Temporary runtime and build/log files under `/tmp/cellarsnap-review-*` may disappear without affecting canonical evidence. No secrets are checked in.
 
 ## Next slice
 
