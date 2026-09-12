@@ -1,5 +1,7 @@
 # B01/B02a merge-readiness handover — September 12, 2026
 
+Historical readiness snapshot; superseded by the [approved merge handover](merged-b01-b02a.md).
+
 ## Objective and IDs
 
 Completed a thorough review/QC of the full #80 → #82 stack at the owner's request. Recommendation: code ready for final owner review and ordered merge, with the known duplicate deployment check failing (OPS-01). Owner explicitly said to wait for their quick check and approval before merging. **Do not merge without that approval.** No product-code defect introduced by the stack was found; added real HTTP integration coverage and updated release evidence.
