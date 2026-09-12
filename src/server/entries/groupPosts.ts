@@ -1,3 +1,4 @@
+import { filterVisibleGroupSlides } from "@shared";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   EntryGroup,
@@ -136,8 +137,13 @@ export async function resolveGroupedPostData(
     throw new Error(slideEntriesError.message);
   }
 
+  const visibleSlides = filterVisibleGroupSlides(
+    (slideRows ?? []) as EntryGroupSlideRow[],
+    new Set((groupRows ?? []).map((row) => row.id)),
+    new Set((slideEntryRows ?? []).map((row) => row.id)),
+  );
   const signedUrlByPath = await signPhotoUrls(
-    (slideRows ?? []).map((row) => row.path),
+    visibleSlides.map((row) => row.path),
     supabase
   );
 
@@ -149,7 +155,7 @@ export async function resolveGroupedPostData(
   );
   const slidesByGroupId = new Map<string, EntryGroupSlideRow[]>();
 
-  ((slideRows ?? []) as EntryGroupSlideRow[]).forEach((row) => {
+  visibleSlides.forEach((row) => {
     const current = slidesByGroupId.get(row.group_id) ?? [];
     current.push(row);
     slidesByGroupId.set(row.group_id, current);

@@ -12,6 +12,7 @@ export * from "./entryDetail";
 export * from "./entry-flow";
 export * from "./featureAccess";
 export * from "./feed";
+export * from "./groupedPhotos";
 export * from "./home";
 export * from "./listScan";
 export * from "./newEntry";

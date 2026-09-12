@@ -1,3 +1,4 @@
+import { filterVisibleGroupSlides } from "@cellarsnap/shared";
 import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
@@ -930,14 +931,17 @@ export async function fetchFeedPage({
       }
 
       // Sign slide photo URLs
-      const slidePaths = slideRows.map((row) => row.path);
+      const visibleSlides = filterVisibleGroupSlides(
+        slideRows, new Set(groupRows.map((row) => row.id)), new Set(slideEntryMap.keys()),
+      );
+      const slidePaths = visibleSlides.map((row) => row.path);
       const slideSignedUrls = await signPhotoUrls(slidePaths, {
         supabaseClient,
       });
 
       const groupById = new Map(groupRows.map((row) => [row.id, row]));
       const slidesByGroupId = new Map<string, typeof slideRows>();
-      slideRows.forEach((row) => {
+      visibleSlides.forEach((row) => {
         const current = slidesByGroupId.get(row.group_id) ?? [];
         current.push(row);
         slidesByGroupId.set(row.group_id, current);

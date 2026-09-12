@@ -21,6 +21,7 @@ export default defineConfig({
     "notes-nlp.spec.ts",
     "database-security.spec.ts",
     "entry-access-policy.spec.ts",
+    "photo-group-access.spec.ts",
     "audit-regressions.spec.ts",
   ],
 });
