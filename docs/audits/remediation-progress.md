@@ -43,3 +43,11 @@ The first patch does not yet close the entry/photo privacy gap (01), personal em
 4. Continue batched entry loading, the remaining photo endpoint, notification polling, and shared entry/import workflows.
 
 No broad schema replay, dependency upgrade campaign, native-device acceptance test, or full feature deletion was performed in this first patch.
+
+## Browser and mobile QC follow-up
+
+Interactive QC on September 12 tested the first patch (`0e7acb0`) in Chrome against the local Next app and the mobile app's Expo web runtime, using the existing E2E account. Authentication, feed photos, grape community statistics, score rendering/reload, library search, owner entry loading, editor hydration/cancel, and logout were exercised. Phone layouts were inspected at measured CSS widths of 390px (web and Expo) and 320px (Expo). No regression attributable to the first patch was identified in those flows.
+
+The pass exposed existing issues: numeric ratings remain visible in the mobile social feed; the web library shifts a date-only consumed date back one day; profile/menu counts differ between surfaces. These were not changed by batch one and remain follow-up work. Google Maps loading/deprecation warnings and Expo web presentation/accessibility limitations are also recorded. The security migration is still undeployed, and no native emulator runtime is installed on this Mac.
+
+See [the detailed QC report](batch-1-browser-mobile-qc-2026-09-12.md) for coverage, evidence, and limits. Interactive browser QC and available mobile-emulator testing are now recorded in the project instructions and the owner's global Codex instructions.

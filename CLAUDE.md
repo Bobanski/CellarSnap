@@ -98,6 +98,10 @@ Friends, entry reactions/comments, entry groups (shared tastings), blocks/report
 
 ## Test Commands
 
+Web-app QC must include interactive browser testing of the affected user flows, visual checks at desktop and phone widths, and inspection of browser/server errors. Build, lint, and unit-test results alone do not complete QC. Capture screenshots and document actual passes, failures, and coverage limits.
+
+For mobile changes, exercise available iOS simulators or Android emulators. If those runtimes are unavailable, test responsive web layouts and the Expo web runtime where practical; explicitly label that fallback as web testing, not native acceptance. Use designated E2E accounts, keep mutations scoped to disposable fixtures, restore temporary environment changes, and retest any fixes found during QC.
+
 ```bash
 npm run test:unit      # pure, route, and isolated database tests; no live services
 npm run test:routes    # route-handler regression subset
