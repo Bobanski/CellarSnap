@@ -71,22 +71,19 @@ function makeProfile(): EffectiveWineProfile {
 }
 
 function makeRefreshSupabase(rows: Record<string, unknown>[]) {
-  return {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({
-            order: () => ({
-              limit: async () => ({
-                data: rows,
-                error: null,
-              }),
-            }),
-          }),
-        }),
-      }),
-    }),
-  } as never;
+  const filters: Record<string, unknown> = {};
+  const query = {
+    eq(column: string, value: unknown) {
+      filters[column] = value;
+      return query;
+    },
+    order: () => query,
+    limit: async () => {
+      expect(filters).toMatchObject({ entry_status: "consumed" });
+      return { data: rows, error: null };
+    },
+  };
+  return { from: () => ({ select: () => query }) } as never;
 }
 
 test.describe("WS3 algorithm UI support", () => {
@@ -163,6 +160,8 @@ test.describe("WS3 algorithm UI support", () => {
 
   test("batch score handler returns cached scores without recomputing", async () => {
     let assembleCalls = 0;
+    let palateCalls = 0;
+    let allowPreferenceLoads = false;
 
     const handler = createAlgorithmScoreBatchHandler({
       requireRequestAuth: async () =>
@@ -213,7 +212,11 @@ test.describe("WS3 algorithm UI support", () => {
         assembleCalls += 1;
         return makeProfile();
       },
-      loadUserPreferenceEntries: async () => [],
+      loadUserPreferenceEntries: async () => {
+        if (!allowPreferenceLoads) throw new Error("Warm cache must not load preferences");
+        return [];
+      },
+      readPalateProfile: async () => { palateCalls += 1; return null; },
     });
 
     const response = await handler(
@@ -237,6 +240,24 @@ test.describe("WS3 algorithm UI support", () => {
     expect(payload.results[0]?.data?.score).toBe(92);
     expect(payload.results[0]?.data?.modifiers_applied).toEqual(["cache"]);
     expect(assembleCalls).toBe(0);
+    expect(palateCalls).toBe(0);
+
+    // A cached sibling must not supply the result for an override of the same ID.
+    allowPreferenceLoads = true;
+    const mixedResponse = await handler(new Request("http://localhost/api/algorithm/score/batch", {
+      method: "POST",
+      body: JSON.stringify({ items: [
+        { request_id: "cached", entry_id: "11111111-1111-4111-8111-111111111111" },
+        { request_id: "override", entry_id: "11111111-1111-4111-8111-111111111111", wine_type: "red" },
+      ] }),
+    }));
+    const mixed = await mixedResponse.json();
+    expect(mixed.results.map((item: { request_id: string }) => item.request_id)).toEqual(["cached", "override"]);
+    expect(mixed.results[0].data.score).toBe(92);
+    expect(mixed.results[1].ok).toBe(true);
+    expect(mixed.results[1].data.modifiers_applied).not.toContain("cache");
+    expect(assembleCalls).toBe(1);
+    expect(palateCalls).toBe(1);
   });
 
   test("batch score handler uses direct fields when entry_id is present", async () => {
@@ -400,7 +421,8 @@ test.describe("WS3 algorithm UI support", () => {
     });
 
     expect(families[0]).toBe("Rich and plush");
-    expect(families).toHaveLength(3);
+    // Do not pad the result with families that have no meaningful signal.
+    expect(families).toEqual(["Rich and plush", "Bold and powerful"]);
   });
 
   test("recent score cache refresh repopulates a bounded recent slice", async () => {
@@ -442,6 +464,7 @@ test.describe("WS3 algorithm UI support", () => {
           {
             rating: 95,
             wine_type: "red",
+            assembled_sensory: makeProfile().sensory,
             advanced_notes: {
               body: "full",
               acidity: "medium",

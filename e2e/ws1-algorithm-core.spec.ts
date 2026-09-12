@@ -613,10 +613,11 @@ test.describe("WS1 algorithm core", () => {
       0
     );
 
-    expect(contributionSum).toBeCloseTo(2.9, 5);
+    // The March rebalance lowered tannin to 0.7 and raised complexity to 1.3.
+    expect(contributionSum).toBeCloseTo(2.6, 5);
     expect(score.axis_contributions.body.contribution).toBeCloseTo(1.0, 5);
     expect(score.axis_contributions.acidity.contribution).toBeCloseTo(0.9, 5);
-    expect(score.axis_contributions.tannin.contribution).toBeCloseTo(1.0, 5);
+    expect(score.axis_contributions.tannin.contribution).toBeCloseTo(0.7, 5);
   });
 
   test("complexity participates in scoring when the user vector includes it", () => {
@@ -631,8 +632,8 @@ test.describe("WS1 algorithm core", () => {
 
     expect(score.axis_contributions.complexity.user_value).toBe(5);
     expect(score.axis_contributions.complexity.wine_value).toBe(1);
-    expect(score.axis_contributions.complexity.weight).toBe(1);
-    expect(score.axis_contributions.complexity.contribution).toBeCloseTo(16, 5);
+    expect(score.axis_contributions.complexity.weight).toBe(1.3);
+    expect(score.axis_contributions.complexity.contribution).toBeCloseTo(20.8, 5);
   });
 
   test("score bands classify strong and decent results correctly", () => {

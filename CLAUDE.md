@@ -13,7 +13,7 @@ palate matching, social layer, badges/gamification. Product name still TBD (Cell
 - **Database + Auth**: Supabase (PostgreSQL + Supabase Auth + Storage)
 - **AI**: OpenAI API (label autofill, photo context, sommelier RAG), Google Vision (OCR)
 - **Infra**: Vercel (web), Supabase (db/auth/storage)
-- **Testing**: Playwright (e2e), Vitest (unit)
+- **Testing**: Playwright (browser and unit/route suites), PGlite (isolated PostgreSQL policy tests)
 
 ## Project Structure
 
@@ -82,7 +82,7 @@ Friends, entry reactions/comments, entry groups (shared tastings), blocks/report
 
 - For bulk data operations, prefer CSV uploads over repeated SQL INSERT statements. Never use dozens of migration pushes for seed data.
 - Migrations live in `supabase/sql/` and are listed in `supabase/sql/manifest.txt` — always append new migrations to the manifest.
-- Latest migration: `091_badges.sql`
+- The ordered migration list is `supabase/sql/manifest.txt`; branch migrations are not necessarily deployed.
 - Supabase project ID: `rbmkypbqavmnuycznssv`
 
 ## Git Workflow
@@ -99,7 +99,8 @@ Friends, entry reactions/comments, entry groups (shared tastings), blocks/report
 ## Test Commands
 
 ```bash
-npm run test:routes    # unit tests
+npm run test:unit      # pure, route, and isolated database tests; no live services
+npm run test:routes    # route-handler regression subset
 npm run e2e            # Playwright end-to-end
 npm run lint           # lint all workspaces
 npm run lint:web       # web only

@@ -53,6 +53,7 @@ type BatchDependencies = {
   assembleProfile: typeof defaultAlgorithmScoreDependencies.assembleProfile;
   buildUserPreferenceVector: typeof buildUserPreferenceVector;
   computeMatchScore: typeof computeMatchScore;
+  readPalateProfile: typeof readPalateProfile;
   readCachedEntryScores: typeof readCachedEntryScores;
   writeCachedEntryScore: typeof writeCachedEntryScore;
   writeCachedEntryScoresBulk: typeof writeCachedEntryScoresBulk;
@@ -154,6 +155,7 @@ export function createAlgorithmScoreBatchHandler(
     assembleProfile: defaultAlgorithmScoreDependencies.assembleProfile,
     buildUserPreferenceVector,
     computeMatchScore,
+    readPalateProfile,
     readCachedEntryScores,
     writeCachedEntryScore,
     writeCachedEntryScoresBulk,
@@ -187,11 +189,6 @@ export function createAlgorithmScoreBatchHandler(
       return NextResponse.json({ error: payload.error.flatten() }, { status: 400 });
     }
 
-    const [preferenceEntries, palateRecord] = await Promise.all([
-      resolvedDependencies.loadUserPreferenceEntries(auth.supabase, auth.user.id),
-      readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
-    ]);
-    const preferenceCache = new Map<WineType, ReturnType<typeof buildUserPreferenceVector>>();
     const cachedScores = await resolvedDependencies.readCachedEntryScores(
       auth.supabase,
       auth.user.id,
@@ -209,7 +206,9 @@ export function createAlgorithmScoreBatchHandler(
       payload.data.items.map(async (item): Promise<ResolvedScoreItem> => {
         const requestId = item.request_id ?? item.entry_id ?? null;
         try {
-          const cached = item.entry_id ? cachedScores.get(item.entry_id) ?? null : null;
+          const cached = item.entry_id && !hasDirectScoreOverrides(item)
+            ? cachedScores.get(item.entry_id) ?? null
+            : null;
           if (cached) {
             return {
               status: "result",
@@ -302,6 +301,19 @@ export function createAlgorithmScoreBatchHandler(
       (resolved): resolved is Extract<ResolvedScoreItem, { status: "pending" }> =>
         resolved.status === "pending"
     );
+
+    // Cache hits and invalid/not-found items do not need preference history.
+    if (pendingItems.length === 0) {
+      return NextResponse.json({
+        results: resolvedItems.flatMap((item) => item.status === "result" ? [item.result] : []),
+      });
+    }
+
+    const [preferenceEntries, palateRecord] = await Promise.all([
+      resolvedDependencies.loadUserPreferenceEntries(auth.supabase, auth.user.id),
+      resolvedDependencies.readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
+    ]);
+    const preferenceCache = new Map<WineType, ReturnType<typeof buildUserPreferenceVector>>();
 
     // Phase 2: assemble profiles + compute scores. In production (no
     // assembleProfile override) prefetch every reference table once for the

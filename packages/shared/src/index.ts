@@ -18,6 +18,7 @@ export * from "./newEntry";
 export * from "./badges";
 export * from "./profile";
 export * from "./sommelier";
+export * from "./storage";
 export * from "./voice";
 export * from "./tasteSurvey";
 export * from "./wineText";

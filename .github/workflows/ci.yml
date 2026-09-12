@@ -21,8 +21,8 @@ jobs:
       - name: Lint
         run: npm run lint:web
 
-      - name: Route handler tests
-        run: npm run test:routes
+      - name: Unit, route, and database policy tests
+        run: npm run test:unit
 
   mobile:
     name: Mobile (typecheck + lint)

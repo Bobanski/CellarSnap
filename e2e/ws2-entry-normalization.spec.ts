@@ -597,6 +597,7 @@ test.describe("WS2: Entry Normalization", () => {
           wine_type: "red",
           country: "United States",
           varietal: null,
+          primary_grapes: [],
         },
       ]);
       await expect(response.json()).resolves.toMatchObject({
@@ -754,6 +755,7 @@ test.describe("WS2: Entry Normalization", () => {
           wine_type: "red",
           country: "United States",
           varietal: "Cabernet Sauvignon",
+          primary_grapes: ["Cabernet Sauvignon"],
         },
       ]);
       await expect(response.json()).resolves.toMatchObject({
