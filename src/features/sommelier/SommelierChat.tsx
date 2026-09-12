@@ -10,9 +10,26 @@ import {
 } from "@shared";
 import SommelierInput from "@/features/sommelier/SommelierInput";
 import SommelierSuggestions from "@/features/sommelier/SommelierSuggestions";
+import type { WineCardData } from "@/features/sommelier/WineCardMessage";
+import {
+  buildIdentifiedWithMatchPrompt,
+  buildIdentifiedWithoutMatchPrompt,
+  UNREADABLE_BOTTLE_PHOTO_PROMPT,
+} from "@/features/sommelier/bottlePhotoContext";
+import {
+  identifyBottlePhoto,
+  IdentifyBottleError,
+  isBottleIdentified,
+} from "@/lib/sommelier/identifyBottleApi";
+import SommelierChatErrorBoundary from "@/features/sommelier/SommelierChatErrorBoundary";
 
 const SommelierMessage = dynamic(
   () => import("@/features/sommelier/SommelierMessage"),
+  { ssr: false, loading: () => null }
+);
+
+const WineCardMessage = dynamic(
+  () => import("@/features/sommelier/WineCardMessage"),
   { ssr: false, loading: () => null }
 );
 
@@ -21,6 +38,18 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  /**
+   * When present, this message renders as a compact wine card instead of a
+   * markdown bubble. `content` still carries the readable text sent to
+   * /api/sommelier/chat (and persisted to the transcript) — never raw image
+   * bytes — so conversation history stays consistent for later turns.
+   */
+  wineCard?: WineCardData;
+};
+
+type ApiMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 function createMessageId(prefix: "user" | "assistant") {
@@ -71,6 +100,20 @@ function parseSseBuffer(
   return remainder;
 }
 
+/**
+ * Maps chat history to the API's {role, content} shape, dropping any
+ * empty-content entries (e.g. an in-flight "identifying..." wine-card
+ * placeholder) so they never trip the chat route's non-empty content
+ * validation. `content` is typed as always-a-string, but this guards the
+ * boundary defensively anyway (typeof check before .trim()) rather than
+ * trusting the type at runtime.
+ */
+function buildPriorApiMessages(history: ChatMessage[]): ApiMessage[] {
+  return history
+    .map(({ role, content }) => ({ role, content }))
+    .filter((message) => typeof message.content === "string" && message.content.trim().length > 0);
+}
+
 function pickGreeting(
   mode: AudienceMode,
   entryCount: number,
@@ -86,6 +129,14 @@ function pickGreeting(
 }
 
 export default function SommelierChat() {
+  return (
+    <SommelierChatErrorBoundary>
+      <SommelierChatInner />
+    </SommelierChatErrorBoundary>
+  );
+}
+
+function SommelierChatInner() {
   const [audienceMode, setAudienceMode] = useState<AudienceMode | null>(null);
   const [greeting, setGreeting] = useState(SOMMELIER_INTRO_MESSAGE);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -100,6 +151,10 @@ export default function SommelierChat() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [lastSubmittedPrompt, setLastSubmittedPrompt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  const photoPreviewUrlsRef = useRef<Set<string>>(new Set());
+
+  messagesRef.current = messages;
 
   // Load user profile (audience_mode) and entry count for greeting
   useEffect(() => {
@@ -147,7 +202,18 @@ export default function SommelierChat() {
     };
   }, []);
 
+  // Revoke any local photo-thumbnail object URLs on unmount to avoid leaks.
+  useEffect(() => {
+    const urls = photoPreviewUrlsRef.current;
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      urls.clear();
+    };
+  }, []);
+
   const resetChat = useCallback(() => {
+    photoPreviewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    photoPreviewUrlsRef.current.clear();
     setMessages([
       {
         id: "intro",
@@ -172,40 +238,20 @@ export default function SommelierChat() {
     });
   }, [messages, pending, error]);
 
-  const sendMessage = async (content: string) => {
-    const trimmed = content.trim();
-    if (!trimmed || pending) {
-      return;
-    }
-    setLastSubmittedPrompt(trimmed);
-
-    const assistantId = createMessageId("assistant");
-    const userMessage: ChatMessage = {
-      id: createMessageId("user"),
-      role: "user",
-      content: trimmed,
-    };
-
-    const priorMessages = messages.map(({ role, content: messageContent }) => ({
-      role,
-      content: messageContent,
-    }));
-
-    startTransition(() => {
-      setMessages((current) => [
-        ...current,
-        userMessage,
-        { id: assistantId, role: "assistant", content: "", isStreaming: true },
-      ]);
-      setError(null);
-    });
+  /**
+   * Streams a somm reply for the given API-facing conversation and appends
+   * it to the assistant placeholder message with id `assistantId`. Shared by
+   * typed messages and the auto-sent bottle-photo context turn — neither
+   * pushes anything to `apiMessages` beyond what's already visible/persisted.
+   */
+  const streamSommelierReply = async (apiMessages: ApiMessage[], assistantId: string) => {
     setPending(true);
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     let accumulated = "";
 
     try {
       const payload = {
-        messages: [...priorMessages, { role: "user", content: trimmed }],
+        messages: apiMessages,
         stream: true,
         ...(conversationId ? { conversationId } : {}),
       };
@@ -219,10 +265,10 @@ export default function SommelierChat() {
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
+        const errorPayload = (await response.json().catch(() => null)) as
           | { error?: string }
           | null;
-        throw new Error(payload?.error ?? "Pocket Sommelier is temporarily unavailable.");
+        throw new Error(errorPayload?.error ?? "Pocket Sommelier is temporarily unavailable.");
       }
 
       if (!response.body) {
@@ -318,6 +364,134 @@ export default function SommelierChat() {
     }
   };
 
+  const sendMessage = async (content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed || pending) {
+      return;
+    }
+    setLastSubmittedPrompt(trimmed);
+
+    const assistantId = createMessageId("assistant");
+    const userMessage: ChatMessage = {
+      id: createMessageId("user"),
+      role: "user",
+      content: trimmed,
+    };
+
+    const apiMessages: ApiMessage[] = [
+      ...buildPriorApiMessages(messagesRef.current),
+      { role: "user", content: trimmed },
+    ];
+
+    startTransition(() => {
+      setMessages((current) => [
+        ...current,
+        userMessage,
+        { id: assistantId, role: "assistant", content: "", isStreaming: true },
+      ]);
+      setError(null);
+    });
+
+    await streamSommelierReply(apiMessages, assistantId);
+  };
+
+  /**
+   * Bottle-photo flow: attach a label photo -> identify-bottle -> render a
+   * wine card as the user's turn -> auto-send the somm a readable context
+   * block so it can react in-voice. No image bytes ever reach the chat API
+   * or the persisted transcript, only the text built from the identified
+   * fields (see bottlePhotoContext.ts).
+   */
+  const attachBottlePhoto = async (file: File) => {
+    if (pending) {
+      return;
+    }
+    setError(null);
+
+    const cardId = createMessageId("user");
+    const previewUrl = URL.createObjectURL(file);
+    photoPreviewUrlsRef.current.add(previewUrl);
+
+    startTransition(() => {
+      setMessages((current) => [
+        ...current,
+        {
+          id: cardId,
+          role: "user",
+          content: "",
+          wineCard: { status: "identifying", previewUrl },
+        },
+      ]);
+    });
+
+    setPending(true);
+
+    try {
+      const result = await identifyBottlePhoto(file);
+      const identified = isBottleIdentified(result.wine);
+
+      const contextText = !identified
+        ? UNREADABLE_BOTTLE_PHOTO_PROMPT
+        : result.match
+          ? buildIdentifiedWithMatchPrompt(result.wine, result.match, result.axis_highlights)
+          : buildIdentifiedWithoutMatchPrompt(result.wine);
+
+      const cardWineCard: WineCardData = identified
+        ? { status: "identified", wine: result.wine, match: result.match, previewUrl }
+        : { status: "unreadable", previewUrl };
+
+      startTransition(() => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === cardId
+              ? { ...message, content: contextText, wineCard: cardWineCard }
+              : message
+          )
+        );
+      });
+
+      setLastSubmittedPrompt(contextText);
+
+      const assistantId = createMessageId("assistant");
+      // `messagesRef.current` still holds the "identifying..." placeholder
+      // (empty content) for this card at this point — buildPriorApiMessages
+      // filters it out so the chat API's non-empty content schema doesn't
+      // reject the request. The contextText below is the readable stand-in
+      // for that turn instead.
+      const apiMessages: ApiMessage[] = [
+        ...buildPriorApiMessages(messagesRef.current),
+        { role: "user", content: contextText },
+      ];
+
+      startTransition(() => {
+        setMessages((current) => [
+          ...current,
+          { id: assistantId, role: "assistant", content: "", isStreaming: true },
+        ]);
+      });
+
+      await streamSommelierReply(apiMessages, assistantId);
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof IdentifyBottleError || caughtError instanceof Error
+          ? caughtError.message
+          : "Could not identify that bottle. Try again in a moment.";
+
+      setError(message);
+      startTransition(() => {
+        setMessages((current) =>
+          current.map((message2) =>
+            message2.id === cardId
+              ? { ...message2, wineCard: { status: "failed", previewUrl } }
+              : message2
+          )
+        );
+      });
+    } finally {
+      setPending(false);
+    }
+  };
+
   const showSuggestions = messages.filter((message) => message.role === "user").length === 0;
 
   return (
@@ -344,14 +518,20 @@ export default function SommelierChat() {
         aria-relevant="additions text"
         className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 pb-6"
       >
-        {messages.map((message) => (
-          <SommelierMessage
-            key={message.id}
-            role={message.role}
-            content={message.content}
-            isStreaming={Boolean(message.isStreaming)}
-          />
-        ))}
+        {messages.map((message) =>
+          message.wineCard ? (
+            <div key={message.id} className="flex justify-end">
+              <WineCardMessage card={message.wineCard} />
+            </div>
+          ) : (
+            <SommelierMessage
+              key={message.id}
+              role={message.role}
+              content={message.content}
+              isStreaming={Boolean(message.isStreaming)}
+            />
+          )
+        )}
         <div ref={messagesEndRef} aria-hidden="true" />
       </div>
 
@@ -390,7 +570,11 @@ export default function SommelierChat() {
           />
         ) : null}
 
-        <SommelierInput disabled={pending} onSend={sendMessage} />
+        <SommelierInput
+          disabled={pending}
+          onSend={sendMessage}
+          onAttachPhoto={attachBottlePhoto}
+        />
       </div>
     </div>
   );

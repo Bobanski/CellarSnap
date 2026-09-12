@@ -87,6 +87,58 @@ export async function saveListScanResult(
   }
 }
 
+/**
+ * Persists updated wine scores (and the refreshed raw_result) for a scan
+ * that's already saved — used after a re-score (e.g. the mini-palate
+ * quick-survey unlocks personalization mid-session). Unlike
+ * saveListScanResult, this updates in place rather than inserting, since
+ * the scan_id row and its wine rows already exist.
+ */
+export async function updateListScanResultScores(
+  supabase: SupabaseClient,
+  userId: string,
+  result: ListScanResult
+) {
+  const { error: updateError } = await supabase
+    .from("list_scan_results")
+    .update({ raw_result: result })
+    .eq("scan_id", result.scan_id)
+    .eq("user_id", userId);
+  if (updateError) {
+    throw updateError;
+  }
+
+  if (result.wines.length === 0) {
+    return;
+  }
+
+  const wineRows = result.wines.map((wine) => ({
+    id: wine.id,
+    scan_id: result.scan_id,
+    user_id: userId,
+    source_order: wine.source_order,
+    menu_label: wine.menu_label,
+    producer: wine.producer,
+    wine_name: wine.wine_name,
+    vintage: wine.vintage,
+    wine_type: wine.wine_type,
+    price_display: wine.price_display,
+    price_value: wine.price_value,
+    varietals: wine.varietals,
+    regions: wine.regions,
+    match_percent: wine.match_percent,
+    parse_confidence: wine.parse_confidence,
+    rationale: wine.rationale,
+  }));
+
+  const { error: winesError } = await supabase
+    .from("list_scan_wines")
+    .upsert(wineRows, { onConflict: "id" });
+  if (winesError) {
+    throw winesError;
+  }
+}
+
 export async function getSavedListScanResult(
   supabase: SupabaseClient,
   userId: string,

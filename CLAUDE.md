@@ -49,7 +49,7 @@ supabase/
 
 ## App Conventions
 
-- **Rating scale is 1–5** (not 1–100, not 10-point). Always check existing types and constants before assuming UI conventions.
+- **Rating scale is 1–100 (int)**, consistently end to end — DB (`rating int check (rating between 1 and 100)`), shared Zod schema, web/mobile forms, `RatingBadge` display, and public share pages. It is a *private input* value (overhaul-plan.md decision 1): public surfaces (feed cards, share/OG) present it as qualitative bands + match-% instead of the raw number, but the underlying stored/edited scale is always 1–100 — never 1–5 or a 10-point scale. The separate 0–100 algorithm **match score** (`wine_entry_scores.match_score`, surfaced as "% match") is a different field and isn't a "rating." Always check existing types and constants before assuming UI conventions.
 - **Enjoyment intent values**: `seek_more`, `happily_again`, `if_poured`, `pass`
 - **Privacy levels**: `public`, `friends`, `private`
 - **Brand guide**: `/Users/esneider/Downloads/cluster-brand-guide-v4.jsx` — source of truth for colors, typography, badge SVGs, and UI patterns.

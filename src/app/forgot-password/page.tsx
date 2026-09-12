@@ -123,7 +123,7 @@ export default function ForgotPasswordPage() {
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Reset access
           </span>
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Forgot your password?</h1>
+          <h1 className="font-serif text-2xl font-semibold text-[var(--color-text-primary)]">Forgot your password?</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
             Enter your username, phone number, or email. We will send a recovery code to your phone
             (or email if your account does not have a phone number yet).

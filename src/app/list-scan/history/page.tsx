@@ -1,4 +1,4 @@
-import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
+import { requireAuthenticatedPageUser } from "@/lib/access/pageAuth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import ListScanHistoryScreen from "@/features/listScan/ListScanHistoryScreen";
 
@@ -8,7 +8,7 @@ export default async function ListScanHistoryPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  await assertPrivateBetaFeatureAccessAsync(supabase, user);
+  requireAuthenticatedPageUser(user);
 
   return <ListScanHistoryScreen />;
 }

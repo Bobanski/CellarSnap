@@ -237,15 +237,22 @@ export default async function SharePage({ params }: SharePageProps) {
 
           <div className="space-y-5 p-6">
             <div className="flex flex-wrap items-center gap-3">
-              {typeof share.rating === "number" ? (
+              {/* Decision 1 (overhaul-plan): a public share/OG surface never
+                  shows the raw 1-100 rating — a warm band + match-% stand in. */}
+              {share.ratingBandLabel ? (
                 <span className="rounded-full border border-[var(--color-accent-secondary)]/40 bg-[var(--color-accent-primary)]/10 px-3 py-1 text-sm font-semibold text-[var(--color-accent-secondary)]">
-                  Rating {share.rating}/100
+                  {share.ratingBandLabel}
                 </span>
               ) : (
                 <span className="rounded-full border border-[var(--color-border-strong)] px-3 py-1 text-sm text-[var(--color-text-secondary)]">
-                  No rating
+                  Not rated yet
                 </span>
               )}
+              {typeof share.matchScore === "number" ? (
+                <span className="rounded-full border border-[var(--color-accent-gold)]/40 bg-[var(--color-accent-gold)]/10 px-3 py-1 text-sm font-semibold text-[var(--color-accent-gold)]">
+                  {share.matchScore}% match to their palate
+                </span>
+              ) : null}
               <span className="text-sm text-[var(--color-text-tertiary)]">
                 Consumed {formatConsumedDate(share.consumedAt)}
               </span>

@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Svg, { Circle, Line, Polygon, Text as SvgText } from "react-native-svg";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
@@ -16,6 +17,10 @@ import {
   type PalateData,
   type RadarPoint,
 } from "@/src/lib/api/palate";
+
+// Baseline top inset on a notchless device — see explanation in AppTopBar.tsx.
+const NOTCHLESS_TOP_INSET = 20;
+const SCROLL_BASE_PADDING_TOP = 12;
 
 // ─── Radar chart (native SVG) ────────────────────────────────
 
@@ -222,6 +227,7 @@ const tb = StyleSheet.create({
 
 export default function PalateScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState<PalateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,7 +298,16 @@ export default function PalateScreen() {
 
   return (
     <View style={ps.screen}>
-      <ScrollView contentContainerStyle={ps.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          ps.scroll,
+          {
+            paddingTop:
+              SCROLL_BASE_PADDING_TOP + (insets.top - NOTCHLESS_TOP_INSET),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Back arrow */}
         <Pressable onPress={() => router.back()} style={ps.backArrow}>
           <AppText style={ps.backArrowText}>{"\u2190"}</AppText>
@@ -475,7 +490,7 @@ export default function PalateScreen() {
 const ps = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.screenBg },
   center: { alignItems: "center", justifyContent: "center" },
-  scroll: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 48, gap: 14 },
+  scroll: { paddingHorizontal: 18, paddingBottom: 48, gap: 14 },
 
   backArrow: {
     width: 34, height: 34, borderRadius: 999, borderWidth: 1,

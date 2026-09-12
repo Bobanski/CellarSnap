@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toExploreSlug, WINE_REGIONS } from "@shared";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
+import AppImage from "@/components/AppImage";
 
 // ---------------------------------------------------------------------------
 // Colors — matching profile page palette
@@ -34,6 +35,7 @@ type SpotlightData = {
   tagline: string;
   href: string;
   characteristics: string[];
+  hero_image_url: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,7 @@ export default function RegionsBrowsePage() {
             tagline: data.featured_region.tagline,
             href: data.featured_region.href,
             characteristics: data.featured_region.characteristics ?? [],
+            hero_image_url: data.featured_region.hero_image_url ?? null,
           });
         }
       } catch { /* non-critical */ }
@@ -119,7 +122,7 @@ export default function RegionsBrowsePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-2xl px-4 pb-20 pt-8">
+      <div className="mx-auto max-w-2xl px-4 pt-8 pb-[var(--app-bottom-nav-height)]">
         {/* ── Back ───────────────────────────────────── */}
         <Link
           href="/explore"
@@ -200,17 +203,26 @@ export default function RegionsBrowsePage() {
             {spotlight && (
               <div className="mt-8">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.25em]" style={{ color: FOG }}>
-                  Region of the Day
+                  Region of the Week
                 </p>
                 <Link
                   href={spotlight.href}
-                  className="mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
+                  className="relative mt-3 block overflow-hidden rounded-2xl transition hover:opacity-95"
                   style={{
-                    background: `linear-gradient(135deg, ${GRENACHE}40 0%, ${NEBBIOLO}20 50%, ${BG_SECTION} 100%)`,
+                    background: spotlight.hero_image_url
+                      ? undefined
+                      : `linear-gradient(135deg, ${GRENACHE}40 0%, ${NEBBIOLO}20 50%, ${BG_SECTION} 100%)`,
                     border: `1px solid ${GRENACHE}30`,
                   }}
                 >
-                  <div className="p-6">
+                  {/* Cached-only thumbnail — icon/gradient fallback above when absent. */}
+                  {spotlight.hero_image_url && (
+                    <>
+                      <AppImage src={spotlight.hero_image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${BG_SECTION}55 0%, ${BG_SECTION}e8 100%)` }} />
+                    </>
+                  )}
+                  <div className="relative p-6">
                     <h3 className="text-xl font-light" style={{ fontFamily: "var(--font-serif)", color: CHAMPAGNE }}>
                       {spotlight.display_name}
                     </h3>
@@ -270,14 +282,23 @@ export default function RegionsBrowsePage() {
                     <Link
                       key={r}
                       href={`/explore/region/${toExploreSlug(r)}`}
-                      className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-90"
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-3 transition hover:opacity-90"
                       style={{ background: `${GRENACHE}12`, border: `1px solid ${GRENACHE}18` }}
                     >
-                      <span className="text-xs font-medium" style={{ color: CHAMPAGNE }}>{r}</span>
+                      {/* Icon, not an AI thumbnail — Dani: browse grids should
+                          read as icons; AI imagery is reserved for the
+                          spotlight hero above and the detail-page hero. */}
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: `${GRENACHE}30` }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="9" stroke={ROSE} strokeWidth="1" opacity="0.7" />
+                          <circle cx="12" cy="12" r="4.5" stroke={ROSE} strokeWidth="0.8" opacity="0.5" />
+                        </svg>
+                      </div>
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ color: CHAMPAGNE }}>{r}</span>
                       {userEntry ? (
-                        <span className="text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
+                        <span className="shrink-0 text-[10px]" style={{ color: FOG }}>{userEntry.count}</span>
                       ) : (
-                        <span className="text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
+                        <span className="shrink-0 text-[10px]" style={{ color: `${FOG}80` }}>&rarr;</span>
                       )}
                     </Link>
                   );

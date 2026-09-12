@@ -57,12 +57,25 @@ export type UserContext = {
   preferenceSnippets: PreferenceSnippet[];
 };
 
+/** Trimmed-down view of palate_profiles.profile used to brief the somm. */
+export type DistilledProfileContext = {
+  narrative: string;
+  wineTypes: Array<{
+    wineType: WineType;
+    narrative: string;
+    favoredVarietals: string[];
+    favoredRegions: string[];
+    leans: Array<{ axis: string; value: number; confidence: number }>;
+  }>;
+};
+
 export type AssembledSommelierContext = {
   query: string;
   wineKnowledge: KnowledgeMatch[];
   generalKnowledge: KnowledgeMatch[];
   entryMatches: KnowledgeMatch[];
   userContext: UserContext;
+  distilledProfile: DistilledProfileContext | null;
   contextText: string;
   sources: SommelierSource[];
 };

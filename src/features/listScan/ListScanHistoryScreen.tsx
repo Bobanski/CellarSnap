@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
 
 type ListScanHistoryItem = {
   scan_id: string;
@@ -160,7 +162,7 @@ export default function ListScanHistoryScreen() {
             className="font-serif"
             style={{
               fontSize: "28px",
-              fontWeight: 300,
+              fontWeight: 400,
               color: "var(--color-text-primary)",
             }}
           >
@@ -174,20 +176,20 @@ export default function ListScanHistoryScreen() {
           >
             Revisit previously scanned wine lists across devices.
           </p>
-          {backToScanId ? (
-            <Link
-              href={`/list-scan/results?scanId=${encodeURIComponent(backToScanId)}`}
-              className="mr-2 inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-            >
-              Back to current scan
-            </Link>
-          ) : null}
-          <Link
-            href="/list-scan"
-            className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
-          >
-            Scan another
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {backToScanId ? (
+              <Button
+                href={`/list-scan/results?scanId=${encodeURIComponent(backToScanId)}`}
+                variant="secondary"
+                size="sm"
+              >
+                Back to current scan
+              </Button>
+            ) : null}
+            <Button href="/list-scan" variant="primary" size="sm">
+              Scan another
+            </Button>
+          </div>
         </header>
 
         {isLoading ? (
@@ -199,35 +201,32 @@ export default function ListScanHistoryScreen() {
             <p>{errorMessage}</p>
             <div className="mt-4">
               {isSignedOut ? (
-                <Link
-                  href="/login"
-                  className="inline-flex rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
-                >
+                <Button href="/login" variant="secondary" size="sm">
                   Sign in
-                </Link>
+                </Button>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     void loadHistory();
                   }}
-                  className="inline-flex rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                 >
                   Try again
-                </button>
+                </Button>
               )}
             </div>
           </section>
         ) : items.length === 0 ? (
-          <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
-            <p>No saved scans yet. Scan a wine list while signed in and it will show up here.</p>
-            <Link
-              href="/list-scan"
-              className="mt-4 inline-flex rounded-full border border-[var(--color-border-strong)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
-            >
-              Scan your first list
-            </Link>
-          </section>
+          <EmptyState
+            title="No saved scans yet."
+            body="Scan a wine list while signed in and it will show up here."
+            cta={
+              <Button href="/list-scan" variant="secondary" size="sm">
+                Scan your first list
+              </Button>
+            }
+          />
         ) : (
           <section className="flex flex-col">
             {items.map((item) => {

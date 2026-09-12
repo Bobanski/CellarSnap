@@ -2,7 +2,43 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useRef, type RefObject } from "react";
 import { usePrivateBetaFeatureAccess } from "@/lib/access/usePrivateBetaFeatureAccess";
+
+const BOTTOM_NAV_HEIGHT_VAR = "--app-bottom-nav-height";
+
+/**
+ * Keeps `--app-bottom-nav-height` in sync with the bar's real, on-device
+ * rendered height (padding + content + whatever safe-area-inset-bottom
+ * actually resolves to). Page content clears the bar using this var
+ * instead of a fixed pb-* guess, so the two can never drift apart again.
+ */
+function useReportBottomNavHeight(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const publish = (height: number) => {
+      if (height > 0) {
+        document.documentElement.style.setProperty(BOTTOM_NAV_HEIGHT_VAR, `${height}px`);
+      }
+    };
+
+    publish(node.getBoundingClientRect().height);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        publish(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+      }
+    });
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [ref]);
+}
 
 function FeedIcon() {
   return (
@@ -113,13 +149,19 @@ export default function BottomTabBar() {
   const searchParams = useSearchParams();
   const fromFeed = searchParams.get("from") === "feed";
   const { hasPrivateBetaFeatureAccess } = usePrivateBetaFeatureAccess();
+  const navRef = useRef<HTMLElement | null>(null);
+  useReportBottomNavHeight(navRef);
 
   const tabs = hasPrivateBetaFeatureAccess === false
     ? ALL_TABS.filter((tab) => !tab.betaOnly)
     : ALL_TABS;
 
   return (
-    <nav className="bottom-tab-bar flex shrink-0 items-end justify-around" style={{ overflow: "visible" }}>
+    <nav
+      ref={navRef}
+      className="bottom-tab-bar flex shrink-0 items-end justify-around"
+      style={{ overflow: "visible" }}
+    >
       {tabs.map((tab) => {
         const active = isTabActive(tab.href, pathname, fromFeed);
 

@@ -55,4 +55,5 @@ test-list-scan.py
 # somm eval harness — real tasting data and run output stay local
 scripts/somm-eval/data/*
 !scripts/somm-eval/data/*.template.*
-scripts/somm-eval/results/
+scripts/somm-eval/results/*
+!scripts/somm-eval/results/live-signal-summary.md

@@ -56,6 +56,21 @@
   --font-serif:            "Cormorant Garamond", serif;
   --font-sans:             "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono:             "SFMono-Regular", Monaco, "Courier New", monospace;
+
+  /* ─── MOTION TOKENS (design-audit spec H) ─────────── */
+  --motion-ease-standard:     cubic-bezier(.2, .8, .2, 1);
+  --motion-duration-fast:     120ms;
+  --motion-duration-standard: 200ms;
+  --motion-duration-slow:     320ms;
+
+  /* Actual rendered height of .bottom-tab-bar (padding + content + the
+     device's own safe-area inset), kept live by BottomTabBar's
+     ResizeObserver. The fallback below matches the bar's height with
+     zero safe-area inset so non-JS/first-paint layout isn't off by much.
+     Page content should clear the bar with this var instead of a
+     hand-picked pb-* guess — a stale guess is exactly what caused the
+     bar to float above a dead strip of unused padding. */
+  --app-bottom-nav-height: 71px;
 }
 
 @theme inline {
@@ -233,4 +248,62 @@ select optgroup {
   backdrop-filter: saturate(140%) blur(18px);
   -webkit-backdrop-filter: saturate(140%) blur(18px);
   border-bottom: 0.5px solid rgba(196, 96, 122, 0.18);
+}
+
+/* ─── TYPE TOKEN: numeric (design-audit spec A) ───────
+   Serif numerals for every score, count, and stat — formalizes the
+   Cormorant-numeral signature already used in stat cards. */
+.text-numeric {
+  font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* ─── MOTION (design-audit spec H) ────────────────────
+   Shared keyframes for the two signature reveal moments: a score
+   count-up and a badge-unlock pop. Components trigger these via
+   className toggles (see ScoreBadge, badge-unlock toast) rather than
+   re-declaring keyframes inline. */
+@keyframes score-count-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-score-count-up {
+  animation: score-count-up var(--motion-duration-slow) var(--motion-ease-standard);
+}
+
+@keyframes badge-unlock-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-badge-unlock-pop {
+  animation: badge-unlock-pop var(--motion-duration-slow) var(--motion-ease-standard);
+}
+
+/* Press state — scale + surface lighten, for interactive cards/buttons
+   that aren't already covered by Button/Chip's active:scale-[.98]. */
+.press-scale {
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.press-scale:active {
+  transform: scale(0.98);
 }

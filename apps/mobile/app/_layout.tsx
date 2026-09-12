@@ -1,4 +1,5 @@
 import { ActivityIndicator, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/providers/AuthProvider";
@@ -37,9 +38,11 @@ export default function RootLayout() {
   }
 
   return (
-    <AgeVerificationProvider>
-      <RootNavigator />
-    </AgeVerificationProvider>
+    <SafeAreaProvider>
+      <AgeVerificationProvider>
+        <RootNavigator />
+      </AgeVerificationProvider>
+    </SafeAreaProvider>
   );
 }
 

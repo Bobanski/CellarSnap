@@ -9,9 +9,9 @@ import { distillPalateProfile, type PalateSignal } from "../../src/server/algori
 
 const signal: PalateSignal = {
   entries: [
-    { id: "1", wine_name: "Chateau Monbousquet", producer: "Chateau Monbousquet", vintage: "2020", wine_type: "red", canonical_region: "Saint-Emilion", canonical_country: "France", region: null, country: null, rating: 4, notes: "loved the plush dark fruit, preferred it over the Gigondas", updated_at: "2026-06-20T00:00:00Z" },
-    { id: "2", wine_name: "Testamatta", producer: "Bibi Graetz", vintage: "2019", wine_type: "red", canonical_region: "Toscana IGT", canonical_country: "Italy", region: null, country: null, rating: 4, notes: "beat the Heitz cab and the Barolo head to head for me", updated_at: "2026-06-20T00:00:00Z" },
-    { id: "3", wine_name: "Clos Marcilly", producer: "Les Heritiers Saint Genys", vintage: "2022", wine_type: "red", canonical_region: "Mercurey", canonical_country: "France", region: null, country: null, rating: 2, notes: "thin, lost every matchup", updated_at: "2026-06-20T00:00:00Z" },
+    { id: "1", wine_name: "Chateau Monbousquet", producer: "Chateau Monbousquet", vintage: "2020", wine_type: "red", canonical_region: "Saint-Emilion", canonical_country: "France", region: null, country: null, rating: 4, notes: "loved the plush dark fruit, preferred it over the Gigondas", created_at: "2026-06-20T00:00:00Z" },
+    { id: "2", wine_name: "Testamatta", producer: "Bibi Graetz", vintage: "2019", wine_type: "red", canonical_region: "Toscana IGT", canonical_country: "Italy", region: null, country: null, rating: 4, notes: "beat the Heitz cab and the Barolo head to head for me", created_at: "2026-06-20T00:00:00Z" },
+    { id: "3", wine_name: "Clos Marcilly", producer: "Les Heritiers Saint Genys", vintage: "2022", wine_type: "red", canonical_region: "Mercurey", canonical_country: "France", region: null, country: null, rating: 2, notes: "thin, lost every matchup", created_at: "2026-06-20T00:00:00Z" },
   ],
   survey: null,
   comparisons: [

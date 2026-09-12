@@ -2,6 +2,7 @@ import {
   isMissingDbTableError,
   type SupabaseErrorLike,
 } from "@/lib/supabase/errors";
+import { log } from "@/server/log";
 import { executeWithColumnFallback } from "@/server/db/compat";
 import {
   createStubResolution,
@@ -180,7 +181,15 @@ export async function persistEntryResolution({
 
   try {
     resolution = await resolveEntryFields(supabase, input);
-  } catch {
+  } catch (error) {
+    log.error(
+      "persistEntryResolution: resolveEntryFields threw — falling back to stub resolution. This degrades the sensory-resolution algorithm to a stub for this entry.",
+      {
+        entryId,
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    );
     resolution = createStubResolution(input);
   }
 
@@ -226,8 +235,15 @@ export async function persistEntryResolution({
       input,
       resolution,
     });
-  } catch {
-    // Logging is best-effort; entry persistence should still succeed.
+  } catch (error) {
+    // Logging is best-effort; entry persistence should still succeed. But
+    // this is also the audit trail for the resolveEntryFields failure
+    // above, so a swallowed failure here can't go silent too.
+    log.error("persistEntryResolution: persistResolutionLog failed (best-effort, entry persistence unaffected).", {
+      entryId,
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return {

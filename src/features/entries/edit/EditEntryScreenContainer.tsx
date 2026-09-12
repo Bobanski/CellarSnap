@@ -27,7 +27,9 @@ import type {
   PrimaryGrape,
   PrivacyLevel,
   WineEntryWithUrls,
+  WineType,
 } from "@/types/wine";
+import { WINE_TYPE_LABELS, WINE_TYPE_VALUES } from "@/types/wine";
 import {
   ADVANCED_NOTE_FIELDS,
   ADVANCED_NOTE_OPTIONS,
@@ -57,6 +59,7 @@ type EditEntryForm = {
   region: string;
   appellation: string;
   classification: string;
+  wine_type: WineType | "";
   rating?: string;
   price_paid?: string;
   price_paid_currency: PricePaidCurrency;
@@ -177,6 +180,7 @@ export default function EditEntryPage() {
       price_paid_source: "",
       qpr_level: "",
       classification: "",
+      wine_type: "",
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
   });
@@ -347,6 +351,7 @@ export default function EditEntryPage() {
           region: data.entry.region ?? "",
           appellation: data.entry.appellation ?? "",
           classification: data.entry.classification ?? "",
+          wine_type: data.entry.wine_type ?? "",
           rating:
             typeof data.entry.rating === "number" && Number.isFinite(data.entry.rating)
               ? String(data.entry.rating)
@@ -1706,6 +1711,7 @@ export default function EditEntryPage() {
       region: values.region || null,
       appellation: values.appellation || null,
       classification: values.classification || null,
+      wine_type: values.wine_type || null,
       primary_grape_ids: selectedPrimaryGrapes.map((grape) => grape.id),
       rating,
       price_paid: pricePaid ?? null,
@@ -2257,6 +2263,37 @@ export default function EditEntryPage() {
                   placeholder="Optional (e.g. Premier Cru, DOCG)"
                   {...register("classification")}
                 />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                  Wine type
+                </label>
+                <Controller
+                  control={control}
+                  name="wine_type"
+                  render={({ field }) => (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {WINE_TYPE_VALUES.map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-pressed={field.value === value}
+                          className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+                            field.value === value
+                              ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
+                              : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                          }`}
+                          onClick={() => field.onChange(field.value === value ? "" : value)}
+                        >
+                          {WINE_TYPE_LABELS[value]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                />
+                <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                  Optional — helps Palate Match score this bottle.
+                </p>
               </div>
               <div className="md:col-span-2">
                 <PrimaryGrapeSelector

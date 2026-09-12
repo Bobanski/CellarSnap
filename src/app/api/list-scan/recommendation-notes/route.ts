@@ -24,6 +24,7 @@ import {
 import type { AssembleWineProfileInput } from "@/server/algorithm/types";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { anthropicToolCall, isAnthropicConfigured } from "@/server/anthropic/client";
+import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import {
   distilledSeedForWineType,
   readPalateProfile,
@@ -34,6 +35,9 @@ import { defaultLoadUserPreferenceEntries } from "../../algorithm/score/handler"
 const NOTE_MODEL = "gpt-5.4-mini";
 const CLAUDE_NOTE_MODEL = process.env.SOMM_NOTES_MODEL ?? "claude-haiku-4-5-20251001";
 const NOTE_TIMEOUT_MS = 3000;
+
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
 
 const noteRequestSchema = z.object({
   items: z.array(listScanParsedWineSchema).min(1).max(3),
@@ -347,6 +351,20 @@ export async function POST(request: Request) {
   // Beta gate removed (PR #62 follow-up).
   void createPrivateBetaFeatureDeniedResponse;
   void userHasPrivateBetaFeatureAccess;
+
+  const rateLimit = await applyRateLimit({
+    request,
+    routeKey: "list-scan-recommendation-notes",
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    userId: auth.user.id,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many recommendation-note requests. Please wait a bit and try again." },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
 
   let body: unknown;
   try {

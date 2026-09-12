@@ -1,6 +1,6 @@
 import AppShell from "@/components/AppShell";
 import SommelierChat from "@/features/sommelier/SommelierChat";
-import { assertPrivateBetaFeatureAccessAsync } from "@/lib/access/privateBetaFeatures";
+import { requireAuthenticatedPageUser } from "@/lib/access/pageAuth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   SOMMELIER_EYEBROW,
@@ -14,7 +14,7 @@ export default async function SommelierPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  await assertPrivateBetaFeatureAccessAsync(supabase, user);
+  requireAuthenticatedPageUser(user);
 
   return (
     <AppShell>

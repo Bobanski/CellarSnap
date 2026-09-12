@@ -119,7 +119,7 @@ function VerifyPhoneInner() {
         window.sessionStorage.removeItem("pendingSignupPhone");
       }
 
-      router.push("/");
+      router.push("/taste-survey");
     } catch {
       setErrorMessage("Unable to verify code right now. Please try again.");
     } finally {

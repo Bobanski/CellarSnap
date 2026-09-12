@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
+import Button from "@/components/ui/Button";
 
 const CATEGORIES = [
   { value: "bug", label: "Bug report" },
@@ -70,7 +71,10 @@ export default function FeedbackPage() {
           <p className="text-xs uppercase tracking-[0.25em] text-[var(--color-accent-secondary)]/70">
             Feedback
           </p>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+          <h1
+            className="text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 32, fontWeight: 400 }}
+          >
             Tell us what felt great and what broke
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
@@ -148,19 +152,12 @@ export default function FeedbackPage() {
           ) : null}
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
-            >
+            <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
               {isSubmitting ? "Sending..." : "Send feedback"}
-            </button>
-            <Link
-              href="/"
-              className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-            >
+            </Button>
+            <Button href="/" variant="secondary" size="sm">
               Back home
-            </Link>
+            </Button>
           </div>
         </form>
 

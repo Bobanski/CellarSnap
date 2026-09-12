@@ -10,11 +10,16 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+
+// Baseline top inset on a notchless device — see explanation in AppTopBar.tsx.
+const NOTCHLESS_TOP_INSET = 20;
+const SCROLL_BASE_PADDING_TOP = 16;
 
 type ImportResult = {
   imported_count: number;
@@ -26,6 +31,7 @@ type ImportResult = {
 
 export default function CellarImportCTScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -90,7 +96,13 @@ export default function CellarImportCTScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop:
+              SCROLL_BASE_PADDING_TOP + (insets.top - NOTCHLESS_TOP_INSET),
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -234,7 +246,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 22,
-    paddingTop: 16,
     paddingBottom: 48,
     gap: 20,
   },

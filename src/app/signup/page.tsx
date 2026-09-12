@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { getAuthMode } from "@/lib/auth/mode";
 import {
@@ -13,6 +13,7 @@ import {
   isUsernameFormatValid,
 } from "@/lib/validation/username";
 import { normalizePhone, PHONE_FORMAT_MESSAGE } from "@/lib/validation/phone";
+import Button from "@/components/ui/Button";
 
 type EmailSignupValues = {
   email: string;
@@ -25,10 +26,12 @@ type PhoneSignupValues = {
   password: string;
 };
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const authMode = getAuthMode();
+  const isScanIntent = searchParams.get("intent") === "scan";
 
   const emailForm = useForm<EmailSignupValues>();
   const phoneForm = useForm<PhoneSignupValues>();
@@ -251,7 +254,7 @@ export default function SignupPage() {
           return;
         }
 
-        router.push("/");
+        router.push("/taste-survey");
         return;
       }
 
@@ -276,11 +279,18 @@ export default function SignupPage() {
           <span className="text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             Create account
           </span>
-          <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Join Cluster</h1>
+          <h1
+            className="text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 400 }}
+          >
+            Join cluster
+          </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            {isPhoneMode
-              ? "Create your account with username, phone, email, and password."
-              : "Enter your email to get started. We'll send a confirmation code, then you'll set your password."}
+            {isScanIntent
+              ? "Create a free account and we'll take you straight to your scan."
+              : isPhoneMode
+                ? "Create your account with username, phone, email, and password."
+                : "Enter your email to get started. We'll send a confirmation code, then you'll set your password."}
           </p>
         </div>
 
@@ -345,14 +355,15 @@ export default function SignupPage() {
                     placeholder="********"
                     {...phoneForm.register("password", { required: true })}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-2 my-1 rounded-lg px-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-secondary)] transition hover:text-[var(--color-accent-secondary)]"
+                    className="absolute inset-y-0 right-2 my-1"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "Hide" : "Show"}
-                  </button>
+                  </Button>
                 </div>
                 <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Must be at least 8 characters.</p>
               </div>
@@ -377,51 +388,38 @@ export default function SignupPage() {
           {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
           {infoMessage ? <p className="text-sm text-emerald-300">{infoMessage}</p> : null}
 
-          <button
+          <Button
             type="submit"
-            className="w-full rounded-xl bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
+            variant="primary"
+            fullWidth
             disabled={isSubmitting || emailCooldownSeconds > 0}
           >
             Send confirmation code
-          </button>
+          </Button>
 
+          {/* Small legal footnote below the primary CTA — intentionally de-emphasized
+              so the disclaimer doesn't compete with the value prop for attention. */}
           {isPhoneMode ? (
-            <p className="text-xs leading-5 text-[var(--color-text-tertiary)]">
-              By entering your phone number and selecting Send confirmation code, you
-              consent to receive transactional SMS verification codes for login and
-              account security. Message frequency varies. Message and data rates may
-              apply. Reply STOP to opt out and HELP for help. See{" "}
-              <Link
-                href="/privacy/more"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
+            <p className="text-center text-[10px] leading-4 text-[var(--color-text-tertiary)]/70">
+              By continuing you consent to transactional SMS for login &amp; security.
+              Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. See{" "}
+              <Link href="/privacy/more" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
                 Privacy
               </Link>{" "}
-              and{" "}
-              <Link
-                href="/terms"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
+              &amp;{" "}
+              <Link href="/terms" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
                 Terms
               </Link>
               .
             </p>
           ) : (
-            <p className="text-xs leading-5 text-[var(--color-text-tertiary)]">
-              This button sends an email confirmation code. For phone-based signup, users
-              opt in to transactional SMS by entering a phone number and selecting Send
-              confirmation code. Reply STOP to opt out and HELP for help. See{" "}
-              <Link
-                href="/privacy/more"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
-                Privacy
+            <p className="text-center text-[10px] leading-4 text-[var(--color-text-tertiary)]/70">
+              By creating an account you agree to our{" "}
+              <Link href="/privacy/more" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
+                Privacy Policy
               </Link>{" "}
               and{" "}
-              <Link
-                href="/terms"
-                className="text-[var(--color-accent-secondary)] transition hover:text-[var(--color-accent-secondary)]"
-              >
+              <Link href="/terms" className="underline decoration-dotted underline-offset-2 hover:text-[var(--color-accent-secondary)]">
                 Terms
               </Link>
               .
@@ -435,12 +433,9 @@ export default function SignupPage() {
           ) : null}
 
           <div className="text-center">
-            <Link
-              href="/login"
-              className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
-            >
+            <Button href="/login" variant="ghost">
               Back to sign in
-            </Link>
+            </Button>
           </div>
 
           <div className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">
@@ -455,5 +450,13 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

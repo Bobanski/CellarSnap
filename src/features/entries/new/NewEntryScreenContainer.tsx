@@ -43,7 +43,9 @@ import type {
   EntryPhotoType,
   PrimaryGrape,
   PrivacyLevel,
+  WineType,
 } from "@/types/wine";
+import { WINE_TYPE_LABELS, WINE_TYPE_VALUES } from "@/types/wine";
 import {
   NEW_ENTRY_BULK_COPY,
   NEW_ENTRY_DRINKING_NOW_COPY,
@@ -86,6 +88,7 @@ import {
 } from "@/lib/collections/client";
 import { snapViewportToTop } from "@/lib/ui/overlayPresentation";
 import BadgeToast from "@/features/badges/BadgeToast";
+import Button, { Chip } from "@/components/ui/Button";
 
 type NewEntryForm = {
   wine_name: string;
@@ -95,6 +98,7 @@ type NewEntryForm = {
   region: string;
   appellation: string;
   classification: string;
+  wine_type: WineType | "";
   rating?: string;
   price_paid?: string;
   price_paid_currency: PricePaidCurrency;
@@ -247,6 +251,7 @@ export default function NewEntryPage() {
       price_paid_source: "",
       qpr_level: "",
       classification: "",
+      wine_type: "",
       drinking_now: false,
       advanced_notes: { ...EMPTY_ADVANCED_NOTES_FORM_VALUES },
     },
@@ -402,16 +407,23 @@ export default function NewEntryPage() {
     primary_grape_confidence?: number | null;
     confidence?: number | null;
     warnings?: string[] | null;
+    // Field names the extraction flagged as inferred/guessed rather than
+    // directly read off the label — by the time this response lands here,
+    // the server has already nulled those fields out (see
+    // extractWineLabel.ts), so applyAutofill leaves them blank automatically.
+    // Kept for the "N fields left blank" messaging below.
+    inferred_fields?: string[] | null;
   };
 
   type NormalizedLabelAutofillResult = Omit<
     LabelAutofillResult,
-    "primary_grape_suggestions" | "primary_grape_confidence" | "confidence" | "warnings"
+    "primary_grape_suggestions" | "primary_grape_confidence" | "confidence" | "warnings" | "inferred_fields"
   > & {
     primary_grape_suggestions: string[];
     primary_grape_confidence: number | null;
     confidence: number | null;
     warnings: string[];
+    inferred_fields: string[];
   };
 
   type LineupWine = {
@@ -448,6 +460,28 @@ export default function NewEntryPage() {
   const [bulkEventType, setBulkEventType] = useState<string>("");
   const [bulkEntryConfigError, setBulkEntryConfigError] = useState<string | null>(null);
   const [showManualFields, setShowManualFields] = useState(false);
+  // The "Wine details" section is a native <details> element, collapsed by
+  // default independent of showManualFields — controlled here so a wine_name
+  // validation error can force it open instead of setting an error message
+  // that's invisible inside a collapsed <details>.
+  const [wineDetailsOpen, setWineDetailsOpen] = useState(false);
+
+  // Whenever a wine_name validation error appears — whether from the
+  // client-side `validate` rule on register("wine_name") blocking submit
+  // before onSubmit ever runs, or from a server 4xx fieldError set after a
+  // round trip — force the "Wine details" section open and surface a top
+  // banner. Without this, the error sits on a field inside a collapsed
+  // <details>, which is exactly the invisible-failure bug this fixes
+  // (UX audit P0-1).
+  useEffect(() => {
+    if (errors.wine_name?.message) {
+      setShowManualFields(true);
+      setWineDetailsOpen(true);
+      setErrorMessage((current) =>
+        current ?? "Wine name is required. We opened Wine details for you."
+      );
+    }
+  }, [errors.wine_name]);
 
   // Fetch user's default privacy preference and friends list on mount
   useEffect(() => {
@@ -1364,7 +1398,13 @@ export default function NewEntryPage() {
   };
 
   const returnAfterSave = (entryId: string) => {
-    returnToPreviousPage(`/entries/${entryId}`);
+    // Deterministic navigation to the created entry's detail page. Do NOT use
+    // the referrer/history heuristic here — after the post-save survey /
+    // comparison step, `document.referrer` and `window.history` reflect
+    // wherever the user was *before* starting entry creation, not the entry
+    // that was just saved. That heuristic previously stranded users on
+    // about:blank or bounced them back to Feed instead of the new entry.
+    router.push(`/entries/${entryId}`);
   };
 
   const returnAfterCancel = () => {
@@ -1661,7 +1701,25 @@ export default function NewEntryPage() {
     setPendingPostSaveSurvey(null);
     setPostSaveSurveyErrorMessage(null);
 
-    clearErrors(["rating", "price_paid", "price_paid_source"]);
+    clearErrors(["rating", "price_paid", "price_paid_source", "wine_name"]);
+
+    // Note: wine_name emptiness is caught client-side by the `validate` rule
+    // on its `register(...)` call below, before this callback ever runs —
+    // react-hook-form calls the invalid-fields effect (see the
+    // errors.wine_name effect near the other state declarations) instead of
+    // this function when that happens. This is a defense-in-depth guard for
+    // the (currently unreachable) case where that changes.
+    if (!values.wine_name.trim()) {
+      setIsSubmitting(false);
+      setShowManualFields(true);
+      setWineDetailsOpen(true);
+      setError("wine_name", {
+        type: "manual",
+        message: "Wine name is required.",
+      });
+      setErrorMessage("Wine name is required. We opened Wine details for you.");
+      return;
+    }
 
     const ratingRaw = values.rating?.trim() ?? "";
     const pricePaidRaw = values.price_paid?.trim() ?? "";
@@ -1701,6 +1759,7 @@ export default function NewEntryPage() {
           region: values.region || null,
           appellation: values.appellation || null,
           classification: values.classification || null,
+          wine_type: values.wine_type || null,
           primary_grape_ids: selectedPrimaryGrapes.map((grape) => grape.id),
           rating,
           price_paid: pricePaid ?? null,
@@ -1743,6 +1802,15 @@ export default function NewEntryPage() {
         return true;
       };
 
+      if (fieldErrors?.wine_name?.[0]) {
+        // The field lives inside the collapsible "Wine details" <details>
+        // section — expand both the manual-fields block and the <details>
+        // itself so the inline error below is actually visible instead of
+        // silently failing to save.
+        setShowManualFields(true);
+        setWineDetailsOpen(true);
+      }
+
       const hadFieldErrors = Boolean(
         setFieldError("rating", fieldErrors?.rating?.[0]) ||
           setFieldError("price_paid", fieldErrors?.price_paid?.[0]) ||
@@ -1761,7 +1829,9 @@ export default function NewEntryPage() {
         typeof payload?.error === "string"
           ? payload.error
           : flattened?.formErrors?.[0] ??
-            (hadFieldErrors ? null : "Unable to create entry.");
+            (hadFieldErrors
+              ? "Please fix the highlighted fields below."
+              : "Unable to create entry.");
       setIsSubmitting(false);
       setErrorMessage(apiError);
       return;
@@ -2958,6 +3028,11 @@ export default function NewEntryPage() {
                 .map((warning) => warning.trim())
                 .filter((warning) => warning.length > 0)
             : [],
+          inferred_fields: Array.isArray(rawLabelData.inferred_fields)
+            ? rawLabelData.inferred_fields
+                .map((field) => field.trim())
+                .filter((field) => field.length > 0)
+            : [],
         };
       }
 
@@ -3021,9 +3096,18 @@ export default function NewEntryPage() {
             warningCount > 0
               ? `${warningCount} field${warningCount > 1 ? "s" : ""} uncertain`
               : null;
+          // Fields the model wasn't confident were directly legible are left
+          // blank rather than filled with a guess (see extractWineLabel.ts) —
+          // surface that so it reads as "left for you to fill in", not a
+          // silent gap.
+          const blankedCount = normalizedLabelData.inferred_fields.length;
+          const blankedLabel =
+            blankedCount > 0
+              ? `${blankedCount} field${blankedCount > 1 ? "s" : ""} left blank — not clearly legible`
+              : null;
           setAutofillMessage(
             (
-              [confidenceLabel, warningLabel]
+              [confidenceLabel, warningLabel, blankedLabel]
                 .filter(Boolean)
                 .join(" • ") || "Autofill complete. Review the details."
             ) + possibleExtraBottleSuffix
@@ -3389,7 +3473,7 @@ export default function NewEntryPage() {
           <span className="text-[9px] uppercase tracking-[3px] text-[var(--color-accent-secondary)]">
             {NEW_ENTRY_HEADER_COPY.eyebrow}
           </span>
-          <h1 className="font-serif text-[28px] font-light text-[var(--color-text-primary)]">
+          <h1 className="font-serif text-[28px] font-normal text-[var(--color-text-primary)]">
             {NEW_ENTRY_HEADER_COPY.title}
           </h1>
           <p className="text-xs text-[var(--color-text-secondary)]">
@@ -3490,9 +3574,9 @@ export default function NewEntryPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {showRescanButton ? (
-                    <button
-                      type="button"
-                      className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] sm:text-xs"
+                    <Button
+                      variant="secondary"
+                      size="xs"
                       onClick={() => {
                         if (labelPhotos.length > 0) {
                           runAnalysis(labelPhotos.map((photo) => photo.file));
@@ -3500,18 +3584,18 @@ export default function NewEntryPage() {
                       }}
                     >
                       {NEW_ENTRY_UPLOAD_COPY.rescanLabel}
-                    </button>
+                    </Button>
                   ) : null}
-                  <button
-                    type="button"
-                    className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs"
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={() => labelInputRef.current?.click()}
                     disabled={!canAddLabelPhoto || autofillStatus === "loading"}
                   >
                     {labelPhotos.length > 0
                       ? NEW_ENTRY_UPLOAD_COPY.addImagesLabel
                       : NEW_ENTRY_UPLOAD_COPY.uploadImagesLabel}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -4052,14 +4136,14 @@ export default function NewEntryPage() {
             {showSingleBottleFields ? (
               <>
                 {!showManualFields ? (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={() => setShowManualFields(true)}
                     aria-expanded={showManualFields}
-                    className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:text-[var(--color-accent-secondary)]"
                   >
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.manualEntryCta}
-                  </button>
+                  </Button>
                 ) : null}
 
                 {showManualFields ? (
@@ -4149,18 +4233,14 @@ export default function NewEntryPage() {
                       render={({ field }) => (
                         <div className="flex flex-wrap gap-1.5">
                           {Object.entries(QPR_LEVEL_LABELS).map(([value, label]) => (
-                            <button
+                            <Chip
                               key={value}
-                              type="button"
-                              className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
-                                field.value === value
-                                  ? "border border-[var(--color-accent-gold)] bg-[rgba(201,168,76,0.22)] font-semibold text-[var(--color-accent-gold)] shadow-[0_0_0_1px_rgba(201,168,76,0.3)]"
-                                  : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
-                              }`}
+                              variant="filter"
+                              selected={field.value === value}
                               onClick={() => field.onChange(field.value === value ? "" : value)}
                             >
                               {label}
-                            </button>
+                            </Chip>
                           ))}
                         </div>
                       )}
@@ -4172,7 +4252,13 @@ export default function NewEntryPage() {
                 </div>
 
                 {showManualFields && (
-                  <details className={collapsibleSectionClassName}>
+                  <details
+                    className={collapsibleSectionClassName}
+                    open={wineDetailsOpen}
+                    onToggle={(event) =>
+                      setWineDetailsOpen(event.currentTarget.open)
+                    }
+                  >
                   <summary className={collapsibleSummaryClassName}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.wineDetailsTitle}
                   </summary>
@@ -4181,13 +4267,22 @@ export default function NewEntryPage() {
                   </p>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">Wine name</label>
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                        Wine name <span className="text-[var(--color-error)]">*</span>
+                      </label>
                       <input
-                        className="w-full rounded-[10px] border-[0.5px] border-[var(--color-border-strong)] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
-                        {...register("wine_name")}
+                        className={`w-full rounded-[10px] border-[0.5px] bg-[rgba(245,237,214,0.04)] px-3 py-[9px] text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
+                          errors.wine_name
+                            ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
+                            : "border-[var(--color-border-strong)] focus:border-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)]/30"
+                        }`}
+                        {...register("wine_name", {
+                          validate: (value) =>
+                            value.trim().length > 0 || "Wine name is required.",
+                        })}
                       />
-                      {errors.wine_name ? (
-                        <p className="mt-1 text-xs text-[var(--color-error)]">{errors.wine_name.message}</p>
+                      {errors.wine_name?.message ? (
+                        <p className="mt-1 text-xs font-semibold text-[var(--color-error)]">{errors.wine_name.message}</p>
                       ) : null}
                     </div>
                     <div>
@@ -4236,6 +4331,37 @@ export default function NewEntryPage() {
                         placeholder="Optional (e.g. Premier Cru, DOCG)"
                         {...register("classification")}
                       />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[9px] uppercase tracking-[2px] text-[var(--color-text-tertiary)] mb-[5px]">
+                        Wine type
+                      </label>
+                      <Controller
+                        control={control}
+                        name="wine_type"
+                        render={({ field }) => (
+                          <div className="flex flex-wrap gap-1.5">
+                            {WINE_TYPE_VALUES.map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={field.value === value}
+                                className={`rounded-[20px] px-2.5 py-[5px] text-[8px] uppercase tracking-[1px] transition ${
+                                  field.value === value
+                                    ? "border border-[var(--color-accent-gold)] bg-[rgba(201,168,76,0.22)] font-semibold text-[var(--color-accent-gold)] shadow-[0_0_0_1px_rgba(201,168,76,0.3)]"
+                                    : "border-[0.5px] border-[var(--color-border)] bg-[rgba(245,237,214,0.04)] text-[var(--color-text-secondary)]"
+                                }`}
+                                onClick={() => field.onChange(field.value === value ? "" : value)}
+                              >
+                                {WINE_TYPE_LABELS[value]}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      />
+                      <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                        Optional — helps Palate Match score this bottle.
+                      </p>
                     </div>
                     <div className="md:col-span-2">
                       <PrimaryGrapeSelector
@@ -4558,20 +4684,12 @@ export default function NewEntryPage() {
                 ) : null}
 
                 <div className="flex items-center gap-3">
-                  <button
-                    type="submit"
-                    className="rounded-[11px] bg-[var(--color-accent-primary)] px-5 py-3 text-xs font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-70"
-                    disabled={isSubmitting}
-                  >
+                  <Button type="submit" variant="primary" size="sm" disabled={isSubmitting}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.saveEntryLabel}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-[11px] border-[0.5px] border-[var(--color-border-strong)] bg-transparent px-5 py-3 text-xs font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-strong)]"
-                    onClick={returnAfterCancel}
-                  >
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={returnAfterCancel}>
                     {NEW_ENTRY_SINGLE_BOTTLE_COPY.cancelLabel}
-                  </button>
+                  </Button>
                 </div>
                   </>
                 ) : null}

@@ -12,7 +12,8 @@ import {
 } from "@/lib/algorithm/matchUi";
 import { normalizeAdvancedNotes } from "@/lib/advancedNotes";
 import { executeSelectWithFallback } from "@/server/db/compat";
-import type { SensoryAxis } from "@/server/algorithm/types";
+import { SENSORY_AXES, type SensoryAxis } from "@/server/algorithm/types";
+import { readPalateProfile } from "@/server/algorithm/palateDistillation";
 import {
   buildUserPreferenceVector,
   type PreferenceSourceEntry,
@@ -53,6 +54,26 @@ const PALATE_RADAR_GROUPS: { key: string; label: string; axes: SensoryAxis[] }[]
   { key: "earth", label: "Earth", axes: ["earthy", "mineral", "savory"] },
   { key: "quality", label: "Quality", axes: ["finish_length", "concentration", "complexity", "freshness"] },
 ];
+
+// Which family each axis belongs to on the TasteMap wheel.
+const AXIS_GROUP: Record<SensoryAxis, "structure" | "flavor" | "aromatics" | "earth" | "quality"> = {
+  body: "structure",
+  acidity: "structure",
+  tannin: "structure",
+  alcohol_perception: "structure",
+  fruit_ripeness: "flavor",
+  sweetness_perception: "flavor",
+  bitterness_phenolic_grip: "flavor",
+  aromatic_intensity: "aromatics",
+  oak_presence: "aromatics",
+  earthy: "earth",
+  mineral: "earth",
+  savory: "earth",
+  finish_length: "quality",
+  concentration: "quality",
+  complexity: "quality",
+  freshness: "quality",
+};
 
 /**
  * GET /api/palate
@@ -191,14 +212,18 @@ export async function GET(request: Request) {
   );
 
   // Regions
-  const regionCounts = new Map<string, { total: number; count: number }>();
+  // `producers` is tracked here (not queried separately) from the same
+  // `rows` already fetched above — the entry select already includes
+  // `producer`, so this is a free aggregation, not a new DB round trip.
+  const regionCounts = new Map<string, { total: number; count: number; producers: Set<string> }>();
   rows.forEach((row) => {
     if (typeof row.rating !== "number") return;
     const key = row.canonical_sub_region ?? row.canonical_region ?? row.region ?? row.canonical_country ?? row.country ?? null;
     if (!key) return;
-    const cur = regionCounts.get(key) ?? { total: 0, count: 0 };
+    const cur = regionCounts.get(key) ?? { total: 0, count: 0, producers: new Set<string>() };
     cur.total += row.rating;
     cur.count += 1;
+    if (row.producer) cur.producers.add(row.producer);
     regionCounts.set(key, cur);
   });
   const overallAvg =
@@ -210,6 +235,7 @@ export async function GET(request: Request) {
       return {
         region,
         count: v.count,
+        producerCount: v.producers.size,
         avgRating: Number((v.total / v.count).toFixed(1)),
         delta,
         deltaLabel: delta > 0.5
@@ -280,6 +306,52 @@ export async function GET(request: Request) {
         neutral: 3,
         user: averageAxisValues(primaryProfile.profile.sensory, group.axes) ?? 3,
       }))
+    : [];
+
+  // Full 16-axis TasteMap data (value + per-axis confidence).
+  // Per-axis confidence prefers the distilled profile's own seed confidence when
+  // available, otherwise falls back to overall preference strength. Axes with no
+  // signal render as small, faint berries rather than misleading full-size ones.
+  let distilledSeedConfidence = new Map<SensoryAxis, number>();
+  try {
+    const distilled = await readPalateProfile(supabase, user.id);
+    if (distilled) {
+      const primaryType = primaryProfile?.wineType ?? null;
+      const typeProfile =
+        (primaryType &&
+          distilled.profile.wine_types.find((t) => t.wine_type === primaryType)) ||
+        distilled.profile.wine_types[0];
+      if (typeProfile) {
+        distilledSeedConfidence = new Map(
+          typeProfile.axis_seeds.map((s) => [s.axis, s.confidence])
+        );
+      }
+    }
+  } catch {
+    // Best-effort — the TasteMap still works from the deterministic vector.
+  }
+
+  const baseConfidence01 = Math.max(0, Math.min(1, preferenceStrength.progress / 100));
+  const tasteMap = primaryProfile
+    ? SENSORY_AXES.map((axis) => {
+        const raw = primaryProfile.profile.sensory[axis];
+        const present = typeof raw === "number" && !Number.isNaN(raw);
+        const seedConf = distilledSeedConfidence.get(axis);
+        const rawConf =
+          typeof seedConf === "number"
+            ? seedConf
+            : present
+              ? baseConfidence01
+              : baseConfidence01 * 0.4;
+        const confidence = Math.max(0.22, Math.min(1, 0.3 + rawConf * 0.7));
+        return {
+          axis,
+          label: SENSORY_AXIS_LABELS[axis] ?? axis,
+          group: AXIS_GROUP[axis],
+          value: Number((present ? (raw as number) : 3).toFixed(2)),
+          confidence: Number(confidence.toFixed(3)),
+        };
+      })
     : [];
 
   // Per-type breakdown
@@ -387,6 +459,7 @@ export async function GET(request: Request) {
     regionStats,
     wineTypeStats,
     radarPoints,
+    tasteMap,
     leansInto,
     avoids,
     typeBreakdown,

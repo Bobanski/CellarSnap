@@ -152,6 +152,7 @@ test.describe("WS3 pocket sommelier", () => {
           recentFavorites: [],
           preferenceSnippets: [],
         },
+        distilledProfile: null,
         contextText: "User likes savory, high-acid wines.",
         sources: [],
       }

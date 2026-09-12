@@ -8,7 +8,6 @@ import {
   COLLECTIONS_COPY,
   DEFAULT_FEED_REPORT_REASON as DEFAULT_REPORT_REASON,
   FEED_EYEBROW,
-  FEED_EMPTY_STATE_MESSAGE,
   FEED_LOAD_MORE_LABEL,
   FEED_PHOTO_TYPE_LABELS as PHOTO_TYPE_LABELS,
   FEED_REACTION_EMOJIS as REACTION_EMOJIS,
@@ -22,8 +21,12 @@ import {
   type FeedReportReason as ReportReason,
   EVENT_TYPE_LABELS,
   type EventTypeValue,
+  getPublicRatingBandLabel,
 } from "@shared";
 import CollectionPickerPopover from "@/components/collections/CollectionPickerPopover";
+import FirstRunChecklist from "@/features/feed/FirstRunChecklist";
+import ListScanCta from "@/features/feed/ListScanCta";
+import PalateGlimpse from "@/features/palate/PalateGlimpse";
 import { formatConsumedDate } from "@/lib/formatDate";
 import {
   addEntryToCollectionsClient,
@@ -42,6 +45,8 @@ import AppImage from "@/components/AppImage";
 import AppShell from "@/components/AppShell";
 import GroupedPostGallery from "@/components/GroupedPostGallery";
 import QprBadge from "@/components/QprBadge";
+import Button, { Chip, SegmentedControl } from "@/components/ui/Button";
+import ScoreBadge from "@/components/ui/ScoreBadge";
 import type {
   EntryGroup,
   GroupedEntrySlide,
@@ -76,6 +81,7 @@ type FeedEntry = WineEntryWithUrls & {
   can_comment?: boolean;
   comments_privacy?: PrivacyLevel;
   comment_count?: number;
+  comment_preview?: { id: string; author_name: string | null; body: string }[];
   reaction_counts?: Record<string, number>;
   my_reactions?: string[];
   reaction_users?: Record<string, string[]>;
@@ -1086,30 +1092,27 @@ export default function FeedPage() {
           </h1>
         </header>
 
-        <div className="flex flex-wrap items-center gap-2 px-6">
-          <button
-            type="button"
-            onClick={() => setFeedScope("public")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              feedScope === "public"
-                ? "border border-[var(--color-accent-secondary)]/60 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
-                : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-            }`}
-          >
-            {FEED_SCOPE_LABELS.public}
-          </button>
-          <button
-            type="button"
-            onClick={() => setFeedScope("friends")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              feedScope === "friends"
-                ? "border border-[var(--color-accent-secondary)]/60 bg-accent-primary/10 text-[var(--color-accent-secondary)]"
-                : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-            }`}
-          >
-            {FEED_SCOPE_LABELS.friends}
-          </button>
+        <div className="px-6">
+          <SegmentedControl
+            options={[
+              { value: "public", label: FEED_SCOPE_LABELS.public },
+              { value: "friends", label: FEED_SCOPE_LABELS.friends },
+            ]}
+            value={feedScope}
+            onChange={setFeedScope}
+          />
+        </div>
 
+        {/* List Scan CTA + "Your palate, read by the somm" — stacked per
+            feedback (round 2, "List Scan prominence on feed": "Maybe
+            replace it with the Palate on Feed? Or just put both on top of
+            each other" — this is the stack). List Scan is a core action so
+            it's not dismissible and sits above; PalateGlimpse is the
+            ambient insight below it, self-gated and still dismissible.
+            Same one-line height language for both rows. */}
+        <div className="px-6 space-y-2">
+          <ListScanCta />
+          <PalateGlimpse />
         </div>
 
         {moderationNotice ? (
@@ -1151,8 +1154,8 @@ export default function FeedPage() {
             {errorMessage}
           </div>
         ) : entries.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--color-border)] bg-surface-primary/10 p-6 text-sm text-[var(--color-text-secondary)]">
-            {FEED_EMPTY_STATE_MESSAGE}
+          <div className="mx-6">
+            <FirstRunChecklist />
           </div>
         ) : (
           <>
@@ -1341,6 +1344,49 @@ export default function FeedPage() {
                     </div>
                   </div>
                 </div>
+                {/* "Tasted with" — moved to the TOP of the card with avatar
+                    chips (bigger presence) per feedback; used to be a quiet
+                    text line near the bottom. */}
+                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
+                  <div
+                    className="mt-2 flex items-center gap-2 overflow-x-auto"
+                    style={{ scrollbarWidth: "none" }}
+                  >
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-tertiary)]">
+                      Tasted with
+                    </span>
+                    {entry.tasted_with_users.slice(0, 6).map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          router.push(`/profile/${user.id}`);
+                        }}
+                        className="group flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-primary)]/40 py-0.5 pl-0.5 pr-2.5 transition hover:border-[var(--color-accent-secondary)]/50"
+                        title={user.display_name ?? "Friend"}
+                      >
+                        <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-black/40 ring-1 ring-white/5">
+                          {user.avatar_url ? (
+                            <AppImage src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[9px] font-medium text-[var(--color-text-tertiary)]">
+                              {(user.display_name || "?")[0].toUpperCase()}
+                            </span>
+                          )}
+                        </span>
+                        <span className="max-w-[88px] truncate text-xs font-medium text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-secondary)]">
+                          {user.display_name ?? "Unknown"}
+                        </span>
+                      </button>
+                    ))}
+                    {entry.tasted_with_users.length > 6 ? (
+                      <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
+                        +{entry.tasted_with_users.length - 6}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
                 {/* Wine name + meta — sits between the "is drinking:" byline
                     above and the photo below, per Eitan's reorder. */}
                 <div className="mt-1.5">
@@ -1411,6 +1457,14 @@ export default function FeedPage() {
                     return null;
                   }
                   const expanded = Boolean(expandedNotesByEntryId[entry.id]);
+                  // Decision 1 (overhaul-plan): the raw 1-100 rating is a
+                  // private input. Only the entry owner sees their own
+                  // number (ScoreBadge, as before); every other viewer sees
+                  // a warm qualitative band instead — never the score.
+                  const isOwnEntry = viewerUserId !== null && viewerUserId === entry.user_id;
+                  const publicBandLabel = hasRating && !isOwnEntry
+                    ? getPublicRatingBandLabel(entry.rating)
+                    : null;
                   return (
                     <div className="mt-3 flex items-baseline justify-between gap-3">
                       <div className="min-w-0 max-w-[60%] flex-1">
@@ -1437,16 +1491,13 @@ export default function FeedPage() {
                       {hasRating || hasQpr ? (
                         <div className="flex shrink-0 flex-col items-end gap-1.5">
                           {hasRating ? (
-                            <span
-                              style={{
-                                color: "#C9A84C",
-                                fontSize: 14,
-                                fontWeight: 800,
-                              }}
-                              title={`Rating ${Math.max(0, Math.min(100, Math.round(entry.rating as number)))} out of 100`}
-                            >
-                              {Math.max(0, Math.min(100, Math.round(entry.rating as number)))} Pts
-                            </span>
+                            isOwnEntry ? (
+                              <ScoreBadge value={entry.rating as number} kind="rating" label="pts" size="sm" />
+                            ) : publicBandLabel ? (
+                              <Chip variant="tag" tone="neutral">
+                                {publicBandLabel}
+                              </Chip>
+                            ) : null
                           ) : null}
                           {hasQpr ? <QprBadge level={entry.qpr_level!} /> : null}
                         </div>
@@ -1461,14 +1512,6 @@ export default function FeedPage() {
                   </span>
                 </div>
 
-                {entry.tasted_with_users && entry.tasted_with_users.length > 0 ? (
-                  <div className="mt-3 break-words text-xs text-[var(--color-text-tertiary)]">
-                    Tasted with:{" "}
-                    {entry.tasted_with_users
-                      .map((user) => user.display_name ?? "Unknown")
-                      .join(", ")}
-                  </div>
-                ) : null}
                 {(() => {
                   const entryComments = commentsByEntryId[entry.id] ?? [];
                   const commentDraft = commentDraftByEntryId[entry.id] ?? "";
@@ -1643,18 +1686,6 @@ export default function FeedPage() {
                                   </button>
                                 )}
                               />
-                              {canComment && (commentCountMap.get(entry.id) ?? 0) > 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleCommentsExpanded(entry.id);
-                                  }}
-                                  className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]"
-                                >
-                                  {(commentCountMap.get(entry.id) ?? 0)} {(commentCountMap.get(entry.id) ?? 0) === 1 ? "comment" : "comments"}
-                                </button>
-                              ) : null}
                             </div>
                           </div>
                           {reactionPopupEntryId === entry.id ? (
@@ -1704,6 +1735,37 @@ export default function FeedPage() {
                             </div>
                           ) : null}
                         </div>
+                        {/* Comment preview — first 1-2 comments surfaced directly
+                            on the card (name + line) instead of a bare count;
+                            tapping opens the full thread. More engaging per
+                            feedback. */}
+                        {!commentsExpanded && (entry.comment_preview?.length ?? 0) > 0 ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleCommentsExpanded(entry.id);
+                            }}
+                            className="mt-1.5 block w-full space-y-1 text-left"
+                          >
+                            {(entry.comment_preview ?? []).map((comment) => (
+                              <p
+                                key={comment.id}
+                                className="truncate text-xs text-[var(--color-text-secondary)]"
+                              >
+                                <span className="font-semibold text-[var(--color-text-primary)]">
+                                  {comment.author_name ?? "Someone"}
+                                </span>{" "}
+                                {comment.body}
+                              </p>
+                            ))}
+                            {(commentCountMap.get(entry.id) ?? 0) > (entry.comment_preview?.length ?? 0) ? (
+                              <span className="text-[11px] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-accent-secondary)]">
+                                {`View all ${commentCountMap.get(entry.id) ?? 0} comments`}
+                              </span>
+                            ) : null}
+                          </button>
+                        ) : null}
                       </div>
                       {commentsExpanded ? (
                         <div
@@ -2144,14 +2206,9 @@ export default function FeedPage() {
           </div>
           {hasMore ? (
             <div className="pt-2">
-              <button
-                type="button"
-                onClick={loadMoreFeed}
-                disabled={loadingMore}
-                className="inline-flex rounded-full bg-accent-primary px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-accent-primary disabled:opacity-50"
-              >
+              <Button variant="primary" size="sm" onClick={loadMoreFeed} disabled={loadingMore}>
                 {loadingMore ? "Loading..." : FEED_LOAD_MORE_LABEL}
-              </button>
+              </Button>
             </div>
           ) : null}
           </>

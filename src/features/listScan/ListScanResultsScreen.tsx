@@ -6,7 +6,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   buildListScanVarietalAccentMap,
@@ -30,11 +29,14 @@ import {
   type ListScanFilterableWineType,
   type ListScanResult,
   type ListScanSortMode,
+  type TasteSurveyPayload,
 } from "@shared";
 import FacetMultiSelect from "@/features/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/features/listScan/RegionFilterSelect";
 import AppShell from "@/components/AppShell";
 import { readListScanResult, saveListScanResult } from "@/lib/listScan/storage";
+import Button, { Chip } from "@/components/ui/Button";
+import ScoreBadge from "@/components/ui/ScoreBadge";
 
 const EMPTY_WINE_TYPES: ListScanFilterableWineType[] = [];
 const EMPTY_STRING_LIST: string[] = [];
@@ -232,16 +234,225 @@ function FilterDropdown({
         <div className="space-y-3 border-t border-white/8 p-4">
           {children}
           <div className="flex justify-end">
-            <button
-              type="button"
-              className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-              onClick={onDone ?? onToggle}
-            >
+            <Button variant="secondary" size="xs" onClick={onDone ?? onToggle}>
               Done
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ── "What should I order?" fallback reason (Wave 3, item 3) ──────────
+// Warm, somm-like one-liner built from the same deterministic signals as
+// buildListScanRationale (varietal / region / price) — used only when the
+// personalized recommendation-note hasn't loaded. Pattern per QA note:
+// [style/place hook] + [personal tie when match data exists] + [price
+// mention only when notable]. One line, no exclamation marks, no jargon.
+function buildSpotlightReason(params: {
+  varietal: string | null;
+  region: string | null;
+  priceValue: number | null;
+  matchPercent: number;
+  personalized: boolean;
+  /** Median price of priced wines on this list — price is "notable" below it. */
+  medianPrice: number | null;
+}): string {
+  const { varietal, region, priceValue, matchPercent, personalized, medianPrice } = params;
+
+  const hook = region && varietal
+    ? `A ${region} ${varietal}`
+    : varietal
+      ? `A ${varietal}`
+      : region
+        ? `A pour from ${region}`
+        : "The strongest pick on this list";
+
+  const tie = personalized
+    ? matchPercent >= 90
+      ? "squarely your kind of bottle"
+      : matchPercent >= 75
+        ? "right in your lane"
+        : "a comfortable fit for your palate"
+    : null;
+
+  const priceIsNotable =
+    typeof priceValue === "number" &&
+    typeof medianPrice === "number" &&
+    priceValue <= medianPrice;
+  const price = priceIsNotable ? `$${priceValue}` : null;
+
+  if (tie && price) return `${hook} — ${tie} at ${price}.`;
+  if (tie) return `${hook} — ${tie}.`;
+  if (price) return `${hook}, and a smart buy at ${price}.`;
+  if (hook.startsWith("The strongest")) return `${hook}.`;
+  return `${hook} — the strongest pick on this list.`;
+}
+
+// ── Mini-palate seeding (Wave 3, item 4) ─────────────────────────────
+// 3 single-tap questions for authed users whose scores are still stubs
+// (buildStubScoreSummary path, no palate data). Answers map straight onto
+// LOVE_AXIS_MAP chip strings in src/server/algorithm/surveySeeding.ts and
+// the `adventurousness` survey field — never a bespoke encoding.
+type MiniPalateOption = {
+  value: string;
+  label: string;
+  sensoryLoves?: string[];
+  adventurousness?: number;
+};
+
+type MiniPalateQuestion = {
+  key: "body" | "flavor" | "adventurous";
+  prompt: string;
+  options: readonly [MiniPalateOption, MiniPalateOption];
+};
+
+const MINI_PALATE_QUESTIONS: readonly MiniPalateQuestion[] = [
+  {
+    key: "body",
+    prompt: "Big & bold, or light & delicate?",
+    options: [
+      { value: "bold", label: "Big & bold", sensoryLoves: ["Big and full-bodied"] },
+      { value: "delicate", label: "Light & delicate", sensoryLoves: ["Light and delicate"] },
+    ],
+  },
+  {
+    key: "flavor",
+    prompt: "Fruit-forward, or earthy & savory?",
+    options: [
+      { value: "fruit", label: "Fruit-forward", sensoryLoves: ["Fruit-forward"] },
+      {
+        value: "earthy",
+        label: "Earthy & savory",
+        sensoryLoves: ["Earthy and funky", "Savory, umami notes"],
+      },
+    ],
+  },
+  {
+    key: "adventurous",
+    prompt: "At a new place, you go...",
+    options: [
+      { value: "adventurous", label: "Adventurous", adventurousness: 8 },
+      { value: "familiar", label: "Stick to favorites", adventurousness: 3 },
+    ],
+  },
+] as const;
+
+function MiniPalateCard({
+  onComplete,
+  onDismiss,
+}: {
+  onComplete: (payload: TasteSurveyPayload) => Promise<void>;
+  onDismiss: () => void;
+}) {
+  const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [collectedLoves, setCollectedLoves] = useState<string[]>([]);
+
+  const question = MINI_PALATE_QUESTIONS[step];
+
+  const handleSelect = async (option: MiniPalateOption) => {
+    setSubmitError(null);
+
+    if (step < MINI_PALATE_QUESTIONS.length - 1) {
+      setCollectedLoves((current) => [...current, ...(option.sensoryLoves ?? [])]);
+      setStep(step + 1);
+      return;
+    }
+
+    // Last question — submit the full quick-survey.
+    setSubmitting(true);
+    try {
+      await onComplete({
+        wine_types: [],
+        varietals: [],
+        regions: [],
+        countries: [],
+        sensory_loves: [...collectedLoves, ...(option.sensoryLoves ?? [])],
+        sensory_avoids: [],
+        budget_restaurant: null,
+        budget_retail: null,
+        adventurousness: option.adventurousness ?? 5,
+        free_text: null,
+      });
+      setDone(true);
+    } catch {
+      setSubmitError("Something went wrong — try again?");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="animate-badge-unlock-pop overflow-hidden rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-surface-primary)]/15 p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--color-accent-secondary)]">
+            Quick palate check
+          </p>
+          <h3
+            className="mt-1 text-lg leading-tight text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)" }}
+          >
+            {done ? "Your matches just got smarter." : "3 taps to personalize these matches"}
+          </h3>
+        </div>
+        {!done ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="shrink-0 text-xs uppercase tracking-[0.14em] text-[var(--color-text-tertiary)] transition hover:text-[var(--color-text-primary)]"
+          >
+            Not now
+          </button>
+        ) : null}
+      </div>
+
+      {done ? (
+        <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
+          We re-scored this list against what you just told us — look for updated match badges above.
+        </p>
+      ) : (
+        <div className="mt-4">
+          <div className="flex items-center gap-1.5">
+            {MINI_PALATE_QUESTIONS.map((q, index) => (
+              <span
+                key={q.key}
+                className={`h-1 flex-1 rounded-full transition-colors ${
+                  index < step
+                    ? "bg-[var(--color-accent-secondary)]"
+                    : index === step
+                      ? "bg-[var(--color-accent-secondary)]/50"
+                      : "bg-[var(--color-border)]"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="mt-4 text-base text-[var(--color-text-primary)]">{question.prompt}</p>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {question.options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                disabled={submitting}
+                onClick={() => void handleSelect(option)}
+                className="rounded-2xl border border-[var(--color-border)] bg-black/20 px-4 py-4 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-accent-secondary)]/60 hover:bg-[var(--color-accent-secondary)]/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {submitting ? (
+            <p className="mt-3 text-xs text-[var(--color-text-tertiary)]">Personalizing your matches…</p>
+          ) : null}
+          {submitError ? (
+            <p className="mt-3 text-xs text-rose-300">{submitError}</p>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -291,6 +502,98 @@ export default function ListScanResultsScreen() {
   const [matchOpen, setMatchOpen] = useState(false);
   const [sortMode, setSortMode] = useState<ListScanSortMode>("list_order");
   const [recommendationNotes, setRecommendationNotes] = useState<Record<string, string>>({});
+  // "What should I order?" spotlight — null until tapped, then an index into
+  // topRecommendations so "show me another" can cycle without a new LLM call.
+  const [spotlightIndex, setSpotlightIndex] = useState<number | null>(null);
+  // Mini-palate seeding (Wave 3, item 4) — shown to authed users with no
+  // palate data yet, i.e. score_summary.mode === "stub" for a reason other
+  // than "not signed in".
+  const [miniPalateGated, setMiniPalateGated] = useState(false);
+  const [miniPalateDismissed, setMiniPalateDismissed] = useState(false);
+  const [miniPalateCompleted, setMiniPalateCompleted] = useState(false);
+
+  // Reset the per-scan UI state during render when scanId changes, rather
+  // than in an effect — the React-recommended pattern for "adjust state
+  // when a prop/derived value changes" without an extra render pass.
+  const [lastScanId, setLastScanId] = useState(scanId);
+  if (scanId !== lastScanId) {
+    setLastScanId(scanId);
+    setSpotlightIndex(null);
+    setMiniPalateDismissed(false);
+    setMiniPalateCompleted(false);
+  }
+
+  const scoresAreStub = Boolean(result && result.score_summary.mode === "stub");
+  // The mini-palate card is eligible once scores are stubs (unpersonalized)
+  // AND the /api/palate check below confirms the viewer is authed with no
+  // palate data yet. `scoresAreStub` is derived at render time so the card
+  // disappears immediately once a re-score personalizes — no need for the
+  // effect below to synchronously clear anything itself.
+  const miniPalateEligible = scoresAreStub && miniPalateGated;
+
+  useEffect(() => {
+    // Once the user has completed the quick-survey this session, keep
+    // showing its "done" state rather than re-evaluating eligibility —
+    // the re-score flips score_summary.mode to "personalized", which the
+    // scoresAreStub-gated render-time check above already hides correctly.
+    if (miniPalateCompleted || !scoresAreStub) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/palate", { cache: "no-store" });
+        if (cancelled) return;
+        if (!response.ok) {
+          // Includes 401 (anonymous) — the no-auth demo path isn't in scope
+          // for this seeding flow.
+          setMiniPalateGated(false);
+          return;
+        }
+        const data = (await response.json()) as { gated?: boolean };
+        setMiniPalateGated(Boolean(data.gated));
+      } catch {
+        if (!cancelled) {
+          setMiniPalateGated(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scoresAreStub, miniPalateCompleted]);
+
+  const handleMiniPalateComplete = async (payload: TasteSurveyPayload) => {
+    const surveyResponse = await fetch("/api/taste-survey", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!surveyResponse.ok) {
+      throw new Error("Unable to save your quick palate check.");
+    }
+
+    if (scanId) {
+      try {
+        const rescoreResponse = await fetch(
+          `/api/list-scan/scans/${encodeURIComponent(scanId)}/rescore`,
+          { method: "POST" }
+        );
+        if (rescoreResponse.ok) {
+          const updated = (await rescoreResponse.json()) as ListScanResult;
+          saveListScanResult(updated);
+          setResult(updated);
+        }
+      } catch {
+        // Survey saved either way — matches personalize on the next load
+        // even if this immediate re-score request failed.
+      }
+    }
+
+    setMiniPalateCompleted(true);
+  };
 
   useEffect(() => {
     const cachedResult = scanId ? readListScanResult(scanId) : null;
@@ -400,6 +703,19 @@ export default function ListScanResultsScreen() {
     () => getTopListScanRecommendations(filteredWines, 3),
     [filteredWines]
   );
+  const spotlightWine =
+    spotlightIndex !== null ? topRecommendations[spotlightIndex] ?? null : null;
+  // Median of priced wines on the whole list — the spotlight's fallback
+  // reason only mentions price when the pick sits at or below it.
+  const medianListPrice = useMemo(() => {
+    if (!result) return null;
+    const prices = result.wines
+      .map((wine) => wine.price_value)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+      .sort((left, right) => left - right);
+    if (prices.length === 0) return null;
+    return prices[Math.floor(prices.length / 2)];
+  }, [result]);
   const highlightedIds = useMemo(
     () => new Set(topRecommendations.map((wine) => wine.id)),
     [topRecommendations]
@@ -504,18 +820,12 @@ export default function ListScanResultsScreen() {
             <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-8 text-sm text-[var(--color-text-secondary)]">
               {loadError ?? "This scan result is no longer available in the current session."}
               <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href="/list-scan"
-                  className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
-                >
+                <Button href="/list-scan" variant="primary" size="sm">
                   Scan another
-                </Link>
-                <Link
-                  href={historyHref}
-                  className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-                >
+                </Button>
+                <Button href={historyHref} variant="secondary" size="sm">
                   My scans
-                </Link>
+                </Button>
               </div>
             </div>
           </div>
@@ -533,7 +843,10 @@ export default function ListScanResultsScreen() {
           <span className="block text-xs uppercase tracking-[0.3em] text-[var(--color-accent-secondary)]/70">
             List results
           </span>
-          <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+          <h1
+            className="text-[var(--color-text-primary)]"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 32, fontWeight: 400 }}
+          >
             {result.venue_name || result.list_title || "Scanned wine list"}
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
@@ -541,20 +854,121 @@ export default function ListScanResultsScreen() {
             list in its original order.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/list-scan"
-              className="inline-flex rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)]"
-            >
+            <Button href="/list-scan" variant="primary" size="sm">
               Scan another
-            </Link>
-            <Link
-              href={historyHref}
-              className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)]"
-            >
+            </Button>
+            <Button href={historyHref} variant="secondary" size="sm">
               My scans
-            </Link>
+            </Button>
           </div>
         </header>
+
+        {topRecommendations.length > 0 ? (
+          <section>
+            {spotlightWine ? (
+              (() => {
+                const display = getListScanDisplayLines(spotlightWine);
+                const structured = getListScanStructuredMeta(spotlightWine);
+                const shortVintage =
+                  spotlightWine.vintage && /^\d{4}$/.test(spotlightWine.vintage)
+                    ? `'${spotlightWine.vintage.slice(2)}`
+                    : spotlightWine.vintage;
+                const primaryLine =
+                  [display.producer, shortVintage].filter(Boolean).join(", ") || display.title;
+                const varietalLabel =
+                  spotlightWine.varietals.length > 0 ? spotlightWine.varietals.join(" / ") : null;
+                const locationParts = [structured.displayRegion, structured.displayCountry].filter(
+                  Boolean
+                );
+                const location = locationParts.length > 0 ? locationParts.join(", ") : null;
+                const secondaryLine = [varietalLabel, location].filter(Boolean).join(" · ") || null;
+                // Reuse the personalized recommendation note when it's already
+                // loaded; otherwise a warm deterministic one-liner built from
+                // the same signals — no new LLM call for this moment.
+                const reason =
+                  recommendationNotes[spotlightWine.id] ??
+                  buildSpotlightReason({
+                    varietal: spotlightWine.varietals[0] ?? null,
+                    region: structured.displayRegion,
+                    priceValue: spotlightWine.price_value,
+                    matchPercent: spotlightWine.match_percent,
+                    personalized: result.score_summary.mode === "personalized",
+                    medianPrice: medianListPrice,
+                  });
+                const hasAnotherOption = topRecommendations.length > 1;
+
+                return (
+                  <div
+                    key={spotlightWine.id}
+                    className="animate-badge-unlock-pop overflow-hidden rounded-3xl border border-[var(--color-accent-secondary)]/30 bg-[var(--color-surface-primary)]/20 p-6 shadow-[0_30px_90px_-40px_rgba(0,0,0,0.9)] sm:p-7"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
+                        What should I order?
+                      </p>
+                      <ScoreBadge value={spotlightWine.match_percent} kind="match" size="lg" animate />
+                    </div>
+                    <h2
+                      className="mt-3 text-2xl leading-tight text-[var(--color-text-primary)] sm:text-3xl"
+                      style={{ fontFamily: "var(--font-serif)", fontWeight: 400 }}
+                    >
+                      {primaryLine}
+                    </h2>
+                    {secondaryLine ? (
+                      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{secondaryLine}</p>
+                    ) : null}
+                    {reason ? (
+                      <p className="mt-4 text-base leading-relaxed text-[var(--color-text-primary)]">
+                        {reason}
+                      </p>
+                    ) : null}
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-base font-semibold text-[var(--color-text-primary)]">
+                        {formatPriceDisplay(spotlightWine.price_display, spotlightWine.menu_label)}
+                      </span>
+                      {hasAnotherOption ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSpotlightIndex((current) =>
+                              current === null
+                                ? 0
+                                : (current + 1) % topRecommendations.length
+                            )
+                          }
+                          className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent-secondary)] transition hover:text-[var(--color-text-primary)]"
+                        >
+                          Show me another →
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSpotlightIndex(0)}
+                className="group flex w-full items-center justify-between gap-4 rounded-3xl border border-[var(--color-accent-secondary)]/25 bg-[var(--color-surface-primary)]/15 px-6 py-5 text-left transition hover:border-[var(--color-accent-secondary)]/50 hover:bg-[var(--color-surface-primary)]/25 sm:px-7 sm:py-6"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent-secondary)]">
+                    Decisive mode
+                  </p>
+                  <h2
+                    className="mt-1 text-xl leading-tight text-[var(--color-text-primary)] sm:text-2xl"
+                    style={{ fontFamily: "var(--font-serif)", fontWeight: 400 }}
+                  >
+                    What should I order?
+                  </h2>
+                </div>
+                <span className="shrink-0 rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-text-on-accent)] transition group-hover:bg-[var(--color-accent-hover)]">
+                  Show me
+                </span>
+              </button>
+            )}
+          </section>
+        ) : null}
 
         {loadError ? (
           <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-5 text-sm text-[var(--color-text-primary)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
@@ -571,6 +985,13 @@ export default function ListScanResultsScreen() {
               {result.score_summary.warning}
             </p>
           </section>
+        ) : null}
+
+        {(miniPalateEligible && !miniPalateDismissed) || miniPalateCompleted ? (
+          <MiniPalateCard
+            onComplete={handleMiniPalateComplete}
+            onDismiss={() => setMiniPalateDismissed(true)}
+          />
         ) : null}
 
         <section className="space-y-5 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-primary)]/10 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
@@ -630,28 +1051,21 @@ export default function ListScanResultsScreen() {
                     { value: "under", label: "Under" },
                     { value: "between", label: "Between" },
                     { value: "over", label: "Over" },
-                  ].map((option) => {
-                    const selected = filters.price_mode === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() =>
-                          setFilters((current) => ({
-                            ...current,
-                            price_mode: option.value as typeof current.price_mode,
-                          }))
-                        }
-                        className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                          selected
-                            ? "bg-[var(--color-accent-primary)] text-[var(--color-text-on-accent)]"
-                            : "border border-[var(--color-border)] text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
+                  ].map((option) => (
+                    <Chip
+                      key={option.value}
+                      variant="filter"
+                      selected={filters.price_mode === option.value}
+                      onClick={() =>
+                        setFilters((current) => ({
+                          ...current,
+                          price_mode: option.value as typeof current.price_mode,
+                        }))
+                      }
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -894,9 +1308,7 @@ export default function ListScanResultsScreen() {
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">
                           Recommendation {index + 1}
                         </p>
-                        <span className="rounded-full border border-emerald-300/35 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
-                          {wine.match_percent}%
-                        </span>
+                        <ScoreBadge value={wine.match_percent} kind="match" size="sm" />
                       </div>
 
                       <div className="mt-3 flex items-start justify-between gap-4">

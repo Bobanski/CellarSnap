@@ -7,6 +7,7 @@ import { LIST_SCAN_MAX_IMAGE_COUNT, type ListScanResult } from "@shared";
 import AppShell from "@/components/AppShell";
 import { saveListScanResult } from "@/lib/listScan/storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import Button from "@/components/ui/Button";
 
 function createFileKey(file: File) {
   return `${file.name}-${file.size}-${file.lastModified}`;
@@ -433,7 +434,7 @@ export default function ListScanIntakeScreen() {
               className="font-serif"
               style={{
                 fontSize: "28px",
-                fontWeight: 300,
+                fontWeight: 400,
                 color: "var(--color-text-primary)",
               }}
             >
@@ -711,25 +712,25 @@ export default function ListScanIntakeScreen() {
             ) : null}
 
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => void submitForm()}
                 disabled={
                   isSubmitting ||
                   (selectedImages.length === 0 && !selectedPdf && !urlValue.trim())
                 }
-                className="rounded-full bg-[var(--color-accent-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Scanning..." : "Scan list"}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={clearInputs}
                 disabled={isSubmitting || !hasIntakeSelection}
-                className="inline-flex rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-strong)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Clear
-              </button>
+              </Button>
             </div>
           </section>
         </div>

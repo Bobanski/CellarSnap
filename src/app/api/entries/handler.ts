@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/server/log";
 import { isMissingDbColumnError } from "@/lib/supabase/errors";
 import { normalizeProducerText, normalizeWineNameText } from "@/lib/wineText";
 import { normalizeAdvancedNotes } from "@/lib/advancedNotes";
@@ -730,8 +731,13 @@ export function createEntryPostHandler(
       },
     });
     newlyEarnedBadges = result.newlyEarned;
-  } catch {
-    // Badge evaluation is best-effort.
+  } catch (error) {
+    // Badge evaluation is best-effort — entry creation should still succeed.
+    log.error("POST /api/entries: evaluateAndAwardBadges failed after entry creation (best-effort).", {
+      entryId: createdEntry.id,
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   const comparisonCandidate = await comparisonCandidatePromise;

@@ -78,20 +78,22 @@ export default function BadgeToast({ badge, onDismiss }: BadgeToastProps) {
       className="fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-[380px] cursor-pointer border-0 bg-transparent p-0"
     >
       <div
-        className="flex items-center gap-4 rounded-2xl border border-[var(--color-border-strong)] px-5 py-4 transition-all duration-300"
+        className="flex items-center gap-4 rounded-2xl border border-[var(--color-border-strong)] px-5 py-4 transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-standard)]"
         style={{
           background: "#2C0A14",
           transform: visible ? "translateY(0)" : "translateY(16px)",
           opacity: visible ? 1 : 0,
         }}
       >
-        <BadgeIcon
-          shape={badge.shape as BadgeShape}
-          color={badge.color as BadgeColor}
-          accent={badge.accent as BadgeColor}
-          tier={badge.tier as BadgeTier}
-          size={48}
-        />
+        <span className={visible ? "animate-badge-unlock-pop" : ""}>
+          <BadgeIcon
+            shape={badge.shape as BadgeShape}
+            color={badge.color as BadgeColor}
+            accent={badge.accent as BadgeColor}
+            tier={badge.tier as BadgeTier}
+            size={48}
+          />
+        </span>
         <div className="min-w-0 flex-1">
           <div
             className="text-[10px] uppercase tracking-[2px] text-[var(--color-accent-secondary)]"
