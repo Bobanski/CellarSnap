@@ -6,7 +6,7 @@ Implemented the bounded entry-row portion of AUD-01, pulled forward the affected
 
 ## Resume here
 
-1. Check Git, [PR #80](https://github.com/Bobanski/CellarSnap/pull/80), and the B02a draft PR linked from [issue #81](https://github.com/Bobanski/CellarSnap/issues/81). Implementation is `50f9fc6d6ac9288f2cc0a5cdc4bfd7d314466afd` on `codex/b02a-entry-privacy`, stacked on B01 `37f183deaa5011ddcafe043ed15c223172f9f7cf`. Main was still `778e43c` during this session.
+1. Check Git, [PR #80](https://github.com/Bobanski/CellarSnap/pull/80), and B02a draft [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) ([issue #81](https://github.com/Bobanski/CellarSnap/issues/81)). Implementation is `50f9fc6d6ac9288f2cc0a5cdc4bfd7d314466afd` on `codex/b02a-entry-privacy`, stacked on B01 `37f183deaa5011ddcafe043ed15c223172f9f7cf`. Main was still `778e43c` during this session.
 2. Read [the access contract](../b02a-access-contract.md), its captured policies and function fixture, and [QC report](../../audits/b02a-browser-database-qc-2026-09-12.md). Do not replay historical SQL against production.
 3. Complete B01 review/release coordination and provision a disposable integration target before claiming B02a end-to-end QC. The B02a migration requires the enabled B01 capability trigger and rejects unreviewed read-policy drift. Retarget/rebase the stacked PR after B01 merges; keep the migration order.
 4. B02b should tackle Storage/photo/group access with explicit source/copy ownership and mixed-privacy fixtures. See the matrix and remaining acceptance in the access contract. Public identity/ratings can be B02c; AUD-04 personal knowledge isolation is the next urgent batch afterward.
@@ -30,7 +30,7 @@ Browser baseline: in-app desktop 1365×900, actual 390×844 phone layout, and Ch
 ## Release state
 
 - B01 PR #80 is still open/draft: web/mobile CI and primary `Vercel – cellar-snap` passed at `37f183d`; duplicate `Vercel – cellarsnap` failed (OPS-01).
-- B02a code is committed and pushed on its dependent branch with a draft PR; inspect its exact checks separately.
+- B02a code is committed and pushed on its dependent branch in draft PR #82 (base `codex/audit-remediation`); inspect its exact checks separately.
 - Merge: neither B01 nor B02a merged in this session. Code deployment: no production deployment performed. Migration deployment: neither B01 nor B02a applied live. Live verification of the fixes: not done.
 - Read-only live catalog still shows all three P0 exposures AUD-01/02/03. AUD-04 also remains open.
 - Next release gate: reviewed integration results on B01→B02a SQL, then normal merge/deploy workflow and explicit target approval where needed. After rollout, capture live policies, verify ordinary/test/admin role behavior and real API/Storage paths before closing any finding.
