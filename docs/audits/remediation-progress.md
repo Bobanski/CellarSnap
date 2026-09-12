@@ -1,5 +1,7 @@
 # Audit remediation progress
 
+**Current planning and status:** [remediation hub](../remediation/README.md), [canonical backlog](../remediation/backlog.md), and [batch-one handover](../remediation/handovers/batch-01.md). This document records historical implementation/QC evidence; update the canonical backlog for ongoing work.
+
 September 12, 2026. The original audit is a historical snapshot at commit 40c6f63; it is not a claim that every finding still exists after later changes.
 
 ## Consolidation

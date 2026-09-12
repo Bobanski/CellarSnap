@@ -1,5 +1,7 @@
 # Batch 1 browser and mobile QC — September 12, 2026
 
+**Follow-up tracking:** the issues below are registered as QC-01 through QC-06 in the [canonical backlog](../remediation/backlog.md). See the [remediation hub](../remediation/README.md) for priorities, batches and fresh-session handovers.
+
 ## Result and scope
 
 Targeted interactive QC completed on `codex/audit-remediation`, implementation commit `0e7acb0caad26f6d88e384b07ab563e5b394848f` (PR #80). No regression attributable to batch one was identified in the exercised flows. This is not full application or native-device acceptance: existing inconsistencies were found, and production policy validation remains outstanding.

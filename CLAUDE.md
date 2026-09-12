@@ -3,6 +3,10 @@
 Wine-focused app. Core features: bottle logging, label/photo workflows, recommendations,
 palate matching, social layer, badges/gamification. Product name still TBD (CellarSnap / Clinq / Cluster).
 
+## Remediation continuity
+
+For the audit backlog, priorities, batch sequence, new-finding intake, and session handovers, start at [docs/remediation/README.md](docs/remediation/README.md). Its linked backlog is the canonical work queue; the September audit and individual QC reports are evidence, not competing task lists. Update the backlog and current handover at every batch/session boundary. Never equate a tested migration file with a verified production fix.
+
 ---
 
 ## Stack

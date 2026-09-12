@@ -1,5 +1,7 @@
 # CellarSnap codebase and backend audit
 
+**Historical evidence:** current priorities, status and batch planning live in the [remediation hub](../remediation/README.md) and [canonical backlog](../remediation/backlog.md). Original section numbers map to AUD-01 through AUD-50; this audit's findings are not all still unimplemented or all fixed.
+
 **Audit date:** September 12, 2026  
 **Checkout:** `feat/marketing-site`, commit `40c6f63`, including the existing working-tree changes  
 **Backend:** Supabase project `rbmkypbqavmnuycznssv`, PostgreSQL 17.6  
