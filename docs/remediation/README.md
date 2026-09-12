@@ -3,7 +3,7 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest handover:** [merge readiness](handovers/merge-readiness.md); [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md) history.
+- **Latest handover:** [B01/B02a merged](handovers/merged-b01-b02a.md); [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md) history.
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
 
@@ -11,13 +11,13 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-B01 [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) → B02a [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) are marked ready for review after completing merge QC: 181 tests, lint/types, Next and Expo production builds, desktop/phone browser flows, and 41 real PostgreSQL/PostgREST HTTP assertions passed. The [merge QC report](../audits/merge-readiness-qc-2026-09-12.md) records precise limits and newly reproduced existing defects. The changed code is recommended for the owner's final review; **the owner has reserved merge approval. Do not merge yet.**
+B01 [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) and B02a [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) **merged with owner approval** as `25f14e1` and `c22a45c`, respectively. #82 was retargeted/rechecked after #80. The merged tree exactly matches the reviewed `22d1378` tree. Production `cellar-snap` deployment for `c22a45c` succeeded; the known duplicate `cellarsnap` env failure remains OPS-01.
 
-Neither migration is deployed or live-verified. B01's capability guard must precede B02a's entry policy. Merge #80 first, retarget/recheck #82 afterward. Primary Vercel checks pass; duplicate `cellarsnap` fails due missing Supabase env variables (OPS-01). Native runtimes are unavailable. Full Supabase Storage-service integration remains a release check. Storage/photo-specific/group access and public identity/ratings remain later B02 slices. B01 now references [issue #83](https://github.com/Bobanski/CellarSnap/issues/83), B02a [#81](https://github.com/Bobanski/CellarSnap/issues/81). Follow [the current handover](handovers/merge-readiness.md).
+The review passed 181 tests, 41 real PostgreSQL/PostgREST HTTP assertions, lint/types, production Next/Expo builds and desktop/phone browser flows. [QC evidence](../audits/merge-readiness-qc-2026-09-12.md) records limits and existing defects. **Neither SQL migration is deployed or live-verified.** B01's capability guard must precede B02a's entry policy in a separately authorized database rollout. Native runtimes are unavailable; actual Supabase Storage-service integration and live acceptance remain release checks. Storage/photo-specific/group access and public identity/ratings remain later B02 slices. B01 tracks [#83](https://github.com/Bobanski/CellarSnap/issues/83), B02a [#81](https://github.com/Bobanski/CellarSnap/issues/81). Follow [the current handover](handovers/merged-b01-b02a.md).
 
 Release coordination need not block independent P0 investigation or fixture preparation; keep branch dependencies and tested versions explicit when work overlaps.
 
-Consolidated main is `778e43c` from [PR #79](https://github.com/Bobanski/CellarSnap/pull/79). Preserve the separate Champagne Daylight draft [PR #75](https://github.com/Bobanski/CellarSnap/pull/75), as explicitly chosen by the owner.
+The stack was reviewed against consolidated main `778e43c` from [PR #79](https://github.com/Bobanski/CellarSnap/pull/79); its implementation merge is now `c22a45c`. Preserve the separate Champagne Daylight draft [PR #75](https://github.com/Bobanski/CellarSnap/pull/75), as explicitly chosen by the owner.
 
 ## Priority and batch plan
 
