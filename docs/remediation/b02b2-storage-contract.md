@@ -1,0 +1,38 @@
+# B02b2 Storage and anonymous-share contract
+
+AUD-01 continuation, September 12, 2026. Requires the B01 capability trigger, B02a entry policies and B02b1 metadata policies. Preserve Noir Refined, trusted-test behavior for authenticated viewers, both-direction blocks and independently owned copies. No production DDL was run during implementation.
+
+## Source authority
+
+`wine-photos` stays private. Replace bucket-wide authenticated SELECT and redundant owner SELECT policies with `can_access_wine_photo(name)`. Existing owner-prefix INSERT/UPDATE/DELETE and public-assets SELECT are preserved. A path, root reference, tag, group reference or collection snapshot does not grant permission to its source.
+
+1. Authenticated owners retain their own prefix, including pre-metadata uploads, drafts, originals, avatars, collection covers and orphan cleanup.
+2. Foreign entry objects must have an existing source entry whose UUID and owner UUID exactly match the first two path segments. Modern four-segment and legacy three-segment paths are supported. Invalid, unattached and foreign-source references deny access.
+3. Parent access and the effective photo privacy must both pass the existing `can_view_entry` contract. Ordered photo metadata establishes the current type; changing categories does not require moving files. If multiple current photo rows reference one object, every type must permit access. Legacy label/place/pairing columns are consulted only when ordered metadata is absent.
+4. When neither ordered nor legacy metadata exists, slide-only images require a valid owned group anchor, a visible anchor, matching source membership and source/photo access. Entry-less context belongs to the anchor's source folder. A slide cannot relabel an existing private ordered/legacy source to broaden access.
+5. `__original` variants inherit their referenced base photo's current access. A physically copied object under another author's own entry path inherits the new entry's privacy. Merely storing the original path in another entry/group/collection cannot unlock it. Source privacy changes revoke new authenticated reads/signing; an independent public copy remains readable.
+6. Avatars are authenticated social assets only when the exact canonical `owner/avatar.jpg|png|webp|gif` path is the profile's current avatar and block/test-author checks pass. Other users cannot read old avatar variants or custom collection covers. Collection snapshots retain source-image privacy.
+
+The actual lookup is a narrowly scoped `private.can_access_wine_photo(text)` SECURITY DEFINER function, with an empty search path, explicit JWT identity and parent/photo checks, and a boolean-only result. It distinguishes hidden metadata from absent metadata; an invoker-only lookup cannot safely distinguish them when considering slide fallback. PUBLIC/anon execution is revoked. Authenticated/service roles receive only the needed schema usage and function execution. The exposed same-name `public` facade is SECURITY INVOKER. No viewer ID, privilege switch, raw row or signature is accepted/returned. Existing capability-trigger execution remains revoked. This is not a general RLS bypass.
+
+## Anonymous shares and revocation
+
+The service-role caller uses the same predicate's **public-only** branch: no tester privileges, and only explicitly public source entries and photo settings. The share resolver also requires an unexpired, unrevoked share, an explicitly public post and a present non-test author. Malformed/null privacy fails closed. Group previews require a same-owner public anchor and public members, and each candidate is checked before signing. Private first candidates are skipped; permitted later candidates remain available. A missing migration/RPC error yields no images, never unchecked admin signatures.
+
+Share authorization is evaluated on every request; the page and OG route are dynamic and OG responses explicitly use `Cache-Control: private, no-store`. New share-image signatures last one hour instead of seven days. This does not retroactively shorten existing signatures, prevent a previously authorized client from retaining bytes, or control external social caches. Supabase signed URLs remain valid until their issued expiry even after permissions or Auth keys change: [official download/signing contract](https://supabase.com/docs/guides/storage/serving/downloads). Authenticated SDK callers can request their own lifetimes; this change is not a global TTL cap or immediate signed-URL revocation system. Assess exceptional revocation with the platform operator rather than claiming that RLS invalidates old capabilities.
+
+The private numeric rating/public identity projection remains AUD-06/QC-01. No unrelated presentation change was added.
+
+## Catalog evidence and compatibility
+
+[Captured Storage policies](evidence/b02b2-live-storage-policies.json) are sanitized catalog definitions from project `rbmkypbqavmnuycznssv`, September 12. Pre-fixture inventory: 869 wine objects: 650 label, 74 lineup, 51 pairing, 41 place, 22 people and 13 other_bottles in modern paths; ten avatars; six legacy label and two legacy place paths. No live custom collection cover object was present; covers were exercised synthetically.
+
+Thirty legacy entry references and 473 ordered references had no foreign owner/entry prefix or unsupported layout. Three ordered photos were reclassified without moving files: label → people, other_bottles → label, pairing → label; no active overrides on those rows. This directly motivated metadata authority and its regression test. Eight entry-backed group paths have no ordered/legacy photo record; slide-only fallback preserves them. These are compatibility facts under AUD-01, not unrelated data repairs. No rows or object paths were rewritten.
+
+Before rollout, recapture these aggregates and policy/function definitions; the migration rejects an absent/public wine bucket, absent predecessors and unknown SELECT/ALL policies. Do not treat policy names alone as proof of unchanged definitions. Verify all expected owner write policies and public-assets SELECT against the capture. Apply B02b1 then this exact manifest migration, then release the share resolver. If the application ships first, share text remains available but images fail closed until the RPC exists.
+
+## Acceptance and release
+
+Use the [QC report](../audits/b02b2-storage-share-qc-2026-09-12.md) for actual role, object-service and browser evidence. Repeat download, single/batch signing, copy, upload/upsert/delete, originals, category changes, slide-only members, avatars/covers, both block directions, testers and public shares against the migrated target. Check Supabase advisors after authorized deployment; a pre-deployment advisor run cannot validate this local migration. Preserve the B01/B02a [remote-version/checksum map](handovers/sql-rollout-b01-b02a.md); do not replay historical SQL.
+
+Recovery favors a targeted forward fix, never restoring bucket-wide authenticated access. Both policies/functions are transactional and do not mutate data. Existing signed URLs and third-party caches remain subject to their original lifetimes. AUD-01 stays Partial until migration, code release and live acceptance are recorded.

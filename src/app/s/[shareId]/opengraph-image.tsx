@@ -51,7 +51,7 @@ export const size = {
 
 export const contentType = "image/png";
 export const runtime = "nodejs";
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 type OpenGraphImageProps = {
   params: Promise<{ shareId: string }>;
@@ -171,6 +171,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
       {
         ...size,
         fonts,
+        headers: { "Cache-Control": "private, no-store" },
       }
     );
   }
@@ -504,6 +505,7 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
     {
       ...size,
       fonts,
+      headers: { "Cache-Control": "private, no-store" },
     }
   );
 }
