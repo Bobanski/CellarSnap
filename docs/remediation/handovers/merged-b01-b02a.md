@@ -1,5 +1,7 @@
 # B01/B02a merged handover — September 12, 2026
 
+Historical merge snapshot; superseded by the [completed SQL rollout](sql-rollout-b01-b02a.md).
+
 ## Objective and IDs
 
 The owner approved merging the reviewed stack. Merged #80, then retargeted/rechecked and merged #82. This session changed no application code, test logic, migration SQL or deployment configuration. This documentation-only follow-up records actual release state for AUD-01/02/03/10/17/19/48 and OPS-01. No finding is closed solely because its code merged.

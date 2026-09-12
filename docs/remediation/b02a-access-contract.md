@@ -1,6 +1,6 @@
 # B02a entry access contract — September 12, 2026
 
-Scope: AUD-01 entry-row containment, targeted AUD-19 baseline, and AUD-48 regression coverage. Implementation: `50f9fc6d6ac9288f2cc0a5cdc4bfd7d314466afd`, branch `codex/b02a-entry-privacy`, based on B01 `37f183d`. [Issue #81](https://github.com/Bobanski/CellarSnap/issues/81). This is a candidate migration, not a live repair.
+Scope: AUD-01 entry-row containment, targeted AUD-19 baseline, and AUD-48 regression coverage. Implementation: `50f9fc6d6ac9288f2cc0a5cdc4bfd7d314466afd`, branch `codex/b02a-entry-privacy`, based on B01 `37f183d`. [Issue #81](https://github.com/Bobanski/CellarSnap/issues/81). This document captures the pre-deployment contract. The migration is now deployed; see the [SQL rollout handover](handovers/sql-rollout-b01-b02a.md) for current status.
 
 ## Live baseline
 

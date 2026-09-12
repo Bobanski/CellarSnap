@@ -3,7 +3,7 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest handover:** [B01/B02a merged](handovers/merged-b01-b02a.md); [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md) history.
+- **Latest handover:** [B01/B02a SQL deployed](handovers/sql-rollout-b01-b02a.md); [merged](handovers/merged-b01-b02a.md), [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md) history.
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
 
@@ -11,9 +11,9 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-B01 [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) and B02a [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) **merged with owner approval** as `25f14e1` and `c22a45c`, respectively. #82 was retargeted/rechecked after #80. The merged tree exactly matches the reviewed `22d1378` tree. Production `cellar-snap` deployment for `c22a45c` succeeded; the known duplicate `cellarsnap` env failure remains OPS-01.
+B01 [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) and B02a [PR #82](https://github.com/Bobanski/CellarSnap/pull/82) are merged, and **both SQL migrations are now deployed and verified live** with owner authorization. B01 was recorded as `20260912211719`, then B02a as `20260912211747`; exact SQL checksums match the reviewed repository files. The [rollout handover](handovers/sql-rollout-b01-b02a.md) records the filename/version mapping—do not reapply because the timestamps differ.
 
-The review passed 181 tests, 41 real PostgreSQL/PostgREST HTTP assertions, lint/types, production Next/Expo builds and desktop/phone browser flows. [QC evidence](../audits/merge-readiness-qc-2026-09-12.md) records limits and existing defects. **Neither SQL migration is deployed or live-verified.** B01's capability guard must precede B02a's entry policy in a separately authorized database rollout. Native runtimes are unavailable; actual Supabase Storage-service integration and live acceptance remain release checks. Storage/photo-specific/group access and public identity/ratings remain later B02 slices. B01 tracks [#83](https://github.com/Bobanski/CellarSnap/issues/83), B02a [#81](https://github.com/Bobanski/CellarSnap/issues/81). Follow [the current handover](handovers/merged-b01-b02a.md).
+AUD-02/03 are Closed. AUD-01's entry-row slice is deployed; the finding remains Partial for Storage/photo-specific/group privacy. In addition to prior isolated QC, 35 live API/Storage checks, eight rolled-back SQL assertions and production web/Expo owner/non-owner checks passed. All disposable fixtures were removed; existing account flags stayed unchanged. [Live QC report](../audits/sql-rollout-qc-2026-09-12.md). Native runtimes remain unavailable; Expo is web fallback coverage. Primary web deployment succeeded; the known duplicate Vercel `cellarsnap` env failure remains OPS-01. Continue B02b, public identity/ratings, and urgent B03 personal knowledge isolation from the current handover and canonical backlog.
 
 Release coordination need not block independent P0 investigation or fixture preparation; keep branch dependencies and tested versions explicit when work overlaps.
 
