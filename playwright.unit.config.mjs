@@ -20,6 +20,7 @@ export default defineConfig({
     "post-save-survey-bulk.spec.ts",
     "notes-nlp.spec.ts",
     "database-security.spec.ts",
+    "entry-access-policy.spec.ts",
     "audit-regressions.spec.ts",
   ],
 });
