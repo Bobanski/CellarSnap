@@ -4,15 +4,15 @@ Updated September 12, 2026. **58 records: all 50 original audit findings, six br
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
-**Ownership / external tickets:** unassigned unless a row links a PR. PR #80 owns only the implemented B01 slices. No GitHub umbrella or 58 separate GitHub issues have been created by this documentation pass; these stable local IDs are the tickets. Add a GitHub URL and active owner to the existing record when assigned. Issue #70 is closed brand/design work and should not be used as this backlog's umbrella.
+**Ownership / external tickets:** unassigned unless a row links a PR or active branch. PR #80 owns only the implemented B01 slices. B02a's entry-row slice is tracked by [issue #81](https://github.com/Bobanski/CellarSnap/issues/81) on `codex/b02a-entry-privacy`. There is no GitHub umbrella; these stable local IDs remain the canonical tickets. Issue #70 is closed brand/design work and should not be used as this backlog's umbrella.
 
-**Release boundary:** no finding is marked Closed here. “QC passed — release pending” means the implemented slice passed its applicable checks but is still in PR #80 or awaiting deployment/live checks. “Partial” preserves residual work. Recheck current deployment state when resuming.
+**Release boundary:** no finding is marked Closed here. “QC passed — release pending” means the implemented slice passed its applicable checks but is still in review or awaiting deployment/live checks. B02a has isolated database tests and browser baseline only; migrated integration remains pending. “Partial” preserves residual work. Recheck current deployment state when resuming.
 
 ## Original audit
 
 | ID | Priority | Finding | Status | Batch / next acceptance evidence |
 |---|---|---|---|---|---|
-| AUD-01 | P0 | Entry/photo policies bypass privacy | Open | B02: direct Data API, Storage and app allow/deny matrix for owner, strangers, friends, blocks, test accounts, originals, shared copies and grouped photos; retain legitimate sharing. |
+| AUD-01 | P0 | Entry/photo policies bypass privacy | Partial | B02a entry-row migration + captured live access helpers + eight PostgreSQL tests implemented on `codex/b02a-entry-privacy` ([#81](https://github.com/Bobanski/CellarSnap/issues/81)); integration/release pending. [Handover](handovers/batch-02a.md). B02b still needs Storage/photo-specific/group policies and real cross-user API/Storage/browser/native verification. |
 | AUD-02 | P0 | PUBLIC can write public-assets | QC passed — release pending | B01 → B02 release: [PR #80](https://github.com/Bobanski/CellarSnap/pull/80) migration tested in PGlite, not deployed. Verify live client write denial and retained public reads/admin writes after rollout. |
 | AUD-03 | P0 | Client-editable privileged test-account flag | QC passed — release pending | B01 → B02 release: PR #80 guards insert/update. Verify live own-profile editing, escalation/revocation denial and retained admin updates; do not reset existing flags. |
 | AUD-04 | P0 | Personal embeddings globally readable/searchable | Open | B03: owner/entry boundaries in tables and every retrieval path; cross-user denial, retained curated search, update/delete propagation and no orphaned private chunks. |
@@ -30,7 +30,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-16 | P1 | Import mapping discards custom types | Open | B08 correctness; B12 consolidation: preserve date, number, grape, bottle-format and currency custom fields across both import formats with round-trip fixtures. |
 | AUD-17 | P1 | Explore grape query uses nonexistent column | QC passed — release pending | B01 PR #80 fixes variety join; schema query and browser community pulse passed. Complete release checks; add a positive personal-grape fixture alongside the empty-state UI coverage. |
 | AUD-18 | P2 | Inconsistent validation on write paths | Open | B08: shared bounded runtime schemas, meaningful 400s and partial-update semantics; unsupported input rejected without erasing omitted valid fields. |
-| AUD-19 | P1 | Migration history does not reproduce production | Open | B02 targeted baseline first, B05 complete baseline: reviewed grants/policies/functions/triggers/seeds, disposable replay and drift detection. Never replay all historical SQL on production. |
+| AUD-19 | P1 | Migration history does not reproduce production | Partial | B02a captured affected live policies/grants and executable entry-helper fixtures; documented text-vs-enum drift in the [access contract](b02a-access-contract.md). B05 still needs the complete reviewed baseline, replay/drift detection, triggers/seeds and deployment reconciliation. Never replay historical SQL on production. |
 | AUD-20 | P1 | Compatibility branches lack retirement contract | Open | B05 supported schema/mobile window; B15 deletion: instrument fallback usage and remove only obsolete schema branches while preserving nullable/input recovery and access controls. |
 | AUD-21 | P1 | Database types drift from schema/domain DTOs | Open | B05: generate one type source from reviewed schema, adopt client factories/query result typing, keep public DTOs/validators distinct and CI-check drift. |
 | AUD-22 | P2 | Duplicated entry/photo/group representations lack ownership | Open | B08: document canonical writer and derived copies, reconcile before retirement; retain OCR provenance, separate tasting ratings and collection snapshots. |
@@ -59,7 +59,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-45 | P2 | Route auth/validation/errors inconsistent | Open | B13: small typed adapters, cookie/bearer auth and endpoint-specific error contracts tested; no oversized framework abstraction. |
 | AUD-46 | P3 | Unused modules/pass-through layers | Open | B15: prove no dynamic/external consumers, delete bounded candidates, preserve knowledge-admin authorization and verify affected features. Source count alone is not performance evidence. |
 | AUD-47 | P3 | Repeated tokens/visual primitives | Open | B13: small shared token source and stable per-platform primitives; preserve Noir Refined, native SVG/rendering and static marketing deployment. |
-| AUD-48 | P1 | Regression baseline incomplete/untrustworthy | Partial | B01: 173 tests, CI, lint/types/build plus browser/Expo QC. Every batch: add missing lifecycle/import/cache/scoring/access parity fixtures as relevant; unavailable native acceptance stays explicit. |
+| AUD-48 | P1 | Regression baseline incomplete/untrustworthy | Partial | B02a: 181 tests (eight added policy tests, 56 app/database access comparisons), lint/types and browser/HTTP baseline. [QC limits](../audits/b02a-browser-database-qc-2026-09-12.md): migrated Supabase integration and native acceptance outstanding. Continue lifecycle/import/cache/scoring coverage in relevant batches. |
 | AUD-49 | P2 | Nested worktrees enter tooling/watch roots | Partial | B01 excludes .claude from web lint/TypeScript. B05: Metro and remaining scan/watch boundaries still need review; preserve the user's existing nested checkout. |
 | AUD-50 | P2 | Silent degradation and stale engineering context | Partial | This hub/intake/handover improves documentation only. Every batch: request/job IDs, stage latency/query counts, cache/fallback/AI usage and actionable error reporting remain implementation work. |
 
@@ -112,6 +112,7 @@ Reconcile these against current code before a related batch: count issues likely
 
 ## Change history
 
+- September 12, 2026, B02a: implemented the AUD-01 entry-row slice with an explicit B01 capability dependency, live catalog/function fixtures and policy/app tests; marked AUD-01/19 Partial, updated AUD-48, and published [handover](handovers/batch-02a.md). Known QC-02/03/04 reconfirmed; no unrelated fixes. No merge, production migration or live-fix verification.
 - September 12, 2026: initialized all 50 audit IDs with explicit B01 partial/release boundaries; registered six QC and two operational/intake records. Added ordered batches, intake/completion rules and a fresh-session handover. No production implementation or schema changes in this planning pass.
 
 For new findings, use the [intake template](README.md#finding-intake-and-local-tickets). Append the next ID rather than renumbering this inventory. For completed work, update the row and link dated verification/release evidence; preserve the record and original source.
