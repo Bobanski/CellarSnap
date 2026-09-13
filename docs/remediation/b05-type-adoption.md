@@ -10,7 +10,8 @@
 - Web server: `createTypedSupabaseServerClient()` uses `createServerClient<Database>` in both cookie modes with unchanged auth/cookie options. The old factory is a named migration bridge preserving the existing caller surface. Server clients remain per-request.
 - Mobile: `supabaseDatabase` constructs `createClient<Database>` with unchanged persistence, secure-storage fallback, PKCE and refresh behavior. Legacy `supabase` references the **same client**; there is no second session manager or auth subscription.
 - Adopted first slice: web grape browsing joins, `/api/grapes` lookups, and Expo Explore Browse's owner-filtered producer query. Query results now infer from the schema; the nested grape/producer casts were removed. HTTP DTOs and UI ranking/filtering remain unchanged.
-- Still unadopted: legacy exports' consumers, admin/bearer factory boundaries, scoring/badges/entry mutation queries and broader public projections. **AUD-21 remains Partial.** Do not erase generated constraints with per-query casts to make those slices compile; resolve each actual schema/domain discrepancy on its original finding ID.
+- B05d: `requireTypedRequestAuth()` returns `SupabaseClient<Database>` for both cookie and bearer modes through a shared resolver. `/api/grapes` adopts it; the legacy auth export preserves existing caller/test contracts. No second session owner.
+- Still unadopted: legacy exports' consumers, admin factory boundaries, scoring/badges/entry mutation queries and broader public projections. **AUD-21 remains Partial.** Do not erase generated constraints with per-query casts to make those slices compile; resolve each actual schema/domain discrepancy on its original finding ID.
 
 ## Regeneration and CI
 
