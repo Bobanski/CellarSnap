@@ -3,7 +3,8 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest handover and release:** [B04d/B05a merged and live-verified](handovers/b04d-b05a-release.md). B04d [implementation](handovers/batch-04d.md) / [QC](../audits/b04d-mobile-dependency-qc-2026-09-13.md); B05a [QC](../audits/b05a-tooling-qc-2026-09-13.md). Prior releases: [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md). Prior implementation checkpoints remain linked from those handovers.
+- **Latest implementation checkpoint:** [B05b reviewed schema/replay](handovers/batch-05b.md); issue #104. Tool/database QC passed, release pending; B05c type adoption next.
+- **Latest release:** [B04d/B05a merged and live-verified](handovers/b04d-b05a-release.md). B04d [implementation](handovers/batch-04d.md) / [QC](../audits/b04d-mobile-dependency-qc-2026-09-13.md); B05a [QC](../audits/b05a-tooling-qc-2026-09-13.md). Prior releases: [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md). Prior implementation checkpoints remain linked from those handovers.
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
 

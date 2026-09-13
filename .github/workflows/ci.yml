@@ -21,6 +21,9 @@ jobs:
       - name: Lint
         run: npm run lint:web
 
+      - name: Reviewed schema replay and drift contracts
+        run: npm run test:schema
+
       - name: Unit, route, and database policy tests
         run: npm run test:unit
 
