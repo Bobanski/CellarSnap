@@ -1,0 +1,97 @@
+{
+  "results": [
+    {
+      "device": "desktop",
+      "imageLoaded": true
+    },
+    {
+      "device": "phone",
+      "imageLoaded": true
+    },
+    {
+      "crossOriginBearer": {
+        "status": 200,
+        "cache": "private, no-store, max-age=0",
+        "bytes": 91828
+      }
+    },
+    {
+      "reason": "photoPrivacy",
+      "denied": {
+        "status": 404,
+        "cache": "private, no-store, max-age=0",
+        "bytes": 0
+      }
+    },
+    {
+      "reason": "entryPrivacy",
+      "denied": {
+        "status": 404,
+        "cache": "private, no-store, max-age=0",
+        "bytes": 0
+      }
+    },
+    {
+      "reason": "testAuthor",
+      "denied": {
+        "status": 404,
+        "cache": "private, no-store, max-age=0",
+        "bytes": 0
+      }
+    },
+    {
+      "deniedLoadThenRetry": true
+    },
+    {
+      "outageThenRetry": true
+    },
+    {
+      "adoptedPayloadSignatureFree": true,
+      "oldBearerCompatible": true
+    },
+    {
+      "storageRequests": 0,
+      "imageRequests": 13,
+      "bearerOnly": true
+    },
+    {
+      "signOutClearsImageSurface": true
+    },
+    {
+      "ownerCropSaveAndReopen": true,
+      "originalDimensionReads": 3
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+  ],
+  "failures": [
+    {
+      "path": "/api/photos/image",
+      "status": 404
+    },
+    {
+      "path": "/api/photos/image",
+      "status": 404
+    },
+    {
+      "path": "/api/photos/image",
+      "status": 404
+    },
+    {
+      "path": "/api/photos/image",
+      "status": 404
+    },
+    {
+      "path": "/api/photos/image",
+      "status": 503
+    }
+  ],
+  "fixturesRemoved": true,
+  "profilesRestored": true
+}

@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADERS } from "@/src/lib/api/webApi";
 import type { CellarEntry } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
@@ -22,7 +23,7 @@ export async function fetchCellarEntries(): Promise<
   let response: Response;
   try {
     response = await fetch(`${baseUrl}/api/cellar`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { ...PHOTO_DELIVERY_HEADERS, Authorization: `Bearer ${accessToken}` },
     });
   } catch {
     return { ok: false, errorMessage: "Unable to reach the cellar API right now." };
@@ -69,7 +70,7 @@ export async function drinkFromCellar(
     response = await fetch(`${baseUrl}/api/cellar/drink`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        ...PHOTO_DELIVERY_HEADERS, Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ cellar_entry_id: cellarEntryId }),

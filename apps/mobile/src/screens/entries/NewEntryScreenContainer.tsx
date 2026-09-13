@@ -10,7 +10,6 @@ import {
   Alert,
   Animated,
   findNodeHandle,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,6 +20,7 @@ import {
   type TextInput as ReactNativeTextInput,
   View
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { router, useFocusEffect } from "expo-router";
 import { z } from "zod";
 import * as ImagePicker from "expo-image-picker";

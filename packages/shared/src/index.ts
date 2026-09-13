@@ -34,3 +34,4 @@ export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from "
 export * from './activity-summary';
 export * from './entryGrapes';
 export * from './entryEdit';
+export * from './photoDelivery';

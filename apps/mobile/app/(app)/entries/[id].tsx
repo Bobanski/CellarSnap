@@ -4,7 +4,6 @@ import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -16,6 +15,7 @@ import {
   type GestureResponderEvent,
   View,
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { router, useLocalSearchParams } from "expo-router";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import {
@@ -64,6 +64,7 @@ import {
   SelectField,
 } from "@/src/components/entries/newEntryFormParts";
 import { signPhotoUrl } from "@/src/lib/storage/signedUrls";
+import { originalPhotoUri } from "@/src/lib/storage/photoDelivery";
 import {
   ensurePhotoMimeType,
   extensionForMimeType,
@@ -1930,7 +1931,7 @@ export default function EntryDetailScreen() {
     const sourceUri =
       cropPhoto && cropSourceDataUrlByPhotoId[cropPhoto.id]
         ? cropSourceDataUrlByPhotoId[cropPhoto.id]
-        : cropPhoto?.url ?? null;
+        : cropPhoto?.url ? originalPhotoUri(cropPhoto.url) : null;
     if (!sourceUri) {
       setCropImageNaturalSize(null);
       setCropSourceLoading(false);
@@ -2008,7 +2009,7 @@ export default function EntryDetailScreen() {
   const activeCropPhotoSourceUri =
     activeCropPhoto && cropSourceDataUrlByPhotoId[activeCropPhoto.id]
       ? cropSourceDataUrlByPhotoId[activeCropPhoto.id]
-      : activeCropPhoto?.url ?? null;
+      : activeCropPhoto?.url ? originalPhotoUri(activeCropPhoto.url) : null;
   const clampCropPercent = (value: number) => Math.min(100, Math.max(0, value));
   const clampCropZoom = (value: number) => Math.min(4, Math.max(1, value));
   const getCropGeometry = useCallback(() => {
@@ -2606,7 +2607,7 @@ export default function EntryDetailScreen() {
         }
 
         if (!sourceDataUrl) {
-          const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+          const sourceBytes = await readPhotoBytes(originalPhotoUri(activeCropPhoto.url));
           const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
           sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
             sourceBytes
@@ -2641,7 +2642,7 @@ export default function EntryDetailScreen() {
         croppedMimeType = payload.mime_type ?? croppedMimeType;
       } else {
         if (!sourceDataUrl) {
-          const sourceBytes = await readPhotoBytes(activeCropPhoto.url);
+          const sourceBytes = await readPhotoBytes(originalPhotoUri(activeCropPhoto.url));
           const sourceMimeType = ensurePhotoMimeType(null, null, activeCropPhoto.url);
           sourceDataUrl = `data:${sourceMimeType};base64,${arrayBufferToBase64(
             sourceBytes

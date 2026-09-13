@@ -1,4 +1,4 @@
-import { signPhotoPaths } from "@cellarsnap/shared";
+import { authenticatedPhotoUrl, isValidPhotoPath, signPhotoPaths } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 
 type MobileSupabaseClient = typeof supabase;
@@ -27,6 +27,7 @@ export async function signPhotoUrl(
 
   const supabaseClient = options?.supabaseClient ?? supabase;
   const bucket = options?.bucket ?? DEFAULT_PHOTO_BUCKET;
+  if (bucket === DEFAULT_PHOTO_BUCKET) return isValidPhotoPath(path) ? authenticatedPhotoUrl(path) : null;
   const ttlSeconds = options?.ttlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS;
   const { data, error } = await supabaseClient.storage
     .from(bucket)
@@ -45,6 +46,10 @@ export async function signPhotoUrls(
 ) {
   const supabaseClient = options?.supabaseClient ?? supabase;
   const bucket = options?.bucket ?? DEFAULT_PHOTO_BUCKET;
+  if (bucket === DEFAULT_PHOTO_BUCKET) {
+    return new Map(Array.from(new Set(paths)).filter((path): path is string => typeof path === "string" && isValidPhotoPath(path))
+      .map(path => [path, authenticatedPhotoUrl(path)]));
+  }
   const ttlSeconds = options?.ttlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS;
   return signPhotoPaths(paths, {
     signBatch: (batch) => supabaseClient.storage.from(bucket).createSignedUrls(batch, ttlSeconds),

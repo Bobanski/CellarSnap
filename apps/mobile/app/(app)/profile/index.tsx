@@ -10,7 +10,6 @@ import * as ImagePicker from "expo-image-picker";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,6 +20,7 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { lightImpact } from "@/src/lib/haptics";

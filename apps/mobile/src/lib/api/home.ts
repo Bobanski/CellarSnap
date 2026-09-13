@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADERS } from "@/src/lib/api/webApi";
 import type { HomeApiResponse } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
@@ -31,7 +32,7 @@ export async function fetchMobileHomeFromApi(): Promise<
   try {
     response = await fetch(`${baseUrl}/api/home`, {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        ...PHOTO_DELIVERY_HEADERS, Authorization: `Bearer ${accessToken}`,
       },
     });
   } catch {

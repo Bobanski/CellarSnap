@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADER, PHOTO_DELIVERY_VERSION } from "@cellarsnap/shared";
 import { supabase } from "@/src/lib/supabase";
 
 export function getWebApiBaseUrl() {
@@ -21,3 +22,5 @@ export async function getAccessTokenForApi() {
 
   return session?.access_token ?? null;
 }
+
+export const PHOTO_DELIVERY_HEADERS = { [PHOTO_DELIVERY_HEADER]: PHOTO_DELIVERY_VERSION };

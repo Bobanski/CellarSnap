@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADERS } from "@/src/lib/api/webApi";
 import type {
   CollectionOption,
   EntryCollectionSummary,
@@ -127,7 +128,7 @@ async function authorizedFetch(
     const response = await fetch(`${baseUrl}${input}`, {
       ...init,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        ...PHOTO_DELIVERY_HEADERS, Authorization: `Bearer ${accessToken}`,
         ...(init?.headers ?? {}),
       },
     });

@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADERS } from "@/src/lib/api/webApi";
 import { type ProfileFriendStatus } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
@@ -69,7 +70,7 @@ async function fetchApiJson<T>(
       ...init,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...PHOTO_DELIVERY_HEADERS, Authorization: `Bearer ${token}`,
         ...(init?.headers ?? {}),
       },
     });

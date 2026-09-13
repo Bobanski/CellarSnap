@@ -3,8 +3,11 @@ import { createClient, type User } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { createAuthenticatedImageGetHandler } from '@/server/storage/imageDelivery';
 import { RequestAuthError } from '@/server/auth/requestAuth';
-import { authenticatedPhotoUrl, registerCookiePhotoClient } from '@/lib/storage/photoDelivery';
+import { authenticatedPhotoUrl, registerRequestPhotoClient } from '@/lib/storage/photoDelivery';
 import { signPhotoUrl, signPhotoUrls } from '@/server/storage/signedUrls';
+import { requireRequestAuth } from '@/server/auth/requestAuth';
+import { fetchAuthorizedPhoto, resolveAuthenticatedPhotoUrl, MAX_DELIVERED_PHOTO_BYTES } from '@shared/photoDelivery';
+import { OPTIONS } from '@/app/api/photos/image/route';
 
 const path = 'owner/entry/label/photo.jpg';
 function fixture() {
@@ -65,7 +68,7 @@ test('path traversal, empty/pending paths, backslashes, control bytes and unknow
 });
 
 test('cookie-web payloads hide capabilities and preserve per-object nulls', async () => {
-  const client = registerCookiePhotoClient(createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async (_input, init) => {
+  const client = registerRequestPhotoClient(createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async (_input, init) => {
     const body = JSON.parse(String(init?.body));
     return new Response(JSON.stringify(body.paths
       ? body.paths.map((p: string) => ({ path: p, signedURL: '/object/sign/wine-photos/' + p + '?token=fixture', error: p === 'missing.jpg' ? 'not found' : null }))
@@ -83,4 +86,61 @@ test('unadopted bearer/native clients retain signed response compatibility', asy
     calls++; return new Response(JSON.stringify({ signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } });
   } } });
   expect(await signPhotoUrl(path, client)).toContain('/storage/v1/object/sign/'); expect(calls).toBe(1);
+});
+
+test('only explicitly adopted verified bearer clients receive request-authorized payloads', async () => {
+  for (const version of [null, 'unknown', 'request-v1']) {
+    const client = createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async () =>
+      new Response(JSON.stringify({ signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } }) } });
+    client.auth.getUser = async () => ({ data: { user: { id: 'viewer' } as User }, error: null });
+    const headers = new Headers({ authorization: 'Bearer fixture' });
+    if (version) headers.set('X-CellarSnap-Photo-Delivery', version);
+    const auth = await requireRequestAuth(new Request('https://app.test/api/feed', { headers }), undefined, {
+      getEnv: () => ({ supabaseUrl: 'https://fixture.supabase.co', supabaseAnonKey: 'fixture-key' }),
+      createBearerClient: () => client,
+      createCookieClient: async () => { throw new Error('Unexpected cookie fallback'); },
+    });
+    const url = await signPhotoUrl(path, auth.supabase);
+    expect(url?.includes('/storage/v1/')).toBe(version !== 'request-v1');
+    if (version === 'request-v1') expect(url).toBe(authenticatedPhotoUrl(path));
+  }
+});
+
+test('mobile normalizes only configured image origins and strips legacy capabilities and arbitrary query fields', () => {
+  const resolve = (uri: string) => resolveAuthenticatedPhotoUrl(uri, 'https://app.test', 'https://fixture.supabase.co');
+  expect(resolve(authenticatedPhotoUrl(path) + '&token=secret')).toBe('https://app.test' + authenticatedPhotoUrl(path));
+  for (const prefix of ['object/sign', 'object/authenticated', 'render/image/sign', 'render/image/authenticated']) {
+    expect(resolve(`https://fixture.supabase.co/storage/v1/${prefix}/wine-photos/${path}?token=secret&width=20`))
+      .toBe('https://app.test' + authenticatedPhotoUrl(path));
+  }
+  for (const bad of ['https://evil.test/api/photos/image?path=' + path, 'https://fixture.supabase.co.evil.test/storage/v1/object/sign/wine-photos/' + path,
+    'https://app.test/api/photos/image?path=a%2F..%2Fb', 'https://user:password@app.test/api/photos/image?path=' + path,
+    'https://fixture.supabase.co/storage/v1/object/sign/public-assets/a.jpg', '/api/photos/image?path=pending', '/api/photos/image?path=a&variant=raw']) {
+    expect(resolve(bad)).toBeNull();
+  }
+  expect(resolveAuthenticatedPhotoUrl(authenticatedPhotoUrl(path), 'http://insecure.test', 'https://fixture.supabase.co')).toBeNull();
+  expect(resolveAuthenticatedPhotoUrl(authenticatedPhotoUrl(path), 'http://localhost:8083', 'https://fixture.supabase.co'))
+    .toBe('http://localhost:8083' + authenticatedPhotoUrl(path));
+});
+
+test('mobile reads use bearer-only no-store requests and bound streamed bytes, error bodies and types', async () => {
+  const bytes = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#792b45' } }).webp().toBuffer();
+  const fetcher: typeof fetch = async (url, init) => {
+    expect(url).toBe('https://app.test/api/photos/image');
+    expect(init).toMatchObject({ headers: { Authorization: 'Bearer fixture' }, credentials: 'omit', cache: 'no-store', redirect: 'error' });
+    return new Response(bytes, { headers: { 'content-type': 'image/webp' } });
+  };
+  const signal = new AbortController().signal;
+  expect((await fetchAuthorizedPhoto('https://app.test/api/photos/image', 'fixture', signal, fetcher)).size).toBe(bytes.length);
+  for (const response of [new Response(null, { status: 401 }), new Response(null, { status: 404 }), new Response('html', { headers: { 'content-type': 'text/html' } }),
+    new Response(null, { headers: { 'content-type': 'image/webp', 'content-length': String(MAX_DELIVERED_PHOTO_BYTES + 1) } }),
+    new Response(new Uint8Array(MAX_DELIVERED_PHOTO_BYTES + 1), { headers: { 'content-type': 'image/webp' } }),
+    new Response(null, { headers: { 'content-type': 'image/webp' } })]) {
+    await expect(fetchAuthorizedPhoto('https://app.test/api/photos/image', 'fixture', signal, async () => response)).rejects.toThrow('Photo unavailable');
+  }
+  const preflight = OPTIONS();
+  expect(preflight.status).toBe(204);
+  expect(preflight.headers.get('access-control-allow-headers')).toBe('Authorization');
+  expect(preflight.headers.get('access-control-allow-credentials')).toBeNull();
+  expect(preflight.headers.get('cache-control')).toContain('no-store');
 });
