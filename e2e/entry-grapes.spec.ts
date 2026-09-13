@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import { loadEntryPrimaryGrapes, primaryGrapeSelectionChanged, ENTRY_GRAPES_LOAD_ERROR, type Database } from '@shared';
+import { buildEntryEditSnapshot, loadEntryPrimaryGrapes, primaryGrapeSelectionChanged, ENTRY_GRAPES_LOAD_ERROR, type Database } from '@shared';
 
 function fixture(data: unknown, status=200) {
   const requests: URL[]=[];
@@ -28,4 +28,14 @@ test('notes-only selection preserves existing links, labels and positions; expli
   expect(primaryGrapeSelectionChanged(grapes,[{...grapes[0],position:0},{...grapes[1],position:1}])).toBe(false);
   for(const changed of [[],[grapes[0]],[...grapes,{id:'c',name:'Third',position:3}],[{...grapes[1],position:1},{...grapes[0],position:2}]])
     expect(primaryGrapeSelectionChanged(grapes,changed)).toBe(true);
+});
+
+
+test('entry edit snapshots retain raw nulls and nested data and reject incomplete reads', async () => {
+  const source = { notes: null, advanced_notes: { aroma: ['cherry'] }, rating: 90, derived: 'unrelated' };
+  expect(buildEntryEditSnapshot({ notes: 'Edited', advanced_notes: null }, source)).toEqual({
+    updates: { notes: 'Edited', advanced_notes: null }, expected: { notes: null, advanced_notes: { aroma: ['cherry'] } },
+  });
+  expect(() => buildEntryEditSnapshot({ absent: true }, source)).toThrow('incomplete');
+  expect(() => buildEntryEditSnapshot({ notes: undefined }, source)).toThrow('incomplete');
 });

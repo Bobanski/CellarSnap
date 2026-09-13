@@ -90,7 +90,39 @@ try {
       } finally { first.child.kill(); second.child.kill(); }
     }
   }
-  console.log(JSON.stringify({postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,productionWrites:0}));
+  // B08b: two independent editors reach the same entry lock. The waiting
+  // backend must see the committed winner, not mix its details/grape set.
+  const editEntry='00000000-0000-4000-8000-000000000901';
+  const grapeA='00000000-0000-4000-8000-000000000902', grapeB='00000000-0000-4000-8000-000000000903';
+  sql(`reset role; insert into grape_varieties(id,name,slug) values('${grapeA}','A','edit-a'),('${grapeB}','B','edit-b');
+    insert into wine_entries(id,user_id,wine_name,notes,entry_privacy) values('${editEntry}','${owner}','Edit race','Before','private');`);
+  let editConcurrencyChecks=0;
+  for (const retry of [false,true]) {
+    sql(`reset role; delete from entry_primary_grapes where entry_id='${editEntry}'; update wine_entries set notes='Before' where id='${editEntry}';`);
+    const command=(note,grape)=>`set local role authenticated; select set_config('request.jwt.claim.sub','${owner}',true);
+      select save_entry_details('${editEntry}','{"notes":"${note}"}','{"notes":"Before"}',array['${grape}']::uuid[],array[]::uuid[]);`;
+    const first=session(), second=session();
+    try {
+      first.child.stdin.write(`begin; ${command('Winner',grapeA)} select 'edit-ready';\n`);
+      let ready='';
+      await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(new Error('Edit transaction not ready')),5000);
+        first.child.stdout.on('data',chunk=>{ready+=chunk;if(ready.includes('edit-ready')){clearTimeout(timer);resolve();}});
+      });
+      second.child.stdin.end(`set application_name='entry-edit-waiter'; begin; ${command(retry?'Winner':'Loser',retry?grapeA:grapeB)} commit;`);
+      await waitForLock('entry-edit-waiter');first.child.stdin.end('commit;');
+      assert.equal((await first.done).code,0);const result=await second.done;
+      if(retry){assert.equal(result.code,0,result.error);assert.match(result.output,/"replayed": true/);}
+      else{assert.notEqual(result.code,0);assert.match(result.error,/Entry changed elsewhere/);}
+      assert.equal(sql(`select notes from wine_entries where id='${editEntry}'`).trim(),'Winner');
+      assert.equal(sql(`select variety_id from entry_primary_grapes where entry_id='${editEntry}'`).trim(),grapeA);
+      const linkId=sql(`select id from entry_primary_grapes where entry_id='${editEntry}'`).trim();
+      sql(`begin; ${command('Winner',grapeA)} commit;`);
+      assert.equal(sql(`select id from entry_primary_grapes where entry_id='${editEntry}'`).trim(),linkId);
+      editConcurrencyChecks++;
+    }finally{first.child.kill();second.child.kill();}
+  }
+  console.log(JSON.stringify({postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,productionWrites:0}));
 } finally {
   if(started) run('pg_ctl',['-D',join(scratch,'data'),'-m','immediate','-w','stop']);
   await rm(scratch,{recursive:true,force:true});

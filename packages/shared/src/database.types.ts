@@ -2813,6 +2813,16 @@ export type Database = {
           published: boolean
         }[]
       }
+      save_entry_details: {
+        Args: {
+          p_entry_id: string
+          p_expected: Json
+          p_expected_grape_ids?: string[]
+          p_grape_ids?: string[]
+          p_updates: Json
+        }
+        Returns: Json
+      }
     }
     Enums: {
       entry_comparison_response: "more" | "less" | "same_or_not_sure"
@@ -2988,3 +2998,4 @@ export const Constants = {
     },
   },
 } as const
+

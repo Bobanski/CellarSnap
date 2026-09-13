@@ -66,6 +66,20 @@ export async function expectedCatalog() {
     }
     expected[key].push(...add);
   }
+  const editDelta = JSON.parse(await readFile(new URL('./b08b-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(editDelta)) {
+    if (remove.length) throw new Error('B08b must be an additive command');
+    expected[key].push(...add);
+  }
+  const conflictDelta = JSON.parse(await readFile(new URL('./b08b-conflict-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(conflictDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error('Missing reviewed B08b conflict predecessor');
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

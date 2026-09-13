@@ -2,7 +2,7 @@
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
-- **Latest working checkpoint:** [B02e](handovers/batch-02e.md), web photo delivery merged #130, live QC in progress; [B02f](handovers/batch-02f.md) helper SQL implemented, hosted QC pending; B08b next.
+- **Latest working checkpoint:** [B02e](handovers/batch-02e.md), web photo delivery merged #130, live QC in progress; [B02f](handovers/batch-02f.md) helper SQL live and #131 merged; [B08b](handovers/batch-08b.md) mobile atomic edit command implemented, hosted/Expo QC pending.
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
 - **Latest release and resume point:** [B02c2/B02d/B08a](handovers/b02c2-b02d-b08a-release.md), [sanitized QC](evidence/b02c2-b02d-b08a-release.json). Three PRs merged; public-profile SQL live and primary web live-verified. Native distribution, old Storage capabilities, helper RPCs, numeric payloads and atomic saves remain explicit.
 - **Previous release:** [B02c1/B06g/B07a/B06h](handovers/b02c1-b06g-b07a-b06h-release.md), [QC](evidence/b02c1-b06g-b07a-b06h-qc.json).
