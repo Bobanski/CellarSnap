@@ -1,6 +1,6 @@
 # Canonical remediation backlog
 
-Updated September 13, 2026. **65 records: all 50 original audit findings, thirteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
+Updated September 13, 2026. **66 records: all 50 original audit findings, fourteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
@@ -68,7 +68,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | ID | Priority | Finding | Status | Batch / acceptance |
 |---|---|---|---|---|
 | QC-01 | P1 | Mobile public feed displays raw numeric ratings | Open | B02: enforce the intended qualitative public presentation and review public payloads; preserve owner's private 1–100 input. Related AUD-01/06/44. |
-| QC-02 | P2 | Web library dates shift one day in negative UTC offsets | Open | B06: one date-only formatter; same consumed date in library/detail/mobile under positive and negative UTC offsets. |
+| QC-02 | P2 | Web library dates shift one day in negative UTC offsets | QC passed — release pending | B06: one date-only formatter; same consumed date in library/detail/mobile under positive and negative UTC offsets. |
 | QC-03 | P2 | Profile/menu country and friend counts disagree | Open | B06: define count semantics, reconcile query/loading behavior, prove consistent counts on shared fixtures across web and mobile. Related AUD-35/39. |
 | QC-04 | P2 | Maps loader/legacy Places warnings | Open | B11: async loading and supported Places contract; location autocomplete still works, relevant warnings eliminated and load impact measured. Related AUD-37. |
 | QC-05 | P2 | Expo web exposes router group titles | Open | B11: intended headers on sign-in/app screens without `(auth)`/`(app)` labels; verify native stacks when runtime available. Severity is provisional for native impact. |
@@ -79,7 +79,8 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-10 | P2 | Expo recovery retains a displaced page scroll after navigation | Open | B04c fixed 390×844 single-tab retest reproduced root top -160/scrollY 160 and light gap. B11: restore full-height background/navigation scroll and verify available native behavior. [QC](../audits/b04c-dependency-qc-2026-09-12.md). |
 | QC-11 | P2 | Script-rendered menu reports successful empty scan | Open | B11 bounded parser follow-up: reject empty/unreadable results with upload guidance; preserve supported server-rendered menus. |
 | QC-12 | P2 | Expo single-photo feed cards render loaded images at zero height | Open | B11: reproduce/fix static Image sizing under Pressable; candidate and prior B04c export both reproduce. Related AUD-38/OPS-02; see detail below. |
-| QC-13 | P1 | Grape search rejects native bearer authentication | In progress | B05d/AUD-39: use the shared cookie/bearer auth contract and preserve typed lookups. Candidate and prior live production return 401 for valid bearer-only grape requests; control endpoint returns 200. See detail below. |
+| QC-13 | P1 | Grape search rejects native bearer authentication | QC passed — release pending | B05d/AUD-39: use the shared cookie/bearer auth contract and preserve typed lookups. Candidate and prior live production return 401 for valid bearer-only grape requests; control endpoint returns 200. See detail below. |
+| QC-14 | P2 | Seeded grape alias normalization drops uppercase letters | Open | B05e / AUD-19 reference-data contract: review collision-safe forward repair and seed generation; canonical/alias search parity. See detail below. |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
@@ -267,3 +268,14 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 
 ### B05d active slice — QC-13 / AUD-21
 - September 13, 2026: `codex/b05d-grape-auth`, based on `2ce30ce`, issue #104. Typed request-auth cookie/bearer clients and grape lookup parity; no SQL. Preserve existing cookie fallback semantics and missing-reference-table errors.
+
+### B06a active slice — QC-02
+- September 13, 2026: `codex/b06a-consumed-dates`, stacked on B05d `e724161`. Reproduced existing Proof Private fixtures displaying Jul 7 in Library before the fix; shared calendar-day formatter for web and mobile entry library/detail. No stored date migration or timestamp-contract rewrite.
+
+### QC-14 — Seeded grape aliases lose uppercase letters
+- Priority / status: P2 / Open; confirmed existing data/seed defect, independent of QC-13 auth.
+- Discovered: September 13, 2026, B05d `e724161` against the existing hosted reference data.
+- Evidence: authenticated alias rows contain `abernet auvignon`, `erlot`, `abernet ranc`; cookie and bearer `q=abernet auvignon` resolve Cabernet Sauvignon. Web `q=shiraz` returns no suggestion. Historical `supabase/sql/019_entry_classification_and_primary_grapes.sql:214,264` and `022_add_grape_varieties.sql:38` apply `regexp_replace(..., '[^a-z0-9]+', ...)` before `lower`, deleting uppercase characters. The seed contains Shiraz, so the normal search key cannot match the damaged value.
+- Expected / actual: case-normalized aliases should remain searchable by their ordinary spelling; capital letters are dropped before normalization. Canonical name matches can mask the damage.
+- Related IDs / target: AUD-19 reviewed seed/reference restoration, AUD-10 resolver compatibility; bounded B05e data repair, unassigned. No change to historical manifest/baseline, SQL or hosted aliases in this session.
+- Acceptance: inventory affected aliases, review normalized-key collisions and accent/punctuation policy, preserve canonical IDs/joins and legitimate synonyms, prepare a forward-only repair plus corrected fresh-seed contract, and test ordinary alias-only lookups with cookie/bearer/browser/Expo. Record exact deployment and live verification separately. Do not replay historical migrations.

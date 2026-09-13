@@ -61,6 +61,7 @@ import {
   type QprLevel,
   type UserCollectionSummary,
   type WineEntrySummary,
+  formatConsumedDate,
 } from "@cellarsnap/shared";
 import {
   fetchEntryCollections,
@@ -191,12 +192,6 @@ function CollectionListCard({ item }: { item: UserCollectionSummary }) {
       <Feather name="chevron-right" size={18} color={colors.textSecondary} />
     </Pressable>
   );
-}
-
-function formatConsumedDate(raw: string) {
-  const date = new Date(`${raw}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return raw;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function normalizeVariety(
