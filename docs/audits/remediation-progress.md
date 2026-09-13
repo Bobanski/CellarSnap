@@ -76,3 +76,5 @@ Product `588d49a`, branch `codex/b04c-dependencies`, issue #97 / PR #98. Next/ES
 ## B04c release — September 12, 2026 (September 13 UTC)
 
 PR #98 merged at 03:25:06 UTC as `a0a9564`; primary Vercel production `dpl_ETLBU2jPWkBR1DVctLZN1PgCE3VZ` is Ready on cellarsnap.app. Final-head web/mobile CI and primary preview passed. Eight live HTTP checks plus phone login/feed images/filtering, desktop results and sign-out passed. One login-page request logged an invalid refresh token (HTTP 200); fresh login succeeded. Disposable scan and 48 children removed, baseline retained. No SQL changes or native distribution. AUD-08 remains Partial for the two mobile advisory roots and native acceptance/release. [Release handover](../remediation/handovers/b04c-release.md) records exact commits, deployment, coverage and cleanup.
+
+- September 13, 2026 UTC — B04d / AUD-08, PR #100: both residual mobile advisory roots repaired, 263 checks and browser/Expo QC passed; native acceptance/distribution outstanding. Existing QC-12 added after prior-export comparison. [Handover](../remediation/handovers/batch-04d.md).
