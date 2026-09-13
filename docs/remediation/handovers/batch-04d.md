@@ -1,5 +1,7 @@
 # B04d handover — September 13, 2026 UTC
 
+> Historical implementation checkpoint. B04d is now merged as `3527208`; current release state and next steps are in the [combined B04d/B05a release handover](b04d-b05a-release.md).
+
 ## Objective and IDs
 AUD-08 decoder and Xcode tooling compatibility repair, issue #97 / [PR #100](https://github.com/Bobanski/CellarSnap/pull/100). Both remaining advisory roots repaired in repository code. AUD-08 remains Partial for native acceptance and distributing rebuilt clients. New QC-12 and additional QC-10 evidence stay B11.
 
