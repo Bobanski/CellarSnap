@@ -8,6 +8,7 @@ import {
 const SOMMELIER_TABLES = [
   "knowledge_documents",
   "wine_knowledge_chunks",
+  "user_entry_knowledge_chunks",
   "general_knowledge_chunks",
   "sommelier_conversations",
   "sommelier_messages",

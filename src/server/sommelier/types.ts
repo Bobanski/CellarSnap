@@ -83,6 +83,7 @@ export type AssembledSommelierContext = {
 export type StructuredIngestionSummary = {
   sourceTable: string;
   insertedCount: number;
+  skippedCount?: number;
 };
 
 export type DocumentIngestionSummary = {

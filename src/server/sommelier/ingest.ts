@@ -3,7 +3,6 @@ import {
   formatAdvancedNoteValue,
   normalizeAdvancedNotes,
 } from "@/lib/advancedNotes";
-import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { isAnyMissingDbColumnError } from "@/lib/supabase/errors";
 import { chunkMarkdown, chunkText } from "@/server/sommelier/chunker";
 import { generateEmbeddings } from "@/server/sommelier/embeddings";
@@ -414,16 +413,6 @@ async function batchGenerateEmbeddings(contents: string[]) {
   return embeddings;
 }
 
-async function loadWineEntryPrimaryGrapes(
-  supabase: AdminClient,
-  entryIds: string[]
-) {
-  return fetchPrimaryGrapesByEntryId(
-    supabase as unknown as Parameters<typeof fetchPrimaryGrapesByEntryId>[0],
-    entryIds
-  );
-}
-
 async function loadRowsWithFallback(
   supabase: AdminClient,
   table: string,
@@ -682,70 +671,57 @@ export async function ingestStructuredWineKnowledge(
   return summaries;
 }
 
+type EntryKnowledgeSource = {
+  entry_id: string;
+  source_snapshot: {
+    entry: EntryEmbeddingRow;
+    primary_grapes: Array<{ name: string }>;
+  };
+};
+
 export async function ingestWineEntryEmbeddings(
   dependencies: {
     supabase?: AdminClient;
+    generateEmbeddings?: typeof generateEmbeddings;
   } = {}
 ): Promise<StructuredIngestionSummary> {
   const supabase = dependencies.supabase ?? createSupabaseAdminClient();
-  const attempts = [
-    "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, ai_notes_summary, advanced_notes, consumed_at",
-    "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, advanced_notes, consumed_at",
-    "id, user_id, wine_name, producer, vintage, wine_type, country, region, appellation, classification, rating, price_paid, price_paid_currency, qpr_level, notes, consumed_at",
-  ];
+  const embed = dependencies.generateEmbeddings ?? generateEmbeddings;
+  let cursor: string | null = null;
+  let insertedCount = 0;
+  let skippedCount = 0;
 
-  const rows = (await loadRowsWithFallback(supabase, "wine_entries", attempts) as EntryEmbeddingRow[])
-    .filter(
-    (row) => normalizeText(row.user_id).length > 0
-  );
-  const primaryGrapesByEntryId = await loadWineEntryPrimaryGrapes(
-    supabase,
-    rows.map((row) => row.id)
-  );
-
-  const serializedRows = rows
-    .map((row) => {
-      const primaryGrapes =
-        primaryGrapesByEntryId.get(row.id)?.map((grape) => grape.name).filter(Boolean) ?? [];
-      const content = serializeWineEntryRow(row, primaryGrapes).trim();
-
-      return {
-        source_row_id: row.id,
-        chunk_index: 0,
-        content,
-        metadata: {
-          table: "wine_entries",
-          user_id: row.user_id,
-          entry_id: row.id,
-          wine_type: normalizeText(row.wine_type) || null,
-          rating: toNumber(row.rating),
-          vintage: normalizeText(row.vintage) || null,
-          title:
-            normalizeText(row.wine_name) ||
-            normalizeText(row.producer) ||
-            "Cellar entry",
-        } satisfies Record<string, unknown>,
-      };
-    })
-    .filter((row) => row.content.length > 0);
-
-  const embeddings = await batchGenerateEmbeddings(
-    serializedRows.map((row) => row.content)
-  );
-
-  await replaceWineKnowledgeChunks(
-    supabase,
-    "wine_entries",
-    serializedRows.map((row, index) => ({
-      ...row,
-      embedding: embeddings[index] ?? [],
-    }))
-  );
-
-  return {
-    sourceTable: "wine_entries",
-    insertedCount: serializedRows.length,
-  };
+  // Keyset pages keep memory/requests bounded. Each row and its grapes come
+  // from one database snapshot; publishing checks it again under an entry lock.
+  for (;;) {
+    const { data, error } = await supabase.rpc("get_entry_knowledge_sources", {
+      after_entry_id: cursor,
+      batch_size: 100,
+    });
+    if (error) throw new Error(`Failed to load personal knowledge sources: ${error.message}`);
+    const sources = (data ?? []) as EntryKnowledgeSource[];
+    if (sources.length === 0) break;
+    const contents = sources.map(({ source_snapshot: snapshot }) =>
+      serializeWineEntryRow(snapshot.entry, snapshot.primary_grapes.map((grape) => grape.name)).trim()
+    );
+    const embeddings = await embed(contents);
+    if (embeddings.length !== sources.length || embeddings.some((value) => value.length !== 1536)) {
+      throw new Error("Personal knowledge embedding response has invalid dimensions or count.");
+    }
+    for (const [index, source] of sources.entries()) {
+      const { data: published, error: publishError } = await supabase.rpc("publish_entry_knowledge", {
+        target_entry_id: source.entry_id,
+        expected_snapshot: source.source_snapshot,
+        chunk_content: contents[index],
+        chunk_embedding: embeddings[index],
+      });
+      if (publishError) throw new Error(`Failed to publish personal knowledge: ${publishError.message}`);
+      if (published === true) insertedCount += 1;
+      else skippedCount += 1; // Source changed/deleted in flight; next ingestion can retry it.
+    }
+    cursor = sources[sources.length - 1]!.entry_id;
+  }
+  return { sourceTable: "wine_entries", insertedCount, skippedCount };
 }
 
 export async function extractDocumentTextFromFile(file: File) {
