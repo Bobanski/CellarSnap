@@ -1,5 +1,8 @@
 # B06d handover — September 13, 2026
 
+> Historical implementation checkpoint. These slices are now merged, the badge migration is deployed, live checks passed and fixtures are cleaned. Use the [combined release handover](b06b-b06d-release.md) for current state; the original checkpoint below preserves history.
+
+
 ## Objective and IDs
 QC-08: selected event wine controls its own caption and detail navigation on web/mobile. Stacked on B06c/#114 and B06b/#113, issue #112. A small B06c review refinement preserves the loaded profile identity when summary loading fails. No unrelated feature removal.
 
