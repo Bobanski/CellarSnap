@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createTypedSupabaseServerClient } from "@/lib/supabase/server";
 import { isMissingDbTableError } from "@/lib/supabase/errors";
 
 type GrapeOption = {
@@ -45,7 +45,7 @@ function grapeScore({
 }
 
 export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createTypedSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

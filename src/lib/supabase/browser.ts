@@ -1,6 +1,8 @@
+import type { Database } from "@shared";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
 
-let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+let browserClient: SupabaseClient<Database> | null = null;
 
 function getBrowserSupabaseEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,12 +15,17 @@ function getBrowserSupabaseEnv() {
   return { supabaseUrl, supabaseAnonKey };
 }
 
-export function createSupabaseBrowserClient() {
+export function createTypedSupabaseBrowserClient() {
   if (browserClient) {
     return browserClient;
   }
 
   const { supabaseUrl, supabaseAnonKey } = getBrowserSupabaseEnv();
-  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
+  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
   return browserClient;
+}
+
+// Temporary AUD-21 bridge for unadopted callers; both exports share one session.
+export function createSupabaseBrowserClient(): ReturnType<typeof createBrowserClient> {
+  return createTypedSupabaseBrowserClient();
 }

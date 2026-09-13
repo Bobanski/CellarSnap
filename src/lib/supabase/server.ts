@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@shared";
 import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
@@ -7,7 +9,7 @@ type MiddlewareContext = {
   response: NextResponse;
 };
 
-export async function createSupabaseServerClient(context?: MiddlewareContext) {
+export async function createTypedSupabaseServerClient(context?: MiddlewareContext) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -19,7 +21,7 @@ export async function createSupabaseServerClient(context?: MiddlewareContext) {
   if (context) {
     const { request, response } = context;
 
-    return createServerClient(supabaseUrl, supabaseAnonKey, {
+    return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
@@ -44,7 +46,7 @@ export async function createSupabaseServerClient(context?: MiddlewareContext) {
   // Server Components / general server usage (Next 16 cookies may be async)
   const cookieStore = await cookies();
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll().map(({ name, value }) => ({ name, value }));
@@ -63,4 +65,9 @@ export async function createSupabaseServerClient(context?: MiddlewareContext) {
       },
     },
   });
+}
+
+// Temporary AUD-21 bridge. New query slices should use the typed factory above.
+export async function createSupabaseServerClient(context?: MiddlewareContext): Promise<SupabaseClient> {
+  return createTypedSupabaseServerClient(context);
 }

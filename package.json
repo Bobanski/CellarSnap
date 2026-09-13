@@ -19,7 +19,9 @@
     "e2e:headed": "playwright test --headed",
     "e2e:install": "playwright install chromium",
     "test:unit": "playwright test --config playwright.unit.config.mjs",
-    "test:schema": "node --test scripts/schema/*.test.mjs"
+    "test:schema": "node --test scripts/schema/*.test.mjs",
+    "test:database-types": "tsc --noEmit --strict --skipLibCheck --target ES2020 --module esnext --moduleResolution bundler scripts/schema/type-contract.ts",
+    "typecheck:web": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toExploreSlug } from "@shared";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createTypedSupabaseBrowserClient } from "@/lib/supabase/browser";
 import AppShell from "@/components/AppShell";
 import AppImage from "@/components/AppImage";
 
@@ -52,7 +52,7 @@ type SpotlightData = {
 // ---------------------------------------------------------------------------
 
 export default function GrapesBrowsePage() {
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => createTypedSupabaseBrowserClient(), []);
   const [query, setQuery] = useState("");
   const [apiResults, setApiResults] = useState<GrapeResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -76,7 +76,7 @@ export default function GrapesBrowsePage() {
       if (!mounted || !data) { setUserGrapesLoaded(true); return; }
       const counts = new Map<string, number>();
       for (const row of data) {
-        const variety = row.grape_varieties as unknown as { name: string } | null;
+        const variety = row.grape_varieties;
         const name = variety?.name?.trim();
         if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
       }

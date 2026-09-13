@@ -84,3 +84,7 @@ PR #98 merged at 03:25:06 UTC as `a0a9564`; primary Vercel production `dpl_ETLBU
 ## September 13 — B05b schema contract checkpoint
 
 Complete reviewed public/private schema capture, disposable PGlite and PostgreSQL 17.6 replay, catalog equality, six drift mutations and actual access/authority checks passed. Existing 256 tests plus three new schema suites pass; live read-only drift checker matches. No production SQL/data changes. AUD-19 remains Partial for full managed provisioning and seed/corpus restoration. See [handover](../remediation/handovers/batch-05b.md). B05c client/type adoption and browser/Expo QC follow before release.
+
+## September 13 — B05c type/client checkpoint
+
+One shared generated Database source, CI drift/type contracts, typed web/mobile factory bridges and grape/producer browse adoption passed 271 tests plus compile-only checks, app types/lint/build/exports and desktop/phone/Expo interactions. Private disposable fixture removed and verified. Preexisting bearer-only grape search failure is new QC-13, reproduced on candidate and production. AUD-21 stays Partial for broader adoption. [QC](b05b-b05c-qc-2026-09-13.md), [handover](../remediation/handovers/batch-05c.md).

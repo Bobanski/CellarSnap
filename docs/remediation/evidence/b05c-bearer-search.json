@@ -1,0 +1,12 @@
+[
+  {
+    "base": "http://localhost:3001",
+    "grapesBearerOnlyStatus": 401,
+    "knownBearerEndpointStatus": 200
+  },
+  {
+    "base": "https://cellarsnap.app",
+    "grapesBearerOnlyStatus": 401,
+    "knownBearerEndpointStatus": 200
+  }
+]
