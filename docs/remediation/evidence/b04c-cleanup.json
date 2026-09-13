@@ -1,0 +1,15 @@
+{
+  "date": "2026-09-13T03:16:06.787Z",
+  "product": "588d49a",
+  "deletedScanIds": [
+    "scan-mtz8djye-2dy6sajs",
+    "scan-mtz8n12o-u9vcv8jh",
+    "scan-mtz8h7c7-8b3mw0xl"
+  ],
+  "deletedParents": 3,
+  "childrenBefore": 137,
+  "childrenAfter": 0,
+  "baselineScansRetained": 1,
+  "entrySaves": 0,
+  "accountChanges": 0
+}

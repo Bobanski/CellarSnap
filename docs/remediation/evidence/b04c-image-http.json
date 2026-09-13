@@ -1,0 +1,22 @@
+[
+  {
+    "name": "anonymous denied",
+    "status": 401,
+    "passed": true
+  },
+  {
+    "name": "jpeg crop",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "name": "zoomed crop",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "name": "tiny image",
+    "status": 422,
+    "passed": true
+  }
+]
