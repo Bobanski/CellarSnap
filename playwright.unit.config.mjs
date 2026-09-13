@@ -30,6 +30,7 @@ export default defineConfig({
     "grape-search.spec.ts",
     "consumed-dates.spec.ts",
     "badge-contract.spec.ts",
+    "activity-summary.spec.ts",
     "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
     "image-dependency.spec.ts",

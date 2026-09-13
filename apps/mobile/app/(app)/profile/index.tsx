@@ -1,3 +1,4 @@
+import { fetchActivitySummary } from "@/src/lib/api/activitySummary";
 ﻿import {
   useCallback,
   useEffect,
@@ -547,6 +548,7 @@ export default function ProfileScreen() {
             { count: "exact" }
           )
           .eq("user_id", user.id)
+          .eq("entry_status", "consumed")
           .order("consumed_at", { ascending: false })
           .order("created_at", { ascending: false })
           .range(start, end);
@@ -587,9 +589,7 @@ export default function ProfileScreen() {
         setEntriesHasMore(
           typeof count === "number" ? start + rows.length < count : rows.length === PAGE_SIZE
         );
-        if (typeof count === "number") {
-          setWineCount(count);
-        }
+        // Own summary counts do not depend on this gallery page.
       } finally {
         setEntriesLoading(false);
       }
@@ -642,16 +642,13 @@ export default function ProfileScreen() {
     if (!user) {
       return;
     }
-    const { count, error } = await supabase
-      .from("friend_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "accepted")
-      .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
-
-    if (error) {
-      return;
+    try {
+      const summary = await fetchActivitySummary();
+      setFriendCount(summary.friendCount);
+      setWineCount(summary.entryCount);
+    } catch {
+      setFriendCount(null); setWineCount(null);
     }
-    setFriendCount(count ?? 0);
   }, [user]);
 
   const loadBadgeCount = useCallback(async () => {

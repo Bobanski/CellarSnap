@@ -1,3 +1,5 @@
+import { fetchActivitySummary } from "@/src/lib/api/activitySummary";
+import type { ActivitySummary } from "@cellarsnap/shared";
 import React, {
   useCallback,
   useEffect,
@@ -601,6 +603,7 @@ export default function EntriesScreen() {
   // Background loops compare their captured generation against the ref; if
   // they differ the component has moved on and they bail out silently.
   const loadGenRef = useRef(0);
+  const [activitySummary, setActivitySummary] = useState<ActivitySummary | null>(null);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const isCollectionsView = activeTab === "collections";
@@ -782,6 +785,10 @@ export default function EntriesScreen() {
       }
       setErrorMessage(null);
 
+      setActivitySummary(null);
+      void fetchActivitySummary().then(summary => {
+        if (loadGenRef.current === gen) setActivitySummary(summary);
+      }).catch(() => { /* Unknown counts remain unavailable, never zero. */ });
       const grapeMap = new Map<string, PrimaryGrape[]>();
       const pageSize = 100;
       let start = 0;
@@ -796,6 +803,7 @@ export default function EntriesScreen() {
             .from("wine_entries")
             .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level, entry_group_id")
             .eq("user_id", user.id)
+            .eq("entry_status", "consumed")
             .order("consumed_at", { ascending: false })
             .order("created_at", { ascending: false })
             .range(start, start + pageSize - 1);
@@ -1001,7 +1009,7 @@ export default function EntriesScreen() {
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <AppText style={styles.statNumber}>{stats.totalEntries}</AppText>
+          <AppText style={styles.statNumber}>{activitySummary?.entryCount ?? "—"}</AppText>
           <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.totalEntries}</AppText>
         </View>
         <View style={styles.statCard}>
@@ -1011,7 +1019,7 @@ export default function EntriesScreen() {
           <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.avgRating}</AppText>
         </View>
         <View style={styles.statCard}>
-          <AppText style={styles.statNumber}>{stats.uniqueCountries}</AppText>
+          <AppText style={styles.statNumber}>{activitySummary?.countryCount ?? "—"}</AppText>
           <AppText style={styles.statLabel}>{ENTRIES_LIBRARY_STATS_LABELS.countries}</AppText>
         </View>
       </View>

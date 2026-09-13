@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { fetchActivitySummary } from "@/src/lib/api/activitySummary";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -44,9 +45,9 @@ type MenuProfileData = {
   displayName: string;
   initial: string;
   username: string | null;
-  entryCount: number;
-  friendCount: number;
-  countryCount: number;
+  entryCount: number | null;
+  friendCount: number | null;
+  countryCount: number | null;
 };
 
 const WEB_API_BASE_URL = getWebApiBaseUrl();
@@ -89,6 +90,7 @@ export function AppTopBar() {
   );
   const [dismissingTagId, setDismissingTagId] = useState<string | null>(null);
   const [addingToCellarId, setAddingToCellarId] = useState<string | null>(null);
+  const menuLoadId = useRef(0);
   const [menuProfile, setMenuProfile] = useState<MenuProfileData | null>(null);
 
   useEffect(() => {
@@ -98,49 +100,31 @@ export function AppTopBar() {
 
   // Load profile data for menu overlay
   const loadMenuProfile = useCallback(async () => {
+    const requestId = ++menuLoadId.current;
     if (!user) {
       setMenuProfile(null);
       return;
     }
 
-    const [profileRes, entryCountRes, friendCountRes, countryRes] =
-      await Promise.all([
-        supabase
-          .from("public_profiles")
-          .select("display_name, username, first_name, last_name, email")
-          .eq("id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("wine_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id),
-        supabase
-          .from("friendships")
-          .select("id", { count: "exact", head: true })
-          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
-        supabase
-          .from("wine_entries")
-          .select("country")
-          .eq("user_id", user.id)
-          .not("country", "is", null),
-      ]);
+    setMenuProfile(null);
+    const [profileRes, summary] = await Promise.all([
+      supabase.from("public_profiles").select("display_name, username, first_name, last_name, email").eq("id", user.id).maybeSingle(),
+      fetchActivitySummary().catch(() => null),
+    ]);
 
+    if (requestId !== menuLoadId.current) return;
     const profile = profileRes.data;
-    const uniqueCountries = new Set(
-      (countryRes.data ?? [])
-        .map((row: { country: string | null }) => row.country)
-        .filter(Boolean)
-    );
-
     setMenuProfile({
       displayName: getPublicProfileName(profile),
       initial: getPublicProfileInitial(profile),
       username: profile?.username ?? null,
-      entryCount: entryCountRes.count ?? 0,
-      friendCount: friendCountRes.count ?? 0,
-      countryCount: uniqueCountries.size,
+      entryCount: summary?.entryCount ?? null,
+      friendCount: summary?.friendCount ?? null,
+      countryCount: summary?.countryCount ?? null,
     });
   }, [user]);
+
+  useEffect(() => () => { menuLoadId.current++; }, [user?.id]);
 
   const refreshAlertCount = useCallback(async () => {
     if (!user) {
@@ -752,21 +736,21 @@ export function AppTopBar() {
                 <View style={menuStyles.statsRow}>
                   <View style={menuStyles.statItem}>
                     <AppText style={menuStyles.statValue}>
-                      {menuProfile.entryCount}
+                      {menuProfile.entryCount ?? "—"}
                     </AppText>
                     <AppText style={menuStyles.statLabel}>Pours</AppText>
                   </View>
                   <View style={menuStyles.statDivider} />
                   <View style={menuStyles.statItem}>
                     <AppText style={menuStyles.statValue}>
-                      {menuProfile.friendCount}
+                      {menuProfile.friendCount ?? "—"}
                     </AppText>
                     <AppText style={menuStyles.statLabel}>Friends</AppText>
                   </View>
                   <View style={menuStyles.statDivider} />
                   <View style={menuStyles.statItem}>
                     <AppText style={menuStyles.statValue}>
-                      {menuProfile.countryCount}
+                      {menuProfile.countryCount ?? "—"}
                     </AppText>
                     <AppText style={menuStyles.statLabel}>Countries</AppText>
                   </View>

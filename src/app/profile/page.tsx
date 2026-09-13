@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchActivitySummary } from "@/features/profile/activitySummary";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -121,7 +123,7 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Badges state
-  const [earnedBadgeCount, setEarnedBadgeCount] = useState<number>(0);
+  const [earnedBadgeCount, setEarnedBadgeCount] = useState<number | null>(null);
 
   // Privacy state
   const [entryPrivacyValue, setEntryPrivacyValue] = useState<PrivacyLevel>("public");
@@ -162,6 +164,7 @@ export default function ProfilePage() {
   const [entriesCursor, setEntriesCursor] = useState<string | null>(null);
   const [entriesHasMore, setEntriesHasMore] = useState(false);
   const [wineCount, setWineCount] = useState<number | null>(null);
+  const [countryCount, setCountryCount] = useState<number | null>(null);
   const [friendCount, setFriendCount] = useState<number | null>(null);
   const [galleryTab, setGalleryTab] = useState<"mine" | "tagged" | "friends">("mine");
   const [taggedEntries, setTaggedEntries] = useState<Entry[]>([]);
@@ -195,22 +198,19 @@ export default function ProfilePage() {
   }, [entries]);
 
   // "Opened" stats band (own-profile only, private framing): derived entirely
-  // client-side from the entries already loaded for the gallery — no extra
-  // query. /api/entries only ever returns consumed ("opened") entries, so
+  // client-side for rating/grape/region summaries. Country and tasting totals
+  // come from the complete own-activity summary, independent of gallery pages. /api/entries only ever returns consumed ("opened") entries, so
   // `entries` here already is that set (bottlesOpened uses the exact
   // `wineCount` total since `entries` itself may only be the first page).
   const openedStats = useMemo(() => {
     if (entries.length === 0) return null;
 
-    const countries = new Set<string>();
     const grapeCounts = new Map<string, number>();
     const regionCounts = new Map<string, number>();
     let ratingSum = 0;
     let ratingCount = 0;
 
     entries.forEach((entry) => {
-      const country = entry.country?.trim();
-      if (country) countries.add(country);
 
       const region = entry.region?.trim();
       if (region) regionCounts.set(region, (regionCounts.get(region) ?? 0) + 1);
@@ -231,13 +231,13 @@ export default function ProfilePage() {
       Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
     return {
-      bottlesOpened: wineCount ?? entries.length,
-      countries: countries.size,
+      bottlesOpened: wineCount ?? "—",
+      countries: countryCount ?? "—",
       topGrape: topOf(grapeCounts),
       topRegion: topOf(regionCounts),
       avgRating: ratingCount > 0 ? ratingSum / ratingCount : null,
     };
-  }, [entries, wineCount]);
+  }, [entries, wineCount, countryCount]);
 
   // Friends tab state
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -402,7 +402,7 @@ export default function ProfilePage() {
       setEntries((prev) => (cursor ? [...prev, ...data.entries] : data.entries));
       setEntriesHasMore(data.has_more ?? false);
       setEntriesCursor(data.next_cursor ?? null);
-      if (data.total_count !== undefined) setWineCount(data.total_count);
+      // Summary counts are loaded independently of gallery pagination.
     } catch {
       // ignore
     } finally {
@@ -558,22 +558,17 @@ export default function ProfilePage() {
     loadProfile();
     loadEntries();
 
-    // Load friend count
-    fetch("/api/friends", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.friends) setFriendCount(data.friends.length);
-      })
-      .catch(() => null);
-
-    // Load earned badge count
-    supabase
-      .from("user_badges")
-      .select("id", { count: "exact", head: true })
-      .then(({ count }: { count: number | null }) => {
-        setEarnedBadgeCount(count ?? 0);
-      })
-      .catch(() => null);
+    let mounted = true;
+    fetchActivitySummary().then(summary => {
+      if (!mounted) return;
+      setFriendCount(summary.friendCount);
+      setCountryCount(summary.countryCount);
+      setWineCount(summary.entryCount);
+      setEarnedBadgeCount(summary.badgeCount);
+    }).catch(() => {
+      if (!mounted) return;
+      setFriendCount(null); setCountryCount(null); setWineCount(null); setEarnedBadgeCount(null);
+    });
 
     // Check taste survey existence
     fetch("/api/taste-survey", { cache: "no-store" })
@@ -582,6 +577,7 @@ export default function ProfilePage() {
         setHasTasteSurvey(data?.survey != null);
       })
       .catch(() => null);
+    return () => { mounted = false; };
   }, [loadProfile, loadEntries, supabase]);
 
   const saveProfile = async () => {
@@ -1927,7 +1923,7 @@ export default function ProfilePage() {
                     )}
                     <div>
                       <p className="text-sm text-[var(--color-text-primary)]">
-                        {earnedBadgeCount} {earnedBadgeCount === 1 ? "badge" : "badges"} earned
+                        {earnedBadgeCount ?? "—"} {earnedBadgeCount === 1 ? "badge" : "badges"} earned
                       </p>
                       <Link
                         href="/badges"

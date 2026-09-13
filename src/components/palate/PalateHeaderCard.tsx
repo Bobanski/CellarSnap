@@ -17,10 +17,10 @@ export type PalateProfile = {
 };
 
 export type PalateStats = {
-  wines: number;
-  friends: number;
-  badges: number;
-  countries: number;
+  wines: number | null;
+  friends: number | null;
+  badges: number | null;
+  countries: number | null;
 };
 
 function getInitial(name: string | null | undefined) {
@@ -154,7 +154,7 @@ export function PalateHeaderCard({
         ].map((stat) => (
           <div key={stat.label} className="flex items-baseline gap-1">
             <span className="text-sm font-semibold" style={{ color: CHAMPAGNE }}>
-              {stat.value}
+              {stat.value ?? "—"}
             </span>
             <span className="text-[10px]" style={{ color: FOG }}>
               {stat.label}
