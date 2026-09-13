@@ -10,7 +10,7 @@ import ipaddr from "ipaddr.js";
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 export const REMOTE_MENU_LIMITS = { text: 400_000, image: 24 * 1024 * 1024, pdf: 32 * 1024 * 1024 };
 type Address = { address: string; family: number };
-type RemoteSource = { url: URL; contentType: string; bytes: Uint8Array<ArrayBuffer> };
+type RemoteSource = { kind: "pdf" | "image" | "text"; url: URL; contentType: string; bytes: Uint8Array<ArrayBuffer> };
 type Dependencies = {
   resolve: (hostname: string) => Promise<Address[]>;
   request: (url: URL, options: RequestOptions, callback: (response: IncomingMessage) => void) => ReturnType<typeof httpRequest>;
@@ -50,8 +50,9 @@ function byteLimit(maximum: number) {
 
 async function boundedBody(response: IncomingMessage, url: URL, signal: AbortSignal): Promise<RemoteSource> {
   const contentType = String(response.headers["content-type"] ?? "").toLowerCase();
-  const maximum = contentType.includes("application/pdf") || url.pathname.toLowerCase().endsWith(".pdf")
-    ? REMOTE_MENU_LIMITS.pdf : contentType.startsWith("image/") ? REMOTE_MENU_LIMITS.image : REMOTE_MENU_LIMITS.text;
+  const kind = contentType.includes("application/pdf") || url.pathname.toLowerCase().endsWith(".pdf")
+    ? "pdf" : contentType.startsWith("image/") ? "image" : "text";
+  const maximum = REMOTE_MENU_LIMITS[kind];
   const contentLength = Number(response.headers["content-length"]);
   if (Number.isFinite(contentLength) && contentLength > maximum) {
     response.destroy();
@@ -71,7 +72,7 @@ async function boundedBody(response: IncomingMessage, url: URL, signal: AbortSig
   streams.push(byteLimit(maximum), sink);
   await pipeline(streams, { signal });
   const bytes = new Uint8Array(Buffer.concat(chunks));
-  return { url, contentType, bytes };
+  return { kind, url, contentType, bytes };
 }
 
 /** Injectable only for isolated socket/DNS fixtures; production uses the defaults below. */

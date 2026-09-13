@@ -36,6 +36,7 @@ test.beforeAll(async () => {
     if (path === "/slow-body") { res.writeHead(200); res.write("start"); return; }
     if (path === "/slow-headers") return;
     if (path === "/reset") { res.writeHead(200); res.write("start"); res.destroy(); return; }
+    if (path === "/MENU.PDF") { res.writeHead(200,{"Content-Type":"application/octet-stream"});res.end("%PDF-uppercase");return; }
     if (path === "/pdf") { res.writeHead(200,{"Content-Type":"application/pdf"}); res.end(Buffer.from("%PDF-fixture")); return; }
     if (path === "/image") { res.writeHead(200,{"Content-Type":"image/png"}); res.end(Buffer.from([137,80,78,71])); return; }
     const encoder = path === "/gzip" ? gzipSync : path === "/br" ? brotliCompressSync : path === "/deflate" ? deflateSync : null;
@@ -63,11 +64,18 @@ test("real HTTP streaming preserves text, compressed text, PDF/image bytes and r
   for (const path of ["/menu","/gzip","/br","/deflate","/redirect"]) {
     const result=await f.fetch(`http://restaurant.example${path}`);
     expect(new TextDecoder().decode(result.bytes)).toBe(menu);
+    expect(result.kind).toBe("text");
     if(path==="/redirect") expect(result.url.hash).toBe("#red");
   }
   expect(new TextDecoder().decode((await f.fetch("http://restaurant.example/pdf")).bytes)).toBe("%PDF-fixture");
   expect(Array.from((await f.fetch("http://restaurant.example/image")).bytes)).toEqual([137,80,78,71]);
   expect(f.validated.every(v=>JSON.stringify(v)===JSON.stringify({error:null,address:"8.8.8.8",family:4}))).toBe(true);
+});
+test("one source-kind contract selects both the byte limit and parser for uppercase PDF paths", async () => {
+  const r=await fixture().fetch("http://restaurant.example/MENU.PDF");
+  expect(r.kind).toBe("pdf");
+  expect(new TextDecoder().decode(r.bytes)).toBe("%PDF-uppercase");
+  expect((await fixture().fetch("http://restaurant.example/image")).kind).toBe("image");
 });
 test("reject literal and DNS-private redirects before contacting their targets", async () => {
   for(const path of ["/private","/dns-private"]) await expect(fixture().fetch(`http://restaurant.example${path}`)).rejects.toThrow(/public website/);

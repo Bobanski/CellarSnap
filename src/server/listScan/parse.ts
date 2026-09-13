@@ -3565,7 +3565,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   const fetchMs = Date.now() - tFetch0;
   const contentType = response.contentType;
 
-  if (contentType.includes("application/pdf") || parsedUrl.pathname.endsWith(".pdf")) {
+  if (response.kind === "pdf") {
     const tBytes0 = Date.now();
     const bytes = response.bytes;
     const bytesMs = Date.now() - tBytes0;
@@ -3590,7 +3590,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     return parsed;
   }
 
-  if (contentType.startsWith("image/")) {
+  if (response.kind === "image") {
     const tBytes0 = Date.now();
     const bytes = response.bytes;
     const bytesMs = Date.now() - tBytes0;
