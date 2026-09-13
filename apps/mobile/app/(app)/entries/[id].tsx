@@ -3696,6 +3696,9 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
+                {!isBulkReview && bulkReviewError ? (
+                  <AppText accessibilityRole="alert" style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
+                ) : null}
                 <View style={styles.bulkFormField}>
                   <AppText style={styles.bulkFormLabel}>Notes</AppText>
                   <DoneTextInput
