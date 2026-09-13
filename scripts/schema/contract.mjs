@@ -42,6 +42,10 @@ export async function expectedCatalog() {
     (g.grantee === 'authenticated' && g.privilege_type === 'SELECT'));
   expected.policies = expected.policies.filter(p => !(p.schemaname === 'public' &&
     p.tablename === 'user_badges' && p.policyname === 'Users can insert own badges'));
+  // Reviewed B06e additions: two private trigger functions, owner-only EXECUTE,
+  // and two triggers. Keep this captured delta independent of replay output.
+  const featuredDelta = JSON.parse(await readFile(new URL('./b06e-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, rows] of Object.entries(featuredDelta)) expected[key].push(...rows);
   return canonical(expected);
 }
 export function differences(expected, actual) {
