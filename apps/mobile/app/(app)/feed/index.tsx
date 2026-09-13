@@ -306,7 +306,7 @@ function GroupedPostGallery({
             scheduleSwipeEnd();
           }}
           onMomentumScrollBegin={clearPendingEnd}
-          onMomentumScrollEnd={(event) => {
+          onScroll={(event) => {
             if (photoFrameWidth > 0) {
               const offsetX = event.nativeEvent.contentOffset.x;
               const rawIndex = Math.round(offsetX / photoFrameWidth);
@@ -314,6 +314,8 @@ function GroupedPostGallery({
               const clamped = Math.max(0, Math.min(maxIndex, rawIndex));
               if (clamped !== clampedIndex) { setActiveIndex(clamped); onIndexChange?.(clamped); }
             }
+          }}
+          onMomentumScrollEnd={() => {
             blockTapUntilRef.current = Date.now() + 200;
             endSwipe();
           }}
@@ -345,20 +347,24 @@ function GroupedPostGallery({
         </Pressable>
       )}
       {hasMultiple ? (
-        <View style={groupedStyles.dotRow}>
+        <View pointerEvents="box-none" style={groupedStyles.dotRow}>
           {slides.map((_, dotIndex) => (
             <Pressable
               key={`grouped-dot-${dotIndex}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Show slide ${dotIndex + 1} of ${slides.length}`}
+              accessibilityState={{ selected: dotIndex === clampedIndex }}
               onPress={(event) => {
                 event.stopPropagation();
                 scrollToIndex(dotIndex);
               }}
-              hitSlop={6}
-              style={[
+              style={groupedStyles.dotButton}
+            >
+              <View pointerEvents="none" style={[
                 groupedStyles.dot,
                 dotIndex === clampedIndex ? groupedStyles.dotActive : null,
-              ]}
-            />
+              ]} />
+            </Pressable>
           ))}
         </View>
       ) : null}
@@ -707,19 +713,7 @@ const FeedCard = React.memo(function FeedCard({
             onCardPress={handleCardPress}
             onIndexChange={setGalleryActiveIndex}
           />
-          {groupSlides.length > 1 ? (
-            <View style={styles.groupedDotRow}>
-              {groupSlides.map((_, i) => (
-                <View
-                  key={`gd-${i}`}
-                  style={[
-                    styles.groupedDot,
-                    i === (galleryActiveIndex ?? 0) ? styles.groupedDotActive : null,
-                  ]}
-                />
-              ))}
-            </View>
-          ) : null}
+
         </View>
       ) : (
       <View
@@ -3084,9 +3078,10 @@ const groupedStyles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
+  dotButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   dotRow: {
     position: "absolute",
-    bottom: 10,
+    bottom: 0,
     left: 0,
     right: 0,
     zIndex: 10,
@@ -3113,6 +3108,7 @@ const groupedStyles = StyleSheet.create({
     fontSize: 11,
   },
   galleryFooter: {
+    minHeight: 44,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
