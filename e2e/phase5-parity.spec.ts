@@ -1,4 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { getFeedDisplayRatingLabel } from "../packages/shared/src/feed";
+
+test("public feed uses enjoyment bands at every boundary without numeric ratings", () => {
+  for (const [rating, label] of [[1, "Tried it"], [59, "Tried it"], [60, "Liked it"], [74, "Liked it"], [75, "Really liked it"], [89, "Really liked it"], [90, "Loved it"], [100, "Loved it"]] as const) {
+    expect(getFeedDisplayRatingLabel(rating)).toBe(label);
+  }
+  for (const rating of [null, undefined, NaN]) expect(getFeedDisplayRatingLabel(rating)).toBeNull();
+});
 import {
   buildResolvedPhotoTypeMap,
   hasLineupWineDetails,

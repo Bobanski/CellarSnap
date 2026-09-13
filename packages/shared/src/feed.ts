@@ -1,3 +1,5 @@
+import { getPublicRatingBandLabel } from "./entryDetail";
+
 export const FEED_EYEBROW = "Feed";
 export const FEED_TITLE = "What your people are drinking.";
 export const FEED_TITLE_ALL = "What the cluster is drinking.";
@@ -150,12 +152,7 @@ export function buildFeedEntryMetaFields(entry: FeedMetaEntryLike) {
 }
 
 export function getFeedDisplayRatingLabel(rating: number | null | undefined): string | null {
-  if (typeof rating !== "number" || Number.isNaN(rating)) {
-    return null;
-  }
-
-  const normalized = Math.max(0, Math.min(100, Math.round(rating)));
-  return `${normalized}/100`;
+  return getPublicRatingBandLabel(rating);
 }
 
 export function getFeedEmptyStateMessage(
