@@ -1,5 +1,7 @@
 # Batch B03a handover — September 12, 2026
 
+**Final release:** both B03 PRs, all SQL and primary production are complete. This file preserves its implementation checkpoint; resume from the [release handover](b03-release.md).
+
 ## Objective and IDs
 AUD-04 read containment; targeted AUD-19/48 coverage. Personal embeddings remain in the existing table, with owner-only access based on the actual entry, never JSON ownership claims. Curated search uses an explicit seven-source allowlist even for service-role requests. Unknown/orphan sources fail closed. Lifecycle cleanup is B03b (AUD-04/26), not claimed complete here.
 

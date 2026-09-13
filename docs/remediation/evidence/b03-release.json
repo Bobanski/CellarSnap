@@ -1,0 +1,47 @@
+{
+  "curated": 3349,
+  "entries": 384,
+  "orphans": 0,
+  "personal": 384,
+  "migrations": [
+    {
+      "md5": "2c4ab9fbdf82841d6a768ba19012613d",
+      "name": "isolate_personal_knowledge_reads",
+      "version": "20260913002605"
+    },
+    {
+      "md5": "190fa5195c0dd372edae429250596c33",
+      "name": "enforce_personal_knowledge_lifecycle",
+      "version": "20260913004127"
+    },
+    {
+      "md5": "0e8c864fbd8abfbf0b623a0b715d360d",
+      "name": "batch_personal_knowledge_publication",
+      "version": "20260913005247"
+    }
+  ],
+  "legacy_personal": 0,
+  "product_commit": "63712c3a99ff7e5ca6ae3e08c37dad2f73f7c4ed",
+  "tested_head": "973b4c3230c9341938ee0fe336f7f411186f98f5",
+  "production_deployment": "dpl_59Ds8k68hnLHFEh2kzQ36pPtTDUP",
+  "stale_source_hashes": 0,
+  "unit_tests": 212,
+  "read_http_assertions": 13,
+  "lifecycle_http_assertions": 20,
+  "concurrent_cases": 3,
+  "delete_cleanup_assertions": 5,
+  "regeneration": {
+    "sources_with_fixtures": 386,
+    "published": 386,
+    "skipped": 0,
+    "source_page_calls": 5,
+    "publication_calls": 4,
+    "elapsed_ms": 25448
+  },
+  "security_advisors": {
+    "categories": 7,
+    "observations": 42
+  },
+  "native_runtime_available": false,
+  "new_finding": "QC-09"
+}
