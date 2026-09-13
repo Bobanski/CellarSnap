@@ -3114,12 +3114,14 @@ export default function EntryDetailScreen() {
     const grapesChanged = primaryGrapeSelectionChanged(entry.primary_grapes, selectedPrimaryGrapes);
     try {
       const snapshot = buildEntryEditSnapshot(updates, entry);
-      const { error: saveError } = await supabase.rpc('save_entry_details', {
+      const { error: saveError } = await supabaseDatabase.rpc('save_entry_details', {
         p_entry_id: entry.id,
         p_updates: snapshot.updates,
         p_expected: snapshot.expected,
-        p_grape_ids: grapesChanged ? primaryGrapeIds : null,
-        p_expected_grape_ids: grapesChanged ? [...entry.primary_grapes].sort((a,b) => a.position-b.position).map(grape => grape.id) : null,
+        ...(grapesChanged ? {
+          p_grape_ids: primaryGrapeIds,
+          p_expected_grape_ids: [...entry.primary_grapes].sort((a,b) => a.position-b.position).map(grape => grape.id),
+        } : {}),
       });
       if (saveError) return saveError.code === '40001'
         ? 'This entry changed elsewhere. Close the editor and refresh before saving again.'
