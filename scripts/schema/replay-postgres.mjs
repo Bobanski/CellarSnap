@@ -122,7 +122,21 @@ try {
       editConcurrencyChecks++;
     }finally{first.child.kill();second.child.kill();}
   }
-  console.log(JSON.stringify({postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,productionWrites:0}));
+  // Exercise the operator CLI against real libpq, including Unicode output,
+  // exclusive publication and its read-only connection (never hosted data).
+  sql(`insert into storage.buckets(id,name) values('wine-photos','wine-photos');
+    insert into storage.objects(bucket_id,name) values('wine-photos','${owner}/inventory-é.jpg');`);
+  const inventoryPath=join(scratch,'inventory.json');
+  const inventoryArgs=[resolve('scripts/storage/photo-reference-inventory.mjs'),'--output',inventoryPath];
+  const inventoryEnv={...process.env,...env,CELLARSNAP_PSQL:join(bin,'psql')};
+  const inventory=spawnSync(process.execPath,inventoryArgs,{env:inventoryEnv,encoding:'utf8'});
+  assert.equal(inventory.status,0,inventory.stderr);
+  const snapshot=JSON.parse(await readFile(inventoryPath,'utf8'));
+  assert(snapshot.records.some(record=>record.path===`${owner}/inventory-é.jpg`));
+  const duplicate=spawnSync(process.execPath,inventoryArgs,{env:inventoryEnv,encoding:'utf8'});
+  assert.notEqual(duplicate.status,0);
+  assert.deepEqual(JSON.parse(await readFile(inventoryPath,'utf8')),snapshot);
+  console.log(JSON.stringify({postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
 } finally {
   if(started) run('pg_ctl',['-D',join(scratch,'data'),'-m','immediate','-w','stop']);
   await rm(scratch,{recursive:true,force:true});
