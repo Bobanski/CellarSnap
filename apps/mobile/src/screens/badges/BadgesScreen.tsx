@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,7 +16,6 @@ import { fonts } from "@/src/lib/typography";
 import {
   BADGE_DEFINITIONS,
   type BadgeCategory,
-  type BadgeDefinition,
 } from "@cellarsnap/shared";
 
 type EarnedRecord = {
@@ -27,6 +26,7 @@ type EarnedRecord = {
 type BadgesResponse = {
   badges: Array<EarnedRecord & { name: string; category: string; tier: string; color: string; accent: string; shape: string; description: string }>;
   featured_badge_id: string | null;
+  featured_badge_ids?: string[];
   total_earned: number;
 };
 
@@ -55,7 +55,10 @@ const TIER_DOT: Record<string, string> = {
 
 export default function BadgesScreen() {
   const [earnedSet, setEarnedSet] = useState<Set<string>>(new Set());
-  const [featuredId, setFeaturedId] = useState<string | null>(null);
+  const [featuredIds, setFeaturedIds] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<BadgeCategory | "all">("all");
@@ -66,13 +69,14 @@ export default function BadgesScreen() {
     try {
       const token = await getAccessTokenForApi();
       const base = getWebApiBaseUrl();
+      if (!base || !token) throw new Error("Sign in again to load your badges.");
       const res = await fetch(`${base}/api/badges`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch badges");
       const data: BadgesResponse = await res.json();
       setEarnedSet(new Set(data.badges.map((b) => b.id)));
-      setFeaturedId(data.featured_badge_id);
+      setFeaturedIds(data.featured_badge_ids ?? (data.featured_badge_id ? [data.featured_badge_id] : []));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -84,25 +88,34 @@ export default function BadgesScreen() {
     fetchBadges();
   }, [fetchBadges]);
 
-  const setFeaturedBadge = useCallback(async (badgeId: string) => {
-    const prev = featuredId;
-    setFeaturedId(badgeId);
+  const saveFeaturedBadges = async (badgeIds: string[]) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    setSaveError(null);
     try {
       const token = await getAccessTokenForApi();
       const base = getWebApiBaseUrl();
+      if (!base || !token) throw new Error("Sign in again to update your badges.");
       const res = await fetch(`${base}/api/badges/featured`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ badge_id: badgeId }),
+        body: JSON.stringify({ badge_ids: badgeIds }),
       });
-      if (!res.ok) throw new Error("Failed");
-    } catch {
-      setFeaturedId(prev);
+      if (!res.ok) throw new Error("Couldn't update featured badges. Please try again.");
+      const data: { featured_badge_ids: string[] } = await res.json();
+      // Use the persisted selection, including single-column compatibility.
+      setFeaturedIds(data.featured_badge_ids);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Couldn't update featured badges. Please try again.");
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
-  }, [featuredId]);
+  };
 
   const filtered = (
     activeCategory === "all"
@@ -152,14 +165,34 @@ export default function BadgesScreen() {
         {isLoading && (
           <ActivityIndicator color={colors.accentSecondary} style={s.loader} />
         )}
-        {error && <AppText style={s.error}>{error}</AppText>}
+        {error && (
+          <View>
+            <AppText accessibilityRole="alert" style={s.error}>{error}</AppText>
+            <Pressable accessibilityRole="button" onPress={fetchBadges} style={s.featureButton}>
+              <AppText style={s.featureText}>Retry loading badges</AppText>
+            </Pressable>
+          </View>
+        )}
+        {!isLoading && !error && (
+          <View>
+            <AppText style={s.subtitle}>{featuredIds.length} of 5 featured · Select earned badges for your profile.</AppText>
+            {featuredIds.length > 0 && (
+              <Pressable accessibilityRole="button" accessibilityState={{ disabled: isSaving }} disabled={isSaving} onPress={() => saveFeaturedBadges([])} style={s.featureButton}>
+                <AppText style={s.featureText}>Clear featured badges</AppText>
+              </Pressable>
+            )}
+            {isSaving && <AppText accessibilityLiveRegion="polite" style={s.subtitle}>Saving featured badges…</AppText>}
+            {saveError && <AppText accessibilityRole="alert" style={s.error}>{saveError}</AppText>}
+          </View>
+        )}
 
         {/* Badge grid */}
-        {!isLoading && (
+        {!isLoading && !error && (
           <View style={s.grid}>
             {filtered.map((badge) => {
               const earned = earnedSet.has(badge.id);
-              const isFeatured = featuredId === badge.id;
+              const isFeatured = featuredIds.includes(badge.id);
+              const disabled = isSaving || (!isFeatured && featuredIds.length >= 5);
               if (!earned) {
                 return (
                   <View key={badge.id} style={s.card}>
@@ -183,13 +216,11 @@ export default function BadgesScreen() {
               }
 
               return (
+                <View key={badge.id} style={[s.card, s.earnedCard, isFeatured && s.featuredCard]}>
                 <Pressable
-                  key={badge.id}
-                  style={[
-                    s.card,
-                    s.earnedCard,
-                    isFeatured && s.featuredCard,
-                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${badge.name} badge`}
+                  style={s.badgeLink}
                   onPress={() =>
                     router.push(`/(app)/badges/${badge.id}` as Parameters<typeof router.push>[0])
                   }
@@ -211,6 +242,17 @@ export default function BadgesScreen() {
                     ]}
                   />
                 </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isFeatured ? "Unfeature" : "Feature"} ${badge.name}`}
+                  accessibilityState={{ disabled, selected: isFeatured }}
+                  disabled={disabled}
+                  onPress={() => saveFeaturedBadges(isFeatured ? featuredIds.filter((id) => id !== badge.id) : [...featuredIds, badge.id])}
+                  style={[s.featureButton, disabled && s.disabled]}
+                >
+                  <AppText style={s.featureText}>{isFeatured ? "Unfeature" : "Feature"}</AppText>
+                </Pressable>
+                </View>
               );
             })}
           </View>
@@ -222,6 +264,10 @@ export default function BadgesScreen() {
 }
 
 const s = StyleSheet.create({
+  badgeLink: { alignItems: "center", gap: 8, width: "100%" },
+  featureButton: { minHeight: 44, paddingHorizontal: 8, justifyContent: "center", alignItems: "center" },
+  featureText: { color: colors.accentSecondary, fontSize: 12, fontWeight: "600", textAlign: "center" },
+  disabled: { opacity: 0.45 },
   container: {
     flex: 1,
     backgroundColor: colors.screenBg,
