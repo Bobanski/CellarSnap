@@ -79,3 +79,4 @@
 20260913003148_enforce_personal_knowledge_lifecycle.sql
 20260913004944_batch_personal_knowledge_publication.sql
 20260913014834_restrict_contact_resolution.sql
+20260913061822_server_authoritative_badge_awards.sql
