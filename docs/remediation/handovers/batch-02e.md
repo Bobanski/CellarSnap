@@ -1,4 +1,6 @@
 # B02e handover — September 13, 2026
+
+**Historical checkpoint:** superseded by the [B02e/B02f/B08b release](b02e-b02f-b08b-release.md). All three PRs are merged, SQL is live, final browser/Expo QC passed, and native runtime/distribution remains pending. The original checkpoint text below preserves sequence and limits.
 ## Objective and IDs
 AUD-01 cookie-web request-time image delivery; related AUD-48/50. Native/bearer image migration, historic signed/SDK/transformed URLs and global cache revocation remain deferred. No theme or feature removal.
 ## Resume here

@@ -1,0 +1,516 @@
+{
+  "date": "2026-09-13",
+  "productCommit": "278bb11f1367a86d34a11f03f374a94cc541cd77",
+  "testedHead": "135d51870f9aa5c2c7aa91c7a8a9313bef47e94c",
+  "mergeTreeMatchesTestedHead": true,
+  "prs": [
+    {
+      "number": 130,
+      "head": "4485ba64f4473e7403ba0fad577736e0a62b8710",
+      "merge": "685b953befc9f5a8652e16dc246f6eec30946001",
+      "mergedAt": "2026-09-13T20:59:21Z"
+    },
+    {
+      "number": 131,
+      "head": "31a345c",
+      "merge": "b129fdb776eaa03cf48e17fb7f000d4dbd5c82bd",
+      "mergedAt": "2026-09-13T21:10:36Z"
+    },
+    {
+      "number": 132,
+      "head": "135d51870f9aa5c2c7aa91c7a8a9313bef47e94c",
+      "merge": "278bb11f1367a86d34a11f03f374a94cc541cd77",
+      "mergedAt": "2026-09-13T21:29:39Z"
+    }
+  ],
+  "checks": {
+    "isolatedTests": 406,
+    "schemaTests": 16,
+    "postgres": "17.6",
+    "catalogMatches": true,
+    "ownerAndStrangerAccess": true,
+    "badgeConcurrencyChecks": 4,
+    "editConcurrencyChecks": 2,
+    "webAndMobileTypes": true,
+    "databaseTypeContract": true,
+    "webAndMobileLint": true,
+    "nextProductionBuild": true,
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "finalApplicationCi": "passed",
+    "finalPrimaryPreview": "passed",
+    "knownDuplicateHosting": "OPS-01: missing Supabase environment variables"
+  },
+  "migrations": [
+    {
+      "file": "20260913205430_private_policy_helpers.sql",
+      "hostedVersion": "20260913210217",
+      "sha256": "dab7d726625ba965802829bb105d340980b6a6d1a2779334cc3df8f567fb7392",
+      "hostedStatementMd5": "8b3663fafee6d85da6ee98ce145c444c"
+    },
+    {
+      "file": "20260913210613_atomic_entry_details.sql",
+      "hostedVersion": "20260913211249",
+      "sha256": "8abbe83b0ee1e80304209bce336b72505e52910f9a8b76e458ec0fc20973fab5",
+      "hostedStatementMd5": "8eaf84f90d9bc8a147b4c0cd4098bffe"
+    },
+    {
+      "file": "20260913211939_entry_edit_conflict_response.sql",
+      "hostedVersion": "20260913212031",
+      "sha256": "c2ddd9e0a44d94168cdd678cec1803ad234b1c0244c591332702dd44a1f4fba6",
+      "hostedStatementMd5": "a99454af9d6518d64fe3cb41bde9482b"
+    }
+  ],
+  "hostedFullCatalogMatches": true,
+  "production": {
+    "project": "cellar-snap",
+    "deploymentId": "dpl_4NgEebZxtjj7AykTnRqgEEYNhbKE",
+    "githubDeploymentId": 6426706443,
+    "state": "READY",
+    "successAt": "2026-09-13T21:30:17Z",
+    "url": "https://cellarsnap.app",
+    "errorLogWindow": {
+      "since": "2026-09-13T21:30:17Z",
+      "until": "2026-09-13T21:35:40Z",
+      "records": 0,
+      "limit": 100
+    }
+  },
+  "viewports": {
+    "desktop": {
+      "width": 1440,
+      "height": 1000
+    },
+    "phone": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "finalLiveImageQc": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failedRequests": [
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "previousExportCompatibility": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      },
+      {
+        "surface": "expo",
+        "device": "desktop",
+        "previousReleaseCompatible": true
+      },
+      {
+        "surface": "expo",
+        "device": "phone",
+        "previousReleaseCompatible": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "decodedCropVisual": {
+    "results": [
+      {
+        "device": "desktop",
+        "headingVisible": true,
+        "decodedPhoto": true,
+        "saveEnabled": true
+      },
+      {
+        "device": "phone",
+        "headingVisible": true,
+        "decodedPhoto": true,
+        "saveEnabled": true
+      }
+    ],
+    "errors": [],
+    "fixtureRemoved": true
+  },
+  "helperHttp": {
+    "results": [
+      {
+        "role": "anon",
+        "name": "is_test_account",
+        "status": 401
+      },
+      {
+        "role": "anon",
+        "name": "are_friends",
+        "status": 401
+      },
+      {
+        "role": "anon",
+        "name": "is_user_blocked",
+        "status": 401
+      },
+      {
+        "role": "anon",
+        "name": "can_view_entry",
+        "status": 401
+      },
+      {
+        "role": "anon",
+        "name": "can_view_entry_standard",
+        "status": 401
+      },
+      {
+        "role": "anon",
+        "name": "can_view_test_authored_content",
+        "status": 401
+      },
+      {
+        "role": "authenticated",
+        "name": "is_test_account",
+        "status": 403
+      },
+      {
+        "role": "authenticated",
+        "name": "are_friends",
+        "status": 403
+      },
+      {
+        "role": "authenticated",
+        "name": "is_user_blocked",
+        "status": 403
+      },
+      {
+        "role": "authenticated",
+        "name": "can_view_entry",
+        "status": 403
+      },
+      {
+        "role": "authenticated",
+        "name": "can_view_entry_standard",
+        "status": 403
+      },
+      {
+        "role": "authenticated",
+        "name": "can_view_test_authored_content",
+        "status": 403
+      },
+      {
+        "privateSchemaExcluded": true,
+        "status": 406
+      },
+      {
+        "serviceFacades": 6
+      },
+      {
+        "ownerProfileReadable": true
+      }
+    ]
+  },
+  "atomicExpoQc": {
+    "results": [
+      {
+        "device": "desktop",
+        "notesOnlyPreservesLinkIds": true,
+        "noDirectGrapeWrites": true,
+        "failedRequestPreservesAllData": true,
+        "lostSuccessRetryPreservesLinkIds": true,
+        "staleConflictPreservesSavedAndLocalText": true,
+        "emptySelectionAndRecovery": true,
+        "webCounterpart": true,
+        "commands": 6
+      },
+      {
+        "device": "phone",
+        "timeoutRetainsInputAndSavedData": true
+      },
+      {
+        "device": "phone",
+        "notesOnlyPreservesLinkIds": true,
+        "noDirectGrapeWrites": true,
+        "failedRequestPreservesAllData": true,
+        "lostSuccessRetryPreservesLinkIds": true,
+        "staleConflictPreservesSavedAndLocalText": true,
+        "emptySelectionAndRecovery": true,
+        "webCounterpart": true,
+        "commands": 7
+      },
+      {
+        "strangerDenied": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      {
+        "device": "desktop",
+        "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "desktop",
+        "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "desktop",
+        "error": "Failed to load resource: the server responded with a status of 409 ()"
+      },
+      {
+        "device": "phone",
+        "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "phone",
+        "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "phone",
+        "error": "Failed to load resource: the server responded with a status of 409 ()"
+      }
+    ],
+    "failedResponses": [
+      {
+        "device": "desktop",
+        "path": "/rest/v1/rpc/save_entry_details",
+        "status": 503,
+        "message": "QC injected pre-save outage"
+      },
+      {
+        "device": "desktop",
+        "path": "/rest/v1/rpc/save_entry_details",
+        "status": 503,
+        "message": "QC injected lost success response"
+      },
+      {
+        "device": "desktop",
+        "path": "/rest/v1/rpc/save_entry_details",
+        "status": 409,
+        "code": "PT409",
+        "message": "Entry changed elsewhere. Close the editor and refresh before saving again."
+      },
+      {
+        "device": "phone",
+        "path": "/rest/v1/rpc/save_entry_details",
+        "status": 503,
+        "message": "QC injected pre-save outage"
+      },
+      {
+        "device": "phone",
+        "path": "/rest/v1/rpc/save_entry_details",
+        "status": 503,
+        "message": "QC injected lost success response"
+      },
+      {
+        "device": "phone",
+        "path": "/rest/v1/rpc/save_entry_details",
+        "status": 409,
+        "code": "PT409",
+        "message": "Entry changed elsewhere. Close the editor and refresh before saving again."
+      }
+    ],
+    "fixturesRemoved": true,
+    "awardsUnchanged": true
+  },
+  "bulkExpoQc": {
+    "results": [
+      {
+        "surface": "bulk",
+        "device": "phone",
+        "failurePreservesAllData": true,
+        "retryFinishesAndPublishes": true,
+        "grapeIdsRetained": true
+      },
+      {
+        "strangerDenied": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failedResponses": [],
+    "fixturesRemoved": true,
+    "awardsUnchanged": true,
+    "consoleCoverage": "No console listener in bulk-only branch; one intentional injected 503 was exercised. Empty console/response arrays do not certify coverage."
+  },
+  "directConflictRetest": {
+    "status": 409,
+    "code": "PT409",
+    "elapsedMs": 279
+  },
+  "cleanup": {
+    "checkedSyntheticNames": [
+      "B02e disposable image fixture",
+      "B02e crop visual fixture",
+      "B08b disposable atomic fixture",
+      "B08b conflict diagnosis"
+    ],
+    "remainingEntries": 0
+  },
+  "history": [
+    "Initial business-conflict SQLSTATE 40001 left hosted requests pending and a direct diagnostic ended in upstream 504. Immutable forward PT409 correction retested at 409 in 279ms; browser conflicts and client deadline passed.",
+    "An early cleanup deleted a fixture while its conflict request remained pending; subsequent 403 was an aftermath, not the original cause.",
+    "One final live image run passed all behavior assertions but logged a Supabase-browser Failed to fetch console message. Traced retest passed with zero page/console errors and only ERR_ABORTED requests during navigation/closure. Original cause unconfirmed; no claim it was a proven product fix.",
+    "Initial B02f TypeScript test annotation failed CI and was fixed before merge. Schema fixtures corrected grape positions to 1-based and share INSERT vs service-only SELECT.",
+    "Image screenshots now wait for opacity/decode. A pre-uploaded original yielded Storage copy 400 in an early crop run; final fixture allows crop to create the original."
+  ],
+  "limits": {
+    "nativeRuntime": "No Xcode/simctl or Android SDK/emulator installed",
+    "nativeDistribution": false,
+    "expoWebIsNotNativeAcceptance": true,
+    "legacyStorageCapabilitiesRevoked": false,
+    "bearerNativeImageMigration": false,
+    "publicNumericPayloadPrivacy": false,
+    "atomicWebGroupLifecycle": false,
+    "durableIdempotencyReceipts": false
+  },
+  "screenshots": [
+    "b02e-crop-phone.png",
+    "b08b-bulk-phone-outage.png"
+  ],
+  "workspace": {
+    "userTsconfigByteIdenticalToStart": true,
+    "userReportsAndDesignDraftPreserved": true,
+    "envFilesChanged": false,
+    "temporaryServersStopped": [
+      3001,
+      8083
+    ]
+  }
+}

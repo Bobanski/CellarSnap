@@ -2,9 +2,9 @@
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
-- **Latest working checkpoint:** [B02e](handovers/batch-02e.md), web photo delivery merged #130, live QC in progress; [B02f](handovers/batch-02f.md) helper SQL live and #131 merged; [B08b](handovers/batch-08b.md) mobile atomic edit command implemented, hosted/Expo QC pending.
+- **Latest release and resume point:** [B02e/B02f/B08b](handovers/b02e-b02f-b08b-release.md), [sanitized QC](evidence/b02e-b02f-b08b-release.json). #130/#131/#132 merged, SQL live, primary web live-verified; native distribution and broader privacy/lifecycle residuals remain explicit.
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest release and resume point:** [B02c2/B02d/B08a](handovers/b02c2-b02d-b08a-release.md), [sanitized QC](evidence/b02c2-b02d-b08a-release.json). Three PRs merged; public-profile SQL live and primary web live-verified. Native distribution, old Storage capabilities, helper RPCs, numeric payloads and atomic saves remain explicit.
+- **Previous release:** [B02c2/B02d/B08a](handovers/b02c2-b02d-b08a-release.md), [sanitized QC](evidence/b02c2-b02d-b08a-release.json).
 - **Previous release:** [B02c1/B06g/B07a/B06h](handovers/b02c1-b06g-b07a-b06h-release.md), [QC](evidence/b02c1-b06g-b07a-b06h-qc.json).
 - **Previous release:** [B06e/B06f/B05e](handovers/b06e-b06f-b05e-release.md), [sanitized evidence](evidence/b06e-b06f-b05e-release.json).
 - **Previous completed release:** [B06b/B06c/B06d](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md).
@@ -16,11 +16,11 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-**B02c2/B02d/B08a are merged through #126/#127/#128, final product main `3415e6a`.** Public-profile view writes and raw-name exposure are contained in deployed SQL. New anonymous share-image requests recheck current authorization and return no-store bytes. Mobile detail uses canonical ordered grapes; notes-only saves leave links untouched, owner search works and failures are visible/retryable. [Release and resume steps](handovers/b02c2-b02d-b08a-release.md).
+**B02e/B02f/B08b are merged through #130/#131/#132, product main `278bb11`.** Cookie-web photos now reauthorize each image request without browser Storage signatures. Six arbitrary-ID helper RPCs are contained with policy semantics retained. Mobile normal/bulk detail and grape edits use one owner-checked transaction with safe retries, visible conflicts and a request deadline. All SQL is live; primary web is live-verified. [Release and resume steps](handovers/b02e-b02f-b08b-release.md).
 
-**398 isolated checks, 12 schema tests**, actual PostgreSQL 17.6 replay/catalog and existing concurrency checks, web/mobile types/lint, Next build and all Expo exports passed; all three application CI/primary previews passed. Desktop/phone browser and Expo tests include explicit failure/recovery, actual hosted objects and private fixtures. Fixtures removed, original profile/awards restored. No native runtime/distribution acceptance.
+**406 isolated checks, 16 schema tests**, actual PostgreSQL 17.6 replay/catalog, four badge races and two entry-edit races, web/mobile types/lint, Next build and all Expo exports passed. Final application CI and primary previews passed. Actual desktop/phone web and Expo tests cover image revocation/crop, helper compatibility, rollback/retry/lost response, stale conflict, timeout and bulk review. Native runtime/distribution remains untested and unreleased. Fixtures cleaned and original profiles/awards restored.
 
-**Next:** P0 AUD-01 authenticated delivery/legacy cache revocation; AUD-06 legacy arbitrary-ID helper disclosures and QC-01 private-rating projections; AUD-13 atomic explicit entry/grape saves. Public-profile view writes/raw names are repaired; do not repeat their old Open claim. QC-07/QC-17 client scopes are implemented and Expo-tested, with native distribution pending. AUD-10 ai_notes_summary/OCR/scoring, AUD-09 deferred badge facts/history and AUD-19/21 bootstrap/adoption remain Partial. #81/#104/#112 stay open. Merge/close permission was one-session only.
+**Next:** P0 AUD-01 bearer/native delivery and legacy capability revocation; QC-01 private numeric projections; AUD-13/15 atomic web/group and remaining lifecycle commands. AUD-06 public-profile writes/raw names and helper disclosures are repaired; native acceptance remains. QC-07/QC-17 retain Partial statuses for native acceptance/distribution. AUD-10 ai_notes_summary/OCR/scoring, AUD-09 deferred badge facts/history and AUD-19/21 bootstrap/adoption remain Partial. #81/#104/#112 stay open. Merge/close permission was one-session only.
 
 B04d dependency and B05a tooling scopes remain as documented in their [release](handovers/b04d-b05a-release.md): audits zero, no nested agent files in Metro; AUD-08 native acceptance/distribution remains Partial and AUD-49 Closed. Existing QC-05/10/12 remain B11. OPS-01 duplicate hosting, AUD-01 cache revocation and AUD-06/QC-01 public projections remain separate.
 

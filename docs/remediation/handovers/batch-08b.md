@@ -1,4 +1,6 @@
 # B08b handover — September 13, 2026
+
+**Historical checkpoint:** superseded by the [B02e/B02f/B08b release](b02e-b02f-b08b-release.md). All three PRs are merged, SQL is live, final browser/Expo QC passed, and native runtime/distribution remains pending. The original checkpoint text below preserves sequence and limits.
 ## Objective and IDs
 AUD-13/15 mobile detail/grape atomic saves; preserve QC-07/QC-17 retention and failure visibility. Web/group edit commands, cellar decrement/clone, creates/imports, and broader side-effect parity are deferred.
 ## Resume here

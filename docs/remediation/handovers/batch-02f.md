@@ -1,4 +1,6 @@
 # B02f handover — September 13, 2026
+
+**Historical checkpoint:** superseded by the [B02e/B02f/B08b release](b02e-b02f-b08b-release.md). All three PRs are merged, SQL is live, final browser/Expo QC passed, and native runtime/distribution remains pending. The original checkpoint text below preserves sequence and limits.
 ## Objective and IDs
 AUD-06 legacy arbitrary-ID helper RPC containment. QC-01 numeric rating projections remain separate. No identity/schema-data cleanup or policy expansion.
 ## Resume here
