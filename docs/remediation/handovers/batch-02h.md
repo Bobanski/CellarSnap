@@ -1,4 +1,7 @@
 # B02h handover — September 13, 2026
+
+Release update: [B02g/B02h/B08c final handover](b02g-b02h-b08c-release.md) supersedes release-pending statements below; this checkpoint preserves intermediate evidence.
+
 ## Objective and IDs
 AUD-01 P0/Partial, related AUD-20/48/50: measure old raw/transformed photo capabilities and document a supported-client/revocation contract. No production remediation claim from a synthetic test.
 ## Resume here

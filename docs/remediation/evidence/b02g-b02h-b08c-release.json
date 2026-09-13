@@ -1,0 +1,437 @@
+{
+  "date": "2026-09-13",
+  "testedHead": "19bda8500f842050fac70183404f8d597404145f",
+  "productMerge": "ae6f354640500de47535a8660866c49e856b8361",
+  "mergedTreeEqualsTestedTree": true,
+  "pullRequests": [
+    134,
+    135,
+    136
+  ],
+  "tests": {
+    "isolated": 411,
+    "schema": 18,
+    "postgres": "17.6",
+    "catalogMatches": true,
+    "badgeRaces": 4,
+    "entryEditRaces": 2,
+    "typesLintNextBuild": "passed",
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "nativeRuntime": "unavailable; no Xcode/simctl or Android SDK/emulator",
+    "nativeDistribution": "not performed"
+  },
+  "production": {
+    "deploymentId": "dpl_AUEhczVyvvNA4VhFLYyWJdeWMSKY",
+    "githubDeploymentId": 6427297759,
+    "readyState": "READY",
+    "successAt": "2026-09-13T22:35:35Z",
+    "alias": "cellarsnap.app",
+    "errorLogQuery": {
+      "since": "2026-09-13T22:35:35Z",
+      "until": "2026-09-13T22:39:25Z",
+      "limit": 100,
+      "records": 0
+    }
+  },
+  "liveBearerPhotos": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true
+      },
+      {
+        "crossOriginBearer": {
+          "status": 200,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "deniedLoadThenRetry": true
+      },
+      {
+        "outageThenRetry": true
+      },
+      {
+        "adoptedPayloadSignatureFree": true,
+        "oldBearerCompatible": true
+      },
+      {
+        "storageRequests": 0,
+        "imageRequests": 13,
+        "bearerOnly": true
+      },
+      {
+        "signOutClearsImageSurface": true
+      },
+      {
+        "ownerCropSaveAndReopen": true,
+        "originalDimensionReads": 3
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    ],
+    "failures": [
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 503
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "liveCookiePhotos": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "TypeError: Failed to fetch\n    at https://cellarsnap.app/_next/static/immutable/chunks/1esb5dwyvlqoy.js:24:38515\n    at tD (https://cellarsnap.app/_next/static/immutable/chunks/1es"
+    ],
+    "failedRequests": [
+      {
+        "path": "/list-scan",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate/distill",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/auth/v1/user",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "liveAtomicWeb": {
+    "results": [
+      {
+        "device": "desktop",
+        "notesOnlyPreservesGrapeIds": true,
+        "onlyTouchedFields": true
+      },
+      {
+        "device": "desktop",
+        "explicitGrapesAndClearedWineType": true,
+        "explicitLostResponseRetryPreservesLinkIds": true
+      },
+      {
+        "device": "desktop",
+        "privacySnapshotMatchesStoredValues": true,
+        "atomicPrivacySave": true
+      },
+      {
+        "device": "desktop",
+        "outageRetainsInputAndSavedData": true,
+        "lostResponseRetry": true
+      },
+      {
+        "device": "desktop",
+        "conflictPreservesBothStates": true,
+        "refreshRecovery": true
+      },
+      {
+        "device": "phone",
+        "notesOnlyPreservesGrapeIds": true,
+        "onlyTouchedFields": true
+      },
+      {
+        "device": "phone",
+        "explicitGrapesAndClearedWineType": true,
+        "explicitLostResponseRetryPreservesLinkIds": true
+      },
+      {
+        "device": "phone",
+        "privacySnapshotMatchesStoredValues": true,
+        "atomicPrivacySave": true
+      },
+      {
+        "device": "phone",
+        "outageRetainsInputAndSavedData": true,
+        "lostResponseRetry": true
+      },
+      {
+        "device": "phone",
+        "timeoutRetainsDataAndInput": true
+      },
+      {
+        "device": "phone",
+        "conflictPreservesBothStates": true,
+        "refreshRecovery": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 409 ()",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+      "Failed to load resource: the server responded with a status of 409 ()",
+      "Failed to load resource: the server responded with a status of 404 ()"
+    ],
+    "responses": [
+      {
+        "path": "/api/entries/fixture",
+        "status": 503,
+        "error": "Unable to confirm the save. Your changes are still here; please retry."
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 503,
+        "error": "QC temporary save outage"
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 503,
+        "error": "Unable to confirm the save. Your changes are still here; please retry."
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 409,
+        "error": "This entry changed elsewhere. Refresh the page before saving again. Your edits are still here."
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 503,
+        "error": "Unable to confirm the save. Your changes are still here; please retry."
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 503,
+        "error": "QC temporary save outage"
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 503,
+        "error": "Unable to confirm the save. Your changes are still here; please retry."
+      },
+      {
+        "path": "/api/entries/fixture",
+        "status": 409,
+        "error": "This entry changed elsewhere. Refresh the page before saving again. Your edits are still here."
+      },
+      {
+        "path": "/api/algorithm/score",
+        "status": 404,
+        "error": "This entry could not be found or is not accessible to you."
+      }
+    ],
+    "fixturesRemoved": true,
+    "awardsUnchanged": true
+  },
+  "liveExpoWebCounterpartRetest": {
+    "results": [
+      {
+        "liveWebAtomicFixtureSaved": true
+      },
+      {
+        "expoPhoneReadsWebGrapes": true,
+        "expoSaveVisibleOnWeb": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "TypeError: Failed to fetch\n    at https://cellarsnap.app/_next/static/immutable/chunks/1esb5dwyvlqoy.js:24:38515\n    at tD (https://cellarsnap.app/_next/static/"
+    ],
+    "responses": [],
+    "fixturesRemoved": true,
+    "awardsUnchanged": true
+  },
+  "securityAdvisors": {
+    "sameAsBefore": true,
+    "lints": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      },
+      {
+        "name": "function_search_path_mutable",
+        "count": 2,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+      },
+      {
+        "name": "extension_in_public",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public"
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 6,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 6,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+      }
+    ]
+  },
+  "coverageNotes": [
+    "Bearer live acceptance began on B02h primary and overlapped the B08c rollout; photo delivery code was unchanged. Atomic and cookie-web live acceptance used final B08c primary.",
+    "All live Expo API calls proxied to cellarsnap.app with cookies stripped; cross-origin bearer probe directly targeted cellarsnap.app. This is browser, not native.",
+    "Initial atomic harness completed every web case then failed when the disposable proxy had exited after writing headers twice on a closed connection. Fixed harness and reran live web-to-Expo-to-web comparison on a new fixture.",
+    "Initial atomic live score 404 occurred during cleanup after the harness failed; preserve this separately from local deliberate wine-type-clear score 400.",
+    "Live cookie and counterpart runs each captured one Failed to fetch console message. Cookie trace includes navigation/closure cancellations; causal attribution is not proven. Zero page exceptions and passed visible behavior do not mean zero console errors.",
+    "Original tester flags/awards restored; fixture and dependent-row/object cleanup asserted. Final count of named session fixture entries: zero.",
+    "Existing duplicate Vercel project fails missing Supabase environment variables; primary succeeds."
+  ],
+  "legacyRevocationEvidence": "b02h-revocation-qc.json",
+  "legacyContract": "../b02h-photo-revocation-contract.md"
+}
