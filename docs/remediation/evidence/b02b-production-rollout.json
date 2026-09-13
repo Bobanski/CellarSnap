@@ -1,0 +1,586 @@
+{
+  "project": "rbmkypbqavmnuycznssv",
+  "before": {
+    "policies": [
+      {
+        "schemaname": "public",
+        "tablename": "entry_group_slides",
+        "policyname": "Authenticated users can view entry group slides",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "SELECT",
+        "qual": "(auth.role() = 'authenticated'::text)",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_group_slides",
+        "policyname": "Owners can manage entry group slides",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "ALL",
+        "qual": "(auth.uid() = ( SELECT entry_groups.user_id\n   FROM entry_groups\n  WHERE (entry_groups.id = entry_group_slides.group_id)))",
+        "with_check": "(auth.uid() = ( SELECT entry_groups.user_id\n   FROM entry_groups\n  WHERE (entry_groups.id = entry_group_slides.group_id)))"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_groups",
+        "policyname": "Authenticated users can view entry groups",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "SELECT",
+        "qual": "(auth.role() = 'authenticated'::text)",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_groups",
+        "policyname": "Owners can manage entry groups",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "ALL",
+        "qual": "(auth.uid() = user_id)",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_photos",
+        "policyname": "Owners can manage entry photos",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "ALL",
+        "qual": "(auth.uid() = ( SELECT wine_entries.user_id\n   FROM wine_entries\n  WHERE (wine_entries.id = entry_photos.entry_id)))",
+        "with_check": "(auth.uid() = ( SELECT wine_entries.user_id\n   FROM wine_entries\n  WHERE (wine_entries.id = entry_photos.entry_id)))"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_photos",
+        "policyname": "Users can view entry photos",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_photos.entry_id) AND can_view_entry(auth.uid(), e.user_id, e.entry_privacy))))",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "wine_entries",
+        "policyname": "Users can delete own wine entries",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "DELETE",
+        "qual": "(auth.uid() = user_id)",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "wine_entries",
+        "policyname": "Users can insert own wine entries",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "INSERT",
+        "qual": null,
+        "with_check": "(auth.uid() = user_id)"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "wine_entries",
+        "policyname": "Users can update own wine entries",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "UPDATE",
+        "qual": "(auth.uid() = user_id)",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "wine_entries",
+        "policyname": "Users can view allowed wine entries",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "can_view_entry(( SELECT auth.uid() AS uid), user_id, entry_privacy)",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Authenticated users can read wine photos",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (auth.role() = 'authenticated'::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Delete_own_photos bzgjph_0",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "DELETE",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Delete_own_photos bzgjph_1",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Public read access for public-assets",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "public"
+        ],
+        "cmd": "SELECT",
+        "qual": "(bucket_id = 'public-assets'::text)",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Read_own_photos bzgjph_0",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Update_Own_Photos bzgjph_0",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "UPDATE",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Update_Own_Photos bzgjph_1",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Upload_Own_Photos bzgjph_0",
+        "permissive": "PERMISSIVE",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "INSERT",
+        "qual": null,
+        "with_check": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+      }
+    ],
+    "migrations": [
+      {
+        "version": "20260912211747",
+        "name": "enforce_entry_read_privacy",
+        "md5": "50fb651cc4595d5980b048a34568b7a8"
+      },
+      {
+        "version": "20260912211719",
+        "name": "protect_profile_capabilities_and_public_assets",
+        "md5": "4f690c3fb41c060a1bc41add57207abb"
+      },
+      {
+        "version": "20260331034006",
+        "name": "badges",
+        "md5": "def964aba685a3675c93d97b28b5efef"
+      },
+      {
+        "version": "20260329223408",
+        "name": "add_event_type_to_entry_groups",
+        "md5": "b9e440ad68e015547b5fbca077c78b63"
+      },
+      {
+        "version": "20260329171857",
+        "name": "audience_mode",
+        "md5": "a147a8ac23845858535f9de0f1a81ac9"
+      },
+      {
+        "version": "20260328024919",
+        "name": "055_taste_survey_responses",
+        "md5": "8c02de9899b1b9ba57e0bc7e0fec84d6"
+      }
+    ],
+    "bucket": false,
+    "counts": {
+      "entries": 384,
+      "groups": 34,
+      "slides": 107,
+      "profiles": 64,
+      "testers": 4,
+      "objects": 869
+    },
+    "helpers": [
+      {
+        "nspname": "public",
+        "proname": "can_view_entry",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=public"
+        ],
+        "proacl": [
+          "=X/postgres",
+          "postgres=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_entry(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if public.can_view_entry_standard(viewer_id, owner_id, privacy) then\n    return true;\n  end if;\n\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if public.is_user_blocked(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if not public.can_view_test_authored_content(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  return public.is_test_account(viewer_id);\nend;\n$function$\n"
+      },
+      {
+        "nspname": "public",
+        "proname": "is_test_account",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=public"
+        ],
+        "proacl": [
+          "=X/postgres",
+          "postgres=X/postgres",
+          "anon=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.is_test_account(user_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if user_id is null then\n    return false;\n  end if;\n\n  return exists (\n    select 1\n    from public.profiles\n    where id = user_id\n      and coalesce(is_test_account, false)\n  );\nend;\n$function$\n"
+      },
+      {
+        "nspname": "private",
+        "proname": "protect_profile_capabilities",
+        "prosecdef": false,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proacl": [
+          "postgres=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION private.protect_profile_capabilities()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  -- Use the database role, never user-editable metadata or a submitted user ID.\n  -- Auth hooks / service-role administration can continue maintaining this flag.\n  if current_user in ('anon', 'authenticated') then\n    if tg_op = 'INSERT' then\n      if coalesce(new.is_test_account, false) then\n        raise exception 'Account capabilities can only be assigned by an administrator'\n          using errcode = '42501';\n      end if;\n    elsif new.is_test_account is distinct from old.is_test_account then\n      raise exception 'Account capabilities can only be changed by an administrator'\n        using errcode = '42501';\n    end if;\n  end if;\n  return new;\nend;\n$function$\n"
+      }
+    ]
+  },
+  "after": {
+    "migrations": [
+      {
+        "version": "20260913000034",
+        "name": "enforce_wine_object_privacy",
+        "md5": "747807c2c8fcfc46df46934c45ed5b99"
+      },
+      {
+        "version": "20260912235835",
+        "name": "enforce_photo_and_group_metadata_privacy",
+        "md5": "7801266297ae37d277d9b287216edfcf"
+      },
+      {
+        "version": "20260912211747",
+        "name": "enforce_entry_read_privacy",
+        "md5": "50fb651cc4595d5980b048a34568b7a8"
+      },
+      {
+        "version": "20260912211719",
+        "name": "protect_profile_capabilities_and_public_assets",
+        "md5": "4f690c3fb41c060a1bc41add57207abb"
+      }
+    ],
+    "policies": [
+      {
+        "schemaname": "public",
+        "tablename": "entry_group_slides",
+        "policyname": "Owners can manage entry group slides",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "ALL",
+        "qual": "(( SELECT auth.uid() AS uid) = ( SELECT g.user_id\n   FROM entry_groups g\n  WHERE (g.id = entry_group_slides.group_id)))",
+        "with_check": "(( SELECT auth.uid() AS uid) = ( SELECT g.user_id\n   FROM entry_groups g\n  WHERE (g.id = entry_group_slides.group_id)))"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_group_slides",
+        "policyname": "Users can view allowed entry group slides",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM (entry_groups g\n     JOIN wine_entries e ON ((e.id = COALESCE(entry_group_slides.entry_id, g.anchor_entry_id))))\n  WHERE ((g.id = entry_group_slides.group_id) AND (e.entry_group_id = g.id) AND (e.user_id = g.user_id) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id,\n        CASE entry_group_slides.photo_type\n            WHEN 'label'::text THEN COALESCE(e.label_photo_privacy, e.entry_privacy)\n            WHEN 'place'::text THEN COALESCE(e.place_photo_privacy, e.entry_privacy)\n            ELSE e.entry_privacy\n        END) AND ((entry_group_slides.entry_id IS NOT NULL) OR (split_part(entry_group_slides.path, '/'::text, 1) = (g.user_id)::text)))))",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_groups",
+        "policyname": "Owners can manage entry groups",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "ALL",
+        "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+        "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_groups",
+        "policyname": "Users can view allowed entry groups",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_groups.anchor_entry_id) AND (e.entry_group_id = entry_groups.id) AND (e.user_id = entry_groups.user_id) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy))))",
+        "with_check": null
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_photos",
+        "policyname": "Owners can manage entry photos",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "ALL",
+        "qual": "(( SELECT auth.uid() AS uid) = ( SELECT e.user_id\n   FROM wine_entries e\n  WHERE (e.id = entry_photos.entry_id)))",
+        "with_check": "(( SELECT auth.uid() AS uid) = ( SELECT e.user_id\n   FROM wine_entries e\n  WHERE (e.id = entry_photos.entry_id)))"
+      },
+      {
+        "schemaname": "public",
+        "tablename": "entry_photos",
+        "policyname": "Users can view entry photos",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_photos.entry_id) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id,\n        CASE entry_photos.type\n            WHEN 'label'::text THEN COALESCE(e.label_photo_privacy, e.entry_privacy)\n            WHEN 'place'::text THEN COALESCE(e.place_photo_privacy, e.entry_privacy)\n            ELSE e.entry_privacy\n        END))))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Delete_own_photos bzgjph_0",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "DELETE",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Public read access for public-assets",
+        "roles": [
+          "public"
+        ],
+        "cmd": "SELECT",
+        "qual": "(bucket_id = 'public-assets'::text)",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Update_Own_Photos bzgjph_0",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "UPDATE",
+        "qual": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))",
+        "with_check": null
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Upload_Own_Photos bzgjph_0",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "INSERT",
+        "qual": null,
+        "with_check": "((bucket_id = 'wine-photos'::text) AND (split_part(name, '/'::text, 1) = (auth.uid())::text))"
+      },
+      {
+        "schemaname": "storage",
+        "tablename": "objects",
+        "policyname": "Users can read allowed wine photos",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "((bucket_id = 'wine-photos'::text) AND can_access_wine_photo(name))",
+        "with_check": null
+      }
+    ],
+    "functions": [
+      {
+        "nspname": "public",
+        "proname": "can_access_wine_photo",
+        "prosecdef": false,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proacl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION public.can_access_wine_photo(object_name text)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.can_access_wine_photo(object_name);\n$function$\n"
+      },
+      {
+        "nspname": "private",
+        "proname": "can_access_wine_photo",
+        "prosecdef": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proacl": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION private.can_access_wine_photo(object_name text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  viewer uuid := auth.uid();\n  public_only boolean := coalesce(auth.role() = 'service_role', false);\n  parts text[] := string_to_array(object_name, '/');\n  source public.wine_entries%rowtype;\n  base_path text := regexp_replace(object_name, '__original(\\.[a-zA-Z0-9]+)?$', '\\1');\n  kinds text[];\n  kind text;\n  photo_privacy text;\nbegin\n  if not public_only and viewer is null then return false; end if;\n  -- Preserves uploads before metadata exists, upserts, avatar/cover changes,\n  -- originals, drafts and cleanup of orphaned objects within one's own prefix.\n  if not public_only and parts[1] = viewer::text then return true; end if;\n  if parts[1] is null or parts[1] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then\n    return false;\n  end if;\n  if not public_only and array_length(parts,1)=2 then\n    return parts[2] ~ '^avatar\\.(jpg|png|webp|gif)$'\n      and public.can_view_entry(viewer, parts[1]::uuid, 'public')\n      and exists (select 1 from public.profiles p\n        where p.id=parts[1]::uuid and p.avatar_path=object_name);\n  end if;\n  if array_length(parts,1) not in (3,4) or parts[2] is null\n    or parts[2] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then\n    return false;\n  end if;\n  select * into source from public.wine_entries e\n    where e.id=parts[2]::uuid and e.user_id=parts[1]::uuid;\n  if not found then return false; end if;\n  if public_only then\n    if source.entry_privacy::text is distinct from 'public'\n      or public.is_test_account(source.user_id) then return false; end if;\n  elsif not public.can_view_entry(viewer,source.user_id,source.entry_privacy::text) then\n    return false;\n  end if;\n\n  -- Photo reclassification updates metadata without moving the object. Exact\n  -- ordered metadata wins over legacy columns and group references. ALL current\n  -- types must permit access if duplicate rows point at the same source object.\n  select array_agg(distinct p.type::text) into kinds from public.entry_photos p\n    where p.entry_id=source.id and p.path=base_path;\n  if kinds is null then\n    select array_agg(v.kind) into kinds from (values\n      ('label',source.label_image_path),('place',source.place_image_path),\n      ('pairing',source.pairing_image_path)) v(kind,path) where v.path=base_path;\n  end if;\n  if kinds is null then\n    -- Some legacy group photos exist only in slides. Validate the source member\n    -- and the group's owned, readable anchor. Entry-less context is anchored.\n    -- A private ordered/legacy source above always wins over a slide reference.\n    select array_agg(distinct s.photo_type::text) into kinds\n    from public.entry_groups g join public.entry_group_slides s on s.group_id=g.id\n    join public.wine_entries anchor on anchor.id=g.anchor_entry_id\n      and anchor.user_id=g.user_id and anchor.entry_group_id=g.id\n    where g.user_id=source.user_id and source.entry_group_id=g.id\n      and coalesce(s.entry_id,g.anchor_entry_id)=source.id and s.path=base_path\n      and case when public_only then anchor.entry_privacy::text='public'\n        else public.can_view_entry(viewer,anchor.user_id,anchor.entry_privacy::text) end;\n  end if;\n  if kinds is null then return false; end if;\n  foreach kind in array kinds loop\n    if kind is null or kind not in ('label','place','pairing','lineup','people','other_bottles') then return false; end if;\n    photo_privacy := case kind\n      when 'label' then coalesce(source.label_photo_privacy,source.entry_privacy)::text\n      when 'place' then coalesce(source.place_photo_privacy,source.entry_privacy)::text\n      else source.entry_privacy::text end;\n    if public_only then\n      if photo_privacy is distinct from 'public' then return false; end if;\n    elsif not public.can_view_entry(viewer,source.user_id,photo_privacy) then return false; end if;\n  end loop;\n  return true;\nend;\n$function$\n"
+      },
+      {
+        "nspname": "private",
+        "proname": "protect_profile_capabilities",
+        "prosecdef": false,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "proacl": [
+          "postgres=X/postgres"
+        ],
+        "definition": "CREATE OR REPLACE FUNCTION private.protect_profile_capabilities()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  -- Use the database role, never user-editable metadata or a submitted user ID.\n  -- Auth hooks / service-role administration can continue maintaining this flag.\n  if current_user in ('anon', 'authenticated') then\n    if tg_op = 'INSERT' then\n      if coalesce(new.is_test_account, false) then\n        raise exception 'Account capabilities can only be assigned by an administrator'\n          using errcode = '42501';\n      end if;\n    elsif new.is_test_account is distinct from old.is_test_account then\n      raise exception 'Account capabilities can only be changed by an administrator'\n        using errcode = '42501';\n    end if;\n  end if;\n  return new;\nend;\n$function$\n"
+      }
+    ],
+    "profile_flags_md5": "1732f025b055f58143ed175770ddbdff"
+  },
+  "advisors": {
+    "before": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      },
+      {
+        "name": "security_definer_view",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view"
+      },
+      {
+        "name": "function_search_path_mutable",
+        "count": 4,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+      },
+      {
+        "name": "extension_in_public",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public"
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 18,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 18,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+      }
+    ],
+    "after": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      },
+      {
+        "name": "security_definer_view",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view"
+      },
+      {
+        "name": "function_search_path_mutable",
+        "count": 4,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+      },
+      {
+        "name": "extension_in_public",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public"
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 18,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 18,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+      }
+    ]
+  },
+  "cleanup": {
+    "entries": 384,
+    "groups": 34,
+    "slides": 107,
+    "profiles": 64,
+    "testers": 4,
+    "objects": 869,
+    "flags_md5": "1732f025b055f58143ed175770ddbdff"
+  },
+  "verificationDate": "September 12, 2026 America/New_York; September 12–13 UTC"
+}
