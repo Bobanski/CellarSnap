@@ -92,3 +92,5 @@ One shared generated Database source, CI drift/type contracts, typed web/mobile 
 ## September 13 — B05b/B05c released
 
 PR #105 merged as `d31e966`, #106 as `c93e172`. Both CI runs and primary previews passed; primary production Ready/live-verified with desktop/phone grape browsing/search, login/sign-out, four HTTP checks and zero bounded error-log records. Generated types are byte-identical on regeneration. No SQL deployment; scoped fixture cleanup complete. AUD-19/21 stay Partial, QC-13 is next. [Release handover](../remediation/handovers/b05b-b05c-release.md).
+
+Final B05 release review (#107) extended the same AUD-19 drift contract to column-specific grants; the baseline already preserved them. Seven drift mutations and PG17/PGlite/live equality pass after the correction. No runtime or production SQL change.

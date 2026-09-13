@@ -33,7 +33,9 @@
     "postgres17Replay": "passed",
     "pglite18Replay": "passed",
     "liveCatalogDrift": [],
-    "regeneratedTypesByteIdentical": true
+    "regeneratedTypesByteIdentical": true,
+    "deliberateDriftMutations": 7,
+    "columnGrantReview": "15 existing grants captured; regression mutation plus PG17/PGlite/live equality rerun"
   },
   "liveHttp": [
     {
