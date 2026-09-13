@@ -1,0 +1,124 @@
+{
+  "productMerge": "d4e5cd21970c520b73cb2b0c7c0ff76810b71e39",
+  "b05d": {
+    "pr": 108,
+    "head": "e7241610e8042a9ecba47907f799c10fd6872170",
+    "merge": "719ad1d221865e2ecc166dcf4aa6676823420981",
+    "ciRun": 34741425769,
+    "primaryDeployment": "dpl_Ec7tY7R4FaeXjjENrugdHkW5Mz85",
+    "liveHttpPassed": true
+  },
+  "b06a": {
+    "pr": 110,
+    "head": "863fab8186f0b4d2caff9a85d86122fe04dcd888",
+    "merge": "d4e5cd21970c520b73cb2b0c7c0ff76810b71e39",
+    "ciRun": 34741673071,
+    "primaryDeployment": "dpl_32qQaMVqVsFmAffYh6nCLkiv35kP",
+    "githubDeployment": 6418291004,
+    "url": "https://cellar-snap-1mbdkrhip-eitan-sneiders-projects.vercel.app",
+    "alias": "https://cellarsnap.app",
+    "state": "READY"
+  },
+  "liveHttp": {
+    "base": "https://cellarsnap.app",
+    "checks": [
+      {
+        "query": "nebbiolo",
+        "bearerOnly": 200,
+        "cookieOnly": 200,
+        "equal": true,
+        "names": [
+          "Nebbiolo"
+        ]
+      },
+      {
+        "query": "abernet auvignon",
+        "bearerOnly": 200,
+        "cookieOnly": 200,
+        "equal": true,
+        "names": [
+          "Cabernet Sauvignon"
+        ]
+      },
+      {
+        "query": "syrah",
+        "bearerOnly": 200,
+        "cookieOnly": 200,
+        "equal": true,
+        "names": [
+          "Syrah"
+        ]
+      },
+      {
+        "query": "zzqcnomatch",
+        "bearerOnly": 200,
+        "cookieOnly": 200,
+        "equal": true,
+        "names": []
+      },
+      {
+        "query": "!!!",
+        "bearerOnly": 200,
+        "cookieOnly": 200,
+        "equal": true,
+        "names": []
+      },
+      {
+        "mode": "anonymous",
+        "status": 401
+      },
+      {
+        "mode": "invalid",
+        "status": 401
+      },
+      {
+        "mode": "invalid bearer with valid cookie fallback",
+        "status": 200
+      },
+      {
+        "limit": "default",
+        "count": 8,
+        "status": 200
+      },
+      {
+        "limit": "&limit=2",
+        "count": 2,
+        "status": 200
+      },
+      {
+        "limit": "&limit=999",
+        "count": 11,
+        "status": 200
+      }
+    ]
+  },
+  "browser": {
+    "desktop": [
+      1440,
+      1000
+    ],
+    "phone": [
+      390,
+      844
+    ],
+    "flows": [
+      "fresh login to feed",
+      "phone cellar autocomplete and selection",
+      "Library Proof Private search on desktop and phone: Jul 8",
+      "selected detail: Date consumed Jul 8",
+      "sign-out confirmed on login page"
+    ],
+    "capturedWarningsErrorsBeforeCleanup": 0
+  },
+  "boundedProductionErrors": {
+    "deployment": "dpl_32qQaMVqVsFmAffYh6nCLkiv35kP",
+    "since": "2026-09-13T06:03:48Z",
+    "level": "error",
+    "limit": 100,
+    "records": 0
+  },
+  "nativeRuntimeAvailable": false,
+  "nativeDistributionPerformed": false,
+  "sqlDeployed": false,
+  "intentionalPersistentDataMutations": false
+}

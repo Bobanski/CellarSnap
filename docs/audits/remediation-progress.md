@@ -94,3 +94,8 @@ One shared generated Database source, CI drift/type contracts, typed web/mobile 
 PR #105 merged as `d31e966`, #106 as `c93e172`. Both CI runs and primary previews passed; primary production Ready/live-verified with desktop/phone grape browsing/search, login/sign-out, four HTTP checks and zero bounded error-log records. Generated types are byte-identical on regeneration. No SQL deployment; scoped fixture cleanup complete. AUD-19/21 stay Partial, QC-13 is next. [Release handover](../remediation/handovers/b05b-b05c-release.md).
 
 Final B05 release review (#107) extended the same AUD-19 drift contract to column-specific grants; the baseline already preserved them. Seven drift mutations and PG17/PGlite/live equality pass after the correction. No runtime or production SQL change.
+
+
+## September 13 — B05d / B06a released
+
+PR #108 (`719ad1d`) restores typed bearer grape autocomplete; PR #110 (`d4e5cd2`) fixes Library tasting-day shifts with a shared web/mobile formatter. 279 isolated checks, schema/type checks, app types/lint/build/exports, desktop/phone and cookie-stripped Expo interactions passed. Both CI runs and primary previews passed. Final production is Ready/live-verified with auth parity, autocomplete selection and Library/detail date checks. QC-13 Closed; QC-02 Partial for native runtime/distribution. No SQL or intentional persistent data mutations. New QC-14 records historical alias seed damage. [Release handover](../remediation/handovers/b05d-b06a-release.md), [QC](b05d-b06a-qc-2026-09-13.md).
