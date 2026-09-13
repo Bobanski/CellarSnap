@@ -1,3 +1,4 @@
+import { projectPublicFeedRating } from '../src/server/entries/publicFeed';
 import { expect, test } from "@playwright/test";
 import { signPhotoPaths } from "../packages/shared/src/storage";
 import { defaultLoadEntryForScoring } from "../src/app/api/algorithm/score/handler";
@@ -86,3 +87,14 @@ for (const canonicalColumnsPresent of [true, false]) {
     expect(fields.length).toBe(canonicalColumnsPresent ? 1 : 2);
   });
 }
+
+test('public feed payloads preserve enjoyment bands while excluding every private 1–100 score', () => {
+  for (let rating = 1; rating <= 100; rating++) {
+    const source = { id: 'fixture', rating, notes: 'Tasting note', qpr_level: 'good' };
+    const projected = JSON.parse(JSON.stringify(projectPublicFeedRating(source)));
+    expect(projected).toEqual({ ...source, rating: null, public_rating_label:
+      rating >= 90 ? 'Loved it' : rating >= 75 ? 'Really liked it' : rating >= 60 ? 'Liked it' : 'Tried it' });
+    expect(source.rating).toBe(rating);
+  }
+  expect(projectPublicFeedRating({ rating: null }).public_rating_label).toBeNull();
+});
