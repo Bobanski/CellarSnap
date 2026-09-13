@@ -57,7 +57,7 @@ function PalatePageContent() {
     const load = async () => {
       const [profileRes, summary] = await Promise.all([
         fetch("/api/profile", { cache: "no-store" }),
-        fetchActivitySummary(),
+        fetchActivitySummary().catch(() => null),
       ]);
 
       let profileData: PalateProfile | null = null;
@@ -75,10 +75,10 @@ function PalatePageContent() {
       if (mounted) {
         setProfile(profileData);
         setStats({
-          wines: summary.entryCount,
-          friends: summary.friendCount,
-          badges: summary.badgeCount,
-          countries: summary.countryCount,
+          wines: summary?.entryCount ?? null,
+          friends: summary?.friendCount ?? null,
+          badges: summary?.badgeCount ?? null,
+          countries: summary?.countryCount ?? null,
         });
         setLoading(false);
       }

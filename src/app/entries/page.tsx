@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveEventSelection } from "@shared";
+
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -291,14 +293,13 @@ function buildGroupedSlideMeta(
 }
 
 function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const slides = entry.group_slides ?? [];
-  const activeSlide = slides[activeIndex] ?? slides[0] ?? null;
+  const selection = resolveEventSelection(slides, selectedSlideId, entry);
   const title = getGroupedTitle(entry);
   const modeLabel = getGroupedModeLabel(entry);
-  const previewTitle =
-    activeSlide?.wine_name ?? activeSlide?.producer ?? entry.wine_name ?? null;
-  const previewMeta = buildGroupedSlideMeta(activeSlide);
+  const previewTitle = selection.title;
+  const previewMeta = selection.entryId ? buildGroupedSlideMeta(selection.slide) : "";
 
   return (
     <div
@@ -350,7 +351,8 @@ function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
             title={entry.entry_group?.event_type ? (EVENT_TYPE_LABELS[entry.entry_group.event_type as EventTypeValue] ?? title) : title}
             slides={slides}
             heightClassName=""
-            onIndexChange={setActiveIndex}
+            activeIndex={selection.index}
+            onIndexChange={index => setSelectedSlideId(slides[index]?.id ?? null)}
           />
         ) : (
           <div
@@ -380,8 +382,8 @@ function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
       ) : null}
 
       <div className="mt-4">
-        <Link
-          href={`/entries/${entry.id}`}
+        {selection.entryId ? <Link
+          href={`/entries/${selection.entryId}`}
           className="inline-flex rounded-full px-4 py-2 text-sm font-semibold transition"
           style={{
             background: "var(--color-accent-primary)",
@@ -389,7 +391,7 @@ function EventHistoryCard({ entry }: { entry: EventHistoryEntry }) {
           }}
         >
           Open details
-        </Link>
+        </Link> : <p className="text-sm text-[var(--color-text-secondary)]">Select a wine to open its details.</p>}
       </div>
     </div>
   );
