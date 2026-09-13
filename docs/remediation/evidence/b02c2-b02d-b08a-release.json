@@ -1,0 +1,305 @@
+{
+  "testedProductCommit": "5bfb6800e4a707abf17b926c4b42356bd288d9ce",
+  "mergedProductCommit": "3415e6a388477c23b0d9a621e549395801d7cfe2",
+  "unitTests": 398,
+  "schemaTests": 12,
+  "typesLintNextBuild": "passed",
+  "expoExports": [
+    "web",
+    "ios",
+    "android"
+  ],
+  "nativeRuntime": "unavailable: simctl, Xcode and Android SDK/emulator absent",
+  "shareProductionBuildQC": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "noStorageCapabilities": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "noStorageCapabilities": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "og": 200,
+        "noStore": true,
+        "bytes": 436579
+      },
+      {
+        "legacySignedAfterExpiry": {
+          "status": 400,
+          "cacheStatus": "BYPASS",
+          "cacheControl": null
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "shareRevoked",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "shareExpired",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "textRetainedWithPrivatePhoto": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "fixturesRemoved": true,
+    "profileRestored": true
+  },
+  "grapeBrowserQC": {
+    "results": [
+      {
+        "device": "desktop",
+        "canonicalRead": true,
+        "notesOnlyRetained": true,
+        "notesOnlyGrapeWrites": 0,
+        "explicitEditPersisted": true,
+        "insertFailureVisibleAndRetryPassed": true,
+        "webCounterpart": true,
+        "readFailureBlocksEdit": true,
+        "readRetryPassed": true,
+        "emptyReadAndSave": true
+      },
+      {
+        "device": "phone",
+        "canonicalRead": true,
+        "notesOnlyRetained": true,
+        "notesOnlyGrapeWrites": 0,
+        "explicitEditPersisted": true,
+        "insertFailureVisibleAndRetryPassed": true,
+        "webCounterpart": true,
+        "readFailureBlocksEdit": true,
+        "readRetryPassed": true,
+        "emptyReadAndSave": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      {
+        "device": "desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ]
+  },
+  "grapeProductionBuildSmoke": {
+    "results": [
+      {
+        "surface": "web",
+        "device": "desktop",
+        "orderedGrapesVisible": true
+      },
+      {
+        "surface": "web",
+        "device": "phone",
+        "orderedGrapesVisible": true
+      },
+      {
+        "surface": "expo",
+        "device": "desktop",
+        "orderedGrapesVisible": true
+      },
+      {
+        "surface": "expo",
+        "device": "phone",
+        "orderedGrapesVisible": true
+      }
+    ],
+    "errors": []
+  },
+  "grapeCleanup": {
+    "checks": [
+      {
+        "table": "wine_entries",
+        "remaining": 0
+      },
+      {
+        "table": "entry_primary_grapes",
+        "remaining": 0
+      },
+      {
+        "table": "wine_entry_scores",
+        "remaining": 0
+      },
+      {
+        "table": "scan_resolution_log",
+        "remaining": 0
+      }
+    ],
+    "awardsUnchanged": true
+  },
+  "profileQC": "b02c2-qc.json",
+  "webLiveVerification": "passed",
+  "shareLiveQC": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "noStorageCapabilities": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "noStorageCapabilities": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "og": 200,
+        "noStore": true,
+        "bytes": 436579
+      },
+      {
+        "legacySignedAfterExpiry": {
+          "status": 400,
+          "cacheStatus": "BYPASS",
+          "cacheControl": null
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "shareRevoked",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "shareExpired",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "nextRequest": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "textRetainedWithPrivatePhoto": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "fixturesRemoved": true,
+    "profileRestored": true
+  },
+  "profileLiveSmoke": {
+    "results": [
+      {
+        "device": "desktop",
+        "publicProfile": 200,
+        "chosenNameVisible": true,
+        "rawNamesNull": true
+      },
+      {
+        "device": "phone",
+        "publicProfile": 200,
+        "chosenNameVisible": true,
+        "rawNamesNull": true
+      },
+      {
+        "ownerSummary": 200,
+        "badges": 200
+      },
+      {
+        "phoneSignOut": true
+      }
+    ],
+    "errors": []
+  },
+  "productionDeployment": {
+    "id": "dpl_E8xzLmuBVsNrtVwUf6AKHtyEwm9K",
+    "githubDeploymentId": 6426020790,
+    "commit": "3415e6a388477c23b0d9a621e549395801d7cfe2",
+    "url": "https://cellarsnap.app",
+    "state": "READY",
+    "successAt": "2026-09-13T20:21:17Z"
+  },
+  "boundedLiveErrorLogs": {
+    "since": "2026-09-13T20:21:17Z",
+    "records": 0,
+    "limit": 100
+  }
+}

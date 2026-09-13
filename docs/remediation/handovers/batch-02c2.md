@@ -1,5 +1,8 @@
 # B02c2 handover — September 13, 2026
 
+**Subsequent release:** merged and QC verified in [B02c2/B02d/B08a release](b02c2-b02d-b08a-release.md). The dated checkpoint below preserves implementation history; use the release handover for current state.
+
+
 ## Objective and IDs
 AUD-06 public-profile authority and identity projection; related AUD-19/21/48. P0 escalation: the current hosted view has authenticated INSERT/UPDATE/DELETE grants and updatable identity columns. An isolated reproduction using its captured definition lets a stranger change another profile's first name through the view while a direct base-table update affects zero rows. No production attack was attempted. Raw public rating payloads (QC-01), signed/CDN delivery (AUD-01), and other public helper RPCs are outside this slice.
 
