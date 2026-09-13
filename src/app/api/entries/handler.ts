@@ -715,20 +715,10 @@ export function createEntryPostHandler(
   // Badge evaluation — best-effort, non-blocking.
   let newlyEarnedBadges: Array<{ id: string; name: string; toastText: string; tier: string; color: string; accent: string; shape: string }> = [];
   try {
-    const grapes = (entryWithPrimaryGrapes.primary_grapes as Array<{ variety?: string; name?: string }>)
-      .map((g) => g.variety ?? g.name ?? "")
-      .filter(Boolean);
     const result = await evaluateAndAwardBadges({
-      supabase,
+      // This handler retains a legacy query bridge; badges use generated types.
+      supabase: supabase as import("@supabase/supabase-js").SupabaseClient<import("@shared").Database>,
       userId: user.id,
-      entryData: {
-        wine_type: createdEntry.wine_type as string | undefined,
-        country: createdEntry.country as string | undefined,
-        region: createdEntry.region as string | undefined,
-        appellation: createdEntry.appellation as string | undefined,
-        grapes,
-        rating: createdEntry.rating as number | undefined,
-      },
     });
     newlyEarnedBadges = result.newlyEarned;
   } catch (error) {

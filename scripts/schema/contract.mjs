@@ -33,7 +33,17 @@ export async function replay() {
     return db;
   } catch(error) { await db.close(); throw error; }
 }
-export async function expectedCatalog() {return canonical(JSON.parse(await baselineFile('catalog.json')));}
+export async function expectedCatalog() {
+  const expected = JSON.parse(await baselineFile('catalog.json'));
+  // Reviewed B06b delta; retain the immutable B05b production capture and
+  // compare every other object without automatically trusting replay output.
+  expected.grants = expected.grants.filter(g => g.object !== 'user_badges' ||
+    !['PUBLIC','anon','authenticated'].includes(g.grantee) ||
+    (g.grantee === 'authenticated' && g.privilege_type === 'SELECT'));
+  expected.policies = expected.policies.filter(p => !(p.schemaname === 'public' &&
+    p.tablename === 'user_badges' && p.policyname === 'Users can insert own badges'));
+  return canonical(expected);
+}
 export function differences(expected, actual) {
   return [...new Set([...Object.keys(expected),...Object.keys(actual)])].filter(key => JSON.stringify(expected[key])!==JSON.stringify(actual[key]));
 }
