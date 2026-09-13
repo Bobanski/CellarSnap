@@ -5,6 +5,11 @@ begin;
 
 do $$
 begin
+  -- Supabase owns storage.objects. Verify its managed RLS setting rather than
+  -- issuing ALTER TABLE, which the hosted migration role cannot perform.
+  if not (select relrowsecurity from pg_class where oid='storage.objects'::regclass) then
+    raise exception 'Storage object RLS must be enabled before Storage privacy';
+  end if;
   if not exists (select 1 from pg_trigger where tgrelid='public.profiles'::regclass
     and tgname='profiles_protect_capabilities' and tgenabled in ('O','A')
     and tgfoid=to_regprocedure('private.protect_profile_capabilities()'))
@@ -119,7 +124,6 @@ $$;
 revoke all on function public.can_access_wine_photo(text) from public, anon;
 grant execute on function public.can_access_wine_photo(text) to authenticated, service_role;
 
-alter table storage.objects enable row level security;
 drop policy if exists "Authenticated users can read wine photos" on storage.objects;
 drop policy if exists "Users can read allowed wine photos" on storage.objects;
 drop policy if exists "Delete_own_photos bzgjph_1" on storage.objects;

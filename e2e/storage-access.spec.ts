@@ -103,16 +103,17 @@ test("reclassification follows authoritative metadata and context cannot overrid
   }finally{await db.close();}
 });
 
-test("Storage migration replays and rejects unknown policies, public bucket and missing predecessor",async()=>{
-  for(const scenario of ['replay','policy','bucket','predecessor']) {
+test("Storage migration replays and rejects unknown policies, public bucket, disabled RLS and missing predecessor",async()=>{
+  for(const scenario of ['replay','policy','bucket','rls','predecessor']) {
     const db=await storageDatabase(false);
     try{
       if(scenario==='policy') await db.exec('create policy leak on storage.objects for all using (true)');
       if(scenario==='bucket') await db.exec("update storage.buckets set public=true where id='wine-photos'");
+      if(scenario==='rls') await db.exec('alter table storage.objects disable row level security');
       if(scenario==='predecessor') await db.exec('drop policy "Users can view allowed entry group slides" on entry_group_slides');
       const sql=await readFile(storageMigration,'utf8');
       if(scenario==='replay'){await db.exec(sql);await db.exec(sql);}
-      else {await expect(db.exec(sql)).rejects.toThrow(/Unreviewed|private|B01/);await db.exec('rollback');}
+      else {await expect(db.exec(sql)).rejects.toThrow(/Unreviewed|private|RLS|B01/);await db.exec('rollback');}
     }finally{await db.close();}
   }
 });
