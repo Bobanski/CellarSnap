@@ -1,0 +1,213 @@
+{
+  "samples": [
+    {
+      "phase": "warm-first",
+      "elapsed": 0,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "MISS",
+      "age": null,
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "warm-first",
+      "elapsed": 0,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "MISS",
+      "age": null,
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "warm-repeat",
+      "elapsed": 0,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "HIT",
+      "age": "0",
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "warm-repeat",
+      "elapsed": 0,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "HIT",
+      "age": "0",
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "after-privacy",
+      "elapsed": 0,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "HIT",
+      "age": "0",
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "after-privacy",
+      "elapsed": 0,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "HIT",
+      "age": "0",
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 0,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "HIT",
+      "age": "2",
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 0,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "HIT",
+      "age": "2",
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 5,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "HIT",
+      "age": "7",
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 5,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "HIT",
+      "age": "7",
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 15,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "HIT",
+      "age": "17",
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 15,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "HIT",
+      "age": "17",
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 30,
+      "kind": "raw",
+      "status": 200,
+      "bytes": 168826,
+      "cache": "HIT",
+      "age": "32",
+      "cacheControl": null,
+      "sha256": "e710fc6bd4f12d9f88b733d067bd89b1ef1dd918a90d02c9d5aa3791a739a6cf"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 30,
+      "kind": "transformed",
+      "status": 200,
+      "bytes": 3678,
+      "cache": "HIT",
+      "age": "32",
+      "cacheControl": null,
+      "sha256": "b4050dea28794be2e671665fdfed283eb0ef4a79c7da8c6e4b7b53aefb95405f"
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 60,
+      "kind": "raw",
+      "status": 400,
+      "bytes": 88,
+      "cache": "BYPASS",
+      "age": null,
+      "cacheControl": null,
+      "sha256": null
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 60,
+      "kind": "transformed",
+      "status": 400,
+      "bytes": 88,
+      "cache": "BYPASS",
+      "age": null,
+      "cacheControl": null,
+      "sha256": null
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 90,
+      "kind": "raw",
+      "status": 400,
+      "bytes": 88,
+      "cache": "BYPASS",
+      "age": null,
+      "cacheControl": null,
+      "sha256": null
+    },
+    {
+      "phase": "after-delete",
+      "elapsed": 90,
+      "kind": "transformed",
+      "status": 400,
+      "bytes": 88,
+      "cache": "BYPASS",
+      "age": null,
+      "cacheControl": null,
+      "sha256": null
+    }
+  ],
+  "phases": [
+    {
+      "privacyDoesNotRevokeExistingRawSignature": true
+    },
+    {
+      "copyHashPreserved": true,
+      "newPathReadableAfterOldDeleted": true,
+      "observationRegion": "single execution host; not global propagation proof"
+    }
+  ],
+  "fixturesRemoved": true
+}

@@ -2,6 +2,7 @@
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
+- **Current revocation checkpoint:** [B02h evidence/contract](handovers/batch-02h.md); synthetic measurement complete, production rekey/client cutover still P0/Partial.
 - **Current session checkpoint:** [B02g bearer/mobile images](handovers/batch-02g.md), implemented and local QC passed; release pending. Next B02h legacy revocation evidence and B08c ordinary web atomic edits.
 - **Latest release and resume point:** [B02e/B02f/B08b](handovers/b02e-b02f-b08b-release.md), [sanitized QC](evidence/b02e-b02f-b08b-release.json). #130/#131/#132 merged, SQL live, primary web live-verified; native distribution and broader privacy/lifecycle residuals remain explicit.
 - **Work queue and current finding status:** [canonical backlog](backlog.md).

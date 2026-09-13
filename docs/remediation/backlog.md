@@ -418,3 +418,6 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 
 ### B02g local QC checkpoint
 - 409 isolated checks, production build, web/mobile types/lint and all Expo exports passed. Actual desktop/phone Expo image/privacy/outage/retry, cross-origin bearer, signature-free adopted payload, old-client compatibility, sign-out and owner crop/original-source checks passed. [Checkpoint](handovers/batch-02g.md). No migration/native release; AUD-01 remains Partial for release, legacy revocation and native acceptance.
+
+### B02h revocation measurement/contract complete
+- AUD-01 P0/Partial: real disposable raw/transformed Storage URLs were CDN HITs after privacy changes and remained readable 0/5/15/30 seconds after old-object deletion; denial at 60/90 seconds. Copy hash preserved, fixture cleaned. Single host, no global deadline/native retained-copy guarantee. [Contract](b02h-photo-revocation-contract.md), [checkpoint](handovers/batch-02h.md). No production rekey or old-client cutoff; durable rekey plus supported-client/authority adoption remains required.
