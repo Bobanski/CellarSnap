@@ -1,0 +1,13 @@
+{
+  "date": "2026-09-13T03:31:05.952Z",
+  "release": "a0a95642e0d632f6562760702a171438a984a875",
+  "deletedScanIds": [
+    "scan-mtz95wgc-tona8ppa"
+  ],
+  "deletedParents": 1,
+  "childrenBefore": 48,
+  "childrenAfter": 0,
+  "baselineScansRetained": 1,
+  "entrySaves": 0,
+  "accountChanges": 0
+}

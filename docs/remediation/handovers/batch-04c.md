@@ -1,5 +1,7 @@
 # B04c dependency handover — September 12, 2026
 
+> Historical implementation checkpoint. Superseded for release state by the [B04c production handover](b04c-release.md): PR #98 merged and web production verified at `a0a9564`.
+
 ## Objective and IDs
 Compatible dependency remediation for AUD-08, issue [#97](https://github.com/Bobanski/CellarSnap/issues/97), PR [#98](https://github.com/Bobanski/CellarSnap/pull/98). Implementation is `588d49a` on `codex/b04c-dependencies`, based on main `1db7d80`. AUD-08 remains **Partial** because two mobile advisory roots and release/native acceptance remain. AUD-48 gains real-codec coverage. Existing QC-10 is now Open after fixed-viewport reproduction; no B11 product fix is mixed in.
 
