@@ -1,5 +1,6 @@
-import { createClient, type User } from "@supabase/supabase-js";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import type { Database } from "@shared";
+import { createTypedSupabaseServerClient } from "@/lib/supabase/server";
 
 export type RequestAuthMode = "bearer" | "cookie";
 
@@ -9,7 +10,7 @@ export type RequestAuthOptions = {
 };
 
 export type RequestAuthResult = {
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  supabase: SupabaseClient;
   user: User;
   authMode: RequestAuthMode;
 };
@@ -34,7 +35,7 @@ type CreateBearerClientParams = {
 export type RequestAuthDependencies = {
   getEnv?: () => RequestAuthEnv;
   createBearerClient?: (params: CreateBearerClientParams) => RequestAuthClientLike;
-  createCookieClient?: () => Promise<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
+  createCookieClient?: () => Promise<SupabaseClient>;
 };
 
 export class RequestAuthError extends Error {
@@ -66,8 +67,8 @@ function createBearerClient({
   supabaseUrl,
   supabaseAnonKey,
   bearerToken,
-}: CreateBearerClientParams): RequestAuthClientLike {
-  return createClient(supabaseUrl, supabaseAnonKey, {
+}: CreateBearerClientParams) {
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -78,19 +79,23 @@ function createBearerClient({
         Authorization: `Bearer ${bearerToken}`,
       },
     },
-  }) as unknown as RequestAuthClientLike;
+  });
 }
 
-export async function requireRequestAuth(
+async function resolveRequestAuth<Client extends RequestAuthClientLike>(
   request: Request,
-  options?: RequestAuthOptions,
-  dependencies?: RequestAuthDependencies
-): Promise<RequestAuthResult> {
+  options: RequestAuthOptions | undefined,
+  dependencies: {
+    getEnv: () => RequestAuthEnv;
+    createBearerClient: (params: CreateBearerClientParams) => Client;
+    createCookieClient: () => Promise<Client>;
+  }
+): Promise<{ supabase: Client; user: User; authMode: RequestAuthMode }> {
   const allowBearer = options?.allowBearer ?? true;
   const allowCookieFallback = options?.allowCookieFallback ?? true;
-  const getEnv = dependencies?.getEnv ?? getDefaultEnv;
-  const buildBearerClient = dependencies?.createBearerClient ?? createBearerClient;
-  const createCookieClient = dependencies?.createCookieClient ?? createSupabaseServerClient;
+  const getEnv = dependencies.getEnv;
+  const buildBearerClient = dependencies.createBearerClient;
+  const createCookieClient = dependencies.createCookieClient;
 
   if (allowBearer) {
     const bearerToken = getBearerToken(request);
@@ -108,9 +113,7 @@ export async function requireRequestAuth(
 
       if (user) {
         return {
-          supabase: bearerClient as unknown as Awaited<
-            ReturnType<typeof createSupabaseServerClient>
-          >,
+          supabase: bearerClient,
           user,
           authMode: "bearer",
         };
@@ -134,4 +137,37 @@ export async function requireRequestAuth(
   }
 
   throw new RequestAuthError("Unauthorized");
+}
+
+export type TypedRequestAuthResult = {
+  supabase: SupabaseClient<Database>;
+  user: User;
+  authMode: RequestAuthMode;
+};
+
+export function requireTypedRequestAuth(
+  request: Request,
+  options?: RequestAuthOptions
+): Promise<TypedRequestAuthResult> {
+  return resolveRequestAuth(request, options, {
+    getEnv: getDefaultEnv,
+    createBearerClient,
+    createCookieClient: createTypedSupabaseServerClient,
+  });
+}
+
+// AUD-21 migration bridge: preserve legacy callers and their injectable auth mocks.
+// Both entry points use the same resolver and typed runtime clients.
+export async function requireRequestAuth(
+  request: Request,
+  options?: RequestAuthOptions,
+  dependencies?: RequestAuthDependencies
+): Promise<RequestAuthResult> {
+  if (!dependencies) return requireTypedRequestAuth(request, options);
+  const result = await resolveRequestAuth<RequestAuthClientLike>(request, options, {
+    getEnv: dependencies.getEnv ?? getDefaultEnv,
+    createBearerClient: dependencies.createBearerClient ?? createBearerClient,
+    createCookieClient: dependencies.createCookieClient ?? createTypedSupabaseServerClient,
+  });
+  return { ...result, supabase: result.supabase as SupabaseClient };
 }

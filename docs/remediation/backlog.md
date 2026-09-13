@@ -79,7 +79,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-10 | P2 | Expo recovery retains a displaced page scroll after navigation | Open | B04c fixed 390×844 single-tab retest reproduced root top -160/scrollY 160 and light gap. B11: restore full-height background/navigation scroll and verify available native behavior. [QC](../audits/b04c-dependency-qc-2026-09-12.md). |
 | QC-11 | P2 | Script-rendered menu reports successful empty scan | Open | B11 bounded parser follow-up: reject empty/unreadable results with upload guidance; preserve supported server-rendered menus. |
 | QC-12 | P2 | Expo single-photo feed cards render loaded images at zero height | Open | B11: reproduce/fix static Image sizing under Pressable; candidate and prior B04c export both reproduce. Related AUD-38/OPS-02; see detail below. |
-| QC-13 | P1 | Grape search rejects native bearer authentication | Open | B05d/AUD-39: use the shared cookie/bearer auth contract and preserve typed lookups. Candidate and prior live production return 401 for valid bearer-only grape requests; control endpoint returns 200. See detail below. |
+| QC-13 | P1 | Grape search rejects native bearer authentication | In progress | B05d/AUD-39: use the shared cookie/bearer auth contract and preserve typed lookups. Candidate and prior live production return 401 for valid bearer-only grape requests; control endpoint returns 200. See detail below. |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
@@ -264,3 +264,6 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - Acceptance: shared request auth with typed cookie/bearer clients; valid bearer and cookie lookup parity, invalid/anonymous 401, alias/name/ranking/limit regressions, browser and Expo autocomplete checks with no cookie masking; native acceptance when available.
 - Deployment / rollback: route code only; no SQL/data migration required. Preserve missing-reference-table 503 semantics.
 - Verification / residual work: no fix in B05c; deterministic source and HTTP reproduction above are sufficient to resume.
+
+### B05d active slice — QC-13 / AUD-21
+- September 13, 2026: `codex/b05d-grape-auth`, based on `2ce30ce`, issue #104. Typed request-auth cookie/bearer clients and grape lookup parity; no SQL. Preserve existing cookie fallback semantics and missing-reference-table errors.

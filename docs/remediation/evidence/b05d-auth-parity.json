@@ -1,0 +1,73 @@
+{
+  "base": "http://localhost:3001",
+  "checks": [
+    {
+      "query": "nebbiolo",
+      "bearerOnly": 200,
+      "cookieOnly": 200,
+      "equal": true,
+      "names": [
+        "Nebbiolo"
+      ]
+    },
+    {
+      "query": "abernet auvignon",
+      "bearerOnly": 200,
+      "cookieOnly": 200,
+      "equal": true,
+      "names": [
+        "Cabernet Sauvignon"
+      ]
+    },
+    {
+      "query": "syrah",
+      "bearerOnly": 200,
+      "cookieOnly": 200,
+      "equal": true,
+      "names": [
+        "Syrah"
+      ]
+    },
+    {
+      "query": "zzqcnomatch",
+      "bearerOnly": 200,
+      "cookieOnly": 200,
+      "equal": true,
+      "names": []
+    },
+    {
+      "query": "!!!",
+      "bearerOnly": 200,
+      "cookieOnly": 200,
+      "equal": true,
+      "names": []
+    },
+    {
+      "mode": "anonymous",
+      "status": 401
+    },
+    {
+      "mode": "invalid",
+      "status": 401
+    },
+    {
+      "mode": "invalid bearer with valid cookie fallback",
+      "status": 200
+    },
+    {
+      "limit": "default",
+      "count": 8,
+      "status": 200
+    },
+    {
+      "limit": "&limit=2",
+      "count": 2,
+      "status": 200
+    },
+    {
+      "limit": "&limit=999",
+      "count": 11,
+      "status": 200
+    }
+  ]
+}
