@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { isProtectedPhotoUri, loadPhotoDataUrl } from "@/src/lib/storage/photoDelivery";
 
 export function extensionForMimeType(mimeType: string) {
   if (mimeType === "image/png") {
@@ -110,6 +111,10 @@ function readArrayBufferFromDataUrl(uri: string) {
 }
 
 export async function readPhotoBytes(uri: string) {
+  if (isProtectedPhotoUri(uri)) {
+    // Never retry a denied remote read through the unauthenticated XHR fallback.
+    return readPhotoBytes(await loadPhotoDataUrl(uri));
+  }
   const normalizedUri = uri.trim();
   if (!normalizedUri) {
     throw new Error("Unable to read selected photo.");

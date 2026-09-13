@@ -1,4 +1,4 @@
-import { authenticatedPhotoUrl, isValidPhotoPath, usesCookiePhotoDelivery } from "@/lib/storage/photoDelivery";
+import { authenticatedPhotoUrl, isValidPhotoPath, usesRequestPhotoDelivery } from "@/lib/storage/photoDelivery";
 import { signPhotoPaths } from "@shared/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -40,7 +40,7 @@ export async function signPhotoUrl(
     return null;
   }
 
-  return bucket === DEFAULT_PHOTO_BUCKET && usesCookiePhotoDelivery(supabase)
+  return bucket === DEFAULT_PHOTO_BUCKET && usesRequestPhotoDelivery(supabase)
     ? authenticatedPhotoUrl(path) : data.signedUrl;
 }
 
@@ -57,7 +57,7 @@ export async function signPhotoUrls(
     signBatch: (batch) => supabase.storage.from(bucket).createSignedUrls(batch, ttlSeconds),
     signOne: (path) => signPhotoUrl(path, supabase, options),
   }, options);
-  if (bucket === DEFAULT_PHOTO_BUCKET && usesCookiePhotoDelivery(supabase)) {
+  if (bucket === DEFAULT_PHOTO_BUCKET && usesRequestPhotoDelivery(supabase)) {
     for (const [path, url] of result) result.set(path, url && isValidPhotoPath(path) ? authenticatedPhotoUrl(path) : null);
   }
   return result;

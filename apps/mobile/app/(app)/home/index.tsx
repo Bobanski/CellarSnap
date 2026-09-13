@@ -7,13 +7,13 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { router, useFocusEffect, type RelativePathString } from "expo-router";
 import { lightImpact } from "@/src/lib/haptics";
 import {

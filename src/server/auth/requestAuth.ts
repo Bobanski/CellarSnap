@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { Database } from "@shared";
 import { createTypedSupabaseServerClient } from "@/lib/supabase/server";
+import { registerRequestPhotoClient } from "@/lib/storage/photoDelivery";
+import { PHOTO_DELIVERY_HEADER, PHOTO_DELIVERY_VERSION } from "@shared/photoDelivery";
 
 export type RequestAuthMode = "bearer" | "cookie";
 
@@ -112,6 +114,9 @@ async function resolveRequestAuth<Client extends RequestAuthClientLike>(
       } = await bearerClient.auth.getUser();
 
       if (user) {
+        if (request.headers.get(PHOTO_DELIVERY_HEADER) === PHOTO_DELIVERY_VERSION) {
+          registerRequestPhotoClient(bearerClient);
+        }
         return {
           supabase: bearerClient,
           user,

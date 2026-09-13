@@ -2,11 +2,19 @@ import sharp from 'sharp';
 import { RequestAuthError, requireRequestAuth, type RequestAuthResult } from '@/server/auth/requestAuth';
 import { fetchShareImageBytes, SHARE_IMAGE_HEADERS } from '@/server/shares/imageDelivery';
 import { isValidPhotoPath } from '@/lib/storage/photoDelivery';
+import { MAX_DELIVERED_PHOTO_BYTES } from '@shared/photoDelivery';
 
-const headers = { ...SHARE_IMAGE_HEADERS, Vary: 'Cookie, Authorization' };
+export const AUTHENTICATED_IMAGE_HEADERS = {
+  ...SHARE_IMAGE_HEADERS, Vary: 'Cookie, Authorization',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization',
+};
+const headers = AUTHENTICATED_IMAGE_HEADERS;
 
 export function createAuthenticatedImageGetHandler(
-  authenticate: (request: Request) => Promise<RequestAuthResult> = requireRequestAuth,
+  authenticate: (request: Request) => Promise<RequestAuthResult> = request =>
+    requireRequestAuth(request, { allowCookieFallback: !request.headers.has('authorization') }),
   fetchBytes = fetchShareImageBytes,
 ) {
   return async (request: Request) => {
@@ -33,6 +41,7 @@ export function createAuthenticatedImageGetHandler(
       if (variant === 'display') output.resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true });
       // Keep original dimensions for recropping; never serve active uploaded content.
       const body = new Uint8Array(await output.webp({ quality: 90 }).toBuffer());
+      if (body.byteLength > MAX_DELIVERED_PHOTO_BYTES) return new Response(null, { status: 413, headers });
       return new Response(body, { headers: { ...headers, 'Content-Type': 'image/webp' } });
     } catch (error) {
       return new Response(null, { status: error instanceof RequestAuthError ? 401 : 503, headers });

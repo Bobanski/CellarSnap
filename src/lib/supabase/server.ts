@@ -1,4 +1,4 @@
-import { registerCookiePhotoClient } from "@/lib/storage/photoDelivery";
+import { registerRequestPhotoClient } from "@/lib/storage/photoDelivery";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@shared";
 import { cookies } from "next/headers";
@@ -22,7 +22,7 @@ export async function createTypedSupabaseServerClient(context?: MiddlewareContex
   if (context) {
     const { request, response } = context;
 
-    return registerCookiePhotoClient(createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    return registerRequestPhotoClient(createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
@@ -47,7 +47,7 @@ export async function createTypedSupabaseServerClient(context?: MiddlewareContex
   // Server Components / general server usage (Next 16 cookies may be async)
   const cookieStore = await cookies();
 
-  return registerCookiePhotoClient(createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return registerRequestPhotoClient(createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll().map(({ name, value }) => ({ name, value }));

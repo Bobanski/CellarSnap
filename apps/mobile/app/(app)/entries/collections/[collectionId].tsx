@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +10,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import {

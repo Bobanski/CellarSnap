@@ -27,7 +27,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -39,6 +38,7 @@ import {
   StyleSheet,
   View
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import * as SMS from "expo-sms";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";

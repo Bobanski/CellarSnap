@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,6 +19,7 @@ import {
   StyleSheet,
   View
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { lightImpact } from "@/src/lib/haptics";

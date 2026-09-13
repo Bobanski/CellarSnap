@@ -1,4 +1,5 @@
-import { ActivityIndicator, Image, Modal, Pressable, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, View } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { SelectField } from "@/src/components/entries/newEntryFormParts";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";

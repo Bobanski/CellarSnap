@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADERS } from "@/src/lib/api/webApi";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -108,7 +109,7 @@ export async function fetchExploreProfile(
   try {
     response = await fetch(
       `${baseUrl}/api/explore/${encodeURIComponent(type)}/${encodeURIComponent(slug)}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
+      { headers: { ...PHOTO_DELIVERY_HEADERS, Authorization: `Bearer ${accessToken}` } },
     );
   } catch {
     return { ok: false, errorMessage: "Unable to reach the server right now." };

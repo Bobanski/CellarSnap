@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import { PhotoImage as Image } from "@/src/components/PhotoImage";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   PUBLIC_PROFILE_COPY,
