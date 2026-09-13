@@ -1,0 +1,50 @@
+{
+  "date": "2026-09-13T03:26:46.360Z",
+  "release": "a0a95642e0d632f6562760702a171438a984a875",
+  "checks": [
+    {
+      "name": "designated account password sign-in",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "anonymous crop denied",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "name": "normal crop",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "zoomed crop",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "tiny image denied",
+      "status": 422,
+      "passed": true
+    },
+    {
+      "name": "private URL denied",
+      "url": "http://127.0.0.1/private",
+      "status": 422,
+      "passed": true
+    },
+    {
+      "name": "private URL denied",
+      "url": "http://[::1]/private",
+      "status": 422,
+      "passed": true
+    },
+    {
+      "name": "public HTML wine list",
+      "status": 200,
+      "wines": 48,
+      "scanId": "scan-mtz95wgc-tona8ppa",
+      "passed": true
+    }
+  ]
+}

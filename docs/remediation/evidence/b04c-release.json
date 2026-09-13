@@ -1,0 +1,48 @@
+{
+  "id": "dpl_ETLBU2jPWkBR1DVctLZN1PgCE3VZ",
+  "name": "cellar-snap",
+  "url": "cellar-snap-cvsto0fux-eitan-sneiders-projects.vercel.app",
+  "target": "production",
+  "readyState": "READY",
+  "createdAt": 1789269909158,
+  "aliases": [
+    "cellarsnap.app",
+    "cellar-snap.vercel.app",
+    "cellar-snap-eitan-sneiders-projects.vercel.app",
+    "cellar-snap-git-main-eitan-sneiders-projects.vercel.app"
+  ],
+  "commit": "a0a95642e0d632f6562760702a171438a984a875",
+  "pullRequest": 98,
+  "mergedAt": "2026-09-13T03:25:06Z",
+  "nextVersion": "16.3.5",
+  "runtimeLogWindowStart": "2026-09-13T03:25:50Z",
+  "runtimeLogRetrievedAt": "2026-09-13T03:30:22.773427+00:00",
+  "runtimeErrors": [
+    {
+      "timestamp": 1789269983013,
+      "path": "/login",
+      "responseStatus": 200,
+      "message": "Error [AuthApiError]: Invalid Refresh Token: Refresh Token Not Found"
+    }
+  ],
+  "browser": {
+    "phone": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "login": "passed",
+      "visibleFeedImages": "loaded",
+      "wineFilter": "Red deselected: 48 to 27 wines"
+    },
+    "desktop": {
+      "width": 1440,
+      "height": 1000,
+      "documentWidth": 1440,
+      "resultsAfterReload": "48 of 48 shown",
+      "capturedResultsConsoleWarningsOrErrors": 0
+    },
+    "signOut": "login page confirmed",
+    "viewportReset": true
+  },
+  "nativeRelease": "not performed; native runtimes unavailable"
+}
