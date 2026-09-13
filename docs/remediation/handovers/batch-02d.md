@@ -1,5 +1,8 @@
 # B02d handover — September 13, 2026
 
+**Subsequent release:** merged and QC verified in [B02c2/B02d/B08a release](b02c2-b02d-b08a-release.md). The dated checkpoint below preserves implementation history; use the release handover for current state.
+
+
 ## Objective and IDs
 AUD-01 anonymous-share image delivery. New shares stop distributing reusable Storage signatures. Photo bytes pass through a dynamic application endpoint which checks share revocation/expiry, public entry, non-test author and current source-photo authority on every request. No SQL, bulk invalidation, key rotation or object rewrite.
 

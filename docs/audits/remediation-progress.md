@@ -115,3 +115,10 @@ PR #108 (`719ad1d`) restores typed bearer grape autocomplete; PR #110 (`d4e5cd2`
 - Four bounded PRs #121–#124 merged through `1b3dff3`; qualitative mobile feed labels, reachable featured controls, grape resolver schema/provenance and QC-discovered gallery scroll/dot repair. No SQL.
 - 388 isolated + 12 schema checks, compile/lint/build/exports/CI and actual desktop/phone web/Expo interaction pass. Live private editor fixtures retain 92/Syrah and exact resolver logs; fixtures removed and awards unchanged. Native runtime/distribution remains unavailable.
 - Privacy re-triage preserved P0 AUD-01 cache/revocation and P1 AUD-06/QC-01 projection/payload work. [Release handover](../remediation/handovers/b02c1-b06g-b07a-b06h-release.md), [sanitized evidence](../remediation/evidence/b02c1-b06g-b07a-b06h-qc.json).
+
+
+## September 13 — B02c2/B02d/B08a released
+
+#126 (`bff9cfd`) contains public-profile view writes/raw-name exposure; the exact forward SQL is live. #127 (`b4644c0`) adds request-time anonymous-share image authorization and no-store delivery. #128 (`3415e6a`) repairs canonical mobile grape reads, preserves notes-only selections and fixes owner editor search/error guards (QC-17). Primary production is Ready and live desktop/phone share/profile/OG/revocation checks passed, with zero bounded error-log records.
+
+398 isolated tests, 12 schema tests, actual PG17 replay/catalog/concurrency checks, types/lint/build, all Expo exports and desktop/phone web/Expo failure/recovery QC passed. Fixtures removed; profiles/awards restored; original workspace edits preserved. AUD-01 old capabilities/authenticated delivery, AUD-06 helper RPCs, QC-01 numeric payloads and AUD-13 atomic explicit saves remain open residuals. QC-07/QC-17 stay Partial for unavailable native acceptance/distribution. [Release handover](../remediation/handovers/b02c2-b02d-b08a-release.md), [sanitized evidence](../remediation/evidence/b02c2-b02d-b08a-release.json).

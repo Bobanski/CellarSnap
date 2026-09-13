@@ -1,5 +1,8 @@
 # B08a handover — September 13, 2026
 
+**Subsequent release:** merged and QC verified in [B02c2/B02d/B08a release](b02c2-b02d-b08a-release.md). The dated checkpoint below preserves implementation history; use the release handover for current state.
+
+
 ## Objective and IDs
 QC-07 canonical mobile grape reads and notes-only retention; QC-17 owner-editor search discovered during acceptance. Related AUD-13/21. No SQL, historical backfill, broad entry mutation refactor or theme changes.
 
