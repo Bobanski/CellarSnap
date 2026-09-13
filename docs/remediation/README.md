@@ -3,13 +3,15 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest handover:** [B02b production rollout](handovers/sql-rollout-b02b.md). Implementation: [B02b2 Storage/share privacy](handovers/batch-02b2.md). Predecessor: [B02b1 photo/group privacy](handovers/batch-02b1.md). Prior release: [B01/B02a SQL deployed](handovers/sql-rollout-b01-b02a.md); earlier [merged](handovers/merged-b01-b02a.md), [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md).
+- **Latest handover:** [B03a knowledge read containment](handovers/batch-03a.md). Prior release: [B02b production rollout](handovers/sql-rollout-b02b.md). Implementation: [B02b2 Storage/share privacy](handovers/batch-02b2.md). Predecessor: [B02b1 photo/group privacy](handovers/batch-02b1.md). Prior release: [B01/B02a SQL deployed](handovers/sql-rollout-b01-b02a.md); earlier [merged](handovers/merged-b01-b02a.md), [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md).
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
 
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+B03a / AUD-04 read isolation is implemented in PR #90; SQL remote `20260913002605` is deployed and live read checks passed. 201 tests and desktop/phone/Expo web chat passed; merge pending. [QC](../audits/b03a-knowledge-qc-2026-09-12.md). B03b lifecycle/FK propagation is next; AUD-04 is not closed.
 
 B02b1 [PR #86](https://github.com/Bobanski/CellarSnap/pull/86) and B02b2 [PR #87](https://github.com/Bobanski/CellarSnap/pull/87) are **merged, migrated and deployed to primary production**, release commit `fd391aa`. Metadata/group privacy and source-authorized Storage/signing are live. Remote SQL versions are `20260912235835` and `20260913000034`; the hosted Storage ownership correction and exact checksums are in the [release handover](handovers/sql-rollout-b02b.md).
 

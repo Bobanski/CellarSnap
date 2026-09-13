@@ -23,6 +23,7 @@ export default defineConfig({
     "entry-access-policy.spec.ts",
     "photo-group-access.spec.ts",
     "storage-access.spec.ts",
+    "knowledge-access.spec.ts",
     "audit-regressions.spec.ts",
   ],
 });
