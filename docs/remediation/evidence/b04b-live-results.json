@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-13T02:29:12.218Z",
+  "release": "c83a5cb9e8cfb5c94ed950e1ea0edc50ee33e309",
+  "assertions": 6,
+  "denials": [
+    {
+      "url": "http://127.0.0.1/private-menu",
+      "status": 422,
+      "error": "That URL must use a public website address."
+    },
+    {
+      "url": "http://[::1]/private-menu",
+      "status": 422,
+      "error": "That URL must use a public website address."
+    },
+    {
+      "url": "http://168.63.129.16/private-menu",
+      "status": 422,
+      "error": "That URL must use a public website address."
+    },
+    {
+      "url": "http://user:password@restaurant.example/menu",
+      "status": 422,
+      "error": "URLs containing credentials are not supported."
+    },
+    {
+      "url": "https://example.com:5432/menu",
+      "status": 422,
+      "error": "Only standard web ports are supported."
+    }
+  ],
+  "validMenu": {
+    "scanId": "scan-mtz73v3s-6lkm14jo",
+    "wines": 48,
+    "venue": "Maison Harlem",
+    "source": "url"
+  },
+  "passed": true,
+  "deployment": {
+    "id": "dpl_3xyryoBujFvufLxw7Gf3aibBChDY",
+    "state": "READY",
+    "alias": "cellarsnap.app",
+    "buildLogCommit": "c83a5cb"
+  },
+  "browser": {
+    "phone": "390x844 private denial, 48/48 results, deselect White -> 33/48, Done closes picker",
+    "desktop": "1440x1000, 48/48, recommendations, no horizontal overflow",
+    "errors": "No new browser error; expected warning for intentional 422"
+  },
+  "runtimeErrorLogQuery": {
+    "since": "2026-09-13T02:28:00Z",
+    "observedThrough": "2026-09-13T02:30:39Z",
+    "errorRecords": 0
+  }
+}
