@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { ImageResponse } from "next/og";
 import { resolvePublicPostShare } from "@/lib/shares";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { loadPublicShareImage } from "@/server/shares/imageDelivery";
 
 const SCREEN_BG = "#220E14";
 const SURFACE_PRIMARY = "#2E1420";
@@ -186,11 +188,11 @@ export default async function OpenGraphImage({ params }: OpenGraphImageProps) {
   const matchText =
     typeof share.matchScore === "number" ? `${share.matchScore}% match to their palate` : null;
   const noteText = share.notePreview ?? "Shared from Cluster";
-  const previewImageUrl =
-    share.previewImageOgUrl ??
-    share.previewImageUrl ??
-    share.labelImageOgUrl ??
-    share.labelImageUrl;
+  // Inline freshly authorized bytes so the renderer neither caches nor follows
+  // a reusable Storage capability or a request-derived host URL.
+  const image = await loadPublicShareImage(createSupabaseAdminClient(), shareId,
+    share.previewImageUrl ? 'preview' : 'label', 'og').catch(() => null);
+  const previewImageUrl = image ? `data:image/png;base64,${Buffer.from(image).toString('base64')}` : null;
   const authorText = `Posted by ${share.authorName}`;
 
   return new ImageResponse(

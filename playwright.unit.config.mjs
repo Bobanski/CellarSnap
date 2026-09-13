@@ -28,6 +28,7 @@ export default defineConfig({
     "knowledge-access.spec.ts",
     "auth-privacy.spec.ts",
     "public-profile-access.spec.ts",
+    "share-image-delivery.spec.ts",
     "grape-search.spec.ts",
     "consumed-dates.spec.ts",
     "badge-contract.spec.ts",
