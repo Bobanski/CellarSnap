@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -7,7 +8,7 @@ import { normalizePhone } from "@/lib/validation/phone";
 import { resolveIdentifierForAuth } from "@/server/auth/identifierResolution";
 
 const requestSchema = z.object({
-  identifier: z.string().trim().min(1),
+  identifier: z.string().trim().min(1).max(320),
   redirectTo: z.string().url().optional(),
 });
 
@@ -19,7 +20,7 @@ type SupabaseRecoveryClient = {
   rpc: (
     fn: string,
     args?: Record<string, unknown>
-  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
   auth: {
     signInWithOtp: (params: {
       phone: string;
@@ -33,6 +34,7 @@ type SupabaseRecoveryClient = {
 };
 
 type RecoveryStartHandlerDependencies = {
+  createResolverClient: () => Pick<SupabaseRecoveryClient, "rpc">;
   createAuthClient: () => SupabaseRecoveryClient;
 };
 
@@ -55,6 +57,7 @@ function createDefaultAuthClient() {
 
 const defaultDependencies: RecoveryStartHandlerDependencies = {
   createAuthClient: createDefaultAuthClient,
+  createResolverClient: createSupabaseAdminClient,
 };
 
 export function createRecoveryStartHandler(
@@ -71,6 +74,7 @@ export function createRecoveryStartHandler(
       routeKey: "recovery-start",
       windowMs: RATE_LIMIT_WINDOW_MS,
       maxRequests: RATE_LIMIT_MAX_REQUESTS,
+      requireDistributed: true,
     });
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -104,17 +108,14 @@ export function createRecoveryStartHandler(
     const normalizedPhone = normalizePhone(identifier);
 
     if (normalizedPhone) {
-      const { error } = await supabase.auth.signInWithOtp({
+      await supabase.auth.signInWithOtp({
         phone: normalizedPhone,
         options: { shouldCreateUser: false },
       });
-      if (error) {
-        return NextResponse.json({ error: "Unable to start recovery." }, { status: 400 });
-      }
 
       return NextResponse.json(
         { channel: "phone" as const, phone: normalizedPhone },
-        { headers: rateLimitHeaders(rateLimit) }
+        { headers: { ...rateLimitHeaders(rateLimit), "Cache-Control": "no-store" } }
       );
     }
 
@@ -124,7 +125,7 @@ export function createRecoveryStartHandler(
       try {
         recoveryEmail = (
           await resolveIdentifierForAuth({
-            client: supabase,
+            client: resolvedDependencies.createResolverClient(),
             identifier,
             mode: "username",
           })
@@ -153,20 +154,16 @@ export function createRecoveryStartHandler(
       }
     }
 
-    if (!recoveryEmail) {
-      return NextResponse.json({ error: "No account matches that identifier." }, { status: 404 });
-    }
-
-    const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
-      redirectTo: parsed.data.redirectTo,
-    });
-    if (error) {
-      return NextResponse.json({ error: "Unable to start recovery." }, { status: 400 });
-    }
+    // Supabase enforces its configured redirect allowlist. Use the same public
+    // outcome for absent accounts and provider delivery errors.
+    await supabase.auth.resetPasswordForEmail(
+      recoveryEmail ?? "invalid-recovery@invalid.invalid",
+      { redirectTo: parsed.data.redirectTo }
+    );
 
     return NextResponse.json(
       { channel: "email" as const },
-      { headers: rateLimitHeaders(rateLimit) }
+      { headers: { ...rateLimitHeaders(rateLimit), "Cache-Control": "no-store" } }
     );
   };
 }

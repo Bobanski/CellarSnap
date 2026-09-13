@@ -1,6 +1,8 @@
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config.mjs";
 
+process.env.CELLARSNAP_RATE_LIMIT_BACKEND = "memory";
+
 // These suites use pure code, request mocks, or isolated PostgreSQL fixtures.
 // Explicitly exclude browser/production journeys and never start a web server.
 export default defineConfig({
@@ -24,6 +26,7 @@ export default defineConfig({
     "photo-group-access.spec.ts",
     "storage-access.spec.ts",
     "knowledge-access.spec.ts",
+    "auth-privacy.spec.ts",
     "audit-regressions.spec.ts",
   ],
 });

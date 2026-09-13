@@ -12,11 +12,6 @@ type LoginFormValues = {
   password: string;
 };
 
-type ResolvedIdentifier = {
-  email?: string | null;
-  phone?: string | null;
-};
-
 export default function LoginPage() {
   const supabase = createSupabaseBrowserClient();
   const { register, handleSubmit } = useForm<LoginFormValues>();
@@ -43,37 +38,20 @@ export default function LoginPage() {
         return;
       }
 
-      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
+      const response = await fetch("/api/auth/password-sign-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, mode: "auto" }),
+        body: JSON.stringify({ identifier, password: values.password, authMode }),
       });
-
-      if (!resolveResponse.ok) {
-        const payload = await resolveResponse.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "No account matches that sign-in identifier.");
+      const payload = await response.json();
+      if (!response.ok || !payload.session) {
+        setErrorMessage(payload.error ?? "Unable to sign in.");
         setInfoMessage(null);
         return;
       }
-
-      const resolved = (await resolveResponse.json()) as ResolvedIdentifier;
-      const resolvedPhone = resolved.phone?.trim() || null;
-      const resolvedEmail = resolved.email?.trim().toLowerCase() || null;
-
-      if (!resolvedPhone && !resolvedEmail) {
-        setErrorMessage("No account matches that sign-in identifier.");
-        setInfoMessage(null);
-        return;
-      }
-
-      const { error } = await supabase.auth.signInWithPassword(
-        authMode === "phone" && resolvedPhone
-          ? { phone: resolvedPhone, password: values.password }
-          : { email: resolvedEmail!, password: values.password }
-      );
-
+      const { error } = await supabase.auth.setSession(payload.session);
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage("Unable to sign in. Please try again.");
         setInfoMessage(null);
         return;
       }

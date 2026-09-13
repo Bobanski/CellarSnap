@@ -55,14 +55,14 @@ export default function ForgotPasswordScreen() {
       }
 
       if (result.channel === "phone") {
-        setInfoMessage("Verification code sent to your phone number.");
+        setInfoMessage("If an account matches, a verification code will arrive on your phone.");
         router.push({
           pathname: "/(auth)/verify-phone",
           params: { phone: result.phone, mode: "recovery" },
         });
         return;
       }
-      setInfoMessage("Recovery email sent. Use the 6-digit code from that email to reset your password.");
+      setInfoMessage("If an account matches, use the recovery code from your email to reset your password.");
       router.push({
         pathname: "/(auth)/reset-password",
         params: {

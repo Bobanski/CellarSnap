@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import {
   USERNAME_FORMAT_MESSAGE,
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     routeKey: "username-check",
     windowMs: RATE_LIMIT_WINDOW_MS,
     maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    requireDistributed: true,
   });
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createSupabaseAdminClient();
 
   let body: unknown;
   try {
