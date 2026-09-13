@@ -1,3 +1,4 @@
+import { fetchRemoteMenu } from "@/server/listScan/remoteSource";
 import OpenAI from "openai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -55,7 +56,6 @@ const MAX_IMAGE_PROCESSED_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_COUNT = 6;
 const MAX_FILE_INPUT_BYTES = 32 * 1024 * 1024;
 const MAX_FETCHED_TEXT_CHARS = 24_000;
-const MAX_URL_HTML_BYTES = 400_000;
 const MAX_URL_MODEL_INPUT_CHARS = 10_000;
 const REQUEST_TIMEOUT_MS = 90_000;
 const PRICE_NUMBER_PATTERN = /(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?/;
@@ -3530,83 +3530,6 @@ function buildHeuristicParsedResponse(params: {
   };
 }
 
-function assertHttpUrl(value: string) {
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error("Enter a valid URL.");
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Only http and https URLs are supported.");
-  }
-  return parsed;
-}
-
-async function fetchRemoteSource(url: URL) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20_000);
-
-  try {
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "User-Agent": "CellarSnap/1.0 (+wine-list-scan)",
-        Accept:
-          "text/html,application/pdf,image/*;q=0.9,text/plain;q=0.8,*/*;q=0.2",
-      },
-      redirect: "follow",
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error("Unable to fetch that URL right now.");
-    }
-
-    return response;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function readResponseTextPreview(response: Response, maxBytes = MAX_URL_HTML_BYTES) {
-  if (!response.body) {
-    return response.text();
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  const chunks: string[] = [];
-  let consumedBytes = 0;
-
-  try {
-    while (consumedBytes < maxBytes) {
-      const { done, value } = await reader.read();
-      if (done || !value) {
-        break;
-      }
-
-      consumedBytes += value.byteLength;
-      chunks.push(decoder.decode(value, { stream: true }));
-      if (consumedBytes >= maxBytes) {
-        break;
-      }
-    }
-
-    chunks.push(decoder.decode());
-  } finally {
-    try {
-      await reader.cancel();
-    } catch {
-      // Ignore stream cleanup issues; the response is no longer needed.
-    }
-  }
-
-  return chunks.join("");
-}
-
 function extractWineListTextFromHtml(html: string, hash: string) {
   const focusedHtml = sliceHtmlAroundHash(html, hash);
   const { title, siteName, organizationName, text } = stripHtmlToText(focusedHtml);
@@ -3636,15 +3559,15 @@ function extractWineListTextFromHtml(html: string, hash: string) {
 }
 
 async function parseUrlSource({ url, userId }: { url: string; userId: string }) {
-  const parsedUrl = assertHttpUrl(url);
   const tFetch0 = Date.now();
-  const response = await fetchRemoteSource(parsedUrl);
+  const response = await fetchRemoteMenu(url);
+  const parsedUrl = response.url;
   const fetchMs = Date.now() - tFetch0;
-  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  const contentType = response.contentType;
 
   if (contentType.includes("application/pdf") || parsedUrl.pathname.endsWith(".pdf")) {
     const tBytes0 = Date.now();
-    const bytes = await response.arrayBuffer();
+    const bytes = response.bytes;
     const bytesMs = Date.now() - tBytes0;
     const remoteFileName =
       decodeURIComponent(parsedUrl.pathname.split("/").pop() || "wine-list.pdf") ||
@@ -3659,6 +3582,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     });
     (parsed as Record<string, unknown>)._urlDiag = {
       fetchMs,
+      downloadedBytes: response.bytes.byteLength,
       bytesMs,
       contentType,
       path: "pdf",
@@ -3668,7 +3592,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
 
   if (contentType.startsWith("image/")) {
     const tBytes0 = Date.now();
-    const bytes = await response.arrayBuffer();
+    const bytes = response.bytes;
     const bytesMs = Date.now() - tBytes0;
     const remoteFileName =
       decodeURIComponent(parsedUrl.pathname.split("/").pop() || "wine-list.jpg") ||
@@ -3683,6 +3607,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     });
     (parsed as Record<string, unknown>)._urlDiag = {
       fetchMs,
+      downloadedBytes: response.bytes.byteLength,
       bytesMs,
       contentType,
       path: "image",
@@ -3691,7 +3616,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   }
 
   const tHtml0 = Date.now();
-  const rawHtml = await readResponseTextPreview(response);
+  const rawHtml = new TextDecoder().decode(response.bytes);
   const htmlMs = Date.now() - tHtml0;
   const tExtract0 = Date.now();
   const { title, venueName, text: wineSectionText } = extractWineListTextFromHtml(
@@ -3734,6 +3659,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     });
     (parsed as Record<string, unknown>)._urlDiag = {
       fetchMs,
+      downloadedBytes: response.bytes.byteLength,
       htmlMs,
       extractMs,
       contentType,
@@ -3755,6 +3681,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   if (heuristic.wines.length > 0) {
     (heuristic as Record<string, unknown>)._urlDiag = {
       fetchMs,
+      downloadedBytes: response.bytes.byteLength,
       htmlMs,
       extractMs,
       contentType,
