@@ -1,0 +1,100 @@
+{
+  "verifiedAt": "2026-09-13T05:19:26.257916+00:00",
+  "productCommit": "c93e17242098a7bf9db4d278ed1c2d2175ae9780",
+  "pullRequests": [
+    105,
+    106
+  ],
+  "ciRuns": [
+    34739111437,
+    34739709493
+  ],
+  "deployment": {
+    "id": "dpl_2gPei8pUJzvNFQDFXLEscxf6AxnT",
+    "githubDeploymentId": 6417963501,
+    "url": "https://cellar-snap-695hunmbf-eitan-sneiders-projects.vercel.app",
+    "alias": "https://cellarsnap.app",
+    "state": "READY"
+  },
+  "tests": {
+    "isolated": 256,
+    "schemaAndGeneratedSource": 5,
+    "dependency": 7,
+    "tooling": 3,
+    "total": 271,
+    "compileOnlyDatabaseContracts": "passed",
+    "webMobileTypesLint": "passed",
+    "nextBuild": "passed",
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "postgres17Replay": "passed",
+    "pglite18Replay": "passed",
+    "liveCatalogDrift": [],
+    "regeneratedTypesByteIdentical": true
+  },
+  "liveHttp": [
+    {
+      "path": "/login",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/forgot-password",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "expected": 200
+    },
+    {
+      "path": "/api/grapes?q=nebbiolo&limit=8",
+      "status": 401,
+      "expected": 401
+    }
+  ],
+  "browser": {
+    "liveFlows": [
+      "login",
+      "feed",
+      "populated grape browse",
+      "Syrah search",
+      "menu sign-out"
+    ],
+    "viewports": [
+      [
+        1440,
+        1000
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "documentWidthMatches": true,
+    "capturedErrorsWarnings": 0
+  },
+  "data": {
+    "productionSchemaChanges": 0,
+    "disposablePrivateEntriesCreated": 1,
+    "disposableGrapeJoinsCreated": 1,
+    "entryJoinKnowledgeCleanupVerified": true
+  },
+  "limitations": [
+    "native runtimes and distribution unavailable",
+    "AUD-19 managed provisioning and corpus restoration remain partial",
+    "AUD-21 unadopted query/client paths remain partial",
+    "QC-13 valid bearer-only grapes still 401, reproduced pre-release",
+    "OPS-01 duplicate project missing Supabase environment variables"
+  ],
+  "logWindow": {
+    "since": "2026-09-13T05:15:00Z",
+    "level": "error",
+    "deployment": "dpl_2gPei8pUJzvNFQDFXLEscxf6AxnT",
+    "records": 0
+  }
+}

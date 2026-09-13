@@ -3,8 +3,7 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest implementation checkpoint:** [B05c shared types/client adoption](handovers/batch-05c.md), following [B05b schema/replay](handovers/batch-05b.md); issue #104. Scoped QC passed; release pending. New QC-13 remains the next bounded authenticated-query fix.
-- **Latest release:** [B04d/B05a merged and live-verified](handovers/b04d-b05a-release.md). B04d [implementation](handovers/batch-04d.md) / [QC](../audits/b04d-mobile-dependency-qc-2026-09-13.md); B05a [QC](../audits/b05a-tooling-qc-2026-09-13.md). Prior releases: [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md). Prior implementation checkpoints remain linked from those handovers.
+- **Latest handover and release:** [B05b/B05c merged and live-verified](handovers/b05b-b05c-release.md). [Schema/replay](handovers/batch-05b.md), [type adoption](handovers/batch-05c.md), [combined QC](../audits/b05b-b05c-qc-2026-09-13.md). Prior releases: [B04d/B05a](handovers/b04d-b05a-release.md), [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md).
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
 
@@ -12,11 +11,13 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-**B04d and B05a are merged and live on cellarsnap.app at `960caaa` through PRs #100/#102.** Primary Vercel `dpl_73JpFDVgvoe9LSJwoUfx6LDTDhrr` is Ready. B04d repairs the residual CommonJS decoder and xcode/uuid advisory roots; root/mobile audits are zero. AUD-08 remains Partial for actual native acceptance and rebuilt-client distribution. B05a closes AUD-49: Metro maps zero nested agent files (660 before), while shared sources/watch events remain visible; Tailwind and Git also exclude the independent checkouts. [Release and resume steps](handovers/b04d-b05a-release.md).
+**B05b and B05c are merged and live-verified on cellarsnap.app at `c93e172` through PRs #105/#106**, issue #104. Primary Vercel `dpl_2gPei8pUJzvNFQDFXLEscxf6AxnT` is Ready. B05b establishes the reviewed public/private app schema baseline, disposable PostgreSQL 17.6/PGlite replay, permission/trigger/function drift checks and a checksum-locked historical manifest boundary. B05c adds one shared generated public Database source and a bounded typed web/mobile factory/query adoption. [Release and resume steps](handovers/b05b-b05c-release.md).
 
-The tested baseline is **266 checks** (256 isolated + 7 dependency + 3 tooling), web/mobile types/lint, Next build and all Expo exports. Hands-on desktop/phone/Expo and actual Fast Refresh checks passed within stated scope. Live login/feed images/filter/sign-out and four HTTP smoke checks passed; no data mutations or SQL. Native runtimes remain unavailable. Existing QC-10 auth overflow and new QC-12 blank Expo single-photo cards stay B11; prior-build comparison excludes B04d as the image defect's cause.
+**271 checks**, database compile contracts, whole web/mobile types/lint, Next build and all Expo exports passed. Desktop/phone web grape browse/search and Expo producer browse/search were exercised visually, including a private fixture and verified cleanup. Live login/feed/grapes/search/sign-out and four HTTP checks passed. No SQL deployment. Native tooling/distribution remains unavailable; Expo web is not native acceptance.
 
-**Next: bounded B05b reviewed schema baseline/disposable replay (AUD-19)**, then a deliberate shared database type-source/client slice (AUD-21). Do not replay historical scripts against production. Native acceptance/distribution, OPS-01 duplicate hosting, AUD-01 photo cache revocation and AUD-06/QC-01 public projections remain separate. The session-specific merge permission is not standing permission for later sessions.
+**Next: B05d / QC-13 typed request-auth and grape-search cookie/bearer parity.** The new finding reproduces on pre-B05c production: valid native bearer-only grape requests get 401 while a control endpoint gets 200. Preserve web auth and missing-table 503s, and avoid same-host cookies masking native tests. Then continue bounded AUD-21 adoption; full managed provisioning and reviewed corpus/seed restoration remain AUD-19 work. Both findings stay Partial. No historical baseline SQL should run against production; AUD-20 fallback/native retirement prerequisites remain open. The merge permission was one-session only.
+
+B04d dependency and B05a tooling scopes remain as documented in their [release](handovers/b04d-b05a-release.md): audits zero, no nested agent files in Metro; AUD-08 native acceptance/distribution remains Partial and AUD-49 Closed. Existing QC-05/10/12 remain B11. OPS-01 duplicate hosting, AUD-01 cache revocation and AUD-06/QC-01 public projections remain separate.
 
 B04a/AUD-05 and B04b/AUD-07 remain Closed for their stated scopes. PRs #94/#95 and release-doc PR #96 are merged; their [release handover](handovers/b04-release.md) retains SQL/checksums and live acceptance. B04c introduced no migration.
 
@@ -53,7 +54,7 @@ For remaining B02 work, start with policy/access fixtures, not a broad code dele
 
 ## Finding intake and local tickets
 
-Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-11 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
+Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-13 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
 
 When a session finds something new:
 
