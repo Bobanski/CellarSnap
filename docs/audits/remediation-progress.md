@@ -80,3 +80,7 @@ PR #98 merged at 03:25:06 UTC as `a0a9564`; primary Vercel production `dpl_ETLBU
 - September 13, 2026 UTC — B04d / AUD-08, PR #100: both residual mobile advisory roots repaired, 263 checks and browser/Expo QC passed; native acceptance/distribution outstanding. Existing QC-12 added after prior-export comparison. [Handover](../remediation/handovers/batch-04d.md).
 
 - September 13, 2026 — B04d/#100 and B05a/#102 merged; primary web `960caaa` Ready and live desktop/phone verified. 266 tests, AUD-49 Closed; AUD-08 Partial for native acceptance/distribution. No SQL/data mutations. [Release handover](../remediation/handovers/b04d-b05a-release.md).
+
+## September 13 — B05b schema contract checkpoint
+
+Complete reviewed public/private schema capture, disposable PGlite and PostgreSQL 17.6 replay, catalog equality, six drift mutations and actual access/authority checks passed. Existing 256 tests plus three new schema suites pass; live read-only drift checker matches. No production SQL/data changes. AUD-19 remains Partial for full managed provisioning and seed/corpus restoration. See [handover](../remediation/handovers/batch-05b.md). B05c client/type adoption and browser/Expo QC follow before release.

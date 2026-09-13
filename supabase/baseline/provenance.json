@@ -1,0 +1,578 @@
+{
+  "capturedAt": "2026-09-13T04:47:07.830Z",
+  "project": "rbmkypbqavmnuycznssv",
+  "postgres": "17.6",
+  "extensions": [
+    {
+      "extname": "pg_stat_statements",
+      "extversion": "1.11",
+      "nspname": "extensions"
+    },
+    {
+      "extname": "pgcrypto",
+      "extversion": "1.3",
+      "nspname": "extensions"
+    },
+    {
+      "extname": "plpgsql",
+      "extversion": "1.0",
+      "nspname": "pg_catalog"
+    },
+    {
+      "extname": "supabase_vault",
+      "extversion": "0.3.1",
+      "nspname": "vault"
+    },
+    {
+      "extname": "uuid-ossp",
+      "extversion": "1.1",
+      "nspname": "extensions"
+    },
+    {
+      "extname": "vector",
+      "extversion": "0.8.0",
+      "nspname": "public"
+    }
+  ],
+  "migrations": [
+    {
+      "version": "20260312174200",
+      "name": "042_drinking_now",
+      "statements_md5": "d9af7fb6a7acf5934c78766cf613943a"
+    },
+    {
+      "version": "20260312174400",
+      "name": "044_content_report_delete_cascade",
+      "statements_md5": "21f6575e82c023c28c40796fae88cd7e"
+    },
+    {
+      "version": "20260313041136",
+      "name": "049_entry_canonical_fields",
+      "statements_md5": "1af44d7feca35a034f5814846a99d608"
+    },
+    {
+      "version": "20260313041547",
+      "name": "050_scan_resolution_log",
+      "statements_md5": "2960d77672968b683ee4ba9c362037a6"
+    },
+    {
+      "version": "20260313045624",
+      "name": "051_region_aliases_chunk_1",
+      "statements_md5": "59164d3ee093416134950230dc22c135"
+    },
+    {
+      "version": "20260313045958",
+      "name": "051_region_aliases_chunk_2",
+      "statements_md5": "0fbec424b0820bf234287ecb1b15d914"
+    },
+    {
+      "version": "20260313050028",
+      "name": "051_region_aliases_chunk_3",
+      "statements_md5": "d9917a52bb4ab456ad63ce2f962e2f1c"
+    },
+    {
+      "version": "20260313050412",
+      "name": "052_producer_aliases_chunk_1",
+      "statements_md5": "6afa4e2c36e58d17d10a043a7c5b59b0"
+    },
+    {
+      "version": "20260313050614",
+      "name": "052_producer_aliases_chunk_2",
+      "statements_md5": "fe9a07462826c9cc26b2d08a6e123e92"
+    },
+    {
+      "version": "20260313050859",
+      "name": "052_producer_aliases_chunk_3",
+      "statements_md5": "04cce40068f2c6664d0c7b88b2396c67"
+    },
+    {
+      "version": "20260313051435",
+      "name": "052_producer_aliases_chunk_4",
+      "statements_md5": "b573978f8d7ced39a26e688055fce23f"
+    },
+    {
+      "version": "20260313051524",
+      "name": "052_producer_aliases_chunk_5",
+      "statements_md5": "b64a00fa4a72bca3d67a2c8bcb0328ee"
+    },
+    {
+      "version": "20260313052252",
+      "name": "053_base_profiles_chunk_1",
+      "statements_md5": "d17939cc7cbbb6308f9bb13da6f69ce9"
+    },
+    {
+      "version": "20260313053425",
+      "name": "053_base_profiles_chunk_2",
+      "statements_md5": "8d47d9c273ac75a7c06af916cb362116"
+    },
+    {
+      "version": "20260313054021",
+      "name": "054_vintage_weather_modifiers_chunk_1",
+      "statements_md5": "f1f7005690be6b8bba25df83b272b443"
+    },
+    {
+      "version": "20260313054334",
+      "name": "054_vintage_weather_modifiers_chunk_2",
+      "statements_md5": "f9b78a793d0c503df7f456bc75667a20"
+    },
+    {
+      "version": "20260313054629",
+      "name": "054_vintage_weather_modifiers_chunk_3",
+      "statements_md5": "f6d260c18ae403ef25f2d7b132c82ee0"
+    },
+    {
+      "version": "20260313054933",
+      "name": "054_vintage_weather_modifiers_chunk_4",
+      "statements_md5": "e82f21dea02114cbcf69bbd10492eb7e"
+    },
+    {
+      "version": "20260313055151",
+      "name": "054_vintage_weather_modifiers_chunk_5",
+      "statements_md5": "da0ff6f1b3a810ddf24013cd2ac7a166"
+    },
+    {
+      "version": "20260313055911",
+      "name": "054_vintage_weather_modifiers_chunk_6",
+      "statements_md5": "e1069ceb26e38a23e9888371e21e2068"
+    },
+    {
+      "version": "20260313060128",
+      "name": "054_vintage_weather_modifiers_chunk_7",
+      "statements_md5": "8b701297a8ca185f3f3035f801e09407"
+    },
+    {
+      "version": "20260313060525",
+      "name": "054_vintage_weather_modifiers_chunk_8",
+      "statements_md5": "d439288daf9549545474c0792f3d5c61"
+    },
+    {
+      "version": "20260313061218",
+      "name": "054_vintage_weather_modifiers_chunk_9",
+      "statements_md5": "2b4daec4fd4729fa3945b3fbbc879e33"
+    },
+    {
+      "version": "20260313062014",
+      "name": "054_vintage_weather_modifiers_chunk_10",
+      "statements_md5": "1714644905684edc9c6c6514c2a43aa2"
+    },
+    {
+      "version": "20260313062927",
+      "name": "054_vintage_weather_modifiers_chunk_11",
+      "statements_md5": "3aac9a7fe1ba731285c3c9edd8cc24a8"
+    },
+    {
+      "version": "20260313065338",
+      "name": "054_vintage_weather_modifiers_chunk_12",
+      "statements_md5": "47037b2aadc210d326309fa971f1227c"
+    },
+    {
+      "version": "20260328024919",
+      "name": "055_taste_survey_responses",
+      "statements_md5": "8c02de9899b1b9ba57e0bc7e0fec84d6"
+    },
+    {
+      "version": "20260329171857",
+      "name": "audience_mode",
+      "statements_md5": "a147a8ac23845858535f9de0f1a81ac9"
+    },
+    {
+      "version": "20260329223408",
+      "name": "add_event_type_to_entry_groups",
+      "statements_md5": "b9e440ad68e015547b5fbca077c78b63"
+    },
+    {
+      "version": "20260331034006",
+      "name": "badges",
+      "statements_md5": "def964aba685a3675c93d97b28b5efef"
+    },
+    {
+      "version": "20260912211719",
+      "name": "protect_profile_capabilities_and_public_assets",
+      "statements_md5": "4f690c3fb41c060a1bc41add57207abb"
+    },
+    {
+      "version": "20260912211747",
+      "name": "enforce_entry_read_privacy",
+      "statements_md5": "50fb651cc4595d5980b048a34568b7a8"
+    },
+    {
+      "version": "20260912235835",
+      "name": "enforce_photo_and_group_metadata_privacy",
+      "statements_md5": "7801266297ae37d277d9b287216edfcf"
+    },
+    {
+      "version": "20260913000034",
+      "name": "enforce_wine_object_privacy",
+      "statements_md5": "747807c2c8fcfc46df46934c45ed5b99"
+    },
+    {
+      "version": "20260913002605",
+      "name": "isolate_personal_knowledge_reads",
+      "statements_md5": "2c4ab9fbdf82841d6a768ba19012613d"
+    },
+    {
+      "version": "20260913004127",
+      "name": "enforce_personal_knowledge_lifecycle",
+      "statements_md5": "190fa5195c0dd372edae429250596c33"
+    },
+    {
+      "version": "20260913005247",
+      "name": "batch_personal_knowledge_publication",
+      "statements_md5": "0e8c864fbd8abfbf0b623a0b715d360d"
+    },
+    {
+      "version": "20260913020752",
+      "name": "restrict_contact_resolution",
+      "statements_md5": "0a15926a59392db0f4906d5be3c30dcc"
+    }
+  ],
+  "publications": [],
+  "buckets": [
+    {
+      "id": "public-assets",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "wine-photos",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    }
+  ],
+  "historicalManifest": [
+    {
+      "file": "001_init.sql",
+      "sha256": "2f07158a59441312f51d2432628e8085eb0d9429d2cc9320cdd2c5e7e0b43d41"
+    },
+    {
+      "file": "002_storage.sql",
+      "sha256": "d269192dd672d21eba3bf1eb50dbf0cb93eeca3020e98895cafefd014ad10345"
+    },
+    {
+      "file": "003_social.sql",
+      "sha256": "03aee0adb2a1ff6b34a862329222d1a54a100f69d72d58276981b614c37ebad9"
+    },
+    {
+      "file": "004_follow_privacy.sql",
+      "sha256": "d2ea2aec0b67f4d642cf78762b1bb5442ef9208ca3bfd195f4175d6f3d15fa7d"
+    },
+    {
+      "file": "004_pairing_and_rating.sql",
+      "sha256": "b4e6926ad7db807d377edc7b27ddc8e53a9f51e58f32030780963c6489fe3719"
+    },
+    {
+      "file": "005_notifications.sql",
+      "sha256": "06ec6db96ec2204c8c294b04af3e540df751dd477e9b31c91e2d0e1fbb047f08"
+    },
+    {
+      "file": "006_friends.sql",
+      "sha256": "c9d6695716ae2e8c1fffe4b8566f866ac19cab0f4fa038ebb856736220352689"
+    },
+    {
+      "file": "007_entry_photos.sql",
+      "sha256": "89d93085602e41318df8cfce60e071176481de38066e43097ee4289d19d22c7a"
+    },
+    {
+      "file": "008_username_login.sql",
+      "sha256": "36a3e6a93442865788c69596a170fe57315c1ac32cb95e0c62ecc5825ca7a598"
+    },
+    {
+      "file": "009_default_public_privacy.sql",
+      "sha256": "fed278fc6907e7e1974a5e589519cd54908b12d89ac03a08a27f99f6366ade10"
+    },
+    {
+      "file": "009_friendship_source_of_truth.sql",
+      "sha256": "0991ce2dd122fff804919045cc092554b141d01873dec0bed43eded2d8fd8853"
+    },
+    {
+      "file": "010_friend_cancel_unfriend.sql",
+      "sha256": "999a90c9462c35ff97f9eb63e4ccc7784350a2740add989de7705222be2ad7b1"
+    },
+    {
+      "file": "011_deprecate_user_follows.sql",
+      "sha256": "6489bb33c22deeafee089c5d7d12edc647be250981ceefeac39c48554edbf646"
+    },
+    {
+      "file": "012_privacy_onboarding.sql",
+      "sha256": "4bf1dd03938d5ffd343f99df6923afefcca4c1b74a5aaf9baeb2c6f4e67d67d8"
+    },
+    {
+      "file": "013_advanced_notes.sql",
+      "sha256": "60e6014898cf79bf361b161d3dea17049875cdd82a2d8ecd8d2e88050e7ff243"
+    },
+    {
+      "file": "013_profile_avatar.sql",
+      "sha256": "00a1f34a4460a0f98da7e1e1436e63860b2f95070597ff653296909fcb9a97ca"
+    },
+    {
+      "file": "014_entry_reactions.sql",
+      "sha256": "9c07368550c4da00f2d53698de5722576a6db6fe174ac2145b7a1249d60beab7"
+    },
+    {
+      "file": "015_entry_photos_visibility.sql",
+      "sha256": "9ab65e608e5f8cf9fdf6e2fddd881d531c534e2da547c0a2111f1e1c5a511b40"
+    },
+    {
+      "file": "016_entry_pricing_qpr.sql",
+      "sha256": "db50b23e375cf238ebb8e3f801fc3207769342efd435a20b801ffc01f5c05be4"
+    },
+    {
+      "file": "017_entry_price_currency.sql",
+      "sha256": "bcbce5681b64aaed7304fb8d3b9e850a1147c7c6bfc63e415219ef54468fa1ff"
+    },
+    {
+      "file": "018_entry_comparison_feedback.sql",
+      "sha256": "dc1fb098fe1e64d06c279dd217f83445c15ecb56a6fca820c3b04d7de3fa875d"
+    },
+    {
+      "file": "019_entry_classification_and_primary_grapes.sql",
+      "sha256": "391c15cf19e8e3aaf7f35e389fc904c319a57e271e7a7e182b0211612506b5b4"
+    },
+    {
+      "file": "020_ai_notes_summary.sql",
+      "sha256": "7bb6fbcbe99d125fbf8496546e93dfd7e3fae6c48d1e67d82d6fd35e2fc69dbe"
+    },
+    {
+      "file": "021_feedback.sql",
+      "sha256": "79d3e84f8052e9eae528f5068df992d2daa6177fa4479b2678f6b26dcda555cf"
+    },
+    {
+      "file": "022_add_grape_varieties.sql",
+      "sha256": "7d0d0b31acc02f60edd558d1be2e462c041a53d94ec377d55695f51762caef4e"
+    },
+    {
+      "file": "022_profile_names.sql",
+      "sha256": "5bb37ad74eccbb1401fd5a53e0bcd3e2bc6a6b2664e07daba23d994db04268b3"
+    },
+    {
+      "file": "023_phone_login.sql",
+      "sha256": "ee38a4433ff9706fdc507979d1a6f6797fe04504c10504eb9f931e52c8886596"
+    },
+    {
+      "file": "024_auth_identifier_helpers.sql",
+      "sha256": "a10cb79f81fb48ea6714d4685d3cfff64771035f78b40f32ae2421b70fab4d56"
+    },
+    {
+      "file": "025_shared_tastings.sql",
+      "sha256": "85a47dcc42ddd0c0174826b7f814388c3e1b9386c4d0ae30feefa7105ee6dce9"
+    },
+    {
+      "file": "026_suppress_shared_copy_tag_notifications.sql",
+      "sha256": "18ed4bc5e1165320548a9d26eae3d7d3bb576bcf226d742556f661a80cc9b419"
+    },
+    {
+      "file": "027_post_shares.sql",
+      "sha256": "731739b88915190de262251ad45b50959f4590afd8e83219b5f793293ff76184"
+    },
+    {
+      "file": "028_entry_photo_context_types.sql",
+      "sha256": "2804ea8f4a6b37b1ecb7764cdad4e4686d6631fcff1a3532e5f2f12dd24875cb"
+    },
+    {
+      "file": "028_location_place_id.sql",
+      "sha256": "2d5f5c0d7b17b15a6d2cab8f36c87d3397c77e5d55d4a916cd01872a8957cd19"
+    },
+    {
+      "file": "029_entry_comments_and_interactions.sql",
+      "sha256": "cbec73d24eac704a365309f9cf960ccb4ec7e957e3ffe9fd8e5e808674bb6a9a"
+    },
+    {
+      "file": "030_post_interaction_privacy_and_comment_deletes.sql",
+      "sha256": "b3be6a96b3550a0fd65f90854bf1550ffe6ae9b6812a01aa1628c645905c5df5"
+    },
+    {
+      "file": "031_backfill_friends_of_friends_interactions.sql",
+      "sha256": "83b3e7813f7726810d69f9e8f50f9867de733dafab28b387c297401b52898dd4"
+    },
+    {
+      "file": "032_profile_interaction_default_privacy.sql",
+      "sha256": "7a896f2d93e939f8960fb6c6d33ffec21dd62920b6a17ace355edbda5c7b7b2f"
+    },
+    {
+      "file": "032_retag_reopens_notification.sql",
+      "sha256": "beac19de0ab062b4f0da72ea9befae967f9c00ee875113aabe8727667e238127"
+    },
+    {
+      "file": "033_profile_bio.sql",
+      "sha256": "1df9782154e0ecdfcb136710a68b0a273ea673e682e216fee38ad3e2cebd3aec"
+    },
+    {
+      "file": "034_blocks_and_reports.sql",
+      "sha256": "b71c414a25f0abe199913b940ece669c8025a9b556c2afec3dcedadf5f064317"
+    },
+    {
+      "file": "035_entry_post_save_survey.sql",
+      "sha256": "601afa7657638e078fdc5e67330d3a8b017de6cc93f7fa0ebf74519ab134d21f"
+    },
+    {
+      "file": "036_apply_friend_transition.sql",
+      "sha256": "23d496e4cfe573e6f00c01caf64a7e6c7972ee6077ae411686b7098025bad480"
+    },
+    {
+      "file": "036_migrate_drink_again_to_enjoyment_intent.sql",
+      "sha256": "bca1a258197de9bd165fc0b5aa83ef8cde5eb09e4c3665787cafa3ec1958172c"
+    },
+    {
+      "file": "037_suppress_root_group_notifications_for_shared_copies.sql",
+      "sha256": "644633016c6aa2bf75aac1a52fea487e3ecd7e6ec5df970034c2454c960f4c0e"
+    },
+    {
+      "file": "038_public_profile_privacy.sql",
+      "sha256": "24dbc23ab96e2d9458463cdfb588413a78ab7a6d1a8ba9302009f77929879334"
+    },
+    {
+      "file": "039_content_report_dedupe.sql",
+      "sha256": "9b8157c9ffcab3a0305b9b971f71d30bac2599a2a1edbce49250ef76e542ee5c"
+    },
+    {
+      "file": "040_test_account_helper.sql",
+      "sha256": "797d93853a2b9615908c00d4ce7ceed7164f58a4643ec9138372ebca03717fab"
+    },
+    {
+      "file": "041_test_account_visibility.sql",
+      "sha256": "58741ef269db027ea2d503305bc79708c67c23f634b598994f95b799ce22a151"
+    },
+    {
+      "file": "042_drinking_now.sql",
+      "sha256": "1b8d02aa6282fc375533ee53e40708ab581437e040a1030c99694685dd38001b"
+    },
+    {
+      "file": "043_name_display_preference.sql",
+      "sha256": "ed43b2aa773408cabe498b267c4f9486db0c0db0251fc97001f9dee24a1c136a"
+    },
+    {
+      "file": "044_content_report_delete_cascade.sql",
+      "sha256": "29d13f02067a027961e37ec91522c70f4f790ad8d2ce3440dd2df8506d1bf60f"
+    },
+    {
+      "file": "045_entry_groups.sql",
+      "sha256": "a65fa546e57aa378f0f874f971382117dbde48b8c3e615e336c4d04d9e8e8c07"
+    },
+    {
+      "file": "049_entry_canonical_fields.sql",
+      "sha256": "35be84f67595d0ad9a4ee5de218e1d81f03cf2aa416434b1eb8bde17e407c9ff"
+    },
+    {
+      "file": "050_scan_resolution_log.sql",
+      "sha256": "9991df8195b412d84c39bb0cb75d2be1cf788ec99f80b162343c71639e803678"
+    },
+    {
+      "file": "051_list_scan_results.sql",
+      "sha256": "ee0f42024e28d55200a1c46606b158f26b93a7c67d6d00bfb38958df12e3ef42"
+    },
+    {
+      "file": "052_wine_entry_scores.sql",
+      "sha256": "d354ace7d2d9b542767d7156e989bccca125ae1de5b44ec267cf4651c13ca832"
+    },
+    {
+      "file": "053_pocket_sommelier.sql",
+      "sha256": "7a1d6d5970827be5c355368d2eb87081451b2f2ce507485bf4f38bc45ae994d8"
+    },
+    {
+      "file": "054_match_user_entries.sql",
+      "sha256": "d3e0fb3d1d6bdb68f5658f53c8ec5beeea27e8ad86660ee79a55fe77f1341994"
+    },
+    {
+      "file": "055_taste_survey_responses.sql",
+      "sha256": "9d1cd29309796c828e57becefa654b26f45cadf85f15b4dbb251ce4af7acfd85"
+    },
+    {
+      "file": "060_assembled_sensory_column.sql",
+      "sha256": "ec0a7860ce16bdfb2b7a9056aa3f9a71a68764bac036a54dfc39d2db7c718d33"
+    },
+    {
+      "file": "065_cellar_support.sql",
+      "sha256": "ad78b11450a0005896404b16cb723f3ab77703b4433bf30666a96c9b4ca38237"
+    },
+    {
+      "file": "070_custom_fields.sql",
+      "sha256": "fad228113ba686d290df79a7a170a1aa2bc6967e81dc8dd71e4a36211b5b523b"
+    },
+    {
+      "file": "075_wine_profiles.sql",
+      "sha256": "1e8155818f493bd3ee309efd681c1039713f8b09f537d74557463e07c31b4c4d"
+    },
+    {
+      "file": "080_audience_mode.sql",
+      "sha256": "4db770e5e93c1ec4d24ca29fca47d34c415025bbcbd376a0df8a0077e4139730"
+    },
+    {
+      "file": "085_event_type.sql",
+      "sha256": "e14c459c6a66b44264ab80cf5275e06f44af1678a1346918067f9fada2056a98"
+    },
+    {
+      "file": "090_collections.sql",
+      "sha256": "90df270aae5c4ff69814926a0ffc5a14e4815c15e828dc32d0acaa33e0d86b9f"
+    },
+    {
+      "file": "091_badges.sql",
+      "sha256": "aec7c8770076ceb9c829752aeff74ac6220bee74d1f964f37bfc56e563a77903"
+    },
+    {
+      "file": "092_wine_profiles_audience_mode.sql",
+      "sha256": "3c7235e67d34b0168364d87202251022e10b1b151d52b7022d228316cd1ecc72"
+    },
+    {
+      "file": "093_api_rate_limits.sql",
+      "sha256": "2268104e81d4ba2fa86568d4e7107dc9dd75fb8fcd5a4ef40cde99f311459319"
+    },
+    {
+      "file": "094_palate_profiles.sql",
+      "sha256": "5e13733d5e04d961439aba95d4f1b266278e8124ebaaaf349dcf4e15a5ce578b"
+    },
+    {
+      "file": "095_lock_reference_tables.sql",
+      "sha256": "b6b56afa086a2aaa52338910c4e52c86211f4e2cfe5680deb5aa7ce326bcbc88"
+    },
+    {
+      "file": "096_notifications_index.sql",
+      "sha256": "2eebfd7f8bce70ea05c31f82afda4f52e203c4843f18850b2d6c3f6d8346a2cc"
+    },
+    {
+      "file": "097_featured_badges.sql",
+      "sha256": "7d13a27694ba413ad2a523d9cfe95fb7488a48bcb07d32cd65f3f35810d1c1ee"
+    },
+    {
+      "file": "20260912185640_protect_profile_capabilities_and_public_assets.sql",
+      "sha256": "e5897ec8f79e1bd6d09ee2b1e0285dcb6bb841039d515e6b2df47fbaee9c9b4e"
+    },
+    {
+      "file": "20260912200417_enforce_entry_read_privacy.sql",
+      "sha256": "5ca7d7451183c0819d8bbb9652f828adf019ec2a43deb760150531d312c5a1c8"
+    },
+    {
+      "file": "20260912214315_enforce_photo_and_group_metadata_privacy.sql",
+      "sha256": "138a180b17c0ee6c5be8034b2bff8337572c1c1d33e46e5be2062f37ccabc142"
+    },
+    {
+      "file": "20260912222036_enforce_wine_object_privacy.sql",
+      "sha256": "7f497fca86757028ff8dd9fe1ba0947f5eab9200437d44156651d7c43be95ab4"
+    },
+    {
+      "file": "20260913002148_isolate_personal_knowledge_reads.sql",
+      "sha256": "82e2e850836c460f67b19641f98336554ba94ee71058feee7090591fe9cb72f8"
+    },
+    {
+      "file": "20260913003148_enforce_personal_knowledge_lifecycle.sql",
+      "sha256": "ddb9522e1ea895265f27f5139f5c07f29632c6f0e633e96d2b4a317449157993"
+    },
+    {
+      "file": "20260913004944_batch_personal_knowledge_publication.sql",
+      "sha256": "925817d0409556863960b4e7701a496a99859f087662d938c5364c34dc544a84"
+    },
+    {
+      "file": "20260913014834_restrict_contact_resolution.sql",
+      "sha256": "8c0f9724f02db167f890d4932159ee03a4c278f782163fc9b088158f91e81d6f"
+    }
+  ],
+  "artifactSha256": {
+    "auth.fixture.sql": "16433af060bac660f4948a6696987f1fe5c8c884d39fad4b98146f8b925fece9",
+    "managed-storage.fixture.sql": "b0e465699aa9786b2d4c32df266c07013f85b27dc45b08ef5fa4c837f334ee3d",
+    "app.sql": "a058901567ae8fd59b85f77a35b7446e79f8f17a7a8ba59d0a5f663adddde6ec",
+    "auth-hooks.sql": "5f1b325a9e4d90b0d3459f540491c7032becfab3ecef798658aa9128024a6284"
+  },
+  "captureTool": "pg_dump 17.6 --schema-only --schema=public --schema=private --no-comments --no-security-labels; separate --schema=storage fixture",
+  "normalization": "Removed random psql restrict/unrestrict guards only; SQL definitions/owners/ACLs unchanged. Auth fixture is explicitly synthetic; auth-hooks.sql is captured app-owned DDL. Trailing whitespace/EOF blank lines removed from SQL artifacts; app function bodies unchanged."
+}

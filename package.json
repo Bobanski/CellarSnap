@@ -18,7 +18,8 @@
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:install": "playwright install chromium",
-    "test:unit": "playwright test --config playwright.unit.config.mjs"
+    "test:unit": "playwright test --config playwright.unit.config.mjs",
+    "test:schema": "node --test scripts/schema/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

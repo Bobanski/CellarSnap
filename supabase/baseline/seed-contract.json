@@ -1,0 +1,104 @@
+{
+  "capturedAt": "2026-09-13T04:51:18.546Z",
+  "scope": "Counts and stable content fingerprints only. No personal records or embeddings exported. Fresh schema replay is NOT a fully seeded product database.",
+  "referenceTables": [
+    {
+      "table": "aging_curve_baselines",
+      "row_count": 40,
+      "content_md5": "3bf214955e0735185db993bb0cfdab80",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "appellation_grape_map",
+      "row_count": 922,
+      "content_md5": "75c214e47abf0b51d86d2efefdc772b9",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "base_profiles",
+      "row_count": 205,
+      "content_md5": "89ce7f3ecb63c4a3d9e3f841a268245f",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "classification_tier_aging_modifiers",
+      "row_count": 40,
+      "content_md5": "54020cca33c154d035c45f61bf27b5ce",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "classification_tier_modifiers",
+      "row_count": 55,
+      "content_md5": "c808fb2c69787338368a1be795ba045f",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "grape_sensitivity_coefficients",
+      "row_count": 61,
+      "content_md5": "74c2c86e4ffab389f15031d2bfb58621",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "producer_aliases",
+      "row_count": 1695,
+      "content_md5": "071bb6b9e95557115993f89926bf6ac4",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "producer_modifiers",
+      "row_count": 705,
+      "content_md5": "215a295809e13795961c92752e731a65",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "producer_region_crosswalk",
+      "row_count": 91,
+      "content_md5": "cedb1226df35eed8736b93513e5fccb7",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "region_aliases",
+      "row_count": 809,
+      "content_md5": "515ad51d0d3fc77f2caa465e816216a9",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "taxonomy_classification_tiers",
+      "row_count": 133,
+      "content_md5": "012d90f42231b45c389140c6f3df4656",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "taxonomy_master_v2",
+      "row_count": 89,
+      "content_md5": "8f99ec9e2474beba4bdf24fcb3e91aab",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "taxonomy_price_ranges",
+      "row_count": 8,
+      "content_md5": "f83e6fbcec162fd8c52646a7ec95e0d2",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "vintage_weather_modifiers",
+      "row_count": 2150,
+      "content_md5": "e1939bcdf20ce561c2238da1b3a73cba",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "grape_varieties",
+      "row_count": 93,
+      "content_md5": "62bd40ef48c7e64b4c47f23718327041",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    },
+    {
+      "table": "grape_aliases",
+      "row_count": 131,
+      "content_md5": "1adbd2c9772b0527142c39a9481a28b5",
+      "classification": "curated reference; export/import requires a separately reviewed seed artifact; no rows included in this schema baseline"
+    }
+  ],
+  "curatedKnowledge": "general_knowledge_chunks / wine_knowledge_chunks require a separately reviewed curated corpus ingestion; personal user_entry_knowledge_chunks must stay empty on a fresh environment.",
+  "buckets": "Bucket IDs/settings are captured in provenance.json; object bytes, signing keys and user sessions are never fixtures."
+}
