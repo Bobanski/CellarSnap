@@ -1,3 +1,4 @@
+import { buildEntryEditSnapshot } from "@cellarsnap/shared";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -111,6 +112,7 @@ type EntryDetailRow = {
   place_image_path: string | null;
   pairing_image_path: string | null;
   created_at: string;
+  is_feed_visible: boolean;
   entry_group_id?: string | null;
   entry_privacy: PrivacyLevel;
   reaction_privacy?: PrivacyLevel | null;
@@ -951,7 +953,7 @@ export default function EntryDetailScreen() {
     const { data: entryData, error: entryError } = await supabase
       .from("wine_entries")
       .select(
-        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, entry_group_id, entry_privacy, reaction_privacy"
+        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, is_feed_visible, entry_group_id, entry_privacy, reaction_privacy"
       )
       .eq("id", entryId)
       .maybeSingle();
@@ -3088,9 +3090,7 @@ export default function EntryDetailScreen() {
       .map((grape) => grape.id);
     const nextTastedWithIds = Array.from(new Set(selectedTastedWithIds));
 
-    const { error: updateError } = await supabase
-      .from("wine_entries")
-      .update({
+    const updates = {
         wine_name: wineName,
         producer: normalizeProducerText(bulkReviewForm.producer),
         vintage: normalizeOptionalText(bulkReviewForm.vintage),
@@ -3110,24 +3110,22 @@ export default function EntryDetailScreen() {
         tasted_with_user_ids: nextTastedWithIds,
         advanced_notes: advancedNotesPayload,
         is_feed_visible: true,
-      })
-      .eq("id", entry.id)
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      return updateError.message;
-    }
-
-    if (primaryGrapeSelectionChanged(entry.primary_grapes, selectedPrimaryGrapes)) {
-      const {error: clearError} = await supabaseDatabase.from("entry_primary_grapes")
-        .delete().eq("entry_id", entry.id);
-      if (clearError) return "Entry details saved, but grapes could not be updated. Please try again.";
-      if (primaryGrapeIds.length > 0) {
-        const {error: insertError} = await supabaseDatabase.from("entry_primary_grapes").insert(
-          primaryGrapeIds.map((grapeId, index) => ({entry_id:entry.id, variety_id:grapeId, position:index+1}))
-        );
-        if (insertError) return "Entry details saved, but grapes could not be saved. Keep this selection and try again.";
-      }
+      };
+    const grapesChanged = primaryGrapeSelectionChanged(entry.primary_grapes, selectedPrimaryGrapes);
+    try {
+      const snapshot = buildEntryEditSnapshot(updates, entry);
+      const { error: saveError } = await supabase.rpc('save_entry_details', {
+        p_entry_id: entry.id,
+        p_updates: snapshot.updates,
+        p_expected: snapshot.expected,
+        p_grape_ids: grapesChanged ? primaryGrapeIds : null,
+        p_expected_grape_ids: grapesChanged ? [...entry.primary_grapes].sort((a,b) => a.position-b.position).map(grape => grape.id) : null,
+      });
+      if (saveError) return saveError.code === '40001'
+        ? 'This entry changed elsewhere. Close the editor and refresh before saving again.'
+        : 'Unable to save this entry. Your changes are still here; please try again.';
+    } catch {
+      return 'Unable to confirm the save. Your changes are still here; please retry.';
     }
 
     return null;

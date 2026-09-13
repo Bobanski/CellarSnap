@@ -66,6 +66,11 @@ export async function expectedCatalog() {
     }
     expected[key].push(...add);
   }
+  const editDelta = JSON.parse(await readFile(new URL('./b08b-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(editDelta)) {
+    if (remove.length) throw new Error('B08b must be an additive command');
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

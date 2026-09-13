@@ -1,0 +1,16 @@
+# B08b handover — September 13, 2026
+## Objective and IDs
+AUD-13/15 mobile detail/grape atomic saves; preserve QC-07/QC-17 retention and failure visibility. Web/group edit commands, cellar decrement/clone, creates/imports, and broader side-effect parity are deferred.
+## Resume here
+Branch `codex/b08b-atomic-mobile-edits` stacked on B02f `31a345c` (#131 merged as `b129fdb`). Implementation and isolated transactional/concurrency checks pass. Hosted SQL, generated RPC types and browser/Expo acceptance pending; do not call this released.
+## State and decisions
+New invoker RPC `save_entry_details` locks the caller-owned entry, accepts a strict field allowlist plus exact raw expected values, and updates details/optional ordered grapes in one transaction. Expected values must cover exactly submitted fields. Optional grape arrays distinguish unchanged from explicit empty. Unchanged links retain IDs. A repeat request whose entire requested state already exists succeeds without writes; a conflicting detail/grape change returns SQLSTATE 40001 and retains the editor's inputs. No durable request-receipt store: idempotence is state convergence for this update command, not a create/lifecycle guarantee. Old direct-write clients remain outside the serialized-command guarantee.
+Mobile normal and bulk detail editors share this command; unknown RPC/network failure never falls back to the former multi-request save. Raw loaded is_feed_visible is included in the snapshot; intentional publish behavior remains. Existing schema constraints, owner policy and source invalidation triggers still apply. No historical grape repair.
+## Verification
+New tests force failure on grape insertion after details update/deletion and confirm exact rollback of details and link IDs; retry persists and repeated success retains IDs. Notes-only saves preserve a concurrent grape edit; stale details/grapes fail without writes. Owner/stranger, allowlist, malformed snapshots, max-three/duplicates/nonexistent grapes, bounds and anonymous access pass. Whole schema replay: 16 tests. PostgreSQL 17.6 catalog replay plus two real concurrent-editor cases: loser waits on entry lock then conflicts; duplicate waiter succeeds as replay without replacing links. Four existing badge races remain passing. Browser/native coverage still pending; no native runtime installed.
+## Release state
+Additive migration `20260913210613_atomic_entry_details.sql` not yet applied. SQL must precede updated client distribution. New RPC is invoker/owner checked; public/anon EXECUTE revoked. No destructive schema/data changes. Roll forward on problems; keep atomic client errors visible rather than reviving compensation.
+## Workspace and environment
+User tsconfig.json and two reports preserved. Temporary Expo all-platform export in `/tmp/cellarsnap-b02e-b02f-b08b/expo` uses command-scoped loopback API URL; no env edits. Local Next 3001 and prior Expo 8083 support QC. No binaries/OTA distributed.
+## Next slice
+Finish hosted SQL/type generation, actual Expo desktop/phone notes/explicit/empty/retry/conflict flows and web counterpart reads. Native acceptance/distribution stays pending. Follow with atomic web/group edits, private numeric projection QC-01, mobile image adoption/legacy revocation, then B07/B05 residuals.
